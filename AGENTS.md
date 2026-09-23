@@ -42,10 +42,11 @@ cargo clippy --workspace --all-targets --no-default-features -- -D warnings
 cargo test --workspace --all-features                          # unit, integration, doc (README too)
 cargo test --workspace --no-default-features
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
-for example in quickstart split_methods restaurant_bill multi_currency settling_up \
-               members_and_accounts persistence; do
-    cargo run -q -p eranos --all-features --example "$example" || break
-done
+# A subshell, so a failing example fails the gates without closing the shell.
+(for example in quickstart split_methods restaurant_bill multi_currency \
+                settling_up members_and_accounts persistence; do
+    cargo run -q -p eranos --all-features --example "$example" || exit 1
+done)
 ```
 
 Run all of them; clippy findings are fixed, not silenced. The examples
