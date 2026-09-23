@@ -1,0 +1,15 @@
+//! Money, currencies, exchange rates, and the ratios splits are made of.
+//!
+//! Amounts are whole numbers of minor units (cents): arithmetic is exact, and
+//! every split distributes its leftover minor units so parts always add up.
+
+pub(crate) mod allocation;
+mod amount;
+mod currency;
+mod rate;
+mod ratio;
+
+pub use amount::Money;
+pub use currency::Currency;
+pub use rate::ExchangeRate;
+pub use ratio::{Parts, Percentage};

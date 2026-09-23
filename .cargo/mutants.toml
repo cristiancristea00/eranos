@@ -1,0 +1,18 @@
+# cargo-mutants configuration. Mutation testing is an occasional audit, not a
+# gate; docs/TESTING.md explains how to read a survivor.
+#
+# The scope is not set here: an `examine_globs` key would override `--file` on
+# the command line, so the file is named in the command
+# (`cargo mutants -p eranos --file crates/eranos/src/money/allocation.rs`).
+
+# Only the library's own suites can kill its mutants.
+test_package = ["eranos"]
+
+# With every feature, so mutants in feature-gated code (`serde`) are built
+# and tested instead of surviving as code the tests never compiled.
+all_features = true
+
+# The unit tests finish in milliseconds, so the auto-derived timeout is tiny;
+# without a floor a mutant that only makes something slow (the exact
+# settlement solver's inner loop) is reported as a timeout rather than caught.
+minimum_test_timeout = 30

@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Debug one unit test by name; the prompt takes the same filter
+            // string `cargo test <filter>` would.
+            "name": "Debug a unit test (eranos)",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": ["test", "--no-run", "-p", "eranos", "--lib", "--all-features"]
+            },
+            "args": ["${input:testFilter}"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            // Debug one example by name (`quickstart`, `settling_up`, …).
+            "name": "Debug an example (eranos)",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": ["build", "-p", "eranos", "--all-features", "--example", "${input:exampleName}"]
+            },
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "testFilter",
+            "type": "promptString",
+            "description": "Test name filter (as passed to `cargo test <filter>`)"
+        },
+        {
+            "id": "exampleName",
+            "type": "promptString",
+            "description": "Example name (a file stem under crates/eranos/examples)"
+        }
+    ]
+}

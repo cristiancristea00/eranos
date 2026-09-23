@@ -1,0 +1,313 @@
+//! The serialized form of a group (feature `serde`). The apps persist and
+//! sync groups in this form, so a round trip must be the identity, the JSON
+//! shape is pinned (renaming a field breaks every stored group), and a
+//! tampered or corrupted file must be refused rather than loaded into an
+//! inconsistent group.
+#![cfg(feature = "serde")]
+#![expect(
+    clippy::unwrap_used,
+    reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"
+)]
+
+use eranos::{
+    Account, Category, CategoryId, Currency, Date, Email, ExchangeRate, Expense, Group, Iban, Item,
+    Language, Member, MemberId, Money, Parts, Percentage, PhoneNumber, SettlementStrategy, Split,
+    Time, Tip, TipDistribution, Transfer, Username,
+};
+use serde_json::{Value, json};
+
+fn eur(text: &str) -> Money {
+    Money::parse(text, Currency::EUR).unwrap()
+}
+
+fn day() -> Date {
+    Date::new(2026, 9, 23).unwrap()
+}
+
+/// A group using every serialized feature, and its members.
+fn group() -> (Group, MemberId, MemberId, MemberId) {
+    let mut group = Group::builder("Lisbon", Currency::EUR)
+        .description("Autumn trip")
+        .language(Language::parse("pt-PT").unwrap())
+        .build()
+        .unwrap();
+    let ana = group.add_member(
+        Member::builder("Ana")
+            .last_name("Popescu")
+            .email(Email::parse("ana@example.com").unwrap())
+            .phone(PhoneNumber::parse("+40712345678").unwrap())
+            .account(Account::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap())
+            .account(Account::new("Revolut", Username::new("@ana").unwrap()).unwrap())
+            .build()
+            .unwrap(),
+    );
+    let bob = group.add_member(Member::builder("Bob").build().unwrap());
+    let carol = group.add_member(Member::builder("Carol").build().unwrap());
+    let food = group.add_category(Category::new("Food").unwrap()).unwrap();
+
+    let bill = Expense::builder("Bill", eur("21.00"), day())
+        .description("Tasca")
+        .time(Time::new(20, 30).unwrap())
+        .category(food)
+        .paid_by(bob)
+        .items([
+            Item::builder("Bacalhau", eur("12.00"))
+                .shared_by([ana])
+                .build()
+                .unwrap(),
+            Item::builder("Wine", eur("4.50"))
+                .quantity(2)
+                .split(Split::parts([
+                    (ana, Parts::ONE),
+                    (bob, Parts::parse("1.5").unwrap()),
+                ]))
+                .build()
+                .unwrap(),
+        ])
+        .tip(
+            Tip::percentage(Percentage::parse("12.5").unwrap()).distributed(TipDistribution::Equal),
+        )
+        .build()
+        .unwrap();
+    group.add_expense(bill).unwrap();
+    let tram = Expense::builder("Tram", Money::parse("30.00", Currency::RON).unwrap(), day())
+        .payers(Split::amounts([
+            (ana, Money::parse("20.00", Currency::RON).unwrap()),
+            (carol, Money::parse("10.00", Currency::RON).unwrap()),
+        ]))
+        .split(Split::percentages([
+            (ana, Percentage::parse("50").unwrap()),
+            (carol, Percentage::parse("50").unwrap()),
+        ]))
+        .exchange_rate(ExchangeRate::parse("0.2011").unwrap())
+        .build()
+        .unwrap();
+    group.add_expense(tram).unwrap();
+    group
+        .add_transfer(
+            Transfer::builder(ana, bob, eur("5.00"), day())
+                .note("Wine")
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    group.archive_member(carol).unwrap();
+    (group, ana, bob, carol)
+}
+
+fn json_of(group: &Group) -> Value {
+    serde_json::to_value(group).unwrap()
+}
+
+/// Loading a saved group must give back the same group, the same totals,
+/// and the same plans; anything else silently changes what people owe.
+#[test]
+fn a_group_round_trips_through_json() {
+    let (group, _, _, carol) = group();
+    let text = serde_json::to_string(&group).unwrap();
+    let loaded: Group = serde_json::from_str(&text).unwrap();
+    assert_eq!(loaded, group);
+    assert_eq!(loaded.summary(), group.summary());
+    for strategy in SettlementStrategy::all() {
+        assert_eq!(
+            loaded.settlement(strategy).unwrap(),
+            group.settlement(strategy).unwrap()
+        );
+    }
+    // The archived member stays archived, and keeps her history.
+    assert!(loaded.is_archived(carol));
+    assert_eq!(serde_json::to_string(&loaded).unwrap(), text);
+}
+
+/// The field names and value shapes are the stored format; renaming one
+/// would make every saved group unreadable.
+#[test]
+fn the_json_shape_is_pinned() {
+    let (group, ana, _, carol) = group();
+    let value = json_of(&group);
+    assert_eq!(value["format"], json!(1));
+    assert_eq!(value["name"], json!("Lisbon"));
+    assert_eq!(value["currency"], json!("EUR"));
+    assert_eq!(value["language"], json!("pt-PT"));
+    // Members carry their ID, the archive flag only when set, and details.
+    let members = value["members"].as_array().unwrap();
+    assert_eq!(members[0]["id"], json!(ana.to_string()));
+    assert_eq!(members[0].get("archived"), None);
+    assert_eq!(members[2]["id"], json!(carol.to_string()));
+    assert_eq!(members[2]["archived"], json!(true));
+    assert_eq!(
+        members[0]["member"]["accounts"],
+        json!([
+            {"name": "ING", "details": {"iban": "RO49AAAA1B31007593840000"}},
+            {"name": "Revolut", "details": {"username": "@ana"}},
+        ])
+    );
+    assert_eq!(members[0]["member"]["phone"], json!("+40712345678"));
+    // Entries are `{id, entry}`; amounts are minor units plus a code.
+    let bill = &value["expenses"][0]["entry"];
+    assert_eq!(
+        bill["amount"],
+        json!({"minor_units": 2100, "currency": "EUR"})
+    );
+    assert_eq!(bill["date"], json!("2026-09-23"));
+    assert_eq!(bill["time"], json!("20:30"));
+    assert_eq!(
+        bill["tip"],
+        json!({"value": {"percentage": 1250}, "distribution": "equal"})
+    );
+    assert_eq!(
+        bill["payers"],
+        json!({"equal": [value["members"][1]["id"]]})
+    );
+    assert_eq!(
+        bill["split"]["itemized"][1]["split"]["parts"][1][1],
+        json!(150)
+    );
+    assert_eq!(bill.get("total"), None);
+    let tram = &value["expenses"][1]["entry"];
+    assert_eq!(tram["exchange_rate"], json!("0.2011"));
+    assert_eq!(tram["split"]["whole"]["percentages"][0][1], json!(5000));
+    assert_eq!(value["transfers"][0]["entry"]["note"], json!("Wine"));
+    assert_eq!(value["categories"][0]["entry"], json!({"name": "Food"}));
+}
+
+/// Loading a file with an entry the library would never accept must fail,
+/// or a corrupted file would produce balances that do not add up.
+#[test]
+fn a_tampered_file_is_refused() {
+    let (group, _, _, _) = group();
+    let tamper = |change: &dyn Fn(&mut Value)| {
+        let mut value = json_of(&group);
+        change(&mut value);
+        serde_json::from_value::<Group>(value)
+            .map(|_| ())
+            .unwrap_err()
+            .to_string()
+    };
+
+    // Percentages that no longer add up to 100 %.
+    let unbalanced = tamper(&|value| {
+        value["expenses"][1]["entry"]["split"]["whole"]["percentages"][0][1] = json!(4999);
+    });
+    assert!(
+        unbalanced.contains("percentages add up to 9999"),
+        "{unbalanced}"
+    );
+    // An expense paid by someone who is not a member.
+    let stranger = MemberId::from_bytes([200; 16]).to_string();
+    let unknown_payer = tamper(&|value| {
+        value["expenses"][0]["entry"]["payers"] = json!({"equal": [stranger]});
+    });
+    assert!(unknown_payer.contains("unknown member"), "{unknown_payer}");
+    // An IBAN with a typo.
+    let typo = tamper(&|value| {
+        value["members"][0]["member"]["accounts"][0]["details"]["iban"] =
+            json!("RO49AAAA1B31007593840001");
+    });
+    assert!(typo.contains("check digits"), "{typo}");
+    // A blank first name, and a foreign expense that lost its rate.
+    let blank_name = tamper(&|value| {
+        value["members"][1]["member"]["first_name"] = json!("  ");
+    });
+    assert!(blank_name.contains("first name"), "{blank_name}");
+    let unrated = tamper(&|value| {
+        value["expenses"][1]["entry"]
+            .as_object_mut()
+            .unwrap()
+            .remove("exchange_rate");
+    });
+    assert!(unrated.contains("exchange rate from RON"), "{unrated}");
+    // A newer format is refused instead of read with fields dropped.
+    let newer = tamper(&|value| {
+        value["format"] = json!(2);
+    });
+    assert!(newer.contains("unsupported group format 2"), "{newer}");
+}
+
+/// A file must also be refused when each entry is valid on its own but the
+/// group as a whole is not, or loading would merge or drop entries.
+#[test]
+fn an_inconsistent_file_is_refused() {
+    let (group, _, _, _) = group();
+    let tamper = |change: &dyn Fn(&mut Value)| {
+        let mut value = json_of(&group);
+        change(&mut value);
+        serde_json::from_value::<Group>(value)
+            .map(|_| ())
+            .unwrap_err()
+            .to_string()
+    };
+
+    // A group without a name.
+    let nameless = tamper(&|value| value["name"] = json!("  "));
+    assert!(nameless.contains("group name"), "{nameless}");
+    // Two members with one ID.
+    let twins = tamper(&|value| value["members"][1]["id"] = value["members"][0]["id"].clone());
+    assert!(twins.contains("already exists"), "{twins}");
+    // Two categories with one name, in different cases.
+    let other = CategoryId::from_bytes([201; 16]).to_string();
+    let homonyms = tamper(&|value| {
+        let copy = json!({"id": other, "entry": {"name": "FOOD"}});
+        value["categories"].as_array_mut().unwrap().push(copy);
+    });
+    assert!(homonyms.contains("already has this name"), "{homonyms}");
+    // A transfer from someone who is not a member.
+    let stranger = MemberId::from_bytes([200; 16]).to_string();
+    let unknown_sender = tamper(&|value| value["transfers"][0]["entry"]["from"] = json!(stranger));
+    assert!(
+        unknown_sender.contains("unknown member"),
+        "{unknown_sender}"
+    );
+}
+
+/// A group with none of the optional details round-trips as well, without
+/// gaining any.
+#[test]
+fn a_bare_group_round_trips_through_json() {
+    let group = Group::builder("Bare", Currency::EUR).build().unwrap();
+    let text = serde_json::to_string(&group).unwrap();
+    assert!(!text.contains("description"), "{text}");
+    let loaded: Group = serde_json::from_str(&text).unwrap();
+    assert_eq!(loaded, group);
+    assert_eq!(loaded.description(), None);
+    assert_eq!(loaded.language(), None);
+}
+
+/// Account details are stored in clear text, for the app's secure storage,
+/// but never appear in debug output that could reach logs.
+#[test]
+fn secrets_serialize_but_never_print() {
+    let (group, ana, _, _) = group();
+    let text = serde_json::to_string(&group).unwrap();
+    assert!(text.contains("RO49AAAA1B31007593840000"));
+    let debug = format!("{:?}", group.member(ana).unwrap());
+    assert!(!debug.contains("RO49AAAA1B31007593840000"));
+    assert!(!debug.contains("@ana"));
+    assert!(debug.contains("RO49 •••• 0000"));
+}
+
+/// Value types serialize on their own in the same shapes as inside a
+/// group.
+#[test]
+fn value_types_serialize_on_their_own() {
+    assert_eq!(
+        serde_json::to_value(eur("12.34")).unwrap(),
+        json!({"minor_units": 1234, "currency": "EUR"})
+    );
+    assert_eq!(
+        serde_json::to_value(Percentage::parse("33.33").unwrap()).unwrap(),
+        json!(3333)
+    );
+    assert_eq!(
+        serde_json::from_value::<Parts>(json!(50)).unwrap(),
+        Parts::parse("0.5").unwrap()
+    );
+    assert!(serde_json::from_value::<Parts>(json!(0)).is_err());
+    assert!(serde_json::from_value::<Currency>(json!("XYZ")).is_err());
+    assert!(serde_json::from_value::<Date>(json!("2026-02-30")).is_err());
+    assert_eq!(
+        serde_json::from_value::<Time>(json!("07:05")).unwrap(),
+        Time::new(7, 5).unwrap()
+    );
+    assert!(serde_json::from_value::<ExchangeRate>(json!("0")).is_err());
+}

@@ -1,0 +1,12 @@
+# What a developer's machine needs from Homebrew:
+# `brew bundle --file Brewfile.develop`.
+#
+# Not here: rustup (install it from rustup.rs; it materializes
+# rust-toolchain.toml, including the llvm-tools component coverage needs).
+
+# The coverage report; the bottle is a download rather than a compile.
+brew "cargo-llvm-cov"
+
+# The mutation audit. No bottle exists, so it is compiled, which takes a few
+# minutes.
+cargo "cargo-mutants"

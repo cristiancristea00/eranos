@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // The commit gates, exactly as AGENTS.md states them.
+            "label": "gates",
+            "type": "shell",
+            "command": "cargo fmt --all --check && cargo clippy --workspace --all-targets --all-features -- -D warnings && cargo clippy --workspace --all-targets --no-default-features -- -D warnings && cargo test --workspace --all-features && cargo test --workspace --no-default-features && RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --all-features && for example in quickstart split_methods restaurant_bill multi_currency settling_up members_and_accounts persistence; do cargo run -q -p eranos --all-features --example \"$example\" || exit 1; done",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            // Coverage is a diagnostic, not a gate; doctests are not measured
+            // on the stable toolchain.
+            "label": "coverage (html)",
+            "type": "shell",
+            "command": "cargo llvm-cov --workspace --all-features --html --open",
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            // The full criterion run whose numbers the settlement docs quote.
+            // Timings are wall-clock: run it on an idle machine.
+            "label": "bench",
+            "type": "shell",
+            "command": "cargo bench -p eranos",
+            "problemMatcher": ["$rustc"]
+        },
+        {
+            // One file per run: the whole crate takes hours.
+            "label": "mutants (current file)",
+            "type": "shell",
+            "command": "cargo mutants -p eranos --file ${relativeFile}",
+            "problemMatcher": []
+        }
+    ]
+}

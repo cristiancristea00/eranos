@@ -1,0 +1,16 @@
+# Rust
+/target
+
+# Coverage artifacts. `cargo llvm-cov --html` writes its report under
+# target/llvm-cov; these are the raw profile data and lcov file a hand-run
+# cargo llvm-cov writes elsewhere.
+/lcov.info
+*.profraw
+*.profdata
+
+# cargo-mutants writes its per-mutant logs, diffs and outcome lists here.
+/mutants.out
+/mutants.out.old
+
+# macOS
+.DS_Store

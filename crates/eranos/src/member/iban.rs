@@ -1,0 +1,168 @@
+//! International Bank Account Numbers (ISO 13616).
+
+use std::fmt;
+use std::str::FromStr;
+
+use zeroize::Zeroizing;
+
+use crate::error::{IbanError, ValueError};
+use crate::secret::Secret;
+
+mod registry;
+
+/// A validated IBAN, held as a secret.
+///
+/// Parsing checks the country code against the SWIFT IBAN registry, the
+/// length the registry sets for that country, and the ISO 7064 mod-97 check
+/// digits, which catch every single-character typo and most transpositions.
+/// The number is wiped from memory when dropped; `Debug` and `Display` show
+/// only a masked form, and the full number is available through
+/// [`expose_secret`](Self::expose_secret).
+///
+/// # Examples
+///
+/// ```
+/// use eranos::Iban;
+///
+/// let iban = Iban::parse("de89 3704 0044 0532 0130 00")?;
+/// assert_eq!(iban.expose_secret(), "DE89370400440532013000");
+/// assert_eq!(iban.country_code(), "DE");
+/// assert_eq!(iban.to_string(), "DE89 •••• 3000");
+///
+/// // One mistyped digit fails the check digits.
+/// assert!(Iban::parse("DE89 3704 0044 0532 0130 01").is_err());
+/// # Ok::<(), eranos::error::ValueError>(())
+/// ```
+#[derive(Clone, PartialEq, Eq)]
+pub struct Iban(Secret);
+
+impl Iban {
+    /// Parses an IBAN in electronic (`DE89370400440532013000`) or print
+    /// (`DE89 3704 0044 …`) format, in any letter case.
+    ///
+    /// # Errors
+    ///
+    /// [`ValueError::InvalidIban`] with the [`IbanError`] that failed.
+    pub fn parse(text: &str) -> Result<Self, ValueError> {
+        Self::validate(text).map_err(ValueError::InvalidIban)
+    }
+
+    fn validate(text: &str) -> Result<Self, IbanError> {
+        // Normalized never outgrows the input, so the buffer never
+        // reallocates and leaves no unwiped copy behind.
+        let mut normalized = Zeroizing::new(String::with_capacity(text.len()));
+        for character in text.chars() {
+            match character {
+                'a'..='z' | 'A'..='Z' | '0'..='9' => {
+                    normalized.push(character.to_ascii_uppercase());
+                }
+                character if character.is_whitespace() => {}
+                _ => return Err(IbanError::InvalidCharacter),
+            }
+        }
+        let bytes = normalized.as_bytes();
+        let valid_prefix = bytes
+            .get(..2)
+            .is_some_and(|country| country.iter().all(u8::is_ascii_uppercase))
+            && bytes
+                .get(2..4)
+                .is_some_and(|check| check.iter().all(u8::is_ascii_digit));
+        let country = normalized
+            .get(..2)
+            .filter(|_| valid_prefix)
+            .ok_or(IbanError::InvalidFormat)?;
+        let expected = registry::LENGTHS
+            .binary_search_by(|(candidate, _)| candidate.cmp(&country))
+            .ok()
+            .and_then(|position| registry::LENGTHS.get(position))
+            .map(|&(_, length)| usize::from(length))
+            .ok_or(IbanError::UnknownCountry)?;
+        if bytes.len() != expected {
+            return Err(IbanError::WrongLength {
+                expected,
+                found: bytes.len(),
+            });
+        }
+        if mod_97(bytes) != 1 {
+            return Err(IbanError::InvalidChecksum);
+        }
+        Ok(Self(Secret::from_zeroizing(normalized)))
+    }
+
+    /// The two-letter country code, such as `"DE"`.
+    #[must_use]
+    pub fn country_code(&self) -> &str {
+        // Parsing guaranteed at least four ASCII characters.
+        self.0.expose().get(..2).unwrap_or_default()
+    }
+
+    /// The number with everything but the first and last four characters
+    /// hidden, such as `DE89 •••• 3000`; safe to show and log.
+    #[must_use]
+    pub fn masked(&self) -> String {
+        let number = self.0.expose();
+        // Parsing guaranteed at least 15 ASCII characters.
+        let head = number.get(..4).unwrap_or_default();
+        let tail = number
+            .get(number.len().saturating_sub(4)..)
+            .unwrap_or_default();
+        format!("{head} •••• {tail}")
+    }
+
+    /// The full number in electronic format: uppercase, without spaces.
+    #[must_use]
+    pub fn expose_secret(&self) -> &str {
+        self.0.expose()
+    }
+}
+
+/// The ISO 7064 MOD 97-10 remainder of an uppercase alphanumeric IBAN: the
+/// first four characters move to the end, and letters count as 10 (A) to 35
+/// (Z).
+fn mod_97(bytes: &[u8]) -> u32 {
+    // Parsing checked the length first, so there are always four to move.
+    let (head, tail) = bytes.split_at_checked(4).unwrap_or((bytes, &[]));
+    tail.iter()
+        .chain(head)
+        .fold(0_u32, |remainder, &byte| match byte {
+            b'0'..=b'9' => (remainder * 10 + u32::from(byte - b'0')) % 97,
+            _ => (remainder * 100 + u32::from(byte - b'A') + 10) % 97,
+        })
+}
+
+impl fmt::Debug for Iban {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_tuple("Iban").field(&self.masked()).finish()
+    }
+}
+
+impl fmt::Display for Iban {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.masked())
+    }
+}
+
+impl FromStr for Iban {
+    type Err = ValueError;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        Self::parse(text)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Iban {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.expose_secret())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Iban {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        crate::serde_text::deserialize(deserializer, "an IBAN")
+    }
+}
+
+#[cfg(test)]
+mod tests;

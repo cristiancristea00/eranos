@@ -1,0 +1,181 @@
+# eranos workspace manifest.
+#
+# One library crate (crates/eranos); the UniFFI and wasm binding crates join as
+# siblings when the apps need them. Every third-party version is pinned here;
+# the members say `{ workspace = true }`.
+
+[workspace]
+resolver = "3"
+members = ["crates/eranos"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+description = "Group expense tracking: exact money splitting, cached balances, and repayment plans"
+# Not published to crates.io: the apps consume it from this repository.
+publish = false
+
+[workspace.dependencies]
+# --- Library -----------------------------------------------------------------
+# Typed errors. The derive stays out of the public API, so replacing it with
+# hand-written impls is not a breaking change.
+thiserror = "2.0.20"
+# UUID v7 identifiers: unique across devices, so entries created offline on
+# two phones never collide, and time-ordered, so ID order is creation order.
+# `v7` pulls getrandom for the random bits; a wasm32-unknown-unknown build
+# additionally needs the `js` feature, which the wasm binding crate enables.
+uuid = { version = "1.26", features = ["v7"] }
+# Wipes account numbers and usernames from memory when they are dropped.
+zeroize = "1.9"
+# Behind eranos's optional `serde` feature; only the derive macros are used.
+serde = { version = "1.0.229", features = ["derive"] }
+
+# --- Development only --------------------------------------------------------
+# Property tests for the arithmetic invariants (exact sums, zero-sum balances,
+# settlements that clear every balance). The fork and timeout features spawn
+# subprocesses per case, which no test here needs.
+proptest = { version = "1.11", default-features = false, features = ["std", "bit-set"] }
+# Benchmarks for the settlement strategies and the ledger updates. Without the
+# default rayon and plotters features: reports are printed, not plotted.
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+# The serde round-trip tests and the persistence example.
+serde_json = "1.0.151"
+# The tables the examples print. Without the default `assert` feature, which
+# only tabled's own tests use.
+tabled = { version = "0.22", default-features = false, features = ["std", "derive"] }
+
+[workspace.lints.rust]
+# No unsafe in the library; the binding crates carry their own lint table,
+# because UniFFI's generated scaffolding uses `#[no_mangle]`.
+unsafe_code = "forbid"
+# Every public item is documented, and nothing is `pub` that callers cannot
+# reach.
+missing_docs = "warn"
+unreachable_pub = "warn"
+missing_debug_implementations = "warn"
+missing_copy_implementations = "warn"
+# Leftovers that compile but say nothing.
+rust_2018_idioms = { level = "warn", priority = -1 }
+unused_qualifications = "warn"
+unused_lifetimes = "warn"
+redundant_lifetimes = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+let_underscore_drop = "warn"
+meta_variable_misuse = "warn"
+unit_bindings = "warn"
+
+# Every target (library, tests, examples, benches) is linted with the
+# pedantic, nursery, and cargo groups, plus the restriction lints below; the
+# gates run clippy with `-D warnings`. An exception is an
+# `#[expect(..., reason = "...")]` at the narrowest scope, never an
+# `#[allow]`.
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+# Contradicts rustc's `unreachable_pub`, which wins: items of private modules
+# say `pub(crate)`.
+redundant_pub_crate = "allow"
+
+# Restriction lints, chosen one by one (the group as a whole is not meant to
+# be enabled). Library code does not panic: it returns errors, and an
+# invariant that rules a panic out is stated where the code relies on it.
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+string_slice = "warn"
+unwrap_in_result = "warn"
+get_unwrap = "warn"
+unreachable = "warn"
+todo = "warn"
+unimplemented = "warn"
+dbg_macro = "warn"
+exit = "warn"
+mem_forget = "warn"
+# Casts say what they assume: `From`, `TryFrom`, or a stated reason.
+as_conversions = "warn"
+as_underscore = "warn"
+fn_to_numeric_cast_any = "warn"
+lossy_float_literal = "warn"
+# Lint exceptions are expectations with reasons, so a stale one is noticed.
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+# The naming rules: no single-letter names, including lifetimes.
+min_ident_chars = "warn"
+single_char_lifetime_names = "warn"
+# Every directory module is `foo.rs` + `foo/`, never `foo/mod.rs`.
+mod_module_files = "warn"
+# Smaller rules that keep the code explicit.
+clone_on_ref_ptr = "warn"
+empty_drop = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+filetype_is_file = "warn"
+float_cmp_const = "warn"
+format_push_string = "warn"
+if_then_some_else_none = "warn"
+infinite_loop = "warn"
+iter_over_hash_type = "warn"
+large_include_file = "warn"
+let_underscore_must_use = "warn"
+let_underscore_untyped = "warn"
+map_with_unused_argument_over_ranges = "warn"
+mixed_read_write_in_expression = "warn"
+mutex_atomic = "warn"
+needless_raw_strings = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+redundant_type_annotations = "warn"
+ref_patterns = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+same_name_method = "warn"
+str_to_string = "warn"
+string_add = "warn"
+string_lit_chars_any = "warn"
+suspicious_xor_used_as_pow = "warn"
+try_err = "warn"
+undocumented_unsafe_blocks = "warn"
+unnecessary_safety_comment = "warn"
+unnecessary_safety_doc = "warn"
+unnecessary_self_imports = "warn"
+unneeded_field_pattern = "warn"
+unseparated_literal_suffix = "warn"
+unused_result_ok = "warn"
+shadow_unrelated = "warn"
+wildcard_enum_match_arm = "warn"
+verbose_file_reads = "warn"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "warn"
+private_intra_doc_links = "warn"
+invalid_codeblock_attributes = "warn"
+invalid_html_tags = "warn"
+invalid_rust_codeblocks = "warn"
+bare_urls = "warn"
+unescaped_backticks = "warn"
+redundant_explicit_links = "warn"
+
+# Debug builds carry everything a debugger uses: full DWARF, debug assertions,
+# and overflow checks, stated explicitly.
+[profile.dev]
+opt-level = 0
+debug = "full"
+debug-assertions = true
+overflow-checks = true
+incremental = true
+
+# Release (and `cargo bench`, which inherits it): fat LTO with one codegen
+# unit gives the optimizer the whole program. Panics unwind, because the
+# UniFFI scaffolding catches them at the boundary and turns them into errors
+# on the Swift and Kotlin side. Line tables keep crash backtraces resolvable.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "unwind"
+debug = "line-tables-only"
+strip = "none"

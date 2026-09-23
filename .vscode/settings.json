@@ -1,0 +1,73 @@
+{
+    // Formatting on save is the workspace default, because the gates check
+    // formatting anyway. Works with autoSave onFocusChange; only afterDelay
+    // skips format-on-save.
+    "editor.formatOnSave": true,
+
+    "files.associations": {
+        "Brewfile.*": "ruby"
+    },
+    // The manifests are annotated key by key; a TOML reflow makes large
+    // diffs over the comments. Format on demand stays available.
+    "[toml]": {
+        "editor.formatOnSave": false
+    },
+
+    // -------------------------------------------------------------------- rust
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        // rustfmt's max_width; the user-level 80 ruler stays for prose.
+        "editor.rulers": [100]
+    },
+    // The commit gate is clippy with zero warnings; surface it inline rather
+    // than at commit time.
+    "rust-analyzer.check.command": "clippy",
+    // The serde code sits behind a cargo feature; without this its modules
+    // are greyed out and unchecked in the editor.
+    "rust-analyzer.cargo.features": "all",
+    // Its own target subdirectory, so rust-analyzer's checks never contend
+    // with terminal cargo builds for the target-dir lock. The cost is
+    // duplicated build artifacts.
+    "rust-analyzer.cargo.targetDir": true,
+    // The codebase imports one `use` per module path (`use crate::money::{…}`).
+    "rust-analyzer.imports.granularity.group": "module",
+
+    // ---------------------------------------------------------------- markdown
+    // markdownlint picks up .markdownlint.yml itself. Trailing whitespace
+    // stays: two-space hard breaks are meaningful.
+    "[markdown]": {
+        "editor.defaultFormatter": "yzhang.markdown-all-in-one",
+        "files.trimTrailingWhitespace": false
+    },
+
+    // ----------------------------------------------------------------- hygiene
+    // Four spaces, never tabs, in every file type. detectIndentation must be
+    // off: with it on, a file that arrives tab-indented switches the editor to
+    // tabs. rustfmt emits four.
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    "files.eol": "\n",
+
+    // ------------------------------------------------------------ search + fs
+    // Build artifacts stay out of search results and out of the file watcher,
+    // which target/ would churn through on every build. CLAUDE.md and
+    // GEMINI.md are symlinks to AGENTS.md, so following them would triple
+    // every search hit in the instructions.
+    "search.followSymlinks": false,
+    "search.exclude": {
+        "**/target": true,
+        "mutants.out*": true
+    },
+    "files.watcherExclude": {
+        "**/target/**": true,
+        "mutants.out*/**": true
+    },
+
+    // --------------------------------------------------------------------- git
+    // Conventional Commits: the subject is at most 72 characters.
+    "git.inputValidation": true,
+    "git.inputValidationSubjectLength": 72
+}

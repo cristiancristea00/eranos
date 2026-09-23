@@ -1,0 +1,192 @@
+//! The fewest payments: an exact solver for an NP-hard problem.
+//!
+//! Settling n balances takes n − g payments, where g is the largest number of
+//! groups the balances can be split into so that each group sums to zero
+//! (Verhoeff, "Settling multiple debts efficiently", 2004). The solver pairs
+//! exact opposites, then finds g for the rest with a dynamic program over
+//! subsets, and settles each group with one payment fewer than its size.
+
+use std::collections::BTreeMap;
+
+use super::Flow;
+use crate::error::SettlementError;
+use crate::id::MemberId;
+
+/// Settles `balances` (member, net; positive = is owed, ordered by member)
+/// with the fewest payments.
+///
+/// # Errors
+///
+/// [`SettlementError::OutOfMemory`] when the 2ⁿ-byte table for the `n`
+/// unpaired balances cannot be allocated.
+pub(super) fn settle(balances: &[(MemberId, i64)]) -> Result<Vec<Flow>, SettlementError> {
+    let (mut flows, rest) = pair_opposites(balances);
+    for group in zero_sum_groups(&rest)? {
+        flows.extend(settle_group(&group));
+    }
+    Ok(flows)
+}
+
+/// Settles every debtor whose debt exactly matches a creditor's credit with
+/// one payment, lowest member IDs first; returns those payments and the
+/// balances left.
+///
+/// Taking such a pair as its own group is always optimal: if an optimal
+/// partition put the two members in groups G and H, then {x, −x} and
+/// (G ∪ H) ∖ {x, −x} is a partition with as many zero-sum groups.
+fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i64)>) {
+    let mut creditors: BTreeMap<i64, Vec<MemberId>> = BTreeMap::new();
+    for &(member, net) in balances.iter().rev() {
+        if net > 0 {
+            // Reversed, so popping from the end yields the lowest ID first.
+            creditors.entry(net).or_default().push(member);
+        }
+    }
+    let mut paired = Vec::new();
+    let mut flows = Vec::new();
+    for &(member, net) in balances {
+        if net < 0 {
+            // The ledger keeps every value above i64::MIN, so negating fits.
+            if let Some(creditor) = creditors.get_mut(&-net).and_then(Vec::pop) {
+                flows.push((member, creditor, -net));
+                paired.push(member);
+                paired.push(creditor);
+            }
+        }
+    }
+    paired.sort_unstable();
+    let rest = balances
+        .iter()
+        .copied()
+        .filter(|&(member, net)| net != 0 && paired.binary_search(&member).is_err())
+        .collect();
+    (flows, rest)
+}
+
+/// Partitions `balances` into the largest number of groups that each sum to
+/// zero.
+///
+/// `table[S]` is the largest number of zero-sum groups the subset S (a
+/// bitmask) splits into, counting S itself only when its sum is zero:
+/// `table[S] = max over i in S of table[S ∖ {i}] + [ΣS = 0]`. Walking back
+/// from the full set along that maximum orders the members so that the
+/// prefix sums hit zero exactly at the group boundaries.
+fn zero_sum_groups(
+    balances: &[(MemberId, i64)],
+) -> Result<Vec<Vec<(MemberId, i64)>>, SettlementError> {
+    let count = balances.len();
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+    let out_of_memory = SettlementError::OutOfMemory { balances: count };
+    let size = u32::try_from(count)
+        .ok()
+        .and_then(|bits| 1_usize.checked_shl(bits))
+        .ok_or(out_of_memory)?;
+    let mut table: Vec<u8> = Vec::new();
+    table.try_reserve_exact(size).map_err(|_| out_of_memory)?;
+
+    let nets: Vec<i128> = balances.iter().map(|&(_, net)| i128::from(net)).collect();
+    let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
+    let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
+    // Subsets in increasing order: every S ∖ {i} is smaller than S, so its
+    // entry is already in the table when S is pushed.
+    table.push(0);
+    for subset in 1..size {
+        let mut best = 0;
+        let mut total = 0_i128;
+        for position in members_of(subset) {
+            total += net_of(position);
+            best = best.max(groups_in(&table, subset & !(1 << position)));
+        }
+        // At most count / 2 ≤ 32 groups on 64-bit targets, so no u8
+        // overflows.
+        table.push(best + u8::from(total == 0));
+    }
+
+    // Walk back from the full set, removing the lowest member whose removal
+    // keeps the maximum: the reversed removal order has zero prefix sums
+    // exactly at the group boundaries. The recurrence guarantees such a
+    // member exists in every non-empty subset, and the empty one has none.
+    let removable = |subset: usize| {
+        let closes_group = u8::from(members_of(subset).map(net_of).sum::<i128>() == 0);
+        let target = groups_in(&table, subset);
+        members_of(subset)
+            .find(|&position| groups_in(&table, subset & !(1 << position)) + closes_group == target)
+    };
+    let mut order = Vec::with_capacity(count);
+    let mut subset = size - 1;
+    while let Some(position) = removable(subset) {
+        order.push(position);
+        subset &= !(1 << position);
+    }
+
+    let mut groups = Vec::new();
+    let mut group = Vec::new();
+    let mut prefix = 0_i128;
+    for &balance in order
+        .iter()
+        .rev()
+        .filter_map(|&position| balances.get(position))
+    {
+        group.push(balance);
+        prefix += i128::from(balance.1);
+        if prefix == 0 {
+            groups.push(std::mem::take(&mut group));
+        }
+    }
+    Ok(groups)
+}
+
+/// The positions of the set bits of `subset`, lowest first.
+fn members_of(mut subset: usize) -> impl Iterator<Item = usize> {
+    std::iter::from_fn(move || {
+        if subset == 0 {
+            return None;
+        }
+        // A bit position is below usize::BITS, so it always fits in usize.
+        let position = usize::try_from(subset.trailing_zeros()).unwrap_or_default();
+        subset &= subset - 1;
+        Some(position)
+    })
+}
+
+/// Settles one zero-sum group with one payment fewer than its size: debtors
+/// and creditors in member order, each payment the overlap of the current
+/// debt and credit (the northwest-corner rule).
+///
+/// A group from a maximum partition has no zero-sum subgroup, so no debt and
+/// credit ever clear together before the last payment, and every payment but
+/// the last clears exactly one member.
+fn settle_group(group: &[(MemberId, i64)]) -> Vec<Flow> {
+    let mut debtors: Vec<(MemberId, i64)> = group
+        .iter()
+        .filter(|&&(_, net)| net < 0)
+        .map(|&(member, net)| (member, -net))
+        .collect();
+    let mut creditors: Vec<(MemberId, i64)> =
+        group.iter().copied().filter(|&(_, net)| net > 0).collect();
+    debtors.sort_unstable();
+    creditors.sort_unstable();
+    let mut flows = Vec::with_capacity(group.len().saturating_sub(1));
+    let mut debtors = debtors.into_iter();
+    let mut creditors = creditors.into_iter();
+    let (mut debtor, mut creditor) = (debtors.next(), creditors.next());
+    while let (Some((debtor_id, debt)), Some((creditor_id, credit))) = (&mut debtor, &mut creditor)
+    {
+        let amount = (*debt).min(*credit);
+        flows.push((*debtor_id, *creditor_id, amount));
+        *debt -= amount;
+        *credit -= amount;
+        if *debt == 0 {
+            debtor = debtors.next();
+        }
+        if *credit == 0 {
+            creditor = creditors.next();
+        }
+    }
+    flows
+}
+
+#[cfg(test)]
+mod tests;

@@ -1,0 +1,258 @@
+//! Settling up with each strategy on a group where they differ, then
+//! recording the chosen plan as transfers until everyone is settled.
+//!
+//! Run with `cargo run -p eranos --example settling_up`.
+
+use std::error::Error;
+
+use eranos::{
+    Balance, Currency, Date, Expense, Group, Member, MemberId, Money, Settlement,
+    SettlementStrategy, Split,
+};
+use tabled::settings::object::Columns;
+use tabled::settings::{Alignment, Style};
+use tabled::{Table, Tabled};
+
+#[derive(Tabled)]
+struct ExpenseRow {
+    #[tabled(rename = "Expense")]
+    name: String,
+    #[tabled(rename = "Paid by")]
+    payer: String,
+    #[tabled(rename = "Shared by")]
+    participants: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
+}
+
+#[derive(Tabled)]
+struct BalanceRow {
+    #[tabled(rename = "Member")]
+    name: String,
+    #[tabled(rename = "Paid")]
+    paid: Money,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
+}
+
+#[derive(Tabled)]
+struct PaymentRow {
+    #[tabled(rename = "From")]
+    from: String,
+    #[tabled(rename = "To")]
+    to: String,
+    #[tabled(rename = "Amount")]
+    amount: Money,
+}
+
+#[derive(Tabled)]
+struct StrategyRow {
+    #[tabled(rename = "Strategy")]
+    strategy: &'static str,
+    #[tabled(rename = "Guarantee")]
+    guarantee: &'static str,
+    #[tabled(rename = "Cost")]
+    cost: &'static str,
+    #[tabled(rename = "Payments here")]
+    payments: usize,
+}
+
+/// Prints a section heading with a line under it.
+fn section(title: &str) {
+    println!("\n{title}\n{}", "─".repeat(title.chars().count()));
+}
+
+/// Prints `rows` with rounded borders, right-aligning the columns from
+/// `numbers_from` on.
+fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: usize) {
+    let mut table = Table::new(rows);
+    table
+        .with(Style::rounded())
+        .modify(Columns::new(numbers_from..), Alignment::right());
+    println!("{table}");
+}
+
+/// The first names of `members`, joined by commas.
+fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
+    members
+        .into_iter()
+        .map(|member| group.member(member).map_or("?", Member::first_name))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Records an expense of `amount` EUR paid by `payer` and split equally.
+fn spend(
+    group: &mut Group,
+    name: &str,
+    amount: &str,
+    payer: MemberId,
+    participants: &[MemberId],
+) -> Result<(), Box<dyn Error>> {
+    let expense = Expense::builder(
+        name,
+        Money::parse(amount, Currency::EUR)?,
+        Date::new(2026, 9, 20)?,
+    )
+    .paid_by(payer)
+    .split(Split::equal(participants.iter().copied()))
+    .build()?;
+    group.add_expense(expense)?;
+    Ok(())
+}
+
+fn print_balances(group: &Group) {
+    let summary = group.summary();
+    print_table(
+        group.members().map(|(id, member)| {
+            let totals = summary.member(id);
+            BalanceRow {
+                name: member.first_name().to_owned(),
+                paid: totals.paid(),
+                consumed: totals.share(),
+                balance: totals.balance(),
+            }
+        }),
+        1,
+    );
+}
+
+fn print_payments(group: &Group, settlement: &Settlement) {
+    print_table(
+        settlement.payments().iter().map(|payment| PaymentRow {
+            from: names(group, [payment.from()]),
+            to: names(group, [payment.to()]),
+            amount: payment.amount(),
+        }),
+        2,
+    );
+}
+
+/// Prints each strategy's plan with what it promises; returns the number of
+/// payments of each, in the order minimum, greedy, direct.
+fn strategies(group: &Group) -> Result<[usize; 3], Box<dyn Error>> {
+    section("3. Minimum transfers");
+    let minimum = group.settlement(SettlementStrategy::MinimumTransfers)?;
+    println!(
+        "The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n\
+         splitting the balances into as many groups that sum to zero as it can: here\n\
+         {{Ana, Dan, Eva}} and {{Bob, Carol, Filip}}, each settled with one payment fewer than\n\
+         its size. {} payments:",
+        minimum.len()
+    );
+    print_payments(group, minimum);
+
+    section("4. Greedy");
+    let greedy = group.settlement(SettlementStrategy::Greedy)?;
+    println!(
+        "The largest debtor pays the largest creditor, again and again: fast, at most one\n\
+         payment fewer than the members with a balance, but not always the minimum. {}\n\
+         payments here:",
+        greedy.len()
+    );
+    print_payments(group, greedy);
+
+    section("5. Direct");
+    let direct = group.settlement(SettlementStrategy::Direct)?;
+    println!(
+        "No simplification: everyone pays back the people who paid for them, with the debts\n\
+         between each pair of members netted. The most payments ({}), but each one traces\n\
+         back to shared expenses:",
+        direct.len()
+    );
+    print_payments(group, direct);
+
+    section("6. The strategies side by side");
+    print_table(
+        [
+            StrategyRow {
+                strategy: "MinimumTransfers",
+                guarantee: "the fewest payments",
+                cost: "O(2ⁿ·n) for n open balances",
+                payments: minimum.len(),
+            },
+            StrategyRow {
+                strategy: "Greedy",
+                guarantee: "at most n − 1 payments",
+                cost: "O(n log n)",
+                payments: greedy.len(),
+            },
+            StrategyRow {
+                strategy: "Direct",
+                guarantee: "one payment per pair in debt",
+                cost: "O(pairs)",
+                payments: direct.len(),
+            },
+        ],
+        3,
+    );
+    Ok([minimum.len(), greedy.len(), direct.len()])
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut group = Group::builder("Ski week", Currency::EUR).build()?;
+    let mut add = |name| -> Result<MemberId, Box<dyn Error>> {
+        Ok(group.add_member(Member::builder(name).build()?))
+    };
+    let (ana, bob, carol) = (add("Ana")?, add("Bob")?, add("Carol")?);
+    let (dan, eva, filip) = (add("Dan")?, add("Eva")?, add("Filip")?);
+
+    println!("Ski week: three ways to settle up");
+    println!("═════════════════════════════════");
+    println!(
+        "Six friends spent a week in the mountains. The library can turn their balances\n\
+         into payments in three ways; the app picks one, and they differ here."
+    );
+
+    section("1. What was spent");
+    spend(&mut group, "Cabin", "12.00", dan, &[dan, eva, filip])?;
+    spend(&mut group, "Lift passes", "9.00", bob, &[bob, carol, filip])?;
+    spend(&mut group, "Groceries", "6.00", carol, &[bob, dan])?;
+    spend(&mut group, "Coffee", "2.00", ana, &[dan, eva])?;
+    spend(&mut group, "Snacks", "1.00", filip, &[ana])?;
+    print_table(
+        group.expenses().map(|(_, expense)| ExpenseRow {
+            name: expense.name().to_owned(),
+            payer: names(&group, expense.payers().members()),
+            participants: names(&group, expense.split().participants()),
+            amount: expense.total(),
+        }),
+        3,
+    );
+
+    section("2. Balances");
+    println!("Four members are owed money and two owe it:");
+    print_balances(&group);
+
+    let payments = strategies(&group)?;
+
+    section("7. Settling up for real");
+    let plan = group
+        .settlement(SettlementStrategy::MinimumTransfers)?
+        .clone();
+    for payment in plan.payments() {
+        group.add_transfer(payment.to_transfer(Date::new(2026, 9, 27)?))?;
+    }
+    println!(
+        "Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n\
+         every balance is zero and a new settlement has nothing left to pay:"
+    );
+    print_balances(&group);
+    println!(
+        "Payments still needed: {}.",
+        group
+            .settlement(SettlementStrategy::MinimumTransfers)?
+            .len()
+    );
+
+    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four
+    // payments suffice; greedy pays the largest amounts first and needs
+    // five; the unsimplified debts between pairs need seven.
+    assert_eq!(payments, [4, 5, 7]);
+    for member in [ana, bob, carol, dan, eva, filip] {
+        assert_eq!(group.summary().member(member).balance(), Balance::Settled);
+    }
+    Ok(())
+}

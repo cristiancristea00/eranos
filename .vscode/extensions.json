@@ -1,0 +1,13 @@
+{
+    // Rust and CodeLLDB for the workspace, Even Better TOML for the manifests,
+    // and the markdown trio for the docs (lint config is the committed
+    // .markdownlint.yml, plus mermaid preview for the diagrams).
+    "recommendations": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "tamasfe.even-better-toml",
+        "davidanson.vscode-markdownlint",
+        "yzhang.markdown-all-in-one",
+        "bierner.markdown-mermaid"
+    ]
+}

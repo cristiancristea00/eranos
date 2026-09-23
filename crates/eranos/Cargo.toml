@@ -1,0 +1,43 @@
+# eranos: the library. Pure and synchronous (no I/O, no async, no global
+# state), so every rule is unit-testable and the binding crates can wrap it
+# without adapting to a runtime.
+[package]
+name = "eranos"
+description.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+readme = "../../README.md"
+
+[features]
+# Serialize/Deserialize on every domain type. A deserialized `Group` is rebuilt
+# through the same validation as its insert methods.
+serde = ["dep:serde", "uuid/serde"]
+
+[dependencies]
+thiserror = { workspace = true }
+uuid = { workspace = true }
+zeroize = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+criterion = { workspace = true }
+serde_json = { workspace = true }
+tabled = { workspace = true }
+
+[[example]]
+name = "persistence"
+required-features = ["serde"]
+
+[[bench]]
+name = "settlement"
+harness = false
+
+[[bench]]
+name = "ledger"
+harness = false
+
+[lints]
+workspace = true

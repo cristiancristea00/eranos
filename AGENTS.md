@@ -1,0 +1,176 @@
+# eranos — contributor notes
+
+Working notes for contributors and coding agents. `README.md` says what the
+library does, `docs/ARCHITECTURE.md` how it is built, `docs/DEVELOPMENT.md`
+holds every command and change recipe, `docs/TESTING.md` the test suites, and
+`docs/VERSIONING.md` what the version number promises. This file holds the
+conventions and the gates. `CLAUDE.md` and `GEMINI.md` are symlinks to it.
+
+## Commit messages
+
+All commits follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```text
+<type>(<optional scope>)<!>: <lowercase description, imperative, ≤72 chars>
+
+<optional body: what and why>
+
+<optional footers, e.g. BREAKING CHANGE:>
+Signed-off-by: <committer name> <<committer email>>
+<optional Co-Authored-By: footers>
+```
+
+- Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
+- Scopes in use: `money`, `member`, `expense`, `transfer`, `group`, `ledger`,
+  `settlement`, `serde`, `docs`, `build`.
+- A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
+- One commit per concern. Bodies are prose in full sentences, not bullet dumps.
+- **Every commit is signed off**: a `Signed-off-by:` trailer with the
+  committer's name and email, as `git commit -s` writes it.
+- **The version moves with the commit**: edit `[workspace.package] version`
+  in `Cargo.toml` in the same commit as the change it describes. What bumps
+  what, including why a rounding change is breaking:
+  [docs/VERSIONING.md](docs/VERSIONING.md).
+- Never commit or push without being asked.
+
+## Gates before committing
+
+```sh
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --no-default-features -- -D warnings
+cargo test --workspace --all-features                          # unit, integration, doc (README too)
+cargo test --workspace --no-default-features
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
+for example in quickstart split_methods restaurant_bill multi_currency settling_up \
+               members_and_accounts persistence; do
+    cargo run -q -p eranos --all-features --example "$example" || break
+done
+```
+
+Run all of them; clippy findings are fixed, not silenced. The examples
+assert their key numbers, so running them is a check, not a demonstration.
+The VS Code task `gates` runs the same sequence.
+
+Clippy is strict on every target (library, tests, examples, benches): the
+pedantic, nursery, and cargo groups plus the restriction lints listed, each
+with its reason, in `[workspace.lints]` of `Cargo.toml`. `clippy.toml`
+exempts only what a test needs to fail loudly: unwrapping, expecting,
+panicking, and indexing inside test functions. Any other exception is an
+`#[expect(lint, reason = "...")]` at the narrowest scope (a whole file only
+for test helpers and benchmark fixtures, which panic to report failure);
+`#[allow]` is itself a lint error.
+
+## Conventions
+
+- **Variable names are never abbreviated**: `error`, `amount`, `currency`,
+  `member`, `expense`, `settlement`, `participants`. Only acronyms and
+  initialisms stay short: id, iban, iso, uuid, utc, ffi, fnv, bcp, json, url,
+  api, io, os, cpu, ui; `max` and `min` count as dictionary words. The rule
+  covers locals, parameters, closure bindings, test helpers, and every
+  serialized field name.
+- **Money is never a float.** Amounts are `i64` minor units; every division
+  goes through `money::allocation::allocate`, every conversion through
+  `ExchangeRate::convert`, and every percentage through
+  `allocation::apply_basis_points`, so parts always add up and rounding is
+  the documented rule (largest remainder; half away from zero).
+- **Library code does not panic.** `unwrap` and `expect` warn outside
+  tests; arithmetic on user amounts is checked and becomes an error. An
+  invariant that makes a failure impossible is written down, next to the
+  code, as a comment or an `#[expect(..., reason = "...")]`.
+- **The library reads no clock, touches no file, and holds no global
+  state.** The one exception is ID generation (UUID v7 reads the clock and
+  the OS random source), which is why every `add_*` has an `insert_*`
+  counterpart taking a caller's ID.
+- **A group changes in one way**: validate the entry, resolve it, build a
+  `Delta`, apply it (range-checked before anything is written), then drop the
+  cached settlements. Nothing else writes to the ledger, so the incremental
+  totals always equal a full rebuild; the group's property test checks it.
+- **The public API grows additively.** Fields are private; entities are
+  built with builders and edited with `to_builder`; public enums are
+  `#[non_exhaustive]`; getters have no `get_` prefix; errors are
+  `#[non_exhaustive]` thiserror enums whose messages are lowercase, carry no
+  trailing period, and never echo the text they rejected (inputs include
+  account numbers).
+- **Serialized data outlives releases.** A new field gets
+  `#[serde(default)]`; a type with invariants deserializes through its
+  validating constructor (`serde(try_from = …)`); `Group` replays its
+  entries through the insert methods; a change older readers cannot accept
+  bumps the `FORMAT` constant in `group/serde.rs`.
+- **Doc comments follow rustdoc conventions**: a one-sentence summary, then
+  `# Errors`, `# Panics`, and `# Examples` sections where they apply.
+  Examples use `?`, never `unwrap`, and compile with warnings denied. Types
+  are referenced with intra-doc links (`` [`Group`] ``); values and snippets
+  keep single backticks.
+- **Every fence in README.md has a language tag** (`rust`, `sh`, `text`,
+  `mermaid`, `toml`): the README is compiled as a doctest, and an untagged
+  fence would be compiled as Rust.
+- **Every Mermaid diagram ships with an ASCII twin** in a
+  `<details><summary>ASCII version (for renderers without Mermaid)</summary>`
+  block directly beneath it. Box-drawing characters (`┌─┐│└┘`), ≤80 columns,
+  inside a plain ```text fence so monospace alignment survives.
+- **Comments state constraints, never history.** A comment says what the
+  code cannot say about itself, written as if the code had always been this
+  way: no "now", "used to", "no longer", "before this existed"; no narrating
+  what a change did. An incident becomes a conditional ("without this, X
+  would…"). Regression witnesses in tests are the exception: the recorded
+  failure is the constraint.
+- **Prose says what it means.** Comments, docs, and error messages use the
+  literal phrase when one exists: no metaphor, no ALL-CAPS emphasis inside a
+  sentence, no reassurance ("cheap", "for free"), no signposting ("worth
+  knowing"). A sentence stays only if it carries a default, a rejected
+  alternative, a failure the code prevents, a platform constraint, a
+  command, a cross-reference, or a format trap. One canonical home per topic
+  in the docs; elsewhere one sentence and a relative link.
+- **Tests are claims.** Unit tests live in `<module>/tests.rs` (declared
+  with `#[cfg(test)] mod tests;` at the bottom of the module); every test
+  module has a `//!` doc and every test a `///` doc stating what breaks in
+  production if it regresses; names read as claims
+  (`an_archived_member_keeps_history_but_joins_no_new_expense`), never
+  `test_*`. No `#[ignore]`, no `#[should_panic]`, no snapshot tests. Details:
+  [docs/TESTING.md](docs/TESTING.md).
+
+### Deliberate choices
+
+- Doctests and rustdoc sections are required: the documentation is the
+  library's interface, and a doctest keeps every example compiling.
+- Types in docs are intra-doc links, so a renamed type breaks the docs build
+  instead of leaving a stale name.
+- Every directory module uses the `foo.rs` + `foo/` form, never `mod.rs`
+  (`clippy::mod_module_files` enforces it).
+- There is no `.cargo/config.toml`: `target-cpu=native` or similar host
+  tuning would make the mobile and web builds non-portable.
+
+## Architecture in one paragraph
+
+One library crate, `crates/eranos`, with binding crates (`eranos-ffi` for
+UniFFI, `eranos-wasm`) planned as siblings. A `Group` owns its members,
+categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
+once into group-currency shares (`resolution.rs`: exact splits, tips,
+conversion, and the pairwise debts behind the direct settlement) and applied
+to the `Ledger` as a range-checked `Delta`; the `Summary` is part of the
+ledger and never recomputed. Settlements are computed from the ledger on
+request, by the strategy the caller names, and cached per strategy in
+`OnceLock`s that every balance-changing mutation clears. Diagrams, rules,
+and numbers: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Verification habits
+
+- A change to rounding, allocation order, the tie rotation, or conversion
+  changes stored shares and must fail a pinned test first: the rotation
+  hash and several hand-computed splits are pinned on purpose. See
+  [docs/VERSIONING.md](docs/VERSIONING.md) before changing any of them.
+- `cargo test --no-default-features` compiles out the serde code; run both
+  feature sets before claiming a change is tested.
+- Coverage is a diagnostic, never a gate:
+  `cargo llvm-cov --workspace --all-features --html`. It does not count
+  doctests on the stable toolchain. Every line, region, and function is
+  covered; a new gap is either a missing test or a branch that cannot run,
+  which is restructured away rather than kept
+  ([docs/TESTING.md](docs/TESTING.md#5-coverage)).
+  `cargo mutants -p eranos --file <file>` is the occasional companion
+  audit: coverage says a line ran, mutation testing says a test would have
+  noticed it was wrong.
+- Benchmarks are wall-clock timings: run `cargo bench -p eranos` on an idle
+  machine, and update the timings quoted on `SettlementStrategy` and in
+  docs/ARCHITECTURE.md together.

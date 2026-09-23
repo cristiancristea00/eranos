@@ -1,0 +1,7 @@
+# Tests are held to the same lints as the library, except that a panic is how
+# a test reports failure: unwrapping, expecting, panicking, and indexing are
+# allowed inside test functions and `#[cfg(test)]` modules.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true

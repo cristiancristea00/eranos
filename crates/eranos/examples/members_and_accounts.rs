@@ -1,0 +1,269 @@
+//! Members with contact details and payment accounts: IBANs are validated
+//! and masked, secrets never reach debug output, and a member who leaves is
+//! archived rather than removed.
+//!
+//! Run with `cargo run -p eranos --example members_and_accounts`.
+
+use std::error::Error;
+
+use eranos::error::GroupError;
+use eranos::{
+    Account, AccountDetails, Balance, Currency, Date, Email, Expense, Group, Iban, Member,
+    MemberId, Money, PhoneNumber, Split, Username,
+};
+use tabled::settings::object::Columns;
+use tabled::settings::{Alignment, Style};
+use tabled::{Table, Tabled};
+
+#[derive(Tabled)]
+struct MemberRow {
+    #[tabled(rename = "Member")]
+    name: String,
+    #[tabled(rename = "Email")]
+    email: String,
+    #[tabled(rename = "Phone")]
+    phone: String,
+    #[tabled(rename = "Accounts")]
+    accounts: String,
+}
+
+#[derive(Tabled)]
+struct CheckRow {
+    #[tabled(rename = "Input")]
+    input: &'static str,
+    #[tabled(rename = "Checked as")]
+    kind: &'static str,
+    #[tabled(rename = "Result")]
+    result: String,
+}
+
+#[derive(Tabled)]
+struct BalanceRow {
+    #[tabled(rename = "Member")]
+    name: String,
+    #[tabled(rename = "Status")]
+    status: &'static str,
+    #[tabled(rename = "Consumed")]
+    consumed: Money,
+    #[tabled(rename = "Balance")]
+    balance: Balance,
+}
+
+/// Prints a section heading with a line under it.
+fn section(title: &str) {
+    println!("\n{title}\n{}", "─".repeat(title.chars().count()));
+}
+
+/// Prints `rows` with rounded borders, right-aligning the columns from
+/// `numbers_from` on.
+fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: usize) {
+    let mut table = Table::new(rows);
+    table
+        .with(Style::rounded())
+        .modify(Columns::new(numbers_from..), Alignment::right());
+    println!("{table}");
+}
+
+/// An account as the apps would show it: IBANs masked, usernames hidden.
+fn describe(account: &Account) -> String {
+    let details = match account.details() {
+        AccountDetails::Iban(iban) => iban.masked(),
+        AccountDetails::Username(_) => "username on file".to_owned(),
+        _ => format!("{:?}", account.kind()),
+    };
+    format!("{}: {details}", account.name())
+}
+
+fn outcome<Value>(
+    result: Result<Value, eranos::error::ValueError>,
+    shown: impl Fn(Value) -> String,
+) -> String {
+    result.map_or_else(
+        |error| format!("refused: {error}"),
+        |value| format!("valid: {}", shown(value)),
+    )
+}
+
+fn print_members(group: &Group) {
+    print_table(
+        group.members().map(|(_, member)| MemberRow {
+            name: [Some(member.first_name()), member.last_name()]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" "),
+            email: member.email().map_or("", Email::as_str).to_owned(),
+            phone: member.phone().map_or("", PhoneNumber::as_str).to_owned(),
+            accounts: member
+                .accounts()
+                .iter()
+                .map(describe)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        }),
+        4,
+    );
+}
+
+fn print_balances(group: &Group) {
+    let summary = group.summary();
+    print_table(
+        group.members().map(|(id, member)| BalanceRow {
+            name: member.first_name().to_owned(),
+            status: if group.is_archived(id) {
+                "archived"
+            } else {
+                "active"
+            },
+            consumed: summary.member(id).share(),
+            balance: summary.member(id).balance(),
+        }),
+        2,
+    );
+}
+
+fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
+    section("1. Members");
+    let ana = group.add_member(
+        Member::builder("Ana")
+            .last_name("Popescu")
+            .email(Email::parse("ana@example.com")?)
+            .phone(PhoneNumber::parse("+40 712 345 678")?)
+            .account(Account::new(
+                "ING",
+                Iban::parse("ro49 aaaa 1b31 0075 9384 0000")?,
+            )?)
+            .account(Account::new("Revolut", Username::new("@ana")?)?)
+            .build()?,
+    );
+    let bob = group.add_member(Member::builder("Bob").build()?);
+    print_members(group);
+    println!(
+        "The phone number was stored without its spaces, and the IBAN in its electronic\n\
+         form; the table shows the IBAN masked, the way the apps should."
+    );
+    Ok((ana, bob))
+}
+
+fn secrets(member: &Member) {
+    section("2. Account details are secrets");
+    println!(
+        "IBANs and usernames are wiped from memory when dropped, and debug output never\n\
+         shows them. Printing Ana's accounts in debug form, as a log line would:"
+    );
+    for account in member.accounts() {
+        println!("  {account:?}");
+    }
+    println!("The full value takes an explicit call, for the moment it is really needed:");
+    for account in member.accounts() {
+        let secret = match account.details() {
+            AccountDetails::Iban(iban) => iban.expose_secret(),
+            AccountDetails::Username(username) => username.expose_secret(),
+            _ => "",
+        };
+        println!("  {}.expose_secret() = {secret}", account.name());
+    }
+}
+
+fn validation() {
+    section("3. What validation accepts");
+    println!(
+        "IBANs are checked against the SWIFT registry: the country, its length, and the\n\
+         mod-97 check digits, which catch any single mistyped character. Emails and phone\n\
+         numbers are checked for shape only."
+    );
+    let iban = |input: &'static str| CheckRow {
+        input,
+        kind: "IBAN",
+        result: outcome(Iban::parse(input), |iban| iban.masked()),
+    };
+    let email = |input: &'static str| CheckRow {
+        input,
+        kind: "email",
+        result: outcome(Email::parse(input), |email| email.as_str().to_owned()),
+    };
+    let phone = |input: &'static str| CheckRow {
+        input,
+        kind: "phone",
+        result: outcome(PhoneNumber::parse(input), |phone| phone.as_str().to_owned()),
+    };
+    print_table(
+        [
+            iban("ro49 aaaa 1b31 0075 9384 0000"),
+            iban("RO49 AAAA 1B31 0075 9384 0001"),
+            iban("RO49 AAAA 1B31 0075"),
+            email("ana@example.com"),
+            email("ana.example.com"),
+            phone("+40 (712) 345-678"),
+            phone("0712 345 678"),
+        ],
+        3,
+    );
+}
+
+fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
+    section("4. A flatmate moves out");
+    let rent = Expense::builder(
+        "Rent",
+        Money::parse("900.00", Currency::EUR)?,
+        Date::new(2026, 9, 1)?,
+    )
+    .paid_by(ana)
+    .split(Split::equal([ana, bob]))
+    .build()?;
+    let rent = group.add_expense(rent)?;
+    group.archive_member(bob)?;
+    println!(
+        "Bob shared September's rent, then moved out. He is archived, not removed: his\n\
+         history and his balance stay, and he can still pay Ana back."
+    );
+    print_balances(group);
+
+    let utilities = Expense::builder(
+        "Utilities",
+        Money::parse("60.00", Currency::EUR)?,
+        Date::new(2026, 10, 1)?,
+    )
+    .paid_by(ana)
+    .split(Split::equal([ana, bob]))
+    .build()?;
+    let refused = group.add_expense(utilities);
+    println!(
+        "October's utilities cannot include him:\n  error: {}",
+        refused
+            .as_ref()
+            .err()
+            .ok_or("the archived member must be refused")?
+    );
+    let removal = group.remove_member(bob);
+    println!(
+        "Nor can he be removed while the rent references him:\n  error: {}",
+        removal
+            .as_ref()
+            .err()
+            .ok_or("the referenced member must stay")?
+    );
+
+    assert_eq!(refused, Err(GroupError::ArchivedMember(bob)));
+    assert!(matches!(removal, Err(GroupError::MemberInUse { .. })));
+    assert_eq!(
+        group.summary().member(bob).balance(),
+        Balance::Owes(Money::parse("450.00", Currency::EUR)?)
+    );
+    assert!(group.expense(rent).is_some());
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut group = Group::builder("Flat 4B", Currency::EUR).build()?;
+    println!("Flat 4B: members and their accounts");
+    println!("═══════════════════════════════════");
+    println!(
+        "Ana and Bob share a flat. A member needs only a first name; the last name,\n\
+         email, phone, and the accounts they can be paid to are optional."
+    );
+    let (ana, bob) = members(&mut group)?;
+    secrets(group.member(ana).ok_or("Ana was added")?);
+    validation();
+    moving_out(&mut group, ana, bob)
+}

@@ -1,0 +1,4 @@
+[toolchain]
+channel = "stable"
+# llvm-tools ships the profdata/cov binaries cargo-llvm-cov drives.
+components = ["rustfmt", "clippy", "llvm-tools"]
