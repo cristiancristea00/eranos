@@ -97,7 +97,12 @@ pub mod calendar {
     #[doc(inline)]
     pub use eranos_calendar::{CalendarDate, TimeOfDay};
 }
-pub mod category;
+pub mod category {
+    //! Expense categories, defined per group.
+
+    #[doc(inline)]
+    pub use eranos_category::Category;
+}
 pub mod error;
 pub mod expense;
 pub mod group;
@@ -143,6 +148,7 @@ pub mod transfer;
 
 #[doc(no_inline)]
 pub use calendar::{CalendarDate, TimeOfDay};
+#[doc(no_inline)]
 pub use category::Category;
 pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,

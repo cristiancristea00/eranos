@@ -1,11 +1,16 @@
 //! Expense categories, defined per group.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
 
-use eranos_core::text;
+mod error;
+
+use eranos_core::{CategoryId, text};
 use icu_casemap::CaseMapper;
 use icu_normalizer::DecomposingNormalizerBorrowed;
 
-use crate::error::CategoryError;
-use crate::id::CategoryId;
+pub use error::CategoryError;
 
 /// A category a group sorts its expenses into, such as "Food" or "Fuel".
 ///

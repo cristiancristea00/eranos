@@ -12,6 +12,7 @@ members = [
     "crates/eranos",
     "crates/eranos-account",
     "crates/eranos-calendar",
+    "crates/eranos-category",
     "crates/eranos-contact",
     "crates/eranos-core",
     "crates/eranos-member",
@@ -34,6 +35,7 @@ publish = false
 eranos = { path = "crates/eranos", default-features = false }
 eranos-account = { path = "crates/eranos-account" }
 eranos-calendar = { path = "crates/eranos-calendar" }
+eranos-category = { path = "crates/eranos-category" }
 eranos-contact = { path = "crates/eranos-contact" }
 eranos-core = { path = "crates/eranos-core" }
 eranos-member = { path = "crates/eranos-member" }

@@ -313,13 +313,12 @@ dependencies = [
  "criterion",
  "eranos-account",
  "eranos-calendar",
+ "eranos-category",
  "eranos-contact",
  "eranos-core",
  "eranos-member",
  "eranos-money",
- "icu_casemap",
  "icu_locale_core",
- "icu_normalizer",
  "proptest",
  "serde",
  "serde_json",
@@ -347,6 +346,19 @@ dependencies = [
  "eranos-core",
  "jiff",
  "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-category"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-core",
+ "icu_casemap",
+ "icu_normalizer",
  "serde",
  "serde_json",
  "thiserror 2.0.20",

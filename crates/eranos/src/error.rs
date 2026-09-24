@@ -9,6 +9,8 @@ pub use eranos_account::{AccountError, IbanError};
 #[doc(inline)]
 pub use eranos_calendar::CalendarError;
 #[doc(inline)]
+pub use eranos_category::CategoryError;
+#[doc(inline)]
 pub use eranos_contact::ContactError;
 #[doc(inline)]
 pub use eranos_core::IdError;
@@ -20,15 +22,6 @@ pub use eranos_money::MoneyError;
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
-
-/// A [`Category`](crate::Category) that could not be built or renamed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum CategoryError {
-    /// A name that is blank.
-    #[error("the category name must not be empty")]
-    EmptyName,
-}
 
 /// A language tag that could not be read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
