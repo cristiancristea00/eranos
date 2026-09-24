@@ -138,9 +138,9 @@ cargo run -p eranos --features serde --example persistence
 
 ## Features
 
-| Feature | Default | Enables                                                                                 |
-| ------- | ------- | --------------------------------------------------------------------------------------- |
-| `serde` | no      | `Serialize`/`Deserialize` for every type; a loaded group is re-validated entry by entry |
+| Feature | Default | Enables                                                                                                       |
+| ------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `serde` | no      | `Serialize`/`Deserialize` for a group and every type it stores; a loaded group is re-validated entry by entry |
 
 ## Development
 

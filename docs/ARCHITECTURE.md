@@ -359,8 +359,13 @@ contact details.
 
 ## 9. The serialised form
 
-With the `serde` feature every type serialises. A group serialises only its
-inputs, never the derived totals:
+With the `serde` feature, `Group` and every type it stores serialise and
+deserialise: its entries, members, and categories, the identifiers, and the
+values inside them, such as `Money`, `Currency`, `ExchangeRate`,
+`CalendarDate`, and `Language`. `SavedGroup` only deserialises. What a group
+derives (`Summary`, `Settlement`, `ExpenseShares`, and the types they hold),
+the builders, the errors, `CurrencyRate`, and `SettlementStrategy` do not
+serialise. A group serialises only its inputs, never the derived totals:
 
 ```text
 {

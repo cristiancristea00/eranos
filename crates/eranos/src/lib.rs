@@ -65,12 +65,14 @@
 //!
 //! # Features
 //!
-//! - `serde`: `Serialize` and `Deserialize` for every domain type. A
-//!   deserialised [`Group`] is rebuilt through the same checks as its `add_*`
-//!   methods; a `SavedGroup` does the same in its `into_group`, which reports
-//!   a refused file as a [`GroupError`](error::GroupError). Account details
-//!   serialise in clear text, so store serialised groups in the platform's
-//!   secure storage.
+//! - `serde`: `Serialize` and `Deserialize` for [`Group`] and every type it
+//!   stores: entries, members, categories, identifiers, and the values in
+//!   them; what a group derives, such as its [`Summary`] and settlements,
+//!   does not serialise. A deserialised [`Group`] is rebuilt through the
+//!   same checks as its `add_*` methods; a `SavedGroup` does the same in its
+//!   `into_group`, which reports a refused file as a
+//!   [`GroupError`](error::GroupError). Account details serialise in clear
+//!   text, so store serialised groups in the platform's secure storage.
 //!
 //! # Examples
 //!
