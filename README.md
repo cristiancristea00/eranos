@@ -145,8 +145,8 @@ cargo run -p eranos --features serde --example persistence
 ## Development
 
 ```sh
+cargo xtask gates                           # every commit gate, in order
 cargo test --workspace --all-features       # unit, integration, property, and doc tests
-cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo bench -p eranos                       # settlement and ledger benchmarks
 ```
 
@@ -172,6 +172,7 @@ eranos/
 │   ├── tests/                 scenarios, properties, persistence (public API only)
 │   ├── examples/              runnable scenarios
 │   └── benches/               criterion benchmarks
+├── crates/xtask/              the repository's automation: `cargo xtask gates`
 ├── docs/                      architecture, development, testing, versioning
 ├── deny.toml                  the rules of the CI dependency audit
 └── AGENTS.md                  conventions and gates (CLAUDE.md and GEMINI.md link to it)

@@ -22,7 +22,7 @@ Signed-off-by: <committer name> <<committer email>>
 
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: `money`, `member`, `expense`, `transfer`, `group`, `ledger`,
-  `settlement`, `serde`, `docs`, `build`.
+  `settlement`, `serde`, `docs`, `build`, `xtask`.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -36,22 +36,26 @@ Signed-off-by: <committer name> <<committer email>>
 ## Gates before committing
 
 ```sh
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo clippy --workspace --all-targets --no-default-features -- -D warnings
-cargo test --workspace --all-features                          # unit, integration, doc (README too)
-cargo test --workspace --no-default-features
-RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
-# A subshell, so a failing example fails the gates without closing the shell.
-(for example in quickstart split_methods restaurant_bill multi_currency \
-                settling_up members_and_accounts persistence; do
-    cargo run -q -p eranos --all-features --example "$example" || exit 1
-done)
+cargo xtask gates
 ```
 
-Run all of them; clippy findings are fixed, not silenced. The examples
-assert their key numbers, so running them is a check, not a demonstration.
-The VS Code task `gates` runs the same sequence, and CI runs it on every push
+It runs these, in this order, and stops at the first that fails:
+
+1. `cargo fmt --all --check`
+2. `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+3. `cargo clippy --workspace --all-targets --no-default-features -- -D warnings`
+4. `cargo test --workspace --all-features` (unit, integration, and doc
+   tests, the README's included)
+5. `cargo test --workspace --no-default-features`
+6. `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --all-features`
+7. `cargo run --quiet --package <package> --all-features --example <name>`
+   for every example of every package, as `cargo metadata` lists them
+
+All of them pass before a commit; clippy findings are fixed, not silenced.
+The examples assert their key numbers, so running them is a check, not a
+demonstration. A test in `crates/xtask` reads this list, so the command and
+the list cannot drift apart. The VS Code task `gates` runs `cargo xtask
+gates`, and CI runs the same steps as its jobs on every push
 ([docs/DEVELOPMENT.md § 6](docs/DEVELOPMENT.md#6-continuous-integration)).
 
 Clippy is strict on every target (library, tests, examples, benches): the
@@ -190,8 +194,9 @@ failure); `#[allow]` is itself a lint error.
   instead of leaving a stale name.
 - Every directory module uses the `foo.rs` + `foo/` form, never `mod.rs`
   (`clippy::mod_module_files` enforces it).
-- There is no `.cargo/config.toml`: `target-cpu=native` or similar host
-  tuning would make the mobile and web builds non-portable.
+- `.cargo/config.toml` holds only the `xtask` alias: a build flag there,
+  such as `target-cpu=native`, would make the mobile and web builds
+  non-portable.
 
 ## Architecture in one paragraph
 

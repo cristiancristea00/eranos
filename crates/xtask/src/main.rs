@@ -1,0 +1,77 @@
+//! The repository's automation, run as `cargo xtask <command>` through the
+//! alias in `.cargo/config.toml`.
+//!
+//! `cargo xtask gates` runs the commit gates AGENTS.md lists, in its order,
+//! and stops at the first that fails; `cargo xtask help` lists the commands.
+
+mod gates;
+mod process;
+
+use std::io;
+use std::process::{ExitCode, ExitStatus};
+
+use crate::process::{Runner, System};
+
+/// What `help` prints, and what a command line xtask does not understand
+/// prints after its error.
+const USAGE: &str = "usage: cargo xtask <command>
+
+commands:
+  gates  run every commit gate AGENTS.md lists, stopping at the first failure
+  help   print this message";
+
+/// Why a command of xtask failed.
+#[derive(Debug, thiserror::Error)]
+enum Failure {
+    /// The output of `cargo metadata` is not the JSON the gates read.
+    #[error("cargo metadata printed JSON the gates cannot read: {0}")]
+    Metadata(#[source] serde_json::Error),
+    /// A step's program could not be started.
+    #[error("{step}: the program could not be started: {source}")]
+    Start {
+        #[source]
+        source: io::Error,
+        step: String,
+    },
+    /// A step ran and did not succeed.
+    #[error("{step} failed ({status})")]
+    Step { status: ExitStatus, step: String },
+    /// The command line names no command xtask knows.
+    #[error("unknown command\n\n{USAGE}")]
+    Usage,
+}
+
+fn main() -> ExitCode {
+    let arguments: Vec<String> = std::env::args_os()
+        .skip(1)
+        .map(|argument| argument.to_string_lossy().into_owned())
+        .collect();
+    match run(&arguments, &mut System) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(failure) => {
+            eprintln!("error: {failure}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Runs the command `arguments` name.
+///
+/// # Errors
+///
+/// [`Failure::Usage`] when `arguments` name no command, and the failure of
+/// the command otherwise.
+fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
+    let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
+    match words.as_slice() {
+        ["gates"] => gates::run(runner),
+        ["help"] => {
+            println!("{USAGE}");
+            Ok(())
+        }
+        _ => Err(Failure::Usage),
+    }
+}
+
+#[cfg(test)]
+mod tests;

@@ -27,6 +27,7 @@ and the test suites in [TESTING.md](TESTING.md).
 ## 2. Building and testing
 
 ```sh
+cargo xtask gates                                # every commit gate, in order
 cargo build -p eranos                            # the library
 cargo build -p eranos --features serde           # with serialisation
 cargo test --workspace --all-features            # every suite, doctests included
@@ -35,8 +36,10 @@ cargo test -p eranos --test scenarios            # one integration suite
 cargo doc -p eranos --all-features --open        # the API documentation
 ```
 
-The full gate sequence, run before every commit, is in
-[AGENTS.md § Gates](../AGENTS.md#gates-before-committing).
+`cargo xtask gates` runs the full gate sequence, listed in
+[AGENTS.md § Gates](../AGENTS.md#gates-before-committing), before every
+commit; `cargo xtask help` lists the commands. The alias lives in
+`.cargo/config.toml`, and the automation in `crates/xtask`.
 
 ## 3. Making a change
 

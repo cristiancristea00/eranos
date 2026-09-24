@@ -1,0 +1,5 @@
+# The one alias the repository defines: `cargo xtask <command>` runs the
+# automation crate (crates/xtask). No build flags live here, so no host tuning
+# such as `target-cpu=native` reaches the mobile and web builds.
+[alias]
+xtask = "run --package xtask --quiet --"
