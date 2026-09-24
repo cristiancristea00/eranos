@@ -51,7 +51,10 @@ It runs these, in this order, and stops at the first that fails:
    tests, the README's included)
 5. `cargo test --workspace --no-default-features`
 6. `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --all-features`
-7. `cargo run --quiet --package <package> --all-features --example <name>`
+7. `cargo tree --workspace --all-features --edges normal,features --invert async-lock --prefix none`,
+   which must show no line `async-lock feature "…"`: with `std`, the lock
+   would gain blocking methods that read the clock and a per-thread parker
+8. `cargo run --quiet --package <package> --all-features --example <name>`
    for every example of every package, as `cargo metadata` lists them
 
 All of them pass before a commit; clippy findings are fixed, not silenced.

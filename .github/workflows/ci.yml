@@ -65,6 +65,16 @@ jobs:
       - run: cargo doc --workspace --no-deps --all-features --locked
         env:
           RUSTDOCFLAGS: "-D warnings"
+      # No package may turn on a feature of async-lock: with `std`, the lock
+      # would gain blocking methods that read the clock and a per-thread
+      # parker (AGENTS.md, the gates).
+      - name: Keep async-lock without features
+        run: |
+          tree=$(cargo tree --workspace --all-features --edges normal,features --invert async-lock --prefix none --locked)
+          if grep '^async-lock feature ' <<< "$tree"; then
+            echo "::error::a package turns on a feature of async-lock, which the library keeps off"
+            exit 1
+          fi
 
   test:
     name: Test

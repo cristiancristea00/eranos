@@ -284,16 +284,16 @@ forks, on the merge queue, and on a manual dispatch. A pull request from a
 branch of this repository starts no jobs of its own: the push of its head
 commit was tested, and those checks show on the pull request.
 
-| Job                   | What it runs                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Lint                  | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied                           |
-| Test                  | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode |
-| MSRV                  | the tests with Rust 1.97, the `rust-version`                                                                   |
-| Mobile targets        | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, and `x86_64-linux-android`   |
-| Dependency audit      | `cargo deny check advisories sources`, with the rules in `deny.toml`                                           |
-| Workflow lint         | actionlint and zizmor, configured in `.github/zizmor.yml`                                                      |
-| Coverage              | both feature sets, merged into the coverage page and its summary, below                                        |
-| Test (macOS, Windows) | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                          |
+| Job                   | What it runs                                                                                                                                         |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint                  | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied, and the check that no package turns on a feature of async-lock |
+| Test                  | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode                                       |
+| MSRV                  | the tests with Rust 1.97, the `rust-version`                                                                                                         |
+| Mobile targets        | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, and `x86_64-linux-android`                                         |
+| Dependency audit      | `cargo deny check advisories sources`, with the rules in `deny.toml`                                                                                 |
+| Workflow lint         | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                            |
+| Coverage              | both feature sets, merged into the coverage page and its summary, below                                                                              |
+| Test (macOS, Windows) | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a
 month, with macOS minutes counting about ten times and Windows minutes about

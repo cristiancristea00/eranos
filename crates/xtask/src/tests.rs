@@ -22,17 +22,20 @@ pub(crate) const METADATA: &str = r#"{
     "version": 1
 }"#;
 
-/// A runner that records every step instead of running it, answers every
+/// A runner that records every step instead of running it, answers the
+/// step that prints async-lock's features with `tree` and every other
 /// output with `metadata`, and fails at the step `failing`.
 #[derive(Debug, Default)]
 pub(crate) struct Recorder {
     pub(crate) metadata: String,
     pub(crate) steps: Vec<Step>,
+    pub(crate) tree: String,
     pub(crate) failing: Option<Step>,
 }
 
 impl Recorder {
-    /// A recorder that answers with [`METADATA`] and fails at no step.
+    /// A recorder that answers with [`METADATA`] and a tree without
+    /// features, and fails at no step.
     pub(crate) fn new() -> Self {
         Self {
             metadata: METADATA.to_owned(),
@@ -58,7 +61,11 @@ impl Runner for Recorder {
 
     fn output(&mut self, step: &Step) -> Result<String, Failure> {
         self.record(step)?;
-        Ok(self.metadata.clone())
+        if *step == gates::lock_features() {
+            Ok(self.tree.clone())
+        } else {
+            Ok(self.metadata.clone())
+        }
     }
 }
 
@@ -66,15 +73,16 @@ fn words(line: &[&str]) -> Vec<String> {
     line.iter().map(|&word| word.to_owned()).collect()
 }
 
-/// `gates` runs every check, lists the examples, and runs each one; if it
-/// ran less, `cargo xtask gates` would pass commits the documented gates
-/// refuse.
+/// `gates` runs every check, reads async-lock's features, lists the
+/// examples, and runs each one; if it ran less, `cargo xtask gates` would
+/// pass commits the documented gates refuse.
 #[test]
 fn gates_runs_every_check_then_every_example() {
     let mut recorder = Recorder::new();
     run(&words(&["gates"]), &mut recorder).unwrap();
 
     let mut expected = gates::checks();
+    expected.push(gates::lock_features());
     expected.push(gates::metadata());
     expected.extend(gates::examples(METADATA).unwrap());
     assert_eq!(recorder.steps, expected);

@@ -35,6 +35,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     for step in checks() {
         runner.run(&step)?;
     }
+    check_lock_features(&runner.output(&lock_features())?)?;
     let metadata = runner.output(&metadata())?;
     for step in examples(&metadata)? {
         runner.run(&step)?;
@@ -87,6 +88,49 @@ pub(crate) fn checks() -> Vec<Step> {
         )
         .with_variable("RUSTDOCFLAGS", "-D warnings"),
     ]
+}
+
+/// The step that prints async-lock's dependents with the features they turn
+/// on in it, each as a line `async-lock feature "<name>"`.
+#[must_use]
+pub(crate) fn lock_features() -> Step {
+    Step::cargo(
+        &[
+            "tree",
+            "--workspace",
+            "--all-features",
+            "--edges",
+            "normal,features",
+            "--invert",
+            "async-lock",
+            "--prefix",
+            "none",
+        ],
+        "async-lock's features",
+    )
+}
+
+/// Succeeds when `tree`, what [`lock_features`] printed, shows no feature
+/// of async-lock turned on. With `std`, the lock gains blocking methods that
+/// read the clock and park threads through a per-thread parker, which the
+/// library keeps out.
+///
+/// # Errors
+///
+/// [`Failure::LockFeatures`] with the features that are on.
+pub(crate) fn check_lock_features(tree: &str) -> Result<(), Failure> {
+    let mut features: Vec<&str> = tree
+        .lines()
+        .filter_map(|line| line.strip_prefix("async-lock feature "))
+        .map(|feature| feature.trim_end_matches(" (*)"))
+        .collect();
+    features.sort_unstable();
+    features.dedup();
+    if features.is_empty() {
+        Ok(())
+    } else {
+        Err(Failure::LockFeatures(features.join(", ")))
+    }
 }
 
 /// The step that lists the workspace's packages and their targets.

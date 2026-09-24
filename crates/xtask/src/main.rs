@@ -23,6 +23,10 @@ commands:
 /// Why a command of xtask failed.
 #[derive(Debug, thiserror::Error)]
 enum Failure {
+    /// A package turns on features of async-lock, which the library keeps
+    /// without any.
+    #[error("async-lock is built with {0}, which the library keeps off")]
+    LockFeatures(String),
     /// The output of `cargo metadata` is not the JSON the gates read.
     #[error("cargo metadata printed JSON the gates cannot read: {0}")]
     Metadata(#[source] serde_json::Error),
