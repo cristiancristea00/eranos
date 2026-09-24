@@ -1,0 +1,8 @@
+# zizmor's configuration; its discovery reads this file first.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Actions are referenced by release tag, which Dependabot security
+        # updates bump; no action needs a commit SHA.
+        "*": ref-pin

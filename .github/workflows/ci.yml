@@ -1,0 +1,281 @@
+# The gates of AGENTS.md, plus an MSRV build, compile checks for the mobile
+# targets, a dependency audit, a lint of the workflow files, and a coverage
+# page. Coverage is reported, never enforced.
+name: CI
+
+on:
+  push:
+    # Every branch. Tags are left out: a tag names a commit that its branch
+    # push has already tested. Quoted, because a bare `*` starts a YAML alias.
+    branches: ["**"]
+  pull_request:
+  # Sent only to repositories with a merge queue, which needs an
+  # organization; a repository owned by a personal account never receives it.
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  # Cloning a private repository needs read access; no job writes.
+  contents: read
+
+concurrency:
+  # One group per event and ref (or pull request), so a push never cancels a
+  # dispatched run. Off main, a newer run cancels the older one; on main, a
+  # started run finishes and a newer push replaces only a pending one.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+defaults:
+  run:
+    # A named `bash` runs as `bash --noprofile --norc -eo pipefail {0}`; on
+    # Windows it is Git Bash.
+    shell: bash
+
+jobs:
+  lint:
+    name: Lint
+    # A pull request whose branch lives in this repository was tested by the
+    # push of its head commit; pull requests from forks run. The other jobs
+    # repeat this condition through the alias, so this job stays first: an
+    # alias must follow its anchor.
+    if: &not-duplicate github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      # The toolchain and components rust-toolchain.toml names, including
+      # llvm-tools, which the runner image's stable lacks.
+      - run: rustup toolchain install
+      # After the toolchain, because the cache key includes the rustc
+      # version. Only main writes caches; other branches restore main's. The
+      # action also sets CARGO_INCREMENTAL=0.
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo clippy --workspace --all-targets --no-default-features --locked -- -D warnings
+      - run: cargo doc --workspace --no-deps --all-features --locked
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  test:
+    name: Test
+    if: *not-duplicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build the library
+        run: cargo build --workspace --all-features --locked
+      # Builds the test targets and the examples, then runs the unit,
+      # integration, and doc tests (the README's included).
+      - run: cargo test --workspace --all-features --locked
+      - name: Run every example
+        # The examples assert their key numbers, so one that fails fails the
+        # job. The list comes from the manifest, and stdin is closed so that
+        # an example cannot read the rest of the list.
+        run: |
+          examples="$(cargo metadata --locked --no-deps --format-version 1 |
+            jq -r '.packages[] | .name as $package | .targets[] | select(.kind == ["example"]) | "\($package) \(.name)"')"
+          test -n "$examples"
+          while read -r package example; do
+            echo "::group::$package: $example"
+            cargo run --locked --quiet --package "$package" --all-features --example "$example" </dev/null
+            echo "::endgroup::"
+          done <<<"$examples"
+      - name: Run each benchmark once
+        # Started by `cargo test`, criterion runs every benchmark function once
+        # without measuring it, in the test profile rather than the release
+        # profile's fat LTO. `--benches` would rerun the library's unit tests
+        # too, because the library target has `bench = true`.
+        run: cargo test --workspace --all-features --locked --bench '*'
+      - run: cargo test --workspace --no-default-features --locked
+
+  test-other-os:
+    name: Test (${{ matrix.os }})
+    # Dispatched by hand only: macOS minutes count about ten times and Windows
+    # minutes about twice against the 2,000 included each month.
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo test --workspace --all-features --locked
+      - run: cargo test --workspace --no-default-features --locked
+
+  msrv:
+    name: MSRV
+    if: *not-duplicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Equal to `rust-version` in Cargo.toml. Cargo refuses a toolchain older
+      # than that, so raising it there fails this job until both match. Set
+      # for the whole job, it overrides rust-toolchain.toml for every cargo
+      # and rustc call, the cache key's included. Quoted, so that a version
+      # such as 1.90 stays text.
+      RUSTUP_TOOLCHAIN: "1.97"
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo test --workspace --all-features --locked
+      - run: cargo check --workspace --lib --no-default-features --locked
+
+  mobile:
+    name: Mobile targets
+    if: *not-duplicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      # The targets' standard libraries, added to the toolchain that
+      # rust-toolchain.toml selects. Clippy only type-checks, so no linker,
+      # Android NDK, or Xcode SDK is needed; no dependency of the library
+      # compiles C code for the target.
+      - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: >-
+          cargo clippy --workspace --lib --all-features --locked
+          --target aarch64-apple-ios --target aarch64-apple-ios-sim
+          --target aarch64-linux-android --target x86_64-linux-android
+          -- -D warnings
+      - run: >-
+          cargo clippy --workspace --lib --no-default-features --locked
+          --target aarch64-apple-ios --target aarch64-apple-ios-sim
+          --target aarch64-linux-android --target x86_64-linux-android
+          -- -D warnings
+
+  deny:
+    name: Dependency audit
+    if: *not-duplicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      # cargo-deny reads the dependency graph through `cargo metadata`.
+      - run: rustup toolchain install
+      - uses: taiki-e/install-action@v2.87.19
+        with:
+          tool: cargo-deny@0.20.2
+      # Advisories (vulnerable, unmaintained, unsound, yanked) and sources
+      # only; deny.toml holds the rules.
+      - run: cargo deny --locked check advisories sources
+
+  workflows:
+    name: Workflow lint
+    if: *not-duplicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      # The image bundles shellcheck, which checks every `run:` script.
+      - run: docker run --rm --volume "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+      # Reads .github/zizmor.yml.
+      - uses: zizmorcore/zizmor-action@v0.6.4
+        with:
+          # SARIF upload needs code scanning, which a private repository on
+          # the Free plan lacks; findings print to the log and fail the step.
+          advanced-security: false
+
+  coverage:
+    name: Coverage
+    if: *not-duplicate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2.87.19
+        with:
+          tool: cargo-llvm-cov@0.9.1
+      # Unit and integration tests; the stable toolchain does not measure
+      # doctests.
+      - run: cargo llvm-cov --no-report --workspace --all-features --locked
+      - name: Export the reports
+        run: |
+          cargo llvm-cov report --cobertura --output-path target/coverage.xml
+          cargo llvm-cov report --json --summary-only --output-path target/coverage.json
+      - name: Render one HTML page
+        # gcovr reads only Cobertura, and takes only line counts from it; the
+        # sources come from the checkout. One file with its styles and scripts
+        # inlined is what an unzipped artifact can hold.
+        run: >-
+          pipx run --spec gcovr==8.6 gcovr
+          --cobertura-add-tracefile target/coverage.xml
+          --html-details target/eranos-coverage.html
+          --html-single-page --html-self-contained
+          --html-theme github.green
+          --html-title "eranos coverage"
+      - name: Upload the page
+        id: upload
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          # Not zipped, so the page opens in the browser, and the file name is
+          # the artifact's name. It is stored uncompressed against the 500 MB
+          # of artifact storage, hence the short retention.
+          path: target/eranos-coverage.html
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+      - name: Summarize
+        env:
+          # Through the environment, not a template inside the script.
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          {
+            echo '## Coverage'
+            echo
+            echo "Annotated source with line counts: [eranos-coverage.html]($ARTIFACT_URL)"
+            echo
+            echo '| File | Regions | Functions | Lines |'
+            echo '| :--- | ---: | ---: | ---: |'
+            jq -r --arg root "$GITHUB_WORKSPACE/" '
+              def cell: if .count == 0 then "-" else "\(.covered)/\(.count) (\(.percent * 100 | floor / 100)%)" end;
+              .data[0]
+              | (.files[] | "| `\(.filename | ltrimstr($root))` | \(.summary.regions | cell) | \(.summary.functions | cell) | \(.summary.lines | cell) |"),
+                "| **Total** | \(.totals.regions | cell) | \(.totals.functions | cell) | \(.totals.lines | cell) |"
+            ' target/coverage.json
+          } >>"$GITHUB_STEP_SUMMARY"

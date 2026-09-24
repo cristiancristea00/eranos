@@ -1,0 +1,16 @@
+# Rules for the CI dependency audit, `cargo deny --locked check advisories
+# sources`. Licenses and bans are not checked, so they have no section.
+
+[graph]
+# The dependencies of every feature, `serde`'s included.
+all-features = true
+
+[advisories]
+# Vulnerabilities and unmaintained crates are errors by default; a yanked
+# version in Cargo.lock is one too.
+yanked = "deny"
+
+[sources]
+# crates.io only: any other registry, or a git dependency, is an error.
+unknown-registry = "deny"
+unknown-git = "deny"
