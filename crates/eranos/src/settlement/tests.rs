@@ -1,6 +1,7 @@
 //! Tests for turning a ledger into a settlement. The payments are what the
 //! apps ask members to send, so they must be in the group currency and
-//! sorted the same way on every device.
+//! sorted the same way on every device, and a kept plan must last exactly
+//! until it is cleared.
 
 use super::*;
 use crate::ledger::Delta;
@@ -65,6 +66,26 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
                 ),
             ]
         );
+    }
+}
+
+/// A plan would be computed again on every request, which the exact solver
+/// makes slow, or kept after the balances it came from changed.
+#[test]
+fn a_kept_settlement_lasts_until_it_is_cleared() {
+    let mut kept = Settlements::default();
+    let empty = Ledger::new(Currency::RON);
+    for strategy in SettlementStrategy::all() {
+        // The first request computes the plan; later ones return it.
+        let first = kept.get(strategy, &ledger()).unwrap();
+        let second = kept.get(strategy, &empty).unwrap();
+        assert!(std::ptr::eq(first, second));
+        assert_eq!(second.len(), 2);
+    }
+    // Cleared, every plan is computed again.
+    kept.clear();
+    for strategy in SettlementStrategy::all() {
+        assert!(kept.get(strategy, &empty).unwrap().is_empty());
     }
 }
 

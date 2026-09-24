@@ -547,16 +547,6 @@ impl Ledger {
         }
     }
 
-    /// Every non-zero net balance, ordered by member.
-    pub(crate) fn balances(&self) -> Vec<(MemberId, i64)> {
-        self.summary
-            .members
-            .iter()
-            .filter(|(_, totals)| totals.net != 0)
-            .map(|(&member, totals)| (member, totals.net))
-            .collect()
-    }
-
     /// Applies `delta` if every resulting value stays in range; otherwise
     /// changes nothing.
     pub(crate) fn apply(&mut self, delta: &Delta) -> Result<(), Overflow> {

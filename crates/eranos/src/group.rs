@@ -8,7 +8,6 @@ mod saved;
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
-use std::sync::OnceLock;
 
 pub use builder::GroupBuilder;
 pub use language::Language;
@@ -22,7 +21,7 @@ use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use crate::ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
 use crate::member::Member;
 use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
-use crate::settlement::{self, Settlement, SettlementStrategy};
+use crate::settlement::{Settlement, SettlementStrategy, Settlements};
 use crate::text;
 use crate::transfer::{Transfer, resolve_transfer};
 
@@ -95,34 +94,6 @@ struct TransferRecord {
     /// The amount in the group currency, in minor units.
     amount: i64,
     transfer: Transfer,
-}
-
-/// One lazily computed settlement per strategy, cleared whenever a balance
-/// changes.
-#[derive(Debug, Clone, Default)]
-struct Settlements {
-    direct: OnceLock<Result<Settlement, SettlementError>>,
-    greedy: OnceLock<Result<Settlement, SettlementError>>,
-    minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
-}
-
-impl Settlements {
-    const fn slot(
-        &self,
-        strategy: SettlementStrategy,
-    ) -> &OnceLock<Result<Settlement, SettlementError>> {
-        match strategy {
-            SettlementStrategy::Direct => &self.direct,
-            SettlementStrategy::Greedy => &self.greedy,
-            SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
-        }
-    }
-
-    fn clear(&mut self) {
-        self.minimum_transfers.take();
-        self.greedy.take();
-        self.direct.take();
-    }
 }
 
 impl Group {
@@ -630,11 +601,7 @@ impl Group {
     /// [`SettlementStrategy::MinimumTransfers`] cannot allocate its table;
     /// the other strategies never fail.
     pub fn settlement(&self, strategy: SettlementStrategy) -> Result<&Settlement, SettlementError> {
-        self.settlements
-            .slot(strategy)
-            .get_or_init(|| settlement::settle(strategy, &self.ledger))
-            .as_ref()
-            .map_err(|&error| error)
+        self.settlements.get(strategy, &self.ledger)
     }
 
     fn invalidate_settlements(&mut self) {

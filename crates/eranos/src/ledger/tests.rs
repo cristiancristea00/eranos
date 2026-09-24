@@ -75,7 +75,6 @@ fn an_expense_moves_every_total_by_its_shares() {
     assert_eq!(summary.member_category_total(bob, food), eur(2000));
     // Bob owes Ana his share, pairwise.
     assert_eq!(ledger.pairs().get(&pair(ana, bob)), Some(&-2000));
-    assert_eq!(ledger.balances(), vec![(ana, 2000), (bob, -2000)]);
 }
 
 /// Removing an entry is the exact inverse of adding it, and leaves no zero
@@ -141,7 +140,6 @@ fn a_transfer_moves_balances_but_not_spending() {
     assert_eq!(summary.member(ana).balance(), Balance::Settled);
     assert_eq!(summary.member(bob).balance(), Balance::Settled);
     assert!(ledger.pairs().is_empty());
-    assert!(ledger.balances().is_empty());
 }
 
 /// Removing a category would leave a row behind, or give Uncategorised

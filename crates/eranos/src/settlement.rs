@@ -9,6 +9,8 @@ mod direct;
 mod greedy;
 mod minimum;
 
+use std::sync::OnceLock;
+
 use crate::error::SettlementError;
 use crate::id::MemberId;
 use crate::ledger::{Ledger, MemberPair};
@@ -164,6 +166,51 @@ impl Flow {
     }
 }
 
+/// One settlement per strategy, computed on first request and kept until
+/// the balances change.
+///
+/// The cache holds no ledger: its owner asks with the same ledger every
+/// time and clears it whenever a balance changes, as the group does.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Settlements {
+    direct: OnceLock<Result<Settlement, SettlementError>>,
+    greedy: OnceLock<Result<Settlement, SettlementError>>,
+    minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
+}
+
+impl Settlements {
+    /// The settlement of `ledger` by `strategy`, computed the first time it
+    /// is asked for.
+    pub(crate) fn get(
+        &self,
+        strategy: SettlementStrategy,
+        ledger: &Ledger,
+    ) -> Result<&Settlement, SettlementError> {
+        self.slot(strategy)
+            .get_or_init(|| settle(strategy, ledger))
+            .as_ref()
+            .map_err(|&error| error)
+    }
+
+    /// Drops every kept settlement.
+    pub(crate) fn clear(&mut self) {
+        self.direct.take();
+        self.greedy.take();
+        self.minimum_transfers.take();
+    }
+
+    const fn slot(
+        &self,
+        strategy: SettlementStrategy,
+    ) -> &OnceLock<Result<Settlement, SettlementError>> {
+        match strategy {
+            SettlementStrategy::Direct => &self.direct,
+            SettlementStrategy::Greedy => &self.greedy,
+            SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
+        }
+    }
+}
+
 /// Settles the balances of `ledger` with `strategy`.
 pub(crate) fn settle(
     strategy: SettlementStrategy,
@@ -171,8 +218,8 @@ pub(crate) fn settle(
 ) -> Result<Settlement, SettlementError> {
     let mut flows = match strategy {
         SettlementStrategy::Direct => direct::settle(ledger.pairs()),
-        SettlementStrategy::Greedy => greedy::settle(&ledger.balances()),
-        SettlementStrategy::MinimumTransfers => minimum::settle(&ledger.balances())?,
+        SettlementStrategy::Greedy => greedy::settle(&balances(ledger)),
+        SettlementStrategy::MinimumTransfers => minimum::settle(&balances(ledger))?,
     };
     // By payer, then recipient, as `Settlement::payments` promises. Every
     // strategy pays each pair of members at most once (the direct one pays
@@ -185,6 +232,16 @@ pub(crate) fn settle(
         .map(|flow| flow.into_payment(currency))
         .collect();
     Ok(Settlement { payments, strategy })
+}
+
+/// Every non-zero net balance of `ledger`, ordered by member.
+fn balances(ledger: &Ledger) -> Vec<(MemberId, i64)> {
+    ledger
+        .summary()
+        .members()
+        .map(|member| (member.member(), member.net().minor_units()))
+        .filter(|&(_, net)| net != 0)
+        .collect()
 }
 
 #[cfg(test)]
