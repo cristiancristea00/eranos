@@ -109,13 +109,29 @@ failure); `#[allow]` is itself a lint error.
 - **The public API grows additively.** Fields are private; entities are
   built with builders and edited with `to_builder`; public enums are
   `#[non_exhaustive]`; getters have no `get_` prefix; errors are
-  `#[non_exhaustive]` thiserror enums, one per module, whose messages are
-  lowercase, carry no trailing full stop, and never echo the text they
-  rejected (inputs include account numbers). No error wraps another and
-  none converts into another: a function reports its own module's failure,
-  and a caller that mixes modules uses `Box<dyn Error>` or its own type.
-  Every public type is `Send` and `Sync`, and a new one joins the list in
-  `tests/api.rs` that asserts it.
+  `#[non_exhaustive]` thiserror enums, one per crate (two in account and
+  group) in its `src/error.rs`, whose messages are lowercase, carry no
+  trailing full stop, and never echo the text they rejected (inputs include
+  account numbers). No error wraps another and none converts into another:
+  a function reports its own crate's failure, and a caller that mixes
+  crates uses `Box<dyn Error>` or its own type. Every public type is `Send`
+  and `Sync`, and a new one joins the list in `tests/api.rs` that asserts
+  it.
+- **Crates depend downwards.** An internal crate depends only on the crates
+  below it in [docs/ARCHITECTURE.md § 2](docs/ARCHITECTURE.md#2-crate-map),
+  and on the facade only as a dev-dependency, for its doc examples. Logic
+  lives in the crate that owns its data; what another crate must call
+  becomes a documented public item of its crate, and the facade re-exports
+  only what callers use, with `#[doc(inline)]` in its module and
+  `#[doc(no_inline)]` at its root: machinery such as `Ledger`, `Delta`,
+  `resolve_expense`, and `Settlements` stays public in its crate and out of
+  the facade. No `#[doc(hidden)]`, no glob re-exports, and nothing public
+  for tests. Doc examples use `eranos::` paths; unit tests use `crate::`
+  and `eranos_<crate>::` paths, never `eranos::`, which would link a second
+  copy of the crate under test; no dev-dependency enables a feature, so
+  `--no-default-features` builds no serde code. A doc link to a crate above
+  is plain text. The recipe is
+  [docs/DEVELOPMENT.md § 3.9](docs/DEVELOPMENT.md#39-a-crossing-between-crates).
 - **A builder starts complete.** A type with a builder names its
   constructors `builder` or a variant of it (`itemised_builder`,
   `builder_with_payers`, `builder_with_split`), and `to_builder` starts an
@@ -207,17 +223,25 @@ failure); `#[allow]` is itself a lint error.
 - `.cargo/config.toml` holds only the `xtask` alias: a build flag there,
   such as `target-cpu=native`, would make the mobile and web builds
   non-portable.
+- Every internal crate dev-depends on the facade so its doc examples read
+  as callers write them, as ICU4X does; Cargo allows the cycle for
+  dev-dependencies, and its cost, that testing one crate builds them all,
+  is measured in [docs/DEVELOPMENT.md § 2](docs/DEVELOPMENT.md#2-building-and-testing).
 
 ## Architecture in one paragraph
 
-The library crate, `crates/eranos`, re-exports the types callers use from
-the internal `eranos-*` crates beside it, with binding crates (`eranos-ffi`
-for UniFFI, `eranos-wasm`) planned as siblings. A `Group` owns its members,
+Thirteen crates in `crates/`: `eranos`, the facade callers depend on,
+which holds only re-exports and the integration tests, examples, and
+benchmarks, and twelve internal crates below it, one per part of the
+domain, from `eranos-core` (identifiers) up to `eranos-group`
+([map](docs/ARCHITECTURE.md#2-crate-map)); binding crates (`eranos-ffi` for
+UniFFI, `eranos-wasm`) are planned as siblings. A `Group` owns its members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced
-(`eranos-expense/src/resolution.rs`: exact splits, tips, conversion, and the
-pairwise debts behind the direct settlement; a transfer's conversion is
-`eranos_transfer::resolve_transfer`) and applied to the `Ledger` as a range-checked `Delta`; the
+(`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the
+pairwise debts behind the direct settlement;
+`eranos_transfer::resolve_transfer` for a transfer) and applied to the
+`Ledger` as a range-checked `Delta`; the
 `Summary` is part of the ledger and is updated by every change. Only
 `change_currency` resolves every entry again and rebuilds the ledger.
 Settlements are computed from the ledger on request, by the strategy the

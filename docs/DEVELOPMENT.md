@@ -41,6 +41,24 @@ cargo doc -p eranos --all-features --open        # the API documentation
 commit; `cargo xtask help` lists the commands. The alias lives in
 `.cargo/config.toml`, and the automation in `crates/xtask`.
 
+Every internal crate's tests link the facade, which its doc examples use,
+so testing one crate builds the whole workspace, and each crate's doctests
+are a binary of their own, thirteen in all. The split also makes a change
+low in the graph rebuild every crate above it. Rebuilds in the dev
+profile on an Apple M4 Pro, after touching one file, with the library as
+one crate and as thirteen:
+
+| Rebuild after touching                    | One crate | Thirteen crates |
+| ----------------------------------------- | --------: | --------------: |
+| `cargo build -p eranos`, the group        |    0.65 s |          0.67 s |
+| `cargo build -p eranos`, money            |    0.64 s |          1.70 s |
+| the touched crate's unit tests, the group |     1.1 s |           1.2 s |
+| the touched crate's unit tests, money     |     1.1 s |           2.1 s |
+| every test target (`--no-run`), money     |     1.9 s |           6.4 s |
+
+The split buys layers the compiler enforces, crates whose APIs stand on
+their own, and smaller units, at those seconds.
+
 ## 3. Making a change
 
 ### 3.1 A new split method
@@ -145,9 +163,9 @@ breaking.
 Error enums are `#[non_exhaustive]`, so a variant is a `feat`. The variant
 joins its crate's enum in that crate's `error.rs`, in alphabetical order;
 its message is lowercase, has no trailing full stop, and never repeats the
-rejected text.
-Pin the message in its enum's list in `tests/errors.rs`, and name the variant
-in the `# Errors` section of every function that can return it.
+rejected text. Pin the message in its enum's list in `tests/errors.rs`, and
+name the variant in the `# Errors` section of every function that can
+return it.
 
 ### 3.7 A lint exception
 
@@ -177,6 +195,26 @@ only security updates, so check for a new one by hand.
 3. Raise the minor version and commit as `build(member)!:`, with a
    `BREAKING CHANGE:` footer naming the metadata versions: a withdrawn range
    refuses stored numbers ([VERSIONING.md](VERSIONING.md)).
+
+### 3.9 A crossing between crates
+
+When code in one crate needs something another crate holds:
+
+1. Move the logic to the crate that owns its data when it can live there: a
+   match on an enum belongs in the enum's crate, since a match on another
+   crate's `#[non_exhaustive]` enum needs a wildcard arm that never runs,
+   and a rule of the group, such as whether a cost suits its currency, in
+   the group.
+2. Otherwise make the item a documented public item of its crate. If
+   callers need it, re-export it in the facade module of its crate with
+   `#[doc(inline)]`, and at the facade's root with `#[doc(no_inline)]`;
+   machinery only the crates above use stays out of the facade.
+3. A crate never depends on a crate above it. When the code would need
+   one, it belongs in that crate, or the crate above passes what it needs.
+4. Check that the facade's API changed only by what the change adds: build
+   the documentation with `cargo doc --workspace --no-deps --all-features`
+   and compare `target/doc/eranos/all.html`, and the method anchors of the
+   pages the change touches, with the documentation before it.
 
 ## 4. Examples and benchmarks
 
