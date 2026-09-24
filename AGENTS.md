@@ -22,7 +22,7 @@ Signed-off-by: <committer name> <<committer email>>
 
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: `core`, `money`, `member`, `expense`, `transfer`, `group`,
-  `ledger`, `settlement`, `serde`, `docs`, `build`, `xtask`.
+  `ledger`, `settlement`, `serde`, `docs`, `examples`, `build`, `xtask`.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the

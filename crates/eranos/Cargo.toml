@@ -43,6 +43,10 @@ tabled = { workspace = true }
 name = "persistence"
 required-features = ["serde"]
 
+[[example]]
+name = "grand_tour"
+required-features = ["serde"]
+
 [[bench]]
 name = "settlement"
 harness = false

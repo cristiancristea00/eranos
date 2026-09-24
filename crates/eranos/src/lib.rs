@@ -82,8 +82,9 @@
 //!
 //! The `examples/` directory has runnable scenarios: `quickstart`,
 //! `split_methods`, `restaurant_bill`, `multi_currency`, `settling_up`,
-//! `members_and_accounts`, and `persistence` (with `--features serde`). Run
-//! one with `cargo run -p eranos --example settling_up`.
+//! `members_and_accounts`, and, with `--features serde`, `persistence` and
+//! `grand_tour`, which uses every feature. Run one with
+//! `cargo run -p eranos --example settling_up`.
 #![doc(test(attr(deny(warnings))))]
 
 pub mod calendar;

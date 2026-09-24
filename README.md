@@ -130,10 +130,12 @@ balances, and payments, and asserts its own numbers:
 | `settling_up`          | The three strategies on one group, then recording the payments                             |
 | `members_and_accounts` | Contact details, IBAN validation, archiving a member                                       |
 | `persistence`          | Saving and loading a group as JSON (needs the `serde` feature)                             |
+| `grand_tour`           | Every feature in one story, from creating a group to saving it (needs `serde`)             |
 
 ```sh
 cargo run -p eranos --example settling_up
 cargo run -p eranos --features serde --example persistence
+cargo run -p eranos --all-features --example grand_tour   # the same identifiers every run
 ```
 
 ## Features
