@@ -57,11 +57,13 @@ The VS Code task `gates` runs the same sequence, and CI runs it on every push
 Clippy is strict on every target (library, tests, examples, benches): the
 pedantic, nursery, and cargo groups plus the restriction lints listed, each
 with its reason, in `[workspace.lints]` of `Cargo.toml`. `clippy.toml`
-exempts only what a test needs to fail loudly: unwrapping, expecting,
-panicking, and indexing inside test functions. Any other exception is an
-`#[expect(lint, reason = "...")]` at the narrowest scope (a whole file only
-for test helpers and benchmark fixtures, which panic to report failure);
-`#[allow]` is itself a lint error.
+holds two kinds of exception: what a test needs to fail loudly (unwrapping,
+expecting, panicking, and indexing inside test functions), and, in
+`allowed-duplicate-crates`, a crate that a dependency's graph lists in two
+versions, each with the upstream issue that removes it. Any other exception
+is an `#[expect(lint, reason = "...")]` at the narrowest scope (a whole file
+only for test helpers and benchmark fixtures, which panic to report
+failure); `#[allow]` is itself a lint error.
 
 ## Conventions
 

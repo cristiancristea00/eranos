@@ -33,9 +33,11 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 - **Deterministic everywhere.** The same entries give the same shares, the
   same totals, and the same settlement on every device and in any order of
   arrival; this is what future sync relies on.
-- **Few dependencies.** `thiserror` (derive only), `uuid` (v7 identifiers),
-  `zeroize` (wiping secrets), and optionally `serde`. Everything else,
-  including the ISO 4217 table, IBAN validation, and dates, is in the crate.
+- **Few dependencies.** `jiff` (calendar dates, times of day, and their ISO
+  8601 parser, without its clock or time zones), `thiserror` (derive only),
+  `uuid` (v7 identifiers), `zeroize` (wiping secrets), and optionally
+  `serde`. Everything else, including the ISO 4217 table and IBAN
+  validation, is in the crate.
 
 ## 2. Module map
 
@@ -354,7 +356,8 @@ inputs, never the derived totals:
 ```
 
 - Identifiers are hyphenated UUIDs, currencies their code, rates decimal
-  strings, dates `YYYY-MM-DD`, times `hh:mm`, percentages basis points,
+  strings, dates `YYYY-MM-DD` and times `hh:mm` (read back by the ISO 8601
+  parser behind `Date::parse` and `Time::parse`), percentages basis points,
   parts hundredths. Absent optional fields are omitted, and so are the
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), and a tip equal to

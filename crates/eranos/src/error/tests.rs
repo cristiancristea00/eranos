@@ -68,11 +68,11 @@ fn value_errors() -> Vec<(ValueError, &'static str)> {
         ),
         (
             ValueError::InvalidDate,
-            "invalid date: expected an existing `YYYY-MM-DD` date between years 1 and 9999",
+            "invalid date: expected an existing ISO 8601 date between years 1 and 9999",
         ),
         (
             ValueError::InvalidTime,
-            "invalid time: expected `hh:mm` between 00:00 and 23:59",
+            "invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds",
         ),
         (
             ValueError::InvalidLanguage,
@@ -198,7 +198,7 @@ fn transfer_errors() -> Vec<(TransferError, &'static str)> {
     vec![
         (
             TransferError::Value(ValueError::InvalidDate),
-            "invalid date: expected an existing `YYYY-MM-DD` date between years 1 and 9999",
+            "invalid date: expected an existing ISO 8601 date between years 1 and 9999",
         ),
         (
             TransferError::SameMember,

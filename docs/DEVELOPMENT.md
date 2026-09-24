@@ -126,7 +126,11 @@ Fix the finding when there is any way to. When the code is right and the
 lint is not, add `#[expect(clippy::lint_name, reason = "...")]` on the
 narrowest item, with a reason that states the invariant. A lint that
 contradicts a convention everywhere is removed from `[workspace.lints]` in
-`Cargo.toml`, with the reason next to the table.
+`Cargo.toml`, with the reason next to the table. A duplicate crate that
+`multiple_crate_versions` reports, and that only a dependency's release can
+remove, goes into `allowed-duplicate-crates` in `clippy.toml`, with the
+dependency, the cause, and the upstream issue; it comes out when that
+release lands.
 
 ## 4. Examples and benchmarks
 
@@ -201,6 +205,8 @@ so a failing run blocks nothing: it is a report.
   needs a language tag; an untagged fence is compiled as Rust.
 - **`unfulfilled lint expectation`**: an `#[expect]` whose lint no longer
   fires; delete it, because the reason it states is gone.
+- **`multiple versions for dependency`**: a new dependency brings a second
+  version of a crate; see [§ 3.7](#37-a-lint-exception).
 - **Benchmarks take minutes to start**: the release profile's fat LTO;
   `-- --quick` shortens the measurements, not the build.
 - **`cargo test --no-default-features` fails where `--all-features`

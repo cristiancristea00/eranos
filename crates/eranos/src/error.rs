@@ -29,8 +29,9 @@ pub enum ValueError {
     /// An amount that is not a decimal number.
     #[error("invalid amount: expected digits with an optional `.` and sign")]
     InvalidAmount,
-    /// A calendar date that does not exist or is not `YYYY-MM-DD`.
-    #[error("invalid date: expected an existing `YYYY-MM-DD` date between years 1 and 9999")]
+    /// A calendar date that does not exist, is outside years 1 to 9999, or is
+    /// not ISO 8601 text.
+    #[error("invalid date: expected an existing ISO 8601 date between years 1 and 9999")]
     InvalidDate,
     /// An email address without exactly one `@`, with an empty side, or with
     /// whitespace.
@@ -60,8 +61,9 @@ pub enum ValueError {
     /// A phone number that is not `+` followed by 7 to 15 digits.
     #[error("invalid phone number: expected `+` followed by 7 to 15 digits")]
     InvalidPhoneNumber,
-    /// A time of day that does not exist or is not `hh:mm`.
-    #[error("invalid time: expected `hh:mm` between 00:00 and 23:59")]
+    /// A time of day that does not exist, has seconds, or is not ISO 8601
+    /// text.
+    #[error("invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")]
     InvalidTime,
     /// A number or a result that does not fit its range.
     #[error("value out of range")]

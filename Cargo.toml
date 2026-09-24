@@ -9,7 +9,7 @@ resolver = "3"
 members = ["crates/eranos"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.97"
 description = "Group expense tracking: exact money splitting, cached balances, and repayment plans"
@@ -18,6 +18,12 @@ publish = false
 
 [workspace.dependencies]
 # --- Library -----------------------------------------------------------------
+# Calendar dates and times of day, and the ISO 8601 parser behind
+# `Date::parse` and `Time::parse`. Without the default features: no clock, no
+# time zone database, and no `std`, none of which a date without a time zone
+# uses. Its types stay inside `Date` and `Time`, so replacing it is not a
+# breaking change.
+jiff = { version = "0.2.37", default-features = false }
 # Typed errors. The derive stays out of the public API, so replacing it with
 # hand-written impls is not a breaking change.
 thiserror = "2.0.20"
@@ -71,7 +77,8 @@ unit_bindings = "warn"
 # pedantic, nursery, and cargo groups, plus the restriction lints below; the
 # gates run clippy with `-D warnings`. An exception is an
 # `#[expect(..., reason = "...")]` at the narrowest scope, never an
-# `#[allow]`.
+# `#[allow]`; a duplicate crate that only a dependency's release can remove
+# is listed in clippy.toml instead.
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }

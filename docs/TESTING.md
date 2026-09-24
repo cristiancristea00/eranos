@@ -101,8 +101,8 @@ two groups must be equal.
 
 ### Lints in tests
 
-Tests are held to the same strict clippy lints as the library. `clippy.toml`
-allows unwrapping, expecting, panicking, and indexing inside `#[test]`
+Tests are held to the same strict clippy lints as the library. The test
+exceptions in `clippy.toml` allow unwrapping, expecting, panicking, and indexing inside `#[test]`
 functions and `#[cfg(test)]` modules; integration-test helpers outside
 those declare the same exception once, at the top of their file, with
 `#![expect(..., reason = "...")]`.

@@ -1,7 +1,8 @@
 //! Expense and transfer dates come from user input and from files synced
-//! between devices. These tests keep impossible dates and times out, keep the
-//! text form exact so a saved date reads back as the same day, and keep
-//! ordering chronological, which every list sorted by date relies on.
+//! between devices. These tests keep impossible dates and times out, pin
+//! which ISO 8601 forms jiff's parser reads, keep the text form exact so a
+//! saved date reads back as the same day, and keep ordering chronological,
+//! which every list sorted by date relies on.
 
 use super::*;
 
@@ -135,24 +136,23 @@ fn parse_rejects_other_shapes() {
         assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
     }
     // Other separators.
-    for text in [
-        "2026/09/23",
-        "2026.09.23",
-        "20260923",
-        "2026 09 23",
-        "2026-09 23",
-    ] {
+    for text in ["2026/09/23", "2026.09.23", "2026 09 23", "2026-09 23"] {
         assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
     }
-    // Extra characters.
-    for text in [
-        "2026-09-23x",
-        "x2026-09-23",
-        "2026-09-23T18:30",
-        "+2026-09-23",
-    ] {
+    // Extra characters, and a sign on a four-digit year.
+    for text in ["2026-09-23x", "x2026-09-23", "+2026-09-23"] {
         assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
     }
+    // The UTC designator: the date would depend on the reader's time zone.
+    assert_eq!(
+        Date::parse("2026-09-24T18:30:00Z"),
+        Err(ValueError::InvalidDate)
+    );
+    // A byte-order mark, which `trim` keeps.
+    assert_eq!(
+        Date::parse("\u{feff}2026-09-24"),
+        Err(ValueError::InvalidDate)
+    );
     // Non-digits, including the characters on either side of `0`-`9`.
     for text in [
         "2a26-09-23",
@@ -169,6 +169,57 @@ fn parse_rejects_other_shapes() {
     // Nothing at all.
     for text in ["", "   "] {
         assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text:?}");
+    }
+}
+
+/// Dates pasted from calendars and other apps, which write the basic form or
+/// a whole date and time, would be refused.
+#[test]
+fn parse_reads_the_other_iso_8601_forms() {
+    let september_24 = date(2026, 9, 24);
+    // The basic form, without separators.
+    assert_eq!(Date::parse("20260923"), Ok(date(2026, 9, 23)));
+    assert_eq!(Date::parse("20260924"), Ok(september_24));
+    // A date and time, of which only the date is kept.
+    for text in [
+        "2026-09-24T18:30",
+        "2026-09-24T00:00",
+        "2026-09-24T00:00:00",
+        "2026-09-24t18:30",
+        "2026-09-24 18:30",
+        "2026-09-24T23:59:60",
+    ] {
+        assert_eq!(Date::parse(text), Ok(september_24), "{text}");
+    }
+    // A date and time with an offset or annotations. The calendar annotation
+    // is read but not applied: the date stays Gregorian.
+    for text in [
+        "2026-09-24T18:30:00+02:00",
+        "2026-09-24T18:30:00+00",
+        "2026-09-24T18:30+02:00[Europe/Bucharest]",
+        "2026-09-24[u-ca=iso8601]",
+        "2026-09-24[u-ca=hebrew]",
+    ] {
+        assert_eq!(Date::parse(text), Ok(september_24), "{text}");
+    }
+    // An expanded year, and the basic form with surrounding whitespace.
+    assert_eq!(Date::parse("+002026-09-24"), Ok(september_24));
+    assert_eq!(Date::parse(" 20260924\n"), Ok(september_24));
+}
+
+/// A date before year 1, which jiff's parser reads, would be stored although
+/// the year does not fit the `YYYY-MM-DD` text form.
+#[test]
+fn parse_rejects_years_before_1() {
+    // Year 0 and negative years, in the forms jiff reads.
+    for text in [
+        "0000-01-01",
+        "0000-02-29",
+        "+000000-01-01",
+        "-000001-01-01",
+        "-002026-09-24",
+    ] {
+        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
     }
 }
 
@@ -241,15 +292,16 @@ fn time_parse_reads_two_digit_hours_and_minutes() {
     assert_eq!("00:00".parse::<Time>(), Time::new(0, 0));
 }
 
-/// A time such as `7:5` or `07:05:00` would be read as the wrong minute.
+/// A time such as `7:5` or `07:05 pm` would be read as the wrong minute.
 #[test]
 fn time_parse_rejects_other_shapes() {
     // Missing padding or other separators.
     for text in ["7:05", "07:5", "0705", "07-05", "07.05", "07 05"] {
         assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
     }
-    // Extra characters.
-    for text in ["07:05:00", "07:05 pm", "T07:05"] {
+    // Extra characters, and the UTC designator, which makes the time depend
+    // on the reader's time zone.
+    for text in ["07:05 pm", "07:05Z"] {
         assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
     }
     // Non-digits.
@@ -262,6 +314,50 @@ fn time_parse_rejects_other_shapes() {
     }
     // Nothing at all.
     assert_eq!(Time::parse(""), Err(ValueError::InvalidTime));
+}
+
+/// Times pasted from other apps, which write seconds, the `T` designator, or
+/// a whole date and time, would be refused.
+#[test]
+fn time_parse_reads_the_other_iso_8601_forms() {
+    let five_past_seven = Time::new(7, 5).unwrap();
+    // Zero seconds and the `T` designator.
+    for text in ["07:05:00", "T07:05", "t07:05", "T0705"] {
+        assert_eq!(Time::parse(text), Ok(five_past_seven), "{text}");
+    }
+    // The hour alone, which is the hour on the dot.
+    for text in ["07", "T07"] {
+        assert_eq!(Time::parse(text), Time::new(7, 0), "{text}");
+    }
+    // A time with an offset or an annotation, and the time of a date and
+    // time.
+    for text in [
+        "07:05+02:00",
+        "07:05[Europe/Bucharest]",
+        "2026-09-24T07:05",
+        "2026-09-24 07:05",
+    ] {
+        assert_eq!(Time::parse(text), Ok(five_past_seven), "{text}");
+    }
+}
+
+/// A time with seconds would be stored as another time than the one typed,
+/// since a `Time` holds whole minutes.
+#[test]
+fn time_parse_rejects_seconds() {
+    // Seconds, fractions of a second, and a leap second, which jiff reads as
+    // 59 seconds.
+    for text in [
+        "07:05:30",
+        "07:05:59",
+        "07:05:00.5",
+        "07:05:00,5",
+        "07:05:00.000000001",
+        "23:59:60",
+        "2026-09-24T07:05:30",
+    ] {
+        assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
+    }
 }
 
 /// Saved times would not be `hh:mm` and would not read back.
@@ -295,6 +391,20 @@ fn times_order_chronologically() {
     assert!(Time::new(7, 59).unwrap() < Time::new(8, 0).unwrap());
     // The whole range.
     assert!(Time::new(0, 0).unwrap() < Time::new(23, 59).unwrap());
+}
+
+/// Logs and test failures would show jiff's value inside instead of the date
+/// or the time.
+#[test]
+fn dates_and_times_debug_as_their_text_form() {
+    // The same text as `Display`.
+    assert_eq!(format!("{:?}", date(2026, 9, 3)), "2026-09-03");
+    assert_eq!(format!("{:?}", Time::new(7, 5).unwrap()), "07:05");
+    // Inside another value.
+    assert_eq!(
+        format!("{:?}", Some(Time::new(7, 5).unwrap())),
+        "Some(07:05)"
+    );
 }
 
 /// A saved date would fail to load, or an impossible one would load.

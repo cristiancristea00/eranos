@@ -16,6 +16,7 @@ readme = "../../README.md"
 serde = ["dep:serde", "uuid/serde"]
 
 [dependencies]
+jiff = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 zeroize = { workspace = true }

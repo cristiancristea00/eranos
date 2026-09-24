@@ -1,3 +1,7 @@
+# Two kinds of exception apply beyond one item: what a test needs to fail
+# loudly, and duplicate crates that only a dependency's release can remove.
+# Every other exception is an `#[expect(..., reason = "...")]` in the code.
+
 # Tests are held to the same lints as the library, except that a panic is how
 # a test reports failure: unwrapping, expecting, panicking, and indexing are
 # allowed inside test functions and `#[cfg(test)]` modules.
@@ -5,3 +9,13 @@ allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
 allow-indexing-slicing-in-tests = true
+
+# `multiple_crate_versions` reads `cargo metadata`, which also lists crates
+# that are never built, and it fires in every target, so it cannot be an
+# `#[expect]`. Each entry names the dependency and the upstream fix; an entry
+# goes when no dependency needs it.
+# - syn: jiff lists jiff-static (syn 2) under a `cfg(any())` that never holds,
+#   and jiff-core's weak `defmt?/alloc` feature lists defmt-macros (syn 2)
+#   (rust-lang/cargo#10801); only syn 3 is built. BurntSushi/jiff#650 (jiff
+#   on syn 3) and BurntSushi/jiff#643 (defmt out of the lockfile) remove it.
+allowed-duplicate-crates = ["syn"]

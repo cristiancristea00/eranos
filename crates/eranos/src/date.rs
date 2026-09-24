@@ -2,11 +2,14 @@
 //!
 //! The library never reads the clock: every date comes from the caller, which
 //! keeps the core deterministic and usable on wasm, where the system clock is
-//! unavailable.
+//! unavailable. Both types wrap jiff's civil types and read text with jiff's
+//! ISO 8601 parser; the jiff types stay private.
 
 use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
+
+use jiff::civil;
 
 use crate::error::ValueError;
 
@@ -26,18 +29,18 @@ use crate::error::ValueError;
 /// assert!(Date::new(29, 2, 2026).is_err()); // 2026 is not a leap year
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Date {
-    day: u8,
-    month: u8,
-    year: u16,
+    /// Always in years 1..=9999: jiff's dates start at year -9999, and
+    /// `from_civil` refuses the years before 1.
+    inner: civil::Date,
 }
 
-// Written out because the fields are in alphabetical order: a derived
-// ordering would compare days first.
+// Written out, like every ordering here, so that it never depends on the
+// order of the fields; jiff orders dates chronologically.
 impl Ord for Date {
     fn cmp(&self, other: &Self) -> Ordering {
-        (self.year, self.month, self.day).cmp(&(other.year, other.month, other.day))
+        self.inner.cmp(&other.inner)
     }
 }
 
@@ -55,22 +58,34 @@ impl Date {
     ///
     /// [`ValueError::InvalidDate`] when the year is outside 1..=9999 or the
     /// day does not exist in that month.
-    pub const fn new(day: u8, month: u8, year: u16) -> Result<Self, ValueError> {
-        if year < 1 || year > 9999 || month < 1 || month > 12 {
+    pub fn new(day: u8, month: u8, year: u16) -> Result<Self, ValueError> {
+        // A day or a month above `i8::MAX`, or a year above `i16::MAX`, is in
+        // no calendar jiff represents.
+        let (Ok(day), Ok(month), Ok(year)) =
+            (i8::try_from(day), i8::try_from(month), i16::try_from(year))
+        else {
             return Err(ValueError::InvalidDate);
-        }
-        if day < 1 || day > days_in_month(year, month) {
-            return Err(ValueError::InvalidDate);
-        }
-        Ok(Self { day, month, year })
+        };
+        civil::Date::new(year, month, day)
+            .ok()
+            .and_then(Self::from_civil)
+            .ok_or(ValueError::InvalidDate)
     }
 
-    /// Parses an ISO 8601 `YYYY-MM-DD` date.
+    /// Parses an ISO 8601 date such as `2026-09-24`, ignoring surrounding
+    /// whitespace.
+    ///
+    /// jiff's parser also reads the basic form `20260924`, an expanded year
+    /// such as `+002026-09-24`, and a date followed by a time, an offset, and
+    /// annotations, such as `2026-09-24T18:30+02:00[Europe/Bucharest]`, of
+    /// which only the date is kept. A calendar annotation such as
+    /// `[u-ca=hebrew]` is read but not applied: the date stays Gregorian.
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidDate`] when the text is not exactly four digits,
-    /// `-`, two digits, `-`, two digits, or names a day that does not exist.
+    /// [`ValueError::InvalidDate`] when the text is not such a date, names a
+    /// day that does not exist or a year before 1, or carries the `Z` of a UTC
+    /// time.
     ///
     /// # Examples
     ///
@@ -78,45 +93,64 @@ impl Date {
     /// use eranos::Date;
     ///
     /// assert_eq!(Date::parse("2028-02-29")?.day(), 29);
+    /// assert_eq!(Date::parse("2026-09-24T18:30+02:00")?, Date::new(24, 9, 2026)?);
     /// assert!(Date::parse("2026-9-23").is_err());
+    /// assert!(Date::parse("0000-01-01").is_err());
     /// # Ok::<(), eranos::error::ValueError>(())
     /// ```
     pub fn parse(text: &str) -> Result<Self, ValueError> {
-        let bytes = text.trim().as_bytes();
-        let [y1, y2, y3, y4, b'-', m1, m2, b'-', d1, d2] = *bytes else {
-            return Err(ValueError::InvalidDate);
-        };
-        let year = four_digits([y1, y2, y3, y4]).ok_or(ValueError::InvalidDate)?;
-        let month = two_digits(m1, m2).ok_or(ValueError::InvalidDate)?;
-        let day = two_digits(d1, d2).ok_or(ValueError::InvalidDate)?;
-        Self::new(day, month, year)
+        text.trim()
+            .parse::<civil::Date>()
+            .ok()
+            .and_then(Self::from_civil)
+            .ok_or(ValueError::InvalidDate)
+    }
+
+    /// Keeps a jiff date from year 1 on.
+    fn from_civil(inner: civil::Date) -> Option<Self> {
+        (inner.year() >= 1).then_some(Self { inner })
     }
 
     /// The day of the month, starting at 1.
     #[must_use]
-    pub const fn day(self) -> u8 {
-        self.day
+    pub fn day(self) -> u8 {
+        // jiff's days run from 1 to 31, so the cast keeps the value.
+        self.inner.day().cast_unsigned()
     }
 
     /// The month, 1 (January) to 12 (December).
     #[must_use]
-    pub const fn month(self) -> u8 {
-        self.month
+    pub fn month(self) -> u8 {
+        // jiff's months run from 1 to 12, so the cast keeps the value.
+        self.inner.month().cast_unsigned()
     }
 
     /// The year, 1 to 9999.
     #[must_use]
-    pub const fn year(self) -> u16 {
-        self.year
+    pub fn year(self) -> u16 {
+        // `from_civil` refuses the years before 1 and jiff's end at 9999, so
+        // the cast keeps the value.
+        self.inner.year().cast_unsigned()
     }
 }
 
+// The text form, not the jiff value inside.
+impl fmt::Debug for Date {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, formatter)
+    }
+}
+
+// Written here rather than taken from jiff: it is the saved form, so it must
+// not change with a dependency's release.
 impl fmt::Display for Date {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
             "{:04}-{:02}-{:02}",
-            self.year, self.month, self.day
+            self.year(),
+            self.month(),
+            self.day()
         )
     }
 }
@@ -144,17 +178,18 @@ impl FromStr for Date {
 /// assert!(Time::new(24, 0).is_err());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Time {
-    hour: u8,
-    minute: u8,
+    /// Always on a whole minute: `new` sets no seconds, and `parse` refuses a
+    /// time with seconds or a fraction of one.
+    inner: civil::Time,
 }
 
-// Written out, like the ordering of `Date`, so that it does not depend on
-// the order of the fields.
+// Written out, like the ordering of `Date`; jiff orders times
+// chronologically.
 impl Ord for Time {
     fn cmp(&self, other: &Self) -> Ordering {
-        (self.hour, self.minute).cmp(&(other.hour, other.minute))
+        self.inner.cmp(&other.inner)
     }
 }
 
@@ -171,45 +206,77 @@ impl Time {
     ///
     /// [`ValueError::InvalidTime`] when the hour is above 23 or the minute
     /// above 59.
-    pub const fn new(hour: u8, minute: u8) -> Result<Self, ValueError> {
-        if hour > 23 || minute > 59 {
+    pub fn new(hour: u8, minute: u8) -> Result<Self, ValueError> {
+        // An hour or a minute above `i8::MAX` is in no day.
+        let (Ok(hour), Ok(minute)) = (i8::try_from(hour), i8::try_from(minute)) else {
             return Err(ValueError::InvalidTime);
-        }
-        Ok(Self { hour, minute })
+        };
+        civil::Time::new(hour, minute, 0, 0)
+            .ok()
+            .map(|inner| Self { inner })
+            .ok_or(ValueError::InvalidTime)
     }
 
-    /// Parses a `hh:mm` time, two digits each.
+    /// Parses an ISO 8601 time of day such as `18:30`, ignoring surrounding
+    /// whitespace.
+    ///
+    /// jiff's parser also reads zero seconds (`18:30:00`), the `T` designator
+    /// (`T1830`), the hour alone (`18` for 18:00), and the time of a date and
+    /// time, or one followed by an offset or annotations
+    /// (`2026-09-24T18:30+02:00`).
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidTime`] when the text is not two digits, `:`, two
-    /// digits, or names a time that does not exist.
+    /// [`ValueError::InvalidTime`] when the text is not such a time, names one
+    /// that does not exist, has seconds or a fraction of a second, or carries
+    /// the `Z` of a UTC time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::Time;
+    ///
+    /// assert_eq!(Time::parse("07:05")?, Time::new(7, 5)?);
+    /// assert_eq!(Time::parse("T07:05:00")?, Time::new(7, 5)?);
+    /// assert!(Time::parse("07:05:30").is_err());
+    /// # Ok::<(), eranos::error::ValueError>(())
+    /// ```
     pub fn parse(text: &str) -> Result<Self, ValueError> {
-        let bytes = text.trim().as_bytes();
-        let [h1, h2, b':', m1, m2] = *bytes else {
-            return Err(ValueError::InvalidTime);
-        };
-        let hour = two_digits(h1, h2).ok_or(ValueError::InvalidTime)?;
-        let minute = two_digits(m1, m2).ok_or(ValueError::InvalidTime)?;
-        Self::new(hour, minute)
+        text.trim()
+            .parse::<civil::Time>()
+            .ok()
+            .filter(|inner| inner.second() == 0 && inner.subsec_nanosecond() == 0)
+            .map(|inner| Self { inner })
+            .ok_or(ValueError::InvalidTime)
     }
 
     /// The hour, 0 to 23.
     #[must_use]
-    pub const fn hour(self) -> u8 {
-        self.hour
+    pub fn hour(self) -> u8 {
+        // jiff's hours run from 0 to 23, so the cast keeps the value.
+        self.inner.hour().cast_unsigned()
     }
 
     /// The minute, 0 to 59.
     #[must_use]
-    pub const fn minute(self) -> u8 {
-        self.minute
+    pub fn minute(self) -> u8 {
+        // jiff's minutes run from 0 to 59, so the cast keeps the value.
+        self.inner.minute().cast_unsigned()
     }
 }
 
+// The text form, not the jiff value inside.
+impl fmt::Debug for Time {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, formatter)
+    }
+}
+
+// Written here rather than taken from jiff, whose form has seconds: it is the
+// saved form, so it must not change with a dependency's release.
 impl fmt::Display for Time {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{:02}:{:02}", self.hour, self.minute)
+        write!(formatter, "{:02}:{:02}", self.hour(), self.minute())
     }
 }
 
@@ -218,32 +285,6 @@ impl FromStr for Time {
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)
-    }
-}
-
-/// The value of four ASCII decimal digits; `None` for anything else.
-fn four_digits(bytes: [u8; 4]) -> Option<u16> {
-    bytes.iter().try_fold(0_u16, |value, &byte| {
-        byte.is_ascii_digit()
-            .then(|| value * 10 + u16::from(byte - b'0'))
-    })
-}
-
-/// The value of two ASCII decimal digits; `None` for anything else.
-fn two_digits(tens: u8, ones: u8) -> Option<u8> {
-    (tens.is_ascii_digit() && ones.is_ascii_digit()).then(|| (tens - b'0') * 10 + (ones - b'0'))
-}
-
-const fn is_leap_year(year: u16) -> bool {
-    year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400))
-}
-
-const fn days_in_month(year: u16, month: u8) -> u8 {
-    match month {
-        2 if is_leap_year(year) => 29,
-        2 => 28,
-        4 | 6 | 9 | 11 => 30,
-        _ => 31,
     }
 }
 
@@ -261,7 +302,7 @@ mod serde_impls {
 
     impl<'de> Deserialize<'de> for Date {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialise(deserialiser, "a `YYYY-MM-DD` date")
+            crate::serde_text::deserialise(deserialiser, "an ISO 8601 date such as `2026-09-24`")
         }
     }
 
@@ -273,7 +314,7 @@ mod serde_impls {
 
     impl<'de> Deserialize<'de> for Time {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialise(deserialiser, "an `hh:mm` time")
+            crate::serde_text::deserialise(deserialiser, "an ISO 8601 time such as `18:30`")
         }
     }
 }
