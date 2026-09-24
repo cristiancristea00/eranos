@@ -22,11 +22,11 @@ fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
         .iter()
         .zip(1_u32..)
         .map(|(&member, weight)| (member, Parts::from_whole(weight).unwrap_or(Parts::ONE)));
-    let day = Date::new(2026, 9, 23).unwrap_or_else(|error| panic!("{error}"));
+    let day = Date::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
     Expense::builder(
-        "Expense",
-        Money::from_minor_units(minor_units, Currency::EUR),
+        Money::from_minor_units(Currency::EUR, minor_units),
         day,
+        "Expense",
     )
     .paid_by(payer)
     .split(Split::parts(parts))
@@ -37,7 +37,7 @@ fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
 /// A household of six with `EXISTING` expenses, each paid by the next member
 /// in turn.
 fn household() -> (Group, Vec<MemberId>) {
-    let mut group = Group::builder("Benchmark", Currency::EUR)
+    let mut group = Group::builder(Currency::EUR, "Benchmark")
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     let member = Member::builder("Member")

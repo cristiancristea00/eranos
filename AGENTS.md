@@ -100,8 +100,11 @@ for test helpers and benchmark fixtures, which panic to report failure);
   field is optional when the caller may leave it out: an `Option`, or a
   field with a default, such as a quantity of 1 or no accounts. Generated
   and derived fields, such as an expense's total, count as required.
-  Struct literals, struct patterns, and serialised keys follow the same
-  order. No field order carries meaning: `Date` and `Time` write their
+  Struct literals, struct patterns, serialised keys, and the arguments of
+  a constructor that takes fields follow the same order:
+  `Date::new(day, month, year)`, `Money::from_minor_units(currency,
+  minor_units)`, `Expense::builder(cost, date, name)`; a `parse` takes its
+  text first. No field order carries meaning: `Date` and `Time` write their
   ordering out by hand, and a table row in the examples fixes its columns
   with `#[tabled(order = N)]`.
 - **Accessors follow their fields.** An `impl` starts with its

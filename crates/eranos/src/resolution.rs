@@ -120,7 +120,7 @@ pub(crate) fn resolve_expense(
     for &(member, consumed) in &shares {
         members.entry(member).or_default().1 = consumed;
     }
-    let money = |minor_units| Money::from_minor_units(minor_units, currency);
+    let money = |minor_units| Money::from_minor_units(currency, minor_units);
     Ok(ExpenseShares {
         debts,
         members: members

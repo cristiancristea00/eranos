@@ -20,10 +20,10 @@ use crate::error::ValueError;
 /// ```
 /// use eranos::Date;
 ///
-/// let date = Date::new(2026, 9, 23)?;
+/// let date = Date::new(23, 9, 2026)?;
 /// assert_eq!(date.to_string(), "2026-09-23");
 /// assert_eq!("2026-09-23".parse::<Date>()?, date);
-/// assert!(Date::new(2026, 2, 29).is_err()); // 2026 is not a leap year
+/// assert!(Date::new(29, 2, 2026).is_err()); // 2026 is not a leap year
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -48,13 +48,14 @@ impl PartialOrd for Date {
 }
 
 impl Date {
-    /// Returns the date `year`-`month`-`day`.
+    /// Returns the date `day` `month` `year`: `new(24, 9, 2026)` is 24
+    /// September 2026.
     ///
     /// # Errors
     ///
     /// [`ValueError::InvalidDate`] when the year is outside 1..=9999 or the
     /// day does not exist in that month.
-    pub const fn new(year: u16, month: u8, day: u8) -> Result<Self, ValueError> {
+    pub const fn new(day: u8, month: u8, year: u16) -> Result<Self, ValueError> {
         if year < 1 || year > 9999 || month < 1 || month > 12 {
             return Err(ValueError::InvalidDate);
         }
@@ -88,7 +89,7 @@ impl Date {
         let year = four_digits([y1, y2, y3, y4]).ok_or(ValueError::InvalidDate)?;
         let month = two_digits(m1, m2).ok_or(ValueError::InvalidDate)?;
         let day = two_digits(d1, d2).ok_or(ValueError::InvalidDate)?;
-        Self::new(year, month, day)
+        Self::new(day, month, year)
     }
 
     /// The day of the month, starting at 1.

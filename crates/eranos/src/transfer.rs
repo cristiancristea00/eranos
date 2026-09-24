@@ -22,11 +22,11 @@ use crate::text;
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let repayment = Transfer::builder(bob, ana, Money::parse("30.00", Currency::EUR)?, Date::new(2026, 9, 24)?)
+/// let repayment = Transfer::builder(Money::parse("30.00", Currency::EUR)?, Date::new(24, 9, 2026)?, bob, ana)
 ///     .note("Dinner")
 ///     .build()?;
 /// assert_eq!(repayment.from(), bob);
-/// assert!(Transfer::builder(ana, ana, repayment.amount(), repayment.date()).build().is_err());
+/// assert!(Transfer::builder(repayment.amount(), repayment.date(), ana, ana).build().is_err());
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,15 +49,15 @@ pub struct Transfer {
 }
 
 impl Transfer {
-    /// Starts a transfer of `cost` from `from` to `to` on `date`.
+    /// Starts a transfer of `cost` on `date`, from `from` to `to`.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
     pub fn builder(
-        from: MemberId,
-        to: MemberId,
         cost: impl Into<Cost>,
         date: Date,
+        from: MemberId,
+        to: MemberId,
     ) -> TransferBuilder {
         TransferBuilder {
             cost: cost.into(),
@@ -83,7 +83,7 @@ impl Transfer {
 
     /// A transfer the caller guarantees is valid: two different members and
     /// a positive amount.
-    pub(crate) fn new_unchecked(from: MemberId, to: MemberId, amount: Money, date: Date) -> Self {
+    pub(crate) fn new_unchecked(amount: Money, date: Date, from: MemberId, to: MemberId) -> Self {
         debug_assert!(
             from != to && amount.is_positive(),
             "an unchecked transfer must be valid"
@@ -265,7 +265,7 @@ impl TryFrom<TransferRecord> for Transfer {
 
     fn try_from(record: TransferRecord) -> Result<Self, Self::Error> {
         let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = Self::builder(record.from, record.to, cost, record.date).time(record.time);
+        let builder = Self::builder(cost, record.date, record.from, record.to).time(record.time);
         match record.note {
             Some(note) => builder.note(note).build(),
             None => builder.build(),

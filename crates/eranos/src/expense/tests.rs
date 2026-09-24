@@ -18,7 +18,7 @@ const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 const DAN: MemberId = MemberId::from_bytes([4; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -26,12 +26,12 @@ fn per_cent(text: &str) -> Percentage {
 }
 
 fn september_23() -> Date {
-    Date::new(2026, 9, 23).unwrap()
+    Date::new(23, 9, 2026).unwrap()
 }
 
 /// A 90.00 EUR dinner on 23 September 2026, without payers or a split.
 fn dinner() -> ExpenseBuilder {
-    Expense::builder("Dinner", euros(9_000), september_23())
+    Expense::builder(euros(9_000), september_23(), "Dinner")
 }
 
 /// A line of `minor_units` shared by Ana.
@@ -110,7 +110,7 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
 #[test]
 fn the_expense_name_is_trimmed_and_required() {
     // Surrounding whitespace.
-    let expense = Expense::builder("  Dinner \n", euros(9_000), september_23())
+    let expense = Expense::builder(euros(9_000), september_23(), "  Dinner \n")
         .paid_by(ANA)
         .split(Split::equal([ANA]))
         .build()
@@ -340,7 +340,7 @@ fn items_must_add_up_to_the_amount() {
 #[test]
 fn an_item_in_another_currency_is_rejected() {
     // A dollar line on a euro receipt.
-    let dollars = Item::builder("Pizza", Money::from_minor_units(9_000, Currency::USD))
+    let dollars = Item::builder("Pizza", Money::from_minor_units(Currency::USD, 9_000))
         .shared_by([ANA])
         .build()
         .unwrap();
@@ -447,7 +447,7 @@ fn an_invalid_fixed_tip_is_rejected() {
         Err(ExpenseError::NegativeTip)
     );
     // Another currency.
-    let dollars = Money::from_minor_units(100, Currency::USD);
+    let dollars = Money::from_minor_units(Currency::USD, 100);
     assert_eq!(
         builder().tip(Tip::fixed(dollars)).build(),
         Err(ExpenseError::CurrencyMismatch {
@@ -462,7 +462,7 @@ fn an_invalid_fixed_tip_is_rejected() {
 #[test]
 fn a_total_out_of_range_is_rejected() {
     let largest = || {
-        Expense::builder("Yacht", euros(i64::MAX), september_23())
+        Expense::builder(euros(i64::MAX), september_23(), "Yacht")
             .paid_by(ANA)
             .split(Split::equal([ANA]))
     };
@@ -670,7 +670,7 @@ fn builder_setters_replace_each_field() {
             .unwrap()
     };
     // Name, cost, and date replaced.
-    let lunch_date = Date::new(2026, 9, 24).unwrap();
+    let lunch_date = Date::new(24, 9, 2026).unwrap();
     let lunch = base()
         .to_builder()
         .name("Lunch")

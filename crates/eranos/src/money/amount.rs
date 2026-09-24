@@ -22,7 +22,7 @@ use crate::money::{Cost, Currency, ExchangeRate};
 /// assert_eq!(price.minor_units(), 1234);
 /// assert_eq!(price.to_string(), "12.34 EUR");
 ///
-/// let tip = Money::from_minor_units(166, Currency::EUR);
+/// let tip = Money::from_minor_units(Currency::EUR, 166);
 /// assert_eq!(price.checked_add(tip)?, Money::parse("14.00", Currency::EUR)?);
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
@@ -34,10 +34,10 @@ pub struct Money {
 }
 
 impl Money {
-    /// Returns `minor_units` of `currency`: `from_minor_units(1234,
-    /// Currency::EUR)` is 12.34 EUR.
+    /// Returns `minor_units` of `currency`: `from_minor_units(Currency::EUR,
+    /// 1234)` is 12.34 EUR.
     #[must_use]
-    pub const fn from_minor_units(minor_units: i64, currency: Currency) -> Self {
+    pub const fn from_minor_units(currency: Currency, minor_units: i64) -> Self {
         Self {
             currency,
             minor_units,
@@ -47,7 +47,7 @@ impl Money {
     /// Returns zero in `currency`.
     #[must_use]
     pub const fn zero(currency: Currency) -> Self {
-        Self::from_minor_units(0, currency)
+        Self::from_minor_units(currency, 0)
     }
 
     /// Parses a decimal amount such as `12.34`, `-5`, or `0.5`.
@@ -109,7 +109,7 @@ impl Money {
             .ok_or(ValueError::Overflow)?;
         let signed = if negative { -magnitude } else { magnitude };
         let minor_units = i64::try_from(signed).map_err(|_| ValueError::Overflow)?;
-        Ok(Self::from_minor_units(minor_units, currency))
+        Ok(Self::from_minor_units(currency, minor_units))
     }
 
     /// The currency.
@@ -176,7 +176,7 @@ impl Money {
             .minor_units
             .checked_add(other.minor_units)
             .ok_or(ValueError::Overflow)?;
-        Ok(Self::from_minor_units(sum, self.currency))
+        Ok(Self::from_minor_units(self.currency, sum))
     }
 
     /// Subtracts an amount of the same currency.
@@ -192,7 +192,7 @@ impl Money {
             .minor_units
             .checked_sub(other.minor_units)
             .ok_or(ValueError::Overflow)?;
-        Ok(Self::from_minor_units(difference, self.currency))
+        Ok(Self::from_minor_units(self.currency, difference))
     }
 
     fn same_currency(self, other: Self) -> Result<(), ValueError> {

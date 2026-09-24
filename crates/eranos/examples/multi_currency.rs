@@ -117,9 +117,9 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     let both = Split::equal([ana, bob]);
     group.add_expense(
         Expense::builder(
-            "Fuel",
             Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
-            Date::new(2026, 8, 1)?,
+            Date::new(1, 8, 2026)?,
+            "Fuel",
         )
         .paid_by(ana)
         .split(both.clone())
@@ -127,9 +127,9 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     )?;
     group.add_expense(
         Expense::builder(
-            "Dinner",
             Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
-            Date::new(2026, 8, 2)?,
+            Date::new(2, 8, 2026)?,
+            "Dinner",
         )
         .paid_by(bob)
         .split(both.clone())
@@ -137,9 +137,9 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     )?;
     group.add_expense(
         Expense::builder(
-            "Ferry",
             Money::parse("60.00", Currency::EUR)?,
-            Date::new(2026, 8, 3)?,
+            Date::new(3, 8, 2026)?,
+            "Ferry",
         )
         .paid_by(bob)
         .split(both)
@@ -157,10 +157,10 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
 fn repayment(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
     section("3. A repayment in cash, in another currency");
     let cash = Transfer::builder(
+        Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
+        Date::new(4, 8, 2026)?,
         ana,
         bob,
-        Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
-        Date::new(2026, 8, 4)?,
     )
     .note("Cash at the border")
     .build()?;
@@ -199,7 +199,7 @@ fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Danube road trip", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Danube road trip").build()?;
     let ana = group.add_member(Member::builder("Ana").build()?);
     let bob = group.add_member(Member::builder("Bob").build()?);
 

@@ -22,7 +22,7 @@ use proptest::prelude::*;
 const MEMBERS: usize = 6;
 
 fn day() -> Date {
-    Date::new(2026, 9, 23).unwrap()
+    Date::new(23, 9, 2026).unwrap()
 }
 
 /// How one amount is divided: a method and weighted members.
@@ -84,7 +84,7 @@ impl SplitRecipe {
             }),
             _ => positive_parts(total.minor_units(), &weights).map_or(equal, |amounts| {
                 Split::amounts(chosen.iter().zip(amounts).map(|(&(member, _), amount)| {
-                    (member, Money::from_minor_units(amount, total.currency()))
+                    (member, Money::from_minor_units(total.currency(), amount))
                 }))
             }),
         }
@@ -137,11 +137,11 @@ impl ExpenseRecipe {
                 )
             }
         };
-        let money = |minor_units| Money::from_minor_units(minor_units, currency);
+        let money = |minor_units| Money::from_minor_units(currency, minor_units);
         let cost = |amount: Money| rate.map_or_else(|| Cost::from(amount), |rate| amount.at(rate));
         let whole = || {
             let amount = money(self.amount);
-            Expense::builder("Whole", cost(amount), day()).split(self.split.build(members, amount))
+            Expense::builder(cost(amount), day(), "Whole").split(self.split.build(members, amount))
         };
         let itemised = |items: &Vec<(i64, u32, SplitRecipe)>| {
             let items: Vec<Item> = items
@@ -159,7 +159,7 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::builder("Itemised", cost(money(amount)), day()).items(items)
+            Expense::builder(cost(money(amount)), day(), "Itemised").items(items)
         };
         let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some((fixed, value, equal)) = self.tip {
@@ -227,10 +227,10 @@ fn entries(recipe: &GroupRecipe) -> Entries {
         .zip(1_u8..)
         .map(|(&(from, to, amount), number)| {
             let transfer = Transfer::builder(
+                Money::from_minor_units(Currency::EUR, amount),
+                day(),
                 members[from],
                 members[to],
-                Money::from_minor_units(amount, Currency::EUR),
-                day(),
             )
             .build()
             .unwrap();
@@ -245,7 +245,7 @@ fn group(
     expenses: &[(ExpenseId, Expense)],
     transfers: &[(TransferId, Transfer)],
 ) -> Group {
-    let mut group = Group::builder("Random", Currency::EUR)
+    let mut group = Group::builder(Currency::EUR, "Random")
         .id(eranos::GroupId::from_bytes([0; 16]))
         .build()
         .unwrap();

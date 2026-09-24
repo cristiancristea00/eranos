@@ -21,12 +21,12 @@ fn eur(text: &str) -> Money {
 }
 
 fn day() -> Date {
-    Date::new(2026, 9, 23).unwrap()
+    Date::new(23, 9, 2026).unwrap()
 }
 
 /// A group using every serialised feature, and its members.
 fn group() -> (Group, MemberId, MemberId, MemberId) {
-    let mut group = Group::builder("Lisbon", Currency::EUR)
+    let mut group = Group::builder(Currency::EUR, "Lisbon")
         .description("Autumn trip")
         .language(Language::parse("pt-PT").unwrap())
         .build()
@@ -36,8 +36,8 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
             .last_name("Popescu")
             .email(Email::parse("ana@example.com").unwrap())
             .phone(PhoneNumber::parse("+40712345678").unwrap())
-            .account(Account::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap())
-            .account(Account::new("Revolut", Username::new("@ana").unwrap()).unwrap())
+            .account(Account::new(Iban::parse("RO49AAAA1B31007593840000").unwrap(), "ING").unwrap())
+            .account(Account::new(Username::new("@ana").unwrap(), "Revolut").unwrap())
             .build()
             .unwrap(),
     );
@@ -45,7 +45,7 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
     let carol = group.add_member(Member::builder("Carol").build().unwrap());
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
 
-    let bill = Expense::builder("Bill", eur("21.00"), day())
+    let bill = Expense::builder(eur("21.00"), day(), "Bill")
         .description("Tasca")
         .time(Time::new(20, 30).unwrap())
         .category(food)
@@ -71,11 +71,11 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
         .unwrap();
     group.add_expense(bill).unwrap();
     let tram = Expense::builder(
-        "Tram",
         Money::parse("30.00", Currency::RON)
             .unwrap()
             .at(ExchangeRate::parse("0.2011").unwrap()),
         day(),
+        "Tram",
     )
     .payers(Split::amounts([
         (ana, Money::parse("20.00", Currency::RON).unwrap()),
@@ -90,7 +90,7 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
     group.add_expense(tram).unwrap();
     group
         .add_transfer(
-            Transfer::builder(ana, bob, eur("5.00"), day())
+            Transfer::builder(eur("5.00"), day(), ana, bob)
                 .note("Wine")
                 .build()
                 .unwrap(),
@@ -277,7 +277,7 @@ fn an_inconsistent_file_is_refused() {
 /// gaining any.
 #[test]
 fn a_bare_group_round_trips_through_json() {
-    let group = Group::builder("Bare", Currency::EUR).build().unwrap();
+    let group = Group::builder(Currency::EUR, "Bare").build().unwrap();
     let text = serde_json::to_string(&group).unwrap();
     assert!(!text.contains("description"), "{text}");
     let loaded: Group = serde_json::from_str(&text).unwrap();

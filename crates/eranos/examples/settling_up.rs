@@ -92,9 +92,9 @@ fn spend(
     participants: &[MemberId],
 ) -> Result<(), Box<dyn Error>> {
     let expense = Expense::builder(
-        name,
         Money::parse(amount, Currency::EUR)?,
-        Date::new(2026, 9, 20)?,
+        Date::new(20, 9, 2026)?,
+        name,
     )
     .paid_by(payer)
     .split(Split::equal(participants.iter().copied()))
@@ -192,7 +192,7 @@ fn strategies(group: &Group) -> Result<[usize; 3], Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Ski week", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Ski week").build()?;
     let mut add = |name| -> Result<MemberId, Box<dyn Error>> {
         Ok(group.add_member(Member::builder(name).build()?))
     };
@@ -233,7 +233,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .settlement(SettlementStrategy::MinimumTransfers)?
         .clone();
     for payment in plan.payments() {
-        group.add_transfer(payment.to_transfer(Date::new(2026, 9, 27)?))?;
+        group.add_transfer(payment.to_transfer(Date::new(27, 9, 2026)?))?;
     }
     println!(
         "Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n\

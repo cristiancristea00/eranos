@@ -34,7 +34,7 @@ use crate::text;
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob, carol) = (MemberId::generate(), MemberId::generate(), MemberId::generate());
-/// let dinner = Expense::builder("Dinner", Money::parse("90.00", Currency::EUR)?, Date::new(2026, 9, 23)?)
+/// let dinner = Expense::builder(Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?, "Dinner")
 ///     .paid_by(ana)
 ///     .split(Split::equal([ana, bob, carol]))
 ///     .tip(Tip::percentage(Percentage::parse("10")?))
@@ -71,11 +71,11 @@ pub struct Expense {
 }
 
 impl Expense {
-    /// Starts an expense with its required name, cost, and date.
+    /// Starts an expense with its required cost, date, and name.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
-    pub fn builder(name: impl Into<String>, cost: impl Into<Cost>, date: Date) -> ExpenseBuilder {
+    pub fn builder(cost: impl Into<Cost>, date: Date, name: impl Into<String>) -> ExpenseBuilder {
         ExpenseBuilder {
             cost: cost.into(),
             date,
@@ -190,8 +190,8 @@ impl Expense {
     pub const fn tip_amount(&self) -> Money {
         // Both are in the expense currency and total = amount + tip.
         Money::from_minor_units(
-            self.total.minor_units() - self.amount.minor_units(),
             self.amount.currency(),
+            self.total.minor_units() - self.amount.minor_units(),
         )
     }
 
@@ -405,7 +405,7 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
     }
     let actual = i64::try_from(sum).map_err(|_| ExpenseError::Overflow)?;
     Err(ExpenseError::ItemsDoNotAddUp {
-        actual: Money::from_minor_units(actual, amount.currency()),
+        actual: Money::from_minor_units(amount.currency(), actual),
         expected: amount,
     })
 }
@@ -475,7 +475,7 @@ impl TryFrom<ExpenseRecord> for Expense {
 
     fn try_from(record: ExpenseRecord) -> Result<Self, Self::Error> {
         let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = Self::builder(record.name, cost, record.date)
+        let builder = Self::builder(cost, record.date, record.name)
             .category(record.category)
             .tip(record.tip)
             .time(record.time)

@@ -98,7 +98,7 @@ impl Item {
             .unit_price
             .minor_units()
             .saturating_mul(i64::from(self.quantity));
-        Money::from_minor_units(total, self.unit_price.currency())
+        Money::from_minor_units(self.unit_price.currency(), total)
     }
 }
 
@@ -172,8 +172,8 @@ impl ItemBuilder {
             .checked_mul(i64::from(self.quantity))
             .ok_or(ExpenseError::Overflow)?;
         split.validate(Money::from_minor_units(
-            line_total,
             self.unit_price.currency(),
+            line_total,
         ))?;
         Ok(Item {
             name,

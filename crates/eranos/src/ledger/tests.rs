@@ -15,7 +15,7 @@ fn category(number: u8) -> CategoryId {
 }
 
 fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 /// The pair of `from` owing or paying `to`.

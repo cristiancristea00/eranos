@@ -71,7 +71,7 @@ fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Weekend in Sinaia", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Weekend in Sinaia").build()?;
     println!("{}", group.name());
     println!("{}", "═".repeat(group.name().chars().count()));
     println!(
@@ -96,16 +96,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Each expense records who paid and who shares it. Here everyone shares everything\n\
          equally."
     );
-    let friday = Date::new(2026, 9, 25)?;
+    let friday = Date::new(25, 9, 2026)?;
     let everyone = Split::equal([ana, bob, carol]);
     group.add_expense(
-        Expense::builder("Cabin", Money::parse("240.00", Currency::EUR)?, friday)
+        Expense::builder(Money::parse("240.00", Currency::EUR)?, friday, "Cabin")
             .paid_by(ana)
             .split(everyone.clone())
             .build()?,
     )?;
     group.add_expense(
-        Expense::builder("Groceries", Money::parse("60.00", Currency::EUR)?, friday)
+        Expense::builder(Money::parse("60.00", Currency::EUR)?, friday, "Groceries")
             .paid_by(bob)
             .split(everyone)
             .build()?,

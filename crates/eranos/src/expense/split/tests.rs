@@ -18,7 +18,7 @@ const BOB: MemberId = MemberId::from_bytes([2; 16]);
 const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -185,7 +185,7 @@ fn percentages_must_add_up_to_exactly_100() {
 #[test]
 fn amounts_in_another_currency_are_rejected() {
     // A dollar share of a euro total.
-    let dollars = Money::from_minor_units(500, Currency::USD);
+    let dollars = Money::from_minor_units(Currency::USD, 500);
     let split = Split::amounts([(ANA, euros(500)), (BOB, dollars)]);
     assert_eq!(
         split.validate(euros(1_000)),

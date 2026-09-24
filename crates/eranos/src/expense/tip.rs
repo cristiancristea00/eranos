@@ -88,7 +88,7 @@ impl Tip {
             }
             TipValue::Percentage(rate) => {
                 apply_basis_points(amount.minor_units(), rate.basis_points())
-                    .map(|tip| Money::from_minor_units(tip, amount.currency()))
+                    .map(|tip| Money::from_minor_units(amount.currency(), tip))
                     .ok_or(ExpenseError::Overflow)
             }
         }

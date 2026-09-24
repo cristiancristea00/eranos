@@ -24,14 +24,14 @@ const MONTH_LENGTHS: [(u8, u8); 12] = [
 ];
 
 fn date(year: u16, month: u8, day: u8) -> Date {
-    Date::new(year, month, day).unwrap()
+    Date::new(day, month, year).unwrap()
 }
 
 /// Any existing date between years 1 and 9999.
 fn any_date() -> impl Strategy<Value = Date> {
     (1_u16..=9999, 1_u8..=12, 1_u8..=31)
         .prop_filter_map("the day must exist in its month", |(year, month, day)| {
-            Date::new(year, month, day).ok()
+            Date::new(day, month, year).ok()
         })
 }
 
@@ -41,20 +41,20 @@ fn any_date() -> impl Strategy<Value = Date> {
 fn a_day_exists_only_within_its_month() {
     // The last day of every month exists, the day after it does not.
     for (month, last_day) in MONTH_LENGTHS {
-        assert!(Date::new(2026, month, last_day).is_ok(), "{month}");
+        assert!(Date::new(last_day, month, 2026).is_ok(), "{month}");
         assert_eq!(
-            Date::new(2026, month, last_day + 1),
+            Date::new(last_day + 1, month, 2026),
             Err(ValueError::InvalidDate),
             "{month}"
         );
     }
     // Day zero exists in no month.
     for (month, _) in MONTH_LENGTHS {
-        assert_eq!(Date::new(2026, month, 0), Err(ValueError::InvalidDate));
+        assert_eq!(Date::new(0, month, 2026), Err(ValueError::InvalidDate));
     }
     // The first day of every month exists.
     for (month, _) in MONTH_LENGTHS {
-        assert!(Date::new(2026, month, 1).is_ok());
+        assert!(Date::new(1, month, 2026).is_ok());
     }
 }
 
@@ -62,12 +62,12 @@ fn a_day_exists_only_within_its_month() {
 #[test]
 fn months_run_from_1_to_12() {
     // Inside the range.
-    assert!(Date::new(2026, 1, 1).is_ok());
-    assert!(Date::new(2026, 12, 31).is_ok());
+    assert!(Date::new(1, 1, 2026).is_ok());
+    assert!(Date::new(31, 12, 2026).is_ok());
     // Outside the range.
-    assert_eq!(Date::new(2026, 0, 1), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(2026, 13, 1), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(2026, u8::MAX, 1), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(1, 0, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(1, 13, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(1, u8::MAX, 2026), Err(ValueError::InvalidDate));
 }
 
 /// Expenses on 29 February would be rejected in leap years or accepted in
@@ -75,20 +75,20 @@ fn months_run_from_1_to_12() {
 #[test]
 fn a_leap_day_exists_only_in_leap_years() {
     // Years divisible by 4.
-    assert!(Date::new(2028, 2, 29).is_ok());
-    assert!(Date::new(2024, 2, 29).is_ok());
-    assert!(Date::new(4, 2, 29).is_ok());
+    assert!(Date::new(29, 2, 2028).is_ok());
+    assert!(Date::new(29, 2, 2024).is_ok());
+    assert!(Date::new(29, 2, 4).is_ok());
     // Years not divisible by 4.
-    assert_eq!(Date::new(2026, 2, 29), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(2027, 2, 29), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(1, 2, 29), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(29, 2, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(29, 2, 2027), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(29, 2, 1), Err(ValueError::InvalidDate));
     // Centuries are common years unless divisible by 400.
-    assert_eq!(Date::new(1900, 2, 29), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(2100, 2, 29), Err(ValueError::InvalidDate));
-    assert!(Date::new(2000, 2, 29).is_ok());
-    assert!(Date::new(2400, 2, 29).is_ok());
+    assert_eq!(Date::new(29, 2, 1900), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(29, 2, 2100), Err(ValueError::InvalidDate));
+    assert!(Date::new(29, 2, 2000).is_ok());
+    assert!(Date::new(29, 2, 2400).is_ok());
     // No leap year has a 30 February.
-    assert_eq!(Date::new(2028, 2, 30), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(30, 2, 2028), Err(ValueError::InvalidDate));
 }
 
 /// A year outside four digits would not fit the `YYYY-MM-DD` text form.
@@ -96,11 +96,11 @@ fn a_leap_day_exists_only_in_leap_years() {
 fn years_run_from_1_to_9999() {
     // Inside the range.
     assert!(Date::new(1, 1, 1).is_ok());
-    assert!(Date::new(9999, 12, 31).is_ok());
+    assert!(Date::new(31, 12, 9999).is_ok());
     // Outside the range.
-    assert_eq!(Date::new(0, 1, 1), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(10_000, 1, 1), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(u16::MAX, 1, 1), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(1, 1, 0), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(1, 1, 10_000), Err(ValueError::InvalidDate));
+    assert_eq!(Date::new(1, 1, u16::MAX), Err(ValueError::InvalidDate));
 }
 
 /// The apps would show the wrong day, month, or year of an expense.

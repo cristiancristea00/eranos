@@ -28,12 +28,12 @@ use crate::transfer::Transfer;
 /// ```
 /// use eranos::{Currency, Date, Group, Member, Money, SettlementStrategy, Transfer};
 ///
-/// let mut group = Group::builder("Flat", Currency::EUR).build()?;
+/// let mut group = Group::builder(Currency::EUR, "Flat").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?);
 /// let bob = group.add_member(Member::builder("Bob").build()?);
-/// let day = Date::new(2026, 9, 23)?;
+/// let day = Date::new(23, 9, 2026)?;
 /// // Bob paid Ana 20.00 too much.
-/// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", Currency::EUR)?, day).build()?)?;
+/// group.add_transfer(Transfer::builder(Money::parse("20.00", Currency::EUR)?, day, bob, ana).build()?)?;
 ///
 /// for strategy in SettlementStrategy::all() {
 ///     let settlement = group.settlement(strategy)?;
@@ -149,7 +149,7 @@ impl Payment {
     /// The transfer recording this payment, made on `date`.
     #[must_use]
     pub fn to_transfer(&self, date: Date) -> Transfer {
-        Transfer::new_unchecked(self.members.from, self.members.to, self.amount, date)
+        Transfer::new_unchecked(self.amount, date, self.members.from, self.members.to)
     }
 }
 
@@ -165,7 +165,7 @@ impl Flow {
     /// The payment this flow makes, in `currency`.
     const fn into_payment(self, currency: Currency) -> Payment {
         Payment {
-            amount: Money::from_minor_units(self.amount, currency),
+            amount: Money::from_minor_units(currency, self.amount),
             members: self.members,
         }
     }

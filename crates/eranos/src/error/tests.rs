@@ -20,7 +20,7 @@ const EXPENSE: ExpenseId = ExpenseId::from_bytes([0x33; 16]);
 const TRANSFER: TransferId = TransferId::from_bytes([0x44; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 /// One example of every `ValueError` variant, with its exact message.

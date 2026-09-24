@@ -39,17 +39,17 @@ use crate::transfer::Transfer;
 /// ```
 /// use eranos::{Currency, Date, Expense, Group, Member, Money, SettlementStrategy, Split};
 ///
-/// let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
+/// let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?);
 /// let bob = group.add_member(Member::builder("Bob").build()?);
 /// let carol = group.add_member(Member::builder("Carol").build()?);
 ///
-/// let day = Date::new(2026, 9, 23)?;
+/// let day = Date::new(23, 9, 2026)?;
 /// let eur = |text| Money::parse(text, Currency::EUR);
 /// group.add_expense(
-///     Expense::builder("Hotel", eur("300.00")?, day).paid_by(ana).split(Split::equal([ana, bob, carol])).build()?,
+///     Expense::builder(eur("300.00")?, day, "Hotel").paid_by(ana).split(Split::equal([ana, bob, carol])).build()?,
 /// )?;
-/// group.add_expense(Expense::builder("Dinner", eur("60.00")?, day).paid_by(bob).split(Split::equal([ana, bob, carol])).build()?)?;
+/// group.add_expense(Expense::builder(eur("60.00")?, day, "Dinner").paid_by(bob).split(Split::equal([ana, bob, carol])).build()?)?;
 ///
 /// assert_eq!(group.summary().total_spent(), eur("360.00")?);
 /// // Everyone's share is 120.00: Ana gets back 180.00, Bob owes 60.00, Carol 120.00.
@@ -120,17 +120,17 @@ impl Settlements {
 }
 
 impl Group {
-    /// Starts a group with its required name and currency.
+    /// Starts a group with its required currency and name.
     ///
     /// Every total, balance, and settlement is in the group currency.
-    pub fn builder(name: impl Into<String>, currency: Currency) -> GroupBuilder {
-        GroupBuilder::new(name.into(), currency)
+    pub fn builder(currency: Currency, name: impl Into<String>) -> GroupBuilder {
+        GroupBuilder::new(currency, name.into())
     }
 
     fn new(
         id: GroupId,
-        name: String,
         currency: Currency,
+        name: String,
         description: Option<String>,
         language: Option<Language>,
     ) -> Self {
@@ -297,11 +297,11 @@ impl Group {
     /// ```
     /// use eranos::{Currency, Date, ExchangeRate, Expense, Group, Member, Money, Split};
     ///
-    /// let mut group = Group::builder("Trip", Currency::EUR).build()?;
+    /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?);
-    /// let day = Date::new(2026, 9, 23)?;
+    /// let day = Date::new(23, 9, 2026)?;
     /// group.add_expense(
-    ///     Expense::builder("Museum", Money::parse("20.00", Currency::EUR)?, day)
+    ///     Expense::builder(Money::parse("20.00", Currency::EUR)?, day, "Museum")
     ///         .paid_by(ana)
     ///         .split(Split::equal([ana]))
     ///         .build()?,
@@ -679,7 +679,7 @@ impl Group {
     pub fn transfer_amount(&self, id: TransferId) -> Option<Money> {
         self.transfers
             .get(&id)
-            .map(|record| Money::from_minor_units(record.amount, self.currency))
+            .map(|record| Money::from_minor_units(self.currency, record.amount))
     }
 
     /// Adds a transfer under a newly generated identifier.

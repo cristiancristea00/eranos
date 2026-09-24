@@ -14,7 +14,7 @@ const ANA: MemberId = MemberId::from_bytes([1; 16]);
 const BOB: MemberId = MemberId::from_bytes([2; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 /// Three beers at 4.50, shared by Ana and Bob.

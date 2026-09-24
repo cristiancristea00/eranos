@@ -161,7 +161,7 @@ impl GroupRecord {
         if self.format != FORMAT {
             return Err(ReplayError::Format(self.format));
         }
-        let mut builder = Group::builder(self.name, self.currency)
+        let mut builder = Group::builder(self.currency, self.name)
             .id(self.id)
             .language(self.language);
         if let Some(description) = self.description {

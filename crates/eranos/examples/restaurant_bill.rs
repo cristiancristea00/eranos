@@ -113,11 +113,11 @@ fn consumed(shares: &ExpenseShares, member: MemberId) -> Result<Money, Box<dyn E
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Dinner at Caru' cu Bere", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Dinner at Caru' cu Bere").build()?;
     let ana = group.add_member(Member::builder("Ana").build()?);
     let bob = group.add_member(Member::builder("Bob").build()?);
     let carol = group.add_member(Member::builder("Carol").build()?);
-    let day = Date::new(2026, 9, 23)?;
+    let day = Date::new(23, 9, 2026)?;
 
     println!("{}: an itemised bill", group.name());
     println!("{}", "═".repeat(group.name().chars().count() + 19));
@@ -145,13 +145,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     section("2. Who ordered what, and the tip");
     let bill = |distribution| -> Result<Expense, Box<dyn Error>> {
-        Ok(Expense::builder("Dinner", eur("54.00")?, day)
+        Ok(Expense::builder(eur("54.00")?, day, "Dinner")
             .paid_by(ana)
             .items(receipt(ana, bob, carol)?)
             .tip(Tip::percentage(Percentage::parse("10")?).distributed(distribution))
             .build()?)
     };
-    let untipped = Expense::builder("Dinner", eur("54.00")?, day)
+    let untipped = Expense::builder(eur("54.00")?, day, "Dinner")
         .paid_by(ana)
         .items(receipt(ana, bob, carol)?)
         .build()?;
@@ -187,7 +187,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     section("3. A total that does not match is refused");
-    let mismatched = Expense::builder("Dinner", eur("55.00")?, day)
+    let mismatched = Expense::builder(eur("55.00")?, day, "Dinner")
         .paid_by(ana)
         .items(receipt(ana, bob, carol)?)
         .build();

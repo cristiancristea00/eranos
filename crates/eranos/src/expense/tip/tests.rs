@@ -8,7 +8,7 @@ use super::*;
 use crate::money::Currency;
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -59,10 +59,10 @@ fn a_percentage_tip_is_that_share_of_the_amount() {
         Ok(euros(1_500))
     );
     // Currencies without decimals: 10 % of 1234 JPY is 123.4, so 123.
-    let yen = Money::from_minor_units(1_234, Currency::JPY);
+    let yen = Money::from_minor_units(Currency::JPY, 1_234);
     assert_eq!(
         Tip::percentage(per_cent("10")).amount_on(yen),
-        Ok(Money::from_minor_units(123, Currency::JPY))
+        Ok(Money::from_minor_units(Currency::JPY, 123))
     );
 }
 
@@ -117,7 +117,7 @@ fn zero_tips_are_allowed() {
 #[test]
 fn a_fixed_tip_in_another_currency_is_rejected() {
     // A dollar tip on a euro expense.
-    let dollars = Money::from_minor_units(500, Currency::USD);
+    let dollars = Money::from_minor_units(Currency::USD, 500);
     assert_eq!(
         Tip::fixed(dollars).amount_on(euros(9_000)),
         Err(ExpenseError::CurrencyMismatch {
@@ -126,7 +126,7 @@ fn a_fixed_tip_in_another_currency_is_rejected() {
         })
     );
     // The currency is checked before the sign.
-    let negative_dollars = Money::from_minor_units(-500, Currency::USD);
+    let negative_dollars = Money::from_minor_units(Currency::USD, -500);
     assert_eq!(
         Tip::fixed(negative_dollars).amount_on(euros(9_000)),
         Err(ExpenseError::CurrencyMismatch {

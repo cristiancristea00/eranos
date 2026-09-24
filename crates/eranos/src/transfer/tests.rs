@@ -14,16 +14,16 @@ const BOB: MemberId = MemberId::from_bytes([2; 16]);
 const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 fn september_24() -> Date {
-    Date::new(2026, 9, 24).unwrap()
+    Date::new(24, 9, 2026).unwrap()
 }
 
 /// Bob repays Ana 30.00 on 24 September 2026.
 fn repayment() -> TransferBuilder {
-    Transfer::builder(BOB, ANA, euros(3_000), september_24())
+    Transfer::builder(euros(3_000), september_24(), BOB, ANA)
 }
 
 /// The repayment with every optional field set, converted at 1 EUR =
@@ -60,12 +60,12 @@ fn a_transfer_keeps_its_fields_and_defaults() {
 fn a_transfer_to_oneself_is_rejected() {
     // Same sender and recipient.
     assert_eq!(
-        Transfer::builder(ANA, ANA, euros(3_000), september_24()).build(),
+        Transfer::builder(euros(3_000), september_24(), ANA, ANA).build(),
         Err(TransferError::SameMember)
     );
     // The members are checked before the amount.
     assert_eq!(
-        Transfer::builder(ANA, ANA, euros(0), september_24()).build(),
+        Transfer::builder(euros(0), september_24(), ANA, ANA).build(),
         Err(TransferError::SameMember)
     );
 }
@@ -150,7 +150,7 @@ fn to_builder_rebuilds_an_equal_transfer() {
 #[test]
 fn builder_setters_replace_each_field() {
     // Members, amount, and date replaced.
-    let september_25 = Date::new(2026, 9, 25).unwrap();
+    let september_25 = Date::new(25, 9, 2026).unwrap();
     let transfer = full_repayment()
         .to_builder()
         .from(CAROL)
@@ -178,7 +178,7 @@ fn builder_setters_replace_each_field() {
 fn new_unchecked_matches_a_built_transfer() {
     // Same fields, no optional details.
     assert_eq!(
-        Transfer::new_unchecked(BOB, ANA, euros(3_000), september_24()),
+        Transfer::new_unchecked(euros(3_000), september_24(), BOB, ANA),
         repayment().build().unwrap()
     );
 }

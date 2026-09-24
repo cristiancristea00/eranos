@@ -40,14 +40,14 @@ use eranos::{
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
     let ana = group.add_member(Member::builder("Ana").build()?);
     let bob = group.add_member(Member::builder("Bob").build()?);
     let carol = group.add_member(Member::builder("Carol").build()?);
 
     // Ana paid dinner for three, plus a 10 % tip.
     let amount = Money::parse("90.00", Currency::EUR)?;
-    let dinner = Expense::builder("Dinner", amount, Date::new(2026, 9, 23)?)
+    let dinner = Expense::builder(amount, Date::new(23, 9, 2026)?, "Dinner")
         .paid_by(ana)
         .split(Split::equal([ana, bob, carol]))
         .tip(Tip::percentage(Percentage::parse("10")?))

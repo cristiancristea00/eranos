@@ -128,7 +128,7 @@ impl ExchangeRate {
         let denominator = 10_i128.pow(denominator_power);
         let converted = divide_rounding_half_away(numerator, denominator);
         let minor_units = i64::try_from(converted).map_err(|_| ValueError::Overflow)?;
-        Ok(Money::from_minor_units(minor_units, target))
+        Ok(Money::from_minor_units(target, minor_units))
     }
 }
 

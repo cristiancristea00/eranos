@@ -40,14 +40,14 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Road trip", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Road trip").build()?;
     let ana = group.add_member(Member::builder("Ana").build()?);
     let bob = group.add_member(Member::builder("Bob").build()?);
     group.add_expense(
         Expense::builder(
-            "Fuel",
             Money::parse("70.00", Currency::EUR)?,
-            Date::new(2026, 9, 23)?,
+            Date::new(23, 9, 2026)?,
+            "Fuel",
         )
         .paid_by(ana)
         .split(Split::equal([ana, bob]))
@@ -55,9 +55,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     group.add_expense(
         Expense::builder(
-            "Lunch",
             Money::parse("30.00", Currency::EUR)?,
-            Date::new(2026, 9, 23)?,
+            Date::new(23, 9, 2026)?,
+            "Lunch",
         )
         .paid_by(bob)
         .split(Split::equal([ana, bob]))

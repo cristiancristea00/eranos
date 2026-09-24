@@ -18,10 +18,10 @@ use crate::text;
 /// ```
 /// use eranos::{Account, AccountKind, Iban, Username};
 ///
-/// let bank = Account::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?;
+/// let bank = Account::new(Iban::parse("RO49AAAA1B31007593840000")?, "ING")?;
 /// assert_eq!(bank.kind(), AccountKind::Iban);
 ///
-/// let app = Account::new("Revolut", Username::new("@ana")?)?;
+/// let app = Account::new(Username::new("@ana")?, "Revolut")?;
 /// assert_eq!(app.name(), "Revolut");
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
@@ -43,8 +43,8 @@ impl Account {
     ///
     /// [`ValueError::Empty`] when the name is blank.
     pub fn new(
-        name: impl Into<String>,
         details: impl Into<AccountDetails>,
+        name: impl Into<String>,
     ) -> Result<Self, ValueError> {
         let name = text::required(name, Field::AccountName)?;
         Ok(Self {
@@ -184,7 +184,7 @@ impl TryFrom<AccountRecord> for Account {
     type Error = ValueError;
 
     fn try_from(record: AccountRecord) -> Result<Self, Self::Error> {
-        Self::new(record.name, record.details)
+        Self::new(record.details, record.name)
     }
 }
 

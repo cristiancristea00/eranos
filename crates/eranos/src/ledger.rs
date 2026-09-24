@@ -22,11 +22,11 @@ use crate::money::{Currency, Money};
 /// ```
 /// use eranos::{Balance, Currency, Date, Expense, Group, Member, Money, Split};
 ///
-/// let mut group = Group::builder("Weekend", Currency::EUR).build()?;
+/// let mut group = Group::builder(Currency::EUR, "Weekend").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?);
 /// let bob = group.add_member(Member::builder("Bob").build()?);
 /// group.add_expense(
-///     Expense::builder("Groceries", Money::parse("30.00", Currency::EUR)?, Date::new(2026, 9, 23)?)
+///     Expense::builder(Money::parse("30.00", Currency::EUR)?, Date::new(23, 9, 2026)?, "Groceries")
 ///         .paid_by(ana)
 ///         .split(Split::equal([ana, bob]))
 ///         .build()?,
@@ -66,8 +66,8 @@ impl Summary {
     #[must_use]
     pub fn category_total(&self, category: Option<CategoryId>) -> Money {
         Money::from_minor_units(
-            self.categories.get(&category).copied().unwrap_or(0),
             self.currency,
+            self.categories.get(&category).copied().unwrap_or(0),
         )
     }
 
@@ -79,7 +79,7 @@ impl Summary {
     ) -> impl ExactSizeIterator<Item = (Option<CategoryId>, Money)> + '_ {
         self.categories
             .iter()
-            .map(|(&category, &total)| (category, Money::from_minor_units(total, self.currency)))
+            .map(|(&category, &total)| (category, Money::from_minor_units(self.currency, total)))
     }
 
     /// One member's share of the spending in one category (`None` for
@@ -91,7 +91,7 @@ impl Summary {
             .get(&(member, category))
             .copied()
             .unwrap_or(0);
-        Money::from_minor_units(total, self.currency)
+        Money::from_minor_units(self.currency, total)
     }
 
     /// One member's share of the spending in every category they have
@@ -104,7 +104,7 @@ impl Summary {
             .range((member, None)..)
             .take_while(move |((row_member, _), _)| *row_member == member)
             .map(|(&(_, category), &total)| {
-                (category, Money::from_minor_units(total, self.currency))
+                (category, Money::from_minor_units(self.currency, total))
             })
     }
 
@@ -136,7 +136,7 @@ impl Summary {
     /// spending and do not count.
     #[must_use]
     pub const fn total_spent(&self) -> Money {
-        Money::from_minor_units(self.total_spent, self.currency)
+        Money::from_minor_units(self.currency, self.total_spent)
     }
 }
 
@@ -151,32 +151,32 @@ impl MemberSummary {
     /// What the member paid towards expenses.
     #[must_use]
     pub const fn paid(&self) -> Money {
-        Money::from_minor_units(self.totals.paid, self.currency)
+        Money::from_minor_units(self.currency, self.totals.paid)
     }
 
     /// The member's share of the expenses: what they consumed.
     #[must_use]
     pub const fn share(&self) -> Money {
-        Money::from_minor_units(self.totals.share, self.currency)
+        Money::from_minor_units(self.currency, self.totals.share)
     }
 
     /// What the member transferred to others.
     #[must_use]
     pub const fn sent(&self) -> Money {
-        Money::from_minor_units(self.totals.sent, self.currency)
+        Money::from_minor_units(self.currency, self.totals.sent)
     }
 
     /// What others transferred to the member.
     #[must_use]
     pub const fn received(&self) -> Money {
-        Money::from_minor_units(self.totals.received, self.currency)
+        Money::from_minor_units(self.currency, self.totals.received)
     }
 
     /// `paid − share + sent − received`: positive when the group owes the
     /// member, negative when the member owes the group.
     #[must_use]
     pub const fn net(&self) -> Money {
-        Money::from_minor_units(self.totals.net, self.currency)
+        Money::from_minor_units(self.currency, self.totals.net)
     }
 
     /// The net amount as a [`Balance`].
@@ -184,9 +184,9 @@ impl MemberSummary {
     pub const fn balance(&self) -> Balance {
         let net = self.totals.net;
         match net.signum() {
-            1 => Balance::GetsBack(Money::from_minor_units(net, self.currency)),
+            1 => Balance::GetsBack(Money::from_minor_units(self.currency, net)),
             // The ledger keeps every value above i64::MIN, so negating fits.
-            -1 => Balance::Owes(Money::from_minor_units(-net, self.currency)),
+            -1 => Balance::Owes(Money::from_minor_units(self.currency, -net)),
             _ => Balance::Settled,
         }
     }
@@ -222,12 +222,12 @@ impl fmt::Display for Balance {
 /// ```
 /// use eranos::{Currency, Date, Expense, Group, Member, Money, Split};
 ///
-/// let mut group = Group::builder("Trip", Currency::EUR).build()?;
+/// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?);
 /// let bob = group.add_member(Member::builder("Bob").build()?);
 /// let carol = group.add_member(Member::builder("Carol").build()?);
 /// let taxi = group.add_expense(
-///     Expense::builder("Taxi", Money::parse("10.00", Currency::EUR)?, Date::new(2026, 9, 23)?)
+///     Expense::builder(Money::parse("10.00", Currency::EUR)?, Date::new(23, 9, 2026)?, "Taxi")
 ///         .paid_by(ana)
 ///         .split(Split::equal([ana, bob, carol]))
 ///         .build()?,

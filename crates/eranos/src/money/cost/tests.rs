@@ -9,11 +9,11 @@ use super::*;
 use crate::money::Currency;
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 fn lei(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::RON)
+    Money::from_minor_units(Currency::RON, minor_units)
 }
 
 fn rate(text: &str) -> ExchangeRate {
@@ -51,7 +51,7 @@ fn at_converts_an_amount_at_its_rate() {
 /// US dollar group, would be taken for a local cost and refused.
 #[test]
 fn a_conversion_at_one_is_not_a_local_cost() {
-    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
+    let bermudian_dollars = Money::from_minor_units(Currency::BMD, 5_000);
     let pegged = bermudian_dollars.at(ExchangeRate::ONE);
     assert_ne!(pegged, Cost::from(bermudian_dollars));
     assert_eq!(pegged.exchange_rate(), ExchangeRate::ONE);

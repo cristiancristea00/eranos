@@ -25,7 +25,7 @@ use crate::text;
 /// let ana = Member::builder("Ana")
 ///     .last_name("Popescu")
 ///     .email(Email::parse("ana@example.com")?)
-///     .account(Account::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?)
+///     .account(Account::new(Iban::parse("RO49AAAA1B31007593840000")?, "ING")?)
 ///     .build()?;
 /// assert_eq!(ana.first_name(), "Ana");
 /// assert_eq!(ana.accounts().len(), 1);

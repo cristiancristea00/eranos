@@ -103,7 +103,7 @@ fn equally(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Erro
          nobody always pays it."
     );
     let taxi = group.add_expense(
-        Expense::builder("Taxi", eur("10.00")?, day)
+        Expense::builder(eur("10.00")?, day, "Taxi")
             .paid_by(ana)
             .split(Split::equal([ana, bob, mia]))
             .build()?,
@@ -128,7 +128,7 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
          100 %. Mia's room is smaller, so she takes 20 %."
     );
     let rent = group.add_expense(
-        Expense::builder("Flat", eur("500.00")?, day)
+        Expense::builder(eur("500.00")?, day, "Flat")
             .paid_by(bob)
             .split(Split::percentages([
                 (ana, Percentage::parse("40")?),
@@ -149,7 +149,7 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
          2.5 parts in total, so one part is 125.00 / 2.5 = 50.00."
     );
     let food = group.add_expense(
-        Expense::builder("Food", eur("125.00")?, day)
+        Expense::builder(eur("125.00")?, day, "Food")
             .paid_by(ana)
             .split(Split::parts([
                 (ana, Parts::ONE),
@@ -174,7 +174,7 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
          exactly the expense amount."
     );
     let tickets = group.add_expense(
-        Expense::builder("Museum", eur("35.00")?, day)
+        Expense::builder(eur("35.00")?, day, "Museum")
             .paid_by(bob)
             .split(Split::amounts([
                 (ana, eur("15.00")?),
@@ -199,7 +199,7 @@ fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<d
          divided with the same methods as the participants."
     );
     let dinner = group.add_expense(
-        Expense::builder("Dinner", eur("90.00")?, day)
+        Expense::builder(eur("90.00")?, day, "Dinner")
             .payers(Split::amounts([(ana, eur("50.00")?), (bob, eur("40.00")?)]))
             .split(Split::equal([ana, bob, mia]))
             .build()?,
@@ -211,7 +211,7 @@ fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<d
 fn mistakes(family: &Family) -> Result<(), Box<dyn Error>> {
     section("6. Mistakes are refused");
     println!("A percentage split that adds up to 90 % is refused when the expense is built:");
-    let invalid = Expense::builder("Invalid", eur("10.00")?, family.day)
+    let invalid = Expense::builder(eur("10.00")?, family.day, "Invalid")
         .paid_by(family.ana)
         .split(Split::percentages([
             (family.ana, Percentage::parse("60")?),
@@ -244,11 +244,11 @@ fn totals(group: &Group) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Family holiday", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Family holiday").build()?;
     let family = Family {
         ana: group.add_member(Member::builder("Ana").build()?),
         bob: group.add_member(Member::builder("Bob").build()?),
-        day: Date::new(2026, 7, 14)?,
+        day: Date::new(14, 7, 2026)?,
         mia: group.add_member(Member::builder("Mia").build()?),
     };
 

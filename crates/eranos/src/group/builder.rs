@@ -18,7 +18,7 @@ pub struct GroupBuilder {
 }
 
 impl GroupBuilder {
-    pub(super) const fn new(name: String, currency: Currency) -> Self {
+    pub(super) const fn new(currency: Currency, name: String) -> Self {
         Self {
             id: None,
             currency,
@@ -57,8 +57,8 @@ impl GroupBuilder {
         let name = text::required(self.name, Field::GroupName)?;
         Ok(Group::new(
             self.id.unwrap_or_else(GroupId::generate),
-            name,
             self.currency,
+            name,
             self.description.and_then(text::optional),
             self.language,
         ))

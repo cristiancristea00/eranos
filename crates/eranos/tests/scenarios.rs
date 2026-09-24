@@ -21,7 +21,7 @@ fn eur(text: &str) -> Money {
 }
 
 fn day(day: u8) -> Date {
-    Date::new(2026, 9, day).unwrap()
+    Date::new(day, 9, 2026).unwrap()
 }
 
 fn member(name: &str) -> Member {
@@ -58,7 +58,7 @@ struct Weekend {
 
 /// Four friends, four expenses, one per split method.
 fn weekend() -> Weekend {
-    let mut group = Group::builder("Weekend in Brașov", Currency::EUR)
+    let mut group = Group::builder(Currency::EUR, "Weekend in Brașov")
         .build()
         .unwrap();
     let ana = group.add_member(member("Ana"));
@@ -74,17 +74,17 @@ fn weekend() -> Weekend {
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
     let expenses = [
         // Hotel 400.00 by Ana, equal among four: 100.00 each.
-        Expense::builder("Hotel", eur("400.00"), day(19))
+        Expense::builder(eur("400.00"), day(19), "Hotel")
             .paid_by(ana)
             .split(Split::equal([ana, bob, carol, dan]))
             .category(lodging),
         // Fuel 90.00 by Bob, equal among the three who rode: 30.00 each.
-        Expense::builder("Fuel", eur("90.00"), day(19))
+        Expense::builder(eur("90.00"), day(19), "Fuel")
             .paid_by(bob)
             .split(Split::equal([ana, bob, carol]))
             .category(transport),
         // Groceries 60.00 by Carol, parts 1:1:1:3: 10, 10, 10, 30.
-        Expense::builder("Groceries", eur("60.00"), day(20))
+        Expense::builder(eur("60.00"), day(20), "Groceries")
             .paid_by(carol)
             .split(Split::parts([
                 (ana, Parts::ONE),
@@ -94,7 +94,7 @@ fn weekend() -> Weekend {
             ]))
             .category(food),
         // Dinner 100.00 + 10 % tip by Dan, 40/20/20/20: 44, 22, 22, 22.
-        Expense::builder("Dinner", eur("100.00"), day(20))
+        Expense::builder(eur("100.00"), day(20), "Dinner")
             .paid_by(dan)
             .split(Split::percentages([
                 (ana, Percentage::parse("40").unwrap()),
@@ -238,7 +238,7 @@ fn recording_a_settlement_settles_everyone() -> TestResult {
 /// tip distributions differ exactly as documented.
 #[test]
 fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
-    let mut group = Group::builder("Dinner", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Dinner").build()?;
     let ana = group.add_member(member("Ana"));
     let bob = group.add_member(member("Bob"));
     let carol = group.add_member(member("Carol"));
@@ -267,7 +267,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     };
     // 30 + 15 + 4.50 + 10.50 = 60.00: Ana 31.50, Bob 20.00, Carol 8.50.
     let bill = |distribution| -> Result<Expense, eranos::error::ExpenseError> {
-        Expense::builder("Bill", eur("60.00"), day(23))
+        Expense::builder(eur("60.00"), day(23), "Bill")
             .paid_by(carol)
             .items(items()?)
             .tip(Tip::fixed(eur("6.00")).distributed(distribution))
@@ -294,7 +294,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     assert_eq!(consumed_evenly(carol), Some(eur("10.50")));
 
     // Items that do not add up to the amount are refused.
-    let short = Expense::builder("Bill", eur("61.00"), day(23))
+    let short = Expense::builder(eur("61.00"), day(23), "Bill")
         .paid_by(carol)
         .items(items()?)
         .build();
@@ -306,16 +306,16 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
 /// currency change re-converts everything.
 #[test]
 fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
-    let mut group = Group::builder("Bucharest", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Bucharest").build()?;
     let ana = group.add_member(member("Ana"));
     let bob = group.add_member(member("Bob"));
     let ron = |text| Money::parse(text, Currency::RON);
 
     // 500.00 RON at 0.2 EUR is 100.00 EUR, split in two.
     let hostel = Expense::builder(
-        "Hostel",
         ron("500.00")?.at(ExchangeRate::parse("0.2")?),
         day(22),
+        "Hostel",
     )
     .paid_by(ana)
     .split(Split::equal([ana, bob]))
@@ -323,7 +323,7 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     group.add_expense(hostel)?;
     // A 40.00 EUR train in the group currency needs no rate.
     group.add_expense(
-        Expense::builder("Train", eur("40.00"), day(22))
+        Expense::builder(eur("40.00"), day(22), "Train")
             .paid_by(bob)
             .split(Split::equal([ana, bob]))
             .build()?,
@@ -336,17 +336,17 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
 
     // Bob pays back 150.00 RON in cash at 0.2: 30.00 EUR.
     let cash = Transfer::builder(
-        bob,
-        ana,
         ron("150.00")?.at(ExchangeRate::parse("0.2")?),
         day(23),
+        bob,
+        ana,
     )
     .build()?;
     group.add_transfer(cash)?;
     assert_eq!(group.summary().member(bob).balance(), Balance::Settled);
 
     // A rate is required for foreign entries and refused for local ones.
-    let unrated = Expense::builder("Snack", ron("10.00")?, day(23))
+    let unrated = Expense::builder(ron("10.00")?, day(23), "Snack")
         .paid_by(ana)
         .split(Split::equal([ana]))
         .build()?;
@@ -369,24 +369,24 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
 /// their entries exist.
 #[test]
 fn a_flatmate_moves_out() -> TestResult {
-    let mut group = Group::builder("Flat 4B", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Flat 4B").build()?;
     let ana = group.add_member(member("Ana"));
     let bob = group.add_member(member("Bob"));
     let rent = group.add_expense(
-        Expense::builder("Rent", eur("1200.00"), day(1))
+        Expense::builder(eur("1200.00"), day(1), "Rent")
             .paid_by(ana)
             .split(Split::equal([ana, bob]))
             .build()?,
     )?;
     let deposit =
-        group.add_transfer(Transfer::builder(bob, ana, eur("600.00"), day(2)).build()?)?;
+        group.add_transfer(Transfer::builder(eur("600.00"), day(2), bob, ana).build()?)?;
     group.archive_member(bob)?;
 
     // Bob's history and settled balance stay.
     assert_eq!(group.summary().member(bob).share(), eur("600.00"));
     assert_eq!(group.summary().member(bob).balance(), Balance::Settled);
     // He cannot join new expenses, nor be removed while referenced.
-    let utilities = Expense::builder("Utilities", eur("80.00"), day(3))
+    let utilities = Expense::builder(eur("80.00"), day(3), "Utilities")
         .paid_by(ana)
         .split(Split::equal([ana, bob]))
         .build()?;

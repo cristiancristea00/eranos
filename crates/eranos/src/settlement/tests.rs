@@ -57,12 +57,12 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
                 (
                     member(3),
                     member(1),
-                    Money::from_minor_units(500, Currency::RON)
+                    Money::from_minor_units(Currency::RON, 500)
                 ),
                 (
                     member(4),
                     member(2),
-                    Money::from_minor_units(300, Currency::RON)
+                    Money::from_minor_units(Currency::RON, 300)
                 ),
             ]
         );
@@ -87,11 +87,11 @@ fn a_settled_ledger_has_no_payments() {
 fn a_payment_becomes_its_transfer() {
     let settlement = settle(SettlementStrategy::Greedy, &ledger()).unwrap();
     let payment = settlement.payments()[0];
-    let date = Date::new(2026, 9, 24).unwrap();
+    let date = Date::new(24, 9, 2026).unwrap();
     let transfer = payment.to_transfer(date);
     assert_eq!(
         transfer,
-        Transfer::builder(payment.from(), payment.to(), payment.amount(), date)
+        Transfer::builder(payment.amount(), date, payment.from(), payment.to())
             .build()
             .unwrap()
     );

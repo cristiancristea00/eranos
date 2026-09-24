@@ -130,10 +130,10 @@ fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
             .email(Email::parse("ana@example.com")?)
             .phone(PhoneNumber::parse("+40 712 345 678")?)
             .account(Account::new(
-                "ING",
                 Iban::parse("ro49 aaaa 1b31 0075 9384 0000")?,
+                "ING",
             )?)
-            .account(Account::new("Revolut", Username::new("@ana")?)?)
+            .account(Account::new(Username::new("@ana")?, "Revolut")?)
             .build()?,
     );
     let bob = group.add_member(Member::builder("Bob").build()?);
@@ -204,9 +204,9 @@ fn validation() {
 fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
     section("4. A flatmate moves out");
     let rent = Expense::builder(
-        "Rent",
         Money::parse("900.00", Currency::EUR)?,
-        Date::new(2026, 9, 1)?,
+        Date::new(1, 9, 2026)?,
+        "Rent",
     )
     .paid_by(ana)
     .split(Split::equal([ana, bob]))
@@ -220,9 +220,9 @@ fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box
     print_balances(group);
 
     let utilities = Expense::builder(
-        "Utilities",
         Money::parse("60.00", Currency::EUR)?,
-        Date::new(2026, 10, 1)?,
+        Date::new(1, 10, 2026)?,
+        "Utilities",
     )
     .paid_by(ana)
     .split(Split::equal([ana, bob]))
@@ -255,7 +255,7 @@ fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Flat 4B", Currency::EUR).build()?;
+    let mut group = Group::builder(Currency::EUR, "Flat 4B").build()?;
     println!("Flat 4B: members and their accounts");
     println!("═══════════════════════════════════");
     println!(
