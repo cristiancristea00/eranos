@@ -13,6 +13,7 @@ mod saved;
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
+use std::future::Future;
 
 pub use builder::GroupBuilder;
 pub use error::{GroupError, LanguageError};
@@ -21,6 +22,7 @@ pub use language::Language;
 pub use saved::SavedGroup;
 
 use eranos_category::Category;
+use eranos_core::cooperative::Cooperative;
 use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId, text};
 use eranos_expense::{Expense, resolve_expense};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
@@ -606,6 +608,44 @@ impl Group {
     /// the other strategies never fail.
     pub fn settlement(&self, strategy: SettlementStrategy) -> Result<&Settlement, SettlementError> {
         self.settlements.get(strategy, &self.ledger)
+    }
+
+    /// The payments that settle every balance, as
+    /// [`settlement`](Self::settlement) computes and caches them, yielding
+    /// while the exact solver fills its table.
+    ///
+    /// Only [`SettlementStrategy::MinimumTransfers`] yields, while it fills
+    /// its table, and never for 16 open balances or fewer. The plan is
+    /// cached once it is complete, and [`settlement`](Self::settlement)
+    /// reads it; a call dropped before then caches nothing.
+    ///
+    /// # Errors
+    ///
+    /// As for [`settlement`](Self::settlement).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::cooperative::block_on;
+    /// use eranos::{CalendarDate, Currency, Group, Member, Money, SettlementStrategy, Transfer};
+    ///
+    /// let mut group = Group::builder(Currency::EUR, "Flat").build()?;
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
+    /// let bob = group.add_member(Member::builder("Bob").build()?)?;
+    /// let day = CalendarDate::new(23, 9, 2026)?;
+    /// // Bob paid Ana 20.00 too much.
+    /// group.add_transfer(Transfer::builder(Money::parse("20.00", Currency::EUR)?, day, bob, ana).build()?)?;
+    ///
+    /// // Awaited like any future; `block_on` runs it on this thread.
+    /// let settlement = block_on(group.settlement_async(SettlementStrategy::MinimumTransfers))?;
+    /// assert_eq!(settlement.payments()[0].from(), ana);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn settlement_async(
+        &self,
+        strategy: SettlementStrategy,
+    ) -> Cooperative<impl Future<Output = Result<&Settlement, SettlementError>> + Send> {
+        self.settlements.get_async(strategy, &self.ledger)
     }
 
     fn invalidate_settlements(&mut self) {

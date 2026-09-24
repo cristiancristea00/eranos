@@ -326,11 +326,14 @@ computing it from the other four could overflow when each of them fits.
 Settlements are computed on the first request per strategy and cached in
 `OnceLock`s, which keep `Group` `Send + Sync`; the cache belongs to the
 settlement module and reads the balances from the summary, and every
-balance-changing mutation clears it. `change_currency` re-resolves every entry against the
-new rates into a scratch ledger and swaps it in only if everything
-succeeded: entries in any other currency become converted costs at the
-supplied rate (including entries in the old group currency, which were
-local), and entries in the new currency become local.
+balance-changing mutation clears it. A plan is kept once it is computed,
+never while it is: no request waits for another's computation, and an
+asynchronous request dropped before it completes keeps nothing.
+`change_currency` re-resolves every entry against the new rates into a
+scratch ledger and swaps it in only if everything succeeded: entries in any
+other currency become converted costs at the supplied rate (including
+entries in the old group currency, which were local), and entries in the new
+currency become local.
 
 ## 7. Settlement strategies
 

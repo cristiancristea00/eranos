@@ -10,6 +10,10 @@ use eranos_calendar::CalendarDate;
 use eranos_expense::{ExpenseBuilder, MemberParts, Split};
 use eranos_money::{Cost, Parts};
 use eranos_transfer::TransferBuilder;
+use std::future::IntoFuture;
+use std::pin::pin;
+use std::task::{Context, Poll, Waker};
+
 use proptest::prelude::*;
 
 use super::*;
@@ -647,6 +651,44 @@ fn settlements_are_cached_until_a_balance_changes() {
             carol
         );
     }
+}
+
+/// A plan computed asynchronously would be computed again by the
+/// synchronous call, or kept after the balances change.
+#[test]
+fn an_asynchronous_settlement_fills_the_cache_the_synchronous_call_reads() {
+    // Sixteen members each paid a different amount for a seventeenth:
+    // seventeen open balances, so the exact solver yields once.
+    let mut group = Group::builder(Currency::EUR, "Club").build().unwrap();
+    let hub = group.add_member(person("Hub")).unwrap();
+    let mut last = hub;
+    for minor_units in 1..=16 {
+        last = group.add_member(person("Member")).unwrap();
+        group
+            .add_expense(paid_for(cents(minor_units), last, hub))
+            .unwrap();
+    }
+    let strategy = SettlementStrategy::MinimumTransfers;
+    {
+        let mut context = Context::from_waker(Waker::noop());
+        let mut call = pin!(group.settlement_async(strategy).into_future());
+        assert!(call.as_mut().poll(&mut context).is_pending());
+        let Poll::Ready(Ok(computed)) = call.as_mut().poll(&mut context) else {
+            panic!("the plan did not complete after its one yield");
+        };
+        assert_eq!(computed.len(), 16);
+        assert!(std::ptr::eq(computed, group.settlement(strategy).unwrap()));
+    }
+
+    // Settling the last member's balance clears the cache.
+    group.add_transfer(sent(hub, last, cents(16))).unwrap();
+    assert_eq!(
+        group
+            .settlement_async(strategy)
+            .complete()
+            .map(Settlement::len),
+        Ok(15)
+    );
 }
 
 /// A currency change re-converts every entry and rewrites the rates, and a

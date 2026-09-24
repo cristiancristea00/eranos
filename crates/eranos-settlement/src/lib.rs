@@ -178,7 +178,10 @@ impl Flow {
 /// the balances change.
 ///
 /// The cache holds no ledger: its owner asks with the same ledger every
-/// time and clears it whenever a balance changes, as the group does.
+/// time and clears it whenever a balance changes, as the group does. A plan
+/// is kept once it is computed, never while it is: no request waits for
+/// another's computation, and one dropped before it completes keeps
+/// nothing.
 #[derive(Debug, Clone, Default)]
 pub struct Settlements {
     direct: OnceLock<Result<Settlement, SettlementError>>,
@@ -198,10 +201,32 @@ impl Settlements {
         strategy: SettlementStrategy,
         ledger: &Ledger,
     ) -> Result<&Settlement, SettlementError> {
-        self.slot(strategy)
-            .get_or_init(|| settle(strategy, ledger))
-            .as_ref()
-            .map_err(|&error| error)
+        self.get_async(strategy, ledger).complete()
+    }
+
+    /// The settlement of `ledger` by `strategy`, computed with
+    /// [`settle_async`] the first time it is asked for.
+    ///
+    /// # Errors
+    ///
+    /// As for [`settle`], computed once and kept like a plan.
+    pub fn get_async(
+        &self,
+        strategy: SettlementStrategy,
+        ledger: &Ledger,
+    ) -> Cooperative<impl Future<Output = Result<&Settlement, SettlementError>> + Send> {
+        let slot = self.slot(strategy);
+        Cooperative::new(async move {
+            let kept = if let Some(kept) = slot.get() {
+                kept
+            } else {
+                let computed = settle_async(strategy, ledger).await;
+                // Of two requests computing at once, the first to complete
+                // keeps its plan, which equals the other's.
+                slot.get_or_init(|| computed)
+            };
+            kept.as_ref().map_err(|&error| error)
+        })
     }
 
     /// Drops every kept settlement.

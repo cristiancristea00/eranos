@@ -3,8 +3,10 @@
 //! currencies, and transfers. Whatever the entries, the books must balance
 //! (paid, consumed, and spent agree; balances sum to zero; categories add up),
 //! every strategy's plan must clear every balance, the fewest-payments plan
-//! must beat or match greedy, and a group must not depend on the order its
-//! entries arrived in (two devices syncing the same entries must agree).
+//! must beat or match greedy, a plan awaited in an executor must equal the
+//! one computed on the caller's thread, and a group must not depend on the
+//! order its entries arrived in (two devices syncing the same entries must
+//! agree).
 #![expect(
     clippy::unwrap_used,
     clippy::indexing_slicing,
@@ -12,6 +14,7 @@
     reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"
 )]
 
+use eranos::cooperative::block_on;
 use eranos::{
     CalendarDate, CategoryTotal, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item,
     Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts, Percentage,
@@ -298,6 +301,19 @@ proptest! {
             }
             prop_assert!(settled.summary().members().all(|member| member.net().is_zero()));
             prop_assert!(settled.settlement(strategy).unwrap().is_empty());
+        }
+    }
+
+    /// A plan awaited in an executor would differ from the one computed on
+    /// the caller's thread.
+    #[test]
+    fn an_awaited_plan_equals_a_computed_one(recipe in group_recipe()) {
+        let (members, expenses, transfers) = entries(&recipe);
+        let group = group(&base(&members), &expenses, &transfers);
+        for strategy in SettlementStrategy::all() {
+            // A copy, so each call computes its plan instead of reading the other's.
+            let awaited = group.clone();
+            prop_assert_eq!(block_on(awaited.settlement_async(strategy)), group.settlement(strategy));
         }
     }
 

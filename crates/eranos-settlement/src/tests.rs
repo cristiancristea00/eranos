@@ -3,6 +3,10 @@
 //! sorted the same way on every device, and a kept plan must last exactly
 //! until it is cleared.
 
+use std::future::IntoFuture;
+use std::pin::pin;
+use std::task::{Context, Poll, Waker};
+
 use eranos_ledger::Delta;
 use eranos_money::Currency;
 
@@ -34,6 +38,26 @@ fn ledger() -> Ledger {
         1,
     );
     let mut ledger = Ledger::new(Currency::RON);
+    ledger.apply(&delta).unwrap();
+    ledger
+}
+
+/// A ledger where members 1 to `creditors` each sent member 100 a different
+/// amount: `creditors + 1` open balances and no exact opposites among them.
+fn owed_by_a_hub(creditors: u8) -> Ledger {
+    let hub = member(100);
+    let mut delta = Delta::default();
+    for number in 1..=creditors {
+        delta.add_transfer(
+            MemberPair {
+                from: member(number),
+                to: hub,
+            },
+            i64::from(number),
+            1,
+        );
+    }
+    let mut ledger = Ledger::new(Currency::EUR);
     ledger.apply(&delta).unwrap();
     ledger
 }
@@ -90,6 +114,50 @@ fn a_kept_settlement_lasts_until_it_is_cleared() {
     }
 }
 
+/// A request dropped at a yield would keep a plan it never finished, or
+/// leave the next request nothing to compute: it keeps nothing, and the
+/// next request computes the plan in full. Seventeen open balances make the
+/// exact solver yield once.
+#[test]
+fn a_dropped_request_keeps_no_plan() {
+    let kept = Settlements::default();
+    let ledger = owed_by_a_hub(16);
+    let mut context = Context::from_waker(Waker::noop());
+    {
+        let request = kept.get_async(SettlementStrategy::MinimumTransfers, &ledger);
+        let mut request = pin!(request.into_future());
+        assert!(request.as_mut().poll(&mut context).is_pending());
+    }
+    assert!(kept.minimum_transfers.get().is_none());
+    assert_eq!(
+        kept.get(SettlementStrategy::MinimumTransfers, &ledger)
+            .map(Settlement::len),
+        Ok(16)
+    );
+}
+
+/// Two requests computing at once would each keep a plan of their own: the
+/// first to complete keeps its plan, and the other returns that one.
+#[test]
+fn requests_computing_at_once_keep_the_first_plan() {
+    let kept = Settlements::default();
+    let ledger = owed_by_a_hub(16);
+    let mut context = Context::from_waker(Waker::noop());
+    let first = kept.get_async(SettlementStrategy::MinimumTransfers, &ledger);
+    let second = kept.get_async(SettlementStrategy::MinimumTransfers, &ledger);
+    let mut first = pin!(first.into_future());
+    let mut second = pin!(second.into_future());
+    assert!(first.as_mut().poll(&mut context).is_pending());
+    assert!(second.as_mut().poll(&mut context).is_pending());
+    let Poll::Ready(Ok(winner)) = first.as_mut().poll(&mut context) else {
+        panic!("the first request did not complete after its one yield");
+    };
+    let Poll::Ready(Ok(other)) = second.as_mut().poll(&mut context) else {
+        panic!("the second request did not complete after its one yield");
+    };
+    assert!(std::ptr::eq(winner, other));
+}
+
 /// An app listing the strategies from `all` would show them in another
 /// order than their documentation.
 #[test]
@@ -120,22 +188,7 @@ fn a_settled_ledger_has_no_payments() {
 /// still settle the same balances.
 #[test]
 fn an_exact_plan_too_large_to_compute_is_an_error() {
-    // 63 members each sent the hub a different amount: 64 open balances
-    // and no exact opposites among them.
-    let hub = member(100);
-    let mut delta = Delta::default();
-    for number in 1..=63 {
-        delta.add_transfer(
-            MemberPair {
-                from: member(number),
-                to: hub,
-            },
-            i64::from(number),
-            1,
-        );
-    }
-    let mut ledger = Ledger::new(Currency::EUR);
-    ledger.apply(&delta).unwrap();
+    let ledger = owed_by_a_hub(63);
     assert_eq!(
         settle(SettlementStrategy::MinimumTransfers, &ledger),
         Err(SettlementError::OutOfMemory { balances: 64 })
