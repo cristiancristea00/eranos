@@ -13,6 +13,15 @@ fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])
 }
 
+/// A payment of `amount` from member `from` to member `to`.
+fn flow(amount: i64, from: u8, to: u8) -> Flow {
+    Flow {
+        amount,
+        from: member(from),
+        to: member(to),
+    }
+}
+
 /// Balances for members 1, 2, 3, … in order.
 fn balances(nets: &[i64]) -> Vec<(MemberId, i64)> {
     nets.iter()
@@ -28,13 +37,13 @@ fn after(balances: &[(MemberId, i64)], flows: &[Flow]) -> Vec<i64> {
         .map(|&(member, net)| {
             let received: i64 = flows
                 .iter()
-                .filter(|flow| flow.1 == member)
-                .map(|flow| flow.2)
+                .filter(|flow| flow.to == member)
+                .map(|flow| flow.amount)
                 .sum();
             let sent: i64 = flows
                 .iter()
-                .filter(|flow| flow.0 == member)
-                .map(|flow| flow.2)
+                .filter(|flow| flow.from == member)
+                .map(|flow| flow.amount)
                 .sum();
             net - received + sent
         })
@@ -102,10 +111,7 @@ fn exact_opposites_pay_each_other_directly() {
     // Members 3 and 4 owe 5.00 each; 1 and 2 are owed 5.00 each.
     let open = balances(&[500, 500, -500, -500]);
     let (flows, rest) = pair_opposites(&open);
-    assert_eq!(
-        flows,
-        vec![(member(3), member(1), 500), (member(4), member(2), 500)]
-    );
+    assert_eq!(flows, vec![flow(500, 3, 1), flow(500, 4, 2)]);
     assert!(rest.is_empty());
     assert_eq!(settle(&open).unwrap().len(), 2);
 }
@@ -119,7 +125,7 @@ fn a_group_settles_with_one_payment_fewer_than_its_size() {
     assert_eq!(flows.len(), 3);
     assert!(after(&group, &flows).iter().all(|&net| net == 0));
     // Debtors and creditors are taken in member order.
-    assert_eq!(flows[0], (member(3), member(1), 300));
+    assert_eq!(flows[0], flow(300, 3, 1));
 }
 
 /// Settled or empty balances need no payment and no table.
@@ -197,7 +203,7 @@ proptest! {
         let flows = settle(&open).unwrap();
         prop_assert!(after(&open, &flows).iter().all(|&net| net == 0));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
-        for &(from, to, amount) in &flows {
+        for &Flow { amount, from, to } in &flows {
             let net = |member: MemberId| open.iter().find(|entry| entry.0 == member).map_or(0, |entry| entry.1);
             prop_assert!(amount > 0);
             prop_assert!(net(from) < 0 && net(to) > 0);

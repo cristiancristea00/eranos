@@ -14,7 +14,21 @@ fn member(number: u8) -> MemberId {
 fn the_sign_of_a_pair_decides_who_pays() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let pairs = BTreeMap::from([((ana, bob), 700), ((ana, carol), -300), ((bob, carol), 0)]);
-    assert_eq!(settle(&pairs), vec![(ana, bob, 700), (carol, ana, 300)]);
+    assert_eq!(
+        settle(&pairs),
+        vec![
+            Flow {
+                amount: 700,
+                from: ana,
+                to: bob
+            },
+            Flow {
+                amount: 300,
+                from: carol,
+                to: ana
+            }
+        ]
+    );
 }
 
 /// No netted debt means no payment.

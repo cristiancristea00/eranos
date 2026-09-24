@@ -154,8 +154,14 @@ impl Payment {
     }
 }
 
-/// A payment in minor units: (from, to, amount).
-type Flow = (MemberId, MemberId, i64);
+/// A payment in minor units, before it becomes a [`Payment`] in the group
+/// currency.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Flow {
+    amount: i64,
+    from: MemberId,
+    to: MemberId,
+}
 
 /// Settles the balances of `ledger` with `strategy`.
 pub(crate) fn settle(
@@ -167,14 +173,16 @@ pub(crate) fn settle(
         SettlementStrategy::Greedy => greedy::settle(&ledger.balances()),
         SettlementStrategy::Direct => direct::settle(ledger.pairs()),
     };
-    flows.sort_unstable();
+    // By payer, then recipient, as `Settlement::payments` promises; the
+    // amount only breaks ties, as it always has.
+    flows.sort_unstable_by_key(|flow| (flow.from, flow.to, flow.amount));
     let currency = ledger.currency();
     let payments = flows
         .into_iter()
-        .map(|(from, to, amount)| Payment {
-            amount: Money::from_minor_units(amount, currency),
-            from,
-            to,
+        .map(|flow| Payment {
+            amount: Money::from_minor_units(flow.amount, currency),
+            from: flow.from,
+            to: flow.to,
         })
         .collect();
     Ok(Settlement { payments, strategy })

@@ -11,6 +11,15 @@ fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])
 }
 
+/// A payment of `amount` from member `from` to member `to`.
+fn flow(amount: i64, from: u8, to: u8) -> Flow {
+    Flow {
+        amount,
+        from: member(from),
+        to: member(to),
+    }
+}
+
 fn balances(nets: &[i64]) -> Vec<(MemberId, i64)> {
     nets.iter()
         .zip(1_u8..)
@@ -24,14 +33,7 @@ fn balances(nets: &[i64]) -> Vec<(MemberId, i64)> {
 fn the_largest_debtor_pays_the_largest_creditor_first() {
     // Owed 50 and 30; owing 60 and 20.
     let flows = settle(&balances(&[50, 30, -60, -20]));
-    assert_eq!(
-        flows,
-        vec![
-            (member(3), member(1), 50),
-            (member(4), member(2), 20),
-            (member(3), member(2), 10)
-        ]
-    );
+    assert_eq!(flows, vec![flow(50, 3, 1), flow(20, 4, 2), flow(10, 3, 2)]);
 }
 
 /// Equal amounts are taken in member order, so the plan is the same on
@@ -39,10 +41,7 @@ fn the_largest_debtor_pays_the_largest_creditor_first() {
 #[test]
 fn ties_go_to_the_lower_member() {
     let flows = settle(&balances(&[10, 10, -10, -10]));
-    assert_eq!(
-        flows,
-        vec![(member(3), member(1), 10), (member(4), member(2), 10)]
-    );
+    assert_eq!(flows, vec![flow(10, 3, 1), flow(10, 4, 2)]);
 }
 
 /// Settled members are ignored and an all-settled group needs nothing.
@@ -50,10 +49,7 @@ fn ties_go_to_the_lower_member() {
 fn settled_balances_need_no_payment() {
     assert!(settle(&[]).is_empty());
     assert!(settle(&balances(&[0, 0])).is_empty());
-    assert_eq!(
-        settle(&balances(&[0, 5, -5])),
-        vec![(member(3), member(2), 5)]
-    );
+    assert_eq!(settle(&balances(&[0, 5, -5])), vec![flow(5, 3, 2)]);
 }
 
 proptest! {
@@ -71,8 +67,8 @@ proptest! {
         let count = nets.iter().filter(|&&net| net != 0).count();
         prop_assert!(flows.len() <= count.saturating_sub(1));
         for &(member, net) in &open {
-            let received: i64 = flows.iter().filter(|flow| flow.1 == member).map(|flow| flow.2).sum();
-            let sent: i64 = flows.iter().filter(|flow| flow.0 == member).map(|flow| flow.2).sum();
+            let received: i64 = flows.iter().filter(|flow| flow.to == member).map(|flow| flow.amount).sum();
+            let sent: i64 = flows.iter().filter(|flow| flow.from == member).map(|flow| flow.amount).sum();
             prop_assert_eq!(net - received + sent, 0);
             prop_assert!(net >= 0 || received == 0);
             prop_assert!(net <= 0 || sent == 0);

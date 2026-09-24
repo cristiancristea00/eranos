@@ -28,8 +28,12 @@ pub(super) fn settle(balances: &[(MemberId, i64)]) -> Vec<Flow> {
         (creditors.pop(), debtors.pop())
     {
         let amount = credit.min(debt);
-        // Balances are within ±i64::MAX, so every amount fits back in i64.
-        flows.push((debtor, creditor, i64::try_from(amount).unwrap_or(i64::MAX)));
+        flows.push(Flow {
+            // Balances are within ±i64::MAX, so every amount fits back in i64.
+            amount: i64::try_from(amount).unwrap_or(i64::MAX),
+            from: debtor,
+            to: creditor,
+        });
         if credit > amount {
             creditors.push((credit - amount, Reverse(creditor)));
         }

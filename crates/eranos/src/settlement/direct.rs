@@ -11,9 +11,17 @@ pub(super) fn settle(pairs: &BTreeMap<(MemberId, MemberId), i64>) -> Vec<Flow> {
     pairs
         .iter()
         .filter_map(|(&(lower, higher), &amount)| match amount.signum() {
-            1 => Some((lower, higher, amount)),
+            1 => Some(Flow {
+                amount,
+                from: lower,
+                to: higher,
+            }),
             // The ledger keeps every value above i64::MIN, so negating fits.
-            -1 => Some((higher, lower, -amount)),
+            -1 => Some(Flow {
+                amount: -amount,
+                from: higher,
+                to: lower,
+            }),
             _ => None,
         })
         .collect()

@@ -48,7 +48,11 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
         if net < 0 {
             // The ledger keeps every value above i64::MIN, so negating fits.
             if let Some(creditor) = creditors.get_mut(&-net).and_then(Vec::pop) {
-                flows.push((member, creditor, -net));
+                flows.push(Flow {
+                    amount: -net,
+                    from: member,
+                    to: creditor,
+                });
                 paired.push(member);
                 paired.push(creditor);
             }
@@ -175,7 +179,11 @@ fn settle_group(group: &[(MemberId, i64)]) -> Vec<Flow> {
     while let (Some((debtor_id, debt)), Some((creditor_id, credit))) = (&mut debtor, &mut creditor)
     {
         let amount = (*debt).min(*credit);
-        flows.push((*debtor_id, *creditor_id, amount));
+        flows.push(Flow {
+            amount,
+            from: *debtor_id,
+            to: *creditor_id,
+        });
         *debt -= amount;
         *credit -= amount;
         if *debt == 0 {
