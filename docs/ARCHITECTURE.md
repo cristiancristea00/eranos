@@ -17,18 +17,20 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 9. [The serialised form](#9-the-serialised-form)
 10. [Account details](#10-account-details)
 11. [Future bindings](#11-future-bindings)
-12. [Key numbers](#12-key-numbers)
+12. [Async and concurrency](#12-async-and-concurrency)
+13. [Key numbers](#13-key-numbers)
 
 ## 1. Goals and constraints
 
 - **One core for every app.** iOS, Android, and the web share the rules, so
   a group computes the same totals and the same cents everywhere. The core
-  is pure synchronous Rust: no I/O, no async runtime, no clock except for
-  generating identifiers, and no global state except the lock that
-  generation reads the clock under, so the identifiers of concurrent threads
-  stay in creation order (or, with the `sequential-ids` feature for
-  examples and tests, the counter that replaces the clock), and the
-  phone-number metadata, which
+  is plain Rust: no I/O, no async runtime (its asynchronous calls are
+  futures any executor, or the calling thread, can drive;
+  [§ 12](#12-async-and-concurrency)), no clock except for generating
+  identifiers, and no global state except the lock that generation reads the
+  clock under, so the identifiers of concurrent threads stay in creation
+  order (or, with the `sequential-ids` feature for examples and tests, the
+  counter that replaces the clock), and the phone-number metadata, which
   rlibphonenumber decodes once, on first use, into a table nothing writes
   to.
 - **Exact money.** A split that loses or invents a cent is a bug users see.
@@ -339,7 +341,7 @@ other currency become converted costs at the supplied rate (including
 entries in the old group currency, which were local), and entries in the new
 currency become local. Its asynchronous form yields once per 1 024 entries
 and swaps only after its last yield, so a call dropped at a yield changes
-nothing.
+nothing ([§ 12](#12-async-and-concurrency)).
 
 ## 7. Settlement strategies
 
@@ -460,7 +462,7 @@ serialise. A group serialises only its inputs, never the derived totals:
   validating constructor. `into_group_async` replays the same steps,
   yielding once per 1 024 of them; it owns the saved form, so a dropped
   load leaves nothing behind, and a copy of the `SavedGroup` starts it
-  again.
+  again ([§ 12](#12-async-and-concurrency)).
 - `format` is checked: a newer one is refused rather than read with fields
   silently dropped (`GroupError::UnsupportedFormat`). New optional fields
   get `#[serde(default)]`, so files written by older releases keep
@@ -491,8 +493,8 @@ which holds keys the library never sees.
 The core is shaped for binding crates added as workspace siblings:
 
 - **`eranos-ffi` (UniFFI for Swift and Kotlin)**, following matrix-rust-sdk:
-  a `#[derive(uniffi::Object)]` wrapper holding `Mutex<eranos::Group>`
-  (UniFFI objects cannot take `&mut self`), mirror records with `From`
+  a `#[derive(uniffi::Object)]` wrapper holding a `SharedGroup` (UniFFI
+  objects cannot take `&mut self`), mirror records with `From`
   conversions, one flat error enum, and identifiers as strings (UniFFI has no
   128-bit integers). The release profile keeps `panic = "unwind"` so the
   scaffolding can catch panics at the boundary.
@@ -504,7 +506,118 @@ The core is shaped for binding crates added as workspace siblings:
   are `Copy`, and every public type is `Send + Sync`, which `tests/api.rs`
   asserts.
 
-## 12. Key numbers
+## 12. Async and concurrency
+
+The library has no async runtime and depends on none. A computation whose
+time grows with the group is a cooperative future: it pends only by
+yielding, once per budget of work that a `Pacer` counts, never after an
+amount of time, so it yields at the same points on every device.
+
+| Call                           | Yields                                 | Between two yields                                                               |
+| ------------------------------ | -------------------------------------- | -------------------------------------------------------------------------------- |
+| `Group::settlement_async`      | while the exact solver fills its table | 2²¹ subsets times balances, about 0.7 ms; no yield for 16 open balances or fewer |
+| `Group::change_currency_async` | after each re-resolved entry           | 1 024 entries, about 1 ms                                                        |
+| `SavedGroup::into_group_async` | after each replayed step               | 1 024 members, categories, expenses, transfers, or archivings                    |
+
+Each returns a `Cooperative`, which an executor awaits like any future
+and `Cooperative::complete` runs to its end on the calling thread;
+`settlement`, `change_currency`, and `into_group` are those completions, so
+the synchronous and asynchronous calls run the same code. The greedy and
+direct strategies never yield: their largest benchmarked cases take 55 µs
+and 110 µs. A call writes nothing before its last yield, so one dropped at
+a yield changes nothing: a currency change swaps in its new entries and
+ledger after its last yield, a load builds a group of its own, and a
+settlement enters the cache only once it is complete
+([§ 6](#6-the-ledger-and-its-caches)).
+
+Against the same computations without yield points, measured in
+alternating runs on the reference machine, the yield points cost the exact
+solver 2 to 3 % at 16 to 24 balances, a few nanoseconds on each settlement
+computed (none on one read from the cache), and nothing measurable on a
+currency change or a load. The solver's inner loop is the same machine code
+either way; the difference follows where the compiler places the code.
+
+### The shared group
+
+`SharedGroup` puts a group behind a read-write lock: async-lock, built
+without its `std` feature, so the lock reads no clock and keeps no
+per-thread parker (a gate keeps its features off,
+[AGENTS.md](../AGENTS.md#gates-before-committing)). Its clones share one
+group, and each of its methods mirrors one of the group's, returning a
+`Send + 'static` future of an owned result. Reads take the shared lock and
+run alongside each other; changes take the exclusive lock and run alone,
+once the reads in progress are done; while a change waits, new reads wait
+behind it, so a stream of reads cannot starve a change. Only the
+settlement and the currency change yield while they hold the lock; every
+other call holds it for one poll. A call dropped before it completes
+changes nothing and releases the lock it holds or waits for. `read` and
+`write` return guards, for a caller that needs several calls with no other
+call in between.
+
+A settlement at a yield, with a read beside it, and a change and a later
+read waiting their turn:
+
+```mermaid
+sequenceDiagram
+    participant Settlement as settlement
+    participant Read as read
+    participant Lock as lock
+    participant Change as change
+    participant Later as later read
+    Settlement->>Lock: shared lock
+    Note over Settlement: yields
+    Read->>Lock: shared lock
+    Lock-->>Read: at once
+    Change->>Lock: exclusive
+    Note over Change: waits
+    Later->>Lock: shared
+    Note over Later: waits
+    Settlement->>Lock: releases
+    Lock-->>Change: granted
+    Change->>Lock: releases
+    Lock-->>Later: granted
+```
+
+<details>
+<summary>ASCII version (for renderers without Mermaid)</summary>
+
+```text
+ settlement         read            lock           change        later read
+      │               │               │               │               │
+      ├─ shared lock ─┼──────────────>│               │               │
+      │ yields        │               │               │               │
+      │               ├─ shared lock >│               │               │
+      │               │<──── at once ─┤               │               │
+      │               │               │<── exclusive ─┤               │
+      │               │               │               │ waits         │
+      │               │               │<──────────────┼────── shared ─┤
+      │               │               │               │               │ waits
+      ├─ releases ────┼──────────────>│               │               │
+      │               │               ├─ granted ────>│               │
+      │               │               │<─── releases ─┤               │
+      │               │               ├─ granted ─────┼──────────────>│
+```
+
+</details>
+
+### Drivers
+
+| Future                                                          | Pends                                       | Driven by                                                           |
+| --------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| a `Cooperative`: the `_async` calls of `Group` and `SavedGroup` | only by yielding                            | any executor, or `Cooperative::complete` on the calling thread      |
+| a `SharedGroup` call, `read`, or `write`                        | by yielding, or while it waits for the lock | any executor, or `block_on`, which sleeps until the future is woken |
+
+`complete` polls again as soon as a poll pends, with a waker that does
+nothing. It is reachable only through `Cooperative`, because a future that
+waits for another thread, such as a `SharedGroup` call, would keep the
+thread busy until the lock is free. `block_on` parks the thread between
+polls and wakes it through the future's waker. On wasm, whose one thread
+`block_on` would put to sleep with nothing left to wake it, neither it nor
+`read_blocking` and `write_blocking` is compiled; a synchronous caller
+tries the lock with `try_read` or `try_write`, which fail with
+`GroupError::Busy` instead of waiting.
+
+## 13. Key numbers
 
 Release build on an Apple M4 Pro (`cargo bench -p eranos --features serde --bench '*'`):
 

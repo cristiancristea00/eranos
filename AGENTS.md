@@ -105,7 +105,18 @@ failure); `#[allow]` is itself a lint error.
   validation reads rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that
   decodes the embedded libphonenumber metadata on first use and is never
   written after; the invariant that rules out its panic is stated at the
-  call in `eranos-contact`.
+  call in `eranos-contact`. The lock behind `SharedGroup` is async-lock
+  without its `std` feature, which would bring blocking methods that read
+  the clock; a gate keeps its features off.
+- **Async calls are cooperative.** A computation whose time grows with the
+  group is an `async fn` that reports its work to a `Pacer` and pends only
+  by yielding; its public form returns it in a `Cooperative`, the
+  synchronous method is its `.complete()`, and it writes nothing to the
+  group before its last yield, so a dropped call changes nothing. A future
+  that can wait for a lock, such as a `SharedGroup` call, is never a
+  `Cooperative`: `complete` would spin on it. Where each call yields and
+  which lock it takes:
+  [docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency).
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
   cached settlements. The one other writer is `Ledger::move_category`, with
@@ -252,7 +263,10 @@ pairwise debts behind the direct settlement;
 `change_currency` resolves every entry again and rebuilds the ledger.
 Settlements are computed from the ledger on request, by the strategy the
 caller names, and cached per strategy in `OnceLock`s that every
-balance-changing mutation clears. Diagrams, rules, and numbers:
+balance-changing mutation clears. The slow calls also come as cooperative
+futures (`settlement_async`, `change_currency_async`, `into_group_async`),
+and `SharedGroup` shares a group between tasks and threads behind a
+read-write lock. Diagrams, rules, and numbers:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Verification habits

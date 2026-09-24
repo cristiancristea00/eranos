@@ -63,6 +63,41 @@
 //! settlements are computed on first request and cached until a balance
 //! changes.
 //!
+//! # Async calls and sharing
+//!
+//! The slow calls also come as futures that yield while they work, so an
+//! app's other tasks keep running: [`Group::settlement_async`],
+//! [`Group::change_currency_async`], and `SavedGroup::into_group_async`.
+//! They need no particular executor, and
+//! [`Cooperative::complete`](cooperative::Cooperative::complete) runs one on
+//! the calling thread, which is what the synchronous calls do. A
+//! [`SharedGroup`] shares a group between tasks and threads behind a
+//! read-write lock; each of its calls is a future an executor can run on any
+//! thread, and [`block_on`](cooperative::block_on) waits for one from
+//! synchronous code.
+//!
+//! ```
+//! use eranos::cooperative::block_on;
+//! use eranos::{
+//!     CalendarDate, Currency, Expense, Group, Member, Money, SettlementStrategy, SharedGroup,
+//!     Split,
+//! };
+//!
+//! let shared = SharedGroup::new(Group::builder(Currency::EUR, "Flat").build()?);
+//! let ana = block_on(shared.add_member(Member::builder("Ana").build()?))?;
+//! let bob = block_on(shared.add_member(Member::builder("Bob").build()?))?;
+//!
+//! // Ana pays the rent; a clone shares the group, as another task would.
+//! let (amount, day) = (Money::parse("900.00", Currency::EUR)?, CalendarDate::new(1, 10, 2026)?);
+//! let rent = Expense::builder(amount, day, "Rent", ana, Split::equal([ana, bob])).build()?;
+//! let other = shared.clone();
+//! block_on(other.add_expense(rent))?;
+//!
+//! let settlement = block_on(shared.settlement(SettlementStrategy::MinimumTransfers))?;
+//! assert_eq!(settlement.payments()[0].from(), bob);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
 //! # Features
 //!
 //! - `serde`: `Serialize` and `Deserialize` for [`Group`] and every type it

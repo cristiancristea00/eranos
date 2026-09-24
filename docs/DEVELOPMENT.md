@@ -144,7 +144,7 @@ breaking.
 4. Add it to `SettlementStrategy::all()`; the property tests then check that
    its plans clear every balance.
 5. Benchmark it in `benches/settlement.rs` and record the timing in
-   ARCHITECTURE § 12.
+   ARCHITECTURE § 13.
 
 ### 3.5 A new field on an entity
 

@@ -28,6 +28,9 @@ every command.
 - **A refused change changes nothing.** Every error path of a group
   mutation is asserted to leave the group, and its totals, exactly as they
   were.
+- **A dropped call changes nothing.** Each asynchronous call is dropped at
+  its yields in a test that finds the group, its totals, its cache, and its
+  lock as they were.
 - **The public API is tested as a caller uses it.** Integration tests and
   examples use only `eranos::…`; unit tests reach private items.
 
@@ -68,6 +71,7 @@ companion that pins concrete numbers.
 | incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing | `eranos-group/src/tests.rs`                                                                              |
 | paid, consumed, and spent agree; balances sum to zero; category totals add up                           | `tests/properties.rs`                                                                                    |
 | the order entries arrive in does not change the group, its totals, or its plans                         | `tests/properties.rs`                                                                                    |
+| a plan or a currency change awaited in an executor equals the one made on the caller's thread           | `tests/properties.rs`                                                                                    |
 | removing an expense and adding it back restores the totals exactly                                      | `tests/properties.rs`                                                                                    |
 | a group round-trips through JSON unchanged                                                              | `tests/persistence.rs`                                                                                   |
 
@@ -108,6 +112,17 @@ exceptions in `clippy.toml` allow unwrapping, expecting, panicking, and indexing
 functions and `#[cfg(test)]` modules; integration-test helpers outside
 those declare the same exception once, at the top of their file, with
 `#![expect(..., reason = "...")]`.
+
+### Asynchronous code
+
+A test polls a future by hand: with `Waker::noop()` when only the pending
+polls count, and with a counting waker when a wake-up must happen, as in
+`eranos-group/src/shared/tests.rs`. It pins where a computation yields
+(the exact solver's table of 16 balances fills in one poll and that of 17
+in two; a currency change of 2 100 entries yields twice) and drops the
+future at each yield. A test that needs another thread gives it 50 ms and
+bounds the number of polls instead of timing anything: a driver that spun
+would poll thousands of times.
 
 ### What not to do
 
@@ -170,7 +185,7 @@ group of 10 000, and `benches/group.rs` times a currency change and loading
 a saved group (feature `serde`) with 1 000 and 10 000 expenses, the
 operations that touch every entry. The timings quoted on
 `SettlementStrategy` and in
-[ARCHITECTURE § 12](ARCHITECTURE.md#12-key-numbers) come from them; update
+[ARCHITECTURE § 13](ARCHITECTURE.md#13-key-numbers) come from them; update
 both together.
 
 ## 8. What to run for a given change

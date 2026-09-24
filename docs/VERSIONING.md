@@ -8,12 +8,13 @@ changes it).
 
 ## 1. The public contract
 
-| Surface                  | What is covered                                                                                                               |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour, whichever internal crate holds it   |
-| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                          |
-| The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order |
-| The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                |
+| Surface                  | What is covered                                                                                                                                |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour, whichever internal crate holds it                    |
+| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                                           |
+| The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order                  |
+| The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                                 |
+| The concurrency          | which lock each `SharedGroup` call takes, the order in which waiting calls get it, and that a call dropped before it completes changes nothing |
 
 The numbers are part of the contract because groups are shared: two devices
 on different releases must compute the same cent for the same expense. A
@@ -77,6 +78,9 @@ an old format stays until a breaking release says otherwise.
 ## 5. What the version does not promise
 
 - **Performance.** Timings are documented, not guaranteed.
+- **Where a call yields.** The work between two yields
+  ([ARCHITECTURE § 12](ARCHITECTURE.md#12-async-and-concurrency)), and so
+  the number of polls a call takes, may change in any release.
 - **`Debug` output.** Its format may change in any release.
 - **Error messages.** The `Display` text of errors may be reworded; match on
   the variants.

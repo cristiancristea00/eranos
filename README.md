@@ -11,25 +11,26 @@ a fast greedy plan, or the unsimplified debts between each pair of people.
 
 It is the shared core of the eranos apps for iOS, Android, and the web,
 which will reach it through binding crates (UniFFI for Swift and Kotlin,
-wasm for the browser); the library itself is pure, synchronous Rust with
-no I/O.
+wasm for the browser); the library itself is plain Rust with no I/O and no
+async runtime.
 
 ## Concepts
 
-| Concept    | Type         | What it is                                                                        |
-| ---------- | ------------ | --------------------------------------------------------------------------------- |
-| Group      | `Group`      | A trip, a day out, or a household: name, currency, language, and everything below |
-| Member     | `Member`     | A person: first name (required), last name, email, phone, payment accounts        |
-| Account    | `Account`    | Where a member can be paid: an IBAN or a payment-app username                     |
-| Category   | `Category`   | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
-| Expense    | `Expense`    | What was bought: cost, date, payers, split, optional tip and category             |
-| Cost       | `Cost`       | An amount in the group currency, or in another one at a fixed exchange rate       |
-| Split      | `Split`      | How an amount is divided: equally, by percentages, by parts, or by exact amounts  |
-| Item       | `Item`       | A receipt line of an itemised expense, with its own quantity and split            |
-| Tip        | `Tip`        | A fixed amount or a percentage on top, shared proportionally or equally           |
-| Transfer   | `Transfer`   | Money one member paid another, such as a repayment                                |
-| Summary    | `Summary`    | Spending, paid, consumed, balances, and totals per category, always current       |
-| Settlement | `Settlement` | The payments that bring every balance to zero                                     |
+| Concept      | Type          | What it is                                                                        |
+| ------------ | ------------- | --------------------------------------------------------------------------------- |
+| Group        | `Group`       | A trip, a day out, or a household: name, currency, language, and everything below |
+| Shared group | `SharedGroup` | A group shared between tasks and threads, each call locking it while it runs      |
+| Member       | `Member`      | A person: first name (required), last name, email, phone, payment accounts        |
+| Account      | `Account`     | Where a member can be paid: an IBAN or a payment-app username                     |
+| Category     | `Category`    | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
+| Expense      | `Expense`     | What was bought: cost, date, payers, split, optional tip and category             |
+| Cost         | `Cost`        | An amount in the group currency, or in another one at a fixed exchange rate       |
+| Split        | `Split`       | How an amount is divided: equally, by percentages, by parts, or by exact amounts  |
+| Item         | `Item`        | A receipt line of an itemised expense, with its own quantity and split            |
+| Tip          | `Tip`         | A fixed amount or a percentage on top, shared proportionally or equally           |
+| Transfer     | `Transfer`    | Money one member paid another, such as a repayment                                |
+| Summary      | `Summary`     | Spending, paid, consumed, balances, and totals per category, always current       |
+| Settlement   | `Settlement`  | The payments that bring every balance to zero                                     |
 
 ## Quick start
 
@@ -105,6 +106,11 @@ flowchart LR
 - **Totals are incremental.** Each change moves the totals by exactly its
   own shares, checked for overflow before anything is written: a failed
   change leaves the group untouched.
+- **Async without a runtime.** The slow calls, the fewest-payments plan, a
+  currency change, and loading, also come as futures that yield while they
+  work, for any executor or none, and a `SharedGroup` shares a group
+  between tasks and threads behind a read-write lock
+  ([docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency)).
 - **Three settlement strategies**, chosen by the caller:
 
   | Strategy           | Payments                                      | Cost                                       |
