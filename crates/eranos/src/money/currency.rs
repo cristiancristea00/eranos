@@ -40,8 +40,8 @@ pub struct Currency {
 }
 
 // Written out because the fields are in alphabetical order: a derived
-// ordering would compare the decimal places first, and the crate's own
-// ordering is by numeric code.
+// ordering would compare the decimal places first, and currencies order by
+// their three-letter code.
 impl Ord for Currency {
     fn cmp(&self, other: &Self) -> Ordering {
         self.code().cmp(other.code())
