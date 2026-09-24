@@ -249,6 +249,11 @@ fn a_tampered_file_is_refused() {
         value["members"][0]["accounts"][0]["details"]["iban"] = json!("RO491AAA1B31007593840000");
     });
     assert!(malformed.contains("this country's format"), "{malformed}");
+    // A language tag the apps' locale APIs throw on.
+    let language = tamper(&|value| {
+        value["language"] = json!("en-US-US");
+    });
+    assert!(language.contains("invalid language tag"), "{language}");
     // A blank first name, and a foreign expense that lost its rate.
     let blank_name = tamper(&|value| {
         value["members"][1]["first_name"] = json!("  ");

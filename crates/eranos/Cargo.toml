@@ -16,6 +16,7 @@ readme = "../../README.md"
 serde = ["dep:serde", "uuid/serde"]
 
 [dependencies]
+icu_locale_core = { workspace = true }
 iso4217-static = { workspace = true }
 jiff = { workspace = true }
 thiserror = { workspace = true }

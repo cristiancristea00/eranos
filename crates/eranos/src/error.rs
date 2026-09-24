@@ -47,7 +47,7 @@ pub enum ValueError {
     /// An identifier that is not UUID text.
     #[error("invalid identifier: expected a UUID")]
     InvalidId,
-    /// A language tag that does not have the shape of a BCP 47 tag.
+    /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
     #[error("invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`")]
     InvalidLanguage,
     /// A number of parts that is not a positive decimal number with at most

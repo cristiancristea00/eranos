@@ -471,6 +471,7 @@ fn rejected_input_never_appears_in_a_message() {
     assert_not_echoed("24:60", &Time::parse("24:60").unwrap_err());
     assert_not_echoed("not-a-uuid", &"not-a-uuid".parse::<MemberId>().unwrap_err());
     assert_not_echoed("ro_RO", &Language::parse("ro_RO").unwrap_err());
+    assert_not_echoed("en-US-US", &Language::parse("en-US-US").unwrap_err());
 }
 
 /// A validation failure inside a builder would fail to propagate through `?`.

@@ -33,11 +33,12 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 - **Deterministic everywhere.** The same entries give the same shares, the
   same totals, and the same settlement on every device and in any order of
   arrival; this is what future sync relies on.
-- **Few dependencies.** `iso4217-static` (the ISO 4217 list, pinned
-  exactly), `jiff` (calendar dates, times of day, and their ISO 8601 parser,
-  without its clock or time zones), `thiserror` (derive only), `uuid` (v7
-  identifiers), `zeroize` (wiping secrets), and optionally `serde`.
-  Everything else, including IBAN validation, is in the crate.
+- **Few dependencies.** `icu_locale_core` (UTS #35 language tags),
+  `iso4217-static` (the ISO 4217 list, pinned exactly), `jiff` (calendar
+  dates, times of day, and their ISO 8601 parser, without its clock or time
+  zones), `thiserror` (derive only), `uuid` (v7 identifiers), `zeroize`
+  (wiping secrets), and optionally `serde`. Everything else, including IBAN
+  validation, is in the crate.
 
 ## 2. Module map
 

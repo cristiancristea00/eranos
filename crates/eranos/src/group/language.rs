@@ -3,14 +3,20 @@
 use std::fmt;
 use std::str::FromStr;
 
+use icu_locale_core::Locale;
+
 use crate::error::ValueError;
 
-/// A language tag with the shape of BCP 47, such as `en`, `ro-RO`, or
-/// `zh-Hant-TW`.
+/// A language tag, such as `en`, `ro-RO`, or `zh-Hant-TW`: a Unicode BCP 47
+/// locale identifier (UTS #35), the rule the locale APIs of iOS, Android, and
+/// the web apply.
 ///
-/// Only the shape is checked: a first subtag of 2 to 8 letters, then subtags
-/// of 1 to 8 letters or digits, separated by `-`. Whether the language exists
-/// is up to the apps, which use the tag for their own display language.
+/// A tag is a language of 2 or 3 letters, then an optional script, region,
+/// and variants, then extensions such as `-u-nu-thai`. It is stored in
+/// canonical form: each subtag in its canonical case (`en-GB`, `zh-Hant`),
+/// with variants and `-u-` keywords sorted; aliases such as `iw` stay as
+/// typed. Whether the language exists is up to the apps, which use the tag
+/// for their own display language.
 ///
 /// # Examples
 ///
@@ -18,6 +24,7 @@ use crate::error::ValueError;
 /// use eranos::Language;
 ///
 /// assert_eq!(Language::parse("ro-RO")?.as_str(), "ro-RO");
+/// assert_eq!(Language::parse("EN-gb")?.as_str(), "en-GB");
 /// assert!(Language::parse("ro_RO").is_err());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
@@ -25,31 +32,20 @@ use crate::error::ValueError;
 pub struct Language(String);
 
 impl Language {
-    /// Parses a language tag, ignoring surrounding whitespace.
+    /// Parses a language tag, ignoring surrounding whitespace, and keeps its
+    /// canonical form.
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidLanguage`] when the text does not have the shape
-    /// of a BCP 47 tag.
+    /// [`ValueError::InvalidLanguage`] when the text is not a Unicode BCP 47
+    /// locale identifier.
     pub fn parse(text: &str) -> Result<Self, ValueError> {
-        let text = text.trim();
-        let mut subtags = text.split('-');
-        let primary_valid = subtags.next().is_some_and(|primary| {
-            (2..=8).contains(&primary.len())
-                && primary.bytes().all(|byte| byte.is_ascii_alphabetic())
-        });
-        let rest_valid = subtags.all(|subtag| {
-            (1..=8).contains(&subtag.len())
-                && subtag.bytes().all(|byte| byte.is_ascii_alphanumeric())
-        });
-        if primary_valid && rest_valid {
-            Ok(Self(text.to_owned()))
-        } else {
-            Err(ValueError::InvalidLanguage)
-        }
+        Locale::normalize(text.trim())
+            .map(|canonical| Self(canonical.into_owned()))
+            .map_err(|_| ValueError::InvalidLanguage)
     }
 
-    /// The tag as entered, without surrounding whitespace.
+    /// The tag in canonical form, such as `en-GB`.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0

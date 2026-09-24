@@ -18,6 +18,10 @@ publish = false
 
 [workspace.dependencies]
 # --- Library -----------------------------------------------------------------
+# Language tags: UTS 35 parsing and canonical case for `Language`, the rule
+# ICU applies on iOS, Android, and the web. It holds no data and no global
+# state; `alloc` gives `Locale::normalize`. Its types stay inside `Language`.
+icu_locale_core = { version = "2.3", default-features = false, features = ["alloc"] }
 # The ISO 4217 currencies: codes, minor units, names, and numeric codes, which
 # its proc macro generates from SIX Group's List One when eranos is compiled.
 # Pinned exactly: a release that changes the list changes which saved amounts
