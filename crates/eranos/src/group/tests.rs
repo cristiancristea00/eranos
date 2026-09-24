@@ -855,24 +855,24 @@ enum Operation {
         participants: Vec<(usize, u32)>,
         payer: usize,
     },
-    ReplaceExpense {
-        amount: i64,
-        payer: usize,
-        position: usize,
-    },
-    RemoveExpense {
-        position: usize,
-    },
     AddTransfer {
         amount: i64,
         from: usize,
         to: usize,
     },
+    Archive {
+        member: usize,
+    },
+    RemoveExpense {
+        position: usize,
+    },
     RemoveTransfer {
         position: usize,
     },
-    Archive {
-        member: usize,
+    ReplaceExpense {
+        amount: i64,
+        payer: usize,
+        position: usize,
     },
     Unarchive {
         member: usize,
@@ -919,6 +919,21 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
                 .unwrap();
             group.add_expense(expense).is_ok()
         }
+        Operation::AddTransfer { amount, from, to } => {
+            let Ok(transfer) =
+                Transfer::builder(money(amount), day(), members[from], members[to]).build()
+            else {
+                return false;
+            };
+            group.add_transfer(transfer).is_ok()
+        }
+        Operation::Archive { member } => group.archive_member(members[member]).is_ok(),
+        Operation::RemoveExpense { position } => {
+            expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
+        }
+        Operation::RemoveTransfer { position } => {
+            transfer_at(group, position).is_some_and(|id| group.remove_transfer(id).is_ok())
+        }
         Operation::ReplaceExpense {
             amount,
             payer,
@@ -938,21 +953,6 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
             };
             group.replace_expense(id, expense).is_ok()
         }
-        Operation::RemoveExpense { position } => {
-            expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
-        }
-        Operation::AddTransfer { amount, from, to } => {
-            let Ok(transfer) =
-                Transfer::builder(money(amount), day(), members[from], members[to]).build()
-            else {
-                return false;
-            };
-            group.add_transfer(transfer).is_ok()
-        }
-        Operation::RemoveTransfer { position } => {
-            transfer_at(group, position).is_some_and(|id| group.remove_transfer(id).is_ok())
-        }
-        Operation::Archive { member } => group.archive_member(members[member]).is_ok(),
         Operation::Unarchive { member } => group.unarchive_member(members[member]).is_ok(),
     }
 }

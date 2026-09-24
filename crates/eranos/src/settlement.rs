@@ -45,6 +45,22 @@ use crate::transfer::Transfer;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SettlementStrategy {
+    /// No simplification: everyone pays back the people who paid for them.
+    ///
+    /// Every participant owes every payer of each expense their share of what
+    /// that payer paid; the debts between each pair of members are netted
+    /// across all entries. Each payment traces back to shared expenses, at
+    /// the cost of the most payments. O(p) time for p pairs with a debt,
+    /// which the group keeps current as entries change (110 µs for 100
+    /// members who all share every expense, 4 950 pairs, on an Apple M4
+    /// Pro).
+    Direct,
+    /// The largest debtor pays the largest creditor, repeatedly.
+    ///
+    /// O(n log n) time and at most n − 1 payments (85 µs for 1 000 members
+    /// on an Apple M4 Pro); usually as few as
+    /// [`MinimumTransfers`](Self::MinimumTransfers), but not always.
+    Greedy,
     /// The fewest payments possible.
     ///
     /// Finding them is NP-hard, and this solves it exactly: exact opposite
@@ -58,29 +74,13 @@ pub enum SettlementStrategy {
     /// operating system may end the process before an allocation fails, so
     /// prefer [`Greedy`](Self::Greedy) for large groups.
     MinimumTransfers,
-    /// The largest debtor pays the largest creditor, repeatedly.
-    ///
-    /// O(n log n) time and at most n − 1 payments (85 µs for 1 000 members
-    /// on an Apple M4 Pro); usually as few as
-    /// [`MinimumTransfers`](Self::MinimumTransfers), but not always.
-    Greedy,
-    /// No simplification: everyone pays back the people who paid for them.
-    ///
-    /// Every participant owes every payer of each expense their share of what
-    /// that payer paid; the debts between each pair of members are netted
-    /// across all entries. Each payment traces back to shared expenses, at
-    /// the cost of the most payments. O(p) time for p pairs with a debt,
-    /// which the group keeps current as entries change (110 µs for 100
-    /// members who all share every expense, 4 950 pairs, on an Apple M4
-    /// Pro).
-    Direct,
 }
 
 impl SettlementStrategy {
-    /// Every strategy.
+    /// Every strategy, in the order they are declared.
     #[must_use]
     pub const fn all() -> [Self; 3] {
-        [Self::MinimumTransfers, Self::Greedy, Self::Direct]
+        [Self::Direct, Self::Greedy, Self::MinimumTransfers]
     }
 }
 
@@ -177,9 +177,9 @@ pub(crate) fn settle(
     ledger: &Ledger,
 ) -> Result<Settlement, SettlementError> {
     let mut flows = match strategy {
-        SettlementStrategy::MinimumTransfers => minimum::settle(&ledger.balances())?,
-        SettlementStrategy::Greedy => greedy::settle(&ledger.balances()),
         SettlementStrategy::Direct => direct::settle(ledger.pairs()),
+        SettlementStrategy::Greedy => greedy::settle(&ledger.balances()),
+        SettlementStrategy::MinimumTransfers => minimum::settle(&ledger.balances())?,
     };
     // By payer, then recipient, as `Settlement::payments` promises; the
     // amount breaks ties.

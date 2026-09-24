@@ -114,6 +114,11 @@ for test helpers and benchmark fixtures, which panic to report failure);
   sits beside it (`tip_amount` after `tip`, `paid_by` before `payers`),
   and methods that read several fields, such as `build`, come last.
   `Group` heads each field's methods with a section comment.
+- **Variants are alphabetical.** Enum variants are declared in
+  alphabetical order, and so are the arms of a `match` over them and the
+  alternatives of an or-pattern; a catch-all arm stays last. A list of
+  every variant, such as `SettlementStrategy::all`, follows the
+  declaration.
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
   validating constructor (`serde(try_from = …)`); `Group` replays its

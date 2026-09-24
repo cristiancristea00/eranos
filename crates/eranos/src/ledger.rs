@@ -197,10 +197,10 @@ impl MemberSummary {
 /// The text form is `owes 12.00 EUR`, `gets back 12.00 EUR`, or `settled`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Balance {
-    /// The member owes this much to the others.
-    Owes(Money),
     /// The others owe this much to the member.
     GetsBack(Money),
+    /// The member owes this much to the others.
+    Owes(Money),
     /// The member owes nothing and is owed nothing.
     Settled,
 }
@@ -208,8 +208,8 @@ pub enum Balance {
 impl fmt::Display for Balance {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Owes(amount) => write!(formatter, "owes {amount}"),
             Self::GetsBack(amount) => write!(formatter, "gets back {amount}"),
+            Self::Owes(amount) => write!(formatter, "owes {amount}"),
             Self::Settled => formatter.write_str("settled"),
         }
     }

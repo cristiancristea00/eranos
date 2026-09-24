@@ -119,12 +119,12 @@ pub enum TipValue {
 )]
 #[non_exhaustive]
 pub enum TipDistribution {
+    /// The same for every participant.
+    Equal,
     /// In proportion to each participant's share of the amount: whoever
     /// ordered more tips more.
     #[default]
     Proportional,
-    /// The same for every participant.
-    Equal,
 }
 
 #[cfg(test)]

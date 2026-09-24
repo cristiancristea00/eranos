@@ -106,9 +106,9 @@ impl Settlements {
         strategy: SettlementStrategy,
     ) -> &OnceLock<Result<Settlement, SettlementError>> {
         match strategy {
-            SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
-            SettlementStrategy::Greedy => &self.greedy,
             SettlementStrategy::Direct => &self.direct,
+            SettlementStrategy::Greedy => &self.greedy,
+            SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
         }
     }
 

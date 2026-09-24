@@ -43,8 +43,6 @@ use crate::money::{ExchangeRate, Money};
 )]
 #[non_exhaustive]
 pub enum Cost {
-    /// An amount in the group currency.
-    Local(Money),
     /// An amount in another currency, with the rate into the group
     /// currency; made by [`Money::at`].
     #[non_exhaustive]
@@ -55,6 +53,8 @@ pub enum Cost {
         /// currency is worth.
         rate: ExchangeRate,
     },
+    /// An amount in the group currency.
+    Local(Money),
 }
 
 impl Cost {
@@ -62,7 +62,7 @@ impl Cost {
     #[must_use]
     pub const fn amount(self) -> Money {
         match self {
-            Self::Local(amount) | Self::Converted { amount, .. } => amount,
+            Self::Converted { amount, .. } | Self::Local(amount) => amount,
         }
     }
 
@@ -71,8 +71,8 @@ impl Cost {
     #[must_use]
     pub const fn exchange_rate(self) -> ExchangeRate {
         match self {
-            Self::Local(_) => ExchangeRate::ONE,
             Self::Converted { rate, .. } => rate,
+            Self::Local(_) => ExchangeRate::ONE,
         }
     }
 
@@ -81,8 +81,8 @@ impl Cost {
     #[must_use]
     pub const fn with_amount(self, amount: Money) -> Self {
         match self {
-            Self::Local(_) => Self::Local(amount),
             Self::Converted { rate, .. } => Self::Converted { amount, rate },
+            Self::Local(_) => Self::Local(amount),
         }
     }
 
@@ -97,8 +97,8 @@ impl Cost {
     /// The rate of a converted cost; `None` for a local one.
     pub(crate) const fn conversion(self) -> Option<ExchangeRate> {
         match self {
-            Self::Local(_) => None,
             Self::Converted { rate, .. } => Some(rate),
+            Self::Local(_) => None,
         }
     }
 }

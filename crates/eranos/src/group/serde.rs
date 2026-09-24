@@ -141,15 +141,15 @@ impl<'de> Deserialize<'de> for Group {
 /// Why a well-formed file does not make a valid group.
 #[derive(Debug, thiserror::Error)]
 enum ReplayError {
-    /// A format this version cannot read.
-    #[error("unsupported group format {0}: this version reads format {FORMAT}")]
-    Format(u32),
     /// Invalid group details.
     #[error(transparent)]
     Details(#[from] ValueError),
     /// An entry the group refuses.
     #[error(transparent)]
     Entry(#[from] GroupError),
+    /// A format this version cannot read.
+    #[error("unsupported group format {0}: this version reads format {FORMAT}")]
+    Format(u32),
 }
 
 impl GroupRecord {

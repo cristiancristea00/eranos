@@ -47,7 +47,6 @@ pub(crate) fn resolve_expense(
     let total = expense.total().minor_units();
 
     let base = match expense.split() {
-        ExpenseSplit::Whole(split) => split.divide(amount, pass(PASS_SPLIT)),
         ExpenseSplit::Itemised(items) => {
             let mut totals: BTreeMap<MemberId, i64> = BTreeMap::new();
             for (position, item) in (0_u64..).zip(items) {
@@ -61,6 +60,7 @@ pub(crate) fn resolve_expense(
             }
             totals.into_iter().collect()
         }
+        ExpenseSplit::Whole(split) => split.divide(amount, pass(PASS_SPLIT)),
     };
 
     let mut shares = base.clone();
@@ -69,11 +69,11 @@ pub(crate) fn resolve_expense(
             .tip()
             .map_or_else(TipDistribution::default, Tip::distribution)
         {
+            TipDistribution::Equal => vec![1; base.len()],
             TipDistribution::Proportional => base
                 .iter()
                 .map(|&(_, share)| share.unsigned_abs())
                 .collect(),
-            TipDistribution::Equal => vec![1; base.len()],
         };
         let tips = allocate(tip, &weights, pass(PASS_TIP));
         for ((_, share), portion) in shares.iter_mut().zip(tips) {

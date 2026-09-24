@@ -69,6 +69,20 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
     }
 }
 
+/// An app listing the strategies from `all` would show them in another
+/// order than their documentation.
+#[test]
+fn all_lists_every_strategy_in_declaration_order() {
+    assert_eq!(
+        SettlementStrategy::all(),
+        [
+            SettlementStrategy::Direct,
+            SettlementStrategy::Greedy,
+            SettlementStrategy::MinimumTransfers
+        ]
+    );
+}
+
 /// A settled group has an empty settlement under every strategy.
 #[test]
 fn a_settled_ledger_has_no_payments() {

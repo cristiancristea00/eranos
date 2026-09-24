@@ -213,10 +213,10 @@ impl Expense {
 )]
 #[non_exhaustive]
 pub enum ExpenseSplit {
-    /// The whole amount is divided by one [`Split`].
-    Whole(Split),
     /// Every [`Item`] is divided by its own split.
     Itemised(Vec<Item>),
+    /// The whole amount is divided by one [`Split`].
+    Whole(Split),
 }
 
 impl ExpenseSplit {
@@ -224,11 +224,11 @@ impl ExpenseSplit {
     #[must_use]
     pub fn participants(&self) -> BTreeSet<MemberId> {
         match self {
-            Self::Whole(split) => split.members().collect(),
             Self::Itemised(items) => items
                 .iter()
                 .flat_map(|item| item.split().members())
                 .collect(),
+            Self::Whole(split) => split.members().collect(),
         }
     }
 }
@@ -356,8 +356,8 @@ impl ExpenseBuilder {
             .split
             .resolve(ExpenseError::MissingSplit, ExpenseError::ConflictingSplit)?;
         match &split {
-            ExpenseSplit::Whole(split) => split.validate(amount)?,
             ExpenseSplit::Itemised(items) => validate_items(items, amount)?,
+            ExpenseSplit::Whole(split) => split.validate(amount)?,
         }
         let tip_amount = match self.tip {
             Some(tip) => tip.amount_on(amount)?,
@@ -415,35 +415,35 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
 /// `build`, because a silent override would hide the caller's mistake.
 #[derive(Debug, Clone)]
 enum Choice<T> {
-    Unset,
+    Conflict,
+    First(T),
     /// Copied from an existing value by `to_builder`; either setter may
     /// replace it.
     Inherited(T),
-    First(T),
     Second(T),
-    Conflict,
+    Unset,
 }
 
 impl<T> Choice<T> {
     fn set_first(&mut self, value: T) {
         *self = match mem::replace(self, Self::Conflict) {
-            Self::Second(_) | Self::Conflict => Self::Conflict,
-            Self::Unset | Self::Inherited(_) | Self::First(_) => Self::First(value),
+            Self::Conflict | Self::Second(_) => Self::Conflict,
+            Self::First(_) | Self::Inherited(_) | Self::Unset => Self::First(value),
         };
     }
 
     fn set_second(&mut self, value: T) {
         *self = match mem::replace(self, Self::Conflict) {
-            Self::First(_) | Self::Conflict => Self::Conflict,
-            Self::Unset | Self::Inherited(_) | Self::Second(_) => Self::Second(value),
+            Self::Conflict | Self::First(_) => Self::Conflict,
+            Self::Inherited(_) | Self::Second(_) | Self::Unset => Self::Second(value),
         };
     }
 
     fn resolve(self, missing: ExpenseError, conflicting: ExpenseError) -> Result<T, ExpenseError> {
         match self {
-            Self::Unset => Err(missing),
             Self::Conflict => Err(conflicting),
-            Self::Inherited(value) | Self::First(value) | Self::Second(value) => Ok(value),
+            Self::First(value) | Self::Inherited(value) | Self::Second(value) => Ok(value),
+            Self::Unset => Err(missing),
         }
     }
 }
@@ -481,8 +481,8 @@ impl TryFrom<ExpenseRecord> for Expense {
             .time(record.time)
             .payers(record.payers);
         let builder = match record.split {
-            ExpenseSplit::Whole(split) => builder.split(split),
             ExpenseSplit::Itemised(items) => builder.items(items),
+            ExpenseSplit::Whole(split) => builder.split(split),
         };
         match record.description {
             Some(description) => builder.description(description).build(),

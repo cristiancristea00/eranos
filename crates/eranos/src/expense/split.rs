@@ -43,16 +43,16 @@ use crate::money::{Money, Parts, Percentage};
 )]
 #[non_exhaustive]
 pub enum Split {
-    /// Every member pays the same.
-    Equal(Vec<MemberId>),
-    /// Every member pays a percentage; the percentages add up to exactly
-    /// 100 %.
-    Percentages(Vec<(MemberId, Percentage)>),
-    /// Every member pays in proportion to their parts.
-    Parts(Vec<(MemberId, Parts)>),
     /// Every member pays an exact amount; the amounts add up to exactly the
     /// amount being split.
     Amounts(Vec<(MemberId, Money)>),
+    /// Every member pays the same.
+    Equal(Vec<MemberId>),
+    /// Every member pays in proportion to their parts.
+    Parts(Vec<(MemberId, Parts)>),
+    /// Every member pays a percentage; the percentages add up to exactly
+    /// 100 %.
+    Percentages(Vec<(MemberId, Percentage)>),
 }
 
 impl Split {
@@ -80,10 +80,10 @@ impl Split {
     /// The members, in the order they were listed.
     pub fn members(&self) -> impl Iterator<Item = MemberId> + '_ {
         let members: Box<dyn Iterator<Item = MemberId> + '_> = match self {
-            Self::Equal(members) => Box::new(members.iter().copied()),
-            Self::Percentages(shares) => Box::new(shares.iter().map(|&(member, _)| member)),
-            Self::Parts(shares) => Box::new(shares.iter().map(|&(member, _)| member)),
             Self::Amounts(shares) => Box::new(shares.iter().map(|&(member, _)| member)),
+            Self::Equal(members) => Box::new(members.iter().copied()),
+            Self::Parts(shares) => Box::new(shares.iter().map(|&(member, _)| member)),
+            Self::Percentages(shares) => Box::new(shares.iter().map(|&(member, _)| member)),
         };
         members
     }
@@ -92,10 +92,10 @@ impl Split {
     #[must_use]
     pub const fn len(&self) -> usize {
         match self {
-            Self::Equal(members) => members.len(),
-            Self::Percentages(shares) => shares.len(),
-            Self::Parts(shares) => shares.len(),
             Self::Amounts(shares) => shares.len(),
+            Self::Equal(members) => members.len(),
+            Self::Parts(shares) => shares.len(),
+            Self::Percentages(shares) => shares.len(),
         }
     }
 
@@ -116,24 +116,6 @@ impl Split {
             return Err(ExpenseError::DuplicateMember { member });
         }
         match self {
-            Self::Equal(_) | Self::Parts(_) => Ok(()),
-            Self::Percentages(shares) => {
-                if let Some(&(member, _)) = shares
-                    .iter()
-                    .find(|(_, percentage)| percentage.basis_points() == 0)
-                {
-                    return Err(ExpenseError::NonPositiveShare { member });
-                }
-                let total_basis_points = shares
-                    .iter()
-                    .map(|(_, percentage)| u64::from(percentage.basis_points()))
-                    .sum();
-                if total_basis_points == u64::from(Percentage::HUNDRED.basis_points()) {
-                    Ok(())
-                } else {
-                    Err(ExpenseError::PercentagesDoNotAddUp { total_basis_points })
-                }
-            }
             Self::Amounts(shares) => {
                 for &(member, amount) in shares {
                     if amount.currency() != total.currency() {
@@ -160,6 +142,24 @@ impl Split {
                     })
                 }
             }
+            Self::Equal(_) | Self::Parts(_) => Ok(()),
+            Self::Percentages(shares) => {
+                if let Some(&(member, _)) = shares
+                    .iter()
+                    .find(|(_, percentage)| percentage.basis_points() == 0)
+                {
+                    return Err(ExpenseError::NonPositiveShare { member });
+                }
+                let total_basis_points = shares
+                    .iter()
+                    .map(|(_, percentage)| u64::from(percentage.basis_points()))
+                    .sum();
+                if total_basis_points == u64::from(Percentage::HUNDRED.basis_points()) {
+                    Ok(())
+                } else {
+                    Err(ExpenseError::PercentagesDoNotAddUp { total_basis_points })
+                }
+            }
         }
     }
 
@@ -170,18 +170,18 @@ impl Split {
     /// the order they were listed in.
     pub(crate) fn divide(&self, total: i64, rotation: u64) -> Vec<(MemberId, i64)> {
         let mut weighted: Vec<(MemberId, u64)> = match self {
-            Self::Equal(members) => members.iter().map(|&member| (member, 1)).collect(),
-            Self::Percentages(shares) => shares
+            Self::Amounts(shares) => shares
                 .iter()
-                .map(|&(member, percentage)| (member, u64::from(percentage.basis_points())))
+                .map(|&(member, amount)| (member, amount.minor_units().unsigned_abs()))
                 .collect(),
+            Self::Equal(members) => members.iter().map(|&member| (member, 1)).collect(),
             Self::Parts(shares) => shares
                 .iter()
                 .map(|&(member, parts)| (member, u64::from(parts.hundredths())))
                 .collect(),
-            Self::Amounts(shares) => shares
+            Self::Percentages(shares) => shares
                 .iter()
-                .map(|&(member, amount)| (member, amount.minor_units().unsigned_abs()))
+                .map(|&(member, percentage)| (member, u64::from(percentage.basis_points())))
                 .collect(),
         };
         weighted.sort_unstable_by_key(|&(member, _)| member);
