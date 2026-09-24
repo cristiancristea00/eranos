@@ -27,6 +27,8 @@ use crate::error::ValueError;
 /// assert_eq!(currency.code(), "RON");
 /// assert_eq!(Currency::JPY.decimal_places(), 0);
 /// assert_eq!(Currency::BHD.decimal_places(), 3);
+/// assert_eq!(Currency::EUR.name(), "Euro");
+/// assert_eq!(Currency::EUR.numeric_code(), 978);
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -127,6 +129,27 @@ impl Currency {
     #[must_use]
     pub const fn code(self) -> &'static str {
         self.iso.as_str()
+    }
+
+    /// The currency's English name in ISO 4217, such as `"Euro"` or
+    /// `"Pound Sterling"`.
+    ///
+    /// Two codes can share a name: `VED` and `VES` are both
+    /// `"Bolívar Soberano"`.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        self.iso.name()
+    }
+
+    /// The ISO 4217 numeric code, such as 978 for `EUR`; ISO writes it with
+    /// three digits, so the lek's 8 is `008`.
+    #[must_use]
+    #[expect(
+        clippy::as_conversions,
+        reason = "iso4217-static's enum is `repr(u16)` with the numeric codes as discriminants, and a cast is the only conversion it offers"
+    )]
+    pub const fn numeric_code(self) -> u16 {
+        self.iso as u16
     }
 }
 

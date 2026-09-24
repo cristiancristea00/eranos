@@ -214,6 +214,55 @@ fn debug_and_display_print_the_code() {
     assert_eq!(format!("{:?}", Some(Currency::BHD)), "Some(BHD)");
 }
 
+/// Currency pickers would show a name other than ISO 4217's, or with the
+/// space the SIX list has after "Comorian Franc".
+#[test]
+fn names_are_the_trimmed_iso_4217_names() {
+    // A few names.
+    for (currency, name) in [
+        (Currency::EUR, "Euro"),
+        (Currency::GBP, "Pound Sterling"),
+        (Currency::USD, "US Dollar"),
+        (Currency::KMF, "Comorian Franc"),
+        (Currency::TOP, "Pa’anga"),
+    ] {
+        assert_eq!(currency.name(), name, "{currency}");
+    }
+    // Two codes can share a name.
+    assert_eq!(Currency::VED.name(), Currency::VES.name());
+    // Every name is present and trimmed.
+    for currency in Currency::all() {
+        let name = currency.name();
+        assert!(!name.is_empty(), "{currency}");
+        assert_eq!(name, name.trim(), "{currency}");
+    }
+}
+
+/// Exports and bank formats that name currencies by number would name the
+/// wrong one.
+#[test]
+fn numeric_codes_are_the_iso_4217_numbers() {
+    // A few numbers, including one ISO writes with leading zeros.
+    for (currency, number) in [
+        (Currency::EUR, 978),
+        (Currency::USD, 840),
+        (Currency::ALL, 8),
+        (Currency::JPY, 392),
+    ] {
+        assert_eq!(currency.numeric_code(), number, "{currency}");
+    }
+    // Every number has at most three digits and leads back to its code.
+    for &currency in Currency::all() {
+        let number = currency.numeric_code();
+        assert!((1..=999).contains(&number), "{currency}");
+        assert_eq!(
+            IsoCurrency::from_u16(number).map(|iso| iso.as_str()),
+            Ok(currency.code()),
+            "{currency}"
+        );
+    }
+}
+
 /// Amounts would be scaled by the wrong power of ten.
 #[test]
 fn minor_units_per_major_is_ten_to_the_decimal_places() {

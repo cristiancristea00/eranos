@@ -159,7 +159,8 @@ cannot be removed.
   for CLF. Precious metals, drawing rights, and test codes have no minor
   unit and are not currencies here. `Currency` holds the crate's value and
   its minor unit, read once when a code is looked up, so no crate type is
-  part of the API.
+  part of the API; it also gives each currency's ISO English name and
+  numeric code.
 - `ExchangeRate` is an exact positive decimal (`mantissa / 10^scale`, up to
   18 decimal places) meaning "one unit of the entry's currency is this many
   units of the group's". Conversion multiplies in checked `i128` and rounds
