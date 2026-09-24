@@ -1141,7 +1141,7 @@ proptest! {
                 prop_assert_eq!(&group.ledger, &before.ledger);
             }
             prop_assert_eq!(&group.ledger, &rebuilt(&group));
-            let nets: i64 = group.summary().members().map(|(_, summary)| summary.net().minor_units()).sum();
+            let nets: i64 = group.summary().members().map(|summary| summary.net().minor_units()).sum();
             prop_assert_eq!(nets, 0);
         }
         for strategy in SettlementStrategy::all() {
@@ -1150,7 +1150,7 @@ proptest! {
             for payment in payments {
                 settled.add_transfer(payment.to_transfer(day())).unwrap();
             }
-            prop_assert!(settled.summary().members().all(|(_, summary)| summary.net().is_zero()));
+            prop_assert!(settled.summary().members().all(|summary| summary.net().is_zero()));
         }
     }
 }

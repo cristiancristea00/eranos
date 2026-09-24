@@ -334,7 +334,12 @@ fn member_category_totals_list_only_that_member() {
     }
 
     let summary = ledger.summary();
-    let ana_rows: Vec<(CategoryId, Money)> = summary.member_category_totals(ana).collect();
+    let rows = |totals: &mut dyn Iterator<Item = CategoryTotal>| {
+        totals
+            .map(|total| (total.category(), total.total()))
+            .collect::<Vec<_>>()
+    };
+    let ana_rows = rows(&mut summary.member_category_totals(ana));
     assert_eq!(
         ana_rows,
         vec![
@@ -343,10 +348,10 @@ fn member_category_totals_list_only_that_member() {
             (fuel, eur(600))
         ]
     );
-    let bob_rows: Vec<(CategoryId, Money)> = summary.member_category_totals(bob).collect();
+    let bob_rows = rows(&mut summary.member_category_totals(bob));
     assert_eq!(bob_rows, vec![(food, eur(500))]);
     assert_eq!(
-        summary.category_totals().collect::<Vec<_>>(),
+        rows(&mut summary.category_totals()),
         vec![
             (CategoryId::UNCATEGORISED, eur(300)),
             (food, eur(1000)),
@@ -368,4 +373,29 @@ fn expense_shares_look_up_members() {
     assert_eq!(shares.total(), eur(1000));
     assert_eq!(shares.tip(), eur(0));
     assert_eq!(shares.members().len(), 2);
+}
+
+/// A screen listing everyone's totals would attribute them to the wrong
+/// member, or a looked-up member's totals would name someone else.
+#[test]
+fn a_member_summary_names_its_member() {
+    let (ana, bob, carol) = (member(1), member(2), member(3));
+    let mut ledger = Ledger::new(Currency::EUR);
+    let shares = expense(1000, ana, &[(ana, 500), (bob, 500)]);
+    applied(&mut ledger, |delta| {
+        delta.add_expense(&shares, CategoryId::UNCATEGORISED, 1);
+    })
+    .unwrap();
+    let summary = ledger.summary();
+    // Every member with totals, in member order.
+    assert_eq!(
+        summary
+            .members()
+            .map(|totals| (totals.member(), totals.net()))
+            .collect::<Vec<_>>(),
+        vec![(ana, eur(500)), (bob, eur(-500))]
+    );
+    // One member looked up, with totals or without.
+    assert_eq!(summary.member(bob).member(), bob);
+    assert_eq!(summary.member(carol).member(), carol);
 }

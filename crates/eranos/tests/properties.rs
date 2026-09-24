@@ -13,8 +13,8 @@
 )]
 
 use eranos::{
-    CalendarDate, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item, Member,
-    MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts, Percentage,
+    CalendarDate, CategoryTotal, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item,
+    Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts, Percentage,
     SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
 };
 use proptest::prelude::*;
@@ -268,12 +268,12 @@ proptest! {
         let summary = group.summary();
         let total = |values: Vec<Money>| values.iter().map(|value| i128::from(value.minor_units())).sum::<i128>();
         let spent = i128::from(summary.total_spent().minor_units());
-        prop_assert_eq!(total(summary.members().map(|(_, member)| member.paid()).collect()), spent);
-        prop_assert_eq!(total(summary.members().map(|(_, member)| member.share()).collect()), spent);
-        prop_assert_eq!(total(summary.members().map(|(_, member)| member.net()).collect()), 0);
-        prop_assert_eq!(total(summary.category_totals().map(|(_, value)| value).collect()), spent);
-        for (member, totals) in summary.members() {
-            prop_assert_eq!(total(summary.member_category_totals(member).map(|(_, value)| value).collect()), i128::from(totals.share().minor_units()));
+        prop_assert_eq!(total(summary.members().map(|member| member.paid()).collect()), spent);
+        prop_assert_eq!(total(summary.members().map(|member| member.share()).collect()), spent);
+        prop_assert_eq!(total(summary.members().map(|member| member.net()).collect()), 0);
+        prop_assert_eq!(total(summary.category_totals().map(CategoryTotal::total).collect()), spent);
+        for totals in summary.members() {
+            prop_assert_eq!(total(summary.member_category_totals(totals.member()).map(CategoryTotal::total).collect()), i128::from(totals.share().minor_units()));
         }
     }
 
@@ -284,7 +284,7 @@ proptest! {
     fn every_plan_clears_every_balance(recipe in group_recipe()) {
         let (members, expenses, transfers) = entries(&recipe);
         let group = group(&base(&members), &expenses, &transfers);
-        let open = group.summary().members().filter(|(_, member)| !member.net().is_zero()).count();
+        let open = group.summary().members().filter(|member| !member.net().is_zero()).count();
         let minimum = group.settlement(SettlementStrategy::MinimumTransfers).unwrap().len();
         let greedy = group.settlement(SettlementStrategy::Greedy).unwrap().len();
         prop_assert!(minimum <= greedy);
@@ -296,7 +296,7 @@ proptest! {
                 prop_assert!(payment.amount().is_positive());
                 settled.add_transfer(payment.to_transfer(day())).unwrap();
             }
-            prop_assert!(settled.summary().members().all(|(_, member)| member.net().is_zero()));
+            prop_assert!(settled.summary().members().all(|member| member.net().is_zero()));
             prop_assert!(settled.settlement(strategy).unwrap().is_empty());
         }
     }

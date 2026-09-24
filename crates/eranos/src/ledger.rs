@@ -70,10 +70,13 @@ impl Summary {
     /// The spending of every category with expenses, ordered by category,
     /// so Uncategorised comes first.
     #[must_use]
-    pub fn category_totals(&self) -> impl ExactSizeIterator<Item = (CategoryId, Money)> + '_ {
+    pub fn category_totals(&self) -> impl ExactSizeIterator<Item = CategoryTotal> + '_ {
         self.categories
             .iter()
-            .map(|(&category, &total)| (category, Money::from_minor_units(self.currency, total)))
+            .map(|(&category, &total)| CategoryTotal {
+                category,
+                total: Money::from_minor_units(self.currency, total),
+            })
     }
 
     /// One member's share of the spending in one category.
@@ -92,28 +95,26 @@ impl Summary {
     pub fn member_category_totals(
         &self,
         member: MemberId,
-    ) -> impl Iterator<Item = (CategoryId, Money)> + '_ {
+    ) -> impl Iterator<Item = CategoryTotal> + '_ {
         // The nil UUID of Uncategorised is the smallest identifier, so the
         // member's rows start here.
         self.member_categories
             .range((member, CategoryId::UNCATEGORISED)..)
             .take_while(move |((row_member, _), _)| *row_member == member)
-            .map(|(&(_, category), &total)| {
-                (category, Money::from_minor_units(self.currency, total))
+            .map(|(&(_, category), &total)| CategoryTotal {
+                category,
+                total: Money::from_minor_units(self.currency, total),
             })
     }
 
-    /// The totals of every member with a non-zero total, ordered by member.
+    /// The totals of every member with a non-zero total, ordered by member;
+    /// each names its member.
     #[must_use]
-    pub fn members(&self) -> impl ExactSizeIterator<Item = (MemberId, MemberSummary)> + '_ {
-        self.members.iter().map(|(&member, &totals)| {
-            (
-                member,
-                MemberSummary {
-                    currency: self.currency,
-                    totals,
-                },
-            )
+    pub fn members(&self) -> impl ExactSizeIterator<Item = MemberSummary> + '_ {
+        self.members.iter().map(|(&member, &totals)| MemberSummary {
+            currency: self.currency,
+            member,
+            totals,
         })
     }
 
@@ -123,6 +124,7 @@ impl Summary {
         let totals = self.members.get(&member).copied().unwrap_or_default();
         MemberSummary {
             currency: self.currency,
+            member,
             totals,
         }
     }
@@ -139,10 +141,17 @@ impl Summary {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemberSummary {
     currency: Currency,
+    member: MemberId,
     totals: Totals,
 }
 
 impl MemberSummary {
+    /// The member the totals belong to.
+    #[must_use]
+    pub const fn member(&self) -> MemberId {
+        self.member
+    }
+
     /// What the member paid towards expenses.
     #[must_use]
     pub const fn paid(&self) -> Money {
@@ -184,6 +193,28 @@ impl MemberSummary {
             -1 => Balance::Owes(Money::from_minor_units(self.currency, -net)),
             _ => Balance::Settled,
         }
+    }
+}
+
+/// The spending in one category, of the whole group or of one member, in
+/// the group currency.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CategoryTotal {
+    category: CategoryId,
+    total: Money,
+}
+
+impl CategoryTotal {
+    /// The category.
+    #[must_use]
+    pub const fn category(self) -> CategoryId {
+        self.category
+    }
+
+    /// The spending in it.
+    #[must_use]
+    pub const fn total(self) -> Money {
+        self.total
     }
 }
 

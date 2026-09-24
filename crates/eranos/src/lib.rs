@@ -103,7 +103,7 @@ pub use expense::{
 };
 pub use group::{Group, Language};
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
-pub use ledger::{Balance, ExpenseShares, MemberShare, MemberSummary, Summary};
+pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};
 pub use member::{
     Account, AccountDetails, AccountKind, Email, Iban, Member, PhoneNumber, Username,
 };
