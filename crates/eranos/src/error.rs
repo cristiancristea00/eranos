@@ -13,20 +13,13 @@ pub use eranos_contact::ContactError;
 #[doc(inline)]
 pub use eranos_core::IdError;
 #[doc(inline)]
+pub use eranos_member::MemberError;
+#[doc(inline)]
 pub use eranos_money::MoneyError;
 
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
-
-/// A [`Member`](crate::Member) that could not be built.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum MemberError {
-    /// A first name that is blank.
-    #[error("the first name must not be empty")]
-    EmptyFirstName,
-}
 
 /// A [`Category`](crate::Category) that could not be built or renamed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]

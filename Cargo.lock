@@ -315,6 +315,7 @@ dependencies = [
  "eranos-calendar",
  "eranos-contact",
  "eranos-core",
+ "eranos-member",
  "eranos-money",
  "icu_casemap",
  "icu_locale_core",
@@ -374,6 +375,19 @@ dependencies = [
  "serde",
  "thiserror 2.0.20",
  "uuid",
+]
+
+[[package]]
+name = "eranos-member"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-account",
+ "eranos-contact",
+ "eranos-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

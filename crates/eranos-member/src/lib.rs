@@ -1,21 +1,24 @@
-//! The people in a group, their contact details, and where they can be paid.
+//! The people in a group, with their contact details and the accounts they
+//! can be paid to.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
 
-#[doc(inline)]
-pub use eranos_account::{Account, AccountDetails, AccountKind, Iban, Username};
-#[doc(inline)]
-pub use eranos_contact::{Email, PhoneNumber};
+mod error;
 
-use eranos_core::text;
+use eranos_account::Account;
+use eranos_contact::{Email, PhoneNumber};
+use eranos_core::{MemberId, text};
 
-use crate::error::MemberError;
-use crate::id::MemberId;
+pub use error::MemberError;
 
 /// A person who pays for or shares expenses.
 ///
 /// Only the first name is required. A member gets its identifier when it is
 /// built, and keeps it through every edit. Members are values: to change
 /// one, edit a copy with [`to_builder`](Self::to_builder) and pass it to
-/// [`Group::replace_member`](crate::Group::replace_member).
+/// `Group::replace_member`.
 ///
 /// # Examples
 ///

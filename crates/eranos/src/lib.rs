@@ -116,7 +116,17 @@ pub mod id {
     pub use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 }
 pub mod ledger;
-pub mod member;
+pub mod member {
+    //! The people in a group, their contact details, and where they can be
+    //! paid.
+
+    #[doc(inline)]
+    pub use eranos_account::{Account, AccountDetails, AccountKind, Iban, Username};
+    #[doc(inline)]
+    pub use eranos_contact::{Email, PhoneNumber};
+    #[doc(inline)]
+    pub use eranos_member::{Member, MemberBuilder};
+}
 pub mod money {
     //! Money, currencies, exchange rates, costs, and the ratios splits are
     //! made of.

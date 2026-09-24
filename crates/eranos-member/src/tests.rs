@@ -5,6 +5,8 @@
 //! keep edits made through `to_builder` from touching the member they were
 //! copied from.
 
+use eranos_account::{Iban, Username};
+
 use super::*;
 
 fn email() -> Email {

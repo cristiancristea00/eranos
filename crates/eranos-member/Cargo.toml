@@ -1,0 +1,29 @@
+# eranos-member: the people in a group, with their contact details and
+# payment accounts. An internal crate: the `eranos` crate re-exports the
+# types callers use.
+[package]
+name = "eranos-member"
+description = "The members of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `Serialize` and `Deserialize` for members, with their details and accounts.
+serde = ["dep:serde", "eranos-account/serde", "eranos-contact/serde", "eranos-core/serde"]
+
+[dependencies]
+eranos-account = { workspace = true }
+eranos-contact = { workspace = true }
+eranos-core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

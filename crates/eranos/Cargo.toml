@@ -21,6 +21,7 @@ serde = [
     "eranos-calendar/serde",
     "eranos-contact/serde",
     "eranos-core/serde",
+    "eranos-member/serde",
     "eranos-money/serde",
 ]
 # Identifiers count up from one instead of reading the clock and the random
@@ -33,6 +34,7 @@ eranos-account = { workspace = true }
 eranos-calendar = { workspace = true }
 eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
+eranos-member = { workspace = true }
 eranos-money = { workspace = true }
 icu_casemap = { workspace = true }
 icu_locale_core = { workspace = true }
