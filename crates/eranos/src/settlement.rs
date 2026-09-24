@@ -9,12 +9,10 @@ mod direct;
 mod greedy;
 mod minimum;
 
-use crate::calendar::CalendarDate;
 use crate::error::SettlementError;
 use crate::id::MemberId;
 use crate::ledger::{Ledger, MemberPair};
 use crate::money::{Currency, Money};
-use crate::transfer::Transfer;
 
 /// How [`Group::settlement`](crate::Group::settlement) turns balances into
 /// payments.
@@ -86,8 +84,9 @@ impl SettlementStrategy {
 
 /// The payments that settle a group, all in the group currency.
 ///
-/// Recording every payment as a [`Transfer`] (see
-/// [`Payment::to_transfer`]) brings every balance to zero.
+/// Recording every payment as a transfer, with
+/// [`Transfer::from_payment`](crate::Transfer::from_payment), brings every
+/// balance to zero.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settlement {
     payments: Vec<Payment>,
@@ -144,13 +143,6 @@ impl Payment {
     #[must_use]
     pub const fn to(&self) -> MemberId {
         self.members.to
-    }
-
-    /// The transfer recording this payment, made on `date`, under a newly
-    /// generated identifier.
-    #[must_use]
-    pub fn to_transfer(&self, date: CalendarDate) -> Transfer {
-        Transfer::new_unchecked(self.amount, date, self.members.from, self.members.to)
     }
 }
 

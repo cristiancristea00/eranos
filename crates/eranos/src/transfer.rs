@@ -5,6 +5,7 @@ use crate::error::TransferError;
 use crate::id::{MemberId, TransferId};
 use crate::ledger::MemberPair;
 use crate::money::{Cost, ExchangeRate, Money};
+use crate::settlement::Payment;
 use crate::text;
 
 /// Money one member paid directly to another, usually to settle up.
@@ -72,6 +73,31 @@ impl Transfer {
         }
     }
 
+    /// The transfer recording `payment`, made on `date`, under a newly
+    /// generated identifier.
+    ///
+    /// Recording every payment of a [`Settlement`](crate::Settlement) brings
+    /// every balance to zero.
+    #[must_use]
+    pub fn from_payment(payment: &Payment, date: CalendarDate) -> Self {
+        // A settlement pays only from a debtor to a creditor, and only a
+        // positive amount: the checks of `TransferBuilder::build` hold.
+        debug_assert!(
+            payment.from() != payment.to() && payment.amount().is_positive(),
+            "a payment is between two members and positive"
+        );
+        Self {
+            id: TransferId::generate(),
+            amount: payment.amount(),
+            date,
+            from: payment.from(),
+            to: payment.to(),
+            exchange_rate: None,
+            note: None,
+            time: None,
+        }
+    }
+
     /// Starts a builder holding a copy of this transfer, to edit it; the
     /// copy keeps the identifier.
     pub fn to_builder(&self) -> TransferBuilder {
@@ -83,30 +109,6 @@ impl Transfer {
             to: self.to,
             note: self.note.clone(),
             time: self.time,
-        }
-    }
-
-    /// A transfer the caller guarantees is valid, two different members and
-    /// a positive amount, under a newly generated identifier.
-    pub(crate) fn new_unchecked(
-        amount: Money,
-        date: CalendarDate,
-        from: MemberId,
-        to: MemberId,
-    ) -> Self {
-        debug_assert!(
-            from != to && amount.is_positive(),
-            "an unchecked transfer must be valid"
-        );
-        Self {
-            id: TransferId::generate(),
-            amount,
-            date,
-            from,
-            to,
-            exchange_rate: None,
-            note: None,
-            time: None,
         }
     }
 

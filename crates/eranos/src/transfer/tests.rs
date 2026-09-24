@@ -1,12 +1,14 @@
 //! Transfers record repayments between members and move their balances.
 //! These tests keep impossible transfers out (to oneself, of nothing, or of
 //! a negative amount), keep optional details absent rather than blank, and
-//! keep transfers edited through `to_builder` or created by the settlement
-//! planner identical to ones built by hand.
+//! keep transfers edited through `to_builder` or recorded from a
+//! settlement's payment identical to ones built by hand.
 
 use super::*;
 
+use crate::ledger::{Delta, Ledger};
 use crate::money::Currency;
+use crate::settlement::{self, SettlementStrategy};
 
 // Three members, in ID order.
 const ANA: MemberId = MemberId::from_bytes([1; 16]);
@@ -173,16 +175,28 @@ fn builder_setters_replace_each_field() {
 }
 
 /// Repayments proposed by the settlement planner would differ from the same
-/// repayments entered by hand.
+/// repayments entered by hand, or two recordings of one payment would be
+/// one entry.
 #[test]
-fn new_unchecked_matches_a_built_transfer() {
+fn a_payment_becomes_the_transfer_that_records_it() {
+    // A transfer from Ana to Bob leaves Bob owing her 30.00, which the
+    // settlement has him pay back.
+    let mut delta = Delta::default();
+    delta.add_transfer(MemberPair { from: ANA, to: BOB }, 3_000, 1);
+    let mut ledger = Ledger::new(Currency::EUR);
+    ledger.apply(&delta).unwrap();
+    let settlement = settlement::settle(SettlementStrategy::Greedy, &ledger).unwrap();
+    let payment = &settlement.payments()[0];
     // Same fields, no optional details, and an identifier of its own.
-    let transfer = Transfer::new_unchecked(euros(3_000), september_24(), BOB, ANA);
+    let transfer = Transfer::from_payment(payment, september_24());
     assert_eq!(
         transfer,
         repayment().with_id(transfer.id()).build().unwrap()
     );
-    assert_ne!(repayment().build().unwrap().id(), transfer.id());
+    assert_ne!(
+        Transfer::from_payment(payment, september_24()).id(),
+        transfer.id()
+    );
 }
 
 /// Two transfers would share an identifier, or an edited transfer would

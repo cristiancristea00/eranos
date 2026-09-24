@@ -294,7 +294,7 @@ proptest! {
             let plan = settled.settlement(strategy).unwrap().clone();
             for payment in plan.payments() {
                 prop_assert!(payment.amount().is_positive());
-                settled.add_transfer(payment.to_transfer(day())).unwrap();
+                settled.add_transfer(Transfer::from_payment(payment, day())).unwrap();
             }
             prop_assert!(settled.summary().members().all(|member| member.net().is_zero()));
             prop_assert!(settled.settlement(strategy).unwrap().is_empty());

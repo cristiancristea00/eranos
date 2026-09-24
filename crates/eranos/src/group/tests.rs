@@ -1148,7 +1148,7 @@ proptest! {
             let mut settled = group.clone();
             let payments = settled.settlement(strategy).unwrap().payments().to_vec();
             for payment in payments {
-                settled.add_transfer(payment.to_transfer(day())).unwrap();
+                settled.add_transfer(Transfer::from_payment(&payment, day())).unwrap();
             }
             prop_assert!(settled.summary().members().all(|summary| summary.net().is_zero()));
         }

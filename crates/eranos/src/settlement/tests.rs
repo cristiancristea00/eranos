@@ -1,7 +1,6 @@
 //! Tests for turning a ledger into a settlement. The payments are what the
-//! apps ask members to send, so they must be in the group currency, sorted
-//! the same way on every device, and each one convertible into the transfer
-//! that records it.
+//! apps ask members to send, so they must be in the group currency and
+//! sorted the same way on every device.
 
 use super::*;
 use crate::ledger::Delta;
@@ -93,24 +92,6 @@ fn a_settled_ledger_has_no_payments() {
                 .is_empty()
         );
     }
-}
-
-/// A payment becomes the transfer that records it, with the same members,
-/// amount, and the given date, as a new entry every time.
-#[test]
-fn a_payment_becomes_its_transfer() {
-    let settlement = settle(SettlementStrategy::Greedy, &ledger()).unwrap();
-    let payment = settlement.payments()[0];
-    let date = CalendarDate::new(24, 9, 2026).unwrap();
-    let transfer = payment.to_transfer(date);
-    assert_eq!(
-        transfer,
-        Transfer::builder(payment.amount(), date, payment.from(), payment.to())
-            .with_id(transfer.id())
-            .build()
-            .unwrap()
-    );
-    assert_ne!(payment.to_transfer(date).id(), transfer.id());
 }
 
 /// The exact solver's refusal reaches the caller, and the other strategies
