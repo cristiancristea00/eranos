@@ -311,18 +311,31 @@ name = "eranos"
 version = "0.4.0"
 dependencies = [
  "criterion",
+ "eranos-calendar",
  "eranos-core",
  "icu_casemap",
  "icu_locale_core",
  "icu_normalizer",
  "icu_properties",
  "iso4217-static",
- "jiff",
  "proptest",
  "rlibphonenumber",
  "serde",
  "serde_json",
  "tabled",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-calendar"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-core",
+ "jiff",
+ "proptest",
+ "serde",
+ "serde_json",
  "thiserror 2.0.20",
 ]
 

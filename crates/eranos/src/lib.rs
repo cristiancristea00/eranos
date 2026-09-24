@@ -87,7 +87,16 @@
 //! `cargo run -p eranos --example settling_up`.
 #![doc(test(attr(deny(warnings))))]
 
-pub mod calendar;
+pub mod calendar {
+    //! Calendar dates and times of day, without time zones.
+    //!
+    //! The library never reads the clock: every date comes from the caller,
+    //! which keeps the core deterministic and usable on wasm, where the
+    //! system clock is unavailable.
+
+    #[doc(inline)]
+    pub use eranos_calendar::{CalendarDate, TimeOfDay};
+}
 pub mod category;
 pub mod error;
 pub mod expense;
@@ -112,6 +121,7 @@ pub mod money;
 pub mod settlement;
 pub mod transfer;
 
+#[doc(no_inline)]
 pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
 pub use expense::{

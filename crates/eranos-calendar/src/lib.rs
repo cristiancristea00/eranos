@@ -4,6 +4,12 @@
 //! keeps the core deterministic and usable on wasm, where the system clock is
 //! unavailable. Both types wrap jiff's civil types and read text with jiff's
 //! ISO 8601 parser; the jiff types stay private.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
+
+mod error;
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -11,7 +17,7 @@ use std::str::FromStr;
 
 use jiff::civil;
 
-use crate::error::CalendarError;
+pub use error::CalendarError;
 
 /// A calendar date in the proleptic Gregorian calendar, between years 1 and
 /// 9999.

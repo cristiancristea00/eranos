@@ -5,25 +5,13 @@
 //! contact details, and error messages end up in logs.
 
 #[doc(inline)]
+pub use eranos_calendar::CalendarError;
+#[doc(inline)]
 pub use eranos_core::IdError;
 
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
-
-/// A calendar date or a time of day that could not be built or read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum CalendarError {
-    /// A calendar date that does not exist, is outside years 1 to 9999, or is
-    /// not ISO 8601 text.
-    #[error("invalid date: expected an existing ISO 8601 date between years 1 and 9999")]
-    InvalidDate,
-    /// A time of day that does not exist, has seconds, or is not ISO 8601
-    /// text.
-    #[error("invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")]
-    InvalidTime,
-}
 
 /// An amount, a currency, an exchange rate, a percentage, or a number of
 /// parts that could not be built, read, or computed.

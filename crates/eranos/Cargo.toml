@@ -15,20 +15,20 @@ readme = "../../README.md"
 # `Serialize` and `Deserialize` for a group and every type it stores. A
 # deserialised `Group` is rebuilt through the same validation as its `add_*`
 # methods.
-serde = ["dep:serde", "eranos-core/serde"]
+serde = ["dep:serde", "eranos-calendar/serde", "eranos-core/serde"]
 # Identifiers count up from one instead of reading the clock and the random
 # source, so examples and tests print the same text on every run. Never for
 # apps: identifiers from two devices would collide.
 sequential-ids = ["eranos-core/sequential-ids"]
 
 [dependencies]
+eranos-calendar = { workspace = true }
 eranos-core = { workspace = true }
 icu_casemap = { workspace = true }
 icu_locale_core = { workspace = true }
 icu_normalizer = { workspace = true }
 icu_properties = { workspace = true }
 iso4217-static = { workspace = true }
-jiff = { workspace = true }
 rlibphonenumber = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, optional = true }
