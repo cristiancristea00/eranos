@@ -74,36 +74,52 @@ fn weekend() -> Weekend {
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
     let expenses = [
         // Hotel 400.00 by Ana, equal among four: 100.00 each.
-        Expense::builder(eur("400.00"), day(19), "Hotel")
-            .paid_by(ana)
-            .split(Split::equal([ana, bob, carol, dan]))
-            .category(lodging),
+        Expense::builder(
+            eur("400.00"),
+            day(19),
+            "Hotel",
+            ana,
+            Split::equal([ana, bob, carol, dan]),
+        )
+        .category(lodging),
         // Fuel 90.00 by Bob, equal among the three who rode: 30.00 each.
-        Expense::builder(eur("90.00"), day(19), "Fuel")
-            .paid_by(bob)
-            .split(Split::equal([ana, bob, carol]))
-            .category(transport),
+        Expense::builder(
+            eur("90.00"),
+            day(19),
+            "Fuel",
+            bob,
+            Split::equal([ana, bob, carol]),
+        )
+        .category(transport),
         // Groceries 60.00 by Carol, parts 1:1:1:3: 10, 10, 10, 30.
-        Expense::builder(eur("60.00"), day(20), "Groceries")
-            .paid_by(carol)
-            .split(Split::parts([
+        Expense::builder(
+            eur("60.00"),
+            day(20),
+            "Groceries",
+            carol,
+            Split::parts([
                 (ana, Parts::ONE),
                 (bob, Parts::ONE),
                 (carol, Parts::ONE),
                 (dan, Parts::from_whole(3).unwrap()),
-            ]))
-            .category(food),
+            ]),
+        )
+        .category(food),
         // Dinner 100.00 + 10 % tip by Dan, 40/20/20/20: 44, 22, 22, 22.
-        Expense::builder(eur("100.00"), day(20), "Dinner")
-            .paid_by(dan)
-            .split(Split::percentages([
+        Expense::builder(
+            eur("100.00"),
+            day(20),
+            "Dinner",
+            dan,
+            Split::percentages([
                 (ana, Percentage::parse("40").unwrap()),
                 (bob, Percentage::parse("20").unwrap()),
                 (carol, Percentage::parse("20").unwrap()),
                 (dan, Percentage::parse("20").unwrap()),
-            ]))
-            .tip(Tip::percentage(Percentage::parse("10").unwrap()))
-            .category(food),
+            ]),
+        )
+        .tip(Tip::percentage(Percentage::parse("10").unwrap()))
+        .category(food),
     ];
     for expense in expenses {
         group.add_expense(expense.build().unwrap()).unwrap();
@@ -245,31 +261,24 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     let items = || -> Result<Vec<Item>, eranos::error::ExpenseError> {
         Ok(vec![
             // Ana's steak and Bob's pasta.
-            Item::builder("Steak", eur("30.00"))
-                .shared_by([ana])
-                .build()?,
-            Item::builder("Pasta", eur("15.00"))
-                .shared_by([bob])
-                .build()?,
+            Item::builder([ana], "Steak", eur("30.00")).build()?,
+            Item::builder([bob], "Pasta", eur("15.00")).build()?,
             // Three bottles of water shared by everyone: 1.50 each.
-            Item::builder("Water", eur("1.50"))
+            Item::builder([ana, bob, carol], "Water", eur("1.50"))
                 .quantity(3)
-                .shared_by([ana, bob, carol])
                 .build()?,
             // A dessert for Bob and Carol, Carol eating two thirds.
-            Item::builder("Dessert", eur("10.50"))
-                .split(Split::parts([
-                    (bob, Parts::ONE),
-                    (carol, Parts::from_whole(2)?),
-                ]))
-                .build()?,
+            Item::builder_with_split(
+                "Dessert",
+                Split::parts([(bob, Parts::ONE), (carol, Parts::from_whole(2)?)]),
+                eur("10.50"),
+            )
+            .build()?,
         ])
     };
     // 30 + 15 + 4.50 + 10.50 = 60.00: Ana 31.50, Bob 20.00, Carol 8.50.
     let bill = |distribution| -> Result<Expense, eranos::error::ExpenseError> {
-        Expense::builder(eur("60.00"), day(23), "Bill")
-            .paid_by(carol)
-            .items(items()?)
+        Expense::itemised_builder(eur("60.00"), day(23), items()?, "Bill", carol)
             .tip(Tip::fixed(eur("6.00")).distributed(distribution))
             .build()
     };
@@ -294,10 +303,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     assert_eq!(consumed_evenly(carol), Some(eur("10.50")));
 
     // Items that do not add up to the amount are refused.
-    let short = Expense::builder(eur("61.00"), day(23), "Bill")
-        .paid_by(carol)
-        .items(items()?)
-        .build();
+    let short = Expense::itemised_builder(eur("61.00"), day(23), items()?, "Bill", carol).build();
     assert!(short.is_err());
     Ok(())
 }
@@ -316,17 +322,21 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
         ron("500.00")?.at(ExchangeRate::parse("0.2")?),
         day(22),
         "Hostel",
+        ana,
+        Split::equal([ana, bob]),
     )
-    .paid_by(ana)
-    .split(Split::equal([ana, bob]))
     .build()?;
     group.add_expense(hostel)?;
     // A 40.00 EUR train in the group currency needs no rate.
     group.add_expense(
-        Expense::builder(eur("40.00"), day(22), "Train")
-            .paid_by(bob)
-            .split(Split::equal([ana, bob]))
-            .build()?,
+        Expense::builder(
+            eur("40.00"),
+            day(22),
+            "Train",
+            bob,
+            Split::equal([ana, bob]),
+        )
+        .build()?,
     )?;
     assert_eq!(group.summary().total_spent(), eur("140.00"));
     assert_eq!(
@@ -346,10 +356,8 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     assert_eq!(group.summary().member(bob).balance(), Balance::Settled);
 
     // A rate is required for foreign entries and refused for local ones.
-    let unrated = Expense::builder(ron("10.00")?, day(23), "Snack")
-        .paid_by(ana)
-        .split(Split::equal([ana]))
-        .build()?;
+    let unrated =
+        Expense::builder(ron("10.00")?, day(23), "Snack", ana, Split::equal([ana])).build()?;
     assert_eq!(
         group.add_expense(unrated),
         Err(GroupError::MissingExchangeRate {
@@ -373,10 +381,14 @@ fn a_flatmate_moves_out() -> TestResult {
     let ana = group.add_member(member("Ana"));
     let bob = group.add_member(member("Bob"));
     let rent = group.add_expense(
-        Expense::builder(eur("1200.00"), day(1), "Rent")
-            .paid_by(ana)
-            .split(Split::equal([ana, bob]))
-            .build()?,
+        Expense::builder(
+            eur("1200.00"),
+            day(1),
+            "Rent",
+            ana,
+            Split::equal([ana, bob]),
+        )
+        .build()?,
     )?;
     let deposit =
         group.add_transfer(Transfer::builder(eur("600.00"), day(2), bob, ana).build()?)?;
@@ -386,10 +398,14 @@ fn a_flatmate_moves_out() -> TestResult {
     assert_eq!(group.summary().member(bob).share(), eur("600.00"));
     assert_eq!(group.summary().member(bob).balance(), Balance::Settled);
     // He cannot join new expenses, nor be removed while referenced.
-    let utilities = Expense::builder(eur("80.00"), day(3), "Utilities")
-        .paid_by(ana)
-        .split(Split::equal([ana, bob]))
-        .build()?;
+    let utilities = Expense::builder(
+        eur("80.00"),
+        day(3),
+        "Utilities",
+        ana,
+        Split::equal([ana, bob]),
+    )
+    .build()?;
     assert_eq!(
         group.add_expense(utilities),
         Err(GroupError::ArchivedMember(bob))

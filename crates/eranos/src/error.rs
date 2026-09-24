@@ -153,12 +153,6 @@ pub enum ExpenseError {
         /// The amount being split.
         expected: Money,
     },
-    /// Both `paid_by` and `payers` were set.
-    #[error("the payers were set twice, through `paid_by` and `payers`")]
-    ConflictingPayers,
-    /// Both `split` and `items` were set, or both `split` and `shared_by`.
-    #[error("the split was set twice, as a whole and item by item")]
-    ConflictingSplit,
     /// An amount inside the expense is in a different currency.
     #[error("expected an amount in {expected}, found one in {found}")]
     CurrencyMismatch {
@@ -184,12 +178,6 @@ pub enum ExpenseError {
         /// The expense amount.
         expected: Money,
     },
-    /// Nobody paid: neither `paid_by` nor `payers` was set.
-    #[error("the expense has no payers")]
-    MissingPayers,
-    /// Nobody shares the cost: neither `split` nor `items` was set.
-    #[error("the expense has no split")]
-    MissingSplit,
     /// A fixed tip below zero.
     #[error("a tip cannot be negative")]
     NegativeTip,

@@ -95,9 +95,9 @@ fn spend(
         Money::parse(amount, Currency::EUR)?,
         Date::new(20, 9, 2026)?,
         name,
+        payer,
+        Split::equal(participants.iter().copied()),
     )
-    .paid_by(payer)
-    .split(Split::equal(participants.iter().copied()))
     .build()?;
     group.add_expense(expense)?;
     Ok(())

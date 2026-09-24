@@ -27,9 +27,9 @@ fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
         Money::from_minor_units(Currency::EUR, minor_units),
         day,
         "Expense",
+        payer,
+        Split::parts(parts),
     )
-    .paid_by(payer)
-    .split(Split::parts(parts))
     .build()
     .unwrap_or_else(|error| panic!("{error}"))
 }

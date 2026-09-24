@@ -5,7 +5,6 @@ mod split;
 mod tip;
 
 use std::collections::BTreeSet;
-use std::mem;
 
 pub use item::{Item, ItemBuilder};
 pub use split::Split;
@@ -23,9 +22,11 @@ use crate::text;
 /// The [`Cost`] is the amount in the expense's own currency and, for an
 /// expense in another currency than its group's, the [`ExchangeRate`] into
 /// the group currency, fixed when the expense is entered. A tip is added on
-/// top of the amount, and the payers cover amount plus tip. Expenses are values: to
-/// change one, edit a copy with [`to_builder`](Self::to_builder) and pass it
-/// to [`Group::replace_expense`](crate::Group::replace_expense).
+/// top of the amount, and the payers cover amount plus tip. Four
+/// constructors name the payers and the split up front: one payer or
+/// several, and a whole split or items. Expenses are values: to change one,
+/// edit a copy with [`to_builder`](Self::to_builder) and pass it to
+/// [`Group::replace_expense`](crate::Group::replace_expense).
 ///
 /// # Examples
 ///
@@ -34,9 +35,8 @@ use crate::text;
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob, carol) = (MemberId::generate(), MemberId::generate(), MemberId::generate());
-/// let dinner = Expense::builder(Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?, "Dinner")
-///     .paid_by(ana)
-///     .split(Split::equal([ana, bob, carol]))
+/// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+/// let dinner = Expense::builder(amount, date, "Dinner", ana, Split::equal([ana, bob, carol]))
 ///     .tip(Tip::percentage(Percentage::parse("10")?))
 ///     .build()?;
 /// assert_eq!(dinner.tip_amount(), Money::parse("9.00", Currency::EUR)?);
@@ -71,22 +71,80 @@ pub struct Expense {
 }
 
 impl Expense {
-    /// Starts an expense with its required cost, date, and name.
+    /// Starts an expense that `payer` paid alone and whose amount `split`
+    /// divides.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
-    pub fn builder(cost: impl Into<Cost>, date: Date, name: impl Into<String>) -> ExpenseBuilder {
-        ExpenseBuilder {
-            cost: cost.into(),
+    pub fn builder(
+        cost: impl Into<Cost>,
+        date: Date,
+        name: impl Into<String>,
+        payer: MemberId,
+        split: Split,
+    ) -> ExpenseBuilder {
+        starting(
+            cost.into(),
             date,
-            name: name.into(),
-            payers: Choice::Unset,
-            split: Choice::Unset,
-            category: None,
-            description: None,
-            time: None,
-            tip: None,
-        }
+            name.into(),
+            Split::equal([payer]),
+            ExpenseSplit::Whole(split),
+        )
+    }
+
+    /// Starts an expense that `payer` paid alone and whose amount is divided
+    /// item by item; the line totals must add up to the amount.
+    pub fn itemised_builder(
+        cost: impl Into<Cost>,
+        date: Date,
+        items: impl IntoIterator<Item = Item>,
+        name: impl Into<String>,
+        payer: MemberId,
+    ) -> ExpenseBuilder {
+        starting(
+            cost.into(),
+            date,
+            name.into(),
+            Split::equal([payer]),
+            ExpenseSplit::Itemised(items.into_iter().collect()),
+        )
+    }
+
+    /// Starts an expense whose total (the amount plus the tip) `payers`
+    /// divides among the members who paid it, and whose amount `split`
+    /// divides.
+    pub fn builder_with_payers(
+        cost: impl Into<Cost>,
+        date: Date,
+        name: impl Into<String>,
+        payers: Split,
+        split: Split,
+    ) -> ExpenseBuilder {
+        starting(
+            cost.into(),
+            date,
+            name.into(),
+            payers,
+            ExpenseSplit::Whole(split),
+        )
+    }
+
+    /// Starts an expense whose total `payers` divides among the members who
+    /// paid it, and whose amount is divided item by item.
+    pub fn itemised_builder_with_payers(
+        cost: impl Into<Cost>,
+        date: Date,
+        items: impl IntoIterator<Item = Item>,
+        name: impl Into<String>,
+        payers: Split,
+    ) -> ExpenseBuilder {
+        starting(
+            cost.into(),
+            date,
+            name.into(),
+            payers,
+            ExpenseSplit::Itemised(items.into_iter().collect()),
+        )
     }
 
     /// Starts a builder holding a copy of this expense, to edit it.
@@ -98,8 +156,8 @@ impl Expense {
             cost: self.cost(),
             date: self.date,
             name: self.name.clone(),
-            payers: Choice::Inherited(self.payers.clone()),
-            split: Choice::Inherited(self.split.clone()),
+            payers: self.payers.clone(),
+            split: self.split.clone(),
             category: self.category,
             description: self.description.clone(),
             time: self.time,
@@ -233,16 +291,19 @@ impl ExpenseSplit {
     }
 }
 
-/// Builds an [`Expense`]; created by [`Expense::builder`] or
-/// [`Expense::to_builder`].
+/// Builds an [`Expense`]; created by [`Expense::builder`], one of its
+/// variants, or [`Expense::to_builder`].
+///
+/// Every setter replaces what the constructor or an earlier call set: the
+/// last call wins.
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseBuilder {
     cost: Cost,
     date: Date,
     name: String,
-    payers: Choice<Split>,
-    split: Choice<ExpenseSplit>,
+    payers: Split,
+    split: ExpenseSplit,
     category: Option<CategoryId>,
     description: Option<String>,
     time: Option<Time>,
@@ -272,30 +333,29 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Records a single payer who paid the whole total; the same as
-    /// `payers(Split::equal([member]))`, and an error together with it.
+    /// Replaces the payers with `member` alone, who paid the whole total;
+    /// the same as `payers(Split::equal([member]))`.
     pub fn paid_by(mut self, member: MemberId) -> Self {
-        self.payers.set_first(Split::equal([member]));
+        self.payers = Split::equal([member]);
         self
     }
 
-    /// Records who paid the total (amount plus tip) and how much each.
+    /// Replaces who paid the total (amount plus tip) and how much each.
     pub fn payers(mut self, payers: Split) -> Self {
-        self.payers.set_second(payers);
+        self.payers = payers;
         self
     }
 
-    /// Divides the amount item by item; the line totals must add up to the
-    /// amount.
+    /// Replaces the split with one item by item; the line totals must add up
+    /// to the amount.
     pub fn items(mut self, items: impl IntoIterator<Item = Item>) -> Self {
-        self.split
-            .set_second(ExpenseSplit::Itemised(items.into_iter().collect()));
+        self.split = ExpenseSplit::Itemised(items.into_iter().collect());
         self
     }
 
-    /// Divides the whole amount by `split`.
+    /// Replaces the split with `split`, which divides the whole amount.
     pub fn split(mut self, split: Split) -> Self {
-        self.split.set_first(ExpenseSplit::Whole(split));
+        self.split = ExpenseSplit::Whole(split);
         self
     }
 
@@ -332,10 +392,6 @@ impl ExpenseBuilder {
     ///
     /// - [`ExpenseError::Value`] when the name is blank.
     /// - [`ExpenseError::NonPositiveAmount`] when the amount is not positive.
-    /// - [`ExpenseError::MissingPayers`] or [`ExpenseError::ConflictingPayers`]
-    ///   when neither or both of `paid_by` and `payers` were called, and
-    ///   [`ExpenseError::MissingSplit`] or [`ExpenseError::ConflictingSplit`]
-    ///   for `split` and `items`.
     /// - [`ExpenseError::NoItems`] or [`ExpenseError::ItemsDoNotAddUp`] for
     ///   items that are missing or do not add up to the amount.
     /// - [`ExpenseError::CurrencyMismatch`] when an item, a fixed tip, or a
@@ -349,12 +405,7 @@ impl ExpenseBuilder {
         if !amount.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);
         }
-        let payers = self
-            .payers
-            .resolve(ExpenseError::MissingPayers, ExpenseError::ConflictingPayers)?;
-        let split = self
-            .split
-            .resolve(ExpenseError::MissingSplit, ExpenseError::ConflictingSplit)?;
+        let (payers, split) = (self.payers, self.split);
         match &split {
             ExpenseSplit::Itemised(items) => validate_items(items, amount)?,
             ExpenseSplit::Whole(split) => split.validate(amount)?,
@@ -410,41 +461,25 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
     })
 }
 
-/// A value two alternative builder setters compete for: repeating one
-/// setter replaces its value, while using both is a conflict reported by
-/// `build`, because a silent override would hide the caller's mistake.
-#[derive(Debug, Clone)]
-enum Choice<T> {
-    Conflict,
-    First(T),
-    /// Copied from an existing value by `to_builder`; either setter may
-    /// replace it.
-    Inherited(T),
-    Second(T),
-    Unset,
-}
-
-impl<T> Choice<T> {
-    fn set_first(&mut self, value: T) {
-        *self = match mem::replace(self, Self::Conflict) {
-            Self::Conflict | Self::Second(_) => Self::Conflict,
-            Self::First(_) | Self::Inherited(_) | Self::Unset => Self::First(value),
-        };
-    }
-
-    fn set_second(&mut self, value: T) {
-        *self = match mem::replace(self, Self::Conflict) {
-            Self::Conflict | Self::First(_) => Self::Conflict,
-            Self::Inherited(_) | Self::Second(_) | Self::Unset => Self::Second(value),
-        };
-    }
-
-    fn resolve(self, missing: ExpenseError, conflicting: ExpenseError) -> Result<T, ExpenseError> {
-        match self {
-            Self::Conflict => Err(conflicting),
-            Self::First(value) | Self::Inherited(value) | Self::Second(value) => Ok(value),
-            Self::Unset => Err(missing),
-        }
+/// A builder with the required fields set and every optional one empty;
+/// the constructors and the serialised form start here.
+const fn starting(
+    cost: Cost,
+    date: Date,
+    name: String,
+    payers: Split,
+    split: ExpenseSplit,
+) -> ExpenseBuilder {
+    ExpenseBuilder {
+        cost,
+        date,
+        name,
+        payers,
+        split,
+        category: None,
+        description: None,
+        time: None,
+        tip: None,
     }
 }
 
@@ -475,15 +510,10 @@ impl TryFrom<ExpenseRecord> for Expense {
 
     fn try_from(record: ExpenseRecord) -> Result<Self, Self::Error> {
         let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = Self::builder(cost, record.date, record.name)
+        let builder = starting(cost, record.date, record.name, record.payers, record.split)
             .category(record.category)
-            .tip(record.tip)
             .time(record.time)
-            .payers(record.payers);
-        let builder = match record.split {
-            ExpenseSplit::Itemised(items) => builder.items(items),
-            ExpenseSplit::Whole(split) => builder.split(split),
-        };
+            .tip(record.tip);
         match record.description {
             Some(description) => builder.description(description).build(),
             None => builder.build(),

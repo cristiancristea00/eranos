@@ -121,7 +121,9 @@ creation order on every device:
 
 Entities are immutable values built by builders (`Member::builder`,
 `Expense::builder`, …) and edited through `to_builder`; the group validates
-every value it receives. `add_*` generates the identifier, `insert_*` takes
+every value it receives. A builder's constructor takes every required value:
+an expense has four, for one payer or several and for a whole split or
+items, and an item two, for an equal split or any other. `add_*` generates the identifier, `insert_*` takes
 one from the caller (imports, sync, deterministic tests), and `replace_*`
 keeps it.
 

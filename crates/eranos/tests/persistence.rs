@@ -45,46 +45,47 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
     let carol = group.add_member(Member::builder("Carol").build().unwrap());
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
 
-    let bill = Expense::builder(eur("21.00"), day(), "Bill")
-        .description("Tasca")
-        .time(Time::new(20, 30).unwrap())
-        .category(food)
-        .paid_by(bob)
-        .items([
-            Item::builder("Bacalhau", eur("12.00"))
-                .shared_by([ana])
+    let bill = Expense::itemised_builder(
+        eur("21.00"),
+        day(),
+        [
+            Item::builder([ana], "Bacalhau", eur("12.00"))
                 .build()
                 .unwrap(),
-            Item::builder("Wine", eur("4.50"))
-                .quantity(2)
-                .split(Split::parts([
-                    (ana, Parts::ONE),
-                    (bob, Parts::parse("1.5").unwrap()),
-                ]))
-                .build()
-                .unwrap(),
-        ])
-        .tip(
-            Tip::percentage(Percentage::parse("12.5").unwrap()).distributed(TipDistribution::Equal),
-        )
-        .build()
-        .unwrap();
+            Item::builder_with_split(
+                "Wine",
+                Split::parts([(ana, Parts::ONE), (bob, Parts::parse("1.5").unwrap())]),
+                eur("4.50"),
+            )
+            .quantity(2)
+            .build()
+            .unwrap(),
+        ],
+        "Bill",
+        bob,
+    )
+    .description("Tasca")
+    .time(Time::new(20, 30).unwrap())
+    .category(food)
+    .tip(Tip::percentage(Percentage::parse("12.5").unwrap()).distributed(TipDistribution::Equal))
+    .build()
+    .unwrap();
     group.add_expense(bill).unwrap();
-    let tram = Expense::builder(
+    let tram = Expense::builder_with_payers(
         Money::parse("30.00", Currency::RON)
             .unwrap()
             .at(ExchangeRate::parse("0.2011").unwrap()),
         day(),
         "Tram",
+        Split::amounts([
+            (ana, Money::parse("20.00", Currency::RON).unwrap()),
+            (carol, Money::parse("10.00", Currency::RON).unwrap()),
+        ]),
+        Split::percentages([
+            (ana, Percentage::parse("50").unwrap()),
+            (carol, Percentage::parse("50").unwrap()),
+        ]),
     )
-    .payers(Split::amounts([
-        (ana, Money::parse("20.00", Currency::RON).unwrap()),
-        (carol, Money::parse("10.00", Currency::RON).unwrap()),
-    ]))
-    .split(Split::percentages([
-        (ana, Percentage::parse("50").unwrap()),
-        (carol, Percentage::parse("50").unwrap()),
-    ]))
     .build()
     .unwrap();
     group.add_expense(tram).unwrap();

@@ -141,16 +141,16 @@ impl ExpenseRecipe {
         let cost = |amount: Money| rate.map_or_else(|| Cost::from(amount), |rate| amount.at(rate));
         let whole = || {
             let amount = money(self.amount);
-            Expense::builder(cost(amount), day(), "Whole").split(self.split.build(members, amount))
+            let split = self.split.build(members, amount);
+            Expense::builder(cost(amount), day(), "Whole", members[0], split)
         };
         let itemised = |items: &Vec<(i64, u32, SplitRecipe)>| {
             let items: Vec<Item> = items
                 .iter()
                 .map(|(price, quantity, split)| {
                     let line = money(price * i64::from(*quantity));
-                    Item::builder("Item", money(*price))
+                    Item::builder_with_split("Item", split.build(members, line), money(*price))
                         .quantity(*quantity)
-                        .split(split.build(members, line))
                         .build()
                         .unwrap()
                 })
@@ -159,7 +159,7 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::builder(cost(money(amount)), day(), "Itemised").items(items)
+            Expense::itemised_builder(cost(money(amount)), day(), items, "Itemised", members[0])
         };
         let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some((fixed, value, equal)) = self.tip {
@@ -175,8 +175,9 @@ impl ExpenseRecipe {
             };
             builder = builder.tip(tip.distributed(distribution));
         }
-        // The payers divide the total, known only once the tip is resolved.
-        let draft = builder.clone().paid_by(members[0]).build().unwrap();
+        // The payers divide the total, known only once the tip is resolved;
+        // the draft, paid by the first member, resolves it.
+        let draft = builder.clone().build().unwrap();
         builder
             .payers(self.payers.build(members, draft.total()))
             .build()

@@ -97,19 +97,12 @@ fn main() -> Result<(), Box<dyn Error>> {
          equally."
     );
     let friday = Date::new(25, 9, 2026)?;
+    let eur = |text| Money::parse(text, Currency::EUR);
     let everyone = Split::equal([ana, bob, carol]);
-    group.add_expense(
-        Expense::builder(Money::parse("240.00", Currency::EUR)?, friday, "Cabin")
-            .paid_by(ana)
-            .split(everyone.clone())
-            .build()?,
-    )?;
-    group.add_expense(
-        Expense::builder(Money::parse("60.00", Currency::EUR)?, friday, "Groceries")
-            .paid_by(bob)
-            .split(everyone)
-            .build()?,
-    )?;
+    let cabin = Expense::builder(eur("240.00")?, friday, "Cabin", ana, everyone.clone());
+    let groceries = Expense::builder(eur("60.00")?, friday, "Groceries", bob, everyone);
+    group.add_expense(cabin.build()?)?;
+    group.add_expense(groceries.build()?)?;
     print_table(
         group.expenses().map(|(_, expense)| ExpenseRow {
             amount: expense.total(),

@@ -25,12 +25,8 @@ use crate::money::{Currency, Money};
 /// let mut group = Group::builder(Currency::EUR, "Weekend").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?);
 /// let bob = group.add_member(Member::builder("Bob").build()?);
-/// group.add_expense(
-///     Expense::builder(Money::parse("30.00", Currency::EUR)?, Date::new(23, 9, 2026)?, "Groceries")
-///         .paid_by(ana)
-///         .split(Split::equal([ana, bob]))
-///         .build()?,
-/// )?;
+/// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+/// group.add_expense(Expense::builder(amount, day, "Groceries", ana, Split::equal([ana, bob])).build()?)?;
 ///
 /// let summary = group.summary();
 /// assert_eq!(summary.total_spent(), Money::parse("30.00", Currency::EUR)?);
@@ -226,12 +222,9 @@ impl fmt::Display for Balance {
 /// let ana = group.add_member(Member::builder("Ana").build()?);
 /// let bob = group.add_member(Member::builder("Bob").build()?);
 /// let carol = group.add_member(Member::builder("Carol").build()?);
-/// let taxi = group.add_expense(
-///     Expense::builder(Money::parse("10.00", Currency::EUR)?, Date::new(23, 9, 2026)?, "Taxi")
-///         .paid_by(ana)
-///         .split(Split::equal([ana, bob, carol]))
-///         .build()?,
-/// )?;
+/// let (amount, day) = (Money::parse("10.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+/// let everyone = Split::equal([ana, bob, carol]);
+/// let taxi = group.add_expense(Expense::builder(amount, day, "Taxi", ana, everyone).build()?)?;
 ///
 /// let shares = group.expense_shares(taxi).expect("the expense was just added");
 /// let cents: Vec<i64> = shares.members().iter().map(|share| share.share().minor_units()).collect();

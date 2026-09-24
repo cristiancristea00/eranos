@@ -74,22 +74,18 @@ fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
 
 fn receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> Result<Vec<Item>, Box<dyn Error>> {
     Ok(vec![
-        Item::builder("Ciorbă", eur("8.00")?)
-            .shared_by([ana])
-            .build()?,
-        Item::builder("Sarmale", eur("14.00")?)
+        Item::builder([ana], "Ciorbă", eur("8.00")?).build()?,
+        Item::builder([bob, carol], "Sarmale", eur("14.00")?)
             .quantity(2)
-            .shared_by([bob, carol])
             .build()?,
-        Item::builder("Papanași", eur("9.00")?)
-            .split(Split::parts([
-                (ana, Parts::ONE),
-                (carol, Parts::from_whole(2)?),
-            ]))
-            .build()?,
-        Item::builder("Lemonade", eur("3.00")?)
+        Item::builder_with_split(
+            "Papanași",
+            Split::parts([(ana, Parts::ONE), (carol, Parts::from_whole(2)?)]),
+            eur("9.00")?,
+        )
+        .build()?,
+        Item::builder([ana, bob, carol], "Lemonade", eur("3.00")?)
             .quantity(3)
-            .shared_by([ana, bob, carol])
             .build()?,
     ])
 }
@@ -145,16 +141,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     section("2. Who ordered what, and the tip");
     let bill = |distribution| -> Result<Expense, Box<dyn Error>> {
-        Ok(Expense::builder(eur("54.00")?, day, "Dinner")
-            .paid_by(ana)
-            .items(receipt(ana, bob, carol)?)
-            .tip(Tip::percentage(Percentage::parse("10")?).distributed(distribution))
-            .build()?)
+        Ok(
+            Expense::itemised_builder(eur("54.00")?, day, receipt(ana, bob, carol)?, "Dinner", ana)
+                .tip(Tip::percentage(Percentage::parse("10")?).distributed(distribution))
+                .build()?,
+        )
     };
-    let untipped = Expense::builder(eur("54.00")?, day, "Dinner")
-        .paid_by(ana)
-        .items(receipt(ana, bob, carol)?)
-        .build()?;
+    let untipped =
+        Expense::itemised_builder(eur("54.00")?, day, receipt(ana, bob, carol)?, "Dinner", ana)
+            .build()?;
     let ordered = preview(&group, untipped)?;
     let proportional = group.add_expense(bill(TipDistribution::Proportional)?)?;
     let by_consumption = group
@@ -187,10 +182,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     section("3. A total that does not match is refused");
-    let mismatched = Expense::builder(eur("55.00")?, day, "Dinner")
-        .paid_by(ana)
-        .items(receipt(ana, bob, carol)?)
-        .build();
+    let mismatched =
+        Expense::itemised_builder(eur("55.00")?, day, receipt(ana, bob, carol)?, "Dinner", ana)
+            .build();
     println!(
         "An amount of 55.00 EUR with these lines is refused when the expense is built:\n  \
          error: {}",

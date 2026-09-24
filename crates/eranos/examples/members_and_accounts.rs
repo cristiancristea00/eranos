@@ -207,9 +207,9 @@ fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box
         Money::parse("900.00", Currency::EUR)?,
         Date::new(1, 9, 2026)?,
         "Rent",
+        ana,
+        Split::equal([ana, bob]),
     )
-    .paid_by(ana)
-    .split(Split::equal([ana, bob]))
     .build()?;
     let rent = group.add_expense(rent)?;
     group.archive_member(bob)?;
@@ -223,9 +223,9 @@ fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box
         Money::parse("60.00", Currency::EUR)?,
         Date::new(1, 10, 2026)?,
         "Utilities",
+        ana,
+        Split::equal([ana, bob]),
     )
-    .paid_by(ana)
-    .split(Split::equal([ana, bob]))
     .build()?;
     let refused = group.add_expense(utilities);
     println!(

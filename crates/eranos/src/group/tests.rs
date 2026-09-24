@@ -35,11 +35,15 @@ fn trip() -> (Group, MemberId, MemberId, MemberId) {
 }
 
 fn shared(amount: &str, payer: MemberId, participants: &[MemberId]) -> Expense {
-    Expense::builder(eur(amount), day(), "Shared")
-        .paid_by(payer)
-        .split(Split::equal(participants.iter().copied()))
-        .build()
-        .unwrap()
+    Expense::builder(
+        eur(amount),
+        day(),
+        "Shared",
+        payer,
+        Split::equal(participants.iter().copied()),
+    )
+    .build()
+    .unwrap()
 }
 
 fn transfer(from: MemberId, to: MemberId, amount: &str) -> Transfer {
@@ -290,9 +294,7 @@ fn categories_keep_unique_names_and_their_expenses() {
     });
 
     // A category in use stays.
-    let lunch = Expense::builder(eur("20.00"), day(), "Lunch")
-        .paid_by(ana)
-        .split(Split::equal([ana, bob]))
+    let lunch = Expense::builder(eur("20.00"), day(), "Lunch", ana, Split::equal([ana, bob]))
         .category(food)
         .build()
         .unwrap();
@@ -347,11 +349,15 @@ fn an_expense_must_fit_the_group() {
     });
     // A foreign expense needs a converted cost; one in the group currency
     // must not have one, even at a rate of 1.
-    let foreign = Expense::builder(Money::parse("50.00", Currency::RON).unwrap(), day(), "Taxi")
-        .paid_by(ana)
-        .split(Split::equal([ana, bob]))
-        .build()
-        .unwrap();
+    let foreign = Expense::builder(
+        Money::parse("50.00", Currency::RON).unwrap(),
+        day(),
+        "Taxi",
+        ana,
+        Split::equal([ana, bob]),
+    )
+    .build()
+    .unwrap();
     assert_unchanged(
         &mut group,
         &GroupError::MissingExchangeRate {
@@ -553,9 +559,9 @@ fn a_currency_change_reconverts_every_entry() {
             .at(ExchangeRate::parse("0.2").unwrap()),
         day(),
         "Taxi",
+        bob,
+        Split::equal([ana, bob]),
     )
-    .paid_by(bob)
-    .split(Split::equal([ana, bob]))
     .build()
     .unwrap();
     let foreign = group.add_expense(foreign).unwrap();
@@ -629,9 +635,7 @@ fn equality_ignores_the_caches() {
 fn an_overflowing_expense_is_refused() {
     let (mut group, ana, bob, _) = trip();
     let huge = Money::from_minor_units(Currency::EUR, i64::MAX);
-    let first = Expense::builder(huge, day(), "Huge")
-        .paid_by(ana)
-        .split(Split::equal([bob]))
+    let first = Expense::builder(huge, day(), "Huge", ana, Split::equal([bob]))
         .build()
         .unwrap();
     group.add_expense(first.clone()).unwrap();
@@ -675,9 +679,7 @@ fn cents(minor_units: i64) -> Money {
 }
 
 fn paid_for(amount: Money, payer: MemberId, participant: MemberId) -> Expense {
-    Expense::builder(amount, day(), "Large")
-        .paid_by(payer)
-        .split(Split::equal([participant]))
+    Expense::builder(amount, day(), "Large", payer, Split::equal([participant]))
         .build()
         .unwrap()
 }
@@ -775,11 +777,15 @@ fn a_replacement_out_of_range_is_refused() {
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
         group.replace_expense(second, paid_for(cents(HUGE), ana, bob))
     });
-    let foreign = Expense::builder(huge_in_lei().at(two()), day(), "Foreign")
-        .paid_by(ana)
-        .split(Split::equal([bob]))
-        .build()
-        .unwrap();
+    let foreign = Expense::builder(
+        huge_in_lei().at(two()),
+        day(),
+        "Foreign",
+        ana,
+        Split::equal([bob]),
+    )
+    .build()
+    .unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
         group.replace_expense(second, foreign)
     });
@@ -912,11 +918,15 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
                     chosen.push((members[index], Parts::from_hundredths(hundredths).unwrap()));
                 }
             }
-            let expense = Expense::builder(money(amount), day(), "Random")
-                .paid_by(members[payer])
-                .split(Split::parts(chosen))
-                .build()
-                .unwrap();
+            let expense = Expense::builder(
+                money(amount),
+                day(),
+                "Random",
+                members[payer],
+                Split::parts(chosen),
+            )
+            .build()
+            .unwrap();
             group.add_expense(expense).is_ok()
         }
         Operation::AddTransfer { amount, from, to } => {

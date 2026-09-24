@@ -48,9 +48,9 @@ fn group(size: usize) -> Group {
             Money::from_minor_units(Currency::EUR, minor_units),
             day,
             "Expense",
+            payer,
+            Split::equal(members.iter().copied()),
         )
-        .paid_by(payer)
-        .split(Split::equal(members.iter().copied()))
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
         group

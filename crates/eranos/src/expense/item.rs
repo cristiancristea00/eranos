@@ -1,7 +1,7 @@
 //! Receipt lines of an itemised expense.
 
 use crate::error::{ExpenseError, Field};
-use crate::expense::{Choice, Split};
+use crate::expense::Split;
 use crate::id::MemberId;
 use crate::money::Money;
 use crate::text;
@@ -15,18 +15,17 @@ use crate::text;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Item, Money, Split};
+/// use eranos::{Currency, Item, Money, Parts, Split};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let beers = Item::builder("Beer", Money::parse("4.50", Currency::EUR)?)
+/// let beers = Item::builder([ana, bob], "Beer", Money::parse("4.50", Currency::EUR)?)
 ///     .quantity(3)
-///     .shared_by([ana, bob])
 ///     .build()?;
 /// assert_eq!(beers.line_total(), Money::parse("13.50", Currency::EUR)?);
 ///
-/// let pizza = Item::builder("Pizza", Money::parse("12.00", Currency::EUR)?)
-///     .split(Split::equal([ana]))
+/// let split = Split::parts([(ana, Parts::from_whole(2)?), (bob, Parts::from_whole(1)?)]);
+/// let pizza = Item::builder_with_split("Pizza", split, Money::parse("12.00", Currency::EUR)?)
 ///     .build()?;
 /// assert_eq!(pizza.quantity(), 1);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -45,12 +44,26 @@ pub struct Item {
 }
 
 impl Item {
-    /// Starts an item with its name and unit price; the quantity defaults
-    /// to 1.
-    pub fn builder(name: impl Into<String>, unit_price: Money) -> ItemBuilder {
+    /// Starts an item whose line total `members` share equally; the
+    /// quantity defaults to 1.
+    pub fn builder(
+        members: impl IntoIterator<Item = MemberId>,
+        name: impl Into<String>,
+        unit_price: Money,
+    ) -> ItemBuilder {
+        Self::builder_with_split(name, Split::equal(members), unit_price)
+    }
+
+    /// Starts an item whose line total is divided by `split`; the quantity
+    /// defaults to 1.
+    pub fn builder_with_split(
+        name: impl Into<String>,
+        split: Split,
+        unit_price: Money,
+    ) -> ItemBuilder {
         ItemBuilder {
             name: name.into(),
-            split: Choice::Unset,
+            split,
             unit_price,
             quantity: 1,
         }
@@ -60,7 +73,7 @@ impl Item {
     pub fn to_builder(&self) -> ItemBuilder {
         ItemBuilder {
             name: self.name.clone(),
-            split: Choice::Inherited(self.split.clone()),
+            split: self.split.clone(),
             unit_price: self.unit_price,
             quantity: self.quantity,
         }
@@ -102,12 +115,13 @@ impl Item {
     }
 }
 
-/// Builds an [`Item`]; created by [`Item::builder`] or [`Item::to_builder`].
+/// Builds an [`Item`]; created by [`Item::builder`],
+/// [`Item::builder_with_split`], or [`Item::to_builder`].
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ItemBuilder {
     name: String,
-    split: Choice<Split>,
+    split: Split,
     unit_price: Money,
     quantity: u32,
 }
@@ -119,16 +133,16 @@ impl ItemBuilder {
         self
     }
 
-    /// Divides the line total equally among `members`; the same as
-    /// `split(Split::equal(members))`, and an error together with it.
+    /// Replaces the split with an equal one among `members`; the same as
+    /// `split(Split::equal(members))`.
     pub fn shared_by(mut self, members: impl IntoIterator<Item = MemberId>) -> Self {
-        self.split.set_second(Split::equal(members));
+        self.split = Split::equal(members);
         self
     }
 
-    /// Divides the line total by `split`.
+    /// Replaces the split.
     pub fn split(mut self, split: Split) -> Self {
-        self.split.set_first(split);
+        self.split = split;
         self
     }
 
@@ -151,8 +165,6 @@ impl ItemBuilder {
     /// - [`ExpenseError::Value`] when the name is blank.
     /// - [`ExpenseError::NonPositiveAmount`] when the unit price is not
     ///   positive, and [`ExpenseError::ZeroQuantity`] for a quantity of 0.
-    /// - [`ExpenseError::MissingSplit`] when neither `split` nor `shared_by`
-    ///   was called, and [`ExpenseError::ConflictingSplit`] when both were.
     /// - [`ExpenseError::Overflow`] when the line total does not fit.
     /// - Any error of an invalid [`Split`] for the line total.
     pub fn build(self) -> Result<Item, ExpenseError> {
@@ -163,21 +175,18 @@ impl ItemBuilder {
         if self.quantity == 0 {
             return Err(ExpenseError::ZeroQuantity);
         }
-        let split = self
-            .split
-            .resolve(ExpenseError::MissingSplit, ExpenseError::ConflictingSplit)?;
         let line_total = self
             .unit_price
             .minor_units()
             .checked_mul(i64::from(self.quantity))
             .ok_or(ExpenseError::Overflow)?;
-        split.validate(Money::from_minor_units(
+        self.split.validate(Money::from_minor_units(
             self.unit_price.currency(),
             line_total,
         ))?;
         Ok(Item {
             name,
-            split,
+            split: self.split,
             unit_price: self.unit_price,
             quantity: self.quantity,
         })
@@ -199,9 +208,8 @@ impl TryFrom<ItemRecord> for Item {
     type Error = ExpenseError;
 
     fn try_from(record: ItemRecord) -> Result<Self, Self::Error> {
-        Self::builder(record.name, record.unit_price)
+        Self::builder_with_split(record.name, record.split, record.unit_price)
             .quantity(record.quantity)
-            .split(record.split)
             .build()
     }
 }

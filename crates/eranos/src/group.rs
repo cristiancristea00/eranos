@@ -46,10 +46,9 @@ use crate::transfer::Transfer;
 ///
 /// let day = Date::new(23, 9, 2026)?;
 /// let eur = |text| Money::parse(text, Currency::EUR);
-/// group.add_expense(
-///     Expense::builder(eur("300.00")?, day, "Hotel").paid_by(ana).split(Split::equal([ana, bob, carol])).build()?,
-/// )?;
-/// group.add_expense(Expense::builder(eur("60.00")?, day, "Dinner").paid_by(bob).split(Split::equal([ana, bob, carol])).build()?)?;
+/// let everyone = Split::equal([ana, bob, carol]);
+/// group.add_expense(Expense::builder(eur("300.00")?, day, "Hotel", ana, everyone.clone()).build()?)?;
+/// group.add_expense(Expense::builder(eur("60.00")?, day, "Dinner", bob, everyone).build()?)?;
 ///
 /// assert_eq!(group.summary().total_spent(), eur("360.00")?);
 /// // Everyone's share is 120.00: Ana gets back 180.00, Bob owes 60.00, Carol 120.00.
@@ -299,13 +298,8 @@ impl Group {
     ///
     /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?);
-    /// let day = Date::new(23, 9, 2026)?;
-    /// group.add_expense(
-    ///     Expense::builder(Money::parse("20.00", Currency::EUR)?, day, "Museum")
-    ///         .paid_by(ana)
-    ///         .split(Split::equal([ana]))
-    ///         .build()?,
-    /// )?;
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+    /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
     ///
     /// group.change_currency(Currency::RON, &[(Currency::EUR, ExchangeRate::parse("4.97")?)])?;
     /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);

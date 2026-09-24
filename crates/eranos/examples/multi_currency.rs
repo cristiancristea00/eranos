@@ -120,9 +120,9 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
             Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
             Date::new(1, 8, 2026)?,
             "Fuel",
+            ana,
+            both.clone(),
         )
-        .paid_by(ana)
-        .split(both.clone())
         .build()?,
     )?;
     group.add_expense(
@@ -130,9 +130,9 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
             Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
             Date::new(2, 8, 2026)?,
             "Dinner",
+            bob,
+            both.clone(),
         )
-        .paid_by(bob)
-        .split(both.clone())
         .build()?,
     )?;
     group.add_expense(
@@ -140,9 +140,9 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
             Money::parse("60.00", Currency::EUR)?,
             Date::new(3, 8, 2026)?,
             "Ferry",
+            bob,
+            both,
         )
-        .paid_by(bob)
-        .split(both)
         .build()?,
     )?;
     print_entries(group);

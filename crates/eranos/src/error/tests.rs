@@ -141,16 +141,6 @@ fn expense_errors() -> Vec<(ExpenseError, &'static str)> {
             ExpenseError::NonPositiveAmount,
             "the amount must be positive",
         ),
-        (ExpenseError::MissingPayers, "the expense has no payers"),
-        (
-            ExpenseError::ConflictingPayers,
-            "the payers were set twice, through `paid_by` and `payers`",
-        ),
-        (ExpenseError::MissingSplit, "the expense has no split"),
-        (
-            ExpenseError::ConflictingSplit,
-            "the split was set twice, as a whole and item by item",
-        ),
         (
             ExpenseError::EmptySplit,
             "a split needs at least one member",

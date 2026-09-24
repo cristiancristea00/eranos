@@ -48,9 +48,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             Money::parse("70.00", Currency::EUR)?,
             Date::new(23, 9, 2026)?,
             "Fuel",
+            ana,
+            Split::equal([ana, bob]),
         )
-        .paid_by(ana)
-        .split(Split::equal([ana, bob]))
         .build()?,
     )?;
     group.add_expense(
@@ -58,9 +58,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             Money::parse("30.00", Currency::EUR)?,
             Date::new(23, 9, 2026)?,
             "Lunch",
+            bob,
+            Split::equal([ana, bob]),
         )
-        .paid_by(bob)
-        .split(Split::equal([ana, bob]))
         .tip(Tip::percentage(Percentage::parse("10")?))
         .build()?,
     )?;

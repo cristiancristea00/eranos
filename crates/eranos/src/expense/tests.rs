@@ -1,10 +1,10 @@
 //! An expense records who paid, who shares the cost, and any tip on top.
-//! These tests keep invalid expenses out (a blank name, a non-positive
-//! amount, payers or splits missing or set twice, items or shares that do not
-//! add up), keep the payers covering the amount plus the tip while the
-//! participants divide the amount alone, keep edits made through
-//! `to_builder` free to switch between the forms of payers and of splits,
-//! and keep a replaced cost's rate only when the new cost has one.
+//! These tests keep every constructor setting its payers and its split, keep
+//! invalid expenses out (a blank name, a non-positive amount, items or
+//! shares that do not add up), keep the payers covering the amount plus the
+//! tip while the participants divide the amount alone, keep the last setter
+//! in force, also between the forms of payers and of splits, and keep a
+//! replaced cost's rate only when the new cost has one.
 
 use super::*;
 
@@ -29,15 +29,21 @@ fn september_23() -> Date {
     Date::new(23, 9, 2026).unwrap()
 }
 
-/// A 90.00 EUR dinner on 23 September 2026, without payers or a split.
+/// A 90.00 EUR dinner on 23 September 2026 that Ana paid and shared with
+/// Bob and Carol; tests replace the payers and the split they check.
 fn dinner() -> ExpenseBuilder {
-    Expense::builder(euros(9_000), september_23(), "Dinner")
+    Expense::builder(
+        euros(9_000),
+        september_23(),
+        "Dinner",
+        ANA,
+        Split::equal([ANA, BOB, CAROL]),
+    )
 }
 
 /// A line of `minor_units` shared by Ana.
 fn item(name: &str, minor_units: i64) -> Item {
-    Item::builder(name, euros(minor_units))
-        .shared_by([ANA])
+    Item::builder([ANA], name, euros(minor_units))
         .build()
         .unwrap()
 }
@@ -65,9 +71,8 @@ fn full_expense() -> Expense {
 /// The dinner as a receipt paid by Bob: a pizza for Ana and two glasses of
 /// wine for Ana and Carol.
 fn itemised_expense() -> Expense {
-    let wine = Item::builder("Wine", euros(2_000))
+    let wine = Item::builder([ANA, CAROL], "Wine", euros(2_000))
         .quantity(2)
-        .shared_by([ANA, CAROL])
         .build()
         .unwrap();
     dinner()
@@ -110,11 +115,15 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
 #[test]
 fn the_expense_name_is_trimmed_and_required() {
     // Surrounding whitespace.
-    let expense = Expense::builder(euros(9_000), september_23(), "  Dinner \n")
-        .paid_by(ANA)
-        .split(Split::equal([ANA]))
-        .build()
-        .unwrap();
+    let expense = Expense::builder(
+        euros(9_000),
+        september_23(),
+        "  Dinner \n",
+        ANA,
+        Split::equal([ANA]),
+    )
+    .build()
+    .unwrap();
     assert_eq!(expense.name(), "Dinner");
     // Blank names.
     for name in ["", "   "] {
@@ -149,108 +158,88 @@ fn a_non_positive_amount_is_rejected() {
     }
 }
 
-/// An expense nobody paid for, or that nobody shares, would be accepted and
-/// its amount would vanish from the balances.
+/// An expense started with one constructor would come out with the payers
+/// or the split of another.
 #[test]
-fn payers_and_a_split_are_required() {
-    // No payers.
+fn every_constructor_sets_its_payers_and_its_split() {
+    let pizza = || item("Pizza", 9_000);
+    let payers = Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_000))]);
+    let everyone = Split::equal([ANA, BOB, CAROL]);
+    // One payer and a whole split.
+    let whole = Expense::builder(
+        euros(9_000),
+        september_23(),
+        "Dinner",
+        BOB,
+        everyone.clone(),
+    )
+    .build()
+    .unwrap();
+    assert_eq!(whole.payers(), &Split::equal([BOB]));
+    assert_eq!(whole.split(), &ExpenseSplit::Whole(everyone.clone()));
+    // One payer and items.
+    let itemised =
+        Expense::itemised_builder(euros(9_000), september_23(), [pizza()], "Dinner", BOB)
+            .build()
+            .unwrap();
+    assert_eq!(itemised.payers(), &Split::equal([BOB]));
+    assert_eq!(itemised.split(), &ExpenseSplit::Itemised(vec![pizza()]));
+    // Several payers and a whole split.
+    let shared = Expense::builder_with_payers(
+        euros(9_000),
+        september_23(),
+        "Dinner",
+        payers.clone(),
+        everyone.clone(),
+    )
+    .build()
+    .unwrap();
+    assert_eq!(shared.payers(), &payers);
+    assert_eq!(shared.split(), &ExpenseSplit::Whole(everyone));
+    // Several payers and items.
+    let shared_receipt = Expense::itemised_builder_with_payers(
+        euros(9_000),
+        september_23(),
+        [pizza()],
+        "Dinner",
+        payers.clone(),
+    )
+    .build()
+    .unwrap();
+    assert_eq!(shared_receipt.payers(), &payers);
     assert_eq!(
-        dinner().split(Split::equal([ANA])).build(),
-        Err(ExpenseError::MissingPayers)
-    );
-    // No split.
-    assert_eq!(
-        dinner().paid_by(ANA).build(),
-        Err(ExpenseError::MissingSplit)
+        shared_receipt.split(),
+        &ExpenseSplit::Itemised(vec![pizza()])
     );
 }
 
-/// An expense given both a single payer and a list of payers would keep one
-/// of them silently, hiding the caller's mistake.
+/// Correcting the payers or the split before saving would keep what the
+/// constructor or an earlier call set.
 #[test]
-fn paid_by_and_payers_together_conflict() {
-    let payers = Split::amounts([(ANA, euros(9_000))]);
-    // `paid_by` first.
+fn the_last_setter_wins() {
+    let payers = || Split::amounts([(BOB, euros(9_000))]);
+    // A list of payers after a single payer, and the reverse.
+    let listed = dinner().paid_by(ANA).payers(payers()).build().unwrap();
+    assert_eq!(listed.payers(), &payers());
+    let single = dinner().payers(payers()).paid_by(CAROL).build().unwrap();
+    assert_eq!(single.payers(), &Split::equal([CAROL]));
+    // Items after a whole split, and the reverse.
+    let receipt = dinner()
+        .split(Split::equal([ANA]))
+        .items([item("Pizza", 9_000)])
+        .build()
+        .unwrap();
     assert_eq!(
-        dinner()
-            .paid_by(ANA)
-            .payers(payers.clone())
-            .split(Split::equal([ANA]))
-            .build(),
-        Err(ExpenseError::ConflictingPayers)
+        receipt.split(),
+        &ExpenseSplit::Itemised(vec![item("Pizza", 9_000)])
     );
-    // `payers` first.
-    assert_eq!(
-        dinner()
-            .payers(payers)
-            .paid_by(ANA)
-            .split(Split::equal([ANA]))
-            .build(),
-        Err(ExpenseError::ConflictingPayers)
-    );
-}
-
-/// An expense divided both as a whole and item by item would keep one of
-/// the two silently, hiding the caller's mistake.
-#[test]
-fn split_and_items_together_conflict() {
-    // `split` first.
-    assert_eq!(
-        dinner()
-            .paid_by(ANA)
-            .split(Split::equal([ANA]))
-            .items([item("Pizza", 9_000)])
-            .build(),
-        Err(ExpenseError::ConflictingSplit)
-    );
-    // `items` first.
-    assert_eq!(
-        dinner()
-            .paid_by(ANA)
-            .items([item("Pizza", 9_000)])
-            .split(Split::equal([ANA]))
-            .build(),
-        Err(ExpenseError::ConflictingSplit)
-    );
-}
-
-/// A conflict would be forgotten when a setter is called once more after
-/// it.
-#[test]
-fn a_later_setter_call_keeps_the_conflict() {
-    let payers = || Split::amounts([(ANA, euros(9_000))]);
-    // Payers: either setter called again.
-    for builder in [
-        dinner().paid_by(ANA).payers(payers()).paid_by(ANA),
-        dinner().payers(payers()).paid_by(ANA).payers(payers()),
-    ] {
-        assert_eq!(
-            builder.split(Split::equal([ANA])).build(),
-            Err(ExpenseError::ConflictingPayers)
-        );
-    }
-    // Splits: either setter called again.
-    for builder in [
-        dinner()
-            .split(Split::equal([ANA]))
-            .items([item("Pizza", 9_000)])
-            .split(Split::equal([ANA])),
-        dinner()
-            .items([item("Pizza", 9_000)])
-            .split(Split::equal([ANA]))
-            .items([item("Pizza", 9_000)]),
-    ] {
-        assert_eq!(
-            builder.paid_by(ANA).build(),
-            Err(ExpenseError::ConflictingSplit)
-        );
-    }
-}
-
-/// Correcting the payers or the split before saving would be refused.
-#[test]
-fn repeating_a_setter_keeps_the_last_value() {
-    // `paid_by` twice.
+    let whole = dinner()
+        .items([item("Pizza", 9_000)])
+        .split(Split::equal([BOB]))
+        .build()
+        .unwrap();
+    assert_eq!(whole.split(), &ExpenseSplit::Whole(Split::equal([BOB])));
+    // The same setter twice: `paid_by`.
     let expense = dinner()
         .paid_by(ANA)
         .paid_by(BOB)
@@ -340,10 +329,13 @@ fn items_must_add_up_to_the_amount() {
 #[test]
 fn an_item_in_another_currency_is_rejected() {
     // A dollar line on a euro receipt.
-    let dollars = Item::builder("Pizza", Money::from_minor_units(Currency::USD, 9_000))
-        .shared_by([ANA])
-        .build()
-        .unwrap();
+    let dollars = Item::builder(
+        [ANA],
+        "Pizza",
+        Money::from_minor_units(Currency::USD, 9_000),
+    )
+    .build()
+    .unwrap();
     assert_eq!(
         dinner().paid_by(ANA).items([dollars]).build(),
         Err(ExpenseError::CurrencyMismatch {
@@ -462,9 +454,13 @@ fn an_invalid_fixed_tip_is_rejected() {
 #[test]
 fn a_total_out_of_range_is_rejected() {
     let largest = || {
-        Expense::builder(euros(i64::MAX), september_23(), "Yacht")
-            .paid_by(ANA)
-            .split(Split::equal([ANA]))
+        Expense::builder(
+            euros(i64::MAX),
+            september_23(),
+            "Yacht",
+            ANA,
+            Split::equal([ANA]),
+        )
     };
     // The largest amount without a tip.
     assert!(largest().build().is_ok());
@@ -633,29 +629,6 @@ fn a_rebuilt_expense_accepts_a_new_form_of_payers() {
     // A list into a single payer.
     let single_payer_expense = full_expense().to_builder().paid_by(CAROL).build().unwrap();
     assert_eq!(single_payer_expense.payers(), &Split::equal([CAROL]));
-}
-
-/// Setting both forms on a rebuilt expense would keep one of them silently.
-#[test]
-fn a_rebuilt_expense_still_rejects_both_forms() {
-    // Both forms of payers.
-    assert_eq!(
-        full_expense()
-            .to_builder()
-            .paid_by(ANA)
-            .payers(Split::equal([BOB]))
-            .build(),
-        Err(ExpenseError::ConflictingPayers)
-    );
-    // Both forms of split.
-    assert_eq!(
-        full_expense()
-            .to_builder()
-            .split(Split::equal([ANA]))
-            .items([item("Pizza", 9_000)])
-            .build(),
-        Err(ExpenseError::ConflictingSplit)
-    );
 }
 
 /// Editing an expense's name, cost, or date would be lost or skip
