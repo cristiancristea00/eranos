@@ -21,8 +21,11 @@ Signed-off-by: <committer name> <<committer email>>
 ```
 
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
-- Scopes in use: `core`, `money`, `member`, `expense`, `transfer`, `group`,
-  `ledger`, `settlement`, `serde`, `docs`, `examples`, `build`, `xtask`.
+- Scopes in use: one per internal crate, `core`, `calendar`, `money`,
+  `account`, `contact`, `member`, `category`, `ledger`, `expense`,
+  `settlement`, `transfer`, and `group`, and besides them `serde`, `docs`,
+  `examples`, `build`, and `xtask`. A change to the facade alone, or to
+  several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the

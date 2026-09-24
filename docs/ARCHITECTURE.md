@@ -59,7 +59,9 @@ The library is thirteen crates. Callers depend on `eranos`, the facade,
 which re-exports the types they use from twelve internal crates; each
 internal crate owns one part of the domain, holds its own error type, and
 depends only on crates below it. Every crate depends on `eranos-core`, and
-the facade on all twelve; the graph leaves those edges out.
+the facade on all twelve; the graph draws an edge to `eranos-core` only
+from the crates with no other dependency in the workspace, and of the
+facade's edges only the one to the group.
 
 ```mermaid
 flowchart TD
@@ -152,10 +154,10 @@ flowchart TD
 
 The facade's modules (`eranos::money`, `eranos::member`, …) and its root
 re-export what the table lists before a semicolon, and nothing else: what
-follows one is machinery the crates above use, free to change. Every crate
-but `eranos-ledger` and `eranos-core` depends on `thiserror` for its error,
-and every crate but `eranos-ledger` and `eranos-settlement` has a `serde`
-feature, which the facade's enables.
+follows one is machinery the crates above use, free to change. Every
+internal crate but `eranos-ledger`, which has no error of its own, depends
+on `thiserror`, and every crate but `eranos-ledger` and `eranos-settlement`
+has a `serde` feature, which the facade's enables.
 
 ## 3. Data model
 

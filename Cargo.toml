@@ -1,10 +1,11 @@
 # eranos workspace manifest.
 #
-# The library, crates/eranos, re-exports the types callers use from internal
-# crates beside it (crates/eranos-core and those split out after it); the
-# repository's automation is crates/xtask, run as `cargo xtask`. The UniFFI
-# and wasm binding crates join as siblings when the apps need them. Every
-# third-party version is pinned here; the members say `{ workspace = true }`.
+# The library, crates/eranos, re-exports the types callers use from the
+# twelve internal crates beside it, crates/eranos-core to crates/eranos-group,
+# which docs/ARCHITECTURE.md § 2 maps; the repository's automation is
+# crates/xtask, run as `cargo xtask`. The UniFFI and wasm binding crates join
+# as siblings when the apps need them. Every third-party version is pinned
+# here; the members say `{ workspace = true }`.
 
 [workspace]
 resolver = "3"
