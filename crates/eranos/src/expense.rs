@@ -7,7 +7,7 @@ mod tip;
 use std::collections::BTreeSet;
 
 pub use item::{Item, ItemBuilder};
-pub use split::Split;
+pub use split::{MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{Tip, TipDistribution, TipValue};
 
 use crate::calendar::{CalendarDate, TimeOfDay};

@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseId, Group, Member, MemberId, MemberShare, Money, Parts,
-    Percentage, Split,
+    CalendarDate, Currency, Expense, ExpenseId, Group, Member, MemberAmount, MemberId, MemberParts,
+    MemberPercentage, MemberShare, Money, Parts, Percentage, Split,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -138,9 +138,9 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
             "Flat",
             bob,
             Split::percentages([
-                (ana, Percentage::parse("40")?),
-                (bob, Percentage::parse("40")?),
-                (mia, Percentage::parse("20")?),
+                MemberPercentage::new(ana, Percentage::parse("40")?),
+                MemberPercentage::new(bob, Percentage::parse("40")?),
+                MemberPercentage::new(mia, Percentage::parse("20")?),
             ]),
         )
         .build()?,
@@ -163,9 +163,9 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
             "Food",
             ana,
             Split::parts([
-                (ana, Parts::ONE),
-                (bob, Parts::ONE),
-                (mia, Parts::parse("0.5")?),
+                MemberParts::new(ana, Parts::ONE),
+                MemberParts::new(bob, Parts::ONE),
+                MemberParts::new(mia, Parts::parse("0.5")?),
             ]),
         )
         .build()?,
@@ -192,9 +192,9 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
             "Museum",
             bob,
             Split::amounts([
-                (ana, eur("15.00")?),
-                (bob, eur("15.00")?),
-                (mia, eur("5.00")?),
+                MemberAmount::new(eur("15.00")?, ana),
+                MemberAmount::new(eur("15.00")?, bob),
+                MemberAmount::new(eur("5.00")?, mia),
             ]),
         )
         .build()?,
@@ -219,7 +219,10 @@ fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<d
             eur("90.00")?,
             day,
             "Dinner",
-            Split::amounts([(ana, eur("50.00")?), (bob, eur("40.00")?)]),
+            Split::amounts([
+                MemberAmount::new(eur("50.00")?, ana),
+                MemberAmount::new(eur("40.00")?, bob),
+            ]),
             Split::equal([ana, bob, mia]),
         )
         .build()?,
@@ -237,8 +240,8 @@ fn mistakes(family: &Family) -> Result<(), Box<dyn Error>> {
         "Invalid",
         family.ana,
         Split::percentages([
-            (family.ana, Percentage::parse("60")?),
-            (family.bob, Percentage::parse("30")?),
+            MemberPercentage::new(family.ana, Percentage::parse("60")?),
+            MemberPercentage::new(family.bob, Percentage::parse("30")?),
         ]),
     )
     .build();

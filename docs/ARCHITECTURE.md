@@ -371,8 +371,9 @@ inputs, never the derived totals:
 
 - Identifiers are hyphenated UUIDs, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD` and times `hh:mm` (read back by the ISO 8601
-  parser behind `CalendarDate::parse` and `TimeOfDay::parse`), percentages basis points,
-  parts hundredths. Absent optional fields are omitted, and so are the
+  parser behind `CalendarDate::parse` and `TimeOfDay::parse`), percentages
+  basis points, parts hundredths, and each share of a split the two-element
+  array `[member, value]`. Absent optional fields are omitted, and so are the
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), and a tip equal to
   `Tip::default()`, no tip at all. Keys follow the field order of

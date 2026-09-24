@@ -58,11 +58,14 @@ fn full_expense() -> Expense {
         .tip(Tip::percentage(per_cent("10")))
         .time(TimeOfDay::new(20, 30).unwrap())
         .cost(euros(9_000).at(ExchangeRate::parse("4.9765").unwrap()))
-        .payers(Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_900))]))
+        .payers(Split::amounts([
+            MemberAmount::new(euros(5_000), ANA),
+            MemberAmount::new(euros(4_900), BOB),
+        ]))
         .split(Split::percentages([
-            (ANA, per_cent("50")),
-            (BOB, per_cent("25")),
-            (CAROL, per_cent("25")),
+            MemberPercentage::new(ANA, per_cent("50")),
+            MemberPercentage::new(BOB, per_cent("25")),
+            MemberPercentage::new(CAROL, per_cent("25")),
         ]))
         .build()
         .unwrap()
@@ -164,7 +167,10 @@ fn a_non_positive_amount_is_rejected() {
 #[test]
 fn every_constructor_sets_its_payers_and_its_split() {
     let pizza = || item("Pizza", 9_000);
-    let payers = Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_000))]);
+    let payers = Split::amounts([
+        MemberAmount::new(euros(5_000), ANA),
+        MemberAmount::new(euros(4_000), BOB),
+    ]);
     let everyone = Split::equal([ANA, BOB, CAROL]);
     // One payer and a whole split.
     let whole = Expense::builder(
@@ -218,7 +224,7 @@ fn every_constructor_sets_its_payers_and_its_split() {
 /// constructor or an earlier call set.
 #[test]
 fn the_last_setter_wins() {
-    let payers = || Split::amounts([(BOB, euros(9_000))]);
+    let payers = || Split::amounts([MemberAmount::new(euros(9_000), BOB)]);
     // A list of payers after a single payer, and the reverse.
     let listed = dinner().paid_by(ANA).payers(payers()).build().unwrap();
     assert_eq!(listed.payers(), &payers());
@@ -250,14 +256,14 @@ fn the_last_setter_wins() {
     assert_eq!(expense.payers(), &Split::equal([BOB]));
     // `payers` twice.
     let payers_twice = dinner()
-        .payers(Split::amounts([(ANA, euros(9_000))]))
-        .payers(Split::amounts([(BOB, euros(9_000))]))
+        .payers(Split::amounts([MemberAmount::new(euros(9_000), ANA)]))
+        .payers(Split::amounts([MemberAmount::new(euros(9_000), BOB)]))
         .split(Split::equal([ANA]))
         .build()
         .unwrap();
     assert_eq!(
         payers_twice.payers(),
-        &Split::amounts([(BOB, euros(9_000))])
+        &Split::amounts([MemberAmount::new(euros(9_000), BOB)])
     );
     // `split` twice.
     let split_twice = dinner()
@@ -352,10 +358,16 @@ fn an_item_in_another_currency_is_rejected() {
 fn the_participants_divide_the_amount_before_the_tip() {
     let tipped = || dinner().paid_by(ANA).tip(Tip::percentage(per_cent("10")));
     // Shares of the 90.00 amount.
-    let split = Split::amounts([(ANA, euros(4_500)), (BOB, euros(4_500))]);
+    let split = Split::amounts([
+        MemberAmount::new(euros(4_500), ANA),
+        MemberAmount::new(euros(4_500), BOB),
+    ]);
     assert!(tipped().split(split).build().is_ok());
     // Shares of the 99.00 total.
-    let shares_of_the_total = Split::amounts([(ANA, euros(4_950)), (BOB, euros(4_950))]);
+    let shares_of_the_total = Split::amounts([
+        MemberAmount::new(euros(4_950), ANA),
+        MemberAmount::new(euros(4_950), BOB),
+    ]);
     assert_eq!(
         tipped().split(shares_of_the_total).build(),
         Err(ExpenseError::AmountsDoNotAddUp {
@@ -380,12 +392,15 @@ fn the_payers_cover_the_amount_plus_the_tip() {
             .tip(Tip::percentage(per_cent("10")))
     };
     // Payments adding up to the 99.00 total.
-    let payers = Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_900))]);
+    let payers = Split::amounts([
+        MemberAmount::new(euros(5_000), ANA),
+        MemberAmount::new(euros(4_900), BOB),
+    ]);
     assert!(tipped().payers(payers).build().is_ok());
     // Payments adding up to the 90.00 amount only.
     assert_eq!(
         tipped()
-            .payers(Split::amounts([(ANA, euros(9_000))]))
+            .payers(Split::amounts([MemberAmount::new(euros(9_000), ANA)]))
             .build(),
         Err(ExpenseError::AmountsDoNotAddUp {
             actual: euros(9_000),
@@ -630,12 +645,18 @@ fn a_rebuilt_expense_accepts_a_new_form_of_payers() {
     // A single payer into a list.
     let expense = itemised_expense()
         .to_builder()
-        .payers(Split::amounts([(ANA, euros(4_500)), (BOB, euros(4_500))]))
+        .payers(Split::amounts([
+            MemberAmount::new(euros(4_500), ANA),
+            MemberAmount::new(euros(4_500), BOB),
+        ]))
         .build()
         .unwrap();
     assert_eq!(
         expense.payers(),
-        &Split::amounts([(ANA, euros(4_500)), (BOB, euros(4_500))])
+        &Split::amounts([
+            MemberAmount::new(euros(4_500), ANA),
+            MemberAmount::new(euros(4_500), BOB)
+        ])
     );
     // A list into a single payer.
     let single_payer_expense = full_expense().to_builder().paid_by(CAROL).build().unwrap();

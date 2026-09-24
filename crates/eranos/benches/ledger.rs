@@ -12,20 +12,17 @@ use std::iter;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use eranos::{
-    CalendarDate, Currency, Expense, Group, Member, MemberId, Money, Parts, SettlementStrategy,
-    Split,
+    CalendarDate, Currency, Expense, Group, Member, MemberId, MemberParts, Money, Parts,
+    SettlementStrategy, Split,
 };
 
 const EXISTING: i64 = 10_000;
 
 /// `members` sharing by parts 1, 2, 3, and so on.
 fn parts(members: &[MemberId]) -> Split {
-    Split::parts(
-        members
-            .iter()
-            .zip(1_u32..)
-            .map(|(&member, weight)| (member, Parts::from_whole(weight).unwrap_or(Parts::ONE))),
-    )
+    Split::parts(members.iter().zip(1_u32..).map(|(&member, weight)| {
+        MemberParts::new(member, Parts::from_whole(weight).unwrap_or(Parts::ONE))
+    }))
 }
 
 fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {

@@ -97,7 +97,10 @@ mod text;
 
 pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
-pub use expense::{Expense, ExpenseSplit, Item, Split, Tip, TipDistribution, TipValue};
+pub use expense::{
+    Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
+    TipDistribution, TipValue,
+};
 pub use group::{Group, Language};
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 pub use ledger::{Balance, ExpenseShares, MemberShare, MemberSummary, Summary};

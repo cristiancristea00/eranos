@@ -10,8 +10,8 @@
 
 use eranos::{
     Balance, CalendarDate, Category, CategoryId, Currency, ExchangeRate, Expense, Group, Item,
-    Member, MemberId, MemberShare, Money, Parts, Percentage, SettlementStrategy, Split, Tip,
-    TipDistribution, Transfer, error::GroupError,
+    Member, MemberId, MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage,
+    SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
 };
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -98,10 +98,10 @@ fn weekend() -> Weekend {
             "Groceries",
             carol,
             Split::parts([
-                (ana, Parts::ONE),
-                (bob, Parts::ONE),
-                (carol, Parts::ONE),
-                (dan, Parts::from_whole(3).unwrap()),
+                MemberParts::new(ana, Parts::ONE),
+                MemberParts::new(bob, Parts::ONE),
+                MemberParts::new(carol, Parts::ONE),
+                MemberParts::new(dan, Parts::from_whole(3).unwrap()),
             ]),
         )
         .category(food),
@@ -112,10 +112,10 @@ fn weekend() -> Weekend {
             "Dinner",
             dan,
             Split::percentages([
-                (ana, Percentage::parse("40").unwrap()),
-                (bob, Percentage::parse("20").unwrap()),
-                (carol, Percentage::parse("20").unwrap()),
-                (dan, Percentage::parse("20").unwrap()),
+                MemberPercentage::new(ana, Percentage::parse("40").unwrap()),
+                MemberPercentage::new(bob, Percentage::parse("20").unwrap()),
+                MemberPercentage::new(carol, Percentage::parse("20").unwrap()),
+                MemberPercentage::new(dan, Percentage::parse("20").unwrap()),
             ]),
         )
         .tip(Tip::percentage(Percentage::parse("10").unwrap()))
@@ -267,7 +267,10 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
             // A dessert for Bob and Carol, Carol eating two thirds.
             Item::builder_with_split(
                 "Dessert",
-                Split::parts([(bob, Parts::ONE), (carol, Parts::from_whole(2)?)]),
+                Split::parts([
+                    MemberParts::new(bob, Parts::ONE),
+                    MemberParts::new(carol, Parts::from_whole(2)?),
+                ]),
                 eur("10.50"),
             )
             .build()?,

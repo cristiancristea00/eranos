@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseShares, Group, Item, Member, MemberId, MemberShare,
-    Money, Parts, Percentage, Split, Tip, TipDistribution,
+    CalendarDate, Currency, Expense, ExpenseShares, Group, Item, Member, MemberId, MemberParts,
+    MemberShare, Money, Parts, Percentage, Split, Tip, TipDistribution,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -80,7 +80,10 @@ fn receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> Result<Vec<Item>, B
             .build()?,
         Item::builder_with_split(
             "Papanași",
-            Split::parts([(ana, Parts::ONE), (carol, Parts::from_whole(2)?)]),
+            Split::parts([
+                MemberParts::new(ana, Parts::ONE),
+                MemberParts::new(carol, Parts::from_whole(2)?),
+            ]),
             eur("9.00")?,
         )
         .build()?,

@@ -7,6 +7,7 @@
 use super::*;
 
 use crate::error::ValueError;
+use crate::expense::MemberAmount;
 use crate::money::Currency;
 
 // Two members, in ID order.
@@ -136,7 +137,7 @@ fn a_zero_quantity_is_rejected() {
     );
     // The quantity is checked before the split, which would not divide a
     // line total of zero.
-    let one_cent = Split::amounts([(ANA, euros(1))]);
+    let one_cent = Split::amounts([MemberAmount::new(euros(1), ANA)]);
     assert_eq!(
         Item::builder_with_split("Beer", one_cent, euros(450))
             .quantity(0)
@@ -169,10 +170,16 @@ fn a_line_total_out_of_range_is_rejected() {
 fn the_split_must_divide_the_line_total() {
     let builder = || Item::builder([ANA], "Beer", euros(450)).quantity(3);
     // Amounts that add up to 13.50.
-    let split = Split::amounts([(ANA, euros(1_000)), (BOB, euros(350))]);
+    let split = Split::amounts([
+        MemberAmount::new(euros(1_000), ANA),
+        MemberAmount::new(euros(350), BOB),
+    ]);
     assert!(builder().split(split).build().is_ok());
     // Amounts that add up to the unit price instead.
-    let shares_of_the_unit_price = Split::amounts([(ANA, euros(300)), (BOB, euros(150))]);
+    let shares_of_the_unit_price = Split::amounts([
+        MemberAmount::new(euros(300), ANA),
+        MemberAmount::new(euros(150), BOB),
+    ]);
     assert_eq!(
         builder().split(shares_of_the_unit_price).build(),
         Err(ExpenseError::AmountsDoNotAddUp {

@@ -11,8 +11,9 @@
 
 use eranos::{
     Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, Group,
-    Iban, Item, Language, Member, MemberId, Money, Parts, Percentage, PhoneNumber,
-    SettlementStrategy, Split, TimeOfDay, Tip, TipDistribution, Transfer, Username,
+    Iban, Item, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money,
+    Parts, Percentage, PhoneNumber, SettlementStrategy, Split, TimeOfDay, Tip, TipDistribution,
+    Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -62,7 +63,10 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
                 .unwrap(),
             Item::builder_with_split(
                 "Wine",
-                Split::parts([(ana, Parts::ONE), (bob, Parts::parse("1.5").unwrap())]),
+                Split::parts([
+                    MemberParts::new(ana, Parts::ONE),
+                    MemberParts::new(bob, Parts::parse("1.5").unwrap()),
+                ]),
                 eur("4.50"),
             )
             .quantity(2)
@@ -86,12 +90,12 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
         day(),
         "Tram",
         Split::amounts([
-            (ana, Money::parse("20.00", Currency::RON).unwrap()),
-            (carol, Money::parse("10.00", Currency::RON).unwrap()),
+            MemberAmount::new(Money::parse("20.00", Currency::RON).unwrap(), ana),
+            MemberAmount::new(Money::parse("10.00", Currency::RON).unwrap(), carol),
         ]),
         Split::percentages([
-            (ana, Percentage::parse("50").unwrap()),
-            (carol, Percentage::parse("50").unwrap()),
+            MemberPercentage::new(ana, Percentage::parse("50").unwrap()),
+            MemberPercentage::new(carol, Percentage::parse("50").unwrap()),
         ]),
     )
     .build()

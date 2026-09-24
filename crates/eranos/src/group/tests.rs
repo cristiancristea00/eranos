@@ -10,7 +10,7 @@ use proptest::prelude::*;
 
 use super::*;
 use crate::calendar::CalendarDate;
-use crate::expense::Split;
+use crate::expense::{MemberParts, Split};
 use crate::money::{Cost, Parts};
 
 fn eur(text: &str) -> Money {
@@ -1051,10 +1051,13 @@ fn apply(
             participants,
             payer,
         } => {
-            let mut chosen: Vec<(MemberId, Parts)> = Vec::new();
+            let mut chosen: Vec<MemberParts> = Vec::new();
             for (index, hundredths) in participants {
-                if chosen.iter().all(|&(member, _)| member != members[index]) {
-                    chosen.push((members[index], Parts::from_hundredths(hundredths).unwrap()));
+                if chosen.iter().all(|share| share.member() != members[index]) {
+                    chosen.push(MemberParts::new(
+                        members[index],
+                        Parts::from_hundredths(hundredths).unwrap(),
+                    ));
                 }
             }
             let expense = Expense::builder(

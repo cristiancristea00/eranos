@@ -11,7 +11,7 @@ use proptest::prelude::*;
 
 use super::*;
 use crate::calendar::CalendarDate;
-use crate::expense::{Item, Split, Tip, TipDistribution};
+use crate::expense::{Item, MemberAmount, MemberParts, Split, Tip, TipDistribution};
 use crate::id::ExpenseId;
 use crate::money::{Cost, Parts, Percentage};
 
@@ -111,7 +111,10 @@ fn a_proportional_tip_follows_the_shares() {
         day(),
         "Dinner",
         ana,
-        Split::parts([(ana, Parts::from_whole(2).unwrap()), (bob, Parts::ONE)]),
+        Split::parts([
+            MemberParts::new(ana, Parts::from_whole(2).unwrap()),
+            MemberParts::new(bob, Parts::ONE),
+        ]),
     )
     .tip(Tip::percentage(Percentage::parse("10").unwrap()))
     .build()
@@ -132,7 +135,10 @@ fn an_equal_tip_ignores_the_shares() {
         day(),
         "Dinner",
         ana,
-        Split::parts([(ana, Parts::from_whole(2).unwrap()), (bob, Parts::ONE)]),
+        Split::parts([
+            MemberParts::new(ana, Parts::from_whole(2).unwrap()),
+            MemberParts::new(bob, Parts::ONE),
+        ]),
     )
     .tip(Tip::percentage(Percentage::parse("10").unwrap()).distributed(TipDistribution::Equal))
     .build()
@@ -173,7 +179,10 @@ fn several_payers_are_each_owed_their_proportion() {
         eur(10_000),
         day(),
         "Hotel",
-        Split::amounts([(ana, eur(6000)), (bob, eur(4000))]),
+        Split::amounts([
+            MemberAmount::new(eur(6000), ana),
+            MemberAmount::new(eur(4000), bob),
+        ]),
         Split::equal([ana, bob, carol, dan]),
     )
     .build()
@@ -423,7 +432,7 @@ fn random_expense(
 ) -> Expense {
     let parts = |weights: &[u32]| {
         Split::parts(weights.iter().zip(1_u8..).map(|(&hundredths, number)| {
-            (member(number), Parts::from_hundredths(hundredths).unwrap())
+            MemberParts::new(member(number), Parts::from_hundredths(hundredths).unwrap())
         }))
     };
     let cost = match foreign {
@@ -558,7 +567,11 @@ fn the_rotation_of_every_pass_is_pinned() {
         eur(400),
         day(),
         "Pinned",
-        Split::amounts([(ana, eur(133)), (bob, eur(133)), (carol, eur(134))]),
+        Split::amounts([
+            MemberAmount::new(eur(133), ana),
+            MemberAmount::new(eur(133), bob),
+            MemberAmount::new(eur(134), carol),
+        ]),
         Split::equal([ana, bob, carol, dan]),
     )
     .build()
@@ -592,8 +605,14 @@ fn a_zero_portion_is_no_debt() {
         eur(100),
         day(),
         "Snack",
-        Split::amounts([(ana, eur(99)), (bob, eur(1))]),
-        Split::amounts([(carol, eur(99)), (dan, eur(1))]),
+        Split::amounts([
+            MemberAmount::new(eur(99), ana),
+            MemberAmount::new(eur(1), bob),
+        ]),
+        Split::amounts([
+            MemberAmount::new(eur(99), carol),
+            MemberAmount::new(eur(1), dan),
+        ]),
     )
     .build()
     .unwrap();

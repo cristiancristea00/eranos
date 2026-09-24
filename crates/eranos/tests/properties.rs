@@ -13,9 +13,9 @@
 )]
 
 use eranos::{
-    CalendarDate, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item, Member, MemberId,
-    Money, Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
-    error::GroupError,
+    CalendarDate, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item, Member,
+    MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts, Percentage,
+    SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
 };
 use proptest::prelude::*;
 
@@ -69,14 +69,12 @@ impl SplitRecipe {
         let equal = Split::equal(chosen.iter().map(|&(member, _)| member));
         match self.method {
             0 => equal,
-            1 => Split::parts(
-                chosen
-                    .iter()
-                    .map(|&(member, weight)| (member, Parts::from_hundredths(weight).unwrap())),
-            ),
+            1 => Split::parts(chosen.iter().map(|&(member, weight)| {
+                MemberParts::new(member, Parts::from_hundredths(weight).unwrap())
+            })),
             2 => positive_parts(10_000, &weights).map_or(equal, |points| {
                 Split::percentages(chosen.iter().zip(points).map(|(&(member, _), points)| {
-                    (
+                    MemberPercentage::new(
                         member,
                         Percentage::from_basis_points(u32::try_from(points).unwrap()),
                     )
@@ -84,7 +82,7 @@ impl SplitRecipe {
             }),
             _ => positive_parts(total.minor_units(), &weights).map_or(equal, |amounts| {
                 Split::amounts(chosen.iter().zip(amounts).map(|(&(member, _), amount)| {
-                    (member, Money::from_minor_units(total.currency(), amount))
+                    MemberAmount::new(Money::from_minor_units(total.currency(), amount), member)
                 }))
             }),
         }

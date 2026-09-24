@@ -15,8 +15,8 @@ use crate::text;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Item, Money, Parts, Split};
 /// use eranos::id::MemberId;
+/// use eranos::{Currency, Item, MemberParts, Money, Parts, Split};
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
 /// let beers = Item::builder([ana, bob], "Beer", Money::parse("4.50", Currency::EUR)?)
@@ -24,7 +24,10 @@ use crate::text;
 ///     .build()?;
 /// assert_eq!(beers.line_total(), Money::parse("13.50", Currency::EUR)?);
 ///
-/// let split = Split::parts([(ana, Parts::from_whole(2)?), (bob, Parts::from_whole(1)?)]);
+/// let split = Split::parts([
+///     MemberParts::new(ana, Parts::from_whole(2)?),
+///     MemberParts::new(bob, Parts::from_whole(1)?),
+/// ]);
 /// let pizza = Item::builder_with_split("Pizza", split, Money::parse("12.00", Currency::EUR)?)
 ///     .build()?;
 /// assert_eq!(pizza.quantity(), 1);
