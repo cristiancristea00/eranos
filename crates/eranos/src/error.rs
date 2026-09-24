@@ -247,7 +247,8 @@ pub enum GroupError {
     /// A category with this ID already exists.
     #[error("category {0} already exists")]
     DuplicateCategory(CategoryId),
-    /// Another category already has this name, compared case-insensitively.
+    /// Another category already has this name, compared by Unicode canonical
+    /// caseless matching.
     #[error("category {existing} already has this name")]
     DuplicateCategoryName {
         /// The category that has the name.

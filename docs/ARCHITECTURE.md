@@ -33,12 +33,13 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 - **Deterministic everywhere.** The same entries give the same shares, the
   same totals, and the same settlement on every device and in any order of
   arrival; this is what future sync relies on.
-- **Few dependencies.** `icu_locale_core` (UTS #35 language tags),
-  `iso4217-static` (the ISO 4217 list, pinned exactly), `jiff` (calendar
-  dates, times of day, and their ISO 8601 parser, without its clock or time
-  zones), `thiserror` (derive only), `uuid` (v7 identifiers), `zeroize`
-  (wiping secrets), and optionally `serde`. Everything else, including IBAN
-  validation, is in the crate.
+- **Few dependencies.** `icu_casemap` and `icu_normalizer` (Unicode
+  caseless matching of category names), `icu_locale_core` (UTS #35 language
+  tags), `iso4217-static` (the ISO 4217 list, pinned exactly), `jiff`
+  (calendar dates, times of day, and their ISO 8601 parser, without its
+  clock or time zones), `thiserror` (derive only), `uuid` (v7 identifiers),
+  `zeroize` (wiping secrets), and optionally `serde`. Everything else,
+  including IBAN validation, is in the crate.
 
 ## 2. Module map
 
@@ -116,12 +117,12 @@ apps. It owns four maps keyed by the UUID v7 identifiers of their entries,
 so iteration order is the order the entries were built in, on every
 device:
 
-| Map        | Values                                        | Notes                                                 |
-| ---------- | --------------------------------------------- | ----------------------------------------------------- |
-| members    | `Member` + archived flag                      | first name required; contacts and accounts optional   |
-| categories | `Category`                                    | names unique in any case; Uncategorised is built in   |
-| expenses   | `Expense` + its resolved `ExpenseShares`      | the resolution is kept for exact removal              |
-| transfers  | `Transfer` + its amount in the group currency | the same, for transfers                               |
+| Map        | Values                                        | Notes                                                             |
+| ---------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| members    | `Member` + archived flag                      | first name required; contacts and accounts optional               |
+| categories | `Category`                                    | names unique by Unicode caseless match; Uncategorised is built in |
+| expenses   | `Expense` + its resolved `ExpenseShares`      | the resolution is kept for exact removal                          |
+| transfers  | `Transfer` + its amount in the group currency | the same, for transfers                                           |
 
 Entities are immutable values built by builders (`Member::builder`,
 `Expense::builder`, …) and edited through `to_builder`; the group validates

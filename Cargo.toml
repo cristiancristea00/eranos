@@ -18,10 +18,17 @@ publish = false
 
 [workspace.dependencies]
 # --- Library -----------------------------------------------------------------
+# Category names compare by Unicode's canonical caseless match (D145): NFD,
+# full case folding, then NFD again. This is the case folding; `compiled_data`
+# embeds the Unicode tables, so there is no data to load and no global state.
+icu_casemap = { version = "2.3", default-features = false, features = ["compiled_data"] }
 # Language tags: UTS 35 parsing and canonical case for `Language`, the rule
 # ICU applies on iOS, Android, and the web. It holds no data and no global
 # state; `alloc` gives `Locale::normalize`. Its types stay inside `Language`.
 icu_locale_core = { version = "2.3", default-features = false, features = ["alloc"] }
+# The canonical decomposition (NFD) of D145 for category names. Without the
+# default features, which add UTF-8 and UTF-16 iterators nothing here uses.
+icu_normalizer = { version = "2.3", default-features = false, features = ["compiled_data"] }
 # The ISO 4217 currencies: codes, minor units, names, and numeric codes, which
 # its proc macro generates from SIX Group's List One when eranos is compiled.
 # Pinned exactly: a release that changes the list changes which saved amounts

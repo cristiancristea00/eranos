@@ -1,13 +1,18 @@
 //! Expense categories, defined per group.
 
+use icu_casemap::CaseMapper;
+use icu_normalizer::DecomposingNormalizerBorrowed;
+
 use crate::error::{Field, ValueError};
 use crate::id::CategoryId;
 use crate::text;
 
 /// A category a group sorts its expenses into, such as "Food" or "Fuel".
 ///
-/// Every group defines its own categories; names are unique within a group,
-/// compared case-insensitively. A category gets its identifier when it is
+/// Every group defines its own categories; names are unique within a group
+/// under Unicode canonical caseless matching, so `Food` and `FOOD`, `Straße`
+/// and `STRASSE`, and a composed and a decomposed `Café` are one name, and so
+/// are `Maße` and `Masse`. A category gets its identifier when it is
 /// created, and [`renamed`](Self::renamed) keeps it. Every group also has the
 /// built-in "Uncategorised" category, [`CategoryId::UNCATEGORISED`], which
 /// cannot be renamed or removed.
@@ -84,9 +89,17 @@ impl Category {
         &self.name
     }
 
-    /// The name folded for case-insensitive comparison.
+    /// The name's canonical caseless form, on which uniqueness is checked:
+    /// Unicode's D145, `NFD(toCasefold(NFD(name)))`.
+    ///
+    /// The folding is the default one: Turkic folding would make `Istanbul`
+    /// and `istanbul` two names, and folding by the group's language would let
+    /// a change of language create duplicates.
     pub(crate) fn folded_name(&self) -> String {
-        self.name.to_lowercase()
+        let normaliser = DecomposingNormalizerBorrowed::new_nfd();
+        let decomposed = normaliser.normalize(&self.name);
+        let folded = CaseMapper::new().fold_string(&decomposed);
+        normaliser.normalize(&folded).into_owned()
     }
 }
 

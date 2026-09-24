@@ -1,7 +1,8 @@
 //! Categories sort a group's expenses, and their names must be unique within
-//! the group whatever their letter case. These tests keep names trimmed and
-//! present, keep the folded name that uniqueness is checked on the same for
-//! names that differ only in case, in any script, and keep a category's
+//! the group whatever their letter case or the way an accent is encoded.
+//! These tests keep names trimmed and present, keep the folded name that
+//! uniqueness is checked on the same for names that differ only in case, in
+//! any script, or in the encoding of an accent, and keep a category's
 //! identifier through a rename and a save.
 
 use super::*;
@@ -59,6 +60,34 @@ fn folded_names_ignore_case() {
     );
 }
 
+/// Names that differ only by full case folding or by how an accent is
+/// encoded would be accepted as two categories that users see as one.
+#[test]
+fn folded_names_follow_canonical_caseless_matching() {
+    for (first, second) in [
+        // `ß` uppercases to `SS`, and Swiss German writes `ss`.
+        ("Straße", "STRASSE"),
+        ("Straße", "Strasse"),
+        // A final sigma typed as a medial one.
+        ("ΟΔΟΣ", "οδοσ"),
+        // A ligature and a long s.
+        ("\u{fb01}nance", "FINANCE"),
+        ("\u{17f}tate", "STATE"),
+        // A composed and a decomposed accent, which look identical.
+        ("Café", "Cafe\u{301}"),
+        ("\u{390}", "\u{1fd3}"),
+        // Two German words that full folding makes one: the price of
+        // catching `Straße` and `STRASSE`.
+        ("Maße", "Masse"),
+    ] {
+        assert_eq!(
+            category(first).folded_name(),
+            category(second).folded_name(),
+            "{first} and {second}"
+        );
+    }
+}
+
 /// Distinct categories such as "Food" and "Fuel" would collide as
 /// duplicates.
 #[test]
@@ -73,6 +102,21 @@ fn different_names_fold_differently() {
         category("Cafe").folded_name(),
         category("Café").folded_name()
     );
+    // The dotted and the dotless i stay distinct without Turkic folding, and
+    // full-width letters and superscript digits without compatibility
+    // folding.
+    for (first, second) in [
+        ("İstanbul", "istanbul"),
+        ("ısparta", "ISPARTA"),
+        ("ＦＯＯＤ", "food"),
+        ("Food²", "Food2"),
+    ] {
+        assert_ne!(
+            category(first).folded_name(),
+            category(second).folded_name(),
+            "{first} and {second}"
+        );
+    }
     // The name itself keeps its case.
     assert_eq!(category("FOOD").name(), "FOOD");
 }

@@ -310,8 +310,8 @@ fn only_an_unreferenced_member_can_be_removed() {
     });
 }
 
-/// Category names are unique case-insensitively, renames keep that rule,
-/// and an unused category is removed.
+/// Category names are unique under canonical caseless matching, renames
+/// keep that rule, and an unused category is removed.
 #[test]
 fn categories_keep_unique_names() {
     let (mut group, ..) = trip();
@@ -351,6 +351,27 @@ fn categories_keep_unique_names() {
         vec![CategoryId::UNCATEGORISED, food]
     );
     assert_eq!(group.category(food).map(Category::name), Some("food"));
+}
+
+/// A group would hold `Straße` and `STRASSE`, or a composed and a
+/// decomposed `Café`, as two categories that users see as one.
+#[test]
+fn category_names_compare_by_canonical_caseless_matching() {
+    let (mut group, ..) = trip();
+    let street = group
+        .add_category(Category::new("Straße").unwrap())
+        .unwrap();
+    let cafe = group.add_category(Category::new("Café").unwrap()).unwrap();
+    assert_unchanged(
+        &mut group,
+        &GroupError::DuplicateCategoryName { existing: street },
+        |group| group.add_category(Category::new("STRASSE").unwrap()),
+    );
+    assert_unchanged(
+        &mut group,
+        &GroupError::DuplicateCategoryName { existing: cafe },
+        |group| group.add_category(Category::new("Cafe\u{301}").unwrap()),
+    );
 }
 
 /// The built-in category would be removed, renamed, or added a second time,

@@ -176,7 +176,7 @@ impl Group {
     /// - [`GroupError::DuplicateCategory`] when the group already has a
     ///   category with this identifier.
     /// - [`GroupError::DuplicateCategoryName`] when another category has the
-    ///   same name, compared case-insensitively.
+    ///   same name under Unicode canonical caseless matching.
     pub fn add_category(&mut self, category: Category) -> Result<CategoryId, GroupError> {
         let id = category.id();
         if self.categories.contains_key(&id) {
