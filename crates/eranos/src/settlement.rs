@@ -57,7 +57,7 @@ pub enum SettlementStrategy {
     Direct,
     /// The largest debtor pays the largest creditor, repeatedly.
     ///
-    /// O(n log n) time and at most n − 1 payments (85 µs for 1 000 members
+    /// O(n log n) time and at most n − 1 payments (55 µs for 1 000 members
     /// on an Apple M4 Pro); usually as few as
     /// [`MinimumTransfers`](Self::MinimumTransfers), but not always.
     Greedy,
