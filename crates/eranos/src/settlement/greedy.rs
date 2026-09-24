@@ -3,9 +3,10 @@
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
+use eranos_ledger::MemberPair;
+
 use super::Flow;
 use crate::id::MemberId;
-use crate::ledger::MemberPair;
 
 /// Settles `balances` (member, net; positive = is owed) by repeatedly having
 /// the largest debtor pay the largest creditor the smaller of the two

@@ -2,8 +2,9 @@
 
 use std::collections::BTreeMap;
 
+use eranos_ledger::MemberPair;
+
 use super::Flow;
-use crate::ledger::MemberPair;
 
 /// One payment per pair of members with a netted debt; `pairs` maps every
 /// pair, keyed with the lower member as `from`, to what `from` owes `to`.

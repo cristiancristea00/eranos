@@ -46,7 +46,7 @@ fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> Res
     ResolvedExpense::new(debts, members, eur(0), eur(total))
 }
 
-fn applied(ledger: &mut Ledger, change: impl FnOnce(&mut Delta)) -> Result<(), Overflow> {
+fn applied(ledger: &mut Ledger, change: impl FnOnce(&mut Delta)) -> Result<(), MoneyError> {
     let mut delta = Delta::default();
     change(&mut delta);
     ledger.apply(&delta)
@@ -216,7 +216,7 @@ fn an_overflowing_change_is_refused_whole() {
             CategoryId::UNCATEGORISED,
             1
         )),
-        Err(Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(ledger, before);
     // So would a single entry below −i64::MAX, which could not be negated.
@@ -235,7 +235,7 @@ fn an_overflowing_change_is_refused_whole() {
             1,
             -1
         )),
-        Err(Overflow)
+        Err(MoneyError::Overflow)
     );
 }
 
@@ -277,7 +277,7 @@ fn every_value_is_range_checked() {
     ]);
     let mut ledger = Ledger::new(Currency::EUR);
     for delta in &deltas {
-        assert_eq!(ledger.apply(delta), Err(Overflow), "{delta:?}");
+        assert_eq!(ledger.apply(delta), Err(MoneyError::Overflow), "{delta:?}");
         assert_eq!(ledger, Ledger::new(Currency::EUR));
     }
 }

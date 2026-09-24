@@ -9,12 +9,12 @@
 
 use std::collections::BTreeMap;
 
+use eranos_ledger::{Debt, MemberPair, MemberShare, ResolvedExpense};
 use eranos_money::allocation::{allocate, rotation};
 
 use crate::error::MoneyError;
 use crate::expense::{Expense, ExpenseSplit, TipDistribution};
 use crate::id::MemberId;
-use crate::ledger::{Debt, MemberPair, MemberShare, ResolvedExpense};
 use crate::money::{Currency, ExchangeRate, Money};
 
 /// Allocation passes; each gets its own tie rotation.

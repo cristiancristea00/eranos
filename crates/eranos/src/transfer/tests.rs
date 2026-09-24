@@ -4,9 +4,10 @@
 //! keep transfers edited through `to_builder` or recorded from a
 //! settlement's payment identical to ones built by hand.
 
+use eranos_ledger::{Delta, Ledger, MemberPair};
+
 use super::*;
 
-use crate::ledger::{Delta, Ledger, MemberPair};
 use crate::money::Currency;
 use crate::settlement::{self, SettlementStrategy};
 

@@ -11,9 +11,10 @@ mod minimum;
 
 use std::sync::OnceLock;
 
+use eranos_ledger::{Ledger, MemberPair};
+
 use crate::error::SettlementError;
 use crate::id::MemberId;
-use crate::ledger::{Ledger, MemberPair};
 use crate::money::{Currency, Money};
 
 /// How [`Group::settlement`](crate::Group::settlement) turns balances into

@@ -3,8 +3,9 @@
 //! sorted the same way on every device, and a kept plan must last exactly
 //! until it is cleared.
 
+use eranos_ledger::Delta;
+
 use super::*;
-use crate::ledger::Delta;
 use crate::money::Currency;
 
 fn member(number: u8) -> MemberId {

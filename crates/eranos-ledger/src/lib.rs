@@ -3,14 +3,20 @@
 //! Every mutation of a group becomes a set of changes applied in two phases:
 //! every new value is computed and range-checked first, and only then
 //! written, so a change that would overflow leaves the totals untouched.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use. [`Ledger`], [`Delta`], and the pair types are the
+//! machinery the group writes through, and the facade does not re-export
+//! them.
+#![doc(test(attr(deny(warnings))))]
 
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 use std::fmt;
 
-use crate::id::{CategoryId, MemberId};
-use crate::money::{Currency, Money};
+use eranos_core::{CategoryId, MemberId};
+use eranos_money::{Currency, Money, MoneyError};
 
 /// The group's running totals, in the group currency.
 ///
@@ -339,14 +345,17 @@ impl MemberShare {
 
 /// Two members in a direction: `from` owes or pays `to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct MemberPair {
-    pub(crate) from: MemberId,
-    pub(crate) to: MemberId,
+pub struct MemberPair {
+    /// The member who owes or pays.
+    pub from: MemberId,
+    /// The member who is owed or paid.
+    pub to: MemberId,
 }
 
 impl MemberPair {
     /// The same two members the other way round.
-    pub(crate) const fn reversed(self) -> Self {
+    #[must_use]
+    pub const fn reversed(self) -> Self {
         Self {
             from: self.to,
             to: self.from,
@@ -373,24 +382,29 @@ impl PartialOrd for MemberPair {
 /// An amount one member owes another because of one entry: `members.from`
 /// owes `members.to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Debt {
-    pub(crate) amount: i64,
-    pub(crate) members: MemberPair,
+pub struct Debt {
+    /// The amount, in minor units of the group currency.
+    pub amount: i64,
+    /// Who owes whom.
+    pub members: MemberPair,
 }
 
 /// An expense divided in the group currency: the shares callers read, and
 /// what each participant owes each payer, which only the direct settlement
 /// reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ResolvedExpense {
-    pub(crate) debts: Vec<Debt>,
-    pub(crate) shares: ExpenseShares,
+pub struct ResolvedExpense {
+    /// What each participant owes each payer, for the direct settlement.
+    pub debts: Vec<Debt>,
+    /// What every involved member paid and consumed.
+    pub shares: ExpenseShares,
 }
 
 impl ResolvedExpense {
     /// Returns the expense with these debts and, in `members`, sorted by
     /// member, what each involved member paid and consumed.
-    pub(crate) const fn new(
+    #[must_use]
+    pub const fn new(
         debts: Vec<Debt>,
         members: Vec<MemberShare>,
         tip: Money,
@@ -406,10 +420,6 @@ impl ResolvedExpense {
         }
     }
 }
-
-/// A value outside the ledger's range.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Overflow;
 
 /// The totals of one member, in minor units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -431,7 +441,7 @@ impl Totals {
 
 /// Changes to apply to a [`Ledger`] at once, in exact 128-bit arithmetic.
 #[derive(Debug, Default)]
-pub(crate) struct Delta {
+pub struct Delta {
     categories: BTreeMap<CategoryId, i128>,
     member_categories: BTreeMap<(MemberId, CategoryId), i128>,
     /// paid, share, sent, received, net
@@ -442,12 +452,7 @@ pub(crate) struct Delta {
 
 impl Delta {
     /// Adds (`sign` 1) or removes (`sign` −1) one expense.
-    pub(crate) fn add_expense(
-        &mut self,
-        resolved: &ResolvedExpense,
-        category: CategoryId,
-        sign: i128,
-    ) {
+    pub fn add_expense(&mut self, resolved: &ResolvedExpense, category: CategoryId, sign: i128) {
         let total = sign * i128::from(resolved.shares.total.minor_units());
         self.total_spent += total;
         *self.categories.entry(category).or_default() += total;
@@ -470,7 +475,7 @@ impl Delta {
 
     /// Adds (`sign` 1) or removes (`sign` −1) one transfer of `amount` minor
     /// units in the group currency, from `pair.from` to `pair.to`.
-    pub(crate) fn add_transfer(&mut self, pair: MemberPair, amount: i64, sign: i128) {
+    pub fn add_transfer(&mut self, pair: MemberPair, amount: i64, sign: i128) {
         let amount = sign * i128::from(amount);
         let sender = self.members.entry(pair.from).or_default();
         sender[2] += amount;
@@ -497,7 +502,7 @@ impl Delta {
 /// Everything the group derives from its entries: the [`Summary`] and the
 /// netted debt between every pair of members.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Ledger {
+pub struct Ledger {
     /// Keyed with the lower member as `from`: what `from` owes `to`,
     /// negative when `to` owes `from`.
     pairs: BTreeMap<MemberPair, i64>,
@@ -505,22 +510,31 @@ pub(crate) struct Ledger {
 }
 
 impl Ledger {
-    pub(crate) const fn new(currency: Currency) -> Self {
+    /// Returns an empty ledger in `currency`.
+    #[must_use]
+    pub const fn new(currency: Currency) -> Self {
         Self {
             pairs: BTreeMap::new(),
             summary: Summary::new(currency),
         }
     }
 
-    pub(crate) const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
+    /// The netted debt of every pair of members, keyed with the lower member
+    /// as `from`: what `from` owes `to`, negative when `to` owes `from`.
+    #[must_use]
+    pub const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
         &self.pairs
     }
 
-    pub(crate) const fn summary(&self) -> &Summary {
+    /// The group's totals.
+    #[must_use]
+    pub const fn summary(&self) -> &Summary {
         &self.summary
     }
 
-    pub(crate) const fn currency(&self) -> Currency {
+    /// The group currency, which every total is in.
+    #[must_use]
+    pub const fn currency(&self) -> Currency {
         self.summary.currency
     }
 
@@ -530,7 +544,7 @@ impl Ledger {
     /// Category rows are never negative, the group's add up to the total
     /// spent and one member's to their share, and both are in range, so the
     /// sums moved into `to` are in range too.
-    pub(crate) fn move_category(&mut self, from: CategoryId, to: CategoryId) {
+    pub fn move_category(&mut self, from: CategoryId, to: CategoryId) {
         let summary = &mut self.summary;
         if let Some(total) = summary.categories.remove(&from) {
             *summary.categories.entry(to).or_default() += total;
@@ -549,7 +563,12 @@ impl Ledger {
 
     /// Applies `delta` if every resulting value stays in range; otherwise
     /// changes nothing.
-    pub(crate) fn apply(&mut self, delta: &Delta) -> Result<(), Overflow> {
+    ///
+    /// # Errors
+    ///
+    /// [`MoneyError::Overflow`] when a resulting value would leave the range
+    /// of an amount; the ledger is unchanged then.
+    pub fn apply(&mut self, delta: &Delta) -> Result<(), MoneyError> {
         let summary = &self.summary;
         let total_spent = fit(i128::from(summary.total_spent) + delta.total_spent)?;
         let members = delta
@@ -566,7 +585,7 @@ impl Ledger {
                 };
                 Ok((member, totals))
             })
-            .collect::<Result<Vec<_>, Overflow>>()?;
+            .collect::<Result<Vec<_>, MoneyError>>()?;
         let categories = updated(&summary.categories, &delta.categories)?;
         let member_categories = updated(&summary.member_categories, &delta.member_categories)?;
         let pairs = updated(&self.pairs, &delta.pairs)?;
@@ -596,7 +615,7 @@ impl Ledger {
 fn updated<K: Ord + Copy>(
     current: &BTreeMap<K, i64>,
     changes: &BTreeMap<K, i128>,
-) -> Result<Vec<(K, i64)>, Overflow> {
+) -> Result<Vec<(K, i64)>, MoneyError> {
     changes
         .iter()
         .map(|(&key, &change)| {
@@ -627,11 +646,11 @@ fn store<K: Ord, V: Copy>(map: &mut BTreeMap<K, V>, key: K, value: V, is_zero: i
 
 /// Narrows to the ledger's range, ±`i64::MAX`: symmetric, so every value can
 /// be negated.
-fn fit(value: i128) -> Result<i64, Overflow> {
+fn fit(value: i128) -> Result<i64, MoneyError> {
     i64::try_from(value)
         .ok()
         .filter(|&value| value != i64::MIN)
-        .ok_or(Overflow)
+        .ok_or(MoneyError::Overflow)
 }
 
 #[cfg(test)]

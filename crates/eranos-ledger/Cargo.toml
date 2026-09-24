@@ -1,0 +1,21 @@
+# eranos-ledger: a group's running totals and balances, and the range-checked
+# changes that update them. An internal crate: the `eranos` crate re-exports
+# the types callers use.
+[package]
+name = "eranos-ledger"
+description = "The totals and balances of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+eranos-core = { workspace = true }
+eranos-money = { workspace = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+
+[lints]
+workspace = true

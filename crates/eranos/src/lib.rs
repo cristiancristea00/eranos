@@ -120,7 +120,14 @@ pub mod id {
     #[doc(inline)]
     pub use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 }
-pub mod ledger;
+pub mod ledger {
+    //! The group's totals and balances, kept current with every change.
+
+    #[doc(inline)]
+    pub use eranos_ledger::{
+        Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary,
+    };
+}
 pub mod member {
     //! The people in a group, their contact details, and where they can be
     //! paid.
@@ -159,6 +166,7 @@ pub use group::SavedGroup;
 pub use group::{Group, Language};
 #[doc(no_inline)]
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
+#[doc(no_inline)]
 pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};
 #[doc(no_inline)]
 pub use member::{
