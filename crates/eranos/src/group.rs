@@ -149,51 +149,128 @@ impl Group {
         }
     }
 
-    // --- Details -------------------------------------------------------------
+    // --- Identifier ----------------------------------------------------------
 
     /// The identifier.
     pub const fn id(&self) -> GroupId {
         self.id
     }
 
-    /// The name.
-    pub fn name(&self) -> &str {
-        &self.name
+    // --- Categories ----------------------------------------------------------
+
+    /// Every category, in the order they were created.
+    pub fn categories(&self) -> impl ExactSizeIterator<Item = (CategoryId, &Category)> + '_ {
+        self.categories.iter().map(|(&id, category)| (id, category))
     }
 
-    /// The description, if any.
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
+    /// The category with this identifier.
+    pub fn category(&self, id: CategoryId) -> Option<&Category> {
+        self.categories.get(&id)
     }
+
+    /// Adds a category under a newly generated identifier.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::DuplicateCategoryName`] when another category has the
+    /// same name, compared case-insensitively.
+    pub fn add_category(&mut self, category: Category) -> Result<CategoryId, GroupError> {
+        let id = unused_id(&self.categories, CategoryId::generate);
+        self.insert_category(id, category)?;
+        Ok(id)
+    }
+
+    /// Adds a category under an existing identifier.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::DuplicateCategory`] when the identifier is taken.
+    /// - [`GroupError::DuplicateCategoryName`] when another category has the
+    ///   same name, compared case-insensitively.
+    pub fn insert_category(
+        &mut self,
+        id: CategoryId,
+        category: Category,
+    ) -> Result<(), GroupError> {
+        if self.categories.contains_key(&id) {
+            return Err(GroupError::DuplicateCategory(id));
+        }
+        self.check_category_name(&category, None)?;
+        self.categories.insert(id, category);
+        Ok(())
+    }
+
+    /// Replaces a category's details, returning the previous ones; its
+    /// expenses keep it.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::UnknownCategory`] when there is no such category.
+    /// - [`GroupError::DuplicateCategoryName`] when another category has the
+    ///   new name.
+    pub fn rename_category(
+        &mut self,
+        id: CategoryId,
+        category: Category,
+    ) -> Result<Category, GroupError> {
+        if !self.categories.contains_key(&id) {
+            return Err(GroupError::UnknownCategory(id));
+        }
+        self.check_category_name(&category, Some(id))?;
+        self.categories
+            .insert(id, category)
+            .ok_or(GroupError::UnknownCategory(id))
+    }
+
+    /// Removes a category no expense uses, returning it.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::UnknownCategory`] when there is no such category.
+    /// - [`GroupError::CategoryInUse`] listing the expenses that still use
+    ///   it.
+    pub fn remove_category(&mut self, id: CategoryId) -> Result<Category, GroupError> {
+        if !self.categories.contains_key(&id) {
+            return Err(GroupError::UnknownCategory(id));
+        }
+        let expenses: Vec<ExpenseId> = self
+            .expenses
+            .iter()
+            .filter(|(_, record)| record.expense.category() == Some(id))
+            .map(|(&id, _)| id)
+            .collect();
+        if !expenses.is_empty() {
+            return Err(GroupError::CategoryInUse {
+                category: id,
+                expenses,
+            });
+        }
+        self.categories
+            .remove(&id)
+            .ok_or(GroupError::UnknownCategory(id))
+    }
+
+    fn check_category_name(
+        &self,
+        category: &Category,
+        except: Option<CategoryId>,
+    ) -> Result<(), GroupError> {
+        let name = category.folded_name();
+        match self
+            .categories
+            .iter()
+            .find(|&(&id, existing)| Some(id) != except && existing.folded_name() == name)
+        {
+            Some((&existing, _)) => Err(GroupError::DuplicateCategoryName { existing }),
+            None => Ok(()),
+        }
+    }
+
+    // --- Currency ------------------------------------------------------------
 
     /// The currency of every total, balance, and settlement.
     pub const fn currency(&self) -> Currency {
         self.currency
-    }
-
-    /// The language the apps show the group in, if set.
-    pub const fn language(&self) -> Option<&Language> {
-        self.language.as_ref()
-    }
-
-    /// Renames the group.
-    ///
-    /// # Errors
-    ///
-    /// [`ValueError::Empty`] when the name is blank.
-    pub fn set_name(&mut self, name: impl Into<String>) -> Result<(), ValueError> {
-        self.name = text::required(name, Field::GroupName)?;
-        Ok(())
-    }
-
-    /// Sets the description; blank text clears it.
-    pub fn set_description(&mut self, description: impl Into<String>) {
-        self.description = text::optional(description);
-    }
-
-    /// Sets the language, or clears it with `None`.
-    pub fn set_language(&mut self, language: impl Into<Option<Language>>) {
-        self.language = language.into();
     }
 
     /// Moves the group to another currency, re-converting every entry.
@@ -288,7 +365,150 @@ impl Group {
         Ok(())
     }
 
+    // --- Expenses ------------------------------------------------------------
+
+    /// Every expense, in the order they were created.
+    pub fn expenses(&self) -> impl ExactSizeIterator<Item = (ExpenseId, &Expense)> + '_ {
+        self.expenses
+            .iter()
+            .map(|(&id, record)| (id, &record.expense))
+    }
+
+    /// The expense with this identifier.
+    pub fn expense(&self, id: ExpenseId) -> Option<&Expense> {
+        self.expenses.get(&id).map(|record| &record.expense)
+    }
+
+    /// How an expense divides in the group currency.
+    pub fn expense_shares(&self, id: ExpenseId) -> Option<&ExpenseShares> {
+        self.expenses.get(&id).map(|record| &record.shares)
+    }
+
+    /// Adds an expense under a newly generated identifier.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::UnknownMember`] or [`GroupError::ArchivedMember`] when
+    ///   a payer or participant is not an active member.
+    /// - [`GroupError::UnknownCategory`] when the category does not exist.
+    /// - [`GroupError::MissingExchangeRate`] when the expense is in another
+    ///   currency and its cost is local, and
+    ///   [`GroupError::UnexpectedExchangeRate`] when it is in the group
+    ///   currency and its cost is converted.
+    /// - [`GroupError::Overflow`] when a total would leave the range of an
+    ///   amount.
+    pub fn add_expense(&mut self, expense: Expense) -> Result<ExpenseId, GroupError> {
+        let id = unused_id(&self.expenses, ExpenseId::generate);
+        self.insert_expense(id, expense)?;
+        Ok(id)
+    }
+
+    /// Adds an expense under an existing identifier, such as one synced from
+    /// another device.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::DuplicateExpense`] when the identifier is taken, and
+    /// the errors of [`add_expense`](Self::add_expense).
+    pub fn insert_expense(&mut self, id: ExpenseId, expense: Expense) -> Result<(), GroupError> {
+        if self.expenses.contains_key(&id) {
+            return Err(GroupError::DuplicateExpense(id));
+        }
+        self.check_expense(&expense, None)?;
+        let shares = resolve_expense(id, &expense, self.currency)?;
+        let mut delta = Delta::default();
+        delta.add_expense(&shares, expense.category(), 1);
+        self.ledger
+            .apply(&delta)
+            .map_err(|_| GroupError::Overflow)?;
+        self.expenses.insert(id, ExpenseRecord { expense, shares });
+        self.invalidate_settlements();
+        Ok(())
+    }
+
+    /// Replaces an expense, returning the previous version.
+    ///
+    /// The replacement may keep members who were archived after the
+    /// original was added, but may not add archived members.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::UnknownExpense`] when there is no such expense, and the
+    /// errors of [`add_expense`](Self::add_expense).
+    pub fn replace_expense(
+        &mut self,
+        id: ExpenseId,
+        expense: Expense,
+    ) -> Result<Expense, GroupError> {
+        let previous = self
+            .expenses
+            .get(&id)
+            .ok_or(GroupError::UnknownExpense(id))?;
+        self.check_expense(&expense, Some(&previous.expense))?;
+        let shares = resolve_expense(id, &expense, self.currency)?;
+        let mut delta = Delta::default();
+        delta.add_expense(&previous.shares, previous.expense.category(), -1);
+        delta.add_expense(&shares, expense.category(), 1);
+        self.ledger
+            .apply(&delta)
+            .map_err(|_| GroupError::Overflow)?;
+        let replaced = self.expenses.insert(id, ExpenseRecord { expense, shares });
+        self.invalidate_settlements();
+        replaced
+            .map(|replaced| replaced.expense)
+            .ok_or(GroupError::UnknownExpense(id))
+    }
+
+    /// Removes an expense, returning it.
+    ///
+    /// # Errors
+    ///
+    /// - [`GroupError::UnknownExpense`] when there is no such expense.
+    /// - [`GroupError::Overflow`] when the remaining totals would leave the
+    ///   range of an amount.
+    pub fn remove_expense(&mut self, id: ExpenseId) -> Result<Expense, GroupError> {
+        let record = self
+            .expenses
+            .get(&id)
+            .ok_or(GroupError::UnknownExpense(id))?;
+        let mut delta = Delta::default();
+        delta.add_expense(&record.shares, record.expense.category(), -1);
+        self.ledger
+            .apply(&delta)
+            .map_err(|_| GroupError::Overflow)?;
+        self.invalidate_settlements();
+        self.expenses
+            .remove(&id)
+            .map(|removed| removed.expense)
+            .ok_or(GroupError::UnknownExpense(id))
+    }
+
+    // --- Ledger --------------------------------------------------------------
+
+    /// The group's totals: overall, per member, per category, and per member
+    /// per category.
+    pub const fn summary(&self) -> &Summary {
+        self.ledger.summary()
+    }
+
     // --- Members -------------------------------------------------------------
+
+    /// Every member, archived ones included, in the order they were created.
+    pub fn members(&self) -> impl ExactSizeIterator<Item = (MemberId, &Member)> + '_ {
+        self.members
+            .iter()
+            .map(|(&id, record)| (id, &record.member))
+    }
+
+    /// The member with this identifier.
+    pub fn member(&self, id: MemberId) -> Option<&Member> {
+        self.members.get(&id).map(|record| &record.member)
+    }
+
+    /// Whether the member is archived; `false` for an unknown member.
+    pub fn is_archived(&self, id: MemberId) -> bool {
+        self.members.get(&id).is_some_and(|record| record.archived)
+    }
 
     /// Adds a member under a newly generated identifier.
     pub fn add_member(&mut self, member: Member) -> MemberId {
@@ -402,277 +622,65 @@ impl Group {
             .ok_or(GroupError::UnknownMember(id))
     }
 
-    /// The member with this identifier.
-    pub fn member(&self, id: MemberId) -> Option<&Member> {
-        self.members.get(&id).map(|record| &record.member)
+    // --- Name ----------------------------------------------------------------
+
+    /// The name.
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
-    /// Whether the member is archived; `false` for an unknown member.
-    pub fn is_archived(&self, id: MemberId) -> bool {
-        self.members.get(&id).is_some_and(|record| record.archived)
-    }
-
-    /// Every member, archived ones included, in the order they were created.
-    pub fn members(&self) -> impl ExactSizeIterator<Item = (MemberId, &Member)> + '_ {
-        self.members
-            .iter()
-            .map(|(&id, record)| (id, &record.member))
-    }
-
-    // --- Categories ----------------------------------------------------------
-
-    /// Adds a category under a newly generated identifier.
+    /// Renames the group.
     ///
     /// # Errors
     ///
-    /// [`GroupError::DuplicateCategoryName`] when another category has the
-    /// same name, compared case-insensitively.
-    pub fn add_category(&mut self, category: Category) -> Result<CategoryId, GroupError> {
-        let id = unused_id(&self.categories, CategoryId::generate);
-        self.insert_category(id, category)?;
-        Ok(id)
-    }
-
-    /// Adds a category under an existing identifier.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::DuplicateCategory`] when the identifier is taken.
-    /// - [`GroupError::DuplicateCategoryName`] when another category has the
-    ///   same name, compared case-insensitively.
-    pub fn insert_category(
-        &mut self,
-        id: CategoryId,
-        category: Category,
-    ) -> Result<(), GroupError> {
-        if self.categories.contains_key(&id) {
-            return Err(GroupError::DuplicateCategory(id));
-        }
-        self.check_category_name(&category, None)?;
-        self.categories.insert(id, category);
+    /// [`ValueError::Empty`] when the name is blank.
+    pub fn set_name(&mut self, name: impl Into<String>) -> Result<(), ValueError> {
+        self.name = text::required(name, Field::GroupName)?;
         Ok(())
     }
 
-    /// Replaces a category's details, returning the previous ones; its
-    /// expenses keep it.
+    // --- Settlements ---------------------------------------------------------
+
+    /// The payments that settle every balance, computed with `strategy` on
+    /// first request and cached until a balance changes.
     ///
     /// # Errors
     ///
-    /// - [`GroupError::UnknownCategory`] when there is no such category.
-    /// - [`GroupError::DuplicateCategoryName`] when another category has the
-    ///   new name.
-    pub fn rename_category(
-        &mut self,
-        id: CategoryId,
-        category: Category,
-    ) -> Result<Category, GroupError> {
-        if !self.categories.contains_key(&id) {
-            return Err(GroupError::UnknownCategory(id));
-        }
-        self.check_category_name(&category, Some(id))?;
-        self.categories
-            .insert(id, category)
-            .ok_or(GroupError::UnknownCategory(id))
+    /// [`SettlementError::OutOfMemory`] when
+    /// [`SettlementStrategy::MinimumTransfers`] cannot allocate its table;
+    /// the other strategies never fail.
+    pub fn settlement(&self, strategy: SettlementStrategy) -> Result<&Settlement, SettlementError> {
+        self.settlements
+            .slot(strategy)
+            .get_or_init(|| settlement::settle(strategy, &self.ledger))
+            .as_ref()
+            .map_err(|&error| error)
     }
 
-    /// Removes a category no expense uses, returning it.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::UnknownCategory`] when there is no such category.
-    /// - [`GroupError::CategoryInUse`] listing the expenses that still use
-    ///   it.
-    pub fn remove_category(&mut self, id: CategoryId) -> Result<Category, GroupError> {
-        if !self.categories.contains_key(&id) {
-            return Err(GroupError::UnknownCategory(id));
-        }
-        let expenses: Vec<ExpenseId> = self
-            .expenses
-            .iter()
-            .filter(|(_, record)| record.expense.category() == Some(id))
-            .map(|(&id, _)| id)
-            .collect();
-        if !expenses.is_empty() {
-            return Err(GroupError::CategoryInUse {
-                category: id,
-                expenses,
-            });
-        }
-        self.categories
-            .remove(&id)
-            .ok_or(GroupError::UnknownCategory(id))
-    }
-
-    /// The category with this identifier.
-    pub fn category(&self, id: CategoryId) -> Option<&Category> {
-        self.categories.get(&id)
-    }
-
-    /// Every category, in the order they were created.
-    pub fn categories(&self) -> impl ExactSizeIterator<Item = (CategoryId, &Category)> + '_ {
-        self.categories.iter().map(|(&id, category)| (id, category))
-    }
-
-    fn check_category_name(
-        &self,
-        category: &Category,
-        except: Option<CategoryId>,
-    ) -> Result<(), GroupError> {
-        let name = category.folded_name();
-        match self
-            .categories
-            .iter()
-            .find(|&(&id, existing)| Some(id) != except && existing.folded_name() == name)
-        {
-            Some((&existing, _)) => Err(GroupError::DuplicateCategoryName { existing }),
-            None => Ok(()),
-        }
-    }
-
-    // --- Expenses ------------------------------------------------------------
-
-    /// Adds an expense under a newly generated identifier.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::UnknownMember`] or [`GroupError::ArchivedMember`] when
-    ///   a payer or participant is not an active member.
-    /// - [`GroupError::UnknownCategory`] when the category does not exist.
-    /// - [`GroupError::MissingExchangeRate`] when the expense is in another
-    ///   currency and its cost is local, and
-    ///   [`GroupError::UnexpectedExchangeRate`] when it is in the group
-    ///   currency and its cost is converted.
-    /// - [`GroupError::Overflow`] when a total would leave the range of an
-    ///   amount.
-    pub fn add_expense(&mut self, expense: Expense) -> Result<ExpenseId, GroupError> {
-        let id = unused_id(&self.expenses, ExpenseId::generate);
-        self.insert_expense(id, expense)?;
-        Ok(id)
-    }
-
-    /// Adds an expense under an existing identifier, such as one synced from
-    /// another device.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::DuplicateExpense`] when the identifier is taken, and
-    /// the errors of [`add_expense`](Self::add_expense).
-    pub fn insert_expense(&mut self, id: ExpenseId, expense: Expense) -> Result<(), GroupError> {
-        if self.expenses.contains_key(&id) {
-            return Err(GroupError::DuplicateExpense(id));
-        }
-        self.check_expense(&expense, None)?;
-        let shares = resolve_expense(id, &expense, self.currency)?;
-        let mut delta = Delta::default();
-        delta.add_expense(&shares, expense.category(), 1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| GroupError::Overflow)?;
-        self.expenses.insert(id, ExpenseRecord { expense, shares });
-        self.invalidate_settlements();
-        Ok(())
-    }
-
-    /// Replaces an expense, returning the previous version.
-    ///
-    /// The replacement may keep members who were archived after the
-    /// original was added, but may not add archived members.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::UnknownExpense`] when there is no such expense, and the
-    /// errors of [`add_expense`](Self::add_expense).
-    pub fn replace_expense(
-        &mut self,
-        id: ExpenseId,
-        expense: Expense,
-    ) -> Result<Expense, GroupError> {
-        let previous = self
-            .expenses
-            .get(&id)
-            .ok_or(GroupError::UnknownExpense(id))?;
-        self.check_expense(&expense, Some(&previous.expense))?;
-        let shares = resolve_expense(id, &expense, self.currency)?;
-        let mut delta = Delta::default();
-        delta.add_expense(&previous.shares, previous.expense.category(), -1);
-        delta.add_expense(&shares, expense.category(), 1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| GroupError::Overflow)?;
-        let replaced = self.expenses.insert(id, ExpenseRecord { expense, shares });
-        self.invalidate_settlements();
-        replaced
-            .map(|replaced| replaced.expense)
-            .ok_or(GroupError::UnknownExpense(id))
-    }
-
-    /// Removes an expense, returning it.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::UnknownExpense`] when there is no such expense.
-    /// - [`GroupError::Overflow`] when the remaining totals would leave the
-    ///   range of an amount.
-    pub fn remove_expense(&mut self, id: ExpenseId) -> Result<Expense, GroupError> {
-        let record = self
-            .expenses
-            .get(&id)
-            .ok_or(GroupError::UnknownExpense(id))?;
-        let mut delta = Delta::default();
-        delta.add_expense(&record.shares, record.expense.category(), -1);
-        self.ledger
-            .apply(&delta)
-            .map_err(|_| GroupError::Overflow)?;
-        self.invalidate_settlements();
-        self.expenses
-            .remove(&id)
-            .map(|removed| removed.expense)
-            .ok_or(GroupError::UnknownExpense(id))
-    }
-
-    /// The expense with this identifier.
-    pub fn expense(&self, id: ExpenseId) -> Option<&Expense> {
-        self.expenses.get(&id).map(|record| &record.expense)
-    }
-
-    /// How an expense divides in the group currency.
-    pub fn expense_shares(&self, id: ExpenseId) -> Option<&ExpenseShares> {
-        self.expenses.get(&id).map(|record| &record.shares)
-    }
-
-    /// Every expense, in the order they were created.
-    pub fn expenses(&self) -> impl ExactSizeIterator<Item = (ExpenseId, &Expense)> + '_ {
-        self.expenses
-            .iter()
-            .map(|(&id, record)| (id, &record.expense))
-    }
-
-    /// Checks the references of `expense`; `previous` is the version it
-    /// replaces, whose archived members it may keep.
-    fn check_expense(
-        &self,
-        expense: &Expense,
-        previous: Option<&Expense>,
-    ) -> Result<(), GroupError> {
-        let kept = previous.map(Expense::members).unwrap_or_default();
-        for member in expense.members() {
-            let record = self
-                .members
-                .get(&member)
-                .ok_or(GroupError::UnknownMember(member))?;
-            if record.archived && !kept.contains(&member) {
-                return Err(GroupError::ArchivedMember(member));
-            }
-        }
-        match expense.category() {
-            Some(category) if !self.categories.contains_key(&category) => {
-                Err(GroupError::UnknownCategory(category))
-            }
-            _ => Ok(()),
-        }
+    fn invalidate_settlements(&mut self) {
+        self.settlements.clear();
     }
 
     // --- Transfers -----------------------------------------------------------
+
+    /// Every transfer, in the order they were created.
+    pub fn transfers(&self) -> impl ExactSizeIterator<Item = (TransferId, &Transfer)> + '_ {
+        self.transfers
+            .iter()
+            .map(|(&id, record)| (id, &record.transfer))
+    }
+
+    /// The transfer with this identifier.
+    pub fn transfer(&self, id: TransferId) -> Option<&Transfer> {
+        self.transfers.get(&id).map(|record| &record.transfer)
+    }
+
+    /// A transfer's amount in the group currency.
+    pub fn transfer_amount(&self, id: TransferId) -> Option<Money> {
+        self.transfers
+            .get(&id)
+            .map(|record| Money::from_minor_units(record.amount, self.currency))
+    }
 
     /// Adds a transfer under a newly generated identifier.
     ///
@@ -776,23 +784,55 @@ impl Group {
             .ok_or(GroupError::UnknownTransfer(id))
     }
 
-    /// The transfer with this identifier.
-    pub fn transfer(&self, id: TransferId) -> Option<&Transfer> {
-        self.transfers.get(&id).map(|record| &record.transfer)
+    // --- Description ---------------------------------------------------------
+
+    /// The description, if any.
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
-    /// A transfer's amount in the group currency.
-    pub fn transfer_amount(&self, id: TransferId) -> Option<Money> {
-        self.transfers
-            .get(&id)
-            .map(|record| Money::from_minor_units(record.amount, self.currency))
+    /// Sets the description; blank text clears it.
+    pub fn set_description(&mut self, description: impl Into<String>) {
+        self.description = text::optional(description);
     }
 
-    /// Every transfer, in the order they were created.
-    pub fn transfers(&self) -> impl ExactSizeIterator<Item = (TransferId, &Transfer)> + '_ {
-        self.transfers
-            .iter()
-            .map(|(&id, record)| (id, &record.transfer))
+    // --- Language ------------------------------------------------------------
+
+    /// The language the apps show the group in, if set.
+    pub const fn language(&self) -> Option<&Language> {
+        self.language.as_ref()
+    }
+
+    /// Sets the language, or clears it with `None`.
+    pub fn set_language(&mut self, language: impl Into<Option<Language>>) {
+        self.language = language.into();
+    }
+
+    // --- Checks --------------------------------------------------------------
+
+    /// Checks the references of `expense`; `previous` is the version it
+    /// replaces, whose archived members it may keep.
+    fn check_expense(
+        &self,
+        expense: &Expense,
+        previous: Option<&Expense>,
+    ) -> Result<(), GroupError> {
+        let kept = previous.map(Expense::members).unwrap_or_default();
+        for member in expense.members() {
+            let record = self
+                .members
+                .get(&member)
+                .ok_or(GroupError::UnknownMember(member))?;
+            if record.archived && !kept.contains(&member) {
+                return Err(GroupError::ArchivedMember(member));
+            }
+        }
+        match expense.category() {
+            Some(category) if !self.categories.contains_key(&category) => {
+                Err(GroupError::UnknownCategory(category))
+            }
+            _ => Ok(()),
+        }
     }
 
     fn check_transfer(&self, transfer: &Transfer) -> Result<(), GroupError> {
@@ -802,34 +842,6 @@ impl Group {
             }
         }
         Ok(())
-    }
-
-    // --- Derived -------------------------------------------------------------
-
-    /// The group's totals: overall, per member, per category, and per member
-    /// per category.
-    pub const fn summary(&self) -> &Summary {
-        self.ledger.summary()
-    }
-
-    /// The payments that settle every balance, computed with `strategy` on
-    /// first request and cached until a balance changes.
-    ///
-    /// # Errors
-    ///
-    /// [`SettlementError::OutOfMemory`] when
-    /// [`SettlementStrategy::MinimumTransfers`] cannot allocate its table;
-    /// the other strategies never fail.
-    pub fn settlement(&self, strategy: SettlementStrategy) -> Result<&Settlement, SettlementError> {
-        self.settlements
-            .slot(strategy)
-            .get_or_init(|| settlement::settle(strategy, &self.ledger))
-            .as_ref()
-            .map_err(|&error| error)
-    }
-
-    fn invalidate_settlements(&mut self) {
-        self.settlements.clear();
     }
 }
 

@@ -53,12 +53,6 @@ impl Account {
         })
     }
 
-    /// The account's label, such as `"ING"` or `"Revolut"`.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
     /// The secret account details.
     #[must_use]
     pub const fn details(&self) -> &AccountDetails {
@@ -69,6 +63,12 @@ impl Account {
     #[must_use]
     pub const fn kind(&self) -> AccountKind {
         self.details.kind()
+    }
+
+    /// The account's label, such as `"ING"` or `"Revolut"`.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

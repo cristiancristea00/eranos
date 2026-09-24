@@ -112,16 +112,16 @@ impl Money {
         Ok(Self::from_minor_units(minor_units, currency))
     }
 
-    /// The amount in minor units: 1234 for 12.34 EUR.
-    #[must_use]
-    pub const fn minor_units(self) -> i64 {
-        self.minor_units
-    }
-
     /// The currency.
     #[must_use]
     pub const fn currency(self) -> Currency {
         self.currency
+    }
+
+    /// The amount in minor units: 1234 for 12.34 EUR.
+    #[must_use]
+    pub const fn minor_units(self) -> i64 {
+        self.minor_units
     }
 
     /// Whether the amount is zero.

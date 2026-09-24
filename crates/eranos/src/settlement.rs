@@ -95,12 +95,6 @@ pub struct Settlement {
 }
 
 impl Settlement {
-    /// The strategy that produced the payments.
-    #[must_use]
-    pub const fn strategy(&self) -> SettlementStrategy {
-        self.strategy
-    }
-
     /// The payments, ordered by payer and then by recipient.
     #[must_use]
     pub fn payments(&self) -> &[Payment] {
@@ -118,6 +112,12 @@ impl Settlement {
     pub const fn is_empty(&self) -> bool {
         self.payments.is_empty()
     }
+
+    /// The strategy that produced the payments.
+    #[must_use]
+    pub const fn strategy(&self) -> SettlementStrategy {
+        self.strategy
+    }
 }
 
 /// One payment of a [`Settlement`]: `from` pays `amount` to `to`.
@@ -128,6 +128,12 @@ pub struct Payment {
 }
 
 impl Payment {
+    /// The amount, in the group currency.
+    #[must_use]
+    pub const fn amount(&self) -> Money {
+        self.amount
+    }
+
     /// The member who pays.
     #[must_use]
     pub const fn from(&self) -> MemberId {
@@ -138,12 +144,6 @@ impl Payment {
     #[must_use]
     pub const fn to(&self) -> MemberId {
         self.members.to
-    }
-
-    /// The amount, in the group currency.
-    #[must_use]
-    pub const fn amount(&self) -> Money {
-        self.amount
     }
 
     /// The transfer recording this payment, made on `date`.

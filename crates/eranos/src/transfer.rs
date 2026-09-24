@@ -81,68 +81,6 @@ impl Transfer {
         }
     }
 
-    /// The member who paid.
-    #[must_use]
-    pub const fn from(&self) -> MemberId {
-        self.from
-    }
-
-    /// The member who received the money.
-    #[must_use]
-    pub const fn to(&self) -> MemberId {
-        self.to
-    }
-
-    /// The cost: the amount and, for a transfer in another currency than
-    /// its group's, the rate into the group currency.
-    #[must_use]
-    pub const fn cost(&self) -> Cost {
-        Cost::from_parts(self.amount, self.exchange_rate)
-    }
-
-    /// The amount, in the transfer's own currency.
-    #[must_use]
-    pub const fn amount(&self) -> Money {
-        self.amount
-    }
-
-    /// The date of the transfer.
-    #[must_use]
-    pub const fn date(&self) -> Date {
-        self.date
-    }
-
-    /// The time of day, if recorded.
-    #[must_use]
-    pub const fn time(&self) -> Option<Time> {
-        self.time
-    }
-
-    /// The rate from the transfer's currency into its group's currency:
-    /// [`ExchangeRate::ONE`] for a local cost.
-    #[must_use]
-    pub const fn exchange_rate(&self) -> ExchangeRate {
-        self.cost().exchange_rate()
-    }
-
-    /// A note, if any.
-    #[must_use]
-    pub fn note(&self) -> Option<&str> {
-        self.note.as_deref()
-    }
-
-    /// The sender and the recipient.
-    pub(crate) const fn pair(&self) -> MemberPair {
-        MemberPair {
-            from: self.from,
-            to: self.to,
-        }
-    }
-
-    pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {
-        self.exchange_rate = exchange_rate;
-    }
-
     /// A transfer the caller guarantees is valid: two different members and
     /// a positive amount.
     pub(crate) fn new_unchecked(from: MemberId, to: MemberId, amount: Money, date: Date) -> Self {
@@ -158,6 +96,68 @@ impl Transfer {
             exchange_rate: None,
             note: None,
             time: None,
+        }
+    }
+
+    /// The amount, in the transfer's own currency.
+    #[must_use]
+    pub const fn amount(&self) -> Money {
+        self.amount
+    }
+
+    /// The cost: the amount and, for a transfer in another currency than
+    /// its group's, the rate into the group currency.
+    #[must_use]
+    pub const fn cost(&self) -> Cost {
+        Cost::from_parts(self.amount, self.exchange_rate)
+    }
+
+    /// The date of the transfer.
+    #[must_use]
+    pub const fn date(&self) -> Date {
+        self.date
+    }
+
+    /// The member who paid.
+    #[must_use]
+    pub const fn from(&self) -> MemberId {
+        self.from
+    }
+
+    /// The member who received the money.
+    #[must_use]
+    pub const fn to(&self) -> MemberId {
+        self.to
+    }
+
+    /// The rate from the transfer's currency into its group's currency:
+    /// [`ExchangeRate::ONE`] for a local cost.
+    #[must_use]
+    pub const fn exchange_rate(&self) -> ExchangeRate {
+        self.cost().exchange_rate()
+    }
+
+    pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {
+        self.exchange_rate = exchange_rate;
+    }
+
+    /// A note, if any.
+    #[must_use]
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
+    }
+
+    /// The time of day, if recorded.
+    #[must_use]
+    pub const fn time(&self) -> Option<Time> {
+        self.time
+    }
+
+    /// The sender and the recipient.
+    pub(crate) const fn pair(&self) -> MemberPair {
+        MemberPair {
+            from: self.from,
+            to: self.to,
         }
     }
 }
@@ -176,18 +176,6 @@ pub struct TransferBuilder {
 }
 
 impl TransferBuilder {
-    /// Replaces the member who paid.
-    pub const fn from(mut self, from: MemberId) -> Self {
-        self.from = from;
-        self
-    }
-
-    /// Replaces the member who received the money.
-    pub const fn to(mut self, to: MemberId) -> Self {
-        self.to = to;
-        self
-    }
-
     /// Replaces the cost.
     ///
     /// A [`Money`] amount makes the cost local; to change the amount of a
@@ -204,15 +192,27 @@ impl TransferBuilder {
         self
     }
 
-    /// Sets the time of day, or clears it with `None`.
-    pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
-        self.time = time.into();
+    /// Replaces the member who paid.
+    pub const fn from(mut self, from: MemberId) -> Self {
+        self.from = from;
+        self
+    }
+
+    /// Replaces the member who received the money.
+    pub const fn to(mut self, to: MemberId) -> Self {
+        self.to = to;
         self
     }
 
     /// Sets the note; blank text clears it.
     pub fn note(mut self, note: impl Into<String>) -> Self {
         self.note = Some(note.into());
+        self
+    }
+
+    /// Sets the time of day, or clears it with `None`.
+    pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
+        self.time = time.into();
         self
     }
 

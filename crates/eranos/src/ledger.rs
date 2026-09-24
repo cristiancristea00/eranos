@@ -62,37 +62,6 @@ impl Summary {
         }
     }
 
-    /// The sum of every expense's total (amount plus tip); transfers are not
-    /// spending and do not count.
-    #[must_use]
-    pub const fn total_spent(&self) -> Money {
-        Money::from_minor_units(self.total_spent, self.currency)
-    }
-
-    /// The totals of one member; all zero for a member without entries.
-    #[must_use]
-    pub fn member(&self, member: MemberId) -> MemberSummary {
-        let totals = self.members.get(&member).copied().unwrap_or_default();
-        MemberSummary {
-            currency: self.currency,
-            totals,
-        }
-    }
-
-    /// The totals of every member with a non-zero total, ordered by member.
-    #[must_use]
-    pub fn members(&self) -> impl ExactSizeIterator<Item = (MemberId, MemberSummary)> + '_ {
-        self.members.iter().map(|(&member, &totals)| {
-            (
-                member,
-                MemberSummary {
-                    currency: self.currency,
-                    totals,
-                },
-            )
-        })
-    }
-
     /// The spending in one category (`None` for uncategorised expenses).
     #[must_use]
     pub fn category_total(&self, category: Option<CategoryId>) -> Money {
@@ -137,6 +106,37 @@ impl Summary {
             .map(|(&(_, category), &total)| {
                 (category, Money::from_minor_units(total, self.currency))
             })
+    }
+
+    /// The totals of every member with a non-zero total, ordered by member.
+    #[must_use]
+    pub fn members(&self) -> impl ExactSizeIterator<Item = (MemberId, MemberSummary)> + '_ {
+        self.members.iter().map(|(&member, &totals)| {
+            (
+                member,
+                MemberSummary {
+                    currency: self.currency,
+                    totals,
+                },
+            )
+        })
+    }
+
+    /// The totals of one member; all zero for a member without entries.
+    #[must_use]
+    pub fn member(&self, member: MemberId) -> MemberSummary {
+        let totals = self.members.get(&member).copied().unwrap_or_default();
+        MemberSummary {
+            currency: self.currency,
+            totals,
+        }
+    }
+
+    /// The sum of every expense's total (amount plus tip); transfers are not
+    /// spending and do not count.
+    #[must_use]
+    pub const fn total_spent(&self) -> Money {
+        Money::from_minor_units(self.total_spent, self.currency)
     }
 }
 
@@ -249,18 +249,6 @@ pub struct ExpenseShares {
 }
 
 impl ExpenseShares {
-    /// The expense's total (amount plus tip).
-    #[must_use]
-    pub const fn total(&self) -> Money {
-        self.total
-    }
-
-    /// The part of the total that is tip.
-    #[must_use]
-    pub const fn tip(&self) -> Money {
-        self.tip
-    }
-
     /// What every involved member paid and consumed, ordered by member.
     #[must_use]
     pub fn members(&self) -> &[MemberShare] {
@@ -274,6 +262,18 @@ impl ExpenseShares {
             .binary_search_by_key(&member, MemberShare::member)
             .ok()
             .and_then(|index| self.members.get(index))
+    }
+
+    /// The part of the total that is tip.
+    #[must_use]
+    pub const fn tip(&self) -> Money {
+        self.tip
+    }
+
+    /// The expense's total (amount plus tip).
+    #[must_use]
+    pub const fn total(&self) -> Money {
+        self.total
     }
 }
 
@@ -449,16 +449,16 @@ impl Ledger {
         }
     }
 
+    pub(crate) const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
+        &self.pairs
+    }
+
     pub(crate) const fn summary(&self) -> &Summary {
         &self.summary
     }
 
     pub(crate) const fn currency(&self) -> Currency {
         self.summary.currency
-    }
-
-    pub(crate) const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
-        &self.pairs
     }
 
     /// Every non-zero net balance, ordered by member.

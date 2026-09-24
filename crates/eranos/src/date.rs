@@ -91,10 +91,10 @@ impl Date {
         Self::new(year, month, day)
     }
 
-    /// The year, 1 to 9999.
+    /// The day of the month, starting at 1.
     #[must_use]
-    pub const fn year(self) -> u16 {
-        self.year
+    pub const fn day(self) -> u8 {
+        self.day
     }
 
     /// The month, 1 (January) to 12 (December).
@@ -103,10 +103,10 @@ impl Date {
         self.month
     }
 
-    /// The day of the month, starting at 1.
+    /// The year, 1 to 9999.
     #[must_use]
-    pub const fn day(self) -> u8 {
-        self.day
+    pub const fn year(self) -> u16 {
+        self.year
     }
 }
 

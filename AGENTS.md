@@ -104,6 +104,13 @@ for test helpers and benchmark fixtures, which panic to report failure);
   order. No field order carries meaning: `Date` and `Time` write their
   ordering out by hand, and a table row in the examples fixes its columns
   with `#[tabled(order = N)]`.
+- **Accessors follow their fields.** An `impl` starts with its
+  constructors and associated constants, then lists the getters and
+  setters in field order: for each field, the method named after it, then
+  its other readers, then its setters. A method derived from one field
+  sits beside it (`tip_amount` after `tip`, `paid_by` before `payers`),
+  and methods that read several fields, such as `build`, come last.
+  `Group` heads each field's methods with a section comment.
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
   validating constructor (`serde(try_from = …)`); `Group` replays its

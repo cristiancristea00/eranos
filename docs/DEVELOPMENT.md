@@ -104,7 +104,8 @@ breaking.
    takes `impl Into<Option<T>>` so callers can clear it, a text field trims
    and treats blank as absent. The field goes where the field order of
    [AGENTS.md](../AGENTS.md) puts it, in the builder and the `*Record`
-   struct too.
+   struct too, and its getter and setter go where the accessor order puts
+   them.
 2. Validate it in the builder's `build()`, or in `Group::check_*` when the
    rule depends on the group.
 3. With `serde`: add `#[serde(skip_serializing_if = …)]` for an optional

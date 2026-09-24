@@ -50,15 +50,6 @@ impl Tip {
         }
     }
 
-    /// Returns the same tip shared by `distribution`.
-    #[must_use]
-    pub const fn distributed(self, distribution: TipDistribution) -> Self {
-        Self {
-            distribution,
-            ..self
-        }
-    }
-
     /// How the tip is expressed.
     #[must_use]
     pub const fn value(self) -> TipValue {
@@ -69,6 +60,15 @@ impl Tip {
     #[must_use]
     pub const fn distribution(self) -> TipDistribution {
         self.distribution
+    }
+
+    /// Returns the same tip shared by `distribution`.
+    #[must_use]
+    pub const fn distributed(self, distribution: TipDistribution) -> Self {
+        Self {
+            distribution,
+            ..self
+        }
     }
 
     /// The tip on `amount`, in the amount's currency.

@@ -72,6 +72,12 @@ impl Item {
         &self.name
     }
 
+    /// How the line total is divided.
+    #[must_use]
+    pub const fn split(&self) -> &Split {
+        &self.split
+    }
+
     /// The price of one unit.
     #[must_use]
     pub const fn unit_price(&self) -> Money {
@@ -82,12 +88,6 @@ impl Item {
     #[must_use]
     pub const fn quantity(&self) -> u32 {
         self.quantity
-    }
-
-    /// How the line total is divided.
-    #[must_use]
-    pub const fn split(&self) -> &Split {
-        &self.split
     }
 
     /// The unit price times the quantity.
@@ -119,15 +119,10 @@ impl ItemBuilder {
         self
     }
 
-    /// Replaces the unit price.
-    pub const fn unit_price(mut self, unit_price: Money) -> Self {
-        self.unit_price = unit_price;
-        self
-    }
-
-    /// Sets the number of units.
-    pub const fn quantity(mut self, quantity: u32) -> Self {
-        self.quantity = quantity;
+    /// Divides the line total equally among `members`; the same as
+    /// `split(Split::equal(members))`, and an error together with it.
+    pub fn shared_by(mut self, members: impl IntoIterator<Item = MemberId>) -> Self {
+        self.split.set_second(Split::equal(members));
         self
     }
 
@@ -137,10 +132,15 @@ impl ItemBuilder {
         self
     }
 
-    /// Divides the line total equally among `members`; the same as
-    /// `split(Split::equal(members))`, and an error together with it.
-    pub fn shared_by(mut self, members: impl IntoIterator<Item = MemberId>) -> Self {
-        self.split.set_second(Split::equal(members));
+    /// Replaces the unit price.
+    pub const fn unit_price(mut self, unit_price: Money) -> Self {
+        self.unit_price = unit_price;
+        self
+    }
+
+    /// Sets the number of units.
+    pub const fn quantity(mut self, quantity: u32) -> Self {
+        self.quantity = quantity;
         self
     }
 

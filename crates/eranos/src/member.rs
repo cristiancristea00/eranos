@@ -81,10 +81,10 @@ impl Member {
         &self.first_name
     }
 
-    /// The last name, if any.
+    /// The accounts the member can be paid to, in the order they were added.
     #[must_use]
-    pub fn last_name(&self) -> Option<&str> {
-        self.last_name.as_deref()
+    pub fn accounts(&self) -> &[Account] {
+        &self.accounts
     }
 
     /// The email address, if any.
@@ -93,16 +93,16 @@ impl Member {
         self.email.as_ref()
     }
 
+    /// The last name, if any.
+    #[must_use]
+    pub fn last_name(&self) -> Option<&str> {
+        self.last_name.as_deref()
+    }
+
     /// The phone number, if any.
     #[must_use]
     pub const fn phone(&self) -> Option<&PhoneNumber> {
         self.phone.as_ref()
-    }
-
-    /// The accounts the member can be paid to, in the order they were added.
-    #[must_use]
-    pub fn accounts(&self) -> &[Account] {
-        &self.accounts
     }
 }
 
@@ -125,24 +125,6 @@ impl MemberBuilder {
         self
     }
 
-    /// Sets the last name; blank text clears it.
-    pub fn last_name(mut self, last_name: impl Into<String>) -> Self {
-        self.last_name = Some(last_name.into());
-        self
-    }
-
-    /// Sets the email address, or clears it with `None`.
-    pub fn email(mut self, email: impl Into<Option<Email>>) -> Self {
-        self.email = email.into();
-        self
-    }
-
-    /// Sets the phone number, or clears it with `None`.
-    pub fn phone(mut self, phone: impl Into<Option<PhoneNumber>>) -> Self {
-        self.phone = phone.into();
-        self
-    }
-
     /// Appends an account.
     pub fn account(mut self, account: Account) -> Self {
         self.accounts.push(account);
@@ -152,6 +134,24 @@ impl MemberBuilder {
     /// Replaces every account.
     pub fn accounts(mut self, accounts: impl IntoIterator<Item = Account>) -> Self {
         self.accounts = accounts.into_iter().collect();
+        self
+    }
+
+    /// Sets the email address, or clears it with `None`.
+    pub fn email(mut self, email: impl Into<Option<Email>>) -> Self {
+        self.email = email.into();
+        self
+    }
+
+    /// Sets the last name; blank text clears it.
+    pub fn last_name(mut self, last_name: impl Into<String>) -> Self {
+        self.last_name = Some(last_name.into());
+        self
+    }
+
+    /// Sets the phone number, or clears it with `None`.
+    pub fn phone(mut self, phone: impl Into<Option<PhoneNumber>>) -> Self {
+        self.phone = phone.into();
         self
     }
 

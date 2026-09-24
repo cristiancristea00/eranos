@@ -107,22 +107,10 @@ impl Expense {
         }
     }
 
-    /// The name.
+    /// The amount before the tip, in the expense's currency.
     #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// The description, if any.
-    #[must_use]
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-
-    /// The category, if any.
-    #[must_use]
-    pub const fn category(&self) -> Option<CategoryId> {
-        self.category
+    pub const fn amount(&self) -> Money {
+        self.amount
     }
 
     /// The cost before the tip: the amount and, for an expense in another
@@ -132,10 +120,63 @@ impl Expense {
         Cost::from_parts(self.amount, self.exchange_rate)
     }
 
-    /// The amount before the tip, in the expense's currency.
+    /// The date of the expense.
     #[must_use]
-    pub const fn amount(&self) -> Money {
-        self.amount
+    pub const fn date(&self) -> Date {
+        self.date
+    }
+
+    /// The name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Who paid, and how much each.
+    #[must_use]
+    pub const fn payers(&self) -> &Split {
+        &self.payers
+    }
+
+    /// How the cost is shared.
+    #[must_use]
+    pub const fn split(&self) -> &ExpenseSplit {
+        &self.split
+    }
+
+    /// The amount plus the tip: what the payers paid.
+    #[must_use]
+    pub const fn total(&self) -> Money {
+        self.total
+    }
+
+    /// The category, if any.
+    #[must_use]
+    pub const fn category(&self) -> Option<CategoryId> {
+        self.category
+    }
+
+    /// The description, if any.
+    #[must_use]
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    /// The rate from the expense's currency into its group's currency:
+    /// [`ExchangeRate::ONE`] for a local cost.
+    #[must_use]
+    pub const fn exchange_rate(&self) -> ExchangeRate {
+        self.cost().exchange_rate()
+    }
+
+    pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {
+        self.exchange_rate = exchange_rate;
+    }
+
+    /// The time of day, if recorded.
+    #[must_use]
+    pub const fn time(&self) -> Option<Time> {
+        self.time
     }
 
     /// The tip, if any.
@@ -154,53 +195,12 @@ impl Expense {
         )
     }
 
-    /// The amount plus the tip: what the payers paid.
-    #[must_use]
-    pub const fn total(&self) -> Money {
-        self.total
-    }
-
-    /// The date of the expense.
-    #[must_use]
-    pub const fn date(&self) -> Date {
-        self.date
-    }
-
-    /// The time of day, if recorded.
-    #[must_use]
-    pub const fn time(&self) -> Option<Time> {
-        self.time
-    }
-
-    /// The rate from the expense's currency into its group's currency:
-    /// [`ExchangeRate::ONE`] for a local cost.
-    #[must_use]
-    pub const fn exchange_rate(&self) -> ExchangeRate {
-        self.cost().exchange_rate()
-    }
-
-    /// Who paid, and how much each.
-    #[must_use]
-    pub const fn payers(&self) -> &Split {
-        &self.payers
-    }
-
-    /// How the cost is shared.
-    #[must_use]
-    pub const fn split(&self) -> &ExpenseSplit {
-        &self.split
-    }
-
     /// Every member the expense involves, as a payer or as a participant.
     #[must_use]
     pub fn members(&self) -> BTreeSet<MemberId> {
         let mut members: BTreeSet<MemberId> = self.payers.members().collect();
         members.extend(self.split.participants());
         members
-    }
-
-    pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {
-        self.exchange_rate = exchange_rate;
     }
 }
 
@@ -250,24 +250,6 @@ pub struct ExpenseBuilder {
 }
 
 impl ExpenseBuilder {
-    /// Replaces the name.
-    pub fn name(mut self, name: impl Into<String>) -> Self {
-        self.name = name.into();
-        self
-    }
-
-    /// Sets the description; blank text clears it.
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.description = Some(description.into());
-        self
-    }
-
-    /// Sets the category, or clears it with `None`.
-    pub fn category(mut self, category: impl Into<Option<CategoryId>>) -> Self {
-        self.category = category.into();
-        self
-    }
-
     /// Replaces the cost (before the tip).
     ///
     /// A [`Money`] amount makes the cost local; to change the amount of a
@@ -278,21 +260,15 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Sets the tip, or clears it with `None`.
-    pub fn tip(mut self, tip: impl Into<Option<Tip>>) -> Self {
-        self.tip = tip.into();
-        self
-    }
-
     /// Replaces the date.
     pub const fn date(mut self, date: Date) -> Self {
         self.date = date;
         self
     }
 
-    /// Sets the time of day, or clears it with `None`.
-    pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
-        self.time = time.into();
+    /// Replaces the name.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
         self
     }
 
@@ -309,17 +285,41 @@ impl ExpenseBuilder {
         self
     }
 
+    /// Divides the amount item by item; the line totals must add up to the
+    /// amount.
+    pub fn items(mut self, items: impl IntoIterator<Item = Item>) -> Self {
+        self.split
+            .set_second(ExpenseSplit::Itemised(items.into_iter().collect()));
+        self
+    }
+
     /// Divides the whole amount by `split`.
     pub fn split(mut self, split: Split) -> Self {
         self.split.set_first(ExpenseSplit::Whole(split));
         self
     }
 
-    /// Divides the amount item by item; the line totals must add up to the
-    /// amount.
-    pub fn items(mut self, items: impl IntoIterator<Item = Item>) -> Self {
-        self.split
-            .set_second(ExpenseSplit::Itemised(items.into_iter().collect()));
+    /// Sets the category, or clears it with `None`.
+    pub fn category(mut self, category: impl Into<Option<CategoryId>>) -> Self {
+        self.category = category.into();
+        self
+    }
+
+    /// Sets the description; blank text clears it.
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    /// Sets the time of day, or clears it with `None`.
+    pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
+        self.time = time.into();
+        self
+    }
+
+    /// Sets the tip, or clears it with `None`.
+    pub fn tip(mut self, tip: impl Into<Option<Tip>>) -> Self {
+        self.tip = tip.into();
         self
     }
 
