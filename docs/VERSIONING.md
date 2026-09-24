@@ -10,7 +10,7 @@ changes it).
 
 | Surface                  | What is covered                                                                                                               |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour                                      |
+| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour, whichever internal crate holds it   |
 | The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                          |
 | The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order |
 | The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                |
@@ -21,10 +21,15 @@ change to the allocation order, the FNV-1a tie rotation, the rounding rule,
 or a strategy's payment choice changes what users see without any API
 change, and counts as breaking.
 
-The items of the internal crates that the facade does not re-export (such
-as `eranos_core::text`, `eranos_money::allocation`, and
-`eranos_expense::resolve_expense`), private modules, and the internal
-layout of `Group` move freely.
+The internal crates (`eranos-core` to `eranos-group`) are outside the
+contract on their own: they are not published, they take the workspace's
+version, and callers depend on the facade. A re-exported type is covered
+through its `eranos::` path, so moving it to another internal crate changes
+nothing the contract covers. What the facade does not re-export moves
+freely: the machinery the crates above use (such as `eranos_core::text`,
+`eranos_money::allocation`, `eranos_ledger::Ledger`, and
+`eranos_expense::resolve_expense`), the internal crates' own paths, private
+modules, and the internal layout of `Group`.
 
 ## 2. What moves the number
 
