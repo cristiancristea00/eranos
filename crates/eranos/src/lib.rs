@@ -99,7 +99,6 @@ pub mod money;
 pub mod settlement;
 pub mod transfer;
 
-mod resolution;
 #[cfg(feature = "serde")]
 mod serde_text;
 mod text;

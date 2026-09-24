@@ -1,10 +1,11 @@
-//! Resolving entries into group-currency shares.
+//! Resolving expenses into group-currency shares.
 //!
-//! Every figure a user entered is in the entry's own currency and is divided
-//! there first; a foreign entry's total is then converted once, and its
-//! shares are re-divided from the converted total, so both sides still add
-//! up exactly. Each division rotates its ties by the entry ID and a pass
-//! number, so the same entry resolves identically on every device.
+//! Every figure a user entered is in the expense's own currency and is
+//! divided there first; a foreign expense's total is then converted once,
+//! and its shares are re-divided from the converted total, so both sides
+//! still add up exactly. Each division rotates its ties by the expense ID
+//! and a pass number, so the same expense resolves identically on every
+//! device.
 
 use std::collections::BTreeMap;
 
@@ -14,7 +15,6 @@ use crate::id::MemberId;
 use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare};
 use crate::money::allocation::{allocate, rotation};
 use crate::money::{Currency, ExchangeRate, Money};
-use crate::transfer::Transfer;
 
 /// Allocation passes; each gets its own tie rotation.
 const PASS_SPLIT: u64 = 0;
@@ -132,18 +132,6 @@ pub(crate) fn resolve_expense(
         tip: money(tip),
         total: money(total),
     })
-}
-
-/// A transfer's amount in the group currency, in minor units.
-///
-/// # Errors
-///
-/// As for [`resolve_expense`].
-pub(crate) fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
-    Ok(
-        convert(transfer.amount(), transfer.cost().conversion(), currency)?
-            .unwrap_or_else(|| transfer.amount().minor_units()),
-    )
 }
 
 /// Converts `amount` at `rate` into `currency`: `None` for an amount without

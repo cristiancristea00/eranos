@@ -346,27 +346,6 @@ fn the_leftover_cent_rotates_with_the_expense_id() {
     assert_eq!(carriers.len(), 3);
 }
 
-/// A transfer converts like an expense.
-#[test]
-fn a_transfer_converts_like_an_expense() {
-    let (ana, bob) = (member(1), member(2));
-    // In the group currency, the amount is taken as is.
-    let local = Transfer::builder(eur(2500), day(), ana, bob)
-        .build()
-        .unwrap();
-    assert_eq!(resolve_transfer(&local, Currency::EUR), Ok(2500));
-    // In a foreign currency, it needs and uses the rate.
-    let cash = Transfer::builder(
-        Money::from_minor_units(Currency::RON, 10_000).at(ExchangeRate::parse("0.2011").unwrap()),
-        day(),
-        ana,
-        bob,
-    )
-    .build()
-    .unwrap();
-    assert_eq!(resolve_transfer(&cash, Currency::EUR), Ok(2011));
-}
-
 /// Builds a random valid expense from primitive draws: participants and
 /// payers by parts, an optional tip, and an optional conversion from JPY.
 fn random_expense(

@@ -1,12 +1,14 @@
 //! Expenses: what was bought, who paid, and how the cost is shared.
 
 mod item;
+mod resolution;
 mod split;
 mod tip;
 
 use std::collections::BTreeSet;
 
 pub use item::{Item, ItemBuilder};
+pub(crate) use resolution::resolve_expense;
 pub use split::{MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{Tip, TipDistribution, TipValue};
 

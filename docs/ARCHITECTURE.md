@@ -58,23 +58,23 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 ```mermaid
 flowchart TD
     GROUP["group<br/>Group, GroupBuilder, Language<br/>(+ serde replay)"]
-    RESOLUTION["resolution (private)<br/>entry → group-currency shares, pair debts"]
+    EXPENSE["expense<br/>Expense, Split, Item, Tip<br/>(+ resolution: shares, pair debts)"]
+    TRANSFER["transfer<br/>Transfer (+ resolution)"]
     LEDGER["ledger<br/>Summary, MemberSummary, Balance,<br/>ExpenseShares; Delta, Ledger"]
     SETTLEMENT["settlement<br/>SettlementStrategy, Settlement, Payment<br/>minimum · greedy · direct"]
-    EXPENSE["expense<br/>Expense, Split, Item, Tip"]
-    TRANSFER["transfer<br/>Transfer"]
     MEMBER["member<br/>Member, Email, PhoneNumber,<br/>Account, Iban, Username"]
     CATEGORY["category<br/>Category"]
     MONEY["money<br/>Currency, Money, Cost, ExchangeRate,<br/>Percentage, Parts, allocation"]
     BASE["id · calendar · error · text"]
-    GROUP --> RESOLUTION
+    GROUP --> EXPENSE
+    GROUP --> TRANSFER
     GROUP --> LEDGER
     GROUP --> SETTLEMENT
     GROUP --> MEMBER
     GROUP --> CATEGORY
-    RESOLUTION --> EXPENSE
-    RESOLUTION --> TRANSFER
-    RESOLUTION --> LEDGER
+    EXPENSE --> LEDGER
+    TRANSFER --> LEDGER
+    TRANSFER --> SETTLEMENT
     SETTLEMENT --> LEDGER
     EXPENSE --> MONEY
     TRANSFER --> MONEY
@@ -95,16 +95,13 @@ flowchart TD
              ┌──────────────┘      │      │      └──────────────┐
              ▼                     ▼      ▼                     ▼
  ┌───────────────────────┐ ┌────────────┐ ┌───────────────┐ ┌───────────┐
- │ resolution (private)  │ │ ledger     │ │ settlement    │ │ member    │
- │ entry → shares,       │►│ Summary,   │◄│ minimum,      │ │ category  │
- │ pair debts            │ │ Delta      │ │ greedy, direct│ └─────┬─────┘
- └───┬───────────────┬───┘ └─────┬──────┘ └───────────────┘       │
-     ▼               ▼           │                                │
- ┌─────────┐   ┌──────────┐      │                                │
- │ expense │   │ transfer │      │                                │
- └────┬────┘   └────┬─────┘      │                                │
-      └──────┬──────┴────────────┘                                │
-             ▼                                                    │
+ │ expense · transfer    │ │ ledger     │ │ settlement    │ │ member    │
+ │ (+ resolution: entry  │►│ Summary,   │◄│ minimum,      │ │ category  │
+ │ → shares, pair debts) │ │ Delta      │ │ greedy, direct│ └─────┬─────┘
+ └──┬──────────┬─────────┘ └─────┬──────┘ └───────▲───────┘       │
+    │          └─ transfer ──────┼────── Payment ─┘               │
+    ├────────────────────────────┘                                │
+    ▼                                                             │
  ┌───────────────────────────────────────┐                        │
  │ money: Currency, Money, Cost, rates,  │                        │
  │ Percentage, Parts, allocation         │                        │
@@ -118,8 +115,9 @@ flowchart TD
 </details>
 
 The root re-exports the types callers name; the modules group them for the
-documentation. `resolution` and `text` are private, and `money::allocation`
-is crate-private: they are free to change.
+documentation. `text` and the resolution inside `expense` and `transfer`
+are private, and `money::allocation` is crate-private: they are free to
+change.
 
 ## 3. Data model
 

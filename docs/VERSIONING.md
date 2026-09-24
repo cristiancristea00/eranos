@@ -21,7 +21,7 @@ change to the allocation order, the FNV-1a tie rotation, the rounding rule,
 or a strategy's payment choice changes what users see without any API
 change, and counts as breaking.
 
-Private modules (`resolution`, `text`, `money::allocation`) and the
+Private modules (`expense::resolution`, `text`, `money::allocation`) and the
 internal layout of `Group` move freely.
 
 ## 2. What moves the number

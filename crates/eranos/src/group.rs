@@ -17,15 +17,14 @@ pub use saved::SavedGroup;
 
 use crate::category::Category;
 use crate::error::{GroupError, SettlementError};
-use crate::expense::Expense;
+use crate::expense::{Expense, resolve_expense};
 use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use crate::ledger::{Delta, ExpenseShares, Ledger, Summary};
 use crate::member::Member;
 use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
-use crate::resolution::{resolve_expense, resolve_transfer};
 use crate::settlement::{self, Settlement, SettlementStrategy};
 use crate::text;
-use crate::transfer::Transfer;
+use crate::transfer::{Transfer, resolve_transfer};
 
 /// The version of the saved form. Every other version is refused: a newer
 /// one would be read with fields silently dropped, and no earlier one is

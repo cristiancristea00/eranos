@@ -1,10 +1,10 @@
 //! Transfers: money one member paid another, such as a repayment.
 
 use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::error::TransferError;
+use crate::error::{MoneyError, TransferError};
 use crate::id::{MemberId, TransferId};
 use crate::ledger::MemberPair;
-use crate::money::{Cost, ExchangeRate, Money};
+use crate::money::{Cost, Currency, ExchangeRate, Money};
 use crate::settlement::Payment;
 use crate::text;
 
@@ -305,6 +305,22 @@ impl TryFrom<TransferRecord> for Transfer {
             Some(note) => builder.note(note).build(),
             None => builder.build(),
         }
+    }
+}
+
+/// A transfer's amount in the group currency `currency`, in minor units.
+///
+/// The group has checked the kind of the transfer's cost against
+/// `currency` (`Group::check_cost`, or the rates of a currency change).
+///
+/// # Errors
+///
+/// [`MoneyError::Overflow`] when the conversion leaves the range of an
+/// amount.
+pub(crate) fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
+    match transfer.cost().conversion() {
+        None => Ok(transfer.amount().minor_units()),
+        Some(rate) => Ok(rate.convert(transfer.amount(), currency)?.minor_units()),
     }
 }
 

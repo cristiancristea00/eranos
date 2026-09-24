@@ -199,6 +199,26 @@ fn a_payment_becomes_the_transfer_that_records_it() {
     );
 }
 
+/// A transfer in the group currency would be counted at another amount, or
+/// a foreign one without its rate.
+#[test]
+fn a_transfer_converts_into_the_group_currency() {
+    // In the group currency, the amount is taken as is.
+    assert_eq!(
+        resolve_transfer(&repayment().build().unwrap(), Currency::EUR),
+        Ok(3_000)
+    );
+    // In a foreign currency, the rate converts it.
+    let cash = repayment()
+        .cost(
+            Money::from_minor_units(Currency::RON, 10_000)
+                .at(ExchangeRate::parse("0.2011").unwrap()),
+        )
+        .build()
+        .unwrap();
+    assert_eq!(resolve_transfer(&cash, Currency::EUR), Ok(2_011));
+}
+
 /// Two transfers would share an identifier, or an edited transfer would
 /// become another entry.
 #[test]

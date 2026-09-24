@@ -60,8 +60,8 @@ companion that pins concrete numbers.
 | Invariant                                                                                               | Where                                                                              |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | an allocation's parts add up to its total, each its exact share rounded down or up                      | `money/allocation/tests.rs`                                                        |
-| paid and consumed shares of an expense each add up to its total, in any currency                        | `resolution/tests.rs`                                                              |
-| the pairwise debts of an expense net to each member's paid minus consumed                               | `resolution/tests.rs`                                                              |
+| paid and consumed shares of an expense each add up to its total, in any currency                        | `expense/resolution/tests.rs`                                                      |
+| the pairwise debts of an expense net to each member's paid minus consumed                               | `expense/resolution/tests.rs`                                                      |
 | the exact solver finds the true minimum (checked against an exhaustive search)                          | `settlement/minimum/tests.rs`                                                      |
 | every plan clears every balance, pays only from debtors to creditors, and never overpays                | `settlement/minimum/tests.rs`, `settlement/greedy/tests.rs`, `tests/properties.rs` |
 | greedy needs at most n − 1 payments; the exact plan never more than greedy                              | `settlement/greedy/tests.rs`, `tests/properties.rs`                                |
@@ -156,10 +156,10 @@ a change no test noticed. It complements coverage: coverage says a line ran,
 mutation testing says a test would have noticed it was wrong. It is an
 occasional audit, run one file at a time (`.cargo/mutants.toml` sets the
 package, every feature, and a timeout floor); the arithmetic in
-`money/allocation.rs`, `resolution.rs`, and `settlement/minimum.rs` is where
-survivors matter most. Every feature includes `sequential-ids`, so an audit
-of `id.rs` also runs once with `--no-default-features` to reach the
-clock-based generator.
+`money/allocation.rs`, `expense/resolution.rs`, and
+`settlement/minimum.rs` is where survivors matter most. Every feature
+includes `sequential-ids`, so an audit of `id.rs` also runs once with
+`--no-default-features` to reach the clock-based generator.
 
 ## 7. Benchmarks
 
