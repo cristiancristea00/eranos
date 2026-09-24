@@ -53,9 +53,7 @@ fn a_blank_first_name_is_rejected() {
     for first_name in ["", "  ", "\t\n"] {
         assert_eq!(
             Member::builder(first_name).build(),
-            Err(ValueError::Empty {
-                field: Field::FirstName
-            }),
+            Err(MemberError::EmptyFirstName),
             "{first_name:?}"
         );
     }
@@ -179,9 +177,7 @@ fn a_renamed_member_is_validated_again() {
     // Blank replacement.
     assert_eq!(
         ana().to_builder().first_name(" ").build(),
-        Err(ValueError::Empty {
-            field: Field::FirstName
-        })
+        Err(MemberError::EmptyFirstName)
     );
 }
 

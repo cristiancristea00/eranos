@@ -14,7 +14,7 @@ pub use builder::GroupBuilder;
 pub use language::Language;
 
 use crate::category::Category;
-use crate::error::{Field, GroupError, SettlementError, ValueError};
+use crate::error::{GroupError, SettlementError};
 use crate::expense::Expense;
 use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use crate::ledger::{Delta, ExpenseShares, Ledger, Summary};
@@ -597,9 +597,9 @@ impl Group {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the name is blank.
-    pub fn set_name(&mut self, name: impl Into<String>) -> Result<(), ValueError> {
-        self.name = text::required(name, Field::GroupName)?;
+    /// [`GroupError::EmptyName`] when the name is blank.
+    pub fn set_name(&mut self, name: impl Into<String>) -> Result<(), GroupError> {
+        self.name = text::required(name, GroupError::EmptyName)?;
         Ok(())
     }
 

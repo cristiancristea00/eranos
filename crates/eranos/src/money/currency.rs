@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use iso4217_static::Currency as IsoCurrency;
 
-use crate::error::ValueError;
+use crate::error::MoneyError;
 
 /// An active ISO 4217 currency, such as [`Currency::EUR`].
 ///
@@ -29,7 +29,7 @@ use crate::error::ValueError;
 /// assert_eq!(Currency::BHD.decimal_places(), 3);
 /// assert_eq!(Currency::EUR.name(), "Euro");
 /// assert_eq!(Currency::EUR.numeric_code(), 978);
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Currency {
@@ -88,10 +88,10 @@ impl Currency {
     ///
     /// # Errors
     ///
-    /// [`ValueError::UnknownCurrency`] when the code is not an active ISO 4217
+    /// [`MoneyError::UnknownCurrency`] when the code is not an active ISO 4217
     /// code with a minor unit.
-    pub fn from_code(code: &str) -> Result<Self, ValueError> {
-        Self::lookup(&code.trim().to_ascii_uppercase()).ok_or(ValueError::UnknownCurrency)
+    pub fn from_code(code: &str) -> Result<Self, MoneyError> {
+        Self::lookup(&code.trim().to_ascii_uppercase()).ok_or(MoneyError::UnknownCurrency)
     }
 
     /// The currency whose code is exactly `code`, three uppercase ASCII
@@ -166,7 +166,7 @@ impl fmt::Display for Currency {
 }
 
 impl FromStr for Currency {
-    type Err = ValueError;
+    type Err = MoneyError;
 
     fn from_str(code: &str) -> Result<Self, Self::Err> {
         Self::from_code(code)

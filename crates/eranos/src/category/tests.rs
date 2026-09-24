@@ -28,9 +28,7 @@ fn a_blank_category_name_is_rejected() {
     for name in ["", "   ", "\t\n"] {
         assert_eq!(
             Category::new(name),
-            Err(ValueError::Empty {
-                field: Field::CategoryName
-            }),
+            Err(CategoryError::EmptyName),
             "{name:?}"
         );
     }
@@ -131,12 +129,7 @@ fn a_rename_keeps_the_identifier() {
     let groceries = food.renamed(" Groceries ").unwrap();
     assert_eq!(groceries.id(), food.id());
     assert_eq!(groceries.name(), "Groceries");
-    assert_eq!(
-        food.renamed(" "),
-        Err(ValueError::Empty {
-            field: Field::CategoryName
-        })
-    );
+    assert_eq!(food.renamed(" "), Err(CategoryError::EmptyName));
 }
 
 /// Saved categories would fail to load, load under another identifier, or

@@ -11,7 +11,7 @@ pub use split::{MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{Tip, TipDistribution, TipValue};
 
 use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::error::{ExpenseError, Field};
+use crate::error::ExpenseError;
 use crate::id::{CategoryId, ExpenseId, MemberId};
 use crate::money::{Cost, ExchangeRate, Money};
 use crate::text;
@@ -414,7 +414,7 @@ impl ExpenseBuilder {
     ///
     /// # Errors
     ///
-    /// - [`ExpenseError::Value`] when the name is blank.
+    /// - [`ExpenseError::EmptyName`] when the name is blank.
     /// - [`ExpenseError::NonPositiveAmount`] when the amount is not positive.
     /// - [`ExpenseError::NoItems`] or [`ExpenseError::ItemsDoNotAddUp`] for
     ///   items that are missing or do not add up to the amount.
@@ -424,7 +424,7 @@ impl ExpenseBuilder {
     /// - Any error of an invalid [`Split`]: the participants' split must
     ///   divide the amount, the payers' split the total.
     pub fn build(self) -> Result<Expense, ExpenseError> {
-        let name = text::required(self.name, Field::ExpenseName)?;
+        let name = text::required(self.name, ExpenseError::EmptyName)?;
         let amount = self.cost.amount();
         if !amount.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);

@@ -75,7 +75,7 @@ fn malformed_rates_are_rejected() {
     for text in ["0", "0.000", "0.0", "000"] {
         assert_eq!(
             ExchangeRate::parse(text),
-            Err(ValueError::InvalidExchangeRate),
+            Err(MoneyError::InvalidExchangeRate),
             "{text}"
         );
     }
@@ -83,7 +83,7 @@ fn malformed_rates_are_rejected() {
     for text in ["-1", "+1", "1,5", "1 5", "1e3", "1.2.3", "abc", "4.97a"] {
         assert_eq!(
             ExchangeRate::parse(text),
-            Err(ValueError::InvalidExchangeRate),
+            Err(MoneyError::InvalidExchangeRate),
             "{text}"
         );
     }
@@ -91,7 +91,7 @@ fn malformed_rates_are_rejected() {
     for text in [".5", "5.", ".", "", "  "] {
         assert_eq!(
             ExchangeRate::parse(text),
-            Err(ValueError::InvalidExchangeRate),
+            Err(MoneyError::InvalidExchangeRate),
             "{text:?}"
         );
     }
@@ -108,7 +108,7 @@ fn rates_with_more_than_18_decimals_are_rejected() {
     for text in ["0.0000000000000000001", "1.0000000000000000000"] {
         assert_eq!(
             ExchangeRate::parse(text),
-            Err(ValueError::InvalidExchangeRate),
+            Err(MoneyError::InvalidExchangeRate),
             "{text}"
         );
     }
@@ -116,7 +116,7 @@ fn rates_with_more_than_18_decimals_are_rejected() {
     let long = format!("1.{}", "0".repeat(256));
     assert_eq!(
         ExchangeRate::parse(&long),
-        Err(ValueError::InvalidExchangeRate)
+        Err(MoneyError::InvalidExchangeRate)
     );
 }
 
@@ -135,7 +135,7 @@ fn rates_with_more_digits_than_fit_are_rejected() {
     ] {
         assert_eq!(
             ExchangeRate::parse(text),
-            Err(ValueError::InvalidExchangeRate),
+            Err(MoneyError::InvalidExchangeRate),
             "{text}"
         );
     }
@@ -148,21 +148,21 @@ fn from_decimal_validates_and_normalises() {
     // A zero mantissa.
     assert_eq!(
         ExchangeRate::from_decimal(0, 0),
-        Err(ValueError::InvalidExchangeRate)
+        Err(MoneyError::InvalidExchangeRate)
     );
     assert_eq!(
         ExchangeRate::from_decimal(0, 4),
-        Err(ValueError::InvalidExchangeRate)
+        Err(MoneyError::InvalidExchangeRate)
     );
     // The scale limit.
     assert!(ExchangeRate::from_decimal(1, 18).is_ok());
     assert_eq!(
         ExchangeRate::from_decimal(1, 19),
-        Err(ValueError::InvalidExchangeRate)
+        Err(MoneyError::InvalidExchangeRate)
     );
     assert_eq!(
         ExchangeRate::from_decimal(10, 19),
-        Err(ValueError::InvalidExchangeRate)
+        Err(MoneyError::InvalidExchangeRate)
     );
     // Normalisation.
     assert_eq!(ExchangeRate::from_decimal(49_765, 4), Ok(rate("4.9765")));
@@ -285,17 +285,17 @@ fn conversions_out_of_range_overflow() {
     // The converted amount does not fit.
     assert_eq!(
         rate("2").convert(euros(i64::MAX), Currency::EUR),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(
         rate("2").convert(euros(i64::MIN), Currency::EUR),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     // The intermediate product does not fit.
     let largest = ExchangeRate::from_decimal(u64::MAX, 0).unwrap();
     assert_eq!(
         largest.convert(euros(i64::MAX), Currency::BHD),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     // The largest amount at rate 1 fits.
     assert_eq!(

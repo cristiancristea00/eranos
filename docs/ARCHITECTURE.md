@@ -335,17 +335,27 @@ group (members exist and are not archived, the category exists, and the
 cost is converted exactly when the entry is foreign) and against the
 ledger's range.
 
-| Error             | Returned by                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------ |
-| `ValueError`      | parsing and constructing values: text, amounts, rates, ratios, dates, contacts, IBANs, currencies, IDs |
-| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                                          |
-| `TransferError`   | `TransferBuilder::build`                                                                               |
-| `GroupError`      | every group mutation; the group is unchanged when one is returned                                      |
-| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                                 |
+| Error             | Returned by                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `IdError`         | reading an identifier from text                                                             |
+| `CalendarError`   | building and reading dates and times of day                                                 |
+| `MoneyError`      | building, reading, and combining amounts, currencies, rates, percentages, and parts         |
+| `AccountError`    | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                |
+| `ContactError`    | `Email::parse`, `PhoneNumber::parse`                                                        |
+| `MemberError`     | `MemberBuilder::build`                                                                      |
+| `CategoryError`   | `Category::new`, `Category::renamed`                                                        |
+| `LanguageError`   | `Language::parse`                                                                           |
+| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                               |
+| `TransferError`   | `TransferBuilder::build`                                                                    |
+| `GroupError`      | `GroupBuilder::build` and every group mutation; the group is unchanged when one is returned |
+| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                      |
 
-Every error enum is `#[non_exhaustive]` and built with `thiserror`. Messages
-are lowercase without a trailing full stop and never repeat the rejected text,
-because inputs include account numbers and contact details.
+Each module has one error enum, `#[non_exhaustive]` and built with
+`thiserror`, and none wraps another: a function reports the failure of its
+own module, so a caller that mixes modules uses its own error type or
+`Box<dyn Error>`. Messages are lowercase without a trailing full stop and
+never repeat the rejected text, because inputs include account numbers and
+contact details.
 
 ## 9. The serialised form
 

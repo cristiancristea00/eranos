@@ -57,7 +57,7 @@ fn malformed_tags_are_rejected() {
     for text in ["ro_RO", "ro RO", "ro.RO"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -66,7 +66,7 @@ fn malformed_tags_are_rejected() {
     for text in ["r", "x-private", "abcdefghi", "123", "e1", "é-FR"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -74,7 +74,7 @@ fn malformed_tags_are_rejected() {
     for text in ["abcd", "abcde", "abcdefgh", "root"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -82,7 +82,7 @@ fn malformed_tags_are_rejected() {
     for text in ["en-", "-en", "en--US", "-"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -90,7 +90,7 @@ fn malformed_tags_are_rejected() {
     for text in ["en-abcdefghi", "en-U$", "en-ÜS"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -98,7 +98,7 @@ fn malformed_tags_are_rejected() {
     for text in ["", "   "] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text:?}"
         );
     }
@@ -112,7 +112,7 @@ fn misplaced_or_repeated_subtags_are_rejected() {
     for text in ["en-a", "en-u", "en-x", "en-a-b"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -121,7 +121,7 @@ fn misplaced_or_repeated_subtags_are_rejected() {
     for text in ["en-US-US", "en-US-Latn", "de-1901-1901", "en-a-bbb-a-ccc"] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }
@@ -143,7 +143,7 @@ fn extended_and_grandfathered_tags_are_rejected() {
     ] {
         assert_eq!(
             Language::parse(text),
-            Err(ValueError::InvalidLanguage),
+            Err(LanguageError::InvalidLanguage),
             "{text}"
         );
     }

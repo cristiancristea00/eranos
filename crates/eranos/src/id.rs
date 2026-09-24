@@ -9,7 +9,7 @@ use std::sync::{Mutex, PoisonError};
 
 use uuid::Uuid;
 
-use crate::error::ValueError;
+use crate::error::IdError;
 
 /// Held while an identifier is generated. uuid's shared v7 context reads the
 /// clock before it takes its own lock, and when a thread is paused between
@@ -45,7 +45,7 @@ macro_rules! define_id {
         #[doc = concat!("let parsed: ", stringify!($name), " = id.to_string().parse()?;")]
         /// assert_eq!(parsed, id);
         #[doc = concat!("assert_eq!(", stringify!($name), "::from_bytes(id.to_bytes()), id);")]
-        /// # Ok::<(), eranos::error::ValueError>(())
+        /// # Ok::<(), eranos::error::IdError>(())
         /// ```
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(transparent))]
@@ -83,11 +83,11 @@ macro_rules! define_id {
         }
 
         impl FromStr for $name {
-            type Err = ValueError;
+            type Err = IdError;
 
             /// Parses the hyphenated, simple, braced, or URN UUID text form.
             fn from_str(text: &str) -> Result<Self, Self::Err> {
-                Uuid::try_parse(text.trim()).map(Self).map_err(|_| ValueError::InvalidId)
+                Uuid::try_parse(text.trim()).map(Self).map_err(|_| IdError::InvalidId)
             }
         }
     };

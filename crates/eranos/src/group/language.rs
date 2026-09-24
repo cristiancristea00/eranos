@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use icu_locale_core::Locale;
 
-use crate::error::ValueError;
+use crate::error::LanguageError;
 
 /// A language tag, such as `en`, `ro-RO`, or `zh-Hant-TW`: a Unicode BCP 47
 /// locale identifier (UTS #35), the rule the locale APIs of iOS, Android, and
@@ -26,7 +26,7 @@ use crate::error::ValueError;
 /// assert_eq!(Language::parse("ro-RO")?.as_str(), "ro-RO");
 /// assert_eq!(Language::parse("EN-gb")?.as_str(), "en-GB");
 /// assert!(Language::parse("ro_RO").is_err());
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::LanguageError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Language(String);
@@ -37,12 +37,12 @@ impl Language {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidLanguage`] when the text is not a Unicode BCP 47
+    /// [`LanguageError::InvalidLanguage`] when the text is not a Unicode BCP 47
     /// locale identifier.
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, LanguageError> {
         Locale::normalize(text.trim())
             .map(|canonical| Self(canonical.into_owned()))
-            .map_err(|_| ValueError::InvalidLanguage)
+            .map_err(|_| LanguageError::InvalidLanguage)
     }
 
     /// The tag in canonical form, such as `en-GB`.
@@ -59,7 +59,7 @@ impl fmt::Display for Language {
 }
 
 impl FromStr for Language {
-    type Err = ValueError;
+    type Err = LanguageError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)

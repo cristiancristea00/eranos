@@ -4,7 +4,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::error::ValueError;
+use crate::error::MoneyError;
 
 /// A percentage with two decimal places, stored as basis points (1 % = 100).
 ///
@@ -20,7 +20,7 @@ use crate::error::ValueError;
 /// assert_eq!(third.basis_points(), 3333);
 /// assert_eq!(third.to_string(), "33.33%");
 /// assert_eq!(Percentage::parse("12.5%")?, Percentage::from_basis_points(1250));
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[cfg_attr(
@@ -48,14 +48,14 @@ impl Percentage {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidPercentage`] for anything else, including values
+    /// [`MoneyError::InvalidPercentage`] for anything else, including values
     /// that do not fit in 32-bit basis points.
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, MoneyError> {
         let text = text.trim();
         let number = text.strip_suffix('%').map_or(text, str::trim_end);
         parse_hundredths(number)
             .map(Self)
-            .ok_or(ValueError::InvalidPercentage)
+            .ok_or(MoneyError::InvalidPercentage)
     }
 
     /// The percentage in basis points: 3333 for 33.33 %.
@@ -72,7 +72,7 @@ impl fmt::Display for Percentage {
 }
 
 impl FromStr for Percentage {
-    type Err = ValueError;
+    type Err = MoneyError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)
@@ -95,7 +95,7 @@ impl FromStr for Percentage {
 /// assert_eq!(half.hundredths(), 50);
 /// assert_eq!(Parts::from_whole(2)?.to_string(), "2");
 /// assert!(Parts::parse("0").is_err());
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(
@@ -113,10 +113,10 @@ impl Parts {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidParts`] when `hundredths` is zero.
-    pub const fn from_hundredths(hundredths: u32) -> Result<Self, ValueError> {
+    /// [`MoneyError::InvalidParts`] when `hundredths` is zero.
+    pub const fn from_hundredths(hundredths: u32) -> Result<Self, MoneyError> {
         if hundredths == 0 {
-            return Err(ValueError::InvalidParts);
+            return Err(MoneyError::InvalidParts);
         }
         Ok(Self(hundredths))
     }
@@ -125,12 +125,12 @@ impl Parts {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidParts`] when `parts` is zero or above
+    /// [`MoneyError::InvalidParts`] when `parts` is zero or above
     /// `u32::MAX / 100`.
-    pub const fn from_whole(parts: u32) -> Result<Self, ValueError> {
+    pub const fn from_whole(parts: u32) -> Result<Self, MoneyError> {
         match parts.checked_mul(100) {
             Some(hundredths) => Self::from_hundredths(hundredths),
-            None => Err(ValueError::InvalidParts),
+            None => Err(MoneyError::InvalidParts),
         }
     }
 
@@ -139,9 +139,9 @@ impl Parts {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidParts`] for anything else, zero included.
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
-        let hundredths = parse_hundredths(text.trim()).ok_or(ValueError::InvalidParts)?;
+    /// [`MoneyError::InvalidParts`] for anything else, zero included.
+    pub fn parse(text: &str) -> Result<Self, MoneyError> {
+        let hundredths = parse_hundredths(text.trim()).ok_or(MoneyError::InvalidParts)?;
         Self::from_hundredths(hundredths)
     }
 
@@ -159,7 +159,7 @@ impl fmt::Display for Parts {
 }
 
 impl FromStr for Parts {
-    type Err = ValueError;
+    type Err = MoneyError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)
@@ -167,7 +167,7 @@ impl FromStr for Parts {
 }
 
 impl TryFrom<u32> for Parts {
-    type Error = ValueError;
+    type Error = MoneyError;
 
     fn try_from(hundredths: u32) -> Result<Self, Self::Error> {
         Self::from_hundredths(hundredths)

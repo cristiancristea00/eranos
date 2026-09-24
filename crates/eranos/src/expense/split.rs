@@ -41,7 +41,7 @@ use crate::money::{Money, Parts, Percentage};
 /// ]);
 /// assert_eq!(exact.members().collect::<Vec<_>>(), [ana, bob]);
 /// # let _ = (even, couple, fixed);
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(

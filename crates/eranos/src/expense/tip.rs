@@ -23,7 +23,7 @@ use crate::money::{Money, Percentage};
 /// assert_eq!(round_up.distribution(), TipDistribution::Equal);
 ///
 /// assert_eq!(Tip::default(), Tip::percentage(Percentage::ZERO));
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

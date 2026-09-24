@@ -33,7 +33,7 @@ use crate::money::{ExchangeRate, Money};
 /// // A corrected amount keeps the rate.
 /// let corrected = fuel.with_amount(Money::parse("450.00", Currency::RON)?);
 /// assert_eq!(corrected.exchange_rate(), rate);
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(

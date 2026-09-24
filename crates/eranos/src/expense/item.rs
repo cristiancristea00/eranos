@@ -1,6 +1,6 @@
 //! Receipt lines of an itemised expense.
 
-use crate::error::{ExpenseError, Field};
+use crate::error::ExpenseError;
 use crate::expense::Split;
 use crate::id::MemberId;
 use crate::money::Money;
@@ -165,13 +165,13 @@ impl ItemBuilder {
     ///
     /// # Errors
     ///
-    /// - [`ExpenseError::Value`] when the name is blank.
+    /// - [`ExpenseError::EmptyItemName`] when the name is blank.
     /// - [`ExpenseError::NonPositiveAmount`] when the unit price is not
     ///   positive, and [`ExpenseError::ZeroQuantity`] for a quantity of 0.
     /// - [`ExpenseError::Overflow`] when the line total does not fit.
     /// - Any error of an invalid [`Split`] for the line total.
     pub fn build(self) -> Result<Item, ExpenseError> {
-        let name = text::required(self.name, Field::ItemName)?;
+        let name = text::required(self.name, ExpenseError::EmptyItemName)?;
         if !self.unit_price.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);
         }

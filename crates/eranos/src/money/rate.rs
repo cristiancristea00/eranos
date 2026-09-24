@@ -3,7 +3,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::error::ValueError;
+use crate::error::MoneyError;
 use crate::money::allocation::divide_rounding_half_away;
 use crate::money::{Currency, Money};
 
@@ -26,7 +26,7 @@ const MAX_SCALE: u8 = 18;
 /// let rate = ExchangeRate::parse("4.9765")?;
 /// let converted = rate.convert(Money::parse("10.00", Currency::EUR)?, Currency::RON)?;
 /// assert_eq!(converted, Money::parse("49.77", Currency::RON)?); // 49.765 rounds half up
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExchangeRate {
@@ -50,11 +50,11 @@ impl ExchangeRate {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidExchangeRate`] when `mantissa` is zero or `scale`
+    /// [`MoneyError::InvalidExchangeRate`] when `mantissa` is zero or `scale`
     /// is above 18.
-    pub const fn from_decimal(mantissa: u64, scale: u8) -> Result<Self, ValueError> {
+    pub const fn from_decimal(mantissa: u64, scale: u8) -> Result<Self, MoneyError> {
         if mantissa == 0 || scale > MAX_SCALE {
-            return Err(ValueError::InvalidExchangeRate);
+            return Err(MoneyError::InvalidExchangeRate);
         }
         let (mut mantissa, mut scale) = (mantissa, scale);
         while scale > 0 && mantissa % 10 == 0 {
@@ -68,24 +68,24 @@ impl ExchangeRate {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidExchangeRate`] when the text is not digits with
+    /// [`MoneyError::InvalidExchangeRate`] when the text is not digits with
     /// an optional `.` followed by digits, is zero, has more than 18 decimal
     /// places, or has more significant digits than fit in 64 bits.
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, MoneyError> {
         let text = text.trim();
         let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
         let is_digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
         if whole.is_empty() || !is_digits(whole) || !is_digits(fraction) || text.ends_with('.') {
-            return Err(ValueError::InvalidExchangeRate);
+            return Err(MoneyError::InvalidExchangeRate);
         }
-        let scale = u8::try_from(fraction.len()).map_err(|_| ValueError::InvalidExchangeRate)?;
+        let scale = u8::try_from(fraction.len()).map_err(|_| MoneyError::InvalidExchangeRate)?;
         let mantissa = whole
             .bytes()
             .chain(fraction.bytes())
             .try_fold(0_u64, |value, digit| {
                 value.checked_mul(10)?.checked_add(u64::from(digit - b'0'))
             })
-            .ok_or(ValueError::InvalidExchangeRate)?;
+            .ok_or(MoneyError::InvalidExchangeRate)?;
         Self::from_decimal(mantissa, scale)
     }
 
@@ -109,9 +109,9 @@ impl ExchangeRate {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Overflow`] when the converted amount does not fit in
+    /// [`MoneyError::Overflow`] when the converted amount does not fit in
     /// 64-bit minor units.
-    pub fn convert(self, amount: Money, target: Currency) -> Result<Money, ValueError> {
+    pub fn convert(self, amount: Money, target: Currency) -> Result<Money, MoneyError> {
         let source_places = i32::from(amount.currency().decimal_places());
         let target_places = i32::from(target.decimal_places());
         // amount × mantissa × 10^(target − source) / 10^scale, with the
@@ -124,10 +124,10 @@ impl ExchangeRate {
         // ten are at most 10^4 and 10^22.
         let numerator = (i128::from(amount.minor_units()) * i128::from(self.mantissa))
             .checked_mul(10_i128.pow(numerator_power))
-            .ok_or(ValueError::Overflow)?;
+            .ok_or(MoneyError::Overflow)?;
         let denominator = 10_i128.pow(denominator_power);
         let converted = divide_rounding_half_away(numerator, denominator);
-        let minor_units = i64::try_from(converted).map_err(|_| ValueError::Overflow)?;
+        let minor_units = i64::try_from(converted).map_err(|_| MoneyError::Overflow)?;
         Ok(Money::from_minor_units(target, minor_units))
     }
 }
@@ -149,7 +149,7 @@ impl fmt::Display for ExchangeRate {
 }
 
 impl FromStr for ExchangeRate {
-    type Err = ValueError;
+    type Err = MoneyError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)

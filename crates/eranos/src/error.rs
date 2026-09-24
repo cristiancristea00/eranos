@@ -1,17 +1,40 @@
-//! Error types, one per kind of operation.
+//! Error types, one per module: every function reports the failure of its
+//! own module, and no error wraps another.
 //!
 //! No error echoes the text it rejected: inputs include account numbers and
 //! contact details, and error messages end up in logs.
 
-use std::fmt;
-
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
 
-/// A single input value that failed validation.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+/// An identifier that could not be read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
-pub enum ValueError {
+pub enum IdError {
+    /// Text that is not a UUID.
+    #[error("invalid identifier: expected a UUID")]
+    InvalidId,
+}
+
+/// A calendar date or a time of day that could not be built or read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
+#[non_exhaustive]
+pub enum CalendarError {
+    /// A calendar date that does not exist, is outside years 1 to 9999, or is
+    /// not ISO 8601 text.
+    #[error("invalid date: expected an existing ISO 8601 date between years 1 and 9999")]
+    InvalidDate,
+    /// A time of day that does not exist, has seconds, or is not ISO 8601
+    /// text.
+    #[error("invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")]
+    InvalidTime,
+}
+
+/// An amount, a currency, an exchange rate, a percentage, or a number of
+/// parts that could not be built, read, or computed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
+#[non_exhaustive]
+pub enum MoneyError {
     /// Arithmetic between amounts of two different currencies.
     #[error("cannot combine {left} and {right} amounts")]
     CurrencyMismatch {
@@ -20,37 +43,13 @@ pub enum ValueError {
         /// The currency of the right operand.
         right: Currency,
     },
-    /// A required text field is empty after trimming.
-    #[error("the {field} must not be empty")]
-    Empty {
-        /// The field that was empty.
-        field: Field,
-    },
     /// An amount that is not a decimal number.
     #[error("invalid amount: expected digits with an optional `.` and sign")]
     InvalidAmount,
-    /// A calendar date that does not exist, is outside years 1 to 9999, or is
-    /// not ISO 8601 text.
-    #[error("invalid date: expected an existing ISO 8601 date between years 1 and 9999")]
-    InvalidDate,
-    /// An email address that breaks the RFC 5321 and 5322 rules: no local
-    /// part or domain around an `@`, a malformed one, one too long, or
-    /// whitespace or an invisible character.
-    #[error("invalid email address")]
-    InvalidEmail,
     /// An exchange rate that is not a positive decimal number with at most 18
     /// decimal places.
     #[error("invalid exchange rate: expected a positive number with at most 18 decimal places")]
     InvalidExchangeRate,
-    /// An IBAN that failed validation.
-    #[error("invalid IBAN: {0}")]
-    InvalidIban(IbanError),
-    /// An identifier that is not UUID text.
-    #[error("invalid identifier: expected a UUID")]
-    InvalidId,
-    /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
-    #[error("invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`")]
-    InvalidLanguage,
     /// A number of parts that is not a positive decimal number with at most
     /// two decimal places.
     #[error("invalid parts: expected a positive number with at most 2 decimal places")]
@@ -59,14 +58,6 @@ pub enum ValueError {
     /// places.
     #[error("invalid percentage: expected a number with at most 2 decimal places")]
     InvalidPercentage,
-    /// A phone number that does not start with `+`, holds a letter or an
-    /// extension, or is not valid in its country's numbering plan.
-    #[error("invalid phone number: expected `+` and a number valid in its country")]
-    InvalidPhoneNumber,
-    /// A time of day that does not exist, has seconds, or is not ISO 8601
-    /// text.
-    #[error("invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")]
-    InvalidTime,
     /// A number or a result that does not fit its range.
     #[error("value out of range")]
     Overflow,
@@ -83,38 +74,61 @@ pub enum ValueError {
     UnknownCurrency,
 }
 
-/// The text field a [`ValueError::Empty`] refers to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// A payment account, or its details, that could not be built.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
-pub enum Field {
-    /// [`Account::name`](crate::Account::name).
-    AccountName,
-    /// [`Category::name`](crate::Category::name).
-    CategoryName,
-    /// [`Expense::name`](crate::Expense::name).
-    ExpenseName,
-    /// [`Member::first_name`](crate::Member::first_name).
-    FirstName,
-    /// [`Group::name`](crate::Group::name).
-    GroupName,
-    /// [`Item::name`](crate::Item::name).
-    ItemName,
-    /// A [`Username`](crate::Username).
-    Username,
+pub enum AccountError {
+    /// An account whose name is blank.
+    #[error("the account name must not be empty")]
+    EmptyName,
+    /// A username that is blank.
+    #[error("the username must not be empty")]
+    EmptyUsername,
+    /// An IBAN that failed validation, and why.
+    #[error("invalid IBAN: {0}")]
+    InvalidIban(IbanError),
 }
 
-impl fmt::Display for Field {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(match self {
-            Self::AccountName => "account name",
-            Self::CategoryName => "category name",
-            Self::ExpenseName => "expense name",
-            Self::FirstName => "first name",
-            Self::GroupName => "group name",
-            Self::ItemName => "item name",
-            Self::Username => "username",
-        })
-    }
+/// A contact detail that could not be read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
+#[non_exhaustive]
+pub enum ContactError {
+    /// An email address that breaks the RFC 5321 and 5322 rules: no local
+    /// part or domain around an `@`, a malformed one, one too long, or
+    /// whitespace or an invisible character.
+    #[error("invalid email address")]
+    InvalidEmail,
+    /// A phone number that does not start with `+`, holds a letter or an
+    /// extension, or is not valid in its country's numbering plan.
+    #[error("invalid phone number: expected `+` and a number valid in its country")]
+    InvalidPhoneNumber,
+}
+
+/// A [`Member`](crate::Member) that could not be built.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
+#[non_exhaustive]
+pub enum MemberError {
+    /// A first name that is blank.
+    #[error("the first name must not be empty")]
+    EmptyFirstName,
+}
+
+/// A [`Category`](crate::Category) that could not be built or renamed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
+#[non_exhaustive]
+pub enum CategoryError {
+    /// A name that is blank.
+    #[error("the category name must not be empty")]
+    EmptyName,
+}
+
+/// A language tag that could not be read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
+#[non_exhaustive]
+pub enum LanguageError {
+    /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
+    #[error("invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`")]
+    InvalidLanguage,
 }
 
 /// Why an IBAN was rejected.
@@ -152,7 +166,7 @@ pub enum IbanError {
 
 /// An [`Expense`](crate::Expense) or [`Item`](crate::Item) whose parts do not
 /// fit together.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExpenseError {
     /// The amounts of a split do not add up to the amount being split.
@@ -177,6 +191,12 @@ pub enum ExpenseError {
         /// The repeated member.
         member: MemberId,
     },
+    /// An item whose name is blank.
+    #[error("the item name must not be empty")]
+    EmptyItemName,
+    /// An expense whose name is blank.
+    #[error("the expense name must not be empty")]
+    EmptyName,
     /// A split lists no member.
     #[error("a split needs at least one member")]
     EmptySplit,
@@ -212,16 +232,13 @@ pub enum ExpenseError {
         /// The sum of the percentages, in basis points (100 % = 10 000).
         total_basis_points: u64,
     },
-    /// A field value is invalid.
-    #[error(transparent)]
-    Value(#[from] ValueError),
     /// An item quantity of zero.
     #[error("an item quantity must be at least 1")]
     ZeroQuantity,
 }
 
 /// A [`Transfer`](crate::Transfer) that cannot exist.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
 pub enum TransferError {
     /// The amount is zero or negative.
@@ -230,13 +247,10 @@ pub enum TransferError {
     /// The sender and the recipient are the same member.
     #[error("a transfer needs two different members")]
     SameMember,
-    /// A field value is invalid.
-    #[error(transparent)]
-    Value(#[from] ValueError),
 }
 
-/// A [`Group`](crate::Group) operation that would break the group's
-/// consistency; the group is unchanged when one is returned.
+/// A [`Group`](crate::Group) that could not be built, or an operation that
+/// would break its consistency; the group is unchanged when one is returned.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum GroupError {
@@ -271,6 +285,9 @@ pub enum GroupError {
     /// A transfer with this ID already exists.
     #[error("transfer {0} already exists")]
     DuplicateTransfer(TransferId),
+    /// A group name that is blank.
+    #[error("the group name must not be empty")]
+    EmptyName,
     /// The member is still referenced and cannot be removed; archive it
     /// instead.
     #[error("member {member} is used by {}", usage(expenses.len(), transfers.len()))]

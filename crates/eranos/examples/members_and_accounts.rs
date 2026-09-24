@@ -74,8 +74,8 @@ fn describe(account: &Account) -> String {
     format!("{}: {details}", account.name())
 }
 
-fn outcome<Value>(
-    result: Result<Value, eranos::error::ValueError>,
+fn outcome<Value, Error: std::fmt::Display>(
+    result: Result<Value, Error>,
     shown: impl Fn(Value) -> String,
 ) -> String {
     result.map_or_else(

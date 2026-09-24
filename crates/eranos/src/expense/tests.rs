@@ -8,7 +8,6 @@
 
 use super::*;
 
-use crate::error::ValueError;
 use crate::money::{Currency, Percentage};
 
 // Four members, in ID order.
@@ -137,9 +136,7 @@ fn the_expense_name_is_trimmed_and_required() {
                 .paid_by(ANA)
                 .split(Split::equal([ANA]))
                 .build(),
-            Err(ExpenseError::Value(ValueError::Empty {
-                field: Field::ExpenseName
-            })),
+            Err(ExpenseError::EmptyName),
             "{name:?}"
         );
     }

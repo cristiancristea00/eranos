@@ -92,7 +92,7 @@ fn unknown_codes_are_rejected() {
     for code in ["XYZ", "ABC", "XAU", "XDR", "XTS", "XXX"] {
         assert_eq!(
             Currency::from_code(code),
-            Err(ValueError::UnknownCurrency),
+            Err(MoneyError::UnknownCurrency),
             "{code}"
         );
     }
@@ -100,7 +100,7 @@ fn unknown_codes_are_rejected() {
     for code in ["€", "E1R", "E R", "12A"] {
         assert_eq!(
             Currency::from_code(code),
-            Err(ValueError::UnknownCurrency),
+            Err(MoneyError::UnknownCurrency),
             "{code}"
         );
     }
@@ -113,7 +113,7 @@ fn short_and_long_codes_are_rejected() {
     for code in ["", "   ", "E", "EU"] {
         assert_eq!(
             Currency::from_code(code),
-            Err(ValueError::UnknownCurrency),
+            Err(MoneyError::UnknownCurrency),
             "{code:?}"
         );
     }
@@ -121,7 +121,7 @@ fn short_and_long_codes_are_rejected() {
     for code in ["EURO", "EUR EUR", "E UR", "ＥＵＲ"] {
         assert_eq!(
             Currency::from_code(code),
-            Err(ValueError::UnknownCurrency),
+            Err(MoneyError::UnknownCurrency),
             "{code:?}"
         );
     }
@@ -284,7 +284,7 @@ fn minor_units_per_major_is_ten_to_the_decimal_places() {
 fn from_str_parses_like_from_code() {
     // Known and unknown codes.
     assert_eq!(" chf ".parse::<Currency>(), Ok(Currency::CHF));
-    assert_eq!("XYZ".parse::<Currency>(), Err(ValueError::UnknownCurrency));
+    assert_eq!("XYZ".parse::<Currency>(), Err(MoneyError::UnknownCurrency));
 }
 
 /// Saved amounts would load in the wrong currency, or an unknown one.

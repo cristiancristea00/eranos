@@ -50,7 +50,7 @@ fn malformed_percentages_are_rejected() {
     for text in ["1.234", "33.333", "0.001"] {
         assert_eq!(
             Percentage::parse(text),
-            Err(ValueError::InvalidPercentage),
+            Err(MoneyError::InvalidPercentage),
             "{text}"
         );
     }
@@ -58,7 +58,7 @@ fn malformed_percentages_are_rejected() {
     for text in ["-1", "+1", "abc", "1,5", "12.5%%", "% 12", "12%5", "1e2"] {
         assert_eq!(
             Percentage::parse(text),
-            Err(ValueError::InvalidPercentage),
+            Err(MoneyError::InvalidPercentage),
             "{text}"
         );
     }
@@ -66,7 +66,7 @@ fn malformed_percentages_are_rejected() {
     for text in [".5", "5.", ".", "", "%", " % "] {
         assert_eq!(
             Percentage::parse(text),
-            Err(ValueError::InvalidPercentage),
+            Err(MoneyError::InvalidPercentage),
             "{text:?}"
         );
     }
@@ -82,7 +82,7 @@ fn percentages_beyond_u32_basis_points_are_rejected() {
     for text in ["42949672.96", "42949673", "99999999999"] {
         assert_eq!(
             Percentage::parse(text),
-            Err(ValueError::InvalidPercentage),
+            Err(MoneyError::InvalidPercentage),
             "{text}"
         );
     }
@@ -143,11 +143,11 @@ fn parts_parse_to_hundredths() {
 fn zero_parts_are_rejected() {
     // Typed zeros.
     for text in ["0", "0.0", "0.00", "000"] {
-        assert_eq!(Parts::parse(text), Err(ValueError::InvalidParts), "{text}");
+        assert_eq!(Parts::parse(text), Err(MoneyError::InvalidParts), "{text}");
     }
     // Zero hundredths and zero whole parts.
-    assert_eq!(Parts::from_hundredths(0), Err(ValueError::InvalidParts));
-    assert_eq!(Parts::from_whole(0), Err(ValueError::InvalidParts));
+    assert_eq!(Parts::from_hundredths(0), Err(MoneyError::InvalidParts));
+    assert_eq!(Parts::from_whole(0), Err(MoneyError::InvalidParts));
     // The smallest positive value.
     assert_eq!(Parts::from_hundredths(1).map(Parts::hundredths), Ok(1));
 }
@@ -158,13 +158,13 @@ fn zero_parts_are_rejected() {
 fn malformed_parts_are_rejected() {
     // Too many decimals, signs, and letters.
     for text in ["1.234", "0.001", "-1", "+1", "abc", "1,5", "1%"] {
-        assert_eq!(Parts::parse(text), Err(ValueError::InvalidParts), "{text}");
+        assert_eq!(Parts::parse(text), Err(MoneyError::InvalidParts), "{text}");
     }
     // Missing digits.
     for text in [".5", "5.", "", "  "] {
         assert_eq!(
             Parts::parse(text),
-            Err(ValueError::InvalidParts),
+            Err(MoneyError::InvalidParts),
             "{text:?}"
         );
     }
@@ -173,7 +173,7 @@ fn malformed_parts_are_rejected() {
         Parts::parse("42949672.95").map(Parts::hundredths),
         Ok(u32::MAX)
     );
-    assert_eq!(Parts::parse("42949672.96"), Err(ValueError::InvalidParts));
+    assert_eq!(Parts::parse("42949672.96"), Err(MoneyError::InvalidParts));
 }
 
 /// Whole parts such as "a couple counts as 2" would be stored off by a
@@ -188,8 +188,8 @@ fn whole_parts_are_scaled_to_hundredths() {
         Parts::from_whole(42_949_672).map(Parts::hundredths),
         Ok(4_294_967_200)
     );
-    assert_eq!(Parts::from_whole(42_949_673), Err(ValueError::InvalidParts));
-    assert_eq!(Parts::from_whole(u32::MAX), Err(ValueError::InvalidParts));
+    assert_eq!(Parts::from_whole(42_949_673), Err(MoneyError::InvalidParts));
+    assert_eq!(Parts::from_whole(u32::MAX), Err(MoneyError::InvalidParts));
 }
 
 /// Parts would be shown with noise such as `1.50` or lose decimals.
@@ -209,7 +209,7 @@ fn parts_display_drops_trailing_zeros() {
 fn parts_convert_to_and_from_hundredths() {
     // From hundredths.
     assert_eq!(Parts::try_from(150), Ok(parts("1.5")));
-    assert_eq!(Parts::try_from(0), Err(ValueError::InvalidParts));
+    assert_eq!(Parts::try_from(0), Err(MoneyError::InvalidParts));
     // Into hundredths.
     assert_eq!(u32::from(parts("1.5")), 150);
     // Ordering follows the value.

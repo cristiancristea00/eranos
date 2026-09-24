@@ -3,7 +3,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::error::{Field, ValueError};
+use crate::error::AccountError;
 use crate::member::Iban;
 use crate::text;
 
@@ -22,7 +22,7 @@ use crate::text;
 ///
 /// let app = Account::new(Username::new("@ana")?, "Revolut")?;
 /// assert_eq!(app.name(), "Revolut");
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::AccountError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -40,12 +40,12 @@ impl Account {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the name is blank.
+    /// [`AccountError::EmptyName`] when the name is blank.
     pub fn new(
         details: impl Into<AccountDetails>,
         name: impl Into<String>,
-    ) -> Result<Self, ValueError> {
-        let name = text::required(name, Field::AccountName)?;
+    ) -> Result<Self, AccountError> {
+        let name = text::required(name, AccountError::EmptyName)?;
         Ok(Self {
             details: details.into(),
             name,
@@ -137,13 +137,11 @@ impl Username {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the text is blank.
-    pub fn new(text: &str) -> Result<Self, ValueError> {
+    /// [`AccountError::EmptyUsername`] when the text is blank.
+    pub fn new(text: &str) -> Result<Self, AccountError> {
         let trimmed = text.trim();
         if trimmed.is_empty() {
-            return Err(ValueError::Empty {
-                field: Field::Username,
-            });
+            return Err(AccountError::EmptyUsername);
         }
         Ok(Self(trimmed.to_owned()))
     }
@@ -162,7 +160,7 @@ impl fmt::Display for Username {
 }
 
 impl FromStr for Username {
-    type Err = ValueError;
+    type Err = AccountError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::new(text)
@@ -179,7 +177,7 @@ struct AccountRecord {
 
 #[cfg(feature = "serde")]
 impl TryFrom<AccountRecord> for Account {
-    type Error = ValueError;
+    type Error = AccountError;
 
     fn try_from(record: AccountRecord) -> Result<Self, Self::Error> {
         Self::new(record.details, record.name)

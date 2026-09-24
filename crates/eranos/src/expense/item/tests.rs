@@ -6,7 +6,6 @@
 
 use super::*;
 
-use crate::error::ValueError;
 use crate::expense::MemberAmount;
 use crate::money::Currency;
 
@@ -104,9 +103,7 @@ fn the_item_name_is_trimmed_and_required() {
     for name in ["", "   "] {
         assert_eq!(
             Item::builder([ANA], name, euros(450)).build(),
-            Err(ExpenseError::Value(ValueError::Empty {
-                field: Field::ItemName
-            })),
+            Err(ExpenseError::EmptyItemName),
             "{name:?}"
         );
     }

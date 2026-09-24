@@ -41,21 +41,29 @@ fn an_email_needs_one_at_with_text_on_both_sides() {
     // No `@`.
     assert_eq!(
         Email::parse("ana.example.com"),
-        Err(ValueError::InvalidEmail)
+        Err(ContactError::InvalidEmail)
     );
     // More than one `@`.
     for text in ["ana@@example.com", "ana@ex@ample.com", "@ana@example.com"] {
-        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+        assert_eq!(
+            Email::parse(text),
+            Err(ContactError::InvalidEmail),
+            "{text}"
+        );
     }
     // An empty side.
     for text in ["@example.com", "ana@", "@"] {
-        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+        assert_eq!(
+            Email::parse(text),
+            Err(ContactError::InvalidEmail),
+            "{text}"
+        );
     }
     // Nothing at all.
     for text in ["", "   "] {
         assert_eq!(
             Email::parse(text),
-            Err(ValueError::InvalidEmail),
+            Err(ContactError::InvalidEmail),
             "{text:?}"
         );
     }
@@ -77,7 +85,7 @@ fn whitespace_inside_an_email_is_rejected() {
     ] {
         assert_eq!(
             Email::parse(text),
-            Err(ValueError::InvalidEmail),
+            Err(ContactError::InvalidEmail),
             "{text:?}"
         );
     }
@@ -95,7 +103,11 @@ fn dots_separate_non_empty_atoms_in_a_local_part() {
         ".ana@example.com",
         "ana.@example.com",
     ] {
-        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+        assert_eq!(
+            Email::parse(text),
+            Err(ContactError::InvalidEmail),
+            "{text}"
+        );
     }
 }
 
@@ -114,7 +126,11 @@ fn symbols_outside_atext_are_rejected_in_a_local_part() {
         "ana(comment)@example.com",
         "(comment)ana@example.com",
     ] {
-        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+        assert_eq!(
+            Email::parse(text),
+            Err(ContactError::InvalidEmail),
+            "{text}"
+        );
     }
 }
 
@@ -148,7 +164,7 @@ fn a_quoted_local_part_may_hold_any_printable_character() {
     ] {
         assert_eq!(
             Email::parse(text),
-            Err(ValueError::InvalidEmail),
+            Err(ContactError::InvalidEmail),
             "{text:?}"
         );
     }
@@ -178,7 +194,7 @@ fn characters_outside_ascii_are_accepted_unless_invisible() {
     ] {
         assert_eq!(
             Email::parse(text),
-            Err(ValueError::InvalidEmail),
+            Err(ContactError::InvalidEmail),
             "{text:?}"
         );
     }
@@ -203,7 +219,11 @@ fn a_domain_is_labels_of_letters_digits_and_hyphens() {
         "ana@ex!ample.com",
         "ana@🙂.com",
     ] {
-        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+        assert_eq!(
+            Email::parse(text),
+            Err(ContactError::InvalidEmail),
+            "{text}"
+        );
     }
     // Hyphens inside, letters outside ASCII, punycode, a single label, and
     // digits.
@@ -242,7 +262,11 @@ fn a_bracketed_domain_is_an_ip_address() {
         "ana@[192.168.0.1",
         "ana@192.168.0.1]",
     ] {
-        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+        assert_eq!(
+            Email::parse(text),
+            Err(ContactError::InvalidEmail),
+            "{text}"
+        );
     }
 }
 
@@ -319,7 +343,7 @@ fn a_phone_number_needs_a_leading_plus() {
     for text in ["0712345678", "0712 345 678", "0040712345678", "40712345678"] {
         assert_eq!(
             PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
+            Err(ContactError::InvalidPhoneNumber),
             "{text}"
         );
     }
@@ -328,7 +352,7 @@ fn a_phone_number_needs_a_leading_plus() {
     for text in ["+", "+40+712345678", "＋40712345678", "tel:+40-721-234-567"] {
         assert_eq!(
             PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
+            Err(ContactError::InvalidPhoneNumber),
             "{text}"
         );
     }
@@ -376,7 +400,7 @@ fn a_phone_number_must_be_valid_in_its_countrys_plan() {
     ] {
         assert_eq!(
             PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
+            Err(ContactError::InvalidPhoneNumber),
             "{text}"
         );
     }
@@ -390,7 +414,7 @@ fn letters_extensions_and_other_symbols_are_rejected_in_a_phone_number() {
     for text in ["+40712345abc", "+1 800 FLOWERS"] {
         assert_eq!(
             PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
+            Err(ContactError::InvalidPhoneNumber),
             "{text}"
         );
     }
@@ -406,7 +430,7 @@ fn letters_extensions_and_other_symbols_are_rejected_in_a_phone_number() {
     ] {
         assert_eq!(
             PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
+            Err(ContactError::InvalidPhoneNumber),
             "{text}"
         );
     }
@@ -414,7 +438,7 @@ fn letters_extensions_and_other_symbols_are_rejected_in_a_phone_number() {
     for text in ["+40_712_345_678", "+40\t712345678"] {
         assert_eq!(
             PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
+            Err(ContactError::InvalidPhoneNumber),
             "{text:?}"
         );
     }
@@ -436,7 +460,7 @@ fn other_digit_forms_are_read_as_digits() {
     // A full-width sign.
     assert_eq!(
         PhoneNumber::parse("＋４０ ７２１ ２３４ ５６７"),
-        Err(ValueError::InvalidPhoneNumber)
+        Err(ContactError::InvalidPhoneNumber)
     );
 }
 

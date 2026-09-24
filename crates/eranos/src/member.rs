@@ -8,7 +8,7 @@ pub use account::{Account, AccountDetails, AccountKind, Username};
 pub use contact::{Email, PhoneNumber};
 pub use iban::Iban;
 
-use crate::error::{Field, ValueError};
+use crate::error::MemberError;
 use crate::id::MemberId;
 use crate::text;
 
@@ -34,7 +34,7 @@ use crate::text;
 ///
 /// let renamed = ana.to_builder().first_name("Anna").build()?;
 /// assert_eq!(renamed.last_name(), Some("Popescu"));
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
@@ -174,9 +174,9 @@ impl MemberBuilder {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the first name is blank.
-    pub fn build(self) -> Result<Member, ValueError> {
-        let first_name = text::required(self.first_name, Field::FirstName)?;
+    /// [`MemberError::EmptyFirstName`] when the first name is blank.
+    pub fn build(self) -> Result<Member, MemberError> {
+        let first_name = text::required(self.first_name, MemberError::EmptyFirstName)?;
         Ok(Member {
             id: self.id.unwrap_or_else(MemberId::generate),
             first_name,
@@ -206,7 +206,7 @@ struct MemberRecord {
 
 #[cfg(feature = "serde")]
 impl TryFrom<MemberRecord> for Member {
-    type Error = ValueError;
+    type Error = MemberError;
 
     fn try_from(record: MemberRecord) -> Result<Self, Self::Error> {
         let builder = MemberBuilder {

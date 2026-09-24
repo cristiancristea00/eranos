@@ -35,9 +35,7 @@ fn a_blank_account_name_is_rejected() {
     for name in ["", "   ", "\t"] {
         assert_eq!(
             Account::new(username(), name),
-            Err(ValueError::Empty {
-                field: Field::AccountName
-            }),
+            Err(AccountError::EmptyName),
             "{name:?}"
         );
     }
@@ -86,9 +84,7 @@ fn a_blank_username_is_rejected() {
     for text in ["", "   ", "\n"] {
         assert_eq!(
             Username::new(text),
-            Err(ValueError::Empty {
-                field: Field::Username
-            }),
+            Err(AccountError::EmptyUsername),
             "{text:?}"
         );
     }

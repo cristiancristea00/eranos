@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::Group;
 use crate::category::Category;
-use crate::error::{GroupError, ValueError};
+use crate::error::GroupError;
 use crate::expense::Expense;
 use crate::group::Language;
 use crate::id::{CategoryId, GroupId, MemberId};
@@ -114,10 +114,7 @@ impl<'de> Deserialize<'de> for Group {
 /// Why a well-formed file does not make a valid group.
 #[derive(Debug, thiserror::Error)]
 enum ReplayError {
-    /// Invalid group details.
-    #[error(transparent)]
-    Details(#[from] ValueError),
-    /// An entry the group refuses.
+    /// Group details or an entry the group refuses.
     #[error(transparent)]
     Entry(#[from] GroupError),
     /// A format this version cannot read.

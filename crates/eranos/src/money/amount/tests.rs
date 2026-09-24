@@ -11,7 +11,7 @@ fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)
 }
 
-fn parse_euros(text: &str) -> Result<Money, ValueError> {
+fn parse_euros(text: &str) -> Result<Money, MoneyError> {
     Money::parse(text, Currency::EUR)
 }
 
@@ -82,23 +82,23 @@ fn surrounding_whitespace_is_ignored() {
 fn malformed_amounts_are_rejected() {
     // Other separators and notations.
     for text in ["1,50", "1 000", "1e3", "0x10", "1.2.3", "12.3a", "abc"] {
-        assert_eq!(parse_euros(text), Err(ValueError::InvalidAmount), "{text}");
+        assert_eq!(parse_euros(text), Err(MoneyError::InvalidAmount), "{text}");
     }
     // Missing digits on either side of the point.
     for text in [".5", "5.", ".", "-.5", "-5."] {
-        assert_eq!(parse_euros(text), Err(ValueError::InvalidAmount), "{text}");
+        assert_eq!(parse_euros(text), Err(MoneyError::InvalidAmount), "{text}");
     }
     // Signs other than one leading minus.
     for text in ["+5", "--1", "-", "- 1", "1-", "−1"] {
-        assert_eq!(parse_euros(text), Err(ValueError::InvalidAmount), "{text}");
+        assert_eq!(parse_euros(text), Err(MoneyError::InvalidAmount), "{text}");
     }
     // Digits outside ASCII.
-    assert_eq!(parse_euros("١٢"), Err(ValueError::InvalidAmount));
+    assert_eq!(parse_euros("١٢"), Err(MoneyError::InvalidAmount));
     // Nothing at all.
     for text in ["", "   "] {
         assert_eq!(
             parse_euros(text),
-            Err(ValueError::InvalidAmount),
+            Err(MoneyError::InvalidAmount),
             "{text:?}"
         );
     }
@@ -111,7 +111,7 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
     // Two decimals.
     assert_eq!(
         parse_euros("12.345"),
-        Err(ValueError::TooManyDecimals {
+        Err(MoneyError::TooManyDecimals {
             allowed: 2,
             currency: Currency::EUR
         })
@@ -119,7 +119,7 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
     // Trailing zeros count.
     assert_eq!(
         parse_euros("12.340"),
-        Err(ValueError::TooManyDecimals {
+        Err(MoneyError::TooManyDecimals {
             allowed: 2,
             currency: Currency::EUR
         })
@@ -128,7 +128,7 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
     for text in ["1.0", "1.5"] {
         assert_eq!(
             Money::parse(text, Currency::JPY),
-            Err(ValueError::TooManyDecimals {
+            Err(MoneyError::TooManyDecimals {
                 allowed: 0,
                 currency: Currency::JPY
             })
@@ -137,14 +137,14 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
     // Three and four decimals.
     assert_eq!(
         Money::parse("1.2345", Currency::BHD),
-        Err(ValueError::TooManyDecimals {
+        Err(MoneyError::TooManyDecimals {
             allowed: 3,
             currency: Currency::BHD
         })
     );
     assert_eq!(
         Money::parse("1.23456", Currency::CLF),
-        Err(ValueError::TooManyDecimals {
+        Err(MoneyError::TooManyDecimals {
             allowed: 4,
             currency: Currency::CLF
         })
@@ -165,25 +165,25 @@ fn amounts_beyond_the_i64_range_overflow() {
     // One minor unit more.
     assert_eq!(
         parse_euros("92233720368547758.08"),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(
         Money::parse("9223372036854775808", Currency::JPY),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     // Far beyond.
     assert_eq!(
         parse_euros("99999999999999999999"),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(
         parse_euros("-99999999999999999999.99"),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     // Beyond even the 128-bit accumulator.
     assert_eq!(
         parse_euros("1000000000000000000000000000000000000000"),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
 }
 
@@ -282,14 +282,14 @@ fn mixed_currencies_are_rejected() {
     // Addition and subtraction name both currencies in order.
     assert_eq!(
         euros(100).checked_add(dollars),
-        Err(ValueError::CurrencyMismatch {
+        Err(MoneyError::CurrencyMismatch {
             left: Currency::EUR,
             right: Currency::USD
         })
     );
     assert_eq!(
         dollars.checked_sub(euros(100)),
-        Err(ValueError::CurrencyMismatch {
+        Err(MoneyError::CurrencyMismatch {
             left: Currency::USD,
             right: Currency::EUR
         })
@@ -297,7 +297,7 @@ fn mixed_currencies_are_rejected() {
     // The currencies are checked before the range.
     assert_eq!(
         euros(i64::MAX).checked_add(dollars),
-        Err(ValueError::CurrencyMismatch {
+        Err(MoneyError::CurrencyMismatch {
             left: Currency::EUR,
             right: Currency::USD
         })
@@ -310,20 +310,20 @@ fn results_out_of_range_overflow() {
     // Addition.
     assert_eq!(
         euros(i64::MAX).checked_add(euros(1)),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(
         euros(i64::MIN).checked_add(euros(-1)),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     // Subtraction.
     assert_eq!(
         euros(i64::MIN).checked_sub(euros(1)),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(
         euros(0).checked_sub(euros(i64::MIN)),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
 }
 
@@ -367,10 +367,10 @@ fn the_smallest_amount_parses() {
     // One unit further is out of range on both sides.
     assert_eq!(
         parse_euros("-92233720368547758.09"),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
     assert_eq!(
         parse_euros("92233720368547758.08"),
-        Err(ValueError::Overflow)
+        Err(MoneyError::Overflow)
     );
 }

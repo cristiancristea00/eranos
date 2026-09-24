@@ -114,11 +114,7 @@ macro_rules! identifier_tests {
                     "0011 2233-4455-6677-8899-aabbccddeeff",
                     "{00112233-4455-6677-8899-aabbccddeeff",
                 ] {
-                    assert_eq!(
-                        text.parse::<$name>(),
-                        Err(ValueError::InvalidId),
-                        "{text:?}"
-                    );
+                    assert_eq!(text.parse::<$name>(), Err(IdError::InvalidId), "{text:?}");
                 }
             }
 

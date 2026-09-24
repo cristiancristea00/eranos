@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::error::ValueError;
+use crate::error::MoneyError;
 use crate::money::{Cost, Currency, ExchangeRate};
 
 /// An amount of money: a whole number of minor units (cents) in one currency.
@@ -24,7 +24,7 @@ use crate::money::{Cost, Currency, ExchangeRate};
 ///
 /// let tip = Money::from_minor_units(Currency::EUR, 166);
 /// assert_eq!(price.checked_add(tip)?, Money::parse("14.00", Currency::EUR)?);
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -57,11 +57,11 @@ impl Money {
     ///
     /// # Errors
     ///
-    /// - [`ValueError::InvalidAmount`] when the text is not digits with an
+    /// - [`MoneyError::InvalidAmount`] when the text is not digits with an
     ///   optional leading `-` and an optional `.` followed by digits.
-    /// - [`ValueError::TooManyDecimals`] when it has more decimal places than
+    /// - [`MoneyError::TooManyDecimals`] when it has more decimal places than
     ///   the currency.
-    /// - [`ValueError::Overflow`] when it does not fit in 64-bit minor units.
+    /// - [`MoneyError::Overflow`] when it does not fit in 64-bit minor units.
     ///
     /// # Examples
     ///
@@ -72,9 +72,9 @@ impl Money {
     /// assert_eq!(Money::parse("0.5", Currency::EUR)?.minor_units(), 50);
     /// assert!(Money::parse("0.505", Currency::EUR).is_err());
     /// assert!(Money::parse("1,50", Currency::EUR).is_err());
-    /// # Ok::<(), eranos::error::ValueError>(())
+    /// # Ok::<(), eranos::error::MoneyError>(())
     /// ```
-    pub fn parse(text: &str, currency: Currency) -> Result<Self, ValueError> {
+    pub fn parse(text: &str, currency: Currency) -> Result<Self, MoneyError> {
         let text = text.trim();
         let (negative, unsigned) = text
             .strip_prefix('-')
@@ -86,12 +86,12 @@ impl Money {
         let is_digits =
             |part: &str| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit());
         if !is_digits(whole) || fraction.is_some_and(|fraction| !is_digits(fraction)) {
-            return Err(ValueError::InvalidAmount);
+            return Err(MoneyError::InvalidAmount);
         }
         let fraction = fraction.unwrap_or("");
         let allowed = currency.decimal_places();
         if fraction.len() > usize::from(allowed) {
-            return Err(ValueError::TooManyDecimals { allowed, currency });
+            return Err(MoneyError::TooManyDecimals { allowed, currency });
         }
         // Right-pad the fraction to the currency's decimal places: "12.3" EUR
         // is 1230 minor units.
@@ -106,9 +106,9 @@ impl Money {
             .try_fold(0_i128, |value, digit| {
                 value.checked_mul(10)?.checked_add(i128::from(digit - b'0'))
             })
-            .ok_or(ValueError::Overflow)?;
+            .ok_or(MoneyError::Overflow)?;
         let signed = if negative { -magnitude } else { magnitude };
-        let minor_units = i64::try_from(signed).map_err(|_| ValueError::Overflow)?;
+        let minor_units = i64::try_from(signed).map_err(|_| MoneyError::Overflow)?;
         Ok(Self::from_minor_units(currency, minor_units))
     }
 
@@ -156,7 +156,7 @@ impl Money {
     /// // Fuel paid in RON, for a group in EUR: 1 RON = 0.2 EUR.
     /// let fuel = Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?);
     /// assert_eq!(fuel.exchange_rate(), ExchangeRate::parse("0.2")?);
-    /// # Ok::<(), eranos::error::ValueError>(())
+    /// # Ok::<(), eranos::error::MoneyError>(())
     /// ```
     #[must_use]
     pub const fn at(self, rate: ExchangeRate) -> Cost {
@@ -167,15 +167,15 @@ impl Money {
     ///
     /// # Errors
     ///
-    /// - [`ValueError::CurrencyMismatch`] when the currencies differ.
-    /// - [`ValueError::Overflow`] when the sum does not fit in 64-bit minor
+    /// - [`MoneyError::CurrencyMismatch`] when the currencies differ.
+    /// - [`MoneyError::Overflow`] when the sum does not fit in 64-bit minor
     ///   units.
-    pub fn checked_add(self, other: Self) -> Result<Self, ValueError> {
+    pub fn checked_add(self, other: Self) -> Result<Self, MoneyError> {
         self.same_currency(other)?;
         let sum = self
             .minor_units
             .checked_add(other.minor_units)
-            .ok_or(ValueError::Overflow)?;
+            .ok_or(MoneyError::Overflow)?;
         Ok(Self::from_minor_units(self.currency, sum))
     }
 
@@ -183,23 +183,23 @@ impl Money {
     ///
     /// # Errors
     ///
-    /// - [`ValueError::CurrencyMismatch`] when the currencies differ.
-    /// - [`ValueError::Overflow`] when the difference does not fit in 64-bit
+    /// - [`MoneyError::CurrencyMismatch`] when the currencies differ.
+    /// - [`MoneyError::Overflow`] when the difference does not fit in 64-bit
     ///   minor units.
-    pub fn checked_sub(self, other: Self) -> Result<Self, ValueError> {
+    pub fn checked_sub(self, other: Self) -> Result<Self, MoneyError> {
         self.same_currency(other)?;
         let difference = self
             .minor_units
             .checked_sub(other.minor_units)
-            .ok_or(ValueError::Overflow)?;
+            .ok_or(MoneyError::Overflow)?;
         Ok(Self::from_minor_units(self.currency, difference))
     }
 
-    fn same_currency(self, other: Self) -> Result<(), ValueError> {
+    fn same_currency(self, other: Self) -> Result<(), MoneyError> {
         if self.currency == other.currency {
             Ok(())
         } else {
-            Err(ValueError::CurrencyMismatch {
+            Err(MoneyError::CurrencyMismatch {
                 left: self.currency,
                 right: other.currency,
             })

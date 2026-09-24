@@ -11,7 +11,7 @@ use std::str::FromStr;
 
 use jiff::civil;
 
-use crate::error::ValueError;
+use crate::error::CalendarError;
 
 /// A calendar date in the proleptic Gregorian calendar, between years 1 and
 /// 9999.
@@ -27,7 +27,7 @@ use crate::error::ValueError;
 /// assert_eq!(date.to_string(), "2026-09-23");
 /// assert_eq!("2026-09-23".parse::<CalendarDate>()?, date);
 /// assert!(CalendarDate::new(29, 2, 2026).is_err()); // 2026 is not a leap year
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::CalendarError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CalendarDate {
@@ -56,20 +56,20 @@ impl CalendarDate {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidDate`] when the year is outside 1..=9999 or the
+    /// [`CalendarError::InvalidDate`] when the year is outside 1..=9999 or the
     /// day does not exist in that month.
-    pub fn new(day: u8, month: u8, year: u16) -> Result<Self, ValueError> {
+    pub fn new(day: u8, month: u8, year: u16) -> Result<Self, CalendarError> {
         // A day or a month above `i8::MAX`, or a year above `i16::MAX`, is in
         // no calendar jiff represents.
         let (Ok(day), Ok(month), Ok(year)) =
             (i8::try_from(day), i8::try_from(month), i16::try_from(year))
         else {
-            return Err(ValueError::InvalidDate);
+            return Err(CalendarError::InvalidDate);
         };
         civil::Date::new(year, month, day)
             .ok()
             .and_then(Self::from_civil)
-            .ok_or(ValueError::InvalidDate)
+            .ok_or(CalendarError::InvalidDate)
     }
 
     /// Parses an ISO 8601 date such as `2026-09-24`, ignoring surrounding
@@ -83,7 +83,7 @@ impl CalendarDate {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidDate`] when the text is not such a date, names a
+    /// [`CalendarError::InvalidDate`] when the text is not such a date, names a
     /// day that does not exist or a year before 1, or carries the `Z` of a UTC
     /// time.
     ///
@@ -96,14 +96,14 @@ impl CalendarDate {
     /// assert_eq!(CalendarDate::parse("2026-09-24T18:30+02:00")?, CalendarDate::new(24, 9, 2026)?);
     /// assert!(CalendarDate::parse("2026-9-23").is_err());
     /// assert!(CalendarDate::parse("0000-01-01").is_err());
-    /// # Ok::<(), eranos::error::ValueError>(())
+    /// # Ok::<(), eranos::error::CalendarError>(())
     /// ```
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, CalendarError> {
         text.trim()
             .parse::<civil::Date>()
             .ok()
             .and_then(Self::from_civil)
-            .ok_or(ValueError::InvalidDate)
+            .ok_or(CalendarError::InvalidDate)
     }
 
     /// Keeps a jiff date from year 1 on.
@@ -156,7 +156,7 @@ impl fmt::Display for CalendarDate {
 }
 
 impl FromStr for CalendarDate {
-    type Err = ValueError;
+    type Err = CalendarError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)
@@ -176,7 +176,7 @@ impl FromStr for CalendarDate {
 /// assert_eq!(time.to_string(), "18:30");
 /// assert_eq!(TimeOfDay::parse("07:05")?.hour(), 7);
 /// assert!(TimeOfDay::new(24, 0).is_err());
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::CalendarError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TimeOfDay {
@@ -204,17 +204,17 @@ impl TimeOfDay {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidTime`] when the hour is above 23 or the minute
+    /// [`CalendarError::InvalidTime`] when the hour is above 23 or the minute
     /// above 59.
-    pub fn new(hour: u8, minute: u8) -> Result<Self, ValueError> {
+    pub fn new(hour: u8, minute: u8) -> Result<Self, CalendarError> {
         // An hour or a minute above `i8::MAX` is in no day.
         let (Ok(hour), Ok(minute)) = (i8::try_from(hour), i8::try_from(minute)) else {
-            return Err(ValueError::InvalidTime);
+            return Err(CalendarError::InvalidTime);
         };
         civil::Time::new(hour, minute, 0, 0)
             .ok()
             .map(|inner| Self { inner })
-            .ok_or(ValueError::InvalidTime)
+            .ok_or(CalendarError::InvalidTime)
     }
 
     /// Parses an ISO 8601 time of day such as `18:30`, ignoring surrounding
@@ -227,7 +227,7 @@ impl TimeOfDay {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidTime`] when the text is not such a time, names one
+    /// [`CalendarError::InvalidTime`] when the text is not such a time, names one
     /// that does not exist, has seconds or a fraction of a second, or carries
     /// the `Z` of a UTC time.
     ///
@@ -239,15 +239,15 @@ impl TimeOfDay {
     /// assert_eq!(TimeOfDay::parse("07:05")?, TimeOfDay::new(7, 5)?);
     /// assert_eq!(TimeOfDay::parse("T07:05:00")?, TimeOfDay::new(7, 5)?);
     /// assert!(TimeOfDay::parse("07:05:30").is_err());
-    /// # Ok::<(), eranos::error::ValueError>(())
+    /// # Ok::<(), eranos::error::CalendarError>(())
     /// ```
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, CalendarError> {
         text.trim()
             .parse::<civil::Time>()
             .ok()
             .filter(|inner| inner.second() == 0 && inner.subsec_nanosecond() == 0)
             .map(|inner| Self { inner })
-            .ok_or(ValueError::InvalidTime)
+            .ok_or(CalendarError::InvalidTime)
     }
 
     /// The hour, 0 to 23.
@@ -281,7 +281,7 @@ impl fmt::Display for TimeOfDay {
 }
 
 impl FromStr for TimeOfDay {
-    type Err = ValueError;
+    type Err = CalendarError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)

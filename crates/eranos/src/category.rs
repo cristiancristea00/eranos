@@ -3,7 +3,7 @@
 use icu_casemap::CaseMapper;
 use icu_normalizer::DecomposingNormalizerBorrowed;
 
-use crate::error::{Field, ValueError};
+use crate::error::CategoryError;
 use crate::id::CategoryId;
 use crate::text;
 
@@ -28,7 +28,7 @@ use crate::text;
 ///
 /// let groceries = food.renamed("Groceries")?;
 /// assert_eq!(groceries.id(), food.id());
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::CategoryError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -47,9 +47,9 @@ impl Category {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the name is blank.
-    pub fn new(name: impl Into<String>) -> Result<Self, ValueError> {
-        let name = text::required(name, Field::CategoryName)?;
+    /// [`CategoryError::EmptyName`] when the name is blank.
+    pub fn new(name: impl Into<String>) -> Result<Self, CategoryError> {
+        let name = text::required(name, CategoryError::EmptyName)?;
         Ok(Self {
             id: CategoryId::generate(),
             name,
@@ -69,11 +69,11 @@ impl Category {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the name is blank.
-    pub fn renamed(&self, name: impl Into<String>) -> Result<Self, ValueError> {
+    /// [`CategoryError::EmptyName`] when the name is blank.
+    pub fn renamed(&self, name: impl Into<String>) -> Result<Self, CategoryError> {
         Ok(Self {
             id: self.id,
-            name: text::required(name, Field::CategoryName)?,
+            name: text::required(name, CategoryError::EmptyName)?,
         })
     }
 
@@ -113,12 +113,12 @@ struct CategoryRecord {
 
 #[cfg(feature = "serde")]
 impl TryFrom<CategoryRecord> for Category {
-    type Error = ValueError;
+    type Error = CategoryError;
 
     fn try_from(record: CategoryRecord) -> Result<Self, Self::Error> {
         Ok(Self {
             id: record.id,
-            name: text::required(record.name, Field::CategoryName)?,
+            name: text::required(record.name, CategoryError::EmptyName)?,
         })
     }
 }

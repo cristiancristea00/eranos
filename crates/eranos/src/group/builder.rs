@@ -1,6 +1,6 @@
 //! Creating groups.
 
-use crate::error::{Field, ValueError};
+use crate::error::GroupError;
 use crate::group::{Group, Language};
 use crate::id::GroupId;
 use crate::money::Currency;
@@ -45,9 +45,9 @@ impl GroupBuilder {
     ///
     /// # Errors
     ///
-    /// [`ValueError::Empty`] when the name is blank.
-    pub fn build(self) -> Result<Group, ValueError> {
-        let name = text::required(self.name, Field::GroupName)?;
+    /// [`GroupError::EmptyName`] when the name is blank.
+    pub fn build(self) -> Result<Group, GroupError> {
+        let name = text::required(self.name, GroupError::EmptyName)?;
         Ok(Group::new(
             GroupId::generate(),
             self.currency,

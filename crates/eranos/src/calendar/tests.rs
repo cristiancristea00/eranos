@@ -45,7 +45,7 @@ fn a_day_exists_only_within_its_month() {
         assert!(CalendarDate::new(last_day, month, 2026).is_ok(), "{month}");
         assert_eq!(
             CalendarDate::new(last_day + 1, month, 2026),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{month}"
         );
     }
@@ -53,7 +53,7 @@ fn a_day_exists_only_within_its_month() {
     for (month, _) in MONTH_LENGTHS {
         assert_eq!(
             CalendarDate::new(0, month, 2026),
-            Err(ValueError::InvalidDate)
+            Err(CalendarError::InvalidDate)
         );
     }
     // The first day of every month exists.
@@ -69,11 +69,17 @@ fn months_run_from_1_to_12() {
     assert!(CalendarDate::new(1, 1, 2026).is_ok());
     assert!(CalendarDate::new(31, 12, 2026).is_ok());
     // Outside the range.
-    assert_eq!(CalendarDate::new(1, 0, 2026), Err(ValueError::InvalidDate));
-    assert_eq!(CalendarDate::new(1, 13, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(
+        CalendarDate::new(1, 0, 2026),
+        Err(CalendarError::InvalidDate)
+    );
+    assert_eq!(
+        CalendarDate::new(1, 13, 2026),
+        Err(CalendarError::InvalidDate)
+    );
     assert_eq!(
         CalendarDate::new(1, u8::MAX, 2026),
-        Err(ValueError::InvalidDate)
+        Err(CalendarError::InvalidDate)
     );
 }
 
@@ -86,16 +92,31 @@ fn a_leap_day_exists_only_in_leap_years() {
     assert!(CalendarDate::new(29, 2, 2024).is_ok());
     assert!(CalendarDate::new(29, 2, 4).is_ok());
     // Years not divisible by 4.
-    assert_eq!(CalendarDate::new(29, 2, 2026), Err(ValueError::InvalidDate));
-    assert_eq!(CalendarDate::new(29, 2, 2027), Err(ValueError::InvalidDate));
-    assert_eq!(CalendarDate::new(29, 2, 1), Err(ValueError::InvalidDate));
+    assert_eq!(
+        CalendarDate::new(29, 2, 2026),
+        Err(CalendarError::InvalidDate)
+    );
+    assert_eq!(
+        CalendarDate::new(29, 2, 2027),
+        Err(CalendarError::InvalidDate)
+    );
+    assert_eq!(CalendarDate::new(29, 2, 1), Err(CalendarError::InvalidDate));
     // Centuries are common years unless divisible by 400.
-    assert_eq!(CalendarDate::new(29, 2, 1900), Err(ValueError::InvalidDate));
-    assert_eq!(CalendarDate::new(29, 2, 2100), Err(ValueError::InvalidDate));
+    assert_eq!(
+        CalendarDate::new(29, 2, 1900),
+        Err(CalendarError::InvalidDate)
+    );
+    assert_eq!(
+        CalendarDate::new(29, 2, 2100),
+        Err(CalendarError::InvalidDate)
+    );
     assert!(CalendarDate::new(29, 2, 2000).is_ok());
     assert!(CalendarDate::new(29, 2, 2400).is_ok());
     // No leap year has a 30 February.
-    assert_eq!(CalendarDate::new(30, 2, 2028), Err(ValueError::InvalidDate));
+    assert_eq!(
+        CalendarDate::new(30, 2, 2028),
+        Err(CalendarError::InvalidDate)
+    );
 }
 
 /// A year outside four digits would not fit the `YYYY-MM-DD` text form.
@@ -105,14 +126,14 @@ fn years_run_from_1_to_9999() {
     assert!(CalendarDate::new(1, 1, 1).is_ok());
     assert!(CalendarDate::new(31, 12, 9999).is_ok());
     // Outside the range.
-    assert_eq!(CalendarDate::new(1, 1, 0), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(1, 1, 0), Err(CalendarError::InvalidDate));
     assert_eq!(
         CalendarDate::new(1, 1, 10_000),
-        Err(ValueError::InvalidDate)
+        Err(CalendarError::InvalidDate)
     );
     assert_eq!(
         CalendarDate::new(1, 1, u16::MAX),
-        Err(ValueError::InvalidDate)
+        Err(CalendarError::InvalidDate)
     );
 }
 
@@ -150,7 +171,7 @@ fn parse_rejects_other_shapes() {
     for text in ["2026-9-23", "2026-09-3", "26-09-23", "2026-9-3"] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text}"
         );
     }
@@ -158,7 +179,7 @@ fn parse_rejects_other_shapes() {
     for text in ["2026/09/23", "2026.09.23", "2026 09 23", "2026-09 23"] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text}"
         );
     }
@@ -166,19 +187,19 @@ fn parse_rejects_other_shapes() {
     for text in ["2026-09-23x", "x2026-09-23", "+2026-09-23"] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text}"
         );
     }
     // The UTC designator: the date would depend on the reader's time zone.
     assert_eq!(
         CalendarDate::parse("2026-09-24T18:30:00Z"),
-        Err(ValueError::InvalidDate)
+        Err(CalendarError::InvalidDate)
     );
     // A byte-order mark, which `trim` keeps.
     assert_eq!(
         CalendarDate::parse("\u{feff}2026-09-24"),
-        Err(ValueError::InvalidDate)
+        Err(CalendarError::InvalidDate)
     );
     // Non-digits, including the characters on either side of `0`-`9`.
     for text in [
@@ -193,7 +214,7 @@ fn parse_rejects_other_shapes() {
     ] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text}"
         );
     }
@@ -201,7 +222,7 @@ fn parse_rejects_other_shapes() {
     for text in ["", "   "] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text:?}"
         );
     }
@@ -256,7 +277,7 @@ fn parse_rejects_years_before_1() {
     ] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text}"
         );
     }
@@ -276,7 +297,7 @@ fn parse_rejects_dates_that_do_not_exist() {
     ] {
         assert_eq!(
             CalendarDate::parse(text),
-            Err(ValueError::InvalidDate),
+            Err(CalendarError::InvalidDate),
             "{text}"
         );
     }
@@ -315,13 +336,13 @@ fn a_time_runs_from_midnight_to_23_59() {
     assert!(TimeOfDay::new(0, 0).is_ok());
     assert!(TimeOfDay::new(23, 59).is_ok());
     // One past either bound.
-    assert_eq!(TimeOfDay::new(24, 0), Err(ValueError::InvalidTime));
-    assert_eq!(TimeOfDay::new(0, 60), Err(ValueError::InvalidTime));
-    assert_eq!(TimeOfDay::new(23, 60), Err(ValueError::InvalidTime));
+    assert_eq!(TimeOfDay::new(24, 0), Err(CalendarError::InvalidTime));
+    assert_eq!(TimeOfDay::new(0, 60), Err(CalendarError::InvalidTime));
+    assert_eq!(TimeOfDay::new(23, 60), Err(CalendarError::InvalidTime));
     // Far outside.
     assert_eq!(
         TimeOfDay::new(u8::MAX, u8::MAX),
-        Err(ValueError::InvalidTime)
+        Err(CalendarError::InvalidTime)
     );
 }
 
@@ -345,7 +366,7 @@ fn time_parse_rejects_other_shapes() {
     for text in ["7:05", "07:5", "0705", "07-05", "07.05", "07 05"] {
         assert_eq!(
             TimeOfDay::parse(text),
-            Err(ValueError::InvalidTime),
+            Err(CalendarError::InvalidTime),
             "{text}"
         );
     }
@@ -354,7 +375,7 @@ fn time_parse_rejects_other_shapes() {
     for text in ["07:05 pm", "07:05Z"] {
         assert_eq!(
             TimeOfDay::parse(text),
-            Err(ValueError::InvalidTime),
+            Err(CalendarError::InvalidTime),
             "{text}"
         );
     }
@@ -362,7 +383,7 @@ fn time_parse_rejects_other_shapes() {
     for text in ["ab:cd", "0a:05", "07:0a", "/7:05", "07:5:"] {
         assert_eq!(
             TimeOfDay::parse(text),
-            Err(ValueError::InvalidTime),
+            Err(CalendarError::InvalidTime),
             "{text}"
         );
     }
@@ -370,12 +391,12 @@ fn time_parse_rejects_other_shapes() {
     for text in ["24:00", "23:60", "99:99"] {
         assert_eq!(
             TimeOfDay::parse(text),
-            Err(ValueError::InvalidTime),
+            Err(CalendarError::InvalidTime),
             "{text}"
         );
     }
     // Nothing at all.
-    assert_eq!(TimeOfDay::parse(""), Err(ValueError::InvalidTime));
+    assert_eq!(TimeOfDay::parse(""), Err(CalendarError::InvalidTime));
 }
 
 /// Times pasted from other apps, which write seconds, the `T` designator, or
@@ -420,7 +441,7 @@ fn time_parse_rejects_seconds() {
     ] {
         assert_eq!(
             TimeOfDay::parse(text),
-            Err(ValueError::InvalidTime),
+            Err(CalendarError::InvalidTime),
             "{text}"
         );
     }

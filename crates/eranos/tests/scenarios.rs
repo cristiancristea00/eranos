@@ -255,6 +255,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     let ana = group.add_member(member("Ana"))?;
     let bob = group.add_member(member("Bob"))?;
     let carol = group.add_member(member("Carol"))?;
+    let two_parts = Parts::from_whole(2)?;
     let items = || -> Result<Vec<Item>, eranos::error::ExpenseError> {
         Ok(vec![
             // Ana's steak and Bob's pasta.
@@ -269,7 +270,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
                 "Dessert",
                 Split::parts([
                     MemberParts::new(bob, Parts::ONE),
-                    MemberParts::new(carol, Parts::from_whole(2)?),
+                    MemberParts::new(carol, two_parts),
                 ]),
                 eur("10.50"),
             )

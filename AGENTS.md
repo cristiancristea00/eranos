@@ -107,9 +107,11 @@ failure); `#[allow]` is itself a lint error.
 - **The public API grows additively.** Fields are private; entities are
   built with builders and edited with `to_builder`; public enums are
   `#[non_exhaustive]`; getters have no `get_` prefix; errors are
-  `#[non_exhaustive]` thiserror enums whose messages are lowercase, carry no
-  trailing full stop, and never echo the text they rejected (inputs include
-  account numbers).
+  `#[non_exhaustive]` thiserror enums, one per module, whose messages are
+  lowercase, carry no trailing full stop, and never echo the text they
+  rejected (inputs include account numbers). No error wraps another and
+  none converts into another: a function reports its own module's failure,
+  and a caller that mixes modules uses `Box<dyn Error>` or its own type.
 - **A builder starts complete.** A type with a builder names its
   constructors `builder` or a variant of it (`itemised_builder`,
   `builder_with_payers`, `builder_with_split`), and `to_builder` starts an

@@ -9,7 +9,7 @@ use icu_properties::CodePointMapData;
 use icu_properties::props::{GeneralCategory, GeneralCategoryGroup};
 use rlibphonenumber::{PHONE_NUMBER_UTIL, PhoneNumberFormat};
 
-use crate::error::ValueError;
+use crate::error::ContactError;
 
 /// An email address: a local part and a domain around an `@`, as RFC 5321
 /// and 5322 define them, with the characters outside ASCII that RFC 6531
@@ -33,7 +33,7 @@ use crate::error::ValueError;
 /// assert_eq!(email.as_str(), "ana@example.com");
 /// assert!(Email::parse("ana.example.com").is_err());
 /// assert!(Email::parse("ana..popescu@example.com").is_err()); // a doubled dot
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::ContactError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Email(String);
@@ -43,15 +43,15 @@ impl Email {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidEmail`] when the text is not a local part and a
+    /// [`ContactError::InvalidEmail`] when the text is not a local part and a
     /// domain around an `@` by the rules above, or holds whitespace or an
     /// invisible character.
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, ContactError> {
         let text = text.trim();
         if is_address(text) {
             Ok(Self(text.to_owned()))
         } else {
-            Err(ValueError::InvalidEmail)
+            Err(ContactError::InvalidEmail)
         }
     }
 
@@ -69,7 +69,7 @@ impl fmt::Display for Email {
 }
 
 impl FromStr for Email {
-    type Err = ValueError;
+    type Err = ContactError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)
@@ -248,7 +248,7 @@ fn general_category(character: char) -> GeneralCategory {
 /// assert_eq!(phone.as_str(), "+40712345678");
 /// assert!(PhoneNumber::parse("0712 345 678").is_err()); // no country code
 /// assert!(PhoneNumber::parse("+40 612 345 678").is_err()); // no such range in Romania
-/// # Ok::<(), eranos::error::ValueError>(())
+/// # Ok::<(), eranos::error::ContactError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PhoneNumber(String);
@@ -259,16 +259,16 @@ impl PhoneNumber {
     ///
     /// # Errors
     ///
-    /// [`ValueError::InvalidPhoneNumber`] when the text does not start with
+    /// [`ContactError::InvalidPhoneNumber`] when the text does not start with
     /// `+`, holds a letter or an extension, or is not a valid number in its
     /// country's numbering plan.
-    pub fn parse(text: &str) -> Result<Self, ValueError> {
+    pub fn parse(text: &str) -> Result<Self, ContactError> {
         let text = text.trim();
         // Letters are refused before libphonenumber sees them: it reads three
         // or more as a vanity number, and would store `+1 800 FLOWERS` as
         // `+18003569377`.
         if !text.starts_with('+') || text.chars().any(char::is_alphabetic) {
-            return Err(ValueError::InvalidPhoneNumber);
+            return Err(ContactError::InvalidPhoneNumber);
         }
         // `PHONE_NUMBER_UTIL` decodes the metadata of the pinned
         // rlibphonenumber on first use, and a country's patterns compile the
@@ -280,7 +280,7 @@ impl PhoneNumber {
         let plans = &*PHONE_NUMBER_UTIL;
         let number = plans
             .parse(text, None)
-            .map_err(|_| ValueError::InvalidPhoneNumber)?;
+            .map_err(|_| ContactError::InvalidPhoneNumber)?;
         // E.164 has no place for an extension, and dropping it would dial
         // another line.
         let has_extension = number
@@ -288,7 +288,7 @@ impl PhoneNumber {
             .as_deref()
             .is_some_and(|extension| !extension.is_empty());
         if has_extension || !plans.is_valid_number(&number) {
-            return Err(ValueError::InvalidPhoneNumber);
+            return Err(ContactError::InvalidPhoneNumber);
         }
         Ok(Self(
             plans.format(&number, PhoneNumberFormat::E164).into_owned(),
@@ -319,7 +319,7 @@ impl PhoneNumber {
     ///
     /// let phone = PhoneNumber::parse("+40712345678")?;
     /// assert_eq!(phone.international(), "+40 712 345 678");
-    /// # Ok::<(), eranos::error::ValueError>(())
+    /// # Ok::<(), eranos::error::ContactError>(())
     /// ```
     #[must_use]
     pub fn international(&self) -> String {
@@ -342,7 +342,7 @@ impl fmt::Display for PhoneNumber {
 }
 
 impl FromStr for PhoneNumber {
-    type Err = ValueError;
+    type Err = ContactError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)

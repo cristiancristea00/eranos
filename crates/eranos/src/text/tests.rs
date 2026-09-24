@@ -1,52 +1,35 @@
 //! Every name, note, and description goes through these helpers: the tests
 //! keep stray whitespace out of stored text, keep blank optional fields
 //! absent rather than empty, and keep blank required fields rejected with the
-//! field that was blank.
+//! error of the field that was blank.
 
 use super::*;
 
-/// Every field a required text can be.
-const FIELDS: [Field; 7] = [
-    Field::GroupName,
-    Field::FirstName,
-    Field::AccountName,
-    Field::Username,
-    Field::CategoryName,
-    Field::ExpenseName,
-    Field::ItemName,
-];
+/// The error each test's required text fails with, standing in for the
+/// `Empty*` variants of the error types.
+#[derive(Debug, PartialEq, Eq)]
+struct Blank;
 
 /// Names typed with a stray space would be stored and shown with it.
 #[test]
 fn required_text_is_trimmed() {
     // Spaces on both sides.
-    assert_eq!(
-        required("  Ana  ", Field::FirstName),
-        Ok(String::from("Ana"))
-    );
+    assert_eq!(required("  Ana  ", Blank), Ok(String::from("Ana")));
     // Tabs, newlines, and non-breaking spaces.
     assert_eq!(
-        required("\t\u{a0}Ana Maria\n", Field::FirstName),
+        required("\t\u{a0}Ana Maria\n", Blank),
         Ok(String::from("Ana Maria"))
     );
     // Text without surrounding whitespace.
-    assert_eq!(required("Ana", Field::FirstName), Ok(String::from("Ana")));
+    assert_eq!(required("Ana", Blank), Ok(String::from("Ana")));
 }
 
-/// A blank name would be saved, or the error would point at the wrong field.
+/// A blank name would be saved, or fail with another error than its own.
 #[test]
-fn blank_required_text_is_rejected_with_its_field() {
-    // Empty text.
-    for field in FIELDS {
-        assert_eq!(required("", field), Err(ValueError::Empty { field }));
-    }
-    // Whitespace only.
-    for field in FIELDS {
-        assert_eq!(
-            required(" \t\n\u{a0}", field),
-            Err(ValueError::Empty { field })
-        );
-    }
+fn blank_required_text_is_rejected_with_its_error() {
+    // Empty text, and whitespace only.
+    assert_eq!(required("", Blank), Err(Blank));
+    assert_eq!(required(" \t\n\u{a0}", Blank), Err(Blank));
 }
 
 /// A note typed with a stray space would be stored and shown with it.
@@ -83,6 +66,6 @@ fn trimmed_text_keeps_its_allocation() {
     // Required text.
     let first_name = String::from("Ana");
     let first_name_pointer = first_name.as_ptr();
-    let kept_first_name = required(first_name, Field::FirstName).unwrap();
+    let kept_first_name = required(first_name, Blank).unwrap();
     assert_eq!(kept_first_name.as_ptr(), first_name_pointer);
 }
