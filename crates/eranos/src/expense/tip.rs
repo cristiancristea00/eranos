@@ -1,7 +1,8 @@
 //! Tips added on top of an expense.
 
+use eranos_money::allocation::apply_basis_points;
+
 use crate::error::ExpenseError;
-use crate::money::allocation::apply_basis_points;
 use crate::money::{Money, Percentage};
 
 /// A tip added on top of an expense's amount: a fixed amount or a percentage

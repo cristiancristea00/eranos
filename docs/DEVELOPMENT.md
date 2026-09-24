@@ -31,7 +31,7 @@ cargo xtask gates                                # every commit gate, in order
 cargo build -p eranos                            # the library
 cargo build -p eranos --features serde           # with serialisation
 cargo test --workspace --all-features            # every suite, doctests included
-cargo test -p eranos --lib money::allocation     # one module's unit tests
+cargo test -p eranos-money --lib allocation      # one module's unit tests
 cargo test -p eranos --test scenarios            # one integration suite
 cargo doc -p eranos --all-features --open        # the API documentation
 ```
@@ -63,12 +63,12 @@ commit; `cargo xtask help` lists the commands. The alias lives in
 The codes, minor units, and names come from `iso4217-static`, pinned
 exactly in `Cargo.toml` and generated from the list SIX Group publishes at
 <https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml>.
-`crates/eranos/src/money/currency/iso4217.rs` lists, in code order, the
+`crates/eranos-money/src/currency/iso4217.rs` lists, in code order, the
 codes that get a constant.
 
 1. Move the exact pin to the release that carries the amendment, and build
    without `--locked` so `Cargo.lock` follows.
-2. `cargo test -p eranos --lib money::currency`:
+2. `cargo test -p eranos-money --lib currency`:
    `all_matches_every_iso4217_static_code_with_a_minor_unit` names the codes
    to add to the list, `decimal_places_follow_iso_4217` names a changed
    minor unit, and a code the release dropped fails the build at its
@@ -199,7 +199,7 @@ cargo llvm-cov --no-report --workspace --all-features         # sequential IDs, 
 cargo llvm-cov --no-report --workspace --no-default-features  # clock-based IDs
 cargo llvm-cov report --html --open                           # HTML report
 cargo llvm-cov report --summary-only                          # totals only
-cargo mutants --file crates/eranos/src/money/allocation.rs
+cargo mutants --file crates/eranos-money/src/allocation.rs
 ```
 
 Coverage merges the two runs because each compiles code the other leaves

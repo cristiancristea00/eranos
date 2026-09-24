@@ -78,7 +78,7 @@ failure); `#[allow]` is itself a lint error.
   covers locals, parameters, closure bindings, test helpers, and every
   serialised field name.
 - **Money is never a float.** Amounts are `i64` minor units; every division
-  goes through `money::allocation::allocate`, every conversion through
+  goes through `eranos_money::allocation::allocate`, every conversion through
   `ExchangeRate::convert`, and every percentage through
   `allocation::apply_basis_points`, so parts always add up and rounding is
   the documented rule (largest remainder; half away from zero).

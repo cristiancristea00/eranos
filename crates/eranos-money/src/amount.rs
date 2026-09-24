@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::error::MoneyError;
-use crate::money::{Cost, Currency, ExchangeRate};
+use crate::{Cost, Currency, ExchangeRate};
 
 /// An amount of money: a whole number of minor units (cents) in one currency.
 ///

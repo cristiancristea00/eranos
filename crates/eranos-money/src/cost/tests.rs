@@ -6,7 +6,7 @@
 
 use super::*;
 
-use crate::money::Currency;
+use crate::Currency;
 
 fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)

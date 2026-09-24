@@ -313,11 +313,11 @@ dependencies = [
  "criterion",
  "eranos-calendar",
  "eranos-core",
+ "eranos-money",
  "icu_casemap",
  "icu_locale_core",
  "icu_normalizer",
  "icu_properties",
- "iso4217-static",
  "proptest",
  "rlibphonenumber",
  "serde",
@@ -348,6 +348,19 @@ dependencies = [
  "serde",
  "thiserror 2.0.20",
  "uuid",
+]
+
+[[package]]
+name = "eranos-money"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-core",
+ "iso4217-static",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

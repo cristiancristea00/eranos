@@ -8,7 +8,13 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/eranos", "crates/eranos-calendar", "crates/eranos-core", "crates/xtask"]
+members = [
+    "crates/eranos",
+    "crates/eranos-calendar",
+    "crates/eranos-core",
+    "crates/eranos-money",
+    "crates/xtask",
+]
 
 [workspace.package]
 version = "0.4.0"
@@ -25,6 +31,7 @@ publish = false
 eranos = { path = "crates/eranos", default-features = false }
 eranos-calendar = { path = "crates/eranos-calendar" }
 eranos-core = { path = "crates/eranos-core" }
+eranos-money = { path = "crates/eranos-money" }
 
 # --- Library -----------------------------------------------------------------
 # Category names compare by Unicode's canonical caseless match (D145): NFD,

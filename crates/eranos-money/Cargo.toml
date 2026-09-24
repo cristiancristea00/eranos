@@ -1,0 +1,30 @@
+# eranos-money: amounts, currencies, exchange rates, costs, percentages,
+# parts, and the exact apportionment every split uses. An internal crate: the
+# `eranos` crate re-exports the types callers use.
+[package]
+name = "eranos-money"
+description = "The money, currencies, rates, and apportionment of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `Serialize` and `Deserialize` for amounts, currencies, rates, costs,
+# percentages, and parts.
+serde = ["dep:serde", "eranos-core/serde"]
+
+[dependencies]
+eranos-core = { workspace = true }
+iso4217-static = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

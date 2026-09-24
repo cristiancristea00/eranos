@@ -2,9 +2,10 @@
 
 use std::collections::BTreeSet;
 
+use eranos_money::allocation::allocate;
+
 use crate::error::ExpenseError;
 use crate::id::MemberId;
-use crate::money::allocation::allocate;
 use crate::money::{Money, Parts, Percentage};
 
 /// How an amount is divided among members: who pays for an expense, who

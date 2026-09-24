@@ -117,7 +117,17 @@ pub mod id {
 }
 pub mod ledger;
 pub mod member;
-pub mod money;
+pub mod money {
+    //! Money, currencies, exchange rates, costs, and the ratios splits are
+    //! made of.
+    //!
+    //! Amounts are whole numbers of minor units (cents): arithmetic is exact,
+    //! and every split distributes its leftover minor units so parts always
+    //! add up.
+
+    #[doc(inline)]
+    pub use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
+}
 pub mod settlement;
 pub mod transfer;
 
@@ -137,6 +147,7 @@ pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSumma
 pub use member::{
     Account, AccountDetails, AccountKind, Email, Iban, Member, PhoneNumber, Username,
 };
+#[doc(no_inline)]
 pub use money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
 pub use settlement::{Payment, Settlement, SettlementStrategy};
 pub use transfer::Transfer;

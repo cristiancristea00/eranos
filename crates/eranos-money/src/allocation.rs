@@ -13,7 +13,8 @@ use std::cmp::Reverse;
 /// len` onwards, which spreads the leftover of even splits across callers
 /// that vary the rotation. Weights that are all zero count as equal, so any
 /// non-empty weights carry the whole total; empty weights give no parts.
-pub(crate) fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
+#[must_use]
+pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
     if weights.is_empty() {
         return Vec::new();
     }
@@ -70,7 +71,8 @@ pub(crate) fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
 ///
 /// FNV-1a is fixed by its specification, so every platform and every release
 /// rotates the same way, and a synced entry splits identically everywhere.
-pub(crate) fn rotation(entry: [u8; 16], pass: u64) -> u64 {
+#[must_use]
+pub fn rotation(entry: [u8; 16], pass: u64) -> u64 {
     const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0000_0100_0000_01b3;
     entry
@@ -96,7 +98,8 @@ pub(crate) const fn divide_rounding_half_away(numerator: i128, denominator: i128
 
 /// `amount × basis_points / 10 000`, rounded half away from zero; `None` when
 /// the result does not fit in `i64`.
-pub(crate) fn apply_basis_points(amount: i64, basis_points: u32) -> Option<i64> {
+#[must_use]
+pub fn apply_basis_points(amount: i64, basis_points: u32) -> Option<i64> {
     let product = i128::from(amount) * i128::from(basis_points);
     i64::try_from(divide_rounding_half_away(product, 10_000)).ok()
 }

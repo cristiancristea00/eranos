@@ -3,9 +3,9 @@
 use std::fmt;
 use std::str::FromStr;
 
+use crate::allocation::divide_rounding_half_away;
 use crate::error::MoneyError;
-use crate::money::allocation::divide_rounding_half_away;
-use crate::money::{Currency, Money};
+use crate::{Currency, Money};
 
 /// The most decimal places an [`ExchangeRate`] may have.
 const MAX_SCALE: u8 = 18;
@@ -171,8 +171,7 @@ impl<'de> serde::Deserialize<'de> for ExchangeRate {
 }
 
 /// The rate that converts one currency into another, as a currency change
-/// needs one for every currency in use:
-/// [`Group::change_currency`](crate::Group::change_currency).
+/// needs one for every currency in use: `Group::change_currency`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CurrencyRate {
     currency: Currency,

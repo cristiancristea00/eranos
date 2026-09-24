@@ -1,6 +1,6 @@
 //! What an entry cost, and how it converts into its group's currency.
 
-use crate::money::{ExchangeRate, Money};
+use crate::{ExchangeRate, Money};
 
 /// What an entry cost: its amount, and for an amount in another currency
 /// than its group's, the rate into the group currency.

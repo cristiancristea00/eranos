@@ -145,7 +145,8 @@ impl Parts {
         Self::from_hundredths(hundredths)
     }
 
-    /// The parts in hundredths: 150 for 1.5 parts.
+    /// The parts in hundredths: 150 for 1.5 parts, as `u32::from(parts)`
+    /// also gives.
     #[must_use]
     pub const fn hundredths(self) -> u32 {
         self.0

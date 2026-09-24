@@ -45,8 +45,8 @@ every command.
 | Examples    | `crates/eranos/examples/*.rs`           | public API; they assert their numbers | `cargo run -p eranos --example <name>`                   |
 | Benchmarks  | `crates/eranos/benches/*.rs`            | public API                            | `cargo bench -p eranos`                                  |
 
-Unit tests live in a sibling file: `money/allocation.rs` ends with
-`#[cfg(test)] mod tests;` and its tests are in `money/allocation/tests.rs`.
+Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
+`#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
 Visibility is never widened to make something testable.
 
 The README is compiled as a doctest through a `#[cfg(doctest)]` item in
@@ -59,7 +59,7 @@ companion that pins concrete numbers.
 
 | Invariant                                                                                               | Where                                                                              |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| an allocation's parts add up to its total, each its exact share rounded down or up                      | `money/allocation/tests.rs`                                                        |
+| an allocation's parts add up to its total, each its exact share rounded down or up                      | `eranos-money/src/allocation/tests.rs`                                             |
 | paid and consumed shares of an expense each add up to its total, in any currency                        | `expense/resolution/tests.rs`                                                      |
 | the pairwise debts of an expense net to each member's paid minus consumed                               | `expense/resolution/tests.rs`                                                      |
 | the exact solver finds the true minimum (checked against an exhaustive search)                          | `settlement/minimum/tests.rs`                                                      |
@@ -156,7 +156,7 @@ change no test noticed. It complements coverage: coverage says a line ran,
 mutation testing says a test would have noticed it was wrong. It is an
 occasional audit, run one file at a time (`.cargo/mutants.toml` sets the
 workspace's tests, every feature, and a timeout floor); the arithmetic in
-`money/allocation.rs`, `expense/resolution.rs`, and
+`eranos-money/src/allocation.rs`, `expense/resolution.rs`, and
 `settlement/minimum.rs` is where survivors matter most. Every feature
 includes `sequential-ids`, so an audit of `eranos-core` also runs once with
 `--no-default-features` to reach the clock-based generator.
@@ -175,7 +175,7 @@ both together.
 | Change                            | Run                                                                                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | anything                          | the gates in [AGENTS.md](../AGENTS.md#gates-before-committing)                                                                             |
-| rounding, allocation, conversion  | the gates, then `cargo mutants --file crates/eranos/src/money/allocation.rs`                                                               |
+| rounding, allocation, conversion  | the gates, then `cargo mutants --file crates/eranos-money/src/allocation.rs`                                                               |
 | a settlement strategy             | the gates, then `cargo bench -p eranos --bench settlement`                                                                                 |
 | the ledger or group mutations     | the gates, then `cargo bench -p eranos --bench ledger`                                                                                     |
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading            |
