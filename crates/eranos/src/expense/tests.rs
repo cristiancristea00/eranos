@@ -322,8 +322,8 @@ fn items_must_add_up_to_the_amount() {
             .items([item("Pizza", 5_000), item("Wine", 3_000)])
             .build(),
         Err(ExpenseError::ItemsDoNotAddUp {
-            expected: euros(9_000),
-            actual: euros(8_000)
+            actual: euros(8_000),
+            expected: euros(9_000)
         })
     );
     // Item totals whose sum leaves the 64-bit range.
@@ -366,8 +366,8 @@ fn the_participants_divide_the_amount_before_the_tip() {
     assert_eq!(
         tipped().split(shares_of_the_total).build(),
         Err(ExpenseError::AmountsDoNotAddUp {
-            expected: euros(9_000),
-            actual: euros(9_900)
+            actual: euros(9_900),
+            expected: euros(9_000)
         })
     );
     // Any other invalid split.
@@ -395,8 +395,8 @@ fn the_payers_cover_the_amount_plus_the_tip() {
             .payers(Split::amounts([(ANA, euros(9_000))]))
             .build(),
         Err(ExpenseError::AmountsDoNotAddUp {
-            expected: euros(9_900),
-            actual: euros(9_000)
+            actual: euros(9_000),
+            expected: euros(9_900)
         })
     );
     // Any other invalid payers.
@@ -736,8 +736,8 @@ fn expenses_round_trip_through_serde() {
     );
     // Loading validates like the builder.
     let tampered = itemised_json.replace(
-        r#""amount":{"minor_units":9000"#,
-        r#""amount":{"minor_units":9001"#,
+        r#""amount":{"currency":"EUR","minor_units":9000"#,
+        r#""amount":{"currency":"EUR","minor_units":9001"#,
     );
     assert_ne!(tampered, itemised_json);
     assert!(serde_json::from_str::<Expense>(&tampered).is_err());

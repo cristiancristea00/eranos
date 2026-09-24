@@ -46,14 +46,14 @@ fn sorted(mut payments: Vec<(MemberId, MemberId, Money)>) -> Vec<(MemberId, Memb
 }
 
 struct Weekend {
-    group: Group,
     ana: MemberId,
     bob: MemberId,
     carol: MemberId,
     dan: MemberId,
+    food: CategoryId,
+    group: Group,
     lodging: CategoryId,
     transport: CategoryId,
-    food: CategoryId,
 }
 
 /// Four friends, four expenses, one per split method.
@@ -109,14 +109,14 @@ fn weekend() -> Weekend {
         group.add_expense(expense.build().unwrap()).unwrap();
     }
     Weekend {
-        group,
         ana,
         bob,
         carol,
         dan,
+        food,
+        group,
         lodging,
         transport,
-        food,
     }
 }
 
@@ -125,14 +125,14 @@ fn weekend() -> Weekend {
 #[test]
 fn a_weekend_trip_adds_up_by_hand() {
     let Weekend {
-        group,
         ana,
         bob,
         carol,
         dan,
+        food,
+        group,
         lodging,
         transport,
-        food,
     } = weekend();
     let summary = group.summary();
 
@@ -172,11 +172,11 @@ fn a_weekend_trip_adds_up_by_hand() {
 #[test]
 fn every_strategy_settles_the_weekend_its_own_way() {
     let Weekend {
-        group,
         ana,
         bob,
         carol,
         dan,
+        group,
         ..
     } = weekend();
 
@@ -213,11 +213,11 @@ fn every_strategy_settles_the_weekend_its_own_way() {
 fn recording_a_settlement_settles_everyone() -> TestResult {
     for strategy in SettlementStrategy::all() {
         let Weekend {
-            mut group,
             ana,
             bob,
             carol,
             dan,
+            mut group,
             ..
         } = weekend();
         let plan = group.settlement(strategy)?.clone();
@@ -397,8 +397,8 @@ fn a_flatmate_moves_out() -> TestResult {
     assert_eq!(
         group.remove_member(bob),
         Err(GroupError::MemberInUse {
-            member: bob,
             expenses: vec![rent],
+            member: bob,
             transfers: vec![deposit]
         })
     );

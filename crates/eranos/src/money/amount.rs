@@ -29,8 +29,8 @@ use crate::money::{Cost, Currency, ExchangeRate};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Money {
-    minor_units: i64,
     currency: Currency,
+    minor_units: i64,
 }
 
 impl Money {
@@ -39,8 +39,8 @@ impl Money {
     #[must_use]
     pub const fn from_minor_units(minor_units: i64, currency: Currency) -> Self {
         Self {
-            minor_units,
             currency,
+            minor_units,
         }
     }
 
@@ -91,7 +91,7 @@ impl Money {
         let fraction = fraction.unwrap_or("");
         let allowed = currency.decimal_places();
         if fraction.len() > usize::from(allowed) {
-            return Err(ValueError::TooManyDecimals { currency, allowed });
+            return Err(ValueError::TooManyDecimals { allowed, currency });
         }
         // Right-pad the fraction to the currency's decimal places: "12.3" EUR
         // is 1230 minor units.

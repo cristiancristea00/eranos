@@ -11,8 +11,8 @@ use crate::text;
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct GroupBuilder {
     id: Option<GroupId>,
-    name: String,
     currency: Currency,
+    name: String,
     description: Option<String>,
     language: Option<Language>,
 }
@@ -21,8 +21,8 @@ impl GroupBuilder {
     pub(super) const fn new(name: String, currency: Currency) -> Self {
         Self {
             id: None,
-            name,
             currency,
+            name,
             description: None,
             language: None,
         }

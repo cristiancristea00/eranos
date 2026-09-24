@@ -211,10 +211,7 @@ fn dates_order_chronologically() {
     // The whole range.
     assert!(date(1, 1, 1) < date(9999, 12, 31));
     // Equal dates.
-    assert_eq!(
-        date(2026, 9, 23).cmp(&date(2026, 9, 23)),
-        std::cmp::Ordering::Equal
-    );
+    assert_eq!(date(2026, 9, 23).cmp(&date(2026, 9, 23)), Ordering::Equal);
 }
 
 /// A time of day such as 24:00 or 18:60 would be stored.

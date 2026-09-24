@@ -50,24 +50,24 @@ use crate::text;
     serde(try_from = "ExpenseRecord")
 )]
 pub struct Expense {
-    name: String,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    description: Option<String>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    category: Option<CategoryId>,
     amount: Money,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    tip: Option<Tip>,
+    date: Date,
+    name: String,
+    payers: Split,
+    split: ExpenseSplit,
     // Derived from amount and tip by `build`, so never serialised.
     #[cfg_attr(feature = "serde", serde(skip))]
     total: Money,
-    date: Date,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    category: Option<CategoryId>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    description: Option<String>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     time: Option<Time>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    exchange_rate: Option<ExchangeRate>,
-    payers: Split,
-    split: ExpenseSplit,
+    tip: Option<Tip>,
 }
 
 impl Expense {
@@ -77,15 +77,15 @@ impl Expense {
     /// [`Money::at`] makes a converted one.
     pub fn builder(name: impl Into<String>, cost: impl Into<Cost>, date: Date) -> ExpenseBuilder {
         ExpenseBuilder {
-            name: name.into(),
-            description: None,
-            category: None,
             cost: cost.into(),
-            tip: None,
             date,
-            time: None,
+            name: name.into(),
             payers: Choice::Unset,
             split: Choice::Unset,
+            category: None,
+            description: None,
+            time: None,
+            tip: None,
         }
     }
 
@@ -95,15 +95,15 @@ impl Expense {
     /// `payers` the payers, whichever form they had.
     pub fn to_builder(&self) -> ExpenseBuilder {
         ExpenseBuilder {
-            name: self.name.clone(),
-            description: self.description.clone(),
-            category: self.category,
             cost: self.cost(),
-            tip: self.tip,
             date: self.date,
-            time: self.time,
+            name: self.name.clone(),
             payers: Choice::Inherited(self.payers.clone()),
             split: Choice::Inherited(self.split.clone()),
+            category: self.category,
+            description: self.description.clone(),
+            time: self.time,
+            tip: self.tip,
         }
     }
 
@@ -238,15 +238,15 @@ impl ExpenseSplit {
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseBuilder {
-    name: String,
-    description: Option<String>,
-    category: Option<CategoryId>,
     cost: Cost,
-    tip: Option<Tip>,
     date: Date,
-    time: Option<Time>,
+    name: String,
     payers: Choice<Split>,
     split: Choice<ExpenseSplit>,
+    category: Option<CategoryId>,
+    description: Option<String>,
+    time: Option<Time>,
+    tip: Option<Tip>,
 }
 
 impl ExpenseBuilder {
@@ -368,17 +368,17 @@ impl ExpenseBuilder {
             .map_err(|_| ExpenseError::Overflow)?;
         payers.validate(total)?;
         Ok(Expense {
-            name,
-            description: self.description.and_then(text::optional),
-            category: self.category,
             amount,
-            tip: self.tip,
-            total,
             date: self.date,
-            time: self.time,
-            exchange_rate: self.cost.conversion(),
+            name,
             payers,
             split,
+            total,
+            category: self.category,
+            description: self.description.and_then(text::optional),
+            exchange_rate: self.cost.conversion(),
+            time: self.time,
+            tip: self.tip,
         })
     }
 }
@@ -405,8 +405,8 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
     }
     let actual = i64::try_from(sum).map_err(|_| ExpenseError::Overflow)?;
     Err(ExpenseError::ItemsDoNotAddUp {
-        expected: amount,
         actual: Money::from_minor_units(actual, amount.currency()),
+        expected: amount,
     })
 }
 
@@ -452,21 +452,21 @@ impl<T> Choice<T> {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct ExpenseRecord {
+    amount: Money,
+    date: Date,
     name: String,
+    payers: Split,
+    split: ExpenseSplit,
+    #[serde(default)]
+    category: Option<CategoryId>,
     #[serde(default)]
     description: Option<String>,
     #[serde(default)]
-    category: Option<CategoryId>,
-    amount: Money,
-    #[serde(default)]
-    tip: Option<Tip>,
-    date: Date,
+    exchange_rate: Option<ExchangeRate>,
     #[serde(default)]
     time: Option<Time>,
     #[serde(default)]
-    exchange_rate: Option<ExchangeRate>,
-    payers: Split,
-    split: ExpenseSplit,
+    tip: Option<Tip>,
 }
 
 #[cfg(feature = "serde")]

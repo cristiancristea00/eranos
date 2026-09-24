@@ -16,26 +16,26 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ShareRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Rule")]
-    rule: String,
-    #[tabled(rename = "Paid")]
-    paid: Money,
-    #[tabled(rename = "Consumed")]
+    #[tabled(rename = "Consumed", order = 3)]
     consumed: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Paid", order = 2)]
+    paid: Money,
+    #[tabled(rename = "Rule", order = 1)]
+    rule: String,
 }
 
 #[derive(Tabled)]
 struct TotalRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Paid")]
-    paid: Money,
-    #[tabled(rename = "Consumed")]
-    consumed: Money,
-    #[tabled(rename = "Balance")]
+    #[tabled(rename = "Balance", order = 3)]
     balance: String,
+    #[tabled(rename = "Consumed", order = 2)]
+    consumed: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Paid", order = 1)]
+    paid: Money,
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
@@ -73,14 +73,14 @@ fn report(group: &Group, id: ExpenseId, rules: &[(MemberId, &str)]) {
     println!("{}, {}:", expense.name(), shares.total());
     print_table(
         shares.members().iter().map(|share: &MemberShare| ShareRow {
+            consumed: share.share(),
             name: name(group, share.member()),
+            paid: share.paid(),
             rule: rules
                 .iter()
                 .find(|(member, _)| *member == share.member())
                 .map_or("(payer only)", |&(_, rule)| rule)
                 .to_owned(),
-            paid: share.paid(),
-            consumed: share.share(),
         }),
         2,
     );
@@ -90,12 +90,12 @@ fn report(group: &Group, id: ExpenseId, rules: &[(MemberId, &str)]) {
 struct Family {
     ana: MemberId,
     bob: MemberId,
-    mia: MemberId,
     day: Date,
+    mia: MemberId,
 }
 
 fn equally(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, mia, day } = *family;
+    let Family { ana, bob, day, mia } = *family;
     section("1. Equally");
     println!(
         "Everyone pays the same. 10.00 does not divide by three, so one member pays the\n\
@@ -121,7 +121,7 @@ const fn thirds(family: &Family) -> [(MemberId, &'static str); 3] {
 }
 
 fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, mia, day } = *family;
+    let Family { ana, bob, day, mia } = *family;
     section("2. By percentage");
     println!(
         "Everyone pays a percentage of the amount; the percentages must add up to exactly\n\
@@ -142,7 +142,7 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
 }
 
 fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, mia, day } = *family;
+    let Family { ana, bob, day, mia } = *family;
     section("3. By parts");
     println!(
         "Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n\
@@ -167,7 +167,7 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
 }
 
 fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, mia, day } = *family;
+    let Family { ana, bob, day, mia } = *family;
     section("4. By exact amounts");
     println!(
         "Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n\
@@ -192,7 +192,7 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
 }
 
 fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
-    let Family { ana, bob, mia, day } = *family;
+    let Family { ana, bob, day, mia } = *family;
     section("5. Several payers");
     println!(
         "The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n\
@@ -233,10 +233,10 @@ fn totals(group: &Group) {
         group.members().map(|(id, member)| {
             let member_totals = summary.member(id);
             TotalRow {
+                balance: member_totals.balance().to_string(),
+                consumed: member_totals.share(),
                 name: member.first_name().to_owned(),
                 paid: member_totals.paid(),
-                consumed: member_totals.share(),
-                balance: member_totals.balance().to_string(),
             }
         }),
         1,
@@ -248,8 +248,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let family = Family {
         ana: group.add_member(Member::builder("Ana").build()?),
         bob: group.add_member(Member::builder("Bob").build()?),
-        mia: group.add_member(Member::builder("Mia").build()?),
         day: Date::new(2026, 7, 14)?,
+        mia: group.add_member(Member::builder("Mia").build()?),
     };
 
     println!("Family holiday: every way to split an expense");

@@ -60,22 +60,22 @@ use crate::transfer::Transfer;
 #[derive(Debug, Clone)]
 pub struct Group {
     id: GroupId,
-    name: String,
-    description: Option<String>,
-    currency: Currency,
-    language: Option<Language>,
-    members: BTreeMap<MemberId, MemberRecord>,
     categories: BTreeMap<CategoryId, Category>,
+    currency: Currency,
     expenses: BTreeMap<ExpenseId, ExpenseRecord>,
-    transfers: BTreeMap<TransferId, TransferRecord>,
     ledger: Ledger,
+    members: BTreeMap<MemberId, MemberRecord>,
+    name: String,
     settlements: Settlements,
+    transfers: BTreeMap<TransferId, TransferRecord>,
+    description: Option<String>,
+    language: Option<Language>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct MemberRecord {
-    member: Member,
     archived: bool,
+    member: Member,
 }
 
 #[derive(Debug, Clone)]
@@ -86,18 +86,18 @@ struct ExpenseRecord {
 
 #[derive(Debug, Clone)]
 struct TransferRecord {
-    transfer: Transfer,
     /// The amount in the group currency, in minor units.
     amount: i64,
+    transfer: Transfer,
 }
 
 /// One lazily computed settlement per strategy, cleared whenever a balance
 /// changes.
 #[derive(Debug, Clone, Default)]
 struct Settlements {
-    minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
-    greedy: OnceLock<Result<Settlement, SettlementError>>,
     direct: OnceLock<Result<Settlement, SettlementError>>,
+    greedy: OnceLock<Result<Settlement, SettlementError>>,
+    minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
 }
 
 impl Settlements {
@@ -136,16 +136,16 @@ impl Group {
     ) -> Self {
         Self {
             id,
-            name,
-            description,
-            currency,
-            language,
-            members: BTreeMap::new(),
             categories: BTreeMap::new(),
+            currency,
             expenses: BTreeMap::new(),
-            transfers: BTreeMap::new(),
             ledger: Ledger::new(currency),
+            members: BTreeMap::new(),
+            name,
             settlements: Settlements::default(),
+            transfers: BTreeMap::new(),
+            description,
+            language,
         }
     }
 
@@ -275,7 +275,7 @@ impl Group {
             transfer.set_exchange_rate(rate_for(transfer.amount().currency())?);
             let amount = resolve_transfer(&transfer, currency)?;
             delta.add_transfer(transfer.from(), transfer.to(), amount, 1);
-            transfers.insert(id, TransferRecord { transfer, amount });
+            transfers.insert(id, TransferRecord { amount, transfer });
         }
         let mut ledger = Ledger::new(currency);
         ledger.apply(&delta).map_err(|_| GroupError::Overflow)?;
@@ -296,8 +296,8 @@ impl Group {
         self.members.insert(
             id,
             MemberRecord {
-                member,
                 archived: false,
+                member,
             },
         );
         id
@@ -316,8 +316,8 @@ impl Group {
         self.members.insert(
             id,
             MemberRecord {
-                member,
                 archived: false,
+                member,
             },
         );
         Ok(())
@@ -391,8 +391,8 @@ impl Group {
             .collect();
         if !expenses.is_empty() || !transfers.is_empty() {
             return Err(GroupError::MemberInUse {
-                member: id,
                 expenses,
+                member: id,
                 transfers,
             });
         }
@@ -715,7 +715,7 @@ impl Group {
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
         self.transfers
-            .insert(id, TransferRecord { transfer, amount });
+            .insert(id, TransferRecord { amount, transfer });
         self.invalidate_settlements();
         Ok(())
     }
@@ -750,7 +750,7 @@ impl Group {
             .map_err(|_| GroupError::Overflow)?;
         let replaced = self
             .transfers
-            .insert(id, TransferRecord { transfer, amount });
+            .insert(id, TransferRecord { amount, transfer });
         self.invalidate_settlements();
         replaced
             .map(|record| record.transfer)

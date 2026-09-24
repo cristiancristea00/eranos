@@ -31,24 +31,24 @@ const FORMAT: u32 = 2;
 struct GroupView<'group> {
     format: u32,
     id: GroupId,
+    categories: Vec<Entry<CategoryId, &'group Category>>,
+    currency: Currency,
+    expenses: Vec<Entry<ExpenseId, &'group Expense>>,
+    members: Vec<MemberView<'group>>,
     name: &'group str,
+    transfers: Vec<Entry<TransferId, &'group Transfer>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<&'group str>,
-    currency: Currency,
     #[serde(skip_serializing_if = "Option::is_none")]
     language: Option<&'group Language>,
-    members: Vec<MemberView<'group>>,
-    categories: Vec<Entry<CategoryId, &'group Category>>,
-    expenses: Vec<Entry<ExpenseId, &'group Expense>>,
-    transfers: Vec<Entry<TransferId, &'group Transfer>>,
 }
 
 #[derive(Serialize)]
 struct MemberView<'group> {
     id: MemberId,
+    member: &'group Member,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     archived: bool,
-    member: &'group Member,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -62,18 +62,18 @@ struct Entry<Id, Value> {
 struct GroupRecord {
     format: u32,
     id: GroupId,
+    currency: Currency,
     name: String,
     #[serde(default)]
+    categories: Vec<Entry<CategoryId, Category>>,
+    #[serde(default)]
     description: Option<String>,
-    currency: Currency,
+    #[serde(default)]
+    expenses: Vec<Entry<ExpenseId, Expense>>,
     #[serde(default)]
     language: Option<Language>,
     #[serde(default)]
     members: Vec<MemberRecord>,
-    #[serde(default)]
-    categories: Vec<Entry<CategoryId, Category>>,
-    #[serde(default)]
-    expenses: Vec<Entry<ExpenseId, Expense>>,
     #[serde(default)]
     transfers: Vec<Entry<TransferId, Transfer>>,
 }
@@ -81,9 +81,9 @@ struct GroupRecord {
 #[derive(Deserialize)]
 struct MemberRecord {
     id: MemberId,
+    member: Member,
     #[serde(default)]
     archived: bool,
-    member: Member,
 }
 
 impl Serialize for Group {
@@ -91,24 +91,12 @@ impl Serialize for Group {
         GroupView {
             format: FORMAT,
             id: self.id,
-            name: &self.name,
-            description: self.description.as_deref(),
-            currency: self.currency,
-            language: self.language.as_ref(),
-            members: self
-                .members
-                .iter()
-                .map(|(&id, record)| MemberView {
-                    id,
-                    archived: record.archived,
-                    member: &record.member,
-                })
-                .collect(),
             categories: self
                 .categories
                 .iter()
                 .map(|(&id, value)| Entry { id, value })
                 .collect(),
+            currency: self.currency,
             expenses: self
                 .expenses
                 .iter()
@@ -117,6 +105,16 @@ impl Serialize for Group {
                     value: &record.expense,
                 })
                 .collect(),
+            members: self
+                .members
+                .iter()
+                .map(|(&id, record)| MemberView {
+                    id,
+                    member: &record.member,
+                    archived: record.archived,
+                })
+                .collect(),
+            name: &self.name,
             transfers: self
                 .transfers
                 .iter()
@@ -125,6 +123,8 @@ impl Serialize for Group {
                     value: &record.transfer,
                 })
                 .collect(),
+            description: self.description.as_deref(),
+            language: self.language.as_ref(),
         }
         .serialize(serialiser)
     }

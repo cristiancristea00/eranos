@@ -122,8 +122,7 @@ pub(crate) fn resolve_expense(
     }
     let money = |minor_units| Money::from_minor_units(minor_units, currency);
     Ok(ExpenseShares {
-        total: money(total),
-        tip: money(tip),
+        debts,
         members: members
             .into_iter()
             .map(|(member, (payment, consumed))| MemberShare {
@@ -132,7 +131,8 @@ pub(crate) fn resolve_expense(
                 share: money(consumed),
             })
             .collect(),
-        debts,
+        tip: money(tip),
+        total: money(total),
     })
 }
 
@@ -194,9 +194,9 @@ fn debts(
             *left -= portion;
             if debtor != creditor && portion > 0 {
                 debts.push(Debt {
-                    debtor,
-                    creditor,
                     amount: portion,
+                    creditor,
+                    debtor,
                 });
             }
         }

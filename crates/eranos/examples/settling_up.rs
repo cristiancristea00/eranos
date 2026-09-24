@@ -15,48 +15,48 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ExpenseRow {
-    #[tabled(rename = "Expense")]
-    name: String,
-    #[tabled(rename = "Paid by")]
-    payer: String,
-    #[tabled(rename = "Shared by")]
-    participants: String,
-    #[tabled(rename = "Amount")]
+    #[tabled(rename = "Amount", order = 3)]
     amount: Money,
+    #[tabled(rename = "Expense", order = 0)]
+    name: String,
+    #[tabled(rename = "Shared by", order = 2)]
+    participants: String,
+    #[tabled(rename = "Paid by", order = 1)]
+    payer: String,
 }
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Paid")]
-    paid: Money,
-    #[tabled(rename = "Consumed")]
-    consumed: Money,
-    #[tabled(rename = "Balance")]
+    #[tabled(rename = "Balance", order = 3)]
     balance: Balance,
+    #[tabled(rename = "Consumed", order = 2)]
+    consumed: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Paid", order = 1)]
+    paid: Money,
 }
 
 #[derive(Tabled)]
 struct PaymentRow {
-    #[tabled(rename = "From")]
-    from: String,
-    #[tabled(rename = "To")]
-    to: String,
-    #[tabled(rename = "Amount")]
+    #[tabled(rename = "Amount", order = 2)]
     amount: Money,
+    #[tabled(rename = "From", order = 0)]
+    from: String,
+    #[tabled(rename = "To", order = 1)]
+    to: String,
 }
 
 #[derive(Tabled)]
 struct StrategyRow {
-    #[tabled(rename = "Strategy")]
-    strategy: &'static str,
-    #[tabled(rename = "Guarantee")]
-    guarantee: &'static str,
-    #[tabled(rename = "Cost")]
+    #[tabled(rename = "Cost", order = 2)]
     cost: &'static str,
-    #[tabled(rename = "Payments here")]
+    #[tabled(rename = "Guarantee", order = 1)]
+    guarantee: &'static str,
+    #[tabled(rename = "Payments here", order = 3)]
     payments: usize,
+    #[tabled(rename = "Strategy", order = 0)]
+    strategy: &'static str,
 }
 
 /// Prints a section heading with a line under it.
@@ -109,10 +109,10 @@ fn print_balances(group: &Group) {
         group.members().map(|(id, member)| {
             let totals = summary.member(id);
             BalanceRow {
+                balance: totals.balance(),
+                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
-                consumed: totals.share(),
-                balance: totals.balance(),
             }
         }),
         1,
@@ -122,9 +122,9 @@ fn print_balances(group: &Group) {
 fn print_payments(group: &Group, settlement: &Settlement) {
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
+            amount: payment.amount(),
             from: names(group, [payment.from()]),
             to: names(group, [payment.to()]),
-            amount: payment.amount(),
         }),
         2,
     );
@@ -168,22 +168,22 @@ fn strategies(group: &Group) -> Result<[usize; 3], Box<dyn Error>> {
     print_table(
         [
             StrategyRow {
-                strategy: "MinimumTransfers",
-                guarantee: "the fewest payments",
                 cost: "O(2ⁿ·n) for n open balances",
+                guarantee: "the fewest payments",
                 payments: minimum.len(),
+                strategy: "MinimumTransfers",
             },
             StrategyRow {
-                strategy: "Greedy",
-                guarantee: "at most n − 1 payments",
                 cost: "O(n log n)",
+                guarantee: "at most n − 1 payments",
                 payments: greedy.len(),
+                strategy: "Greedy",
             },
             StrategyRow {
-                strategy: "Direct",
-                guarantee: "one payment per pair in debt",
                 cost: "O(pairs)",
+                guarantee: "one payment per pair in debt",
                 payments: direct.len(),
+                strategy: "Direct",
             },
         ],
         3,
@@ -214,10 +214,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     spend(&mut group, "Snacks", "1.00", filip, &[ana])?;
     print_table(
         group.expenses().map(|(_, expense)| ExpenseRow {
-            name: expense.name().to_owned(),
-            payer: names(&group, expense.payers().members()),
-            participants: names(&group, expense.split().participants()),
             amount: expense.total(),
+            name: expense.name().to_owned(),
+            participants: names(&group, expense.split().participants()),
+            payer: names(&group, expense.payers().members()),
         }),
         3,
     );

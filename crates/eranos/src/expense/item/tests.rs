@@ -216,8 +216,8 @@ fn the_split_must_divide_the_line_total() {
     assert_eq!(
         builder().split(shares_of_the_unit_price).build(),
         Err(ExpenseError::AmountsDoNotAddUp {
-            expected: euros(1_350),
-            actual: euros(450)
+            actual: euros(450),
+            expected: euros(1_350)
         })
     );
     // Any other invalid split.

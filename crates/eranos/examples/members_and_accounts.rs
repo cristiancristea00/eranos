@@ -17,14 +17,14 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct MemberRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Email")]
-    email: String,
-    #[tabled(rename = "Phone")]
-    phone: String,
-    #[tabled(rename = "Accounts")]
+    #[tabled(rename = "Accounts", order = 3)]
     accounts: String,
+    #[tabled(rename = "Email", order = 1)]
+    email: String,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Phone", order = 2)]
+    phone: String,
 }
 
 #[derive(Tabled)]
@@ -39,14 +39,14 @@ struct CheckRow {
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Status")]
-    status: &'static str,
-    #[tabled(rename = "Consumed")]
-    consumed: Money,
-    #[tabled(rename = "Balance")]
+    #[tabled(rename = "Balance", order = 3)]
     balance: Balance,
+    #[tabled(rename = "Consumed", order = 2)]
+    consumed: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Status", order = 1)]
+    status: &'static str,
 }
 
 /// Prints a section heading with a line under it.
@@ -87,19 +87,19 @@ fn outcome<Value>(
 fn print_members(group: &Group) {
     print_table(
         group.members().map(|(_, member)| MemberRow {
-            name: [Some(member.first_name()), member.last_name()]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>()
-                .join(" "),
-            email: member.email().map_or("", Email::as_str).to_owned(),
-            phone: member.phone().map_or("", PhoneNumber::as_str).to_owned(),
             accounts: member
                 .accounts()
                 .iter()
                 .map(describe)
                 .collect::<Vec<_>>()
                 .join("\n"),
+            email: member.email().map_or("", Email::as_str).to_owned(),
+            name: [Some(member.first_name()), member.last_name()]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" "),
+            phone: member.phone().map_or("", PhoneNumber::as_str).to_owned(),
         }),
         4,
     );
@@ -109,14 +109,14 @@ fn print_balances(group: &Group) {
     let summary = group.summary();
     print_table(
         group.members().map(|(id, member)| BalanceRow {
+            balance: summary.member(id).balance(),
+            consumed: summary.member(id).share(),
             name: member.first_name().to_owned(),
             status: if group.is_archived(id) {
                 "archived"
             } else {
                 "active"
             },
-            consumed: summary.member(id).share(),
-            balance: summary.member(id).balance(),
         }),
         2,
     );

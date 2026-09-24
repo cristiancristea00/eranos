@@ -144,7 +144,7 @@ fn accounts_round_trip_through_serde() {
     let json = serde_json::to_string(&bank).unwrap();
     assert_eq!(
         json,
-        r#"{"name":"ING","details":{"iban":"RO49AAAA1B31007593840000"}}"#
+        r#"{"details":{"iban":"RO49AAAA1B31007593840000"},"name":"ING"}"#
     );
     assert_eq!(serde_json::from_str::<Account>(&json).unwrap(), bank);
     // Username accounts, trimmed on the way in.

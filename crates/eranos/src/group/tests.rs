@@ -240,8 +240,8 @@ fn only_an_unreferenced_member_can_be_removed() {
     assert_unchanged(
         &mut group,
         &GroupError::MemberInUse {
-            member: bob,
             expenses: vec![dinner],
+            member: bob,
             transfers: vec![repayment],
         },
         |group| group.remove_member(bob),
@@ -249,8 +249,8 @@ fn only_an_unreferenced_member_can_be_removed() {
     assert_unchanged(
         &mut group,
         &GroupError::MemberInUse {
-            member: carol,
             expenses: vec![],
+            member: carol,
             transfers: vec![repayment],
         },
         |group| group.remove_member(carol),
@@ -857,21 +857,21 @@ fn a_transfer_out_of_range_is_refused() {
 enum Operation {
     AddExpense {
         amount: i64,
-        payer: usize,
         participants: Vec<(usize, u32)>,
+        payer: usize,
     },
     ReplaceExpense {
-        position: usize,
         amount: i64,
         payer: usize,
+        position: usize,
     },
     RemoveExpense {
         position: usize,
     },
     AddTransfer {
+        amount: i64,
         from: usize,
         to: usize,
-        amount: i64,
     },
     RemoveTransfer {
         position: usize,
@@ -908,8 +908,8 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
     match operation.clone() {
         Operation::AddExpense {
             amount,
-            payer,
             participants,
+            payer,
         } => {
             let mut chosen: Vec<(MemberId, Parts)> = Vec::new();
             for (index, hundredths) in participants {
@@ -925,9 +925,9 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
             group.add_expense(expense).is_ok()
         }
         Operation::ReplaceExpense {
-            position,
             amount,
             payer,
+            position,
         } => {
             let Some(id) = expense_at(group, position) else {
                 return false;
@@ -946,7 +946,7 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
         Operation::RemoveExpense { position } => {
             expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
         }
-        Operation::AddTransfer { from, to, amount } => {
+        Operation::AddTransfer { amount, from, to } => {
             let Ok(transfer) =
                 Transfer::builder(members[from], members[to], money(amount), day()).build()
             else {

@@ -16,12 +16,12 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ComparisonRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Balance before saving")]
-    before: Balance,
-    #[tabled(rename = "Balance after loading")]
+    #[tabled(rename = "Balance after loading", order = 2)]
     after: Balance,
+    #[tabled(rename = "Balance before saving", order = 1)]
+    before: Balance,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
 }
 
 /// Prints a section heading with a line under it.
@@ -91,9 +91,9 @@ fn main() -> Result<(), Box<dyn Error>> {
          the totals. The loaded group equals the saved one, and so do its balances:"
     );
     let rows = [(ana, "Ana"), (bob, "Bob")].map(|(member, name)| ComparisonRow {
-        name: name.to_owned(),
-        before: group.summary().member(member).balance(),
         after: loaded.summary().member(member).balance(),
+        before: group.summary().member(member).balance(),
+        name: name.to_owned(),
     });
     print_table(rows, 1);
     let plan = loaded.settlement(SettlementStrategy::Greedy)?;

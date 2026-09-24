@@ -40,23 +40,24 @@ use crate::money::{Currency, Money};
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Summary {
-    currency: Currency,
-    total_spent: i64,
-    // Rows whose values are all zero are removed, so two summaries with the
-    // same totals compare equal however they were reached.
-    members: BTreeMap<MemberId, Totals>,
+    // In the three maps, rows whose values are all zero are removed, so two
+    // summaries with the same totals compare equal however they were
+    // reached.
     categories: BTreeMap<Option<CategoryId>, i64>,
+    currency: Currency,
     member_categories: BTreeMap<(MemberId, Option<CategoryId>), i64>,
+    members: BTreeMap<MemberId, Totals>,
+    total_spent: i64,
 }
 
 impl Summary {
     const fn new(currency: Currency) -> Self {
         Self {
-            currency,
-            total_spent: 0,
-            members: BTreeMap::new(),
             categories: BTreeMap::new(),
+            currency,
             member_categories: BTreeMap::new(),
+            members: BTreeMap::new(),
+            total_spent: 0,
         }
     }
 
@@ -238,12 +239,12 @@ impl fmt::Display for Balance {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExpenseShares {
-    pub(crate) total: Money,
-    pub(crate) tip: Money,
-    /// Sorted by member.
-    pub(crate) members: Vec<MemberShare>,
     /// What each participant owes each payer, for the direct settlement.
     pub(crate) debts: Vec<Debt>,
+    /// Sorted by member.
+    pub(crate) members: Vec<MemberShare>,
+    pub(crate) tip: Money,
+    pub(crate) total: Money,
 }
 
 impl ExpenseShares {
@@ -306,9 +307,9 @@ impl MemberShare {
 /// An amount one member owes another because of one entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Debt {
-    pub(crate) debtor: MemberId,
-    pub(crate) creditor: MemberId,
     pub(crate) amount: i64,
+    pub(crate) creditor: MemberId,
+    pub(crate) debtor: MemberId,
 }
 
 /// A value outside the ledger's range.
@@ -318,13 +319,13 @@ pub(crate) struct Overflow;
 /// The totals of one member, in minor units.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 struct Totals {
-    paid: i64,
-    share: i64,
-    sent: i64,
-    received: i64,
     // Kept as its own accumulator: computing it from the other four could
     // overflow even when every total fits.
     net: i64,
+    paid: i64,
+    received: i64,
+    sent: i64,
+    share: i64,
 }
 
 impl Totals {
@@ -336,12 +337,12 @@ impl Totals {
 /// Changes to apply to a [`Ledger`] at once, in exact 128-bit arithmetic.
 #[derive(Debug, Default)]
 pub(crate) struct Delta {
-    total_spent: i128,
-    /// paid, share, sent, received, net
-    members: BTreeMap<MemberId, [i128; 5]>,
     categories: BTreeMap<Option<CategoryId>, i128>,
     member_categories: BTreeMap<(MemberId, Option<CategoryId>), i128>,
+    /// paid, share, sent, received, net
+    members: BTreeMap<MemberId, [i128; 5]>,
     pairs: BTreeMap<(MemberId, MemberId), i128>,
+    total_spent: i128,
 }
 
 impl Delta {
@@ -400,16 +401,16 @@ impl Delta {
 /// netted debt between every pair of members.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Ledger {
-    summary: Summary,
     /// (lower, higher) → what lower owes higher; negative when higher owes.
     pairs: BTreeMap<(MemberId, MemberId), i64>,
+    summary: Summary,
 }
 
 impl Ledger {
     pub(crate) const fn new(currency: Currency) -> Self {
         Self {
-            summary: Summary::new(currency),
             pairs: BTreeMap::new(),
+            summary: Summary::new(currency),
         }
     }
 
@@ -446,11 +447,11 @@ impl Ledger {
             .map(|(&member, change)| {
                 let old = summary.members.get(&member).copied().unwrap_or_default();
                 let totals = Totals {
-                    paid: fit(i128::from(old.paid) + change[0])?,
-                    share: fit(i128::from(old.share) + change[1])?,
-                    sent: fit(i128::from(old.sent) + change[2])?,
-                    received: fit(i128::from(old.received) + change[3])?,
                     net: fit(i128::from(old.net) + change[4])?,
+                    paid: fit(i128::from(old.paid) + change[0])?,
+                    received: fit(i128::from(old.received) + change[3])?,
+                    sent: fit(i128::from(old.sent) + change[2])?,
+                    share: fit(i128::from(old.share) + change[1])?,
                 };
                 Ok((member, totals))
             })

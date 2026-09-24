@@ -227,15 +227,15 @@ fn amounts_must_add_up_to_the_total() {
     assert_eq!(
         short.validate(euros(1_000)),
         Err(ExpenseError::AmountsDoNotAddUp {
-            expected: euros(1_000),
-            actual: euros(999)
+            actual: euros(999),
+            expected: euros(1_000)
         })
     );
     assert_eq!(
         over.validate(euros(1_000)),
         Err(ExpenseError::AmountsDoNotAddUp {
-            expected: euros(1_000),
-            actual: euros(1_001)
+            actual: euros(1_001),
+            expected: euros(1_000)
         })
     );
 }

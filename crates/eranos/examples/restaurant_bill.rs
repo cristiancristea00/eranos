@@ -16,32 +16,32 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct LineRow {
-    #[tabled(rename = "Item")]
-    name: String,
-    #[tabled(rename = "Shared by")]
-    participants: String,
-    #[tabled(rename = "Quantity")]
-    quantity: u32,
-    #[tabled(rename = "Unit price")]
-    unit_price: Money,
-    #[tabled(rename = "Line total")]
+    #[tabled(rename = "Line total", order = 4)]
     line_total: Money,
+    #[tabled(rename = "Item", order = 0)]
+    name: String,
+    #[tabled(rename = "Shared by", order = 1)]
+    participants: String,
+    #[tabled(rename = "Quantity", order = 2)]
+    quantity: u32,
+    #[tabled(rename = "Unit price", order = 3)]
+    unit_price: Money,
 }
 
 #[derive(Tabled)]
 struct TipRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Ordered")]
-    subtotal: Money,
-    #[tabled(rename = "Tip by consumption")]
-    proportional_tip: Money,
-    #[tabled(rename = "Pays")]
-    proportional_total: Money,
-    #[tabled(rename = "Tip shared equally")]
+    #[tabled(rename = "Tip shared equally", order = 4)]
     equal_tip: Money,
-    #[tabled(rename = "Pays")]
+    #[tabled(rename = "Pays", order = 5)]
     equal_total: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Tip by consumption", order = 2)]
+    proportional_tip: Money,
+    #[tabled(rename = "Pays", order = 3)]
+    proportional_total: Money,
+    #[tabled(rename = "Ordered", order = 1)]
+    subtotal: Money,
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
@@ -130,11 +130,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let lines = receipt(ana, bob, carol)?;
     print_table(
         lines.iter().map(|item| LineRow {
+            line_total: item.line_total(),
             name: item.name().to_owned(),
             participants: names(&group, item.split().members()),
             quantity: item.quantity(),
             unit_price: item.unit_price(),
-            line_total: item.line_total(),
         }),
         2,
     );
@@ -172,12 +172,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         let proportional_total = consumed(by_consumption, member)?;
         let equal_total = consumed(&even, member)?;
         rows.push(TipRow {
-            name: first_name.to_owned(),
-            subtotal,
-            proportional_tip: proportional_total.checked_sub(subtotal)?,
-            proportional_total,
             equal_tip: equal_total.checked_sub(subtotal)?,
             equal_total,
+            name: first_name.to_owned(),
+            proportional_tip: proportional_total.checked_sub(subtotal)?,
+            proportional_total,
+            subtotal,
         });
     }
     print_table(rows, 1);

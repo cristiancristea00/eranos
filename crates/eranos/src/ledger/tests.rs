@@ -27,8 +27,15 @@ fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> Exp
         members.entry(participant).or_default().1 = share;
     }
     ExpenseShares {
-        total: eur(total),
-        tip: eur(0),
+        debts: participants
+            .iter()
+            .filter(|&&(participant, _)| participant != payer)
+            .map(|&(debtor, amount)| Debt {
+                amount,
+                creditor: payer,
+                debtor,
+            })
+            .collect(),
         members: members
             .into_iter()
             .map(|(member, (paid, share))| MemberShare {
@@ -37,15 +44,8 @@ fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> Exp
                 share: eur(share),
             })
             .collect(),
-        debts: participants
-            .iter()
-            .filter(|&&(participant, _)| participant != payer)
-            .map(|&(debtor, amount)| Debt {
-                debtor,
-                creditor: payer,
-                amount,
-            })
-            .collect(),
+        tip: eur(0),
+        total: eur(total),
     }
 }
 

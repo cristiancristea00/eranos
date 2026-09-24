@@ -16,32 +16,32 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct EntryRow {
-    #[tabled(rename = "Entry")]
-    name: String,
-    #[tabled(rename = "Paid by")]
-    payer: String,
-    #[tabled(rename = "Entered as")]
-    original: Money,
-    #[tabled(rename = "Rate")]
-    rate: ExchangeRate,
-    #[tabled(rename = "In the group currency")]
+    #[tabled(rename = "In the group currency", order = 4)]
     converted: Money,
+    #[tabled(rename = "Entry", order = 0)]
+    name: String,
+    #[tabled(rename = "Entered as", order = 2)]
+    original: Money,
+    #[tabled(rename = "Paid by", order = 1)]
+    payer: String,
+    #[tabled(rename = "Rate", order = 3)]
+    rate: ExchangeRate,
 }
 
 #[derive(Tabled)]
 struct BalanceRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Paid")]
-    paid: Money,
-    #[tabled(rename = "Consumed")]
-    consumed: Money,
-    #[tabled(rename = "Sent")]
-    sent: Money,
-    #[tabled(rename = "Received")]
-    received: Money,
-    #[tabled(rename = "Balance")]
+    #[tabled(rename = "Balance", order = 5)]
     balance: Balance,
+    #[tabled(rename = "Consumed", order = 2)]
+    consumed: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Paid", order = 1)]
+    paid: Money,
+    #[tabled(rename = "Received", order = 4)]
+    received: Money,
+    #[tabled(rename = "Sent", order = 3)]
+    sent: Money,
 }
 
 /// Prints a section heading with a line under it.
@@ -69,27 +69,27 @@ fn name(group: &Group, member: MemberId) -> String {
 /// Every expense and transfer, as entered and in the group currency.
 fn print_entries(group: &Group) {
     let expenses = group.expenses().map(|(id, expense)| EntryRow {
+        converted: group
+            .expense_shares(id)
+            .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
         name: expense.name().to_owned(),
+        original: expense.total(),
         payer: expense
             .payers()
             .members()
             .map(|member| name(group, member))
             .collect::<Vec<_>>()
             .join(", "),
-        original: expense.total(),
         rate: expense.exchange_rate(),
-        converted: group
-            .expense_shares(id)
-            .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
     });
     let transfers = group.transfers().map(|(id, transfer)| EntryRow {
-        name: format!("Transfer to {}", name(group, transfer.to())),
-        payer: name(group, transfer.from()),
-        original: transfer.amount(),
-        rate: transfer.exchange_rate(),
         converted: group
             .transfer_amount(id)
             .unwrap_or_else(|| Money::zero(group.currency())),
+        name: format!("Transfer to {}", name(group, transfer.to())),
+        original: transfer.amount(),
+        payer: name(group, transfer.from()),
+        rate: transfer.exchange_rate(),
     });
     print_table(expenses.chain(transfers), 2);
 }
@@ -100,12 +100,12 @@ fn print_balances(group: &Group) {
         group.members().map(|(id, member)| {
             let totals = summary.member(id);
             BalanceRow {
+                balance: totals.balance(),
+                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
-                consumed: totals.share(),
-                sent: totals.sent(),
                 received: totals.received(),
-                balance: totals.balance(),
+                sent: totals.sent(),
             }
         }),
         1,

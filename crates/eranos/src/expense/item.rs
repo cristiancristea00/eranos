@@ -39,9 +39,9 @@ use crate::text;
 )]
 pub struct Item {
     name: String,
+    split: Split,
     unit_price: Money,
     quantity: u32,
-    split: Split,
 }
 
 impl Item {
@@ -50,9 +50,9 @@ impl Item {
     pub fn builder(name: impl Into<String>, unit_price: Money) -> ItemBuilder {
         ItemBuilder {
             name: name.into(),
+            split: Choice::Unset,
             unit_price,
             quantity: 1,
-            split: Choice::Unset,
         }
     }
 
@@ -60,9 +60,9 @@ impl Item {
     pub fn to_builder(&self) -> ItemBuilder {
         ItemBuilder {
             name: self.name.clone(),
+            split: Choice::Inherited(self.split.clone()),
             unit_price: self.unit_price,
             quantity: self.quantity,
-            split: Choice::Inherited(self.split.clone()),
         }
     }
 
@@ -107,9 +107,9 @@ impl Item {
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ItemBuilder {
     name: String,
+    split: Choice<Split>,
     unit_price: Money,
     quantity: u32,
-    split: Choice<Split>,
 }
 
 impl ItemBuilder {
@@ -177,9 +177,9 @@ impl ItemBuilder {
         ))?;
         Ok(Item {
             name,
+            split,
             unit_price: self.unit_price,
             quantity: self.quantity,
-            split,
         })
     }
 }
@@ -189,9 +189,9 @@ impl ItemBuilder {
 #[derive(serde::Deserialize)]
 struct ItemRecord {
     name: String,
-    unit_price: Money,
     quantity: u32,
     split: Split,
+    unit_price: Money,
 }
 
 #[cfg(feature = "serde")]

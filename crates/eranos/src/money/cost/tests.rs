@@ -95,14 +95,14 @@ fn costs_serialise_by_kind() {
     // Local.
     let local = Cost::from(euros(2_000));
     let json = serde_json::to_string(&local).unwrap();
-    assert_eq!(json, r#"{"local":{"minor_units":2000,"currency":"EUR"}}"#);
+    assert_eq!(json, r#"{"local":{"currency":"EUR","minor_units":2000}}"#);
     assert_eq!(serde_json::from_str::<Cost>(&json).unwrap(), local);
     // Converted, with the rate as text.
     let converted = lei(40_000).at(rate("0.2"));
     let converted_json = serde_json::to_string(&converted).unwrap();
     assert_eq!(
         converted_json,
-        r#"{"converted":{"amount":{"minor_units":40000,"currency":"RON"},"rate":"0.2"}}"#
+        r#"{"converted":{"amount":{"currency":"RON","minor_units":40000},"rate":"0.2"}}"#
     );
     assert_eq!(
         serde_json::from_str::<Cost>(&converted_json).unwrap(),

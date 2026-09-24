@@ -14,36 +14,36 @@ use tabled::{Table, Tabled};
 
 #[derive(Tabled)]
 struct ExpenseRow {
-    #[tabled(rename = "Expense")]
-    name: String,
-    #[tabled(rename = "Paid by")]
-    payers: String,
-    #[tabled(rename = "Shared by")]
-    participants: String,
-    #[tabled(rename = "Amount")]
+    #[tabled(rename = "Amount", order = 3)]
     amount: Money,
+    #[tabled(rename = "Expense", order = 0)]
+    name: String,
+    #[tabled(rename = "Shared by", order = 2)]
+    participants: String,
+    #[tabled(rename = "Paid by", order = 1)]
+    payers: String,
 }
 
 #[derive(Tabled)]
 struct MemberRow {
-    #[tabled(rename = "Member")]
-    name: String,
-    #[tabled(rename = "Paid")]
-    paid: Money,
-    #[tabled(rename = "Consumed")]
-    consumed: Money,
-    #[tabled(rename = "Balance")]
+    #[tabled(rename = "Balance", order = 3)]
     balance: Balance,
+    #[tabled(rename = "Consumed", order = 2)]
+    consumed: Money,
+    #[tabled(rename = "Member", order = 0)]
+    name: String,
+    #[tabled(rename = "Paid", order = 1)]
+    paid: Money,
 }
 
 #[derive(Tabled)]
 struct PaymentRow {
-    #[tabled(rename = "From")]
-    from: String,
-    #[tabled(rename = "To")]
-    to: String,
-    #[tabled(rename = "Amount")]
+    #[tabled(rename = "Amount", order = 2)]
     amount: Money,
+    #[tabled(rename = "From", order = 0)]
+    from: String,
+    #[tabled(rename = "To", order = 1)]
+    to: String,
 }
 
 /// Prints a section heading with a line under it.
@@ -112,10 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
     print_table(
         group.expenses().map(|(_, expense)| ExpenseRow {
-            name: expense.name().to_owned(),
-            payers: names(&group, expense.payers().members()),
-            participants: names(&group, expense.split().participants()),
             amount: expense.total(),
+            name: expense.name().to_owned(),
+            participants: names(&group, expense.split().participants()),
+            payers: names(&group, expense.payers().members()),
         }),
         3,
     );
@@ -131,10 +131,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         group.members().map(|(id, member)| {
             let totals = summary.member(id);
             MemberRow {
+                balance: totals.balance(),
+                consumed: totals.share(),
                 name: member.first_name().to_owned(),
                 paid: totals.paid(),
-                consumed: totals.share(),
-                balance: totals.balance(),
             }
         }),
         1,
@@ -153,9 +153,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
+            amount: payment.amount(),
             from: names(&group, [payment.from()]),
             to: names(&group, [payment.to()]),
-            amount: payment.amount(),
         }),
         2,
     );

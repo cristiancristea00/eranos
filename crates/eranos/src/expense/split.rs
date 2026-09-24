@@ -155,8 +155,8 @@ impl Split {
                 } else {
                     let actual = i64::try_from(sum).map_err(|_| ExpenseError::Overflow)?;
                     Err(ExpenseError::AmountsDoNotAddUp {
-                        expected: total,
                         actual: Money::from_minor_units(actual, total.currency()),
+                        expected: total,
                     })
                 }
             }

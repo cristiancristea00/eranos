@@ -28,8 +28,8 @@ fn day() -> Date {
 /// How one amount is divided: a method and weighted members.
 #[derive(Debug, Clone)]
 struct SplitRecipe {
-    method: u8,
     members: Vec<(usize, u32)>,
+    method: u8,
 }
 
 fn split_recipe() -> impl Strategy<Value = SplitRecipe> {
@@ -37,7 +37,7 @@ fn split_recipe() -> impl Strategy<Value = SplitRecipe> {
         0_u8..4,
         proptest::collection::vec((0..MEMBERS, 1_u32..1_000), 1..5),
     )
-        .prop_map(|(method, members)| SplitRecipe { method, members })
+        .prop_map(|(method, members)| SplitRecipe { members, method })
 }
 
 /// Divides `total` minor units by `weights` into positive integers adding
@@ -94,11 +94,11 @@ impl SplitRecipe {
 #[derive(Debug, Clone)]
 struct ExpenseRecipe {
     amount: i64,
-    items: Option<Vec<(i64, u32, SplitRecipe)>>,
-    split: SplitRecipe,
     payers: SplitRecipe,
-    tip: Option<(bool, u32, bool)>,
+    split: SplitRecipe,
     foreign: Option<(u8, u64, u8)>,
+    items: Option<Vec<(i64, u32, SplitRecipe)>>,
+    tip: Option<(bool, u32, bool)>,
 }
 
 fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
@@ -116,11 +116,11 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
         .prop_map(
             |(amount, items, split, payers, tip, foreign)| ExpenseRecipe {
                 amount,
-                items,
-                split,
                 payers,
-                tip,
+                split,
                 foreign,
+                items,
+                tip,
             },
         )
 }

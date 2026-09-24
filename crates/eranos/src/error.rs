@@ -40,10 +40,10 @@ pub enum ValueError {
     /// An amount with more decimal places than its currency has.
     #[error("{currency} amounts have at most {allowed} decimal places")]
     TooManyDecimals {
-        /// The currency of the amount.
-        currency: Currency,
         /// The currency's number of decimal places.
         allowed: u8,
+        /// The currency of the amount.
+        currency: Currency,
     },
     /// A percentage that is not a decimal number with at most two decimal
     /// places.
@@ -190,18 +190,18 @@ pub enum ExpenseError {
     /// The amounts of a split do not add up to the amount being split.
     #[error("the amounts add up to {actual} instead of {expected}")]
     AmountsDoNotAddUp {
-        /// The amount being split.
-        expected: Money,
         /// The sum of the listed amounts.
         actual: Money,
+        /// The amount being split.
+        expected: Money,
     },
     /// The item line totals do not add up to the expense amount.
     #[error("the items add up to {actual} instead of {expected}")]
     ItemsDoNotAddUp {
-        /// The expense amount.
-        expected: Money,
         /// The sum of the item line totals.
         actual: Money,
+        /// The expense amount.
+        expected: Money,
     },
     /// An amount inside the expense is in a different currency.
     #[error("expected an amount in {expected}, found one in {found}")]
@@ -279,10 +279,10 @@ pub enum GroupError {
     /// instead.
     #[error("member {member} is used by {}", usage(expenses.len(), transfers.len()))]
     MemberInUse {
-        /// The member that was to be removed.
-        member: MemberId,
         /// The expenses that reference the member.
         expenses: Vec<ExpenseId>,
+        /// The member that was to be removed.
+        member: MemberId,
         /// The transfers that reference the member.
         transfers: Vec<TransferId>,
     },

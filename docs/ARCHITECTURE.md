@@ -330,21 +330,26 @@ inputs, never the derived totals:
 ```text
 {
   "format": 2,
-  "id": "…", "name": "Lisbon", "currency": "EUR", "language": "pt-PT",
-  "members":    [{"id": "…", "archived": true, "member": {"first_name": "Ana", …}}],
+  "id": "…",
   "categories": [{"id": "…", "entry": {"name": "Food"}}],
-  "expenses":   [{"id": "…", "entry": {"name": "Dinner",
-                  "amount": {"minor_units": 9000, "currency": "EUR"},
-                  "date": "2026-09-23", "payers": {"equal": ["…"]},
+  "currency": "EUR",
+  "expenses":   [{"id": "…", "entry": {
+                  "amount": {"currency": "EUR", "minor_units": 9000},
+                  "date": "2026-09-23", "name": "Dinner", "payers": {"equal": ["…"]},
                   "split": {"whole": {"percentages": [["…", 5000], …]}},
                   "tip": {"value": {"percentage": 1000}, "distribution": "proportional"}}}],
-  "transfers":  [{"id": "…", "entry": {"from": "…", "to": "…", …}}]
+  "members":    [{"id": "…", "member": {"first_name": "Ana", …}, "archived": true}],
+  "name": "Lisbon",
+  "transfers":  [{"id": "…", "entry": {"amount": …, "date": "…", "from": "…", "to": "…"}}],
+  "language": "pt-PT"
 }
 ```
 
 - Identifiers are hyphenated UUIDs, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD`, times `hh:mm`, percentages basis points,
-  parts hundredths. Absent optional fields are omitted.
+  parts hundredths. Absent optional fields are omitted. Keys follow the
+  field order of [AGENTS.md](../AGENTS.md): `format` and `id` first, then
+  the required fields, then the optional ones, each alphabetically.
 - Loading replays the entries through the insert methods: members (all
   unarchived first), categories, expenses, transfers, then the archive
   flags, because an expense may reference a member archived after it was

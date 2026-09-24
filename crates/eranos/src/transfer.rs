@@ -35,16 +35,16 @@ use crate::text;
     serde(try_from = "TransferRecord")
 )]
 pub struct Transfer {
-    from: MemberId,
-    to: MemberId,
     amount: Money,
     date: Date,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    time: Option<Time>,
+    from: MemberId,
+    to: MemberId,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     note: Option<String>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    time: Option<Time>,
 }
 
 impl Transfer {
@@ -59,24 +59,24 @@ impl Transfer {
         date: Date,
     ) -> TransferBuilder {
         TransferBuilder {
-            from,
-            to,
             cost: cost.into(),
             date,
-            time: None,
+            from,
+            to,
             note: None,
+            time: None,
         }
     }
 
     /// Starts a builder holding a copy of this transfer, to edit it.
     pub fn to_builder(&self) -> TransferBuilder {
         TransferBuilder {
-            from: self.from,
-            to: self.to,
             cost: self.cost(),
             date: self.date,
-            time: self.time,
+            from: self.from,
+            to: self.to,
             note: self.note.clone(),
+            time: self.time,
         }
     }
 
@@ -142,13 +142,13 @@ impl Transfer {
             "an unchecked transfer must be valid"
         );
         Self {
-            from,
-            to,
             amount,
             date,
-            time: None,
+            from,
+            to,
             exchange_rate: None,
             note: None,
+            time: None,
         }
     }
 }
@@ -158,12 +158,12 @@ impl Transfer {
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct TransferBuilder {
-    from: MemberId,
-    to: MemberId,
     cost: Cost,
     date: Date,
-    time: Option<Time>,
+    from: MemberId,
+    to: MemberId,
     note: Option<String>,
+    time: Option<Time>,
 }
 
 impl TransferBuilder {
@@ -223,13 +223,13 @@ impl TransferBuilder {
             return Err(TransferError::NonPositiveAmount);
         }
         Ok(Transfer {
-            from: self.from,
-            to: self.to,
             amount,
             date: self.date,
-            time: self.time,
+            from: self.from,
+            to: self.to,
             exchange_rate: self.cost.conversion(),
             note: self.note.and_then(text::optional),
+            time: self.time,
         })
     }
 }
@@ -238,16 +238,16 @@ impl TransferBuilder {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct TransferRecord {
-    from: MemberId,
-    to: MemberId,
     amount: Money,
     date: Date,
-    #[serde(default)]
-    time: Option<Time>,
+    from: MemberId,
+    to: MemberId,
     #[serde(default)]
     exchange_rate: Option<ExchangeRate>,
     #[serde(default)]
     note: Option<String>,
+    #[serde(default)]
+    time: Option<Time>,
 }
 
 #[cfg(feature = "serde")]

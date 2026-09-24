@@ -32,8 +32,8 @@ use crate::text;
     serde(try_from = "AccountRecord")
 )]
 pub struct Account {
-    name: String,
     details: AccountDetails,
+    name: String,
 }
 
 impl Account {
@@ -48,8 +48,8 @@ impl Account {
     ) -> Result<Self, ValueError> {
         let name = text::required(name, Field::AccountName)?;
         Ok(Self {
-            name,
             details: details.into(),
+            name,
         })
     }
 
@@ -175,8 +175,8 @@ impl FromStr for Username {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct AccountRecord {
-    name: String,
     details: AccountDetails,
+    name: String,
 }
 
 #[cfg(feature = "serde")]

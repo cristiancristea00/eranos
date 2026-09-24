@@ -4,6 +4,7 @@
 //! keeps the core deterministic and usable on wasm, where the system clock is
 //! unavailable.
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
 
@@ -25,12 +26,25 @@ use crate::error::ValueError;
 /// assert!(Date::new(2026, 2, 29).is_err()); // 2026 is not a leap year
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Date {
-    // Field order is the ordering: year, then month, then day.
-    year: u16,
-    month: u8,
     day: u8,
+    month: u8,
+    year: u16,
+}
+
+// Written out because the fields are in alphabetical order: a derived
+// ordering would compare days first.
+impl Ord for Date {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.year, self.month, self.day).cmp(&(other.year, other.month, other.day))
+    }
+}
+
+impl PartialOrd for Date {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Date {
@@ -47,7 +61,7 @@ impl Date {
         if day < 1 || day > days_in_month(year, month) {
             return Err(ValueError::InvalidDate);
         }
-        Ok(Self { year, month, day })
+        Ok(Self { day, month, year })
     }
 
     /// Parses an ISO 8601 `YYYY-MM-DD` date.
@@ -129,11 +143,24 @@ impl FromStr for Date {
 /// assert!(Time::new(24, 0).is_err());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Time {
-    // Field order is the ordering: hour, then minute.
     hour: u8,
     minute: u8,
+}
+
+// Written out, like the ordering of `Date`, so that it does not depend on
+// the order of the fields.
+impl Ord for Time {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.hour, self.minute).cmp(&(other.hour, other.minute))
+    }
+}
+
+impl PartialOrd for Time {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Time {

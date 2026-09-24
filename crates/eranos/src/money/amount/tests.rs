@@ -112,16 +112,16 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
     assert_eq!(
         parse_euros("12.345"),
         Err(ValueError::TooManyDecimals {
-            currency: Currency::EUR,
-            allowed: 2
+            allowed: 2,
+            currency: Currency::EUR
         })
     );
     // Trailing zeros count.
     assert_eq!(
         parse_euros("12.340"),
         Err(ValueError::TooManyDecimals {
-            currency: Currency::EUR,
-            allowed: 2
+            allowed: 2,
+            currency: Currency::EUR
         })
     );
     // No decimals: any fraction is too many.
@@ -129,8 +129,8 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
         assert_eq!(
             Money::parse(text, Currency::JPY),
             Err(ValueError::TooManyDecimals {
-                currency: Currency::JPY,
-                allowed: 0
+                allowed: 0,
+                currency: Currency::JPY
             })
         );
     }
@@ -138,15 +138,15 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
     assert_eq!(
         Money::parse("1.2345", Currency::BHD),
         Err(ValueError::TooManyDecimals {
-            currency: Currency::BHD,
-            allowed: 3
+            allowed: 3,
+            currency: Currency::BHD
         })
     );
     assert_eq!(
         Money::parse("1.23456", Currency::CLF),
         Err(ValueError::TooManyDecimals {
-            currency: Currency::CLF,
-            allowed: 4
+            allowed: 4,
+            currency: Currency::CLF
         })
     );
 }
@@ -334,10 +334,10 @@ fn amounts_serialise_as_minor_units_and_currency() {
     // Round trip.
     let amount = euros(1_234);
     let json = serde_json::to_string(&amount).unwrap();
-    assert_eq!(json, r#"{"minor_units":1234,"currency":"EUR"}"#);
+    assert_eq!(json, r#"{"currency":"EUR","minor_units":1234}"#);
     assert_eq!(serde_json::from_str::<Money>(&json).unwrap(), amount);
     // An unknown currency.
-    assert!(serde_json::from_str::<Money>(r#"{"minor_units":1,"currency":"XYZ"}"#).is_err());
+    assert!(serde_json::from_str::<Money>(r#"{"currency":"XYZ","minor_units":1}"#).is_err());
 }
 
 proptest! {

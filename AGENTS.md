@@ -94,6 +94,16 @@ for test helpers and benchmark fixtures, which panic to report failure);
   `#[non_exhaustive]` thiserror enums whose messages are lowercase, carry no
   trailing full stop, and never echo the text they rejected (inputs include
   account numbers).
+- **Fields follow one order.** Named fields, in structs and in enum
+  variants, start with `format` (the saved group's version) and `id`, then
+  list the required fields, then the optional ones, each alphabetically. A
+  field is optional when the caller may leave it out: an `Option`, or a
+  field with a default, such as a quantity of 1 or no accounts. Generated
+  and derived fields, such as an expense's total, count as required.
+  Struct literals, struct patterns, and serialised keys follow the same
+  order. No field order carries meaning: `Date` and `Time` write their
+  ordering out by hand, and a table row in the examples fixes its columns
+  with `#[tabled(order = N)]`.
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
   validating constructor (`serde(try_from = …)`); `Group` replays its

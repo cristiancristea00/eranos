@@ -42,14 +42,14 @@ use crate::text;
 )]
 pub struct Member {
     first_name: String,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    last_name: Option<String>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    accounts: Vec<Account>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     email: Option<Email>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    last_name: Option<String>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     phone: Option<PhoneNumber>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
-    accounts: Vec<Account>,
 }
 
 impl Member {
@@ -57,10 +57,10 @@ impl Member {
     pub fn builder(first_name: impl Into<String>) -> MemberBuilder {
         MemberBuilder {
             first_name: first_name.into(),
-            last_name: None,
-            email: None,
-            phone: None,
             accounts: Vec::new(),
+            email: None,
+            last_name: None,
+            phone: None,
         }
     }
 
@@ -68,10 +68,10 @@ impl Member {
     pub fn to_builder(&self) -> MemberBuilder {
         MemberBuilder {
             first_name: self.first_name.clone(),
-            last_name: self.last_name.clone(),
-            email: self.email.clone(),
-            phone: self.phone.clone(),
             accounts: self.accounts.clone(),
+            email: self.email.clone(),
+            last_name: self.last_name.clone(),
+            phone: self.phone.clone(),
         }
     }
 
@@ -112,10 +112,10 @@ impl Member {
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct MemberBuilder {
     first_name: String,
-    last_name: Option<String>,
-    email: Option<Email>,
-    phone: Option<PhoneNumber>,
     accounts: Vec<Account>,
+    email: Option<Email>,
+    last_name: Option<String>,
+    phone: Option<PhoneNumber>,
 }
 
 impl MemberBuilder {
@@ -163,10 +163,10 @@ impl MemberBuilder {
     pub fn build(self) -> Result<Member, ValueError> {
         Ok(Member {
             first_name: text::required(self.first_name, Field::FirstName)?,
-            last_name: self.last_name.and_then(text::optional),
-            email: self.email,
-            phone: self.phone,
             accounts: self.accounts,
+            email: self.email,
+            last_name: self.last_name.and_then(text::optional),
+            phone: self.phone,
         })
     }
 }
@@ -177,13 +177,13 @@ impl MemberBuilder {
 struct MemberRecord {
     first_name: String,
     #[serde(default)]
-    last_name: Option<String>,
+    accounts: Vec<Account>,
     #[serde(default)]
     email: Option<Email>,
     #[serde(default)]
-    phone: Option<PhoneNumber>,
+    last_name: Option<String>,
     #[serde(default)]
-    accounts: Vec<Account>,
+    phone: Option<PhoneNumber>,
 }
 
 #[cfg(feature = "serde")]

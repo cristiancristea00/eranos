@@ -90,8 +90,8 @@ impl SettlementStrategy {
 /// [`Payment::to_transfer`]) brings every balance to zero.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settlement {
-    strategy: SettlementStrategy,
     payments: Vec<Payment>,
+    strategy: SettlementStrategy,
 }
 
 impl Settlement {
@@ -123,9 +123,9 @@ impl Settlement {
 /// One payment of a [`Settlement`]: `from` pays `amount` to `to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Payment {
+    amount: Money,
     from: MemberId,
     to: MemberId,
-    amount: Money,
 }
 
 impl Payment {
@@ -172,12 +172,12 @@ pub(crate) fn settle(
     let payments = flows
         .into_iter()
         .map(|(from, to, amount)| Payment {
+            amount: Money::from_minor_units(amount, currency),
             from,
             to,
-            amount: Money::from_minor_units(amount, currency),
         })
         .collect();
-    Ok(Settlement { strategy, payments })
+    Ok(Settlement { payments, strategy })
 }
 
 #[cfg(test)]
