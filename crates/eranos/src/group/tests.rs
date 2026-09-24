@@ -69,9 +69,9 @@ fn rebuilt(group: &Group) -> Ledger {
     let mut delta = Delta::default();
     for (&id, record) in &group.expenses {
         assert_eq!(id, record.expense.id());
-        let shares = resolve_expense(&record.expense, group.currency).unwrap();
-        assert_eq!(shares, record.shares);
-        delta.add_expense(&shares, record.expense.category(), 1);
+        let resolved = resolve_expense(&record.expense, group.currency).unwrap();
+        assert_eq!(resolved, record.resolved);
+        delta.add_expense(&resolved, record.expense.category(), 1);
     }
     for (&id, record) in &group.transfers {
         assert_eq!(id, record.transfer.id());
@@ -79,7 +79,7 @@ fn rebuilt(group: &Group) -> Ledger {
             resolve_transfer(&record.transfer, group.currency).unwrap(),
             record.amount
         );
-        delta.add_transfer(record.transfer.pair(), record.amount, 1);
+        delta.add_transfer(pair(&record.transfer), record.amount, 1);
     }
     let mut ledger = Ledger::new(group.currency);
     ledger.apply(&delta).unwrap();

@@ -6,7 +6,7 @@
 
 use super::*;
 
-use crate::ledger::{Delta, Ledger};
+use crate::ledger::{Delta, Ledger, MemberPair};
 use crate::money::Currency;
 use crate::settlement::{self, SettlementStrategy};
 

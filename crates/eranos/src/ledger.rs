@@ -264,8 +264,6 @@ impl fmt::Display for Balance {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExpenseShares {
-    /// What each participant owes each payer, for the direct settlement.
-    pub(crate) debts: Vec<Debt>,
     /// Sorted by member.
     pub(crate) members: Vec<MemberShare>,
     pub(crate) tip: Money,
@@ -370,6 +368,15 @@ pub(crate) struct Debt {
     pub(crate) members: MemberPair,
 }
 
+/// An expense divided in the group currency: the shares callers read, and
+/// what each participant owes each payer, which only the direct settlement
+/// reads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ResolvedExpense {
+    pub(crate) debts: Vec<Debt>,
+    pub(crate) shares: ExpenseShares,
+}
+
 /// A value outside the ledger's range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Overflow;
@@ -405,11 +412,16 @@ pub(crate) struct Delta {
 
 impl Delta {
     /// Adds (`sign` 1) or removes (`sign` −1) one expense.
-    pub(crate) fn add_expense(&mut self, shares: &ExpenseShares, category: CategoryId, sign: i128) {
-        let total = sign * i128::from(shares.total.minor_units());
+    pub(crate) fn add_expense(
+        &mut self,
+        resolved: &ResolvedExpense,
+        category: CategoryId,
+        sign: i128,
+    ) {
+        let total = sign * i128::from(resolved.shares.total.minor_units());
         self.total_spent += total;
         *self.categories.entry(category).or_default() += total;
-        for share in &shares.members {
+        for share in &resolved.shares.members {
             let paid = sign * i128::from(share.paid.minor_units());
             let consumed = sign * i128::from(share.share.minor_units());
             let row = self.members.entry(share.member).or_default();
@@ -421,7 +433,7 @@ impl Delta {
                 .entry((share.member, category))
                 .or_default() += consumed;
         }
-        for debt in &shares.debts {
+        for debt in &resolved.debts {
             self.add_debt(debt.members, sign * i128::from(debt.amount));
         }
     }

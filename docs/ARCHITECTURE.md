@@ -131,7 +131,7 @@ device:
 | ---------- | --------------------------------------------- | ----------------------------------------------------------------- |
 | members    | `Member` + archived flag                      | first name required; contacts and accounts optional               |
 | categories | `Category`                                    | names unique by Unicode caseless match; Uncategorised is built in |
-| expenses   | `Expense` + its resolved `ExpenseShares`      | the resolution is kept for exact removal                          |
+| expenses   | `Expense` + its shares and pair debts         | the resolution is kept for exact removal                          |
 | transfers  | `Transfer` + its amount in the group currency | the same, for transfers                                           |
 
 Entities are immutable values built by builders (`Member::builder`,

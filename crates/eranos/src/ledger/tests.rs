@@ -25,13 +25,13 @@ const fn pair(from: MemberId, to: MemberId) -> MemberPair {
 
 /// An expense of `total` paid by `payer` and consumed by `participants`,
 /// with the payer owed every other share.
-fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> ExpenseShares {
+fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> ResolvedExpense {
     let mut members: BTreeMap<MemberId, (i64, i64)> = BTreeMap::new();
     members.entry(payer).or_default().0 = total;
     for &(participant, share) in participants {
         members.entry(participant).or_default().1 = share;
     }
-    ExpenseShares {
+    ResolvedExpense {
         debts: participants
             .iter()
             .filter(|&&(participant, _)| participant != payer)
@@ -40,16 +40,18 @@ fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> Exp
                 members: pair(debtor, payer),
             })
             .collect(),
-        members: members
-            .into_iter()
-            .map(|(member, (paid, share))| MemberShare {
-                member,
-                paid: eur(paid),
-                share: eur(share),
-            })
-            .collect(),
-        tip: eur(0),
-        total: eur(total),
+        shares: ExpenseShares {
+            members: members
+                .into_iter()
+                .map(|(member, (paid, share))| MemberShare {
+                    member,
+                    paid: eur(paid),
+                    share: eur(share),
+                })
+                .collect(),
+            tip: eur(0),
+            total: eur(total),
+        },
     }
 }
 
@@ -365,7 +367,7 @@ fn member_category_totals_list_only_that_member() {
 #[test]
 fn expense_shares_look_up_members() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
-    let shares = expense(1000, ana, &[(ana, 400), (bob, 600)]);
+    let shares = expense(1000, ana, &[(ana, 400), (bob, 600)]).shares;
     assert_eq!(shares.member(bob).map(MemberShare::share), Some(eur(600)));
     assert_eq!(shares.member(ana).map(MemberShare::paid), Some(eur(1000)));
     assert_eq!(shares.member(ana).map(MemberShare::member), Some(ana));

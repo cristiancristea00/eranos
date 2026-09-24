@@ -19,7 +19,7 @@ use crate::category::Category;
 use crate::error::{GroupError, SettlementError};
 use crate::expense::{Expense, resolve_expense};
 use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
-use crate::ledger::{Delta, ExpenseShares, Ledger, Summary};
+use crate::ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
 use crate::member::Member;
 use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
 use crate::settlement::{self, Settlement, SettlementStrategy};
@@ -87,7 +87,7 @@ struct MemberRecord {
 #[derive(Debug, Clone)]
 struct ExpenseRecord {
     expense: Expense,
-    shares: ExpenseShares,
+    resolved: ResolvedExpense,
 }
 
 #[derive(Debug, Clone)]
@@ -339,16 +339,16 @@ impl Group {
         for (&id, record) in &self.expenses {
             let mut expense = record.expense.clone();
             expense.set_exchange_rate(rate_for(expense.amount().currency())?);
-            let shares = resolve_expense(&expense, currency).map_err(|_| GroupError::Overflow)?;
-            delta.add_expense(&shares, expense.category(), 1);
-            expenses.insert(id, ExpenseRecord { expense, shares });
+            let resolved = resolve_expense(&expense, currency).map_err(|_| GroupError::Overflow)?;
+            delta.add_expense(&resolved, expense.category(), 1);
+            expenses.insert(id, ExpenseRecord { expense, resolved });
         }
         let mut transfers = BTreeMap::new();
         for (&id, record) in &self.transfers {
             let mut transfer = record.transfer.clone();
             transfer.set_exchange_rate(rate_for(transfer.amount().currency())?);
             let amount = resolve_transfer(&transfer, currency).map_err(|_| GroupError::Overflow)?;
-            delta.add_transfer(transfer.pair(), amount, 1);
+            delta.add_transfer(pair(&transfer), amount, 1);
             transfers.insert(id, TransferRecord { amount, transfer });
         }
         let mut ledger = Ledger::new(currency);
@@ -377,7 +377,7 @@ impl Group {
 
     /// How an expense divides in the group currency.
     pub fn expense_shares(&self, id: ExpenseId) -> Option<&ExpenseShares> {
-        self.expenses.get(&id).map(|record| &record.shares)
+        self.expenses.get(&id).map(|record| &record.resolved.shares)
     }
 
     /// Adds an expense under its identifier.
@@ -401,13 +401,15 @@ impl Group {
             return Err(GroupError::DuplicateExpense(id));
         }
         self.check_expense(&expense, None)?;
-        let shares = resolve_expense(&expense, self.currency).map_err(|_| GroupError::Overflow)?;
+        let resolved =
+            resolve_expense(&expense, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
-        delta.add_expense(&shares, expense.category(), 1);
+        delta.add_expense(&resolved, expense.category(), 1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
-        self.expenses.insert(id, ExpenseRecord { expense, shares });
+        self.expenses
+            .insert(id, ExpenseRecord { expense, resolved });
         self.invalidate_settlements();
         Ok(id)
     }
@@ -429,14 +431,17 @@ impl Group {
             .get(&id)
             .ok_or(GroupError::UnknownExpense(id))?;
         self.check_expense(&expense, Some(&previous.expense))?;
-        let shares = resolve_expense(&expense, self.currency).map_err(|_| GroupError::Overflow)?;
+        let resolved =
+            resolve_expense(&expense, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
-        delta.add_expense(&previous.shares, previous.expense.category(), -1);
-        delta.add_expense(&shares, expense.category(), 1);
+        delta.add_expense(&previous.resolved, previous.expense.category(), -1);
+        delta.add_expense(&resolved, expense.category(), 1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
-        let replaced = self.expenses.insert(id, ExpenseRecord { expense, shares });
+        let replaced = self
+            .expenses
+            .insert(id, ExpenseRecord { expense, resolved });
         self.invalidate_settlements();
         replaced
             .map(|replaced| replaced.expense)
@@ -456,7 +461,7 @@ impl Group {
             .get(&id)
             .ok_or(GroupError::UnknownExpense(id))?;
         let mut delta = Delta::default();
-        delta.add_expense(&record.shares, record.expense.category(), -1);
+        delta.add_expense(&record.resolved, record.expense.category(), -1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
@@ -677,7 +682,7 @@ impl Group {
         let amount =
             resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
-        delta.add_transfer(transfer.pair(), amount, 1);
+        delta.add_transfer(pair(&transfer), amount, 1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
@@ -705,8 +710,8 @@ impl Group {
         let amount =
             resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
-        delta.add_transfer(previous.transfer.pair(), previous.amount, -1);
-        delta.add_transfer(transfer.pair(), amount, 1);
+        delta.add_transfer(pair(&previous.transfer), previous.amount, -1);
+        delta.add_transfer(pair(&transfer), amount, 1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
@@ -732,7 +737,7 @@ impl Group {
             .get(&id)
             .ok_or(GroupError::UnknownTransfer(id))?;
         let mut delta = Delta::default();
-        delta.add_transfer(record.transfer.pair(), record.amount, -1);
+        delta.add_transfer(pair(&record.transfer), record.amount, -1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
@@ -844,6 +849,14 @@ impl PartialEq for Group {
 }
 
 impl Eq for Group {}
+
+/// The sender and the recipient of `transfer`, as the ledger keys them.
+const fn pair(transfer: &Transfer) -> MemberPair {
+    MemberPair {
+        from: transfer.from(),
+        to: transfer.to(),
+    }
+}
 
 #[cfg(test)]
 mod tests;

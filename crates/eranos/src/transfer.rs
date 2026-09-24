@@ -3,7 +3,6 @@
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::error::{MoneyError, TransferError};
 use crate::id::{MemberId, TransferId};
-use crate::ledger::MemberPair;
 use crate::money::{Cost, Currency, ExchangeRate, Money};
 use crate::settlement::Payment;
 use crate::text;
@@ -170,14 +169,6 @@ impl Transfer {
     #[must_use]
     pub const fn time(&self) -> Option<TimeOfDay> {
         self.time
-    }
-
-    /// The sender and the recipient.
-    pub(crate) const fn pair(&self) -> MemberPair {
-        MemberPair {
-            from: self.from,
-            to: self.to,
-        }
     }
 }
 

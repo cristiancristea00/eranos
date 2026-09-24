@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use crate::error::MoneyError;
 use crate::expense::{Expense, ExpenseSplit, TipDistribution};
 use crate::id::MemberId;
-use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare};
+use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare, ResolvedExpense};
 use crate::money::allocation::{allocate, rotation};
 use crate::money::{Currency, ExchangeRate, Money};
 
@@ -40,7 +40,7 @@ const PASS_DEBTS: u64 = 2 << 32;
 pub(crate) fn resolve_expense(
     expense: &Expense,
     currency: Currency,
-) -> Result<ExpenseShares, MoneyError> {
+) -> Result<ResolvedExpense, MoneyError> {
     let seed = expense.id().to_bytes();
     let pass = |number: u64| rotation(seed, number);
     let amount = expense.amount().minor_units();
@@ -119,18 +119,20 @@ pub(crate) fn resolve_expense(
         members.entry(member).or_default().1 = consumed;
     }
     let money = |minor_units| Money::from_minor_units(currency, minor_units);
-    Ok(ExpenseShares {
+    Ok(ResolvedExpense {
         debts,
-        members: members
-            .into_iter()
-            .map(|(member, (payment, consumed))| MemberShare {
-                member,
-                paid: money(payment),
-                share: money(consumed),
-            })
-            .collect(),
-        tip: money(tip),
-        total: money(total),
+        shares: ExpenseShares {
+            members: members
+                .into_iter()
+                .map(|(member, (payment, consumed))| MemberShare {
+                    member,
+                    paid: money(payment),
+                    share: money(consumed),
+                })
+                .collect(),
+            tip: money(tip),
+            total: money(total),
+        },
     })
 }
 
