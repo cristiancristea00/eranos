@@ -29,6 +29,10 @@ icu_locale_core = { version = "2.3", default-features = false, features = ["allo
 # The canonical decomposition (NFD) of D145 for category names. Without the
 # default features, which add UTF-8 and UTF-16 iterators nothing here uses.
 icu_normalizer = { version = "2.3", default-features = false, features = ["compiled_data"] }
+# The Unicode general categories of the characters of an email address
+# outside ASCII, from tables compiled in. icu_casemap already depends on it, so
+# it adds no package.
+icu_properties = { version = "2.3", default-features = false, features = ["compiled_data"] }
 # The ISO 4217 currencies: codes, minor units, names, and numeric codes, which
 # its proc macro generates from SIX Group's List One when eranos is compiled.
 # Pinned exactly: a release that changes the list changes which saved amounts

@@ -1,8 +1,9 @@
 //! Email addresses and phone numbers are how members reach each other to
-//! settle up. These tests keep obviously broken addresses and numbers out,
-//! keep surrounding whitespace from making two entries of the same contact
-//! differ, and keep phone numbers stored in the one `+digits` form that
-//! diallers and messaging apps accept.
+//! settle up. These tests keep addresses to the RFC 5321 and 5322 rules,
+//! which refuse the typos mobile keyboards make, keep obviously broken
+//! numbers out, keep surrounding whitespace from making two entries of the
+//! same contact differ, and keep phone numbers stored in the one `+digits`
+//! form that diallers and messaging apps accept.
 
 use super::*;
 
@@ -14,8 +15,16 @@ fn a_well_formed_email_is_accepted() {
         Email::parse("Ana.Popescu@Example.com").unwrap().as_str(),
         "Ana.Popescu@Example.com"
     );
-    // The shortest shape.
+    // The shortest shape: a domain needs no dot.
     assert_eq!(Email::parse("a@b").unwrap().as_str(), "a@b");
+    // A subaddress, capitals, and every atext symbol.
+    for text in [
+        "ana+splitwise@example.com",
+        "ANA@EXAMPLE.COM",
+        "!#$%&'*+-/=?^_`{|}~@example.com",
+    ] {
+        assert_eq!(Email::parse(text).unwrap().as_str(), text);
+    }
     // `FromStr` parses the same way.
     assert_eq!(
         "ana@example.com".parse::<Email>(),
@@ -26,7 +35,7 @@ fn a_well_formed_email_is_accepted() {
 /// An address without a mailbox or a domain would be stored and every
 /// message sent to it would bounce.
 #[test]
-fn an_email_needs_exactly_one_at_with_text_on_both_sides() {
+fn an_email_needs_one_at_with_text_on_both_sides() {
     // No `@`.
     assert_eq!(
         Email::parse("ana.example.com"),
@@ -62,6 +71,7 @@ fn whitespace_inside_an_email_is_rejected() {
         "ana\t@example.com",
         "ana@example.com\nbcc@example.com",
         "ana\u{a0}@example.com",
+        "\"ana popescu\"@example.com",
     ] {
         assert_eq!(
             Email::parse(text),
@@ -69,6 +79,192 @@ fn whitespace_inside_an_email_is_rejected() {
             "{text:?}"
         );
     }
+}
+
+/// A leading, trailing, or doubled dot before the `@`, a common typo, would
+/// be stored and every message sent to it would bounce.
+#[test]
+fn dots_separate_non_empty_atoms_in_a_local_part() {
+    // Dots between atoms.
+    assert!(Email::parse("ana.popescu@example.com").is_ok());
+    // A doubled dot, and a dot at either end.
+    for text in [
+        "ana..popescu@example.com",
+        ".ana@example.com",
+        "ana.@example.com",
+    ] {
+        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+    }
+}
+
+/// A comma typed for a dot, a pasted `mailto:` or angle brackets, or a
+/// comment would be stored as part of the address.
+#[test]
+fn symbols_outside_atext_are_rejected_in_a_local_part() {
+    // Symbols RFC 5322 allows only inside quotes.
+    for text in [
+        "ana,bob@example.com",
+        "ana;bob@gmail.com",
+        "ana<b>@example.com",
+        "ana\\@example.com",
+        "<ana@example.com>",
+        "mailto:ana@example.com",
+        "ana(comment)@example.com",
+        "(comment)ana@example.com",
+    ] {
+        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+    }
+}
+
+/// Addresses RFC 5322 allows in quotes would be refused, or broken quoting
+/// stored.
+#[test]
+fn a_quoted_local_part_may_hold_any_printable_character() {
+    // Plain text, an `@`, doubled dots, quoted pairs, and letters outside
+    // ASCII.
+    for text in [
+        "\"ana\"@example.com",
+        "\"a@b\"@example.com",
+        "\"ana..popescu\"@example.com",
+        "\"a\\\"b\"@example.com",
+        "\"a\\\\b\"@example.com",
+        "\"ană\"@example.com",
+    ] {
+        assert_eq!(Email::parse(text).unwrap().as_str(), text);
+    }
+    // Empty quotes, a bare quote inside, an escaped closing quote, no closing
+    // quote, a control character, a quoted control character, and a control
+    // character outside ASCII.
+    for text in [
+        "\"\"@example.com",
+        "\"a\"b\"@example.com",
+        "\"a\\\"@example.com",
+        "\"ana@example.com",
+        "\"a\u{1}\"@example.com",
+        "\"a\\\u{1}\"@example.com",
+        "\"a\u{80}\"@example.com",
+    ] {
+        assert_eq!(
+            Email::parse(text),
+            Err(ValueError::InvalidEmail),
+            "{text:?}"
+        );
+    }
+}
+
+/// Addresses in other scripts or with emoji, which RFC 6531 allows, would be
+/// refused, or an invisible character pasted from a web page stored.
+#[test]
+fn characters_outside_ascii_are_accepted_unless_invisible() {
+    // Emoji, a decomposed accent, letters, and other scripts.
+    for text in [
+        "🙂@example.com",
+        "ane\u{301}@example.com",
+        "anä@example.com",
+        "用户@例子.广告",
+    ] {
+        assert_eq!(Email::parse(text).unwrap().as_str(), text);
+    }
+    // A format character, a control, private use, and a noncharacter in the
+    // local part, and a format character in the domain.
+    for text in [
+        "ana\u{200b}@example.com",
+        "ana\u{80}@example.com",
+        "ana\u{e000}@example.com",
+        "ana\u{ffff}@example.com",
+        "ana@exa\u{200b}mple.com",
+    ] {
+        assert_eq!(
+            Email::parse(text),
+            Err(ValueError::InvalidEmail),
+            "{text:?}"
+        );
+    }
+}
+
+/// An empty label, a trailing full stop (which iOS inserts after a double
+/// space), or a stray symbol would be stored and every message would bounce.
+#[test]
+fn a_domain_is_labels_of_letters_digits_and_hyphens() {
+    // Empty labels, symbols, hyphens at either end, and emoji.
+    for text in [
+        "ana@example..com",
+        "ana@.gmail.com",
+        "ana@example.com.",
+        "ana@gmail.com.",
+        "ana@gmail,com",
+        "ana@gmail.com>",
+        "ana@gmail.com;",
+        "ana@-example.com",
+        "ana@example-.com",
+        "ana@example_domain.com",
+        "ana@ex!ample.com",
+        "ana@🙂.com",
+    ] {
+        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+    }
+    // Hyphens inside, letters outside ASCII, punycode, a single label, and
+    // digits.
+    for text in [
+        "ana@ex-ample.com",
+        "ana@müller.de",
+        "ana@MÜLLER.de",
+        "ana@xn--mller-kva.de",
+        "ana@localhost",
+        "ana@123",
+        "ana@192.168.0.1",
+    ] {
+        assert_eq!(Email::parse(text).unwrap().as_str(), text);
+    }
+}
+
+/// An address literal that is not an IP address would be stored and could
+/// never receive mail.
+#[test]
+fn a_bracketed_domain_is_an_ip_address() {
+    // IPv4, and IPv6 behind its tag in either case.
+    for text in [
+        "ana@[192.168.0.1]",
+        "ana@[IPv6:2001:db8::1]",
+        "ana@[ipv6:2001:db8::1]",
+    ] {
+        assert_eq!(Email::parse(text).unwrap().as_str(), text);
+    }
+    // An impossible IPv4 address, IPv6 without its tag, an IPv4 address behind
+    // it, a name, and unbalanced brackets.
+    for text in [
+        "ana@[300.1.1.1]",
+        "ana@[2001:db8::1]",
+        "ana@[IPv6:192.168.0.1]",
+        "ana@[example.com]",
+        "ana@[192.168.0.1",
+        "ana@192.168.0.1]",
+    ] {
+        assert_eq!(Email::parse(text), Err(ValueError::InvalidEmail), "{text}");
+    }
+}
+
+/// An address longer than SMTP carries would be stored and every message
+/// refused by the sending server.
+#[test]
+fn an_email_fits_the_smtp_length_limits() {
+    let address = |local_part: &str, domain: &str| format!("{local_part}@{domain}");
+    // A local part of 64 octets, but not 65.
+    assert!(Email::parse(&address(&"a".repeat(64), "example.com")).is_ok());
+    assert!(Email::parse(&address(&"a".repeat(65), "example.com")).is_err());
+    // A label of 63 octets, but not 64.
+    assert!(Email::parse(&address("ana", &format!("{}.com", "b".repeat(63)))).is_ok());
+    assert!(Email::parse(&address("ana", &format!("{}.com", "b".repeat(64)))).is_err());
+    // An address of 254 octets, but not 255.
+    let domain =
+        |last: usize| format!("{}.{}.{}", "b".repeat(63), "c".repeat(63), "d".repeat(last));
+    let longest = address(&"a".repeat(64), &domain(61));
+    assert_eq!(longest.len(), 254);
+    assert!(Email::parse(&longest).is_ok());
+    assert!(Email::parse(&address(&"a".repeat(64), &domain(62))).is_err());
+    // The limits count octets: 32 two-octet letters fill a local part.
+    assert!(Email::parse(&address(&"ä".repeat(32), "example.com")).is_ok());
+    assert!(Email::parse(&address(&"ä".repeat(33), "example.com")).is_err());
 }
 
 /// The same address typed with a stray space would be stored as a second,
@@ -205,6 +401,7 @@ fn contact_details_serialise_as_their_text_form() {
         email
     );
     assert!(serde_json::from_str::<Email>("\"ana.example.com\"").is_err());
+    assert!(serde_json::from_str::<Email>("\"ana..popescu@example.com\"").is_err());
     // Phone round trip, normalised on the way in.
     let phone = PhoneNumber::parse("+40712345678").unwrap();
     assert_eq!(serde_json::to_string(&phone).unwrap(), "\"+40712345678\"");

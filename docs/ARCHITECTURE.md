@@ -35,11 +35,12 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   arrival; this is what future sync relies on.
 - **Few dependencies.** `icu_casemap` and `icu_normalizer` (Unicode
   caseless matching of category names), `icu_locale_core` (UTS #35 language
-  tags), `iso4217-static` (the ISO 4217 list, pinned exactly), `jiff`
-  (calendar dates, times of day, and their ISO 8601 parser, without its
-  clock or time zones), `thiserror` (derive only), `uuid` (v7 identifiers),
-  `zeroize` (wiping secrets), and optionally `serde`. Everything else,
-  including IBAN validation, is in the crate.
+  tags), `icu_properties` (the Unicode categories of email characters),
+  `iso4217-static` (the ISO 4217 list, pinned exactly), `jiff` (calendar
+  dates, times of day, and their ISO 8601 parser, without its clock or time
+  zones), `thiserror` (derive only), `uuid` (v7 identifiers), `zeroize`
+  (wiping secrets), and optionally `serde`. Everything else, including IBAN
+  validation and the email rules, is in the crate.
 
 ## 2. Module map
 

@@ -170,7 +170,9 @@ fn validation() {
     println!(
         "IBANs are checked against the SWIFT registry: the country, its length, which\n\
          positions hold digits and which letters, and the mod-97 check digits, which catch\n\
-         any single mistyped character. Emails and phone numbers are checked for shape only."
+         any single mistyped character. Emails are checked against the rules of RFC 5321\n\
+         and 5322, which refuse the doubled dots and stray commas of hurried typing, and\n\
+         phone numbers for shape only."
     );
     let iban = |input: &'static str| CheckRow {
         input,
@@ -195,6 +197,7 @@ fn validation() {
             iban("DE46 37O4 0044 0532 0130 00"),
             email("ana@example.com"),
             email("ana.example.com"),
+            email("ana..popescu@example.com"),
             phone("+40 (712) 345-678"),
             phone("0712 345 678"),
         ],

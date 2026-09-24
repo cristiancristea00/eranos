@@ -256,6 +256,7 @@ dependencies = [
  "icu_casemap",
  "icu_locale_core",
  "icu_normalizer",
+ "icu_properties",
  "iso4217-static",
  "jiff",
  "proptest",

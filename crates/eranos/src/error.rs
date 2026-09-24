@@ -33,8 +33,9 @@ pub enum ValueError {
     /// not ISO 8601 text.
     #[error("invalid date: expected an existing ISO 8601 date between years 1 and 9999")]
     InvalidDate,
-    /// An email address without exactly one `@`, with an empty side, or with
-    /// whitespace.
+    /// An email address that breaks the RFC 5321 and 5322 rules: no local
+    /// part or domain around an `@`, a malformed one, one too long, or
+    /// whitespace or an invisible character.
     #[error("invalid email address")]
     InvalidEmail,
     /// An exchange rate that is not a positive decimal number with at most 18

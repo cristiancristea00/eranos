@@ -449,8 +449,9 @@ fn rejected_input_never_appears_in_a_message() {
         assert_not_echoed(input, &Iban::parse(input).unwrap_err());
     }
     // Contact details.
-    let email = "ana.popescu@@example.com";
-    assert_not_echoed(email, &Email::parse(email).unwrap_err());
+    for email in ["ana.popescu@@example.com", "ana..popescu@example.com"] {
+        assert_not_echoed(email, &Email::parse(email).unwrap_err());
+    }
     let phone = "+40 712 345 67x";
     assert_not_echoed(phone, &PhoneNumber::parse(phone).unwrap_err());
     // Amounts, ratios, and rates.

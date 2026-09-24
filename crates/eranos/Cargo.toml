@@ -19,6 +19,7 @@ serde = ["dep:serde", "uuid/serde"]
 icu_casemap = { workspace = true }
 icu_locale_core = { workspace = true }
 icu_normalizer = { workspace = true }
+icu_properties = { workspace = true }
 iso4217-static = { workspace = true }
 jiff = { workspace = true }
 thiserror = { workspace = true }
