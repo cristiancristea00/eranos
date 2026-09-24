@@ -58,21 +58,33 @@ pub enum Cost {
 }
 
 impl Cost {
+    /// Returns the cost of `amount` as it is stored, with the rate of a
+    /// converted cost or `None` for a local one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Cost, Currency, ExchangeRate, Money};
+    ///
+    /// let amount = Money::parse("400.00", Currency::RON)?;
+    /// let rate = ExchangeRate::parse("0.2")?;
+    /// assert_eq!(Cost::from_parts(amount, Some(rate)), amount.at(rate));
+    /// assert_eq!(Cost::from_parts(amount, None), Cost::Local(amount));
+    /// # Ok::<(), eranos::error::MoneyError>(())
+    /// ```
+    #[must_use]
+    pub const fn from_parts(amount: Money, rate: Option<ExchangeRate>) -> Self {
+        match rate {
+            None => Self::Local(amount),
+            Some(rate) => Self::Converted { amount, rate },
+        }
+    }
+
     /// The amount, in the entry's own currency.
     #[must_use]
     pub const fn amount(self) -> Money {
         match self {
             Self::Converted { amount, .. } | Self::Local(amount) => amount,
-        }
-    }
-
-    /// The rate into the group currency: [`ExchangeRate::ONE`] for a local
-    /// cost.
-    #[must_use]
-    pub const fn exchange_rate(self) -> ExchangeRate {
-        match self {
-            Self::Converted { rate, .. } => rate,
-            Self::Local(_) => ExchangeRate::ONE,
         }
     }
 
@@ -86,16 +98,32 @@ impl Cost {
         }
     }
 
-    /// The cost of an amount stored with its rate: `None` for a local cost.
-    pub(crate) const fn from_parts(amount: Money, rate: Option<ExchangeRate>) -> Self {
-        match rate {
-            None => Self::Local(amount),
-            Some(rate) => Self::Converted { amount, rate },
+    /// The rate into the group currency: [`ExchangeRate::ONE`] for a local
+    /// cost.
+    #[must_use]
+    pub const fn exchange_rate(self) -> ExchangeRate {
+        match self {
+            Self::Converted { rate, .. } => rate,
+            Self::Local(_) => ExchangeRate::ONE,
         }
     }
 
-    /// The rate of a converted cost; `None` for a local one.
-    pub(crate) const fn conversion(self) -> Option<ExchangeRate> {
+    /// The rate of a converted cost, or `None` for a local one; unlike
+    /// [`exchange_rate`](Self::exchange_rate), it tells a conversion at 1
+    /// from a local cost.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Cost, Currency, ExchangeRate, Money};
+    ///
+    /// let dollars = Money::parse("50.00", Currency::BMD)?;
+    /// assert_eq!(dollars.at(ExchangeRate::ONE).conversion(), Some(ExchangeRate::ONE));
+    /// assert_eq!(Cost::from(dollars).conversion(), None);
+    /// # Ok::<(), eranos::error::MoneyError>(())
+    /// ```
+    #[must_use]
+    pub const fn conversion(self) -> Option<ExchangeRate> {
         match self {
             Self::Converted { rate, .. } => Some(rate),
             Self::Local(_) => None,
