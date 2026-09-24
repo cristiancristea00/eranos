@@ -1,13 +1,14 @@
 # eranos workspace manifest.
 #
-# One library crate (crates/eranos), and the repository's automation
-# (crates/xtask, run as `cargo xtask`); the UniFFI and wasm binding crates join
-# as siblings when the apps need them. Every third-party version is pinned
-# here; the members say `{ workspace = true }`.
+# The library, crates/eranos, re-exports the types callers use from internal
+# crates beside it (crates/eranos-core and those split out after it); the
+# repository's automation is crates/xtask, run as `cargo xtask`. The UniFFI
+# and wasm binding crates join as siblings when the apps need them. Every
+# third-party version is pinned here; the members say `{ workspace = true }`.
 
 [workspace]
 resolver = "3"
-members = ["crates/eranos", "crates/xtask"]
+members = ["crates/eranos", "crates/eranos-core", "crates/xtask"]
 
 [workspace.package]
 version = "0.4.0"
@@ -18,6 +19,12 @@ description = "Group expense tracking: exact money splitting, cached balances, a
 publish = false
 
 [workspace.dependencies]
+# --- This workspace ----------------------------------------------------------
+# The library: the internal crates' documentation examples use it through a
+# dev-dependency, so they read as callers write them.
+eranos = { path = "crates/eranos", default-features = false }
+eranos-core = { path = "crates/eranos-core" }
+
 # --- Library -----------------------------------------------------------------
 # Category names compare by Unicode's canonical caseless match (D145): NFD,
 # full case folding, then NFD again. This is the case folding; `compiled_data`

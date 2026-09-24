@@ -1,4 +1,5 @@
-//! Identifiers for groups and their entries.
+//! Identifiers for groups and their entries, and the rules for the text
+//! every entry holds.
 //!
 //! Every identifier is a UUID v7: unique across devices, so entries created
 //! offline on two phones never collide, and ordered by creation time. With
@@ -6,6 +7,19 @@
 //! one instead, so a program that builds the same entries in the same order
 //! gets the same identifiers on every run. The feature is for examples and
 //! tests: two devices would generate the same identifiers.
+//!
+//! The `text` module trims text and keeps blank optional text absent, and
+//! `serde_text` (feature `serde`) reads the values whose serialised form is
+//! their text form.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
+
+mod error;
+#[cfg(feature = "serde")]
+pub mod serde_text;
+pub mod text;
 
 use std::fmt;
 use std::str::FromStr;
@@ -18,7 +32,7 @@ use std::sync::{Mutex, PoisonError};
 use uuid::Builder;
 use uuid::Uuid;
 
-use crate::error::IdError;
+pub use error::IdError;
 
 /// Held while an identifier is generated. uuid's shared v7 context reads the
 /// clock before it takes its own lock, and when a thread is paused between
@@ -124,7 +138,7 @@ macro_rules! define_id {
 }
 
 define_id! {
-    /// Identifies a [`Group`](crate::Group).
+    /// Identifies a group.
     GroupId
 }
 

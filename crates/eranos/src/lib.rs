@@ -92,16 +92,25 @@ pub mod category;
 pub mod error;
 pub mod expense;
 pub mod group;
-pub mod id;
+pub mod id {
+    //! Identifiers for groups and their entries.
+    //!
+    //! Every identifier is a UUID v7: unique across devices, so entries
+    //! created offline on two phones never collide, and ordered by creation
+    //! time. With the `sequential-ids` feature, the identifiers of a process
+    //! count up from one instead, so a program that builds the same entries
+    //! in the same order gets the same identifiers on every run. The feature
+    //! is for examples and tests: two devices would generate the same
+    //! identifiers.
+
+    #[doc(inline)]
+    pub use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
+}
 pub mod ledger;
 pub mod member;
 pub mod money;
 pub mod settlement;
 pub mod transfer;
-
-#[cfg(feature = "serde")]
-mod serde_text;
-mod text;
 
 pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
@@ -112,6 +121,7 @@ pub use expense::{
 #[cfg(feature = "serde")]
 pub use group::SavedGroup;
 pub use group::{Group, Language};
+#[doc(no_inline)]
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};
 pub use member::{

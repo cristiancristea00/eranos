@@ -166,7 +166,7 @@ impl serde::Serialize for ExchangeRate {
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for ExchangeRate {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialise(deserialiser, "a positive decimal exchange rate")
+        eranos_core::serde_text::deserialise(deserialiser, "a positive decimal exchange rate")
     }
 }
 

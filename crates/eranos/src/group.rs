@@ -14,6 +14,8 @@ pub use language::Language;
 #[cfg(feature = "serde")]
 pub use saved::SavedGroup;
 
+use eranos_core::text;
+
 use crate::category::Category;
 use crate::error::{GroupError, SettlementError};
 use crate::expense::{Expense, resolve_expense};
@@ -22,7 +24,6 @@ use crate::ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, S
 use crate::member::Member;
 use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
 use crate::settlement::{Settlement, SettlementStrategy, Settlements};
-use crate::text;
 use crate::transfer::{Transfer, resolve_transfer};
 
 /// The version of the saved form. Every other version is refused: a newer

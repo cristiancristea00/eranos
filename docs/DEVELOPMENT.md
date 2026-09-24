@@ -199,7 +199,7 @@ cargo llvm-cov --no-report --workspace --all-features         # sequential IDs, 
 cargo llvm-cov --no-report --workspace --no-default-features  # clock-based IDs
 cargo llvm-cov report --html --open                           # HTML report
 cargo llvm-cov report --summary-only                          # totals only
-cargo mutants -p eranos --file crates/eranos/src/money/allocation.rs
+cargo mutants --file crates/eranos/src/money/allocation.rs
 ```
 
 Coverage merges the two runs because each compiles code the other leaves

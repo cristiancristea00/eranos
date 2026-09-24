@@ -1,0 +1,32 @@
+# eranos-core: the identifiers of groups and their entries, and the text rules
+# every entry shares. An internal crate: the `eranos` crate re-exports the
+# types callers use.
+[package]
+name = "eranos-core"
+description = "The identifiers and text rules of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `Serialize` and `Deserialize` for the identifiers, and the text-form
+# deserialiser the other crates use.
+serde = ["dep:serde", "uuid/serde"]
+# Identifiers count up from one instead of reading the clock and the random
+# source, so examples and tests print the same text on every run. Never for
+# apps: identifiers from two devices would collide.
+sequential-ids = []
+
+[dependencies]
+thiserror = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+proptest = { workspace = true }
+
+[lints]
+workspace = true

@@ -33,7 +33,7 @@
             // One file per run: the whole crate takes hours.
             "label": "mutants (current file)",
             "type": "shell",
-            "command": "cargo mutants -p eranos --file ${relativeFile}",
+            "command": "cargo mutants --file ${relativeFile}",
             "problemMatcher": []
         }
     ]

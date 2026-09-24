@@ -76,7 +76,7 @@ impl serde::Serialize for Language {
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Language {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialise(deserialiser, "a BCP 47 language tag")
+        eranos_core::serde_text::deserialise(deserialiser, "a BCP 47 language tag")
     }
 }
 

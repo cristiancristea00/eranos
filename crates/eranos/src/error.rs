@@ -4,18 +4,12 @@
 //! No error echoes the text it rejected: inputs include account numbers and
 //! contact details, and error messages end up in logs.
 
+#[doc(inline)]
+pub use eranos_core::IdError;
+
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
-
-/// An identifier that could not be read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum IdError {
-    /// Text that is not a UUID.
-    #[error("invalid identifier: expected a UUID")]
-    InvalidId,
-}
 
 /// A calendar date or a time of day that could not be built or read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]

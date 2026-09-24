@@ -363,7 +363,7 @@ mod serde_impls {
 
     impl<'de> Deserialize<'de> for Email {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialise(deserialiser, "an email address")
+            eranos_core::serde_text::deserialise(deserialiser, "an email address")
         }
     }
 
@@ -375,7 +375,10 @@ mod serde_impls {
 
     impl<'de> Deserialize<'de> for PhoneNumber {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialise(deserialiser, "a phone number such as +40712345678")
+            eranos_core::serde_text::deserialise(
+                deserialiser,
+                "a phone number such as +40712345678",
+            )
         }
     }
 }

@@ -12,11 +12,12 @@ pub(crate) use resolution::resolve_expense;
 pub use split::{MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{Tip, TipDistribution, TipValue};
 
+use eranos_core::text;
+
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::error::ExpenseError;
 use crate::id::{CategoryId, ExpenseId, MemberId};
 use crate::money::{Cost, ExchangeRate, Money};
-use crate::text;
 
 /// Something bought for the group: its amount, who paid, and how its cost is
 /// shared.

@@ -3,9 +3,10 @@
 use std::fmt;
 use std::str::FromStr;
 
+use eranos_core::text;
+
 use crate::error::AccountError;
 use crate::member::Iban;
-use crate::text;
 
 /// A named place where a member can receive money, such as `ING` with an
 /// IBAN or `Revolut` with a username.
@@ -194,7 +195,7 @@ impl serde::Serialize for Username {
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Username {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialise(deserialiser, "a non-empty username")
+        eranos_core::serde_text::deserialise(deserialiser, "a non-empty username")
     }
 }
 

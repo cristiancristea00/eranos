@@ -9,7 +9,13 @@ use serde::de::{Error, Visitor};
 
 /// Deserialises a string and parses it with `T`'s [`FromStr`], so the value
 /// passes the same validation as when it is parsed directly.
-pub(crate) fn deserialise<'de, D, T>(deserialiser: D, expected: &'static str) -> Result<T, D::Error>
+///
+/// # Errors
+///
+/// The deserialiser's error, naming `expected`, when the input is not a
+/// string, and its custom error with `T`'s message when `T` refuses the
+/// text.
+pub fn deserialise<'de, D, T>(deserialiser: D, expected: &'static str) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
     T: FromStr,

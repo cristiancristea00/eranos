@@ -35,13 +35,13 @@ every command.
 
 | Suite       | Location                                | Reaches                               | Runs with                                                |
 | ----------- | --------------------------------------- | ------------------------------------- | -------------------------------------------------------- |
-| Unit tests  | `crates/eranos/src/<module>/tests.rs`   | private items (`use super::*`)        | `cargo test -p eranos --lib`                             |
+| Unit tests  | `crates/<crate>/src/<module>/tests.rs`  | private items (`use super::*`)        | `cargo test --workspace --lib`                           |
 | Scenarios   | `crates/eranos/tests/scenarios.rs`      | public API                            | `cargo test -p eranos --test scenarios`                  |
 | Properties  | `crates/eranos/tests/properties.rs`     | public API                            | `cargo test -p eranos --test properties`                 |
 | Persistence | `crates/eranos/tests/persistence.rs`    | public API, feature `serde`           | `cargo test -p eranos --all-features --test persistence` |
 | Errors      | `crates/eranos/tests/errors.rs`         | public API: every error message       | `cargo test -p eranos --test errors`                     |
 | API         | `crates/eranos/tests/api.rs`            | public API: every type `Send + Sync`  | `cargo test -p eranos --test api`                        |
-| Doctests    | every `# Examples` block and the README | public API                            | `cargo test -p eranos --doc`                             |
+| Doctests    | every `# Examples` block and the README | public API                            | `cargo test --workspace --doc`                           |
 | Examples    | `crates/eranos/examples/*.rs`           | public API; they assert their numbers | `cargo run -p eranos --example <name>`                   |
 | Benchmarks  | `crates/eranos/benches/*.rs`            | public API                            | `cargo bench -p eranos`                                  |
 
@@ -150,15 +150,15 @@ follows three rules:
 
 ## 6. Mutation testing
 
-`cargo mutants -p eranos --file <file>` changes the code one operator at a
-time and runs the unit tests against each change; a mutant that survives is
-a change no test noticed. It complements coverage: coverage says a line ran,
+`cargo mutants --file <file>` changes the code one operator at a time and
+runs every crate's tests against each change; a mutant that survives is a
+change no test noticed. It complements coverage: coverage says a line ran,
 mutation testing says a test would have noticed it was wrong. It is an
 occasional audit, run one file at a time (`.cargo/mutants.toml` sets the
-package, every feature, and a timeout floor); the arithmetic in
+workspace's tests, every feature, and a timeout floor); the arithmetic in
 `money/allocation.rs`, `expense/resolution.rs`, and
 `settlement/minimum.rs` is where survivors matter most. Every feature
-includes `sequential-ids`, so an audit of `id.rs` also runs once with
+includes `sequential-ids`, so an audit of `eranos-core` also runs once with
 `--no-default-features` to reach the clock-based generator.
 
 ## 7. Benchmarks
@@ -175,9 +175,9 @@ both together.
 | Change                            | Run                                                                                                                                        |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | anything                          | the gates in [AGENTS.md](../AGENTS.md#gates-before-committing)                                                                             |
-| rounding, allocation, conversion  | the gates, then `cargo mutants -p eranos --file crates/eranos/src/money/allocation.rs`                                                     |
+| rounding, allocation, conversion  | the gates, then `cargo mutants --file crates/eranos/src/money/allocation.rs`                                                               |
 | a settlement strategy             | the gates, then `cargo bench -p eranos --bench settlement`                                                                                 |
 | the ledger or group mutations     | the gates, then `cargo bench -p eranos --bench ledger`                                                                                     |
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading            |
 | a libphonenumber metadata release | the gates, then `cargo test -p eranos --lib member::contact` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
-| docs or README                    | `cargo test -p eranos --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                               |
+| docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                             |

@@ -1,11 +1,11 @@
 //! Expense categories, defined per group.
 
+use eranos_core::text;
 use icu_casemap::CaseMapper;
 use icu_normalizer::DecomposingNormalizerBorrowed;
 
 use crate::error::CategoryError;
 use crate::id::CategoryId;
-use crate::text;
 
 /// A category a group sorts its expenses into, such as "Food" or "Fuel".
 ///

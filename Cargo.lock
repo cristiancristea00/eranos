@@ -311,6 +311,7 @@ name = "eranos"
 version = "0.4.0"
 dependencies = [
  "criterion",
+ "eranos-core",
  "icu_casemap",
  "icu_locale_core",
  "icu_normalizer",
@@ -322,6 +323,16 @@ dependencies = [
  "serde",
  "serde_json",
  "tabled",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-core"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "proptest",
+ "serde",
  "thiserror 2.0.20",
  "uuid",
 ]

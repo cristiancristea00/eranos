@@ -90,12 +90,12 @@ failure); `#[allow]` is itself a lint error.
   `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
   state**, with three exceptions. ID generation reads the clock and the OS
-  random source (UUID v7), under one private lock in `id.rs` that keeps the
+  random source (UUID v7), under one private lock in `eranos-core` that keeps the
   IDs of concurrent threads in creation order: an entity gets its ID when
   it is built, and loading a saved group restores the IDs through serde,
   never through a public setter. With the `sequential-ids` feature, which
   is for examples and tests, generation reads neither and takes the next
-  value of one counter in `id.rs` instead. Phone-number validation reads
+  value of one counter in `eranos-core` instead. Phone-number validation reads
   rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the
   embedded libphonenumber metadata on first use and is never written after;
   the invariant that rules out its panic is stated at the call in
@@ -208,8 +208,9 @@ failure); `#[allow]` is itself a lint error.
 
 ## Architecture in one paragraph
 
-One library crate, `crates/eranos`, with binding crates (`eranos-ffi` for
-UniFFI, `eranos-wasm`) planned as siblings. A `Group` owns its members,
+The library crate, `crates/eranos`, re-exports the types callers use from
+the internal `eranos-*` crates beside it, with binding crates (`eranos-ffi`
+for UniFFI, `eranos-wasm`) planned as siblings. A `Group` owns its members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced
 (`expense/resolution.rs`: exact splits, tips, conversion, and the pairwise
@@ -239,7 +240,7 @@ balance-changing mutation clears. Diagrams, rules, and numbers:
   function is covered; a new gap is either a missing test or a branch that
   cannot run, which is restructured away rather than kept
   ([docs/TESTING.md](docs/TESTING.md#5-coverage)).
-  `cargo mutants -p eranos --file <file>` is the occasional companion
+  `cargo mutants --file <file>` is the occasional companion
   audit: coverage says a line ran, mutation testing says a test would have
   noticed it was wrong.
 - Benchmarks are wall-clock timings: run `cargo bench -p eranos` on an idle

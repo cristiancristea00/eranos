@@ -2,13 +2,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            // Debug one unit test by name; the prompt takes the same filter
-            // string `cargo test <filter>` would.
-            "name": "Debug a unit test (eranos)",
+            // Debug one unit test by name, in the crate the first prompt names;
+            // the second takes the same filter string `cargo test <filter>`
+            // would.
+            "name": "Debug a unit test",
             "type": "lldb",
             "request": "launch",
             "cargo": {
-                "args": ["test", "--no-run", "-p", "eranos", "--lib", "--all-features"]
+                "args": ["test", "--no-run", "-p", "${input:crateName}", "--lib", "--all-features"]
             },
             "args": ["${input:testFilter}"],
             "cwd": "${workspaceFolder}"
@@ -25,6 +26,12 @@
         }
     ],
     "inputs": [
+        {
+            "id": "crateName",
+            "type": "promptString",
+            "description": "Crate (eranos, eranos-core, …)",
+            "default": "eranos"
+        },
         {
             "id": "testFilter",
             "type": "promptString",

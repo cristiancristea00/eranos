@@ -8,9 +8,10 @@ pub use account::{Account, AccountDetails, AccountKind, Username};
 pub use contact::{Email, PhoneNumber};
 pub use iban::Iban;
 
+use eranos_core::text;
+
 use crate::error::MemberError;
 use crate::id::MemberId;
-use crate::text;
 
 /// A person who pays for or shares expenses.
 ///

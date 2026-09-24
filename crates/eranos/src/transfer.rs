@@ -1,11 +1,12 @@
 //! Transfers: money one member paid another, such as a repayment.
 
+use eranos_core::text;
+
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::error::{MoneyError, TransferError};
 use crate::id::{MemberId, TransferId};
 use crate::money::{Cost, Currency, ExchangeRate, Money};
 use crate::settlement::Payment;
-use crate::text;
 
 /// Money one member paid directly to another, usually to settle up.
 ///

@@ -302,7 +302,10 @@ mod serde_impls {
 
     impl<'de> Deserialize<'de> for CalendarDate {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialise(deserialiser, "an ISO 8601 date such as `2026-09-24`")
+            eranos_core::serde_text::deserialise(
+                deserialiser,
+                "an ISO 8601 date such as `2026-09-24`",
+            )
         }
     }
 
@@ -314,7 +317,7 @@ mod serde_impls {
 
     impl<'de> Deserialize<'de> for TimeOfDay {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialise(deserialiser, "an ISO 8601 time such as `18:30`")
+            eranos_core::serde_text::deserialise(deserialiser, "an ISO 8601 time such as `18:30`")
         }
     }
 }

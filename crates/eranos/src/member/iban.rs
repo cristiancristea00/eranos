@@ -174,7 +174,7 @@ impl serde::Serialize for Iban {
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Iban {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialise(deserialiser, "an IBAN")
+        eranos_core::serde_text::deserialise(deserialiser, "an IBAN")
     }
 }
 

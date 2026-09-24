@@ -183,7 +183,7 @@ impl serde::Serialize for Currency {
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Currency {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialise(deserialiser, "an ISO 4217 currency code")
+        eranos_core::serde_text::deserialise(deserialiser, "an ISO 4217 currency code")
     }
 }
 

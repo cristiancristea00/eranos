@@ -115,9 +115,9 @@ flowchart TD
 </details>
 
 The root re-exports the types callers name; the modules group them for the
-documentation. `text` and the resolution inside `expense` and `transfer`
-are private, and `money::allocation` is crate-private: they are free to
-change.
+documentation. The `text` rules of `eranos-core` are not re-exported, the
+resolution inside `expense` and `transfer` is private, and
+`money::allocation` is crate-private: they are free to change.
 
 ## 3. Data model
 

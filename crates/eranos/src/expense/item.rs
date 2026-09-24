@@ -1,10 +1,11 @@
 //! Receipt lines of an itemised expense.
 
+use eranos_core::text;
+
 use crate::error::ExpenseError;
 use crate::expense::Split;
 use crate::id::MemberId;
 use crate::money::Money;
-use crate::text;
 
 /// One line of an itemised expense: a unit price times a quantity, divided
 /// among its own members by its own [`Split`].
