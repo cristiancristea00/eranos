@@ -24,15 +24,15 @@ const MONTH_LENGTHS: [(u8, u8); 12] = [
     (12, 31),
 ];
 
-fn date(year: u16, month: u8, day: u8) -> Date {
-    Date::new(day, month, year).unwrap()
+fn date(year: u16, month: u8, day: u8) -> CalendarDate {
+    CalendarDate::new(day, month, year).unwrap()
 }
 
 /// Any existing date between years 1 and 9999.
-fn any_date() -> impl Strategy<Value = Date> {
+fn any_date() -> impl Strategy<Value = CalendarDate> {
     (1_u16..=9999, 1_u8..=12, 1_u8..=31)
         .prop_filter_map("the day must exist in its month", |(year, month, day)| {
-            Date::new(day, month, year).ok()
+            CalendarDate::new(day, month, year).ok()
         })
 }
 
@@ -42,20 +42,23 @@ fn any_date() -> impl Strategy<Value = Date> {
 fn a_day_exists_only_within_its_month() {
     // The last day of every month exists, the day after it does not.
     for (month, last_day) in MONTH_LENGTHS {
-        assert!(Date::new(last_day, month, 2026).is_ok(), "{month}");
+        assert!(CalendarDate::new(last_day, month, 2026).is_ok(), "{month}");
         assert_eq!(
-            Date::new(last_day + 1, month, 2026),
+            CalendarDate::new(last_day + 1, month, 2026),
             Err(ValueError::InvalidDate),
             "{month}"
         );
     }
     // Day zero exists in no month.
     for (month, _) in MONTH_LENGTHS {
-        assert_eq!(Date::new(0, month, 2026), Err(ValueError::InvalidDate));
+        assert_eq!(
+            CalendarDate::new(0, month, 2026),
+            Err(ValueError::InvalidDate)
+        );
     }
     // The first day of every month exists.
     for (month, _) in MONTH_LENGTHS {
-        assert!(Date::new(1, month, 2026).is_ok());
+        assert!(CalendarDate::new(1, month, 2026).is_ok());
     }
 }
 
@@ -63,12 +66,15 @@ fn a_day_exists_only_within_its_month() {
 #[test]
 fn months_run_from_1_to_12() {
     // Inside the range.
-    assert!(Date::new(1, 1, 2026).is_ok());
-    assert!(Date::new(31, 12, 2026).is_ok());
+    assert!(CalendarDate::new(1, 1, 2026).is_ok());
+    assert!(CalendarDate::new(31, 12, 2026).is_ok());
     // Outside the range.
-    assert_eq!(Date::new(1, 0, 2026), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(1, 13, 2026), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(1, u8::MAX, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(1, 0, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(1, 13, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(
+        CalendarDate::new(1, u8::MAX, 2026),
+        Err(ValueError::InvalidDate)
+    );
 }
 
 /// Expenses on 29 February would be rejected in leap years or accepted in
@@ -76,32 +82,38 @@ fn months_run_from_1_to_12() {
 #[test]
 fn a_leap_day_exists_only_in_leap_years() {
     // Years divisible by 4.
-    assert!(Date::new(29, 2, 2028).is_ok());
-    assert!(Date::new(29, 2, 2024).is_ok());
-    assert!(Date::new(29, 2, 4).is_ok());
+    assert!(CalendarDate::new(29, 2, 2028).is_ok());
+    assert!(CalendarDate::new(29, 2, 2024).is_ok());
+    assert!(CalendarDate::new(29, 2, 4).is_ok());
     // Years not divisible by 4.
-    assert_eq!(Date::new(29, 2, 2026), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(29, 2, 2027), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(29, 2, 1), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(29, 2, 2026), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(29, 2, 2027), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(29, 2, 1), Err(ValueError::InvalidDate));
     // Centuries are common years unless divisible by 400.
-    assert_eq!(Date::new(29, 2, 1900), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(29, 2, 2100), Err(ValueError::InvalidDate));
-    assert!(Date::new(29, 2, 2000).is_ok());
-    assert!(Date::new(29, 2, 2400).is_ok());
+    assert_eq!(CalendarDate::new(29, 2, 1900), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(29, 2, 2100), Err(ValueError::InvalidDate));
+    assert!(CalendarDate::new(29, 2, 2000).is_ok());
+    assert!(CalendarDate::new(29, 2, 2400).is_ok());
     // No leap year has a 30 February.
-    assert_eq!(Date::new(30, 2, 2028), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(30, 2, 2028), Err(ValueError::InvalidDate));
 }
 
 /// A year outside four digits would not fit the `YYYY-MM-DD` text form.
 #[test]
 fn years_run_from_1_to_9999() {
     // Inside the range.
-    assert!(Date::new(1, 1, 1).is_ok());
-    assert!(Date::new(31, 12, 9999).is_ok());
+    assert!(CalendarDate::new(1, 1, 1).is_ok());
+    assert!(CalendarDate::new(31, 12, 9999).is_ok());
     // Outside the range.
-    assert_eq!(Date::new(1, 1, 0), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(1, 1, 10_000), Err(ValueError::InvalidDate));
-    assert_eq!(Date::new(1, 1, u16::MAX), Err(ValueError::InvalidDate));
+    assert_eq!(CalendarDate::new(1, 1, 0), Err(ValueError::InvalidDate));
+    assert_eq!(
+        CalendarDate::new(1, 1, 10_000),
+        Err(ValueError::InvalidDate)
+    );
+    assert_eq!(
+        CalendarDate::new(1, 1, u16::MAX),
+        Err(ValueError::InvalidDate)
+    );
 }
 
 /// The apps would show the wrong day, month, or year of an expense.
@@ -118,13 +130,16 @@ fn accessors_return_the_components() {
 #[test]
 fn parse_reads_the_iso_format() {
     // Exact format.
-    assert_eq!(Date::parse("2026-09-23"), Ok(date(2026, 9, 23)));
-    assert_eq!(Date::parse("0001-01-01"), Ok(date(1, 1, 1)));
-    assert_eq!(Date::parse("9999-12-31"), Ok(date(9999, 12, 31)));
+    assert_eq!(CalendarDate::parse("2026-09-23"), Ok(date(2026, 9, 23)));
+    assert_eq!(CalendarDate::parse("0001-01-01"), Ok(date(1, 1, 1)));
+    assert_eq!(CalendarDate::parse("9999-12-31"), Ok(date(9999, 12, 31)));
     // Surrounding whitespace is ignored.
-    assert_eq!(Date::parse(" \t2026-09-23\n"), Ok(date(2026, 9, 23)));
+    assert_eq!(
+        CalendarDate::parse(" \t2026-09-23\n"),
+        Ok(date(2026, 9, 23))
+    );
     // `FromStr` parses the same way.
-    assert_eq!("2028-02-29".parse::<Date>(), Ok(date(2028, 2, 29)));
+    assert_eq!("2028-02-29".parse::<CalendarDate>(), Ok(date(2028, 2, 29)));
 }
 
 /// An ambiguous date such as `2026-9-2` or `09/02/2026` would be read as
@@ -133,24 +148,36 @@ fn parse_reads_the_iso_format() {
 fn parse_rejects_other_shapes() {
     // Missing padding.
     for text in ["2026-9-23", "2026-09-3", "26-09-23", "2026-9-3"] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text}"
+        );
     }
     // Other separators.
     for text in ["2026/09/23", "2026.09.23", "2026 09 23", "2026-09 23"] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text}"
+        );
     }
     // Extra characters, and a sign on a four-digit year.
     for text in ["2026-09-23x", "x2026-09-23", "+2026-09-23"] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text}"
+        );
     }
     // The UTC designator: the date would depend on the reader's time zone.
     assert_eq!(
-        Date::parse("2026-09-24T18:30:00Z"),
+        CalendarDate::parse("2026-09-24T18:30:00Z"),
         Err(ValueError::InvalidDate)
     );
     // A byte-order mark, which `trim` keeps.
     assert_eq!(
-        Date::parse("\u{feff}2026-09-24"),
+        CalendarDate::parse("\u{feff}2026-09-24"),
         Err(ValueError::InvalidDate)
     );
     // Non-digits, including the characters on either side of `0`-`9`.
@@ -164,11 +191,19 @@ fn parse_rejects_other_shapes() {
         "2026--9-23",
         "２０２６-09-23",
     ] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text}"
+        );
     }
     // Nothing at all.
     for text in ["", "   "] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text:?}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text:?}"
+        );
     }
 }
 
@@ -178,8 +213,8 @@ fn parse_rejects_other_shapes() {
 fn parse_reads_the_other_iso_8601_forms() {
     let september_24 = date(2026, 9, 24);
     // The basic form, without separators.
-    assert_eq!(Date::parse("20260923"), Ok(date(2026, 9, 23)));
-    assert_eq!(Date::parse("20260924"), Ok(september_24));
+    assert_eq!(CalendarDate::parse("20260923"), Ok(date(2026, 9, 23)));
+    assert_eq!(CalendarDate::parse("20260924"), Ok(september_24));
     // A date and time, of which only the date is kept.
     for text in [
         "2026-09-24T18:30",
@@ -189,7 +224,7 @@ fn parse_reads_the_other_iso_8601_forms() {
         "2026-09-24 18:30",
         "2026-09-24T23:59:60",
     ] {
-        assert_eq!(Date::parse(text), Ok(september_24), "{text}");
+        assert_eq!(CalendarDate::parse(text), Ok(september_24), "{text}");
     }
     // A date and time with an offset or annotations. The calendar annotation
     // is read but not applied: the date stays Gregorian.
@@ -200,11 +235,11 @@ fn parse_reads_the_other_iso_8601_forms() {
         "2026-09-24[u-ca=iso8601]",
         "2026-09-24[u-ca=hebrew]",
     ] {
-        assert_eq!(Date::parse(text), Ok(september_24), "{text}");
+        assert_eq!(CalendarDate::parse(text), Ok(september_24), "{text}");
     }
     // An expanded year, and the basic form with surrounding whitespace.
-    assert_eq!(Date::parse("+002026-09-24"), Ok(september_24));
-    assert_eq!(Date::parse(" 20260924\n"), Ok(september_24));
+    assert_eq!(CalendarDate::parse("+002026-09-24"), Ok(september_24));
+    assert_eq!(CalendarDate::parse(" 20260924\n"), Ok(september_24));
 }
 
 /// A date before year 1, which jiff's parser reads, would be stored although
@@ -219,7 +254,11 @@ fn parse_rejects_years_before_1() {
         "-000001-01-01",
         "-002026-09-24",
     ] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text}"
+        );
     }
 }
 
@@ -235,7 +274,11 @@ fn parse_rejects_dates_that_do_not_exist() {
         "2026-00-10",
         "0000-01-01",
     ] {
-        assert_eq!(Date::parse(text), Err(ValueError::InvalidDate), "{text}");
+        assert_eq!(
+            CalendarDate::parse(text),
+            Err(ValueError::InvalidDate),
+            "{text}"
+        );
     }
 }
 
@@ -269,27 +312,30 @@ fn dates_order_chronologically() {
 #[test]
 fn a_time_runs_from_midnight_to_23_59() {
     // The first and the last minute.
-    assert!(Time::new(0, 0).is_ok());
-    assert!(Time::new(23, 59).is_ok());
+    assert!(TimeOfDay::new(0, 0).is_ok());
+    assert!(TimeOfDay::new(23, 59).is_ok());
     // One past either bound.
-    assert_eq!(Time::new(24, 0), Err(ValueError::InvalidTime));
-    assert_eq!(Time::new(0, 60), Err(ValueError::InvalidTime));
-    assert_eq!(Time::new(23, 60), Err(ValueError::InvalidTime));
+    assert_eq!(TimeOfDay::new(24, 0), Err(ValueError::InvalidTime));
+    assert_eq!(TimeOfDay::new(0, 60), Err(ValueError::InvalidTime));
+    assert_eq!(TimeOfDay::new(23, 60), Err(ValueError::InvalidTime));
     // Far outside.
-    assert_eq!(Time::new(u8::MAX, u8::MAX), Err(ValueError::InvalidTime));
+    assert_eq!(
+        TimeOfDay::new(u8::MAX, u8::MAX),
+        Err(ValueError::InvalidTime)
+    );
 }
 
 /// Times typed or synced as `hh:mm` would fail to load.
 #[test]
 fn time_parse_reads_two_digit_hours_and_minutes() {
     // Exact format.
-    let time = Time::parse("07:05").unwrap();
+    let time = TimeOfDay::parse("07:05").unwrap();
     assert_eq!((time.hour(), time.minute()), (7, 5));
-    assert_eq!(Time::parse("23:59"), Time::new(23, 59));
+    assert_eq!(TimeOfDay::parse("23:59"), TimeOfDay::new(23, 59));
     // Surrounding whitespace is ignored.
-    assert_eq!(Time::parse(" 18:30\n"), Time::new(18, 30));
+    assert_eq!(TimeOfDay::parse(" 18:30\n"), TimeOfDay::new(18, 30));
     // `FromStr` parses the same way.
-    assert_eq!("00:00".parse::<Time>(), Time::new(0, 0));
+    assert_eq!("00:00".parse::<TimeOfDay>(), TimeOfDay::new(0, 0));
 }
 
 /// A time such as `7:5` or `07:05 pm` would be read as the wrong minute.
@@ -297,37 +343,53 @@ fn time_parse_reads_two_digit_hours_and_minutes() {
 fn time_parse_rejects_other_shapes() {
     // Missing padding or other separators.
     for text in ["7:05", "07:5", "0705", "07-05", "07.05", "07 05"] {
-        assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
+        assert_eq!(
+            TimeOfDay::parse(text),
+            Err(ValueError::InvalidTime),
+            "{text}"
+        );
     }
     // Extra characters, and the UTC designator, which makes the time depend
     // on the reader's time zone.
     for text in ["07:05 pm", "07:05Z"] {
-        assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
+        assert_eq!(
+            TimeOfDay::parse(text),
+            Err(ValueError::InvalidTime),
+            "{text}"
+        );
     }
     // Non-digits.
     for text in ["ab:cd", "0a:05", "07:0a", "/7:05", "07:5:"] {
-        assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
+        assert_eq!(
+            TimeOfDay::parse(text),
+            Err(ValueError::InvalidTime),
+            "{text}"
+        );
     }
     // Times that do not exist.
     for text in ["24:00", "23:60", "99:99"] {
-        assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
+        assert_eq!(
+            TimeOfDay::parse(text),
+            Err(ValueError::InvalidTime),
+            "{text}"
+        );
     }
     // Nothing at all.
-    assert_eq!(Time::parse(""), Err(ValueError::InvalidTime));
+    assert_eq!(TimeOfDay::parse(""), Err(ValueError::InvalidTime));
 }
 
 /// Times pasted from other apps, which write seconds, the `T` designator, or
 /// a whole date and time, would be refused.
 #[test]
 fn time_parse_reads_the_other_iso_8601_forms() {
-    let five_past_seven = Time::new(7, 5).unwrap();
+    let five_past_seven = TimeOfDay::new(7, 5).unwrap();
     // Zero seconds and the `T` designator.
     for text in ["07:05:00", "T07:05", "t07:05", "T0705"] {
-        assert_eq!(Time::parse(text), Ok(five_past_seven), "{text}");
+        assert_eq!(TimeOfDay::parse(text), Ok(five_past_seven), "{text}");
     }
     // The hour alone, which is the hour on the dot.
     for text in ["07", "T07"] {
-        assert_eq!(Time::parse(text), Time::new(7, 0), "{text}");
+        assert_eq!(TimeOfDay::parse(text), TimeOfDay::new(7, 0), "{text}");
     }
     // A time with an offset or an annotation, and the time of a date and
     // time.
@@ -337,12 +399,12 @@ fn time_parse_reads_the_other_iso_8601_forms() {
         "2026-09-24T07:05",
         "2026-09-24 07:05",
     ] {
-        assert_eq!(Time::parse(text), Ok(five_past_seven), "{text}");
+        assert_eq!(TimeOfDay::parse(text), Ok(five_past_seven), "{text}");
     }
 }
 
 /// A time with seconds would be stored as another time than the one typed,
-/// since a `Time` holds whole minutes.
+/// since a `TimeOfDay` holds whole minutes.
 #[test]
 fn time_parse_rejects_seconds() {
     // Seconds, fractions of a second, and a leap second, which jiff reads as
@@ -356,7 +418,11 @@ fn time_parse_rejects_seconds() {
         "23:59:60",
         "2026-09-24T07:05:30",
     ] {
-        assert_eq!(Time::parse(text), Err(ValueError::InvalidTime), "{text}");
+        assert_eq!(
+            TimeOfDay::parse(text),
+            Err(ValueError::InvalidTime),
+            "{text}"
+        );
     }
 }
 
@@ -364,10 +430,10 @@ fn time_parse_rejects_seconds() {
 #[test]
 fn time_display_pads_both_components() {
     // Single digits.
-    assert_eq!(Time::new(7, 5).unwrap().to_string(), "07:05");
+    assert_eq!(TimeOfDay::new(7, 5).unwrap().to_string(), "07:05");
     // Midnight and the last minute.
-    assert_eq!(Time::new(0, 0).unwrap().to_string(), "00:00");
-    assert_eq!(Time::new(23, 59).unwrap().to_string(), "23:59");
+    assert_eq!(TimeOfDay::new(0, 0).unwrap().to_string(), "00:00");
+    assert_eq!(TimeOfDay::new(23, 59).unwrap().to_string(), "23:59");
 }
 
 /// A saved time would read back as another minute of the day.
@@ -376,8 +442,8 @@ fn every_time_of_day_round_trips_through_its_text_form() {
     // All 1440 minutes.
     for hour in 0..24 {
         for minute in 0..60 {
-            let time = Time::new(hour, minute).unwrap();
-            assert_eq!(Time::parse(&time.to_string()), Ok(time));
+            let time = TimeOfDay::new(hour, minute).unwrap();
+            assert_eq!(TimeOfDay::parse(&time.to_string()), Ok(time));
         }
     }
 }
@@ -386,11 +452,11 @@ fn every_time_of_day_round_trips_through_its_text_form() {
 #[test]
 fn times_order_chronologically() {
     // The minute decides within an hour.
-    assert!(Time::new(7, 5).unwrap() < Time::new(7, 6).unwrap());
+    assert!(TimeOfDay::new(7, 5).unwrap() < TimeOfDay::new(7, 6).unwrap());
     // The hour decides before the minute.
-    assert!(Time::new(7, 59).unwrap() < Time::new(8, 0).unwrap());
+    assert!(TimeOfDay::new(7, 59).unwrap() < TimeOfDay::new(8, 0).unwrap());
     // The whole range.
-    assert!(Time::new(0, 0).unwrap() < Time::new(23, 59).unwrap());
+    assert!(TimeOfDay::new(0, 0).unwrap() < TimeOfDay::new(23, 59).unwrap());
 }
 
 /// Logs and test failures would show jiff's value inside instead of the date
@@ -399,10 +465,10 @@ fn times_order_chronologically() {
 fn dates_and_times_debug_as_their_text_form() {
     // The same text as `Display`.
     assert_eq!(format!("{:?}", date(2026, 9, 3)), "2026-09-03");
-    assert_eq!(format!("{:?}", Time::new(7, 5).unwrap()), "07:05");
+    assert_eq!(format!("{:?}", TimeOfDay::new(7, 5).unwrap()), "07:05");
     // Inside another value.
     assert_eq!(
-        format!("{:?}", Some(Time::new(7, 5).unwrap())),
+        format!("{:?}", Some(TimeOfDay::new(7, 5).unwrap())),
         "Some(07:05)"
     );
 }
@@ -418,13 +484,13 @@ fn dates_serialise_as_their_text_form() {
         "\"2026-09-23\""
     );
     assert_eq!(
-        serde_json::from_str::<Date>("\"2026-09-23\"").unwrap(),
+        serde_json::from_str::<CalendarDate>("\"2026-09-23\"").unwrap(),
         september_23
     );
     // Deserialising validates like parsing.
-    assert!(serde_json::from_str::<Date>("\"2026-02-30\"").is_err());
+    assert!(serde_json::from_str::<CalendarDate>("\"2026-02-30\"").is_err());
     // Only strings are dates.
-    assert!(serde_json::from_str::<Date>("20260923").is_err());
+    assert!(serde_json::from_str::<CalendarDate>("20260923").is_err());
 }
 
 /// A saved time would fail to load, or an impossible one would load.
@@ -432,13 +498,16 @@ fn dates_serialise_as_their_text_form() {
 #[test]
 fn times_serialise_as_their_text_form() {
     // Round trip.
-    let time = Time::new(7, 5).unwrap();
+    let time = TimeOfDay::new(7, 5).unwrap();
     assert_eq!(serde_json::to_string(&time).unwrap(), "\"07:05\"");
-    assert_eq!(serde_json::from_str::<Time>("\"07:05\"").unwrap(), time);
+    assert_eq!(
+        serde_json::from_str::<TimeOfDay>("\"07:05\"").unwrap(),
+        time
+    );
     // Deserialising validates like parsing.
-    assert!(serde_json::from_str::<Time>("\"24:00\"").is_err());
+    assert!(serde_json::from_str::<TimeOfDay>("\"24:00\"").is_err());
     // Only strings are times.
-    assert!(serde_json::from_str::<Time>("705").is_err());
+    assert!(serde_json::from_str::<TimeOfDay>("705").is_err());
 }
 
 proptest! {
@@ -447,7 +516,7 @@ proptest! {
     fn every_valid_date_round_trips_through_its_text_form(date in any_date()) {
         let text = date.to_string();
         prop_assert_eq!(text.len(), 10);
-        prop_assert_eq!(Date::parse(&text), Ok(date));
+        prop_assert_eq!(CalendarDate::parse(&text), Ok(date));
     }
 
     /// Dates sorted as text, as databases and file names do, would disagree

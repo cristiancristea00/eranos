@@ -11,7 +11,8 @@ use std::iter;
 
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
 use eranos::{
-    Currency, Date, Expense, Group, Member, MemberId, Money, Settlement, SettlementStrategy, Split,
+    CalendarDate, Currency, Expense, Group, Member, MemberId, Money, Settlement,
+    SettlementStrategy, Split,
 };
 
 /// A deterministic pseudo-random sequence (xorshift64), so every run
@@ -47,7 +48,7 @@ fn group(size: usize) -> Group {
     .take(size)
     .collect();
     let mut draws = Draws(0x9e37_79b9_7f4a_7c15);
-    let day = Date::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
+    let day = CalendarDate::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
     for &payer in &members {
         let minor_units = 1 + i64::try_from(draws.next(1_000_000)).unwrap_or(0);
         let expense = Expense::builder(

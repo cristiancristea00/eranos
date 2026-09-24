@@ -9,7 +9,7 @@
 use proptest::prelude::*;
 
 use super::*;
-use crate::date::Date;
+use crate::calendar::CalendarDate;
 use crate::expense::Split;
 use crate::money::{Cost, Parts};
 
@@ -17,8 +17,8 @@ fn eur(text: &str) -> Money {
     Money::parse(text, Currency::EUR).unwrap()
 }
 
-fn day() -> Date {
-    Date::new(23, 9, 2026).unwrap()
+fn day() -> CalendarDate {
+    CalendarDate::new(23, 9, 2026).unwrap()
 }
 
 fn person(name: &str) -> Member {

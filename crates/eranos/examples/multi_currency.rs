@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, Currency, Date, ExchangeRate, Expense, ExpenseShares, Group, Member, MemberId, Money,
-    Split, Transfer,
+    Balance, CalendarDate, Currency, ExchangeRate, Expense, ExpenseShares, Group, Member, MemberId,
+    Money, Split, Transfer,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -118,7 +118,7 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     group.add_expense(
         Expense::builder(
             Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
-            Date::new(1, 8, 2026)?,
+            CalendarDate::new(1, 8, 2026)?,
             "Fuel",
             ana,
             both.clone(),
@@ -128,7 +128,7 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     group.add_expense(
         Expense::builder(
             Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
-            Date::new(2, 8, 2026)?,
+            CalendarDate::new(2, 8, 2026)?,
             "Dinner",
             bob,
             both.clone(),
@@ -138,7 +138,7 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     group.add_expense(
         Expense::builder(
             Money::parse("60.00", Currency::EUR)?,
-            Date::new(3, 8, 2026)?,
+            CalendarDate::new(3, 8, 2026)?,
             "Ferry",
             bob,
             both,
@@ -158,7 +158,7 @@ fn repayment(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<
     section("3. A repayment in cash, in another currency");
     let cash = Transfer::builder(
         Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
-        Date::new(4, 8, 2026)?,
+        CalendarDate::new(4, 8, 2026)?,
         ana,
         bob,
     )

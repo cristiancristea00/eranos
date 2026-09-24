@@ -9,8 +9,8 @@
 )]
 
 use eranos::{
-    Balance, Category, CategoryId, Currency, Date, ExchangeRate, Expense, Group, Item, Member,
-    MemberId, MemberShare, Money, Parts, Percentage, SettlementStrategy, Split, Tip,
+    Balance, CalendarDate, Category, CategoryId, Currency, ExchangeRate, Expense, Group, Item,
+    Member, MemberId, MemberShare, Money, Parts, Percentage, SettlementStrategy, Split, Tip,
     TipDistribution, Transfer, error::GroupError,
 };
 
@@ -20,8 +20,8 @@ fn eur(text: &str) -> Money {
     Money::parse(text, Currency::EUR).unwrap()
 }
 
-fn day(day: u8) -> Date {
-    Date::new(day, 9, 2026).unwrap()
+fn day(day: u8) -> CalendarDate {
+    CalendarDate::new(day, 9, 2026).unwrap()
 }
 
 fn member(name: &str) -> Member {

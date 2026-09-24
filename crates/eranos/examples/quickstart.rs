@@ -6,7 +6,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, Currency, Date, Expense, Group, Member, MemberId, Money, SettlementStrategy, Split,
+    Balance, CalendarDate, Currency, Expense, Group, Member, MemberId, Money, SettlementStrategy,
+    Split,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -96,7 +97,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Each expense records who paid and who shares it. Here everyone shares everything\n\
          equally."
     );
-    let friday = Date::new(25, 9, 2026)?;
+    let friday = CalendarDate::new(25, 9, 2026)?;
     let eur = |text| Money::parse(text, Currency::EUR);
     let everyone = Split::equal([ana, bob, carol]);
     let cabin = Expense::builder(eur("240.00")?, friday, "Cabin", ana, everyone.clone());

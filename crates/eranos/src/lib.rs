@@ -13,7 +13,7 @@
 //!
 //! ```
 //! use eranos::{
-//!     Balance, Currency, Date, Expense, Group, Member, Money, Percentage, SettlementStrategy,
+//!     Balance, Currency, CalendarDate, Expense, Group, Member, Money, Percentage, SettlementStrategy,
 //!     Split, Tip,
 //! };
 //!
@@ -23,7 +23,7 @@
 //! let carol = group.add_member(Member::builder("Carol").build()?)?;
 //!
 //! // Ana paid dinner for three, plus a 10 % tip.
-//! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+//! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
 //! let dinner = Expense::builder(amount, day, "Dinner", ana, Split::equal([ana, bob, carol]))
 //!     .tip(Tip::percentage(Percentage::parse("10")?))
 //!     .build()?;
@@ -78,8 +78,8 @@
 //! one with `cargo run -p eranos --example settling_up`.
 #![doc(test(attr(deny(warnings))))]
 
+pub mod calendar;
 pub mod category;
-pub mod date;
 pub mod error;
 pub mod expense;
 pub mod group;
@@ -96,8 +96,8 @@ mod secret;
 mod serde_text;
 mod text;
 
+pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
-pub use date::{Date, Time};
 pub use expense::{Expense, ExpenseSplit, Item, Split, Tip, TipDistribution, TipValue};
 pub use group::{Group, Language};
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};

@@ -63,7 +63,7 @@ flowchart TD
     MEMBER["member<br/>Member, Email, PhoneNumber,<br/>Account, Iban, Username"]
     CATEGORY["category<br/>Category"]
     MONEY["money<br/>Currency, Money, Cost, ExchangeRate,<br/>Percentage, Parts, allocation"]
-    BASE["id · date · error · text · secret"]
+    BASE["id · calendar · error · text · secret"]
     GROUP --> RESOLUTION
     GROUP --> LEDGER
     GROUP --> SETTLEMENT
@@ -108,7 +108,7 @@ flowchart TD
  └─────────────────┬─────────────────────┘                        │
                    ▼                                              ▼
          ┌──────────────────────────────────────────────────────────┐
-         │ id · date · error · text · secret                        │
+         │ id · calendar · error · text · secret                    │
          └──────────────────────────────────────────────────────────┘
 ```
 
@@ -372,7 +372,7 @@ inputs, never the derived totals:
 
 - Identifiers are hyphenated UUIDs, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD` and times `hh:mm` (read back by the ISO 8601
-  parser behind `Date::parse` and `Time::parse`), percentages basis points,
+  parser behind `CalendarDate::parse` and `TimeOfDay::parse`), percentages basis points,
   parts hundredths. Absent optional fields are omitted, and so are the
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), and a tip equal to

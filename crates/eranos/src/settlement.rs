@@ -9,7 +9,7 @@ mod direct;
 mod greedy;
 mod minimum;
 
-use crate::date::Date;
+use crate::calendar::CalendarDate;
 use crate::error::SettlementError;
 use crate::id::MemberId;
 use crate::ledger::{Ledger, MemberPair};
@@ -26,12 +26,12 @@ use crate::transfer::Transfer;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Date, Group, Member, Money, SettlementStrategy, Transfer};
+/// use eranos::{Currency, CalendarDate, Group, Member, Money, SettlementStrategy, Transfer};
 ///
 /// let mut group = Group::builder(Currency::EUR, "Flat").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
-/// let day = Date::new(23, 9, 2026)?;
+/// let day = CalendarDate::new(23, 9, 2026)?;
 /// // Bob paid Ana 20.00 too much.
 /// group.add_transfer(Transfer::builder(Money::parse("20.00", Currency::EUR)?, day, bob, ana).build()?)?;
 ///
@@ -149,7 +149,7 @@ impl Payment {
     /// The transfer recording this payment, made on `date`, under a newly
     /// generated identifier.
     #[must_use]
-    pub fn to_transfer(&self, date: Date) -> Transfer {
+    pub fn to_transfer(&self, date: CalendarDate) -> Transfer {
         Transfer::new_unchecked(self.amount, date, self.members.from, self.members.to)
     }
 }

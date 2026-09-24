@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Currency, Date, Expense, ExpenseShares, Group, Item, Member, MemberId, MemberShare, Money,
-    Parts, Percentage, Split, Tip, TipDistribution,
+    CalendarDate, Currency, Expense, ExpenseShares, Group, Item, Member, MemberId, MemberShare,
+    Money, Parts, Percentage, Split, Tip, TipDistribution,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -113,7 +113,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;
-    let day = Date::new(23, 9, 2026)?;
+    let day = CalendarDate::new(23, 9, 2026)?;
 
     println!("{}: an itemised bill", group.name());
     println!("{}", "═".repeat(group.name().chars().count() + 19));

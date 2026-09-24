@@ -38,14 +38,14 @@ use crate::transfer::Transfer;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Date, Expense, Group, Member, Money, SettlementStrategy, Split};
+/// use eranos::{Currency, CalendarDate, Expense, Group, Member, Money, SettlementStrategy, Split};
 ///
 /// let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let carol = group.add_member(Member::builder("Carol").build()?)?;
 ///
-/// let day = Date::new(23, 9, 2026)?;
+/// let day = CalendarDate::new(23, 9, 2026)?;
 /// let eur = |text| Money::parse(text, Currency::EUR);
 /// let everyone = Split::equal([ana, bob, carol]);
 /// group.add_expense(Expense::builder(eur("300.00")?, day, "Hotel", ana, everyone.clone()).build()?)?;
@@ -284,11 +284,11 @@ impl Group {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Currency, Date, ExchangeRate, Expense, Group, Member, Money, Split};
+    /// use eranos::{Currency, CalendarDate, ExchangeRate, Expense, Group, Member, Money, Split};
     ///
     /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?)?;
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
     /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
     ///
     /// group.change_currency(Currency::RON, &[(Currency::EUR, ExchangeRate::parse("4.97")?)])?;

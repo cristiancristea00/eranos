@@ -35,8 +35,8 @@ no I/O.
 
 ```rust
 use eranos::{
-    Balance, Currency, Date, Expense, Group, Member, Money, Percentage, SettlementStrategy, Split,
-    Tip,
+    Balance, CalendarDate, Currency, Expense, Group, Member, Money, Percentage, SettlementStrategy,
+    Split, Tip,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let carol = group.add_member(Member::builder("Carol").build()?)?;
 
     // Ana paid dinner for three, plus a 10 % tip.
-    let (amount, day) = (Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+    let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
     let dinner = Expense::builder(amount, day, "Dinner", ana, Split::equal([ana, bob, carol]))
         .tip(Tip::percentage(Percentage::parse("10")?))
         .build()?;

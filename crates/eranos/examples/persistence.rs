@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, Currency, Date, Expense, Group, Member, Money, Percentage, SettlementStrategy, Split,
-    Tip,
+    Balance, CalendarDate, Currency, Expense, Group, Member, Money, Percentage, SettlementStrategy,
+    Split, Tip,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     group.add_expense(
         Expense::builder(
             Money::parse("70.00", Currency::EUR)?,
-            Date::new(23, 9, 2026)?,
+            CalendarDate::new(23, 9, 2026)?,
             "Fuel",
             ana,
             Split::equal([ana, bob]),
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     group.add_expense(
         Expense::builder(
             Money::parse("30.00", Currency::EUR)?,
-            Date::new(23, 9, 2026)?,
+            CalendarDate::new(23, 9, 2026)?,
             "Lunch",
             bob,
             Split::equal([ana, bob]),

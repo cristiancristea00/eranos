@@ -21,16 +21,16 @@ use crate::error::ValueError;
 /// # Examples
 ///
 /// ```
-/// use eranos::Date;
+/// use eranos::CalendarDate;
 ///
-/// let date = Date::new(23, 9, 2026)?;
+/// let date = CalendarDate::new(23, 9, 2026)?;
 /// assert_eq!(date.to_string(), "2026-09-23");
-/// assert_eq!("2026-09-23".parse::<Date>()?, date);
-/// assert!(Date::new(29, 2, 2026).is_err()); // 2026 is not a leap year
+/// assert_eq!("2026-09-23".parse::<CalendarDate>()?, date);
+/// assert!(CalendarDate::new(29, 2, 2026).is_err()); // 2026 is not a leap year
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Date {
+pub struct CalendarDate {
     /// Always in years 1..=9999: jiff's dates start at year -9999, and
     /// `from_civil` refuses the years before 1.
     inner: civil::Date,
@@ -38,19 +38,19 @@ pub struct Date {
 
 // Written out, like every ordering here, so that it never depends on the
 // order of the fields; jiff orders dates chronologically.
-impl Ord for Date {
+impl Ord for CalendarDate {
     fn cmp(&self, other: &Self) -> Ordering {
         self.inner.cmp(&other.inner)
     }
 }
 
-impl PartialOrd for Date {
+impl PartialOrd for CalendarDate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Date {
+impl CalendarDate {
     /// Returns the date `day` `month` `year`: `new(24, 9, 2026)` is 24
     /// September 2026.
     ///
@@ -90,12 +90,12 @@ impl Date {
     /// # Examples
     ///
     /// ```
-    /// use eranos::Date;
+    /// use eranos::CalendarDate;
     ///
-    /// assert_eq!(Date::parse("2028-02-29")?.day(), 29);
-    /// assert_eq!(Date::parse("2026-09-24T18:30+02:00")?, Date::new(24, 9, 2026)?);
-    /// assert!(Date::parse("2026-9-23").is_err());
-    /// assert!(Date::parse("0000-01-01").is_err());
+    /// assert_eq!(CalendarDate::parse("2028-02-29")?.day(), 29);
+    /// assert_eq!(CalendarDate::parse("2026-09-24T18:30+02:00")?, CalendarDate::new(24, 9, 2026)?);
+    /// assert!(CalendarDate::parse("2026-9-23").is_err());
+    /// assert!(CalendarDate::parse("0000-01-01").is_err());
     /// # Ok::<(), eranos::error::ValueError>(())
     /// ```
     pub fn parse(text: &str) -> Result<Self, ValueError> {
@@ -135,7 +135,7 @@ impl Date {
 }
 
 // The text form, not the jiff value inside.
-impl fmt::Debug for Date {
+impl fmt::Debug for CalendarDate {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, formatter)
     }
@@ -143,7 +143,7 @@ impl fmt::Debug for Date {
 
 // Written here rather than taken from jiff: it is the saved form, so it must
 // not change with a dependency's release.
-impl fmt::Display for Date {
+impl fmt::Display for CalendarDate {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
@@ -155,7 +155,7 @@ impl fmt::Display for Date {
     }
 }
 
-impl FromStr for Date {
+impl FromStr for CalendarDate {
     type Err = ValueError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
@@ -170,36 +170,36 @@ impl FromStr for Date {
 /// # Examples
 ///
 /// ```
-/// use eranos::Time;
+/// use eranos::TimeOfDay;
 ///
-/// let time = Time::new(18, 30)?;
+/// let time = TimeOfDay::new(18, 30)?;
 /// assert_eq!(time.to_string(), "18:30");
-/// assert_eq!(Time::parse("07:05")?.hour(), 7);
-/// assert!(Time::new(24, 0).is_err());
+/// assert_eq!(TimeOfDay::parse("07:05")?.hour(), 7);
+/// assert!(TimeOfDay::new(24, 0).is_err());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Time {
+pub struct TimeOfDay {
     /// Always on a whole minute: `new` sets no seconds, and `parse` refuses a
     /// time with seconds or a fraction of one.
     inner: civil::Time,
 }
 
-// Written out, like the ordering of `Date`; jiff orders times
+// Written out, like the ordering of `CalendarDate`; jiff orders times
 // chronologically.
-impl Ord for Time {
+impl Ord for TimeOfDay {
     fn cmp(&self, other: &Self) -> Ordering {
         self.inner.cmp(&other.inner)
     }
 }
 
-impl PartialOrd for Time {
+impl PartialOrd for TimeOfDay {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Time {
+impl TimeOfDay {
     /// Returns the time `hour`:`minute`.
     ///
     /// # Errors
@@ -234,11 +234,11 @@ impl Time {
     /// # Examples
     ///
     /// ```
-    /// use eranos::Time;
+    /// use eranos::TimeOfDay;
     ///
-    /// assert_eq!(Time::parse("07:05")?, Time::new(7, 5)?);
-    /// assert_eq!(Time::parse("T07:05:00")?, Time::new(7, 5)?);
-    /// assert!(Time::parse("07:05:30").is_err());
+    /// assert_eq!(TimeOfDay::parse("07:05")?, TimeOfDay::new(7, 5)?);
+    /// assert_eq!(TimeOfDay::parse("T07:05:00")?, TimeOfDay::new(7, 5)?);
+    /// assert!(TimeOfDay::parse("07:05:30").is_err());
     /// # Ok::<(), eranos::error::ValueError>(())
     /// ```
     pub fn parse(text: &str) -> Result<Self, ValueError> {
@@ -266,7 +266,7 @@ impl Time {
 }
 
 // The text form, not the jiff value inside.
-impl fmt::Debug for Time {
+impl fmt::Debug for TimeOfDay {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, formatter)
     }
@@ -274,13 +274,13 @@ impl fmt::Debug for Time {
 
 // Written here rather than taken from jiff, whose form has seconds: it is the
 // saved form, so it must not change with a dependency's release.
-impl fmt::Display for Time {
+impl fmt::Display for TimeOfDay {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{:02}:{:02}", self.hour(), self.minute())
     }
 }
 
-impl FromStr for Time {
+impl FromStr for TimeOfDay {
     type Err = ValueError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
@@ -292,27 +292,27 @@ impl FromStr for Time {
 mod serde_impls {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    use super::{Date, Time};
+    use super::{CalendarDate, TimeOfDay};
 
-    impl Serialize for Date {
+    impl Serialize for CalendarDate {
         fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
             serialiser.collect_str(self)
         }
     }
 
-    impl<'de> Deserialize<'de> for Date {
+    impl<'de> Deserialize<'de> for CalendarDate {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
             crate::serde_text::deserialise(deserialiser, "an ISO 8601 date such as `2026-09-24`")
         }
     }
 
-    impl Serialize for Time {
+    impl Serialize for TimeOfDay {
         fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
             serialiser.collect_str(self)
         }
     }
 
-    impl<'de> Deserialize<'de> for Time {
+    impl<'de> Deserialize<'de> for TimeOfDay {
         fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
             crate::serde_text::deserialise(deserialiser, "an ISO 8601 time such as `18:30`")
         }

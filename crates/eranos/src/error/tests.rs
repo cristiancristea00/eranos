@@ -5,7 +5,7 @@
 
 use super::*;
 
-use crate::date::{Date, Time};
+use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::group::Language;
 use crate::member::{Email, Iban, PhoneNumber};
 use crate::money::{ExchangeRate, Parts, Percentage};
@@ -469,8 +469,11 @@ fn rejected_input_never_appears_in_a_message() {
     assert_not_echoed("4,9765", &ExchangeRate::parse("4,9765").unwrap_err());
     // Codes, dates, identifiers, and tags.
     assert_not_echoed("XYZ", &Currency::from_code("XYZ").unwrap_err());
-    assert_not_echoed("2026-02-30", &Date::parse("2026-02-30").unwrap_err());
-    assert_not_echoed("24:60", &Time::parse("24:60").unwrap_err());
+    assert_not_echoed(
+        "2026-02-30",
+        &CalendarDate::parse("2026-02-30").unwrap_err(),
+    );
+    assert_not_echoed("24:60", &TimeOfDay::parse("24:60").unwrap_err());
     assert_not_echoed("not-a-uuid", &"not-a-uuid".parse::<MemberId>().unwrap_err());
     assert_not_echoed("ro_RO", &Language::parse("ro_RO").unwrap_err());
     assert_not_echoed("en-US-US", &Language::parse("en-US-US").unwrap_err());

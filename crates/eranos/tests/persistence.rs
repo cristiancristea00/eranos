@@ -10,9 +10,9 @@
 )]
 
 use eranos::{
-    Account, Category, CategoryId, Currency, Date, Email, ExchangeRate, Expense, Group, Iban, Item,
-    Language, Member, MemberId, Money, Parts, Percentage, PhoneNumber, SettlementStrategy, Split,
-    Time, Tip, TipDistribution, Transfer, Username,
+    Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, Group,
+    Iban, Item, Language, Member, MemberId, Money, Parts, Percentage, PhoneNumber,
+    SettlementStrategy, Split, TimeOfDay, Tip, TipDistribution, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -20,8 +20,8 @@ fn eur(text: &str) -> Money {
     Money::parse(text, Currency::EUR).unwrap()
 }
 
-fn day() -> Date {
-    Date::new(23, 9, 2026).unwrap()
+fn day() -> CalendarDate {
+    CalendarDate::new(23, 9, 2026).unwrap()
 }
 
 /// A group using every serialised feature, and its members.
@@ -73,7 +73,7 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
         bob,
     )
     .description("Tasca")
-    .time(Time::new(20, 30).unwrap())
+    .time(TimeOfDay::new(20, 30).unwrap())
     .category(food)
     .tip(Tip::percentage(Percentage::parse("12.5").unwrap()).distributed(TipDistribution::Equal))
     .build()
@@ -389,10 +389,10 @@ fn value_types_serialise_on_their_own() {
     );
     assert!(serde_json::from_value::<Parts>(json!(0)).is_err());
     assert!(serde_json::from_value::<Currency>(json!("XYZ")).is_err());
-    assert!(serde_json::from_value::<Date>(json!("2026-02-30")).is_err());
+    assert!(serde_json::from_value::<CalendarDate>(json!("2026-02-30")).is_err());
     assert_eq!(
-        serde_json::from_value::<Time>(json!("07:05")).unwrap(),
-        Time::new(7, 5).unwrap()
+        serde_json::from_value::<TimeOfDay>(json!("07:05")).unwrap(),
+        TimeOfDay::new(7, 5).unwrap()
     );
     assert!(serde_json::from_value::<ExchangeRate>(json!("0")).is_err());
 }

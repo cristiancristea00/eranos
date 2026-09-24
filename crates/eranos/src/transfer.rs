@@ -1,6 +1,6 @@
 //! Transfers: money one member paid another, such as a repayment.
 
-use crate::date::{Date, Time};
+use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::error::TransferError;
 use crate::id::{MemberId, TransferId};
 use crate::ledger::MemberPair;
@@ -19,11 +19,11 @@ use crate::text;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Date, Money, Transfer};
+/// use eranos::{Currency, CalendarDate, Money, Transfer};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let repayment = Transfer::builder(Money::parse("30.00", Currency::EUR)?, Date::new(24, 9, 2026)?, bob, ana)
+/// let repayment = Transfer::builder(Money::parse("30.00", Currency::EUR)?, CalendarDate::new(24, 9, 2026)?, bob, ana)
 ///     .note("Dinner")
 ///     .build()?;
 /// assert_eq!(repayment.from(), bob);
@@ -39,7 +39,7 @@ use crate::text;
 pub struct Transfer {
     id: TransferId,
     amount: Money,
-    date: Date,
+    date: CalendarDate,
     from: MemberId,
     to: MemberId,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -47,7 +47,7 @@ pub struct Transfer {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     note: Option<String>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    time: Option<Time>,
+    time: Option<TimeOfDay>,
 }
 
 impl Transfer {
@@ -57,7 +57,7 @@ impl Transfer {
     /// [`Money::at`] makes a converted one.
     pub fn builder(
         cost: impl Into<Cost>,
-        date: Date,
+        date: CalendarDate,
         from: MemberId,
         to: MemberId,
     ) -> TransferBuilder {
@@ -88,7 +88,12 @@ impl Transfer {
 
     /// A transfer the caller guarantees is valid, two different members and
     /// a positive amount, under a newly generated identifier.
-    pub(crate) fn new_unchecked(amount: Money, date: Date, from: MemberId, to: MemberId) -> Self {
+    pub(crate) fn new_unchecked(
+        amount: Money,
+        date: CalendarDate,
+        from: MemberId,
+        to: MemberId,
+    ) -> Self {
         debug_assert!(
             from != to && amount.is_positive(),
             "an unchecked transfer must be valid"
@@ -126,7 +131,7 @@ impl Transfer {
 
     /// The date of the transfer.
     #[must_use]
-    pub const fn date(&self) -> Date {
+    pub const fn date(&self) -> CalendarDate {
         self.date
     }
 
@@ -161,7 +166,7 @@ impl Transfer {
 
     /// The time of day, if recorded.
     #[must_use]
-    pub const fn time(&self) -> Option<Time> {
+    pub const fn time(&self) -> Option<TimeOfDay> {
         self.time
     }
 
@@ -181,11 +186,11 @@ impl Transfer {
 pub struct TransferBuilder {
     id: Option<TransferId>,
     cost: Cost,
-    date: Date,
+    date: CalendarDate,
     from: MemberId,
     to: MemberId,
     note: Option<String>,
-    time: Option<Time>,
+    time: Option<TimeOfDay>,
 }
 
 impl TransferBuilder {
@@ -208,7 +213,7 @@ impl TransferBuilder {
     }
 
     /// Replaces the date.
-    pub const fn date(mut self, date: Date) -> Self {
+    pub const fn date(mut self, date: CalendarDate) -> Self {
         self.date = date;
         self
     }
@@ -232,7 +237,7 @@ impl TransferBuilder {
     }
 
     /// Sets the time of day, or clears it with `None`.
-    pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
+    pub fn time(mut self, time: impl Into<Option<TimeOfDay>>) -> Self {
         self.time = time.into();
         self
     }
@@ -272,7 +277,7 @@ impl TransferBuilder {
 struct TransferRecord {
     id: TransferId,
     amount: Money,
-    date: Date,
+    date: CalendarDate,
     from: MemberId,
     to: MemberId,
     #[serde(default)]
@@ -280,7 +285,7 @@ struct TransferRecord {
     #[serde(default)]
     note: Option<String>,
     #[serde(default)]
-    time: Option<Time>,
+    time: Option<TimeOfDay>,
 }
 
 #[cfg(feature = "serde")]

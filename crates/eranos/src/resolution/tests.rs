@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use proptest::prelude::*;
 
 use super::*;
-use crate::date::Date;
+use crate::calendar::CalendarDate;
 use crate::expense::{Item, Split, Tip, TipDistribution};
 use crate::id::ExpenseId;
 use crate::money::{Cost, Parts, Percentage};
@@ -32,8 +32,8 @@ fn eur(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)
 }
 
-fn day() -> Date {
-    Date::new(23, 9, 2026).unwrap()
+fn day() -> CalendarDate {
+    CalendarDate::new(23, 9, 2026).unwrap()
 }
 
 /// (member, paid, share) in minor units, ordered by member.

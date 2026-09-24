@@ -17,8 +17,8 @@ fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)
 }
 
-fn september_24() -> Date {
-    Date::new(24, 9, 2026).unwrap()
+fn september_24() -> CalendarDate {
+    CalendarDate::new(24, 9, 2026).unwrap()
 }
 
 /// Bob repays Ana 30.00 on 24 September 2026.
@@ -31,7 +31,7 @@ fn repayment() -> TransferBuilder {
 fn full_repayment() -> Transfer {
     repayment()
         .cost(euros(3_000).at(ExchangeRate::parse("4.9765").unwrap()))
-        .time(Time::new(9, 15).unwrap())
+        .time(TimeOfDay::new(9, 15).unwrap())
         .note("Dinner")
         .build()
         .unwrap()
@@ -105,7 +105,7 @@ fn the_note_is_trimmed_and_blank_clears_it() {
 fn the_time_is_set_and_cleared_with_none() {
     // Set.
     let transfer = full_repayment();
-    assert_eq!(transfer.time(), Some(Time::new(9, 15).unwrap()));
+    assert_eq!(transfer.time(), Some(TimeOfDay::new(9, 15).unwrap()));
     // Cleared.
     let untimed_transfer = transfer.to_builder().time(None).build().unwrap();
     assert_eq!(untimed_transfer.time(), None);
@@ -150,7 +150,7 @@ fn to_builder_rebuilds_an_equal_transfer() {
 #[test]
 fn builder_setters_replace_each_field() {
     // Members, amount, and date replaced.
-    let september_25 = Date::new(25, 9, 2026).unwrap();
+    let september_25 = CalendarDate::new(25, 9, 2026).unwrap();
     let transfer = full_repayment()
         .to_builder()
         .from(CAROL)

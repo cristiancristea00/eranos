@@ -10,7 +10,7 @@ pub use item::{Item, ItemBuilder};
 pub use split::Split;
 pub use tip::{Tip, TipDistribution, TipValue};
 
-use crate::date::{Date, Time};
+use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::error::{ExpenseError, Field};
 use crate::id::{CategoryId, ExpenseId, MemberId};
 use crate::money::{Cost, ExchangeRate, Money};
@@ -32,11 +32,11 @@ use crate::text;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Date, Expense, Money, Percentage, Split, Tip};
+/// use eranos::{Currency, CalendarDate, Expense, Money, Percentage, Split, Tip};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob, carol) = (MemberId::generate(), MemberId::generate(), MemberId::generate());
-/// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
+/// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
 /// let dinner = Expense::builder(amount, date, "Dinner", ana, Split::equal([ana, bob, carol]))
 ///     .tip(Tip::percentage(Percentage::parse("10")?))
 ///     .build()?;
@@ -53,7 +53,7 @@ use crate::text;
 pub struct Expense {
     id: ExpenseId,
     amount: Money,
-    date: Date,
+    date: CalendarDate,
     name: String,
     payers: Split,
     split: ExpenseSplit,
@@ -67,7 +67,7 @@ pub struct Expense {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    time: Option<Time>,
+    time: Option<TimeOfDay>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_default_tip"))]
     tip: Tip,
 }
@@ -80,7 +80,7 @@ impl Expense {
     /// [`Money::at`] makes a converted one.
     pub fn builder(
         cost: impl Into<Cost>,
-        date: Date,
+        date: CalendarDate,
         name: impl Into<String>,
         payer: MemberId,
         split: Split,
@@ -98,7 +98,7 @@ impl Expense {
     /// item by item; the line totals must add up to the amount.
     pub fn itemised_builder(
         cost: impl Into<Cost>,
-        date: Date,
+        date: CalendarDate,
         items: impl IntoIterator<Item = Item>,
         name: impl Into<String>,
         payer: MemberId,
@@ -117,7 +117,7 @@ impl Expense {
     /// divides.
     pub fn builder_with_payers(
         cost: impl Into<Cost>,
-        date: Date,
+        date: CalendarDate,
         name: impl Into<String>,
         payers: Split,
         split: Split,
@@ -135,7 +135,7 @@ impl Expense {
     /// paid it, and whose amount is divided item by item.
     pub fn itemised_builder_with_payers(
         cost: impl Into<Cost>,
-        date: Date,
+        date: CalendarDate,
         items: impl IntoIterator<Item = Item>,
         name: impl Into<String>,
         payers: Split,
@@ -190,7 +190,7 @@ impl Expense {
 
     /// The date of the expense.
     #[must_use]
-    pub const fn date(&self) -> Date {
+    pub const fn date(&self) -> CalendarDate {
         self.date
     }
 
@@ -247,7 +247,7 @@ impl Expense {
 
     /// The time of day, if recorded.
     #[must_use]
-    pub const fn time(&self) -> Option<Time> {
+    pub const fn time(&self) -> Option<TimeOfDay> {
         self.time
     }
 
@@ -315,13 +315,13 @@ impl ExpenseSplit {
 pub struct ExpenseBuilder {
     id: Option<ExpenseId>,
     cost: Cost,
-    date: Date,
+    date: CalendarDate,
     name: String,
     payers: Split,
     split: ExpenseSplit,
     category: CategoryId,
     description: Option<String>,
-    time: Option<Time>,
+    time: Option<TimeOfDay>,
     tip: Tip,
 }
 
@@ -345,7 +345,7 @@ impl ExpenseBuilder {
     }
 
     /// Replaces the date.
-    pub const fn date(mut self, date: Date) -> Self {
+    pub const fn date(mut self, date: CalendarDate) -> Self {
         self.date = date;
         self
     }
@@ -395,7 +395,7 @@ impl ExpenseBuilder {
     }
 
     /// Sets the time of day, or clears it with `None`.
-    pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
+    pub fn time(mut self, time: impl Into<Option<TimeOfDay>>) -> Self {
         self.time = time.into();
         self
     }
@@ -487,7 +487,7 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
 /// default; the constructors and the serialised form start here.
 fn starting(
     cost: Cost,
-    date: Date,
+    date: CalendarDate,
     name: String,
     payers: Split,
     split: ExpenseSplit,
@@ -525,7 +525,7 @@ fn is_uncategorised(category: &CategoryId) -> bool {
 struct ExpenseRecord {
     id: ExpenseId,
     amount: Money,
-    date: Date,
+    date: CalendarDate,
     name: String,
     payers: Split,
     split: ExpenseSplit,
@@ -536,7 +536,7 @@ struct ExpenseRecord {
     #[serde(default)]
     exchange_rate: Option<ExchangeRate>,
     #[serde(default)]
-    time: Option<Time>,
+    time: Option<TimeOfDay>,
     #[serde(default)]
     tip: Tip,
 }

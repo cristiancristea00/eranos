@@ -6,7 +6,7 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, Currency, Date, Expense, Group, Member, MemberId, Money, Settlement,
+    Balance, CalendarDate, Currency, Expense, Group, Member, MemberId, Money, Settlement,
     SettlementStrategy, Split,
 };
 use tabled::settings::object::Columns;
@@ -93,7 +93,7 @@ fn spend(
 ) -> Result<(), Box<dyn Error>> {
     let expense = Expense::builder(
         Money::parse(amount, Currency::EUR)?,
-        Date::new(20, 9, 2026)?,
+        CalendarDate::new(20, 9, 2026)?,
         name,
         payer,
         Split::equal(participants.iter().copied()),
@@ -233,7 +233,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .settlement(SettlementStrategy::MinimumTransfers)?
         .clone();
     for payment in plan.payments() {
-        group.add_transfer(payment.to_transfer(Date::new(27, 9, 2026)?))?;
+        group.add_transfer(payment.to_transfer(CalendarDate::new(27, 9, 2026)?))?;
     }
     println!(
         "Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n\

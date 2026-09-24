@@ -7,7 +7,7 @@
 use std::error::Error;
 
 use eranos::{
-    Currency, Date, Expense, ExpenseId, Group, Member, MemberId, MemberShare, Money, Parts,
+    CalendarDate, Currency, Expense, ExpenseId, Group, Member, MemberId, MemberShare, Money, Parts,
     Percentage, Split,
 };
 use tabled::settings::object::Columns;
@@ -90,7 +90,7 @@ fn report(group: &Group, id: ExpenseId, rules: &[(MemberId, &str)]) {
 struct Family {
     ana: MemberId,
     bob: MemberId,
-    day: Date,
+    day: CalendarDate,
     mia: MemberId,
 }
 
@@ -272,7 +272,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let family = Family {
         ana: group.add_member(Member::builder("Ana").build()?)?,
         bob: group.add_member(Member::builder("Bob").build()?)?,
-        day: Date::new(14, 7, 2026)?,
+        day: CalendarDate::new(14, 7, 2026)?,
         mia: group.add_member(Member::builder("Mia").build()?)?,
     };
 

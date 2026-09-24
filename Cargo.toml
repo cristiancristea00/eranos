@@ -10,7 +10,7 @@ resolver = "3"
 members = ["crates/eranos", "crates/xtask"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.97"
 description = "Group expense tracking: exact money splitting, cached balances, and repayment plans"
@@ -43,10 +43,10 @@ icu_properties = { version = "2.3", default-features = false, features = ["compi
 # it is not a breaking change.
 iso4217-static = { version = "=0.2.4", default-features = false }
 # Calendar dates and times of day, and the ISO 8601 parser behind
-# `Date::parse` and `Time::parse`. Without the default features: no clock, no
-# time zone database, and no `std`, none of which a date without a time zone
-# uses. Its types stay inside `Date` and `Time`, so replacing it is not a
-# breaking change.
+# `CalendarDate::parse` and `TimeOfDay::parse`. Without the default features:
+# no clock, no time zone database, and no `std`, none of which a date without a
+# time zone uses. Its types stay inside `CalendarDate` and `TimeOfDay`, so
+# replacing it is not a breaking change.
 jiff = { version = "0.2.37", default-features = false }
 # Phone numbers: libphonenumber's numbering plans, embedded. Pinned exactly:
 # each release carries new metadata that can refuse a number an earlier one

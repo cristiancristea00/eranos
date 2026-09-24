@@ -8,7 +8,7 @@ use std::error::Error;
 
 use eranos::error::GroupError;
 use eranos::{
-    Account, AccountDetails, Balance, Currency, Date, Email, Expense, Group, Iban, Member,
+    Account, AccountDetails, Balance, CalendarDate, Currency, Email, Expense, Group, Iban, Member,
     MemberId, Money, PhoneNumber, Split, Username,
 };
 use tabled::settings::object::Columns;
@@ -214,7 +214,7 @@ fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box
     section("4. A flatmate moves out");
     let rent = Expense::builder(
         Money::parse("900.00", Currency::EUR)?,
-        Date::new(1, 9, 2026)?,
+        CalendarDate::new(1, 9, 2026)?,
         "Rent",
         ana,
         Split::equal([ana, bob]),
@@ -230,7 +230,7 @@ fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box
 
     let utilities = Expense::builder(
         Money::parse("60.00", Currency::EUR)?,
-        Date::new(1, 10, 2026)?,
+        CalendarDate::new(1, 10, 2026)?,
         "Utilities",
         ana,
         Split::equal([ana, bob]),

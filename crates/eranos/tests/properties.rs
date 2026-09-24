@@ -13,16 +13,16 @@
 )]
 
 use eranos::{
-    Cost, Currency, Date, ExchangeRate, Expense, ExpenseId, Group, Item, Member, MemberId, Money,
-    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
+    CalendarDate, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item, Member, MemberId,
+    Money, Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
     error::GroupError,
 };
 use proptest::prelude::*;
 
 const MEMBERS: usize = 6;
 
-fn day() -> Date {
-    Date::new(23, 9, 2026).unwrap()
+fn day() -> CalendarDate {
+    CalendarDate::new(23, 9, 2026).unwrap()
 }
 
 /// How one amount is divided: a method and weighted members.

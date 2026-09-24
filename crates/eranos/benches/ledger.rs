@@ -12,7 +12,8 @@ use std::iter;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use eranos::{
-    Currency, Date, Expense, Group, Member, MemberId, Money, Parts, SettlementStrategy, Split,
+    CalendarDate, Currency, Expense, Group, Member, MemberId, Money, Parts, SettlementStrategy,
+    Split,
 };
 
 const EXISTING: i64 = 10_000;
@@ -28,7 +29,7 @@ fn parts(members: &[MemberId]) -> Split {
 }
 
 fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
-    let day = Date::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
+    let day = CalendarDate::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
     Expense::builder(
         Money::from_minor_units(Currency::EUR, minor_units),
         day,

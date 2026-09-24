@@ -25,8 +25,8 @@ fn per_cent(text: &str) -> Percentage {
     Percentage::parse(text).unwrap()
 }
 
-fn september_23() -> Date {
-    Date::new(23, 9, 2026).unwrap()
+fn september_23() -> CalendarDate {
+    CalendarDate::new(23, 9, 2026).unwrap()
 }
 
 /// A 90.00 EUR dinner on 23 September 2026 that Ana paid and shared with
@@ -56,7 +56,7 @@ fn full_expense() -> Expense {
         .description("Birthday")
         .category(CategoryId::from_bytes([9; 16]))
         .tip(Tip::percentage(per_cent("10")))
-        .time(Time::new(20, 30).unwrap())
+        .time(TimeOfDay::new(20, 30).unwrap())
         .cost(euros(9_000).at(ExchangeRate::parse("4.9765").unwrap()))
         .payers(Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_900))]))
         .split(Split::percentages([
@@ -499,7 +499,7 @@ fn optional_fields_are_set_and_cleared_with_none() {
     // Set.
     let expense = full_expense();
     assert_eq!(expense.category(), CategoryId::from_bytes([9; 16]));
-    assert_eq!(expense.time(), Some(Time::new(20, 30).unwrap()));
+    assert_eq!(expense.time(), Some(TimeOfDay::new(20, 30).unwrap()));
     // Cleared.
     let expense = expense
         .to_builder()
@@ -654,7 +654,7 @@ fn builder_setters_replace_each_field() {
             .unwrap()
     };
     // Name, cost, and date replaced.
-    let lunch_date = Date::new(24, 9, 2026).unwrap();
+    let lunch_date = CalendarDate::new(24, 9, 2026).unwrap();
     let lunch = base()
         .to_builder()
         .name("Lunch")
