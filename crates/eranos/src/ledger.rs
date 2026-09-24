@@ -318,7 +318,9 @@ impl MemberPair {
 // `from`, then `to`.
 impl Ord for MemberPair {
     fn cmp(&self, other: &Self) -> Ordering {
-        (self.from, self.to).cmp(&(other.from, other.to))
+        self.from
+            .cmp(&other.from)
+            .then_with(|| self.to.cmp(&other.to))
     }
 }
 

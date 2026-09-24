@@ -182,9 +182,11 @@ pub(crate) fn settle(
         SettlementStrategy::Greedy => greedy::settle(&ledger.balances()),
         SettlementStrategy::MinimumTransfers => minimum::settle(&ledger.balances())?,
     };
-    // By payer, then recipient, as `Settlement::payments` promises; the
-    // amount breaks ties.
-    flows.sort_unstable_by_key(|flow| (flow.members, flow.amount));
+    // By payer, then recipient, as `Settlement::payments` promises. Every
+    // strategy pays each pair of members at most once (the direct one pays
+    // each ledger pair once, and the others clear a debtor or a creditor
+    // with every payment), so the pair alone orders the flows.
+    flows.sort_unstable_by_key(|flow| flow.members);
     let currency = ledger.currency();
     let payments = flows
         .into_iter()
