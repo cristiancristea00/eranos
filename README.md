@@ -170,7 +170,7 @@ eranos/
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
 ├── crates/eranos/
 │   ├── src/                   the library; every module has its unit tests in <module>/tests.rs
-│   ├── tests/                 scenarios, properties, persistence (public API only)
+│   ├── tests/                 scenarios, properties, persistence, errors, api (public API only)
 │   ├── examples/              runnable scenarios
 │   └── benches/               criterion benchmarks
 ├── crates/xtask/              the repository's automation: `cargo xtask gates`
