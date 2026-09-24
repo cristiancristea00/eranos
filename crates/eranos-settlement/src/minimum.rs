@@ -7,23 +7,34 @@
 //! subsets, and settles each group with one payment fewer than its size.
 
 use std::collections::BTreeMap;
+use std::ops::Range;
 
 use eranos_core::MemberId;
+use eranos_core::cooperative::Pacer;
 use eranos_ledger::MemberPair;
 
 use super::Flow;
 use crate::error::SettlementError;
 
+/// How many subsets the table fill computes between two checks of the
+/// pacer.
+const SUBSETS_PER_CHECK: usize = 1 << 12;
+
+/// The work between two yields of the table fill, counted as subsets times
+/// balances: about 0.7 ms on the reference machine, so a table of 16
+/// balances or fewer fills without a yield.
+const UNITS_PER_YIELD: u64 = 1 << 21;
+
 /// Settles `balances` (member, net; positive = is owed, ordered by member)
-/// with the fewest payments.
+/// with the fewest payments, yielding while it fills its table.
 ///
 /// # Errors
 ///
 /// [`SettlementError::OutOfMemory`] when the 2ⁿ-byte table for the `n`
 /// unpaired balances cannot be allocated.
-pub(super) fn settle(balances: &[(MemberId, i64)]) -> Result<Vec<Flow>, SettlementError> {
+pub(super) async fn settle(balances: &[(MemberId, i64)]) -> Result<Vec<Flow>, SettlementError> {
     let (mut flows, rest) = pair_opposites(balances);
-    for group in zero_sum_groups(&rest)? {
+    for group in zero_sum_groups(&rest).await? {
         flows.extend(settle_group(&group));
     }
     Ok(flows)
@@ -79,7 +90,7 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
 /// `table[S] = max over i in S of table[S ∖ {i}] + [ΣS = 0]`. Walking back
 /// from the full set along that maximum orders the members so that the
 /// prefix sums hit zero exactly at the group boundaries.
-fn zero_sum_groups(
+async fn zero_sum_groups(
     balances: &[(MemberId, i64)],
 ) -> Result<Vec<Vec<(MemberId, i64)>>, SettlementError> {
     let count = balances.len();
@@ -95,27 +106,31 @@ fn zero_sum_groups(
     table.try_reserve_exact(size).map_err(|_| out_of_memory)?;
 
     let nets: Vec<i128> = balances.iter().map(|&(_, net)| i128::from(net)).collect();
-    let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
-    let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
-    // Subsets in increasing order: every S ∖ {i} is smaller than S, so its
-    // entry is already in the table when S is pushed.
+    // Subsets in increasing order, one chunk at a time between the pacer's
+    // checks.
     table.push(0);
-    for subset in 1..size {
-        let mut best = 0;
-        let mut total = 0_i128;
-        for position in members_of(subset) {
-            total += net_of(position);
-            best = best.max(groups_in(&table, subset & !(1 << position)));
-        }
-        // At most count / 2 ≤ 32 groups on 64-bit targets, so no u8
-        // overflows.
-        table.push(best + u8::from(total == 0));
+    let mut pacer = Pacer::new(UNITS_PER_YIELD);
+    let mut start = 1;
+    while start < size {
+        let end = start.saturating_add(SUBSETS_PER_CHECK).min(size);
+        fill_subsets(&mut table, start..end, &nets);
+        // Counted per chunk, not per member of each subset: the aarch64
+        // baseline has no scalar popcount, so `count_ones` in the inner loop
+        // would cost a vector sequence for every subset. A chunk has at most
+        // 2¹² subsets of fewer than 64 balances, so its work fits in a u64.
+        let units = (end - start) * count;
+        pacer
+            .advance(u64::try_from(units).unwrap_or_default())
+            .await;
+        start = end;
     }
 
     // Walk back from the full set, removing the lowest member whose removal
     // keeps the maximum: the reversed removal order has zero prefix sums
     // exactly at the group boundaries. The recurrence guarantees such a
     // member exists in every non-empty subset, and the empty one has none.
+    let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
+    let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
     let removable = |subset: usize| {
         let closes_group = u8::from(members_of(subset).map(net_of).sum::<i128>() == 0);
         let target = groups_in(&table, subset);
@@ -144,6 +159,25 @@ fn zero_sum_groups(
         }
     }
     Ok(groups)
+}
+
+/// Pushes the table's entries for `subsets`, the next ones in increasing
+/// order: every S ∖ {i} is smaller than S, so its entry is already in the
+/// table when S is pushed.
+fn fill_subsets(table: &mut Vec<u8>, subsets: Range<usize>, nets: &[i128]) {
+    let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
+    let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
+    for subset in subsets {
+        let mut best = 0;
+        let mut total = 0_i128;
+        for position in members_of(subset) {
+            total += net_of(position);
+            best = best.max(groups_in(table, subset & !(1 << position)));
+        }
+        // At most count / 2 ≤ 32 groups on 64-bit targets, so no u8
+        // overflows.
+        table.push(best + u8::from(total == 0));
+    }
 }
 
 /// The positions of the set bits of `subset`, lowest first.

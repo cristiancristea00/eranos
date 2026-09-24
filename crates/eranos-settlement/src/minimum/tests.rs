@@ -4,6 +4,11 @@
 //! be visible; an independent brute force checks the count on random small
 //! groups.
 
+use std::future::Future;
+use std::pin::pin;
+use std::task::{Context, Waker};
+
+use eranos_core::cooperative::Cooperative;
 use proptest::prelude::*;
 
 use super::*;
@@ -11,6 +16,22 @@ use crate::greedy;
 
 fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])
+}
+
+/// Runs one of the solver's computations to its end.
+fn completed<F: Future>(future: F) -> F::Output {
+    Cooperative::new(future).complete()
+}
+
+/// How many polls of `future` pend before it is ready.
+fn pending_polls<F: Future>(future: F) -> usize {
+    let mut future = pin!(future);
+    let mut context = Context::from_waker(Waker::noop());
+    let mut pending = 0;
+    while future.as_mut().poll(&mut context).is_pending() {
+        pending += 1;
+    }
+    pending
 }
 
 /// A payment of `amount` from member `from` to member `to`.
@@ -100,7 +121,7 @@ fn random_nets(count: usize) -> impl Strategy<Value = Vec<i64>> {
 #[test]
 fn it_finds_zero_sum_groups_greedy_misses() {
     let open = balances(&[1, 3, 3, 4, -5, -6]);
-    let flows = settle(&open).unwrap();
+    let flows = completed(settle(&open)).unwrap();
     assert_eq!(flows.len(), 4);
     assert_eq!(greedy::settle(&open).len(), 5);
     assert!(after(&open, &flows).iter().all(|&net| net == 0));
@@ -115,7 +136,7 @@ fn exact_opposites_pay_each_other_directly() {
     let (flows, rest) = pair_opposites(&open);
     assert_eq!(flows, vec![flow(500, 3, 1), flow(500, 4, 2)]);
     assert!(rest.is_empty());
-    assert_eq!(settle(&open).unwrap().len(), 2);
+    assert_eq!(completed(settle(&open)).unwrap().len(), 2);
 }
 
 /// Every zero-sum group settles with one payment fewer than its size, each
@@ -133,8 +154,8 @@ fn a_group_settles_with_one_payment_fewer_than_its_size() {
 /// Settled or empty balances need no payment and no table.
 #[test]
 fn nothing_to_settle_needs_no_payment() {
-    assert_eq!(settle(&[]), Ok(vec![]));
-    assert_eq!(zero_sum_groups(&[]), Ok(vec![]));
+    assert_eq!(completed(settle(&[])), Ok(vec![]));
+    assert_eq!(completed(zero_sum_groups(&[])), Ok(vec![]));
 }
 
 /// `count` balances with no exact opposites, so all of them reach the
@@ -146,12 +167,26 @@ fn unpaired(count: i64) -> Vec<(MemberId, i64)> {
     balances(&nets)
 }
 
+/// A long exact plan would hold its thread without a pause, or pause where
+/// it needs none: the table of 16 balances fills in one poll, and that of
+/// 17, which is twice as large, yields once.
+#[test]
+fn the_table_fill_yields_once_per_budget_of_work() {
+    assert_eq!(pending_polls(settle(&unpaired(16))), 0);
+    assert_eq!(pending_polls(settle(&unpaired(17))), 1);
+    // Yielding changes no payment.
+    assert_eq!(
+        completed(settle(&unpaired(17))).map(|flows| flows.len()),
+        Ok(16)
+    );
+}
+
 /// A table that cannot even be addressed is reported as out of memory
 /// instead of overflowing the shift or aborting the process.
 #[test]
 fn a_table_beyond_the_address_space_is_out_of_memory() {
     assert_eq!(
-        settle(&unpaired(64)),
+        completed(settle(&unpaired(64))),
         Err(SettlementError::OutOfMemory { balances: 64 })
     );
 }
@@ -162,7 +197,7 @@ fn a_table_beyond_the_address_space_is_out_of_memory() {
 #[test]
 fn a_table_too_large_to_allocate_is_out_of_memory() {
     assert_eq!(
-        settle(&unpaired(63)),
+        completed(settle(&unpaired(63))),
         Err(SettlementError::OutOfMemory { balances: 63 })
     );
 }
@@ -172,7 +207,7 @@ fn a_table_too_large_to_allocate_is_out_of_memory() {
 #[test]
 fn the_groups_partition_the_balances() {
     let open = balances(&[1, 3, 3, 4, -5, -6]);
-    let groups = zero_sum_groups(&open).unwrap();
+    let groups = completed(zero_sum_groups(&open)).unwrap();
     assert_eq!(groups.len(), 2);
     assert!(
         groups
@@ -193,7 +228,7 @@ proptest! {
     #[test]
     fn the_count_matches_an_exhaustive_search(nets in random_nets(8)) {
         let open = balances(&nets);
-        let flows = settle(&open).unwrap();
+        let flows = completed(settle(&open)).unwrap();
         prop_assert_eq!(flows.len(), brute_force_minimum(&nets));
     }
 
@@ -202,7 +237,7 @@ proptest! {
     #[test]
     fn every_plan_clears_the_balances_without_overpaying(nets in random_nets(12)) {
         let open = balances(&nets);
-        let flows = settle(&open).unwrap();
+        let flows = completed(settle(&open)).unwrap();
         prop_assert!(after(&open, &flows).iter().all(|&net| net == 0));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
         for &Flow { amount, members: MemberPair { from, to } } in &flows {

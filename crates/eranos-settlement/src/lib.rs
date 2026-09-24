@@ -6,8 +6,9 @@
 //! payments they need and how much work that takes.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use. [`Settlements`], the group's cache of plans, and
-//! [`settle`] are the group's, and the facade does not re-export them.
+//! types callers use. [`Settlements`], the group's cache of plans,
+//! [`settle`], and [`settle_async`] are the group's, and the facade does not
+//! re-export them.
 #![doc(test(attr(deny(warnings))))]
 
 mod direct;
@@ -15,9 +16,11 @@ mod error;
 mod greedy;
 mod minimum;
 
+use std::future::Future;
 use std::sync::OnceLock;
 
 use eranos_core::MemberId;
+use eranos_core::cooperative::Cooperative;
 use eranos_ledger::{Ledger, MemberPair};
 use eranos_money::{Currency, Money};
 
@@ -230,10 +233,32 @@ pub fn settle(
     strategy: SettlementStrategy,
     ledger: &Ledger,
 ) -> Result<Settlement, SettlementError> {
+    settle_async(strategy, ledger).complete()
+}
+
+/// Settles the balances of `ledger` with `strategy`, yielding while the
+/// exact solver fills its table; the direct and greedy strategies never
+/// yield.
+///
+/// # Errors
+///
+/// As for [`settle`].
+pub fn settle_async(
+    strategy: SettlementStrategy,
+    ledger: &Ledger,
+) -> Cooperative<impl Future<Output = Result<Settlement, SettlementError>> + Send + '_> {
+    Cooperative::new(settle_paced(strategy, ledger))
+}
+
+/// The computation of [`settle_async`].
+async fn settle_paced(
+    strategy: SettlementStrategy,
+    ledger: &Ledger,
+) -> Result<Settlement, SettlementError> {
     let mut flows = match strategy {
         SettlementStrategy::Direct => direct::settle(ledger.pairs()),
         SettlementStrategy::Greedy => greedy::settle(&balances(ledger)),
-        SettlementStrategy::MinimumTransfers => minimum::settle(&balances(ledger))?,
+        SettlementStrategy::MinimumTransfers => minimum::settle(&balances(ledger)).await?,
     };
     // By payer, then recipient, as `Settlement::payments` promises. Every
     // strategy pays each pair of members at most once (the direct one pays

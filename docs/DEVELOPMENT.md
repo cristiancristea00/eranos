@@ -134,7 +134,11 @@ breaking.
    algorithm, cost, guarantee, and a measured timing.
 2. Implement it as `pub(super) fn settle(…) -> Vec<Flow>` in a new
    `crates/eranos-settlement/src/<name>.rs`, reading the ledger's balances or
-   pair debts, and dispatch to it in the crate's `settle`.
+   pair debts, and dispatch to it in the crate's `settle_paced`, which both
+   `settle` and `settle_async` run. A strategy whose time grows faster than
+   its input is an `async fn` that reports its work to a `Pacer`, as
+   `minimum.rs` does, so that an asynchronous caller's other tasks run while
+   it works.
 3. Add its cache slot to `Settlements` beside it (the `match` in
    `Settlements::slot` is exhaustive, so the compiler points at it).
 4. Add it to `SettlementStrategy::all()`; the property tests then check that
