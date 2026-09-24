@@ -114,6 +114,10 @@ fn iban_errors() -> Vec<(IbanError, &'static str)> {
             "expected a two-letter country code followed by two check digits",
         ),
         (
+            IbanError::InvalidStructure,
+            "the account number does not match this country's format",
+        ),
+        (
             IbanError::UnknownCountry,
             "the country code is not in the IBAN registry",
         ),
@@ -433,11 +437,14 @@ fn no_message_starts_like_a_sentence_or_ends_with_a_period() {
 /// An account number or contact detail typed by a user would leak into logs.
 #[test]
 fn rejected_input_never_appears_in_a_message() {
-    // Account numbers: a typo and a truncated number.
+    // Account numbers: a typo, a truncated number, a digit where the bank
+    // code has letters, and check digits no bank issues.
     for input in [
         "RO49 AAAA 1B31 0075 9384 0001",
         "RO49 AAAA 1B31 0075 9384",
         "RO49-AAAA-1B31-0075-9384-0000",
+        "RO49 1AAA 1B31 0075 9384 0000",
+        "DE00 3704 0044 0532 0000 52",
     ] {
         assert_not_echoed(input, &Iban::parse(input).unwrap_err());
     }

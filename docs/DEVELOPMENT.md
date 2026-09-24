@@ -80,14 +80,31 @@ removed currency stop loading.
 
 ### 3.3 An IBAN registry update
 
-The lengths and the registry's example IBANs are in
-`crates/eranos/src/member/iban/registry.rs`, generated from the SWIFT IBAN
-Registry text file (linked from
+The countries, their IBAN lengths and BBAN structures, and the registry's
+example IBANs are in `crates/eranos/src/member/iban/registry.rs`, generated
+from the SWIFT IBAN Registry text file (linked from
 <https://www.swift.com/standards/data-standards/iban-international-bank-account-number>;
 swift.com answers 403 unless the request carries browser-like headers).
-Update both tables in the same order and the release number in the header;
-the unit tests validate every example against the checksum and its length.
-A country added is a `feat`; a length changed can reject stored IBANs and is
+
+The file is tab-separated and transposed: one row per data element, one
+column per country after the label. Row 3 holds the country code, row 9 the
+BBAN structure, row 20 the IBAN length, and row 22 the example in electronic
+format; rows 27 onwards hold contact details in multi-line quoted cells, so
+read only the first 26 rows. The lines end in CRLF, and without stripping
+the carriage return the last country's cells keep it.
+
+1. Regenerate `COUNTRIES` and `EXAMPLES`, in code order, and update the
+   release number in the header.
+2. Check each changed structure against the PDF of the same release. The
+   text file has had errors: release 98 left out PK, release 99 gave IQ's
+   positions as spreadsheet dates, and release 103 gives CZ one BBAN
+   structure (`4!n16!n`, used here) and a differently split IBAN structure.
+3. `cargo test -p eranos --lib member::iban` validates every example
+   against its length, its structure, and the check digits, and checks that
+   every structure adds up to its country's length.
+
+A country added is a `feat`. A length or a structure changed can refuse
+stored IBANs, and saved groups that hold one stop loading, so it is
 breaking.
 
 ### 3.4 A new settlement strategy

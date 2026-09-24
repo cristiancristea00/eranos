@@ -382,9 +382,10 @@ inputs, never the derived totals:
 IBANs and usernames are held in a buffer that is zeroed when dropped
 (`zeroize`), print as `DE89 •••• 3000` or `[REDACTED]` in `Debug` and
 `Display`, and are readable only through `expose_secret()`. IBANs are
-validated against the SWIFT IBAN Registry (release 103): country code, the
-country's length, and the ISO 7064 mod-97 check digits, which catch every
-single-character typo.
+validated against the SWIFT IBAN Registry (release 103): the country code,
+the country's length and BBAN structure (which positions hold digits and
+which letters), and the ISO 7064 mod-97 check digits, which must lie
+between 02 and 98 and catch every single-character typo.
 
 Copies made outside the library (the caller's strings, a deserialiser's
 buffers, the Swift or Kotlin side of a binding) are out of its reach, and

@@ -123,12 +123,18 @@ pub enum IbanError {
     /// is dropped).
     #[error("only letters, digits, and spaces are allowed")]
     InvalidCharacter,
-    /// The ISO 7064 mod-97 check failed: the number contains a typo.
+    /// The check digits are 00, 01, or 99, which ISO 13616 never issues, or
+    /// the ISO 7064 mod-97 check failed: the number contains a typo.
     #[error("the check digits do not match")]
     InvalidChecksum,
     /// Not two letters followed by two check digits.
     #[error("expected a two-letter country code followed by two check digits")]
     InvalidFormat,
+    /// A letter where the country's account number has a digit, or a digit
+    /// where it has a letter, by the BBAN structure of the SWIFT IBAN
+    /// registry.
+    #[error("the account number does not match this country's format")]
+    InvalidStructure,
     /// A country code without an entry in the SWIFT IBAN registry.
     #[error("the country code is not in the IBAN registry")]
     UnknownCountry,

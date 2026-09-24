@@ -244,6 +244,11 @@ fn a_tampered_file_is_refused() {
         value["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
     });
     assert!(typo.contains("check digits"), "{typo}");
+    // An IBAN with a digit where the bank code has letters.
+    let malformed = tamper(&|value| {
+        value["members"][0]["accounts"][0]["details"]["iban"] = json!("RO491AAA1B31007593840000");
+    });
+    assert!(malformed.contains("this country's format"), "{malformed}");
     // A blank first name, and a foreign expense that lost its rate.
     let blank_name = tamper(&|value| {
         value["members"][1]["first_name"] = json!("  ");

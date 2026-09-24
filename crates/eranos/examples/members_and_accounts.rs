@@ -168,9 +168,9 @@ fn secrets(member: &Member) {
 fn validation() {
     section("3. What validation accepts");
     println!(
-        "IBANs are checked against the SWIFT registry: the country, its length, and the\n\
-         mod-97 check digits, which catch any single mistyped character. Emails and phone\n\
-         numbers are checked for shape only."
+        "IBANs are checked against the SWIFT registry: the country, its length, which\n\
+         positions hold digits and which letters, and the mod-97 check digits, which catch\n\
+         any single mistyped character. Emails and phone numbers are checked for shape only."
     );
     let iban = |input: &'static str| CheckRow {
         input,
@@ -192,6 +192,7 @@ fn validation() {
             iban("ro49 aaaa 1b31 0075 9384 0000"),
             iban("RO49 AAAA 1B31 0075 9384 0001"),
             iban("RO49 AAAA 1B31 0075"),
+            iban("DE46 37O4 0044 0532 0130 00"),
             email("ana@example.com"),
             email("ana.example.com"),
             phone("+40 (712) 345-678"),

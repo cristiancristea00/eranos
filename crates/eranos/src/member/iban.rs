@@ -13,8 +13,10 @@ mod registry;
 /// A validated IBAN, held as a secret.
 ///
 /// Parsing checks the country code against the SWIFT IBAN registry, the
-/// length the registry sets for that country, and the ISO 7064 mod-97 check
-/// digits, which catch every single-character typo and most transpositions.
+/// length and the account-number format (the BBAN structure) the registry
+/// sets for that country, and the ISO 7064 mod-97 check digits, which must
+/// lie between 02 and 98 and catch every single-character typo and most
+/// transpositions.
 /// The number is wiped from memory when dropped; `Debug` and `Display` show
 /// only a masked form, and the full number is available through
 /// [`expose_secret`](Self::expose_secret).
@@ -31,6 +33,8 @@ mod registry;
 ///
 /// // One mistyped digit fails the check digits.
 /// assert!(Iban::parse("DE89 3704 0044 0532 0130 01").is_err());
+/// // A letter O typed for a zero passes them, but not Germany's format.
+/// assert!(Iban::parse("DE46 37O4 0044 0532 0130 00").is_err());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Clone, PartialEq, Eq)]
@@ -67,23 +71,28 @@ impl Iban {
             && bytes
                 .get(2..4)
                 .is_some_and(|check| check.iter().all(u8::is_ascii_digit));
-        let country = normalised
+        let code = normalised
             .get(..2)
             .filter(|_| valid_prefix)
             .ok_or(IbanError::InvalidFormat)?;
-        let expected = registry::LENGTHS
-            .binary_search_by(|(candidate, _)| candidate.cmp(&country))
+        let country = registry::COUNTRIES
+            .binary_search_by(|candidate| candidate.code.cmp(code))
             .ok()
-            .and_then(|position| registry::LENGTHS.get(position))
-            .map(|&(_, length)| usize::from(length))
+            .and_then(|position| registry::COUNTRIES.get(position))
             .ok_or(IbanError::UnknownCountry)?;
+        let expected = usize::from(country.length);
         if bytes.len() != expected {
             return Err(IbanError::WrongLength {
                 expected,
                 found: bytes.len(),
             });
         }
-        if mod_97(bytes) != 1 {
+        if !follows_structure(bytes, country.structure) {
+            return Err(IbanError::InvalidStructure);
+        }
+        // ISO 13616 issues check digits 02 to 98; 00, 01, and 99 pass mod 97
+        // whenever 97, 98, and 02 do, so they can only be typos.
+        if matches!(bytes.get(2..4), Some(b"00" | b"01" | b"99")) || mod_97(bytes) != 1 {
             return Err(IbanError::InvalidChecksum);
         }
         Ok(Self(Secret::from_zeroising(normalised)))
@@ -114,6 +123,36 @@ impl Iban {
     pub fn expose_secret(&self) -> &str {
         self.0.expose()
     }
+}
+
+/// Whether the characters after the four-character prefix follow
+/// `structure`, the registry's BBAN structure: segments of a length, `!`, and
+/// a class, `n` for digits, `a` for uppercase letters, and `c` for either.
+///
+/// The length check runs first, and every structure adds up to its country's
+/// length minus four, which a unit test checks, so each segment finds its
+/// characters and none is left over.
+fn follows_structure(number: &[u8], structure: &str) -> bool {
+    let mut characters = number.iter().skip(4);
+    let mut length = 0;
+    for symbol in structure.bytes() {
+        let belongs: fn(&u8) -> bool = match symbol {
+            digit @ b'0'..=b'9' => {
+                length = length * 10 + usize::from(digit - b'0');
+                continue;
+            }
+            b'a' => u8::is_ascii_uppercase,
+            b'c' => u8::is_ascii_alphanumeric,
+            b'n' => u8::is_ascii_digit,
+            // The `!` between a length and its class.
+            _ => continue,
+        };
+        if !characters.by_ref().take(length).all(belongs) {
+            return false;
+        }
+        length = 0;
+    }
+    true
 }
 
 /// The ISO 7064 MOD 97-10 remainder of an uppercase alphanumeric IBAN: the

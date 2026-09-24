@@ -1,101 +1,117 @@
-//! IBAN lengths per country, from the SWIFT IBAN Registry release 103
-//! (September 2026, <https://www.swift.com/standards/data-standards/iban-international-bank-account-number>).
+//! IBAN lengths and account-number formats per country, from the SWIFT IBAN
+//! Registry release 103 (September 2026,
+//! <https://www.swift.com/standards/data-standards/iban-international-bank-account-number>).
 //!
 //! Territories the registry lists only under another country (for example
 //! Guadeloupe under FR) use that country's code and have no entry. Keep the
 //! lines sorted by country code: lookups binary search the table.
 
-/// Country code and IBAN length, sorted by country code.
-pub(super) const LENGTHS: &[(&str, u8)] = &[
-    ("AD", 24), // Andorra
-    ("AE", 23), // United Arab Emirates (The)
-    ("AL", 28), // Albania
-    ("AT", 20), // Austria
-    ("AZ", 28), // Azerbaijan
-    ("BA", 20), // Bosnia and Herzegovina
-    ("BE", 16), // Belgium
-    ("BG", 22), // Bulgaria
-    ("BH", 22), // Bahrain
-    ("BI", 27), // Burundi
-    ("BR", 29), // Brazil
-    ("BY", 28), // Belarus
-    ("CH", 21), // Switzerland
-    ("CR", 22), // Costa Rica
-    ("CY", 28), // Cyprus
-    ("CZ", 24), // Czechia
-    ("DE", 22), // Germany
-    ("DJ", 27), // Djibouti
-    ("DK", 18), // Denmark
-    ("DO", 28), // Dominican Republic
-    ("EE", 20), // Estonia
-    ("EG", 29), // Egypt
-    ("ES", 24), // Spain
-    ("FI", 18), // Finland
-    ("FK", 18), // Falkland Islands (Malvinas)
-    ("FO", 18), // Faroe Islands
-    ("FR", 27), // France
-    ("GB", 22), // United Kingdom
-    ("GE", 22), // Georgia
-    ("GI", 23), // Gibraltar
-    ("GL", 18), // Greenland
-    ("GR", 27), // Greece
-    ("GT", 28), // Guatemala
-    ("HN", 28), // Honduras
-    ("HR", 21), // Croatia
-    ("HU", 28), // Hungary
-    ("IE", 22), // Ireland
-    ("IL", 23), // Israel
-    ("IQ", 23), // Iraq
-    ("IS", 26), // Iceland
-    ("IT", 27), // Italy
-    ("JO", 30), // Jordan
-    ("KW", 30), // Kuwait
-    ("KZ", 20), // Kazakhstan
-    ("LB", 28), // Lebanon
-    ("LC", 32), // Saint Lucia
-    ("LI", 21), // Liechtenstein
-    ("LT", 20), // Lithuania
-    ("LU", 20), // Luxembourg
-    ("LV", 21), // Latvia
-    ("LY", 25), // Libya
-    ("MC", 27), // Monaco
-    ("MD", 24), // Moldova, Republic of
-    ("ME", 22), // Montenegro
-    ("MK", 19), // North Macedonia
-    ("MN", 20), // Mongolia
-    ("MR", 27), // Mauritania
-    ("MT", 31), // Malta
-    ("MU", 30), // Mauritius
-    ("NI", 28), // Nicaragua
-    ("NL", 18), // Netherlands (The)
-    ("NO", 15), // Norway
-    ("OM", 23), // Oman
-    ("PK", 24), // Pakistan
-    ("PL", 28), // Poland
-    ("PS", 29), // Palestine, State of
-    ("PT", 25), // Portugal
-    ("QA", 29), // Qatar
-    ("RO", 24), // Romania
-    ("RS", 22), // Serbia
-    ("RU", 33), // Russian Federation
-    ("SA", 24), // Saudi Arabia
-    ("SC", 31), // Seychelles
-    ("SD", 18), // Sudan
-    ("SE", 24), // Sweden
-    ("SI", 19), // Slovenia
-    ("SK", 24), // Slovakia
-    ("SM", 27), // San Marino
-    ("SO", 23), // Somalia
-    ("ST", 25), // Sao Tome and Principe
-    ("SV", 28), // El Salvador
-    ("TL", 23), // Timor-Leste
-    ("TN", 24), // Tunisia
-    ("TR", 26), // Turkiye
-    ("UA", 29), // Ukraine
-    ("VA", 22), // Holy See
-    ("VG", 24), // Virgin Islands (British)
-    ("XK", 20), // Kosovo
-    ("YE", 30), // Yemen
+/// A country's entry in the registry.
+pub(super) struct Country {
+    /// The ISO 3166 code the IBAN starts with, such as `"DE"`.
+    pub(super) code: &'static str,
+    /// The number of characters, the four of the prefix included.
+    pub(super) length: u8,
+    /// The BBAN structure of the characters after the prefix: segments of
+    /// a length, `!`, and a class, where `n` is digits, `a` uppercase
+    /// letters, and `c` either, such as `"8!n10!n"` for eight digits, then
+    /// ten.
+    pub(super) structure: &'static str,
+}
+
+/// Every country in the registry, sorted by code.
+// One line per country, so a registry update diffs line by line.
+#[rustfmt::skip]
+pub(super) const COUNTRIES: &[Country] = &[
+    Country { code: "AD", length: 24, structure: "4!n4!n12!c" }, // Andorra
+    Country { code: "AE", length: 23, structure: "3!n16!n" }, // United Arab Emirates (The)
+    Country { code: "AL", length: 28, structure: "8!n16!c" }, // Albania
+    Country { code: "AT", length: 20, structure: "5!n11!n" }, // Austria
+    Country { code: "AZ", length: 28, structure: "4!a20!c" }, // Azerbaijan
+    Country { code: "BA", length: 20, structure: "3!n3!n8!n2!n" }, // Bosnia and Herzegovina
+    Country { code: "BE", length: 16, structure: "3!n7!n2!n" }, // Belgium
+    Country { code: "BG", length: 22, structure: "4!a4!n2!n8!c" }, // Bulgaria
+    Country { code: "BH", length: 22, structure: "4!a14!c" }, // Bahrain
+    Country { code: "BI", length: 27, structure: "5!n5!n11!n2!n" }, // Burundi
+    Country { code: "BR", length: 29, structure: "8!c5!n10!n1!c1!c" }, // Brazil
+    Country { code: "BY", length: 28, structure: "4!c4!n16!c" }, // Belarus
+    Country { code: "CH", length: 21, structure: "5!n12!c" }, // Switzerland
+    Country { code: "CR", length: 22, structure: "4!n14!n" }, // Costa Rica
+    Country { code: "CY", length: 28, structure: "3!n5!n16!c" }, // Cyprus
+    Country { code: "CZ", length: 24, structure: "4!n16!n" }, // Czechia
+    Country { code: "DE", length: 22, structure: "8!n10!n" }, // Germany
+    Country { code: "DJ", length: 27, structure: "5!n5!n11!n2!n" }, // Djibouti
+    Country { code: "DK", length: 18, structure: "4!n9!n1!n" }, // Denmark
+    Country { code: "DO", length: 28, structure: "4!c20!n" }, // Dominican Republic
+    Country { code: "EE", length: 20, structure: "2!n14!n" }, // Estonia
+    Country { code: "EG", length: 29, structure: "4!n4!n17!n" }, // Egypt
+    Country { code: "ES", length: 24, structure: "4!n4!n1!n1!n10!n" }, // Spain
+    Country { code: "FI", length: 18, structure: "3!n11!n" }, // Finland
+    Country { code: "FK", length: 18, structure: "2!a12!n" }, // Falkland Islands (Malvinas)
+    Country { code: "FO", length: 18, structure: "4!n9!n1!n" }, // Faroe Islands
+    Country { code: "FR", length: 27, structure: "5!n5!n11!c2!n" }, // France
+    Country { code: "GB", length: 22, structure: "4!a6!n8!n" }, // United Kingdom
+    Country { code: "GE", length: 22, structure: "2!a16!n" }, // Georgia
+    Country { code: "GI", length: 23, structure: "4!a15!c" }, // Gibraltar
+    Country { code: "GL", length: 18, structure: "4!n9!n1!n" }, // Greenland
+    Country { code: "GR", length: 27, structure: "3!n4!n16!c" }, // Greece
+    Country { code: "GT", length: 28, structure: "4!c20!c" }, // Guatemala
+    Country { code: "HN", length: 28, structure: "4!a20!n" }, // Honduras
+    Country { code: "HR", length: 21, structure: "7!n10!n" }, // Croatia
+    Country { code: "HU", length: 28, structure: "3!n4!n1!n15!n1!n" }, // Hungary
+    Country { code: "IE", length: 22, structure: "4!a6!n8!n" }, // Ireland
+    Country { code: "IL", length: 23, structure: "3!n3!n13!n" }, // Israel
+    Country { code: "IQ", length: 23, structure: "4!a3!n12!n" }, // Iraq
+    Country { code: "IS", length: 26, structure: "4!n2!n6!n10!n" }, // Iceland
+    Country { code: "IT", length: 27, structure: "1!a5!n5!n12!c" }, // Italy
+    Country { code: "JO", length: 30, structure: "4!a4!n18!c" }, // Jordan
+    Country { code: "KW", length: 30, structure: "4!a22!c" }, // Kuwait
+    Country { code: "KZ", length: 20, structure: "3!n13!c" }, // Kazakhstan
+    Country { code: "LB", length: 28, structure: "4!n20!c" }, // Lebanon
+    Country { code: "LC", length: 32, structure: "4!a24!c" }, // Saint Lucia
+    Country { code: "LI", length: 21, structure: "5!n12!c" }, // Liechtenstein
+    Country { code: "LT", length: 20, structure: "5!n11!n" }, // Lithuania
+    Country { code: "LU", length: 20, structure: "3!n13!c" }, // Luxembourg
+    Country { code: "LV", length: 21, structure: "4!a13!c" }, // Latvia
+    Country { code: "LY", length: 25, structure: "3!n3!n15!n" }, // Libya
+    Country { code: "MC", length: 27, structure: "5!n5!n11!c2!n" }, // Monaco
+    Country { code: "MD", length: 24, structure: "2!c18!c" }, // Moldova, Republic of
+    Country { code: "ME", length: 22, structure: "3!n13!n2!n" }, // Montenegro
+    Country { code: "MK", length: 19, structure: "3!n10!c2!n" }, // North Macedonia
+    Country { code: "MN", length: 20, structure: "4!n12!n" }, // Mongolia
+    Country { code: "MR", length: 27, structure: "5!n5!n11!n2!n" }, // Mauritania
+    Country { code: "MT", length: 31, structure: "4!a5!n18!c" }, // Malta
+    Country { code: "MU", length: 30, structure: "4!a2!n2!n12!n3!n3!a" }, // Mauritius
+    Country { code: "NI", length: 28, structure: "4!a20!n" }, // Nicaragua
+    Country { code: "NL", length: 18, structure: "4!a10!n" }, // Netherlands (The)
+    Country { code: "NO", length: 15, structure: "4!n6!n1!n" }, // Norway
+    Country { code: "OM", length: 23, structure: "3!n16!c" }, // Oman
+    Country { code: "PK", length: 24, structure: "4!a16!c" }, // Pakistan
+    Country { code: "PL", length: 28, structure: "8!n16!n" }, // Poland
+    Country { code: "PS", length: 29, structure: "4!a21!c" }, // Palestine, State of
+    Country { code: "PT", length: 25, structure: "4!n4!n11!n2!n" }, // Portugal
+    Country { code: "QA", length: 29, structure: "4!a21!c" }, // Qatar
+    Country { code: "RO", length: 24, structure: "4!a16!c" }, // Romania
+    Country { code: "RS", length: 22, structure: "3!n13!n2!n" }, // Serbia
+    Country { code: "RU", length: 33, structure: "9!n5!n15!c" }, // Russian Federation
+    Country { code: "SA", length: 24, structure: "2!n18!c" }, // Saudi Arabia
+    Country { code: "SC", length: 31, structure: "4!a2!n2!n16!n3!a" }, // Seychelles
+    Country { code: "SD", length: 18, structure: "2!n12!n" }, // Sudan
+    Country { code: "SE", length: 24, structure: "3!n16!n1!n" }, // Sweden
+    Country { code: "SI", length: 19, structure: "5!n8!n2!n" }, // Slovenia
+    Country { code: "SK", length: 24, structure: "4!n6!n10!n" }, // Slovakia
+    Country { code: "SM", length: 27, structure: "1!a5!n5!n12!c" }, // San Marino
+    Country { code: "SO", length: 23, structure: "4!n3!n12!n" }, // Somalia
+    Country { code: "ST", length: 25, structure: "4!n4!n11!n2!n" }, // Sao Tome and Principe
+    Country { code: "SV", length: 28, structure: "4!a20!n" }, // El Salvador
+    Country { code: "TL", length: 23, structure: "3!n14!n2!n" }, // Timor-Leste
+    Country { code: "TN", length: 24, structure: "2!n3!n13!n2!n" }, // Tunisia
+    Country { code: "TR", length: 26, structure: "5!n1!n16!c" }, // Turkiye
+    Country { code: "UA", length: 29, structure: "6!n19!c" }, // Ukraine
+    Country { code: "VA", length: 22, structure: "3!n15!n" }, // Holy See
+    Country { code: "VG", length: 24, structure: "4!a16!n" }, // Virgin Islands (British)
+    Country { code: "XK", length: 20, structure: "4!n10!n2!n" }, // Kosovo
+    Country { code: "YE", length: 30, structure: "4!a4!n18!c" }, // Yemen
 ];
 
 /// The registry's own example IBAN for every country, in the same order.

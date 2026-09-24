@@ -1,7 +1,8 @@
 //! Members share IBANs so others can repay them. These tests keep the
-//! registry's own example valid for every country, catch single-digit typos
-//! before a repayment bounces, reject numbers of an unknown country or the
-//! wrong length, and keep the full number out of debug output and logs.
+//! registry's own example valid for every country, catch single-digit typos,
+//! letters typed for digits, and check digits no bank issues before a
+//! repayment bounces, reject numbers of an unknown country or the wrong
+//! length, and keep the full number out of debug output and logs.
 
 use super::*;
 
@@ -24,14 +25,14 @@ fn print_format(number: &str) -> String {
 #[test]
 fn every_registry_example_validates() {
     // One example per registry entry.
-    assert_eq!(registry::EXAMPLES.len(), registry::LENGTHS.len());
+    assert_eq!(registry::EXAMPLES.len(), registry::COUNTRIES.len());
     // Each example has its country's code and length, and validates.
-    for (example, (country, length)) in registry::EXAMPLES.iter().zip(registry::LENGTHS) {
-        assert!(example.starts_with(country), "{example}");
-        assert_eq!(example.len(), usize::from(*length), "{example}");
+    for (example, country) in registry::EXAMPLES.iter().zip(registry::COUNTRIES) {
+        assert!(example.starts_with(country.code), "{example}");
+        assert_eq!(example.len(), usize::from(country.length), "{example}");
         let iban = Iban::parse(example).unwrap();
         assert_eq!(iban.expose_secret(), *example);
-        assert_eq!(iban.country_code(), *country);
+        assert_eq!(iban.country_code(), country.code);
     }
 }
 
@@ -40,18 +41,114 @@ fn every_registry_example_validates() {
 #[test]
 fn the_registry_is_sorted_and_unique() {
     // Strictly increasing country codes.
-    for pair in registry::LENGTHS.windows(2) {
-        assert!(pair[0].0 < pair[1].0, "{} before {}", pair[0].0, pair[1].0);
+    for pair in registry::COUNTRIES.windows(2) {
+        assert!(
+            pair[0].code < pair[1].code,
+            "{} before {}",
+            pair[0].code,
+            pair[1].code
+        );
     }
     // Two uppercase letters and an ISO 13616 length.
-    for (country, length) in registry::LENGTHS {
-        assert_eq!(country.len(), 2, "{country}");
-        assert!(
-            country.bytes().all(|byte| byte.is_ascii_uppercase()),
-            "{country}"
-        );
-        assert!((15..=34).contains(length), "{country}");
+    for country in registry::COUNTRIES {
+        let code = country.code;
+        assert_eq!(code.len(), 2, "{code}");
+        assert!(code.bytes().all(|byte| byte.is_ascii_uppercase()), "{code}");
+        assert!((15..=34).contains(&country.length), "{code}");
     }
+}
+
+/// A structure that does not add up to its country's length would check
+/// characters against the wrong class, or leave some unchecked.
+#[test]
+fn every_structure_adds_up_to_the_country_length() {
+    for country in registry::COUNTRIES {
+        let code = country.code;
+        let mut total = 0;
+        // Segments of a length without leading zeros, `!`, and a class.
+        for segment in country.structure.split_inclusive(['a', 'c', 'n']) {
+            let (length, class) = segment.split_once('!').unwrap();
+            assert!(["a", "c", "n"].contains(&class), "{code}: {segment}");
+            assert!(!length.starts_with('0'), "{code}: {segment}");
+            total += length.parse::<usize>().unwrap();
+        }
+        // The prefix of four plus every segment.
+        assert_eq!(total + 4, usize::from(country.length), "{code}");
+    }
+}
+
+/// A letter typed for a digit can still pass mod 97, and the repayment would
+/// go to an account that cannot exist.
+#[test]
+fn a_character_of_the_wrong_kind_for_its_position_is_rejected() {
+    // Letters typed for digits: each passes mod 97.
+    for text in [
+        "SE4550000O00058398257466",
+        "PT5000020123I234567890154",
+        "IT60X054Z811101000000123456",
+        "IT60X05428111O1000000123456",
+        "DE4637O400440532013000",
+    ] {
+        assert_eq!(
+            Iban::parse(text),
+            Err(ValueError::InvalidIban(IbanError::InvalidStructure)),
+            "{text}"
+        );
+    }
+    // Digits typed for letters: the British bank code and the Italian
+    // check character are letters.
+    for text in [
+        "GB29 1WBK 6016 1331 9268 19",
+        "IT60 0054 2811 1010 0000 0123 456",
+    ] {
+        assert_eq!(
+            Iban::parse(text),
+            Err(ValueError::InvalidIban(IbanError::InvalidStructure)),
+            "{text}"
+        );
+    }
+    // The class of each position ignores letter case, since parsing
+    // uppercases first.
+    assert!(Iban::parse("gb29 nwbk 6016 1331 9268 19").is_ok());
+}
+
+/// Check digits of 00, 01, or 99 pass mod 97 for some numbers, but no bank
+/// issues them, so such a number is a typo.
+#[test]
+fn check_digits_outside_02_to_98_are_rejected() {
+    // Each passes mod 97.
+    for text in [
+        "DE00370400440532000052",
+        "DE01370400440532000034",
+        "DE99370400440532000016",
+        "IQ01NBIQ850123456789012",
+    ] {
+        assert_eq!(
+            Iban::parse(text),
+            Err(ValueError::InvalidIban(IbanError::InvalidChecksum)),
+            "{text}"
+        );
+    }
+    // The same numbers with the check digits a bank issues: 97, 98, and 02.
+    for text in [
+        "DE97370400440532000052",
+        "DE98370400440532000034",
+        "DE02370400440532000016",
+    ] {
+        assert!(Iban::parse(text).is_ok(), "{text}");
+    }
+    // The country and the length are checked first.
+    assert_eq!(
+        Iban::parse("AA00"),
+        Err(ValueError::InvalidIban(IbanError::UnknownCountry))
+    );
+    assert_eq!(
+        Iban::parse("DE00"),
+        Err(ValueError::InvalidIban(IbanError::WrongLength {
+            expected: 22,
+            found: 4
+        }))
+    );
 }
 
 /// Numbers copied from a bank statement, with spaces and in any case, would
@@ -282,4 +379,5 @@ fn ibans_serialise_as_the_electronic_format() {
     );
     // Loading validates like parsing.
     assert!(serde_json::from_str::<Iban>("\"DE89370400440532013001\"").is_err());
+    assert!(serde_json::from_str::<Iban>("\"DE00370400440532000052\"").is_err());
 }
