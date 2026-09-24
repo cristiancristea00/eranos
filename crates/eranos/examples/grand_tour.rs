@@ -2,8 +2,8 @@
 //! members with contact details and accounts, categories, an expense for
 //! every way of dividing one, another currency, edits and refusals, members
 //! who come and go, the summary, a new group currency, settling up, saving
-//! and loading (feature `serde`), and the values on their own. Every
-//! section asserts its key numbers.
+//! and loading (feature `serde`), the values on their own, and the group
+//! shared between tasks and threads. Every section asserts its key numbers.
 //!
 //! Run with `cargo run -p eranos --features serde --example grand_tour`;
 //! add the `sequential-ids` feature to print the same identifiers, and so
@@ -11,14 +11,18 @@
 
 use std::error::Error;
 use std::fmt::Display;
+use std::pin::pin;
+use std::task::{Context, Waker};
 
+use eranos::cooperative::block_on;
 use eranos::error::{ExpenseError, GroupError, TransferError};
 use eranos::{
     Account, AccountDetails, AccountKind, Balance, CalendarDate, Category, CategoryId,
     CategoryTotal, Cost, Currency, CurrencyRate, Email, ExchangeRate, Expense, ExpenseId,
     ExpenseShares, ExpenseSplit, Group, Iban, Item, Language, Member, MemberAmount, MemberId,
     MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage, PhoneNumber, SavedGroup,
-    SettlementStrategy, Split, TimeOfDay, Tip, TipDistribution, TipValue, Transfer, Username,
+    SettlementStrategy, SharedGroup, Split, TimeOfDay, Tip, TipDistribution, TipValue, Transfer,
+    Username,
 };
 use tabled::settings::formatting::AlignmentStrategy;
 use tabled::settings::object::Columns;
@@ -1684,6 +1688,85 @@ fn values(people: People) -> Result<(), Box<dyn Error>> {
     dates_and_identifiers(people)
 }
 
+fn sharing(group: Group, people: People) -> Result<(), Box<dyn Error>> {
+    section("14. Sharing the group");
+    let shared = SharedGroup::new(group);
+    // Another handle on the same group, as another task or thread holds.
+    let other = shared.clone();
+    let everyone = [people.ana, people.bob, people.carol, people.dan, people.eva];
+    let coffee = Expense::builder(
+        ron("75.00")?,
+        october(8)?,
+        "Airport coffee",
+        people.bob,
+        Split::equal(everyone),
+    )
+    .build()?;
+    block_on(other.add_expense(coffee))?;
+    let plan = block_on(shared.settlement(SettlementStrategy::MinimumTransfers))?;
+    println!(
+        "An app shares the group between its tasks and threads through a SharedGroup,\n\
+         whose calls are futures any executor runs; here the library's block_on runs\n\
+         each one on this thread. Bob adds the airport coffee through another handle,\n\
+         and the plan that settles it comes through the first:"
+    );
+    {
+        let reading = block_on(shared.read());
+        print_table(
+            plan.payments().iter().map(|payment| PaymentRow {
+                amount: payment.amount(),
+                from: name(&reading, payment.from()),
+                to: name(&reading, payment.to()),
+            }),
+            2,
+        );
+    }
+
+    let before = block_on(shared.summary());
+    let rates = [CurrencyRate::new(
+        Currency::RON,
+        ExchangeRate::parse("0.2")?,
+    )];
+    let (waited, reported) = {
+        // A report reads the group, holding the shared lock meanwhile.
+        let report = block_on(shared.read());
+        let mut change = pin!(shared.change_currency(Currency::EUR, rates));
+        let waited = change
+            .as_mut()
+            .poll(&mut Context::from_waker(Waker::noop()))
+            .is_pending();
+        (waited, report.summary().total_spent())
+        // The block drops the waiting change, then the report's guard.
+    };
+    let after = block_on(shared.summary());
+    println!(
+        "While a report reads the group, a change of its currency to EUR waits for the\n\
+         report. The app drops the waiting change, which cancels it: the group still\n\
+         keeps its books in {}, and the trip cost {}, as the report read.",
+        block_on(shared.currency()),
+        after.total_spent()
+    );
+    drop(other);
+    let returned = shared
+        .into_group()
+        .map_err(|_| "another handle still shares the group")?;
+    println!(
+        "With the other handle gone, the app takes the group back: {} expenses.",
+        returned.expenses().len()
+    );
+
+    assert_eq!(plan.len(), 4);
+    for payment in plan.payments() {
+        assert_eq!(payment.to(), people.bob);
+        assert_eq!(payment.amount(), ron("15.00")?);
+    }
+    assert!(waited);
+    assert_eq!(after, before);
+    assert_eq!(reported, after.total_spent());
+    assert_eq!(returned.currency(), Currency::RON);
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Lisbon and Porto: a grand tour of eranos");
     println!("════════════════════════════════════════");
@@ -1704,5 +1787,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     new_currency(&mut group, people)?;
     settling_up(&mut group)?;
     saving_and_loading(&group, people, categories)?;
-    values(people)
+    values(people)?;
+    sharing(group, people)
 }

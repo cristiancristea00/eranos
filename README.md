@@ -127,16 +127,16 @@ Runnable scenarios live in `crates/eranos/examples/`. Each prints a report
 that explains every step, with tables of the members, expenses, shares,
 balances, and payments, and asserts its own numbers:
 
-| Example                | Shows                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------ |
-| `quickstart`           | A trip in a few lines: members, expenses, totals, settlement                               |
-| `split_methods`        | Equal, percentage, parts (half a share for a child), exact amounts, two payers             |
-| `restaurant_bill`      | Itemised receipt with quantities and per-item splits; proportional vs equal tip            |
-| `multi_currency`       | Foreign expenses and a cash repayment at fixed rates; moving the books to another currency |
-| `settling_up`          | The three strategies on one group, then recording the payments                             |
-| `members_and_accounts` | Contact details, IBAN validation, archiving a member                                       |
-| `persistence`          | Saving and loading a group as JSON (needs the `serde` feature)                             |
-| `grand_tour`           | Every feature in one story, from creating a group to saving it (needs `serde`)             |
+| Example                | Shows                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `quickstart`           | A trip in a few lines: members, expenses, totals, settlement                                  |
+| `split_methods`        | Equal, percentage, parts (half a share for a child), exact amounts, two payers                |
+| `restaurant_bill`      | Itemised receipt with quantities and per-item splits; proportional vs equal tip               |
+| `multi_currency`       | Foreign expenses and a cash repayment at fixed rates; moving the books to another currency    |
+| `settling_up`          | The three strategies on one group, then recording the payments                                |
+| `members_and_accounts` | Contact details, IBAN validation, archiving a member                                          |
+| `persistence`          | Saving and loading a group as JSON (needs the `serde` feature)                                |
+| `grand_tour`           | Every feature in one story, from creating a group to sharing it between tasks (needs `serde`) |
 
 ```sh
 cargo run -p eranos --example settling_up
