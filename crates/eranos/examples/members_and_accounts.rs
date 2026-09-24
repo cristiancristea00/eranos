@@ -99,7 +99,9 @@ fn print_members(group: &Group) {
                 .flatten()
                 .collect::<Vec<_>>()
                 .join(" "),
-            phone: member.phone().map_or("", PhoneNumber::as_str).to_owned(),
+            phone: member
+                .phone()
+                .map_or_else(String::new, PhoneNumber::international),
         }),
         4,
     );
@@ -139,8 +141,9 @@ fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     print_members(group);
     println!(
-        "The phone number was stored without its spaces, and the IBAN in its electronic\n\
-         form; the table shows the IBAN masked, the way the apps should."
+        "The phone number was stored in E.164 form, +40712345678, and the table shows it\n\
+         grouped for reading; the IBAN was stored in its electronic form, and the table\n\
+         shows it masked, the way the apps should."
     );
     Ok((ana, bob))
 }

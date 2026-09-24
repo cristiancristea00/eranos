@@ -477,11 +477,34 @@ fn every_regions_example_numbers_are_accepted() {
     let mut checked = 0;
     for example in regional.chain(global) {
         let stored = plans.format(&example, PhoneNumberFormat::E164).into_owned();
-        assert_eq!(PhoneNumber::parse(&stored).unwrap().as_str(), stored);
+        let phone = PhoneNumber::parse(&stored).unwrap();
+        assert_eq!(phone.as_str(), stored);
+        // Formatting compiles the country's other patterns.
+        assert!(phone.international().starts_with('+'), "{stored}");
         checked += 1;
     }
     // At least one number per region.
     assert!(checked >= plans.get_supported_regions().len(), "{checked}");
+}
+
+/// Screens would show the number as one run of digits, which people misread
+/// when they dial or check it.
+#[test]
+fn the_international_form_groups_the_digits() {
+    // The grouping of several plans.
+    for (stored, grouped) in [
+        ("+40712345678", "+40 712 345 678"),
+        ("+442079460958", "+44 20 7946 0958"),
+        ("+12015550123", "+1 201-555-0123"),
+        ("+79123456789", "+7 912 345-67-89"),
+        ("+33612345678", "+33 6 12 34 56 78"),
+        ("+80012345678", "+800 1234 5678"),
+    ] {
+        let phone = PhoneNumber::parse(stored).unwrap();
+        assert_eq!(phone.international(), grouped, "{stored}");
+        // The stored form stays E.164.
+        assert_eq!(phone.as_str(), stored);
+    }
 }
 
 /// A number pasted with a stray space or newline would be refused.
@@ -519,4 +542,7 @@ fn contact_details_serialise_as_their_text_form() {
     );
     assert!(serde_json::from_str::<PhoneNumber>("\"0712345678\"").is_err());
     assert!(serde_json::from_str::<PhoneNumber>("\"+40612345678\"").is_err());
+    // A loaded number groups like a parsed one.
+    let loaded = serde_json::from_str::<PhoneNumber>("\"+40712345678\"").unwrap();
+    assert_eq!(loaded.international(), "+40 712 345 678");
 }

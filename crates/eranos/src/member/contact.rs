@@ -300,6 +300,39 @@ impl PhoneNumber {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    /// The number grouped the way its country writes it for callers abroad,
+    /// such as `+40 712 345 678`, for showing; [`as_str`](Self::as_str) is the
+    /// form to dial and store.
+    ///
+    /// # Panics
+    ///
+    /// Never: [`parse`](Self::parse) accepted the number, directly or on
+    /// load, with the same embedded metadata, so it parses again, and
+    /// formatting compiles the country's patterns, which a unit test compiles
+    /// for every region's example numbers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::PhoneNumber;
+    ///
+    /// let phone = PhoneNumber::parse("+40712345678")?;
+    /// assert_eq!(phone.international(), "+40 712 345 678");
+    /// # Ok::<(), eranos::error::ValueError>(())
+    /// ```
+    #[must_use]
+    pub fn international(&self) -> String {
+        let plans = &*PHONE_NUMBER_UTIL;
+        #[expect(
+            clippy::expect_used,
+            reason = "the stored number came from `parse` with the same pinned metadata, so it parses again"
+        )]
+        let number = plans.parse(&self.0, None).expect("a stored number parses");
+        plans
+            .format(&number, PhoneNumberFormat::International)
+            .into_owned()
+    }
 }
 
 impl fmt::Display for PhoneNumber {
