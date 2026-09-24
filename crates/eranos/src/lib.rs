@@ -67,8 +67,10 @@
 //!
 //! - `serde`: `Serialize` and `Deserialize` for every domain type. A
 //!   deserialised [`Group`] is rebuilt through the same checks as its `add_*`
-//!   methods. Account details serialise in clear text, so store serialised
-//!   groups in the platform's secure storage.
+//!   methods; a `SavedGroup` does the same in its `into_group`, which reports
+//!   a refused file as a [`GroupError`](error::GroupError). Account details
+//!   serialise in clear text, so store serialised groups in the platform's
+//!   secure storage.
 //!
 //! # Examples
 //!
@@ -101,6 +103,8 @@ pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,
 };
+#[cfg(feature = "serde")]
+pub use group::SavedGroup;
 pub use group::{Group, Language};
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};

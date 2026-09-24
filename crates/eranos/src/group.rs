@@ -4,7 +4,7 @@
 mod builder;
 mod language;
 #[cfg(feature = "serde")]
-mod serde;
+mod saved;
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
@@ -12,6 +12,8 @@ use std::sync::OnceLock;
 
 pub use builder::GroupBuilder;
 pub use language::Language;
+#[cfg(feature = "serde")]
+pub use saved::SavedGroup;
 
 use crate::category::Category;
 use crate::error::{GroupError, SettlementError};
@@ -24,6 +26,11 @@ use crate::resolution::{resolve_expense, resolve_transfer};
 use crate::settlement::{self, Settlement, SettlementStrategy};
 use crate::text;
 use crate::transfer::Transfer;
+
+/// The version of the saved form. Every other version is refused: a newer
+/// one would be read with fields silently dropped, and no earlier one is
+/// read.
+pub(crate) const FORMAT: u32 = 2;
 
 /// A group of people sharing expenses: a trip, a day out, a household.
 ///

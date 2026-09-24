@@ -146,9 +146,10 @@ failure); `#[allow]` is itself a lint error.
   declaration.
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
-  validating constructor (`serde(try_from = …)`); `Group` replays its
-  entries through the `add_*` methods; a change older readers cannot accept
-  bumps the `FORMAT` constant in `group/serde.rs`.
+  validating constructor (`serde(try_from = …)`); a group loads through
+  `SavedGroup::into_group`, which replays its entries through the `add_*`
+  methods; a change older readers cannot accept bumps the `FORMAT` constant
+  in `group.rs`.
 - **Doc comments follow rustdoc conventions**: a one-sentence summary, then
   `# Errors`, `# Panics`, and `# Examples` sections where they apply.
   Examples use `?`, never `unwrap`, and compile with warnings denied. Types

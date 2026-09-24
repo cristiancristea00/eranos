@@ -4,6 +4,7 @@
 //! No error echoes the text it rejected: inputs include account numbers and
 //! contact details, and error messages end up in logs.
 
+use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
 
@@ -326,6 +327,13 @@ pub enum GroupError {
     /// No transfer with this ID.
     #[error("unknown transfer {0}")]
     UnknownTransfer(TransferId),
+    /// A saved group in a format this version does not read: a newer one,
+    /// whose fields it would drop, or an earlier one.
+    #[error("unsupported group format {format}: this version reads format {FORMAT}")]
+    UnsupportedFormat {
+        /// The format the saved group names.
+        format: u32,
+    },
 }
 
 /// A settlement that cannot be computed.

@@ -1,7 +1,7 @@
-//! The serialised form of a group: its details and entries, never the
-//! derived totals.
+//! The saved form of a group: its details and entries, never the derived
+//! totals.
 //!
-//! Deserialising replays every entry through the same checks as the `add_*`
+//! Loading replays every entry through the same checks as the `add_*`
 //! methods, so a hand-edited or corrupted file cannot produce an
 //! inconsistent group. Members are replayed unarchived and archived at the
 //! end, because an expense may reference a member who was archived after it
@@ -10,7 +10,7 @@
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::Group;
+use super::{FORMAT, Group};
 use crate::category::Category;
 use crate::error::GroupError;
 use crate::expense::Expense;
@@ -19,11 +19,6 @@ use crate::id::{CategoryId, GroupId, MemberId};
 use crate::member::Member;
 use crate::money::Currency;
 use crate::transfer::Transfer;
-
-/// The version of the serialised form. Every other version is refused: a
-/// newer one would be read with fields silently dropped, and no earlier one
-/// is read.
-const FORMAT: u32 = 2;
 
 #[derive(Serialize)]
 struct GroupView<'group> {
@@ -44,8 +39,41 @@ struct GroupView<'group> {
     language: Option<&'group Language>,
 }
 
-#[derive(Deserialize)]
-struct GroupRecord {
+/// A saved group, read but not yet loaded: its details and entries, before
+/// the group checks them against each other.
+///
+/// Deserialising a [`Group`] loads it in one step and reports a refused file
+/// as the deserialiser's error, which holds only the refusal's message.
+/// Deserialising a `SavedGroup` and calling [`into_group`](Self::into_group)
+/// reports the refusal as a [`GroupError`] instead, so an app can tell a
+/// file from a newer release ([`GroupError::UnsupportedFormat`]) from a
+/// damaged one. Each entry is checked on its own as it is read, since every
+/// entity deserialises through its validating constructor: an entry that
+/// could never have been built fails the read itself.
+///
+/// # Examples
+///
+/// ```
+/// use eranos::error::GroupError;
+/// use eranos::{Currency, Group, SavedGroup};
+///
+/// let group = Group::builder(Currency::EUR, "Lisbon").build()?;
+/// let json = serde_json::to_string(&group)?;
+///
+/// // A file this version wrote loads.
+/// let saved: SavedGroup = serde_json::from_str(&json)?;
+/// assert_eq!(saved.into_group()?.id(), group.id());
+///
+/// // A file from a later release is refused, with the format it names.
+/// let newer: SavedGroup = serde_json::from_str(&json.replace(r#""format":2"#, r#""format":3"#))?;
+/// assert_eq!(
+///     newer.into_group().map(|group| group.id()),
+///     Err(GroupError::UnsupportedFormat { format: 3 })
+/// );
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+pub struct SavedGroup {
     format: u32,
     id: GroupId,
     currency: Currency,
@@ -105,31 +133,31 @@ impl Serialize for Group {
 
 impl<'de> Deserialize<'de> for Group {
     fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        GroupRecord::deserialize(deserialiser)?
-            .replay()
+        SavedGroup::deserialize(deserialiser)?
+            .into_group()
             .map_err(D::Error::custom)
     }
 }
 
-/// Why a well-formed file does not make a valid group.
-#[derive(Debug, thiserror::Error)]
-enum ReplayError {
-    /// Group details or an entry the group refuses.
-    #[error(transparent)]
-    Entry(#[from] GroupError),
-    /// A format this version cannot read.
-    #[error("unsupported group format {0}: this version reads format {FORMAT}")]
-    Format(u32),
-}
-
-impl GroupRecord {
-    /// Rebuilds the group through the same checks as the `add_*` methods.
+impl SavedGroup {
+    /// Loads the group, replaying its entries through the same checks as
+    /// the `add_*` methods.
     ///
-    /// Not generic over the deserialiser, so it is compiled once rather
-    /// than for every format the apps read.
-    fn replay(self) -> Result<Group, ReplayError> {
+    /// # Errors
+    ///
+    /// - [`GroupError::UnsupportedFormat`] when the file names another
+    ///   format than the one this version writes.
+    /// - [`GroupError::EmptyName`] when the name is blank.
+    /// - The errors of [`Group::add_member`], [`Group::add_category`],
+    ///   [`Group::add_expense`], [`Group::add_transfer`], and
+    ///   [`Group::archive_member`] for an entry that does not fit the
+    ///   others: a repeated identifier or category name, an unknown or
+    ///   archived member, an unknown category, or a missing exchange rate.
+    pub fn into_group(self) -> Result<Group, GroupError> {
         if self.format != FORMAT {
-            return Err(ReplayError::Format(self.format));
+            return Err(GroupError::UnsupportedFormat {
+                format: self.format,
+            });
         }
         let mut builder = Group::builder(self.currency, self.name).language(self.language);
         if let Some(description) = self.description {

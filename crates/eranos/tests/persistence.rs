@@ -9,11 +9,12 @@
     reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"
 )]
 
+use eranos::error::GroupError;
 use eranos::{
     Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, Group,
     Iban, Item, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money,
-    Parts, Percentage, PhoneNumber, SettlementStrategy, Split, TimeOfDay, Tip, TipDistribution,
-    Transfer, Username,
+    Parts, Percentage, PhoneNumber, SavedGroup, SettlementStrategy, Split, TimeOfDay, Tip,
+    TipDistribution, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -348,6 +349,53 @@ fn an_inconsistent_file_is_refused() {
         archived_stranger.contains("unknown member"),
         "{archived_stranger}"
     );
+}
+
+/// An app that loads through `SavedGroup` must learn why the group refused a
+/// file, or it could not tell a file from a newer release from a damaged
+/// one.
+#[test]
+fn a_saved_group_names_why_the_group_refuses_it() {
+    let (group, ana, _, _) = group();
+    let load = |change: &dyn Fn(&mut Value)| {
+        let mut value = json_of(&group);
+        change(&mut value);
+        serde_json::from_value::<SavedGroup>(value)
+            .unwrap()
+            .into_group()
+            .map(|loaded| json_of(&loaded))
+    };
+
+    // A file this version wrote loads unchanged.
+    assert_eq!(load(&|_| ()), Ok(json_of(&group)));
+    // A newer format and an older one, each named in the error.
+    assert_eq!(
+        load(&|value| value["format"] = json!(3)),
+        Err(GroupError::UnsupportedFormat { format: 3 })
+    );
+    assert_eq!(
+        load(&|value| value["format"] = json!(1)),
+        Err(GroupError::UnsupportedFormat { format: 1 })
+    );
+    // A blank group name, and two members with one ID.
+    assert_eq!(
+        load(&|value| value["name"] = json!("  ")),
+        Err(GroupError::EmptyName)
+    );
+    assert_eq!(
+        load(&|value| value["members"][1]["id"] = value["members"][0]["id"].clone()),
+        Err(GroupError::DuplicateMember(ana))
+    );
+    // Someone archived who is not a member.
+    let stranger = MemberId::from_bytes([200; 16]);
+    assert_eq!(
+        load(&|value| value["archived"] = json!([stranger.to_string()])),
+        Err(GroupError::UnknownMember(stranger))
+    );
+    // An entry that could never have been built fails the read itself.
+    let mut typo = json_of(&group);
+    typo["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
+    assert!(serde_json::from_value::<SavedGroup>(typo).is_err());
 }
 
 /// A group with none of the optional details round-trips as well, without

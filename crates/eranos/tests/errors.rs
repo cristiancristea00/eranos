@@ -325,6 +325,10 @@ fn group_errors() -> Vec<(GroupError, &'static str)> {
             GroupError::UnknownTransfer(TRANSFER),
             "unknown transfer 44444444-4444-4444-4444-444444444444",
         ),
+        (
+            GroupError::UnsupportedFormat { format: 3 },
+            "unsupported group format 3: this version reads format 2",
+        ),
     ]
 }
 

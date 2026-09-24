@@ -335,20 +335,20 @@ group (members exist and are not archived, the category exists, and the
 cost is converted exactly when the entry is foreign) and against the
 ledger's range.
 
-| Error             | Returned by                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------- |
-| `IdError`         | reading an identifier from text                                                             |
-| `CalendarError`   | building and reading dates and times of day                                                 |
-| `MoneyError`      | building, reading, and combining amounts, currencies, rates, percentages, and parts         |
-| `AccountError`    | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                |
-| `ContactError`    | `Email::parse`, `PhoneNumber::parse`                                                        |
-| `MemberError`     | `MemberBuilder::build`                                                                      |
-| `CategoryError`   | `Category::new`, `Category::renamed`                                                        |
-| `LanguageError`   | `Language::parse`                                                                           |
-| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                               |
-| `TransferError`   | `TransferBuilder::build`                                                                    |
-| `GroupError`      | `GroupBuilder::build` and every group mutation; the group is unchanged when one is returned |
-| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                      |
+| Error             | Returned by                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `IdError`         | reading an identifier from text                                                                                        |
+| `CalendarError`   | building and reading dates and times of day                                                                            |
+| `MoneyError`      | building, reading, and combining amounts, currencies, rates, percentages, and parts                                    |
+| `AccountError`    | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                           |
+| `ContactError`    | `Email::parse`, `PhoneNumber::parse`                                                                                   |
+| `MemberError`     | `MemberBuilder::build`                                                                                                 |
+| `CategoryError`   | `Category::new`, `Category::renamed`                                                                                   |
+| `LanguageError`   | `Language::parse`                                                                                                      |
+| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                                                          |
+| `TransferError`   | `TransferBuilder::build`                                                                                               |
+| `GroupError`      | `GroupBuilder::build`, `SavedGroup::into_group`, and every group mutation; the group is unchanged when one is returned |
+| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                                                 |
 
 Each module has one error enum, `#[non_exhaustive]` and built with
 `thiserror`, and none wraps another: a function reports the failure of its
@@ -395,10 +395,16 @@ inputs, never the derived totals:
   unarchived first), categories, expenses, transfers, then the `archived`
   list, because an expense may reference a member archived after it was
   added. A hand-edited or corrupted file is refused, never loaded
-  inconsistently.
+  inconsistently. Deserialising a `Group` reports the refusal as the
+  deserialiser's error; deserialising a `SavedGroup` and calling
+  `into_group` reports it as a `GroupError`, so an app can tell a newer
+  file from a damaged one. An entry that could never have been built fails
+  the read in both cases, since every entity deserialises through its
+  validating constructor.
 - `format` is checked: a newer one is refused rather than read with fields
-  silently dropped. New optional fields get `#[serde(default)]`, so files
-  written by older releases keep loading.
+  silently dropped (`GroupError::UnsupportedFormat`). New optional fields
+  get `#[serde(default)]`, so files written by older releases keep
+  loading.
 
 ## 10. Account details
 
