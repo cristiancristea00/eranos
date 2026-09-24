@@ -170,5 +170,36 @@ impl<'de> serde::Deserialize<'de> for ExchangeRate {
     }
 }
 
+/// The rate that converts one currency into another, as a currency change
+/// needs one for every currency in use:
+/// [`Group::change_currency`](crate::Group::change_currency).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CurrencyRate {
+    currency: Currency,
+    rate: ExchangeRate,
+}
+
+impl CurrencyRate {
+    /// The rate that converts `currency`: one unit of it is worth `rate`
+    /// units of the target currency.
+    #[must_use]
+    pub const fn new(currency: Currency, rate: ExchangeRate) -> Self {
+        Self { currency, rate }
+    }
+
+    /// The currency the rate converts.
+    #[must_use]
+    pub const fn currency(self) -> Currency {
+        self.currency
+    }
+
+    /// How many units of the target currency one unit of the currency is
+    /// worth.
+    #[must_use]
+    pub const fn rate(self) -> ExchangeRate {
+        self.rate
+    }
+}
+
 #[cfg(test)]
 mod tests;

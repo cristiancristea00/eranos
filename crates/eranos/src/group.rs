@@ -19,7 +19,7 @@ use crate::expense::Expense;
 use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use crate::ledger::{Delta, ExpenseShares, Ledger, Summary};
 use crate::member::Member;
-use crate::money::{Currency, ExchangeRate, Money};
+use crate::money::{Currency, CurrencyRate, ExchangeRate, Money};
 use crate::resolution::{resolve_expense, resolve_transfer};
 use crate::settlement::{self, Settlement, SettlementStrategy};
 use crate::text;
@@ -265,7 +265,7 @@ impl Group {
     /// Moves the group to another currency, re-converting every entry.
     ///
     /// `rates` must hold, for every currency the group's entries use other
-    /// than `currency`, the rate into `currency`; entries in the old group
+    /// than `currency`, its rate into `currency`; entries in the old group
     /// currency count too. Every entry in such a currency gets a converted
     /// cost at that rate, and entries in `currency` a local one. Everything is
     /// recomputed, which takes time proportional to the number of entries;
@@ -284,29 +284,34 @@ impl Group {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Currency, CalendarDate, ExchangeRate, Expense, Group, Member, Money, Split};
+    /// use eranos::{
+    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, Group, Member, Money, Split,
+    /// };
     ///
     /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?)?;
     /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
     /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
     ///
-    /// group.change_currency(Currency::RON, &[(Currency::EUR, ExchangeRate::parse("4.97")?)])?;
+    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
+    /// group.change_currency(Currency::RON, &[rate])?;
     /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn change_currency(
         &mut self,
         currency: Currency,
-        rates: &[(Currency, ExchangeRate)],
+        rates: &[CurrencyRate],
     ) -> Result<(), GroupError> {
         if currency == self.currency {
             return Ok(());
         }
         let mut table = BTreeMap::new();
-        for &(source, rate) in rates {
-            if table.insert(source, rate).is_some() {
-                return Err(GroupError::DuplicateExchangeRate { currency: source });
+        for rate in rates {
+            if table.insert(rate.currency(), rate.rate()).is_some() {
+                return Err(GroupError::DuplicateExchangeRate {
+                    currency: rate.currency(),
+                });
             }
         }
         let rate_for = |source: Currency| -> Result<Option<ExchangeRate>, GroupError> {

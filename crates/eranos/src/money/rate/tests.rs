@@ -352,3 +352,13 @@ proptest! {
         );
     }
 }
+
+/// A currency change would convert with another currency's rate, or read the
+/// rate as belonging to the target currency.
+#[test]
+fn a_currency_rate_keeps_its_currency_and_rate() {
+    let rate = ExchangeRate::parse("4.97").unwrap();
+    let pair = CurrencyRate::new(Currency::EUR, rate);
+    assert_eq!(pair.currency(), Currency::EUR);
+    assert_eq!(pair.rate(), rate);
+}

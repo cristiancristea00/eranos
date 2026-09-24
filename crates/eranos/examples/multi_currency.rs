@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, ExchangeRate, Expense, ExpenseShares, Group, Member, MemberId,
-    Money, Split, Transfer,
+    Balance, CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseShares, Group,
+    Member, MemberId, Money, Split, Transfer,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -184,8 +184,8 @@ fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
     group.change_currency(
         Currency::RON,
         &[
-            (Currency::EUR, ExchangeRate::parse("5")?),
-            (Currency::HUF, ExchangeRate::parse("0.0125")?),
+            CurrencyRate::new(Currency::EUR, ExchangeRate::parse("5")?),
+            CurrencyRate::new(Currency::HUF, ExchangeRate::parse("0.0125")?),
         ],
     )?;
     print_entries(group);

@@ -13,5 +13,5 @@ mod ratio;
 pub use amount::Money;
 pub use cost::Cost;
 pub use currency::Currency;
-pub use rate::ExchangeRate;
+pub use rate::{CurrencyRate, ExchangeRate};
 pub use ratio::{Parts, Percentage};

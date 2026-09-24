@@ -713,13 +713,19 @@ fn a_currency_change_reconverts_every_entry() {
         |group| {
             group.change_currency(
                 Currency::RON,
-                &[(Currency::EUR, eur_to_ron), (Currency::EUR, eur_to_ron)],
+                &[
+                    CurrencyRate::new(Currency::EUR, eur_to_ron),
+                    CurrencyRate::new(Currency::EUR, eur_to_ron),
+                ],
             )
         },
     );
 
     group
-        .change_currency(Currency::RON, &[(Currency::EUR, eur_to_ron)])
+        .change_currency(
+            Currency::RON,
+            &[CurrencyRate::new(Currency::EUR, eur_to_ron)],
+        )
         .unwrap();
     assert_eq!(group.currency(), Currency::RON);
     // 10.00 EUR became 50.00 RON; the RON taxi is now local.
@@ -817,7 +823,7 @@ fn two() -> ExchangeRate {
 
 /// Moves the group to lei at 2 lei per euro.
 fn doubled(group: &mut Group) -> Result<(), GroupError> {
-    group.change_currency(Currency::RON, &[(Currency::EUR, two())])
+    group.change_currency(Currency::RON, &[CurrencyRate::new(Currency::EUR, two())])
 }
 
 /// A currency change needs a rate for the currency of every transfer as
@@ -848,7 +854,10 @@ fn a_currency_change_needs_a_rate_for_every_transfer_too() {
         |group| {
             group.change_currency(
                 Currency::RON,
-                &[(Currency::EUR, ExchangeRate::parse("5").unwrap())],
+                &[CurrencyRate::new(
+                    Currency::EUR,
+                    ExchangeRate::parse("5").unwrap(),
+                )],
             )
         },
     );

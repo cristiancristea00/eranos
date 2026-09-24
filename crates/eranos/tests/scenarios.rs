@@ -9,9 +9,9 @@
 )]
 
 use eranos::{
-    Balance, CalendarDate, Category, CategoryId, Currency, ExchangeRate, Expense, Group, Item,
-    Member, MemberId, MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage,
-    SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
+    Balance, CalendarDate, Category, CategoryId, Currency, CurrencyRate, ExchangeRate, Expense,
+    Group, Item, Member, MemberId, MemberParts, MemberPercentage, MemberShare, Money, Parts,
+    Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
 };
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -366,7 +366,10 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     );
 
     // Moving the group to RON needs the EUR → RON rate for the train.
-    group.change_currency(Currency::RON, &[(Currency::EUR, ExchangeRate::parse("5")?)])?;
+    group.change_currency(
+        Currency::RON,
+        &[CurrencyRate::new(Currency::EUR, ExchangeRate::parse("5")?)],
+    )?;
     assert_eq!(group.summary().total_spent(), ron("700.00")?);
     assert_eq!(group.summary().member(ana).balance(), Balance::Settled);
     Ok(())
