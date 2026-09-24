@@ -60,8 +60,8 @@ pub struct Expense {
     // Derived from amount and tip by `build`, so never serialised.
     #[cfg_attr(feature = "serde", serde(skip))]
     total: Money,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    category: Option<CategoryId>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_uncategorised"))]
+    category: CategoryId,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     description: Option<String>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -218,10 +218,14 @@ impl Expense {
         self.total
     }
 
-    /// The category, if any.
+    /// The category: [`CategoryId::UNCATEGORISED`] unless another was set.
     #[must_use]
-    pub const fn category(&self) -> Option<CategoryId> {
+    pub const fn category(&self) -> CategoryId {
         self.category
+    }
+
+    pub(crate) const fn set_category(&mut self, category: CategoryId) {
+        self.category = category;
     }
 
     /// The description, if any.
@@ -315,7 +319,7 @@ pub struct ExpenseBuilder {
     name: String,
     payers: Split,
     split: ExpenseSplit,
-    category: Option<CategoryId>,
+    category: CategoryId,
     description: Option<String>,
     time: Option<Time>,
     tip: Option<Tip>,
@@ -378,9 +382,9 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Sets the category, or clears it with `None`.
-    pub fn category(mut self, category: impl Into<Option<CategoryId>>) -> Self {
-        self.category = category.into();
+    /// Replaces the category; [`CategoryId::UNCATEGORISED`] clears it.
+    pub const fn category(mut self, category: CategoryId) -> Self {
+        self.category = category;
         self
     }
 
@@ -498,11 +502,18 @@ const fn starting(
         name,
         payers,
         split,
-        category: None,
+        category: CategoryId::UNCATEGORISED,
         description: None,
         time: None,
         tip: None,
     }
+}
+
+/// Whether `category` is the built-in one, which the serialised form leaves
+/// out.
+#[cfg(feature = "serde")]
+fn is_uncategorised(category: &CategoryId) -> bool {
+    *category == CategoryId::UNCATEGORISED
 }
 
 /// The serialised form of an [`Expense`], validated on the way in.
@@ -537,7 +548,7 @@ impl TryFrom<ExpenseRecord> for Expense {
             id: Some(record.id),
             ..starting(cost, record.date, record.name, record.payers, record.split)
         }
-        .category(record.category)
+        .category(record.category.unwrap_or(CategoryId::UNCATEGORISED))
         .time(record.time)
         .tip(record.tip);
         match record.description {

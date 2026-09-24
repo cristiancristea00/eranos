@@ -89,6 +89,13 @@ define_id! {
     CategoryId
 }
 
+impl CategoryId {
+    /// The built-in category every expense has until it is given another,
+    /// the same in every group: the nil UUID, which sorts before every
+    /// generated identifier. The apps show its name in the user's language.
+    pub const UNCATEGORISED: Self = Self(Uuid::nil());
+}
+
 define_id! {
     /// Identifies an expense of a group.
     ExpenseId

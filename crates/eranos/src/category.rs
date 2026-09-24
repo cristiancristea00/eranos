@@ -8,7 +8,9 @@ use crate::text;
 ///
 /// Every group defines its own categories; names are unique within a group,
 /// compared case-insensitively. A category gets its identifier when it is
-/// created, and [`renamed`](Self::renamed) keeps it.
+/// created, and [`renamed`](Self::renamed) keeps it. Every group also has the
+/// built-in "Uncategorised" category, [`CategoryId::UNCATEGORISED`], which
+/// cannot be renamed or removed.
 ///
 /// # Examples
 ///
@@ -47,6 +49,14 @@ impl Category {
             id: CategoryId::generate(),
             name,
         })
+    }
+
+    /// The built-in category, under [`CategoryId::UNCATEGORISED`].
+    pub(crate) fn uncategorised() -> Self {
+        Self {
+            id: CategoryId::UNCATEGORISED,
+            name: "Uncategorised".to_owned(),
+        }
     }
 
     /// The same category under the name `name`, trimmed; the identifier is

@@ -39,8 +39,9 @@ impl GroupBuilder {
         self
     }
 
-    /// Validates the name and returns the empty group, under a newly
-    /// generated identifier.
+    /// Validates the name and returns the group, under a newly generated
+    /// identifier, with no entries and only the built-in Uncategorised
+    /// category.
     ///
     /// # Errors
     ///

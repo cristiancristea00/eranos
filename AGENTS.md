@@ -87,8 +87,10 @@ for test helpers and benchmark fixtures, which panic to report failure);
   public setter.
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
-  cached settlements. Nothing else writes to the ledger, so the incremental
-  totals always equal a full rebuild; the group's property test checks it.
+  cached settlements. The one other writer is `Ledger::move_category`, with
+  which removing a category moves its totals to Uncategorised without
+  touching a balance. So the incremental totals always equal a full rebuild;
+  the group's property test checks it.
 - **The public API grows additively.** Fields are private; entities are
   built with builders and edited with `to_builder`; public enums are
   `#[non_exhaustive]`; getters have no `get_` prefix; errors are

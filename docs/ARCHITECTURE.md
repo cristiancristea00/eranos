@@ -116,7 +116,7 @@ device:
 | Map        | Values                                        | Notes                                                 |
 | ---------- | --------------------------------------------- | ----------------------------------------------------- |
 | members    | `Member` + archived flag                      | first name required; contacts and accounts optional   |
-| categories | `Category`                                    | names unique case-insensitively; optional on expenses |
+| categories | `Category`                                    | names unique in any case; Uncategorised is built in   |
 | expenses   | `Expense` + its resolved `ExpenseShares`      | the resolution is kept for exact removal              |
 | transfers  | `Transfer` + its amount in the group currency | the same, for transfers                               |
 
@@ -132,16 +132,16 @@ entry to replace by it.
 
 An **expense** has a name, a cost (an amount in its own currency, local or
 converted into the group currency at a fixed rate), a date and an optional
-time, optional description and category, an optional tip, the payers (a
-`Split` of the total), and how the cost is shared: an
-`ExpenseSplit::Whole(Split)` or `ExpenseSplit::Itemised(Vec<Item>)`. A split
-is `Equal`, `Percentages` (basis points summing to exactly 10 000), `Parts`
-(hundredths, so 0.5 for a child), or `Amounts` (summing exactly to what is
-divided). An **item** has a unit price, a quantity, and its own split; the
-line totals must add up to the amount. A **tip** is fixed or a percentage of
-the amount, added on top, and shared `Proportional`ly (by consumption) or
-`Equal`ly. A **transfer** is money one member paid another, with a cost
-like an expense's.
+time, an optional description, a category (Uncategorised unless another is
+set), an optional tip, the payers (a `Split` of the total), and how the cost
+is shared: an `ExpenseSplit::Whole(Split)` or
+`ExpenseSplit::Itemised(Vec<Item>)`. A split is `Equal`, `Percentages`
+(basis points summing to exactly 10 000), `Parts` (hundredths, so 0.5 for a
+child), or `Amounts` (summing exactly to what is divided). An **item** has a
+unit price, a quantity, and its own split; the line totals must add up to
+the amount. A **tip** is fixed or a percentage of the amount, added on top,
+and shared `Proportional`ly (by consumption) or `Equal`ly. A **transfer** is
+money one member paid another, with a cost like an expense's.
 
 **Archived members** keep their history and balance and may send and
 receive transfers, but cannot join a new expense; a replacement may keep an
@@ -254,13 +254,14 @@ them, removing rows that reach zero, so a summary compares equal to a
 rebuilt one however it was reached. Net is kept as its own accumulator:
 computing it from the other four could overflow when each of them fits.
 
-| Change                                             | Cost                             | Settlement caches |
-| -------------------------------------------------- | -------------------------------- | ----------------- |
-| add, replace, remove an expense                    | O(k log m), k = members involved | cleared           |
-| add, replace, remove a transfer                    | O(log m)                         | cleared           |
-| add, replace, archive a member; any category change | O(log m)                        | kept              |
-| change the group currency                          | O(entries), full rebuild         | cleared           |
-| read the summary                                   | O(1) or O(log m)                 | —                 |
+| Change                                                   | Cost                             | Settlement caches |
+| -------------------------------------------------------- | -------------------------------- | ----------------- |
+| add, replace, remove an expense                          | O(k log m), k = members involved | cleared           |
+| add, replace, remove a transfer                          | O(log m)                         | cleared           |
+| add, replace, archive a member; add or rename a category | O(log m)                         | kept              |
+| remove a category: its totals move to Uncategorised      | O(expenses + category totals)    | kept              |
+| change the group currency                                | O(entries), full rebuild         | cleared           |
+| read the summary                                         | O(1) or O(log m)                 | —                 |
 
 Settlements are computed on the first request per strategy and cached in
 `OnceLock`s, which keep `Group` `Send + Sync`; every balance-changing
@@ -354,9 +355,11 @@ inputs, never the derived totals:
 
 - Identifiers are hyphenated UUIDs, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD`, times `hh:mm`, percentages basis points,
-  parts hundredths. Absent optional fields are omitted. Keys follow the
-  field order of [AGENTS.md](../AGENTS.md): `format` and `id` first, then
-  the required fields, then the optional ones, each alphabetically.
+  parts hundredths. Absent optional fields are omitted, and so are the
+  built-in category and an expense's category when it is the built-in one:
+  every group has it again when it loads. Keys follow the field order of
+  [AGENTS.md](../AGENTS.md): `format` and `id` first, then the required
+  fields, then the optional ones, each alphabetically.
 - Loading replays the entries through the `add_*` methods: members (all
   unarchived first), categories, expenses, transfers, then the `archived`
   list, because an expense may reference a member archived after it was

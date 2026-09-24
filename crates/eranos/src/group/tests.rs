@@ -311,10 +311,10 @@ fn only_an_unreferenced_member_can_be_removed() {
 }
 
 /// Category names are unique case-insensitively, renames keep that rule,
-/// and a category in use cannot be removed.
+/// and an unused category is removed.
 #[test]
-fn categories_keep_unique_names_and_their_expenses() {
-    let (mut group, ana, bob, _) = trip();
+fn categories_keep_unique_names() {
+    let (mut group, ..) = trip();
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
     let fuel = group.add_category(Category::new("Fuel").unwrap()).unwrap();
     assert_unchanged(
@@ -337,21 +337,6 @@ fn categories_keep_unique_names_and_their_expenses() {
         group.add_category(again)
     });
 
-    // A category in use stays.
-    let lunch = Expense::builder(eur("20.00"), day(), "Lunch", ana, Split::equal([ana, bob]))
-        .category(food)
-        .build()
-        .unwrap();
-    let lunch = group.add_expense(lunch).unwrap();
-    assert_unchanged(
-        &mut group,
-        &GroupError::CategoryInUse {
-            category: food,
-            expenses: vec![lunch],
-        },
-        |group| group.remove_category(food),
-    );
-    assert_eq!(group.summary().category_total(Some(food)), eur("20.00"));
     // An unused one goes, and unknown ones are reported.
     let removed = group.remove_category(fuel).unwrap();
     assert_eq!(removed.name(), "Fuel");
@@ -363,9 +348,83 @@ fn categories_keep_unique_names_and_their_expenses() {
     });
     assert_eq!(
         group.categories().map(|(id, _)| id).collect::<Vec<_>>(),
-        vec![food]
+        vec![CategoryId::UNCATEGORISED, food]
     );
     assert_eq!(group.category(food).map(Category::name), Some("food"));
+}
+
+/// The built-in category would be removed, renamed, or added a second time,
+/// leaving expenses with a category the group does not have.
+#[test]
+fn the_built_in_category_stays() {
+    let (mut group, ..) = trip();
+    let built_in = group.category(CategoryId::UNCATEGORISED).unwrap().clone();
+    assert_eq!(built_in.name(), "Uncategorised");
+    assert_eq!(group.categories().len(), 1);
+    assert_unchanged(&mut group, &GroupError::BuiltInCategory, |group| {
+        group.remove_category(CategoryId::UNCATEGORISED)
+    });
+    let renamed = built_in.renamed("Other").unwrap();
+    assert_unchanged(&mut group, &GroupError::BuiltInCategory, |group| {
+        group.replace_category(renamed)
+    });
+    assert_unchanged(
+        &mut group,
+        &GroupError::DuplicateCategory(CategoryId::UNCATEGORISED),
+        |group| group.add_category(built_in),
+    );
+    // Its name is taken, in any case.
+    assert_unchanged(
+        &mut group,
+        &GroupError::DuplicateCategoryName {
+            existing: CategoryId::UNCATEGORISED,
+        },
+        |group| group.add_category(Category::new("uncategorised").unwrap()),
+    );
+}
+
+/// Removing a category would lose its expenses' totals, change balances, or
+/// drop cached settlements that do not depend on categories.
+#[test]
+fn removing_a_category_moves_its_expenses_to_uncategorised() {
+    let (mut group, ana, bob, _) = trip();
+    let food = group.add_category(Category::new("Food").unwrap()).unwrap();
+    let lunch = Expense::builder(eur("20.00"), day(), "Lunch", ana, Split::equal([ana, bob]))
+        .category(food)
+        .build()
+        .unwrap();
+    let lunch = group.add_expense(lunch).unwrap();
+    group
+        .add_expense(shared("10.00", bob, &[ana, bob]))
+        .unwrap();
+    let balances: Vec<_> = group.summary().members().collect();
+    let cached: *const Settlement = group.settlement(SettlementStrategy::Greedy).unwrap();
+    assert_eq!(group.summary().category_total(food), eur("20.00"));
+
+    group.remove_category(food).unwrap();
+    // The expense and its totals move, per member too.
+    assert_eq!(
+        group.expense(lunch).map(Expense::category),
+        Some(CategoryId::UNCATEGORISED)
+    );
+    let summary = group.summary();
+    assert_eq!(
+        summary.category_total(CategoryId::UNCATEGORISED),
+        eur("30.00")
+    );
+    assert_eq!(summary.category_total(food), eur("0"));
+    assert_eq!(
+        summary.member_category_total(bob, CategoryId::UNCATEGORISED),
+        eur("15.00")
+    );
+    assert_eq!(summary.member_category_totals(bob).count(), 1);
+    // Balances, and with them the cached settlement, stay.
+    assert_eq!(summary.members().collect::<Vec<_>>(), balances);
+    assert!(std::ptr::eq(
+        cached,
+        group.settlement(SettlementStrategy::Greedy).unwrap()
+    ));
+    assert_eq!(group.ledger, rebuilt(&group));
 }
 
 /// An expense must reference existing members and categories and carry a
@@ -905,6 +964,7 @@ fn a_transfer_out_of_range_is_refused() {
 enum Operation {
     AddExpense {
         amount: i64,
+        category: usize,
         participants: Vec<(usize, u32)>,
         payer: usize,
     },
@@ -915,6 +975,9 @@ enum Operation {
     },
     Archive {
         member: usize,
+    },
+    RemoveCategory {
+        category: usize,
     },
     RemoveExpense {
         position: usize,
@@ -934,8 +997,8 @@ enum Operation {
 
 fn operation() -> impl Strategy<Value = Operation> {
     prop_oneof![
-        4 => (1_i64..100_000, 0_usize..5, proptest::collection::vec((0_usize..5, 1_u32..400), 1..5))
-            .prop_map(|(amount, payer, participants)| Operation::AddExpense { amount, payer, participants }),
+        4 => (1_i64..100_000, 0_usize..3, 0_usize..5, proptest::collection::vec((0_usize..5, 1_u32..400), 1..5))
+            .prop_map(|(amount, category, payer, participants)| Operation::AddExpense { amount, category, participants, payer }),
         2 => (0_usize..8, 1_i64..100_000, 0_usize..5)
             .prop_map(|(position, amount, payer)| Operation::ReplaceExpense { position, amount, payer }),
         1 => (0_usize..8).prop_map(|position| Operation::RemoveExpense { position }),
@@ -943,11 +1006,18 @@ fn operation() -> impl Strategy<Value = Operation> {
         1 => (0_usize..8).prop_map(|position| Operation::RemoveTransfer { position }),
         1 => (0_usize..5).prop_map(|member| Operation::Archive { member }),
         1 => (0_usize..5).prop_map(|member| Operation::Unarchive { member }),
+        1 => (0_usize..3).prop_map(|category| Operation::RemoveCategory { category }),
     ]
 }
 
-/// Applies `operation`, returning whether the group accepted it.
-fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool {
+/// Applies `operation`, returning whether the group accepted it;
+/// `categories` starts with the built-in one.
+fn apply(
+    group: &mut Group,
+    members: &[MemberId],
+    categories: &[CategoryId],
+    operation: &Operation,
+) -> bool {
     let money = |amount| Money::from_minor_units(Currency::EUR, amount);
     let expense_at =
         |current: &Group, position: usize| current.expenses().map(|(id, _)| id).nth(position);
@@ -956,6 +1026,7 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
     match operation.clone() {
         Operation::AddExpense {
             amount,
+            category,
             participants,
             payer,
         } => {
@@ -972,6 +1043,7 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
                 members[payer],
                 Split::parts(chosen),
             )
+            .category(categories[category])
             .build()
             .unwrap();
             group.add_expense(expense).is_ok()
@@ -985,6 +1057,9 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
             group.add_transfer(transfer).is_ok()
         }
         Operation::Archive { member } => group.archive_member(members[member]).is_ok(),
+        Operation::RemoveCategory { category } => {
+            group.remove_category(categories[category]).is_ok()
+        }
         Operation::RemoveExpense { position } => {
             expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
         }
@@ -1022,9 +1097,13 @@ proptest! {
     fn random_changes_keep_the_group_consistent(operations in proptest::collection::vec(operation(), 1..40)) {
         let mut group = Group::builder(Currency::EUR, "Random").build().unwrap();
         let members: Vec<MemberId> = ["Ana", "Bob", "Carol", "Dan", "Eve"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
+        let mut categories = vec![CategoryId::UNCATEGORISED];
+        for name in ["Food", "Fuel"] {
+            categories.push(group.add_category(Category::new(name).unwrap()).unwrap());
+        }
         for operation in &operations {
             let before = group.clone();
-            if !apply(&mut group, &members, operation) {
+            if !apply(&mut group, &members, &categories, operation) {
                 prop_assert_eq!(&group, &before);
                 prop_assert_eq!(&group.ledger, &before.ledger);
             }

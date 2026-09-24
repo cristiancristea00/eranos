@@ -173,15 +173,12 @@ fn a_weekend_trip_adds_up_by_hand() {
     );
     assert_eq!(summary.member(dan).balance(), Balance::Owes(eur("42.00")));
     // Per category, and per member per category.
-    assert_eq!(summary.category_total(Some(lodging)), eur("400.00"));
-    assert_eq!(summary.category_total(Some(transport)), eur("90.00"));
-    assert_eq!(summary.category_total(Some(food)), eur("170.00"));
-    assert_eq!(summary.category_total(None), eur("0"));
-    assert_eq!(summary.member_category_total(dan, Some(food)), eur("52.00"));
-    assert_eq!(
-        summary.member_category_total(dan, Some(transport)),
-        eur("0")
-    );
+    assert_eq!(summary.category_total(lodging), eur("400.00"));
+    assert_eq!(summary.category_total(transport), eur("90.00"));
+    assert_eq!(summary.category_total(food), eur("170.00"));
+    assert_eq!(summary.category_total(CategoryId::UNCATEGORISED), eur("0"));
+    assert_eq!(summary.member_category_total(dan, food), eur("52.00"));
+    assert_eq!(summary.member_category_total(dan, transport), eur("0"));
 }
 
 /// Each strategy produces its documented plan for the trip.

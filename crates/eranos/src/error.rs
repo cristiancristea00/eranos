@@ -233,14 +233,9 @@ pub enum GroupError {
     /// An archived member cannot join a new expense.
     #[error("member {0} is archived")]
     ArchivedMember(MemberId),
-    /// The category is still referenced and cannot be removed.
-    #[error("category {category} is used by {}", count(expenses.len(), "expense", "expenses"))]
-    CategoryInUse {
-        /// The category that was to be removed.
-        category: CategoryId,
-        /// The expenses that reference the category.
-        expenses: Vec<ExpenseId>,
-    },
+    /// The built-in Uncategorised category cannot be renamed or removed.
+    #[error("the built-in category cannot be renamed or removed")]
+    BuiltInCategory,
     /// A category with this ID already exists.
     #[error("category {0} already exists")]
     DuplicateCategory(CategoryId),

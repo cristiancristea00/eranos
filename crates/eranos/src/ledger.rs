@@ -40,9 +40,9 @@ pub struct Summary {
     // In the three maps, rows whose values are all zero are removed, so two
     // summaries with the same totals compare equal however they were
     // reached.
-    categories: BTreeMap<Option<CategoryId>, i64>,
+    categories: BTreeMap<CategoryId, i64>,
     currency: Currency,
-    member_categories: BTreeMap<(MemberId, Option<CategoryId>), i64>,
+    member_categories: BTreeMap<(MemberId, CategoryId), i64>,
     members: BTreeMap<MemberId, Totals>,
     total_spent: i64,
 }
@@ -58,30 +58,27 @@ impl Summary {
         }
     }
 
-    /// The spending in one category (`None` for uncategorised expenses).
+    /// The spending in one category.
     #[must_use]
-    pub fn category_total(&self, category: Option<CategoryId>) -> Money {
+    pub fn category_total(&self, category: CategoryId) -> Money {
         Money::from_minor_units(
             self.currency,
             self.categories.get(&category).copied().unwrap_or(0),
         )
     }
 
-    /// The spending of every category with expenses, uncategorised first,
-    /// then ordered by category.
+    /// The spending of every category with expenses, ordered by category,
+    /// so Uncategorised comes first.
     #[must_use]
-    pub fn category_totals(
-        &self,
-    ) -> impl ExactSizeIterator<Item = (Option<CategoryId>, Money)> + '_ {
+    pub fn category_totals(&self) -> impl ExactSizeIterator<Item = (CategoryId, Money)> + '_ {
         self.categories
             .iter()
             .map(|(&category, &total)| (category, Money::from_minor_units(self.currency, total)))
     }
 
-    /// One member's share of the spending in one category (`None` for
-    /// uncategorised expenses).
+    /// One member's share of the spending in one category.
     #[must_use]
-    pub fn member_category_total(&self, member: MemberId, category: Option<CategoryId>) -> Money {
+    pub fn member_category_total(&self, member: MemberId, category: CategoryId) -> Money {
         let total = self
             .member_categories
             .get(&(member, category))
@@ -91,13 +88,15 @@ impl Summary {
     }
 
     /// One member's share of the spending in every category they have
-    /// expenses in, uncategorised first, then ordered by category.
+    /// expenses in, ordered by category, so Uncategorised comes first.
     pub fn member_category_totals(
         &self,
         member: MemberId,
-    ) -> impl Iterator<Item = (Option<CategoryId>, Money)> + '_ {
+    ) -> impl Iterator<Item = (CategoryId, Money)> + '_ {
+        // The nil UUID of Uncategorised is the smallest identifier, so the
+        // member's rows start here.
         self.member_categories
-            .range((member, None)..)
+            .range((member, CategoryId::UNCATEGORISED)..)
             .take_while(move |((row_member, _), _)| *row_member == member)
             .map(|(&(_, category), &total)| {
                 (category, Money::from_minor_units(self.currency, total))
@@ -362,8 +361,8 @@ impl Totals {
 /// Changes to apply to a [`Ledger`] at once, in exact 128-bit arithmetic.
 #[derive(Debug, Default)]
 pub(crate) struct Delta {
-    categories: BTreeMap<Option<CategoryId>, i128>,
-    member_categories: BTreeMap<(MemberId, Option<CategoryId>), i128>,
+    categories: BTreeMap<CategoryId, i128>,
+    member_categories: BTreeMap<(MemberId, CategoryId), i128>,
     /// paid, share, sent, received, net
     members: BTreeMap<MemberId, [i128; 5]>,
     pairs: BTreeMap<MemberPair, i128>,
@@ -372,12 +371,7 @@ pub(crate) struct Delta {
 
 impl Delta {
     /// Adds (`sign` 1) or removes (`sign` −1) one expense.
-    pub(crate) fn add_expense(
-        &mut self,
-        shares: &ExpenseShares,
-        category: Option<CategoryId>,
-        sign: i128,
-    ) {
+    pub(crate) fn add_expense(&mut self, shares: &ExpenseShares, category: CategoryId, sign: i128) {
         let total = sign * i128::from(shares.total.minor_units());
         self.total_spent += total;
         *self.categories.entry(category).or_default() += total;
@@ -452,6 +446,29 @@ impl Ledger {
 
     pub(crate) const fn currency(&self) -> Currency {
         self.summary.currency
+    }
+
+    /// Moves every total of the category `from` to the category `to`, in
+    /// the group and per member; no balance changes.
+    ///
+    /// Category rows are never negative, the group's add up to the total
+    /// spent and one member's to their share, and both are in range, so the
+    /// sums moved into `to` are in range too.
+    pub(crate) fn move_category(&mut self, from: CategoryId, to: CategoryId) {
+        let summary = &mut self.summary;
+        if let Some(total) = summary.categories.remove(&from) {
+            *summary.categories.entry(to).or_default() += total;
+        }
+        let moved: Vec<(MemberId, i64)> = summary
+            .member_categories
+            .iter()
+            .filter(|&(&(_, category), _)| category == from)
+            .map(|(&(member, _), &total)| (member, total))
+            .collect();
+        for (member, total) in moved {
+            summary.member_categories.remove(&(member, from));
+            *summary.member_categories.entry((member, to)).or_default() += total;
+        }
     }
 
     /// Every non-zero net balance, ordered by member.

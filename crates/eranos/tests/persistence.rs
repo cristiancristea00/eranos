@@ -195,11 +195,18 @@ fn the_json_shape_is_pinned() {
     assert_eq!(tram["exchange_rate"], json!("0.2011"));
     assert_eq!(tram["split"]["whole"]["percentages"][0][1], json!(5000));
     assert_eq!(value["transfers"][0]["note"], json!("Wine"));
-    let (food, _) = group.categories().next().unwrap();
+    // The built-in category is not written, and neither is an expense's
+    // category when it is the built-in one.
+    let (food, _) = group
+        .categories()
+        .find(|(_, category)| category.name() == "Food")
+        .unwrap();
     assert_eq!(
-        value["categories"][0],
-        json!({"id": food.to_string(), "name": "Food"})
+        value["categories"],
+        json!([{"id": food.to_string(), "name": "Food"}])
     );
+    assert_eq!(bill["category"], json!(food.to_string()));
+    assert_eq!(tram.get("category"), None);
 }
 
 /// Loading a file with an entry the library would never accept must fail,
@@ -296,6 +303,12 @@ fn an_inconsistent_file_is_refused() {
         unknown_sender.contains("unknown member"),
         "{unknown_sender}"
     );
+    // The built-in category listed as if it were the group's own.
+    let built_in = tamper(&|value| {
+        let copy = json!({"id": CategoryId::UNCATEGORISED.to_string(), "name": "Uncategorised"});
+        value["categories"].as_array_mut().unwrap().push(copy);
+    });
+    assert!(built_in.contains("already exists"), "{built_in}");
     // An expense listed twice.
     let repeated = tamper(&|value| {
         let copy = value["expenses"][0].clone();

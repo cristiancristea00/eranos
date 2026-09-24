@@ -15,7 +15,7 @@ use crate::category::Category;
 use crate::error::{GroupError, ValueError};
 use crate::expense::Expense;
 use crate::group::Language;
-use crate::id::{GroupId, MemberId};
+use crate::id::{CategoryId, GroupId, MemberId};
 use crate::member::Member;
 use crate::money::Currency;
 use crate::transfer::Transfer;
@@ -71,7 +71,12 @@ impl Serialize for Group {
         GroupView {
             format: FORMAT,
             id: self.id,
-            categories: self.categories.values().collect(),
+            // Every group has the built-in category, so it is not written.
+            categories: self
+                .categories
+                .values()
+                .filter(|category| category.id() != CategoryId::UNCATEGORISED)
+                .collect(),
             currency: self.currency,
             expenses: self
                 .expenses

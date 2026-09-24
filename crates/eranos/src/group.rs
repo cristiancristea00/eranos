@@ -136,7 +136,7 @@ impl Group {
     ) -> Self {
         Self {
             id,
-            categories: BTreeMap::new(),
+            categories: BTreeMap::from([(CategoryId::UNCATEGORISED, Category::uncategorised())]),
             currency,
             expenses: BTreeMap::new(),
             ledger: Ledger::new(currency),
@@ -158,7 +158,8 @@ impl Group {
 
     // --- Categories ----------------------------------------------------------
 
-    /// Every category, in the order they were created.
+    /// Every category, in the order they were created, with the built-in
+    /// Uncategorised one first.
     pub fn categories(&self) -> impl ExactSizeIterator<Item = (CategoryId, &Category)> + '_ {
         self.categories.iter().map(|(&id, category)| (id, category))
     }
@@ -191,11 +192,16 @@ impl Group {
     ///
     /// # Errors
     ///
+    /// - [`GroupError::BuiltInCategory`] for the built-in Uncategorised
+    ///   category, whose name is fixed.
     /// - [`GroupError::UnknownCategory`] when there is no such category.
     /// - [`GroupError::DuplicateCategoryName`] when another category has the
     ///   new name.
     pub fn replace_category(&mut self, category: Category) -> Result<Category, GroupError> {
         let id = category.id();
+        if id == CategoryId::UNCATEGORISED {
+            return Err(GroupError::BuiltInCategory);
+        }
         if !self.categories.contains_key(&id) {
             return Err(GroupError::UnknownCategory(id));
         }
@@ -205,32 +211,32 @@ impl Group {
             .ok_or(GroupError::UnknownCategory(id))
     }
 
-    /// Removes a category no expense uses, returning it.
+    /// Removes a category, returning it; its expenses move to
+    /// [`CategoryId::UNCATEGORISED`], and their totals with them.
+    ///
+    /// No balance changes, so the cached settlements are kept. The time is
+    /// proportional to the number of expenses and category totals.
     ///
     /// # Errors
     ///
+    /// - [`GroupError::BuiltInCategory`] for the built-in Uncategorised
+    ///   category.
     /// - [`GroupError::UnknownCategory`] when there is no such category.
-    /// - [`GroupError::CategoryInUse`] listing the expenses that still use
-    ///   it.
     pub fn remove_category(&mut self, id: CategoryId) -> Result<Category, GroupError> {
-        if !self.categories.contains_key(&id) {
-            return Err(GroupError::UnknownCategory(id));
+        if id == CategoryId::UNCATEGORISED {
+            return Err(GroupError::BuiltInCategory);
         }
-        let expenses: Vec<ExpenseId> = self
-            .expenses
-            .iter()
-            .filter(|(_, record)| record.expense.category() == Some(id))
-            .map(|(&id, _)| id)
-            .collect();
-        if !expenses.is_empty() {
-            return Err(GroupError::CategoryInUse {
-                category: id,
-                expenses,
-            });
-        }
-        self.categories
+        let category = self
+            .categories
             .remove(&id)
-            .ok_or(GroupError::UnknownCategory(id))
+            .ok_or(GroupError::UnknownCategory(id))?;
+        for record in self.expenses.values_mut() {
+            if record.expense.category() == id {
+                record.expense.set_category(CategoryId::UNCATEGORISED);
+            }
+        }
+        self.ledger.move_category(id, CategoryId::UNCATEGORISED);
+        Ok(category)
     }
 
     fn check_category_name(
@@ -768,11 +774,11 @@ impl Group {
                 return Err(GroupError::ArchivedMember(member));
             }
         }
-        match expense.category() {
-            Some(category) if !self.categories.contains_key(&category) => {
-                Err(GroupError::UnknownCategory(category))
-            }
-            _ => Ok(()),
+        let category = expense.category();
+        if self.categories.contains_key(&category) {
+            Ok(())
+        } else {
+            Err(GroupError::UnknownCategory(category))
         }
     }
 

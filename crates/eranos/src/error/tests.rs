@@ -263,11 +263,8 @@ fn group_errors() -> Vec<(GroupError, &'static str)> {
             "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",
         ),
         (
-            GroupError::CategoryInUse {
-                category: CATEGORY,
-                expenses: vec![EXPENSE],
-            },
-            "category 22222222-2222-2222-2222-222222222222 is used by 1 expense",
+            GroupError::BuiltInCategory,
+            "the built-in category cannot be renamed or removed",
         ),
         (
             GroupError::MissingExchangeRate {

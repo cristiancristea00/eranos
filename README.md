@@ -21,7 +21,7 @@ no I/O.
 | Group      | `Group`      | A trip, a day out, or a household: name, currency, language, and everything below |
 | Member     | `Member`     | A person: first name (required), last name, email, phone, payment accounts        |
 | Account    | `Account`    | Where a member can be paid: an IBAN or a payment-app username, held as a secret   |
-| Category   | `Category`   | A label the group defines, such as "Food"                                         |
+| Category   | `Category`   | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
 | Expense    | `Expense`    | What was bought: cost, date, payers, split, optional tip and category             |
 | Cost       | `Cost`       | An amount in the group currency, or in another one at a fixed exchange rate       |
 | Split      | `Split`      | How an amount is divided: equally, by percentages, by parts, or by exact amounts  |

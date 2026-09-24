@@ -101,9 +101,9 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
         expense.split(),
         &ExpenseSplit::Whole(Split::equal([ANA, BOB, CAROL]))
     );
-    // Optional fields are absent.
+    // Optional fields are absent, and the category is the built-in one.
     assert_eq!(expense.description(), None);
-    assert_eq!(expense.category(), None);
+    assert_eq!(expense.category(), CategoryId::UNCATEGORISED);
     assert_eq!(expense.tip(), None);
     assert_eq!(expense.time(), None);
     // Without a tip, the total is the amount.
@@ -497,16 +497,16 @@ fn the_description_is_trimmed_and_blank_clears_it() {
 fn optional_fields_are_set_and_cleared_with_none() {
     // Set.
     let expense = full_expense();
-    assert_eq!(expense.category(), Some(CategoryId::from_bytes([9; 16])));
+    assert_eq!(expense.category(), CategoryId::from_bytes([9; 16]));
     assert_eq!(expense.time(), Some(Time::new(20, 30).unwrap()));
     // Cleared.
     let expense = expense
         .to_builder()
-        .category(None)
+        .category(CategoryId::UNCATEGORISED)
         .time(None)
         .build()
         .unwrap();
-    assert_eq!(expense.category(), None);
+    assert_eq!(expense.category(), CategoryId::UNCATEGORISED);
     assert_eq!(expense.time(), None);
 }
 
