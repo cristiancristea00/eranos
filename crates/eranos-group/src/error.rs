@@ -26,6 +26,10 @@ pub enum GroupError {
     /// The built-in Uncategorised category cannot be renamed or removed.
     #[error("the built-in category cannot be renamed or removed")]
     BuiltInCategory,
+    /// A shared group's lock was asked for without waiting, while another
+    /// call held it.
+    #[error("the group is locked by another call")]
+    Busy,
     /// A category with this ID already exists.
     #[error("category {0} already exists")]
     DuplicateCategory(CategoryId),

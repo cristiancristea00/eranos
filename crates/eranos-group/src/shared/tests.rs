@@ -2,12 +2,18 @@
 //! at once, so these pin what each call returns (what the group's own
 //! method returns), how calls wait for each other (reads together, changes
 //! alone, a waiting change ahead of new reads), that a dropped call changes
-//! nothing and releases the lock, and that every call's future can move to
-//! another thread and stays small.
+//! nothing and releases the lock, that the guards, the tries, and the
+//! blocking calls take the lock as they say, and that every call's future
+//! can move to another thread and stays small.
 
+use std::cell::Cell;
+use std::future::poll_fn;
 use std::pin::pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc;
 use std::task::{Context, Poll, Wake, Waker};
+use std::thread;
+use std::time::Duration;
 
 use eranos_calendar::CalendarDate;
 use eranos_core::cooperative::block_on;
@@ -459,7 +465,106 @@ fn every_call_is_send_static_and_small() {
         size_of_call(&shared.set_description("Weekly")),
         size_of_call(&shared.language()),
         size_of_call(&shared.set_language(None)),
+        size_of_call(&shared.read()),
+        size_of_call(&shared.write()),
     ];
     let largest = sizes.iter().max().copied().unwrap();
     assert!(largest <= 4096, "a call's future takes {largest} bytes");
+}
+
+/// A guard that released the lock early would let another call in between
+/// two reads or changes, and one that kept it would block every call after
+/// it: the group's own methods run under the guard, and the lock is free
+/// once it is dropped.
+#[test]
+fn a_guard_holds_the_lock_until_it_is_dropped() {
+    let shared = SharedGroup::new(owed_by_a_hub());
+    {
+        let mut guard = shared.write_blocking();
+        assert!(shared.is_locked());
+        assert_eq!(shared.try_read().map(|_| ()), Err(GroupError::Busy));
+        // The guard reads the group as well as changing it.
+        assert_eq!(guard.name(), "Club");
+        guard.set_name("Society").unwrap();
+    }
+    let guard = shared.read_blocking();
+    assert_eq!(guard.name(), "Society");
+    // Reads share the lock, which a change cannot take meanwhile.
+    assert_eq!(
+        shared.try_read().map(|other| other.name().to_owned()),
+        Ok("Society".to_owned())
+    );
+    assert_eq!(shared.try_write().map(|_| ()), Err(GroupError::Busy));
+    drop(guard);
+    assert!(!shared.is_locked());
+    assert!(shared.try_write().is_ok());
+}
+
+/// On wasm a synchronous call cannot wait, so it tries the lock instead: a
+/// try that succeeded under a change in progress would see the group half
+/// changed. Both tries fail as busy while a change holds the lock at a
+/// yield, and a read succeeds alongside a settlement at its yield.
+#[test]
+fn trying_the_lock_fails_as_busy_while_another_call_holds_it() {
+    let mut context = Context::from_waker(Waker::noop());
+    let office = SharedGroup::new(busy());
+    {
+        let mut change = pin!(office.change_currency(Currency::RON, lei()));
+        assert!(change.as_mut().poll(&mut context).is_pending());
+        assert!(office.is_locked());
+        assert_eq!(office.try_read().map(|_| ()), Err(GroupError::Busy));
+        assert_eq!(office.try_write().map(|_| ()), Err(GroupError::Busy));
+    }
+    assert!(!office.is_locked());
+
+    let club = SharedGroup::new(owed_by_a_hub());
+    let mut settlement = pin!(club.settlement(SettlementStrategy::MinimumTransfers));
+    assert!(settlement.as_mut().poll(&mut context).is_pending());
+    assert!(club.is_locked());
+    assert!(club.try_read().is_ok());
+    assert_eq!(club.try_write().map(|_| ()), Err(GroupError::Busy));
+}
+
+/// A synchronous caller would spin while another thread holds the lock, or
+/// never wake when it lets go: the call sleeps, then reads what the holder
+/// wrote as soon as it releases the lock.
+#[test]
+fn a_blocked_call_sleeps_until_the_lock_is_released() {
+    let shared = SharedGroup::new(owed_by_a_hub());
+    let (locked, holding) = mpsc::channel();
+    let holder = {
+        let shared = shared.clone();
+        thread::spawn(move || {
+            let mut guard = shared.write_blocking();
+            locked.send(()).unwrap();
+            thread::sleep(Duration::from_millis(50));
+            guard.set_name("Society").unwrap();
+        })
+    };
+    holding.recv().unwrap();
+    let polls = Cell::new(0);
+    let mut read = pin!(shared.name());
+    let name = block_on(poll_fn(|context| {
+        polls.set(polls.get() + 1);
+        read.as_mut().poll(context)
+    }));
+    holder.join().unwrap();
+    assert_eq!(name, "Society");
+    // One poll to wait and one to read, with room for a spurious wake-up;
+    // a driver that spun would have polled thousands of times in 50 ms.
+    assert!(polls.get() <= 3, "{} polls", polls.get());
+}
+
+/// A group taken back while another handle still shared it would change
+/// under that handle's calls: it comes back only from the last handle.
+#[test]
+fn the_group_comes_back_only_from_its_last_handle() {
+    let group = owed_by_a_hub();
+    let shared = SharedGroup::new(group.clone());
+    let other = shared.clone();
+    let shared = shared
+        .into_group()
+        .expect_err("a clone still shares the group");
+    drop(other);
+    assert_eq!(shared.into_group().ok(), Some(group));
 }

@@ -21,7 +21,7 @@ pub use error::{GroupError, LanguageError};
 pub use language::Language;
 #[cfg(feature = "serde")]
 pub use saved::SavedGroup;
-pub use shared::SharedGroup;
+pub use shared::{GroupReadGuard, GroupWriteGuard, SharedGroup};
 
 use eranos_category::Category;
 use eranos_core::cooperative::{Cooperative, Pacer};

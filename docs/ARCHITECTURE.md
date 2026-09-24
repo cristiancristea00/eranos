@@ -143,7 +143,7 @@ flowchart TD
 | Crate               | Holds                                                                                                                                                               | Depends on                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `eranos`            | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                           |
-| `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupError`, `LanguageError`                                                                     | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core |
+| `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core |
 | `eranos-expense`    | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                                     |
 | `eranos-transfer`   | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                                 |
 | `eranos-member`     | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                            |
@@ -387,20 +387,20 @@ group (members exist and are not archived, the category exists, and the
 cost is converted exactly when the entry is foreign) and against the
 ledger's range.
 
-| Error             | Returned by                                                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `IdError`         | reading an identifier from text                                                                                        |
-| `CalendarError`   | building and reading dates and times of day                                                                            |
-| `MoneyError`      | building, reading, and combining amounts, currencies, rates, percentages, and parts                                    |
-| `AccountError`    | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                           |
-| `ContactError`    | `Email::parse`, `PhoneNumber::parse`                                                                                   |
-| `MemberError`     | `MemberBuilder::build`                                                                                                 |
-| `CategoryError`   | `Category::new`, `Category::renamed`                                                                                   |
-| `LanguageError`   | `Language::parse`                                                                                                      |
-| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                                                          |
-| `TransferError`   | `TransferBuilder::build`                                                                                               |
-| `GroupError`      | `GroupBuilder::build`, `SavedGroup::into_group`, and every group mutation; the group is unchanged when one is returned |
-| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                                                 |
+| Error             | Returned by                                                                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IdError`         | reading an identifier from text                                                                                                                                                                   |
+| `CalendarError`   | building and reading dates and times of day                                                                                                                                                       |
+| `MoneyError`      | building, reading, and combining amounts, currencies, rates, percentages, and parts                                                                                                               |
+| `AccountError`    | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                                                                                                      |
+| `ContactError`    | `Email::parse`, `PhoneNumber::parse`                                                                                                                                                              |
+| `MemberError`     | `MemberBuilder::build`                                                                                                                                                                            |
+| `CategoryError`   | `Category::new`, `Category::renamed`                                                                                                                                                              |
+| `LanguageError`   | `Language::parse`                                                                                                                                                                                 |
+| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                                                                                                                                     |
+| `TransferError`   | `TransferBuilder::build`                                                                                                                                                                          |
+| `GroupError`      | `GroupBuilder::build`, `SavedGroup::into_group`, every group mutation, and `SharedGroup::try_read` and `try_write` while another call holds the lock; the group is unchanged when one is returned |
+| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                                                                                                                            |
 
 Each module has one error enum, `#[non_exhaustive]` and built with
 `thiserror`, and none wraps another: a function reports the failure of its

@@ -2,10 +2,13 @@
 
 use std::fmt;
 use std::future::Future;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
-use async_lock::RwLock;
+use async_lock::{RwLock, RwLockReadGuardArc, RwLockWriteGuardArc};
 use eranos_category::Category;
+#[cfg(not(target_family = "wasm"))]
+use eranos_core::cooperative::block_on;
 use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use eranos_expense::Expense;
 use eranos_ledger::{ExpenseShares, Summary};
@@ -35,8 +38,11 @@ use crate::{Group, GroupError, Language};
 /// a call with [`block_on`](eranos_core::cooperative::block_on), which sleeps
 /// while the call waits for the lock.
 ///
-/// Clones share one group. [`Debug`](fmt::Debug) never locks, so it prints
-/// none of the group.
+/// A caller that needs several reads or changes to see no other call in
+/// between takes a guard, with [`read`](Self::read) or
+/// [`write`](Self::write), and calls the group's own methods on it. Clones
+/// share one group. [`Debug`](fmt::Debug) never locks, so it prints none of
+/// the group.
 ///
 /// # Examples
 ///
@@ -434,6 +440,82 @@ impl SharedGroup {
 
     // --- Locking -------------------------------------------------------------
 
+    /// Waits for the shared lock, then reads the group through the guard
+    /// until it is dropped.
+    pub fn read(&self) -> impl Future<Output = GroupReadGuard> + Send + 'static {
+        let group = Arc::clone(&self.group);
+        async move { GroupReadGuard(group.read_arc().await) }
+    }
+
+    /// Waits for the exclusive lock, then changes the group through the
+    /// guard until it is dropped.
+    pub fn write(&self) -> impl Future<Output = GroupWriteGuard> + Send + 'static {
+        let group = Arc::clone(&self.group);
+        async move { GroupWriteGuard(group.write_arc().await) }
+    }
+
+    /// Takes the shared lock without waiting.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::Busy`] when a change holds the lock or waits for it.
+    pub fn try_read(&self) -> Result<GroupReadGuard, GroupError> {
+        self.group
+            .try_read_arc()
+            .map(GroupReadGuard)
+            .ok_or(GroupError::Busy)
+    }
+
+    /// Takes the exclusive lock without waiting.
+    ///
+    /// # Errors
+    ///
+    /// [`GroupError::Busy`] when another call holds the lock.
+    pub fn try_write(&self) -> Result<GroupWriteGuard, GroupError> {
+        self.group
+            .try_write_arc()
+            .map(GroupWriteGuard)
+            .ok_or(GroupError::Busy)
+    }
+
+    /// Waits for the shared lock on this thread, which sleeps meanwhile.
+    ///
+    /// It is not compiled for wasm, where the one thread would sleep with
+    /// no thread left to release the lock; [`try_read`](Self::try_read)
+    /// works there.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn read_blocking(&self) -> GroupReadGuard {
+        block_on(self.read())
+    }
+
+    /// Waits for the exclusive lock on this thread, which sleeps meanwhile.
+    ///
+    /// It is not compiled for wasm, where the one thread would sleep with
+    /// no thread left to release the lock; [`try_write`](Self::try_write)
+    /// works there.
+    #[cfg(not(target_family = "wasm"))]
+    pub fn write_blocking(&self) -> GroupWriteGuard {
+        block_on(self.write())
+    }
+
+    /// Whether a call holds the lock, shared or exclusive.
+    #[must_use]
+    pub fn is_locked(&self) -> bool {
+        self.group.try_write().is_none()
+    }
+
+    /// The group, taken back from its last handle.
+    ///
+    /// # Errors
+    ///
+    /// The shared group itself, while a clone of it or a call still in
+    /// progress shares the group.
+    pub fn into_group(self) -> Result<Group, Self> {
+        Arc::try_unwrap(self.group)
+            .map(RwLock::into_inner)
+            .map_err(|group| Self { group })
+    }
+
     /// A call that reads the group under the shared lock, which it holds
     /// for one poll.
     fn read_with<T: Send + 'static>(
@@ -460,6 +542,46 @@ impl fmt::Debug for SharedGroup {
         formatter
             .debug_struct("SharedGroup")
             .finish_non_exhaustive()
+    }
+}
+
+/// Reads a [`SharedGroup`] under its shared lock, which it holds until it is
+/// dropped; it dereferences to the [`Group`].
+///
+/// It borrows nothing, so it can be kept across an await or moved to
+/// another thread.
+#[derive(Debug)]
+#[must_use = "the lock is released as soon as the guard is dropped"]
+pub struct GroupReadGuard(RwLockReadGuardArc<Group>);
+
+impl Deref for GroupReadGuard {
+    type Target = Group;
+
+    fn deref(&self) -> &Group {
+        &self.0
+    }
+}
+
+/// Changes a [`SharedGroup`] under its exclusive lock, which it holds until
+/// it is dropped; it dereferences to the [`Group`].
+///
+/// It borrows nothing, so it can be kept across an await or moved to
+/// another thread.
+#[derive(Debug)]
+#[must_use = "the lock is released as soon as the guard is dropped"]
+pub struct GroupWriteGuard(RwLockWriteGuardArc<Group>);
+
+impl Deref for GroupWriteGuard {
+    type Target = Group;
+
+    fn deref(&self) -> &Group {
+        &self.0
+    }
+}
+
+impl DerefMut for GroupWriteGuard {
+    fn deref_mut(&mut self) -> &mut Group {
+        &mut self.0
     }
 }
 

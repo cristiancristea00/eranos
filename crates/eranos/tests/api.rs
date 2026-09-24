@@ -52,6 +52,8 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::group::Language>();
         #[cfg(feature = "serde")]
         assert_send_and_sync::<eranos::group::SavedGroup>();
+        assert_send_and_sync::<eranos::group::GroupReadGuard>();
+        assert_send_and_sync::<eranos::group::GroupWriteGuard>();
         assert_send_and_sync::<eranos::group::SharedGroup>();
         // Identifiers.
         assert_send_and_sync::<eranos::id::CategoryId>();

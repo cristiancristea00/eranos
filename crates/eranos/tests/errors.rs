@@ -260,6 +260,7 @@ fn group_errors() -> Vec<(GroupError, &'static str)> {
             GroupError::BuiltInCategory,
             "the built-in category cannot be renamed or removed",
         ),
+        (GroupError::Busy, "the group is locked by another call"),
         (
             GroupError::DuplicateCategory(CATEGORY),
             "category 22222222-2222-2222-2222-222222222222 already exists",

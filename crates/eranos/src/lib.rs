@@ -166,7 +166,9 @@ pub mod group {
     #[doc(inline)]
     pub use eranos_group::SavedGroup;
     #[doc(inline)]
-    pub use eranos_group::{Group, GroupBuilder, Language, SharedGroup};
+    pub use eranos_group::{
+        Group, GroupBuilder, GroupReadGuard, GroupWriteGuard, Language, SharedGroup,
+    };
 }
 pub mod id {
     //! Identifiers for groups and their entries.
