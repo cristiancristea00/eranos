@@ -5,6 +5,8 @@
 //! contact details, and error messages end up in logs.
 
 #[doc(inline)]
+pub use eranos_account::{AccountError, IbanError};
+#[doc(inline)]
 pub use eranos_calendar::CalendarError;
 #[doc(inline)]
 pub use eranos_core::IdError;
@@ -14,21 +16,6 @@ pub use eranos_money::MoneyError;
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
-
-/// A payment account, or its details, that could not be built.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum AccountError {
-    /// An account whose name is blank.
-    #[error("the account name must not be empty")]
-    EmptyName,
-    /// A username that is blank.
-    #[error("the username must not be empty")]
-    EmptyUsername,
-    /// An IBAN that failed validation, and why.
-    #[error("invalid IBAN: {0}")]
-    InvalidIban(IbanError),
-}
 
 /// A contact detail that could not be read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
@@ -70,39 +57,6 @@ pub enum LanguageError {
     /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
     #[error("invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`")]
     InvalidLanguage,
-}
-
-/// Why an IBAN was rejected.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum IbanError {
-    /// A character other than an ASCII letter, a digit, or whitespace (which
-    /// is dropped).
-    #[error("only letters, digits, and spaces are allowed")]
-    InvalidCharacter,
-    /// The check digits are 00, 01, or 99, which ISO 13616 never issues, or
-    /// the ISO 7064 mod-97 check failed: the number contains a typo.
-    #[error("the check digits do not match")]
-    InvalidChecksum,
-    /// Not two letters followed by two check digits.
-    #[error("expected a two-letter country code followed by two check digits")]
-    InvalidFormat,
-    /// A letter where the country's account number has a digit, or a digit
-    /// where it has a letter, by the BBAN structure of the SWIFT IBAN
-    /// registry.
-    #[error("the account number does not match this country's format")]
-    InvalidStructure,
-    /// A country code without an entry in the SWIFT IBAN registry.
-    #[error("the country code is not in the IBAN registry")]
-    UnknownCountry,
-    /// The wrong number of characters for the country.
-    #[error("expected {expected} characters for this country, found {found}")]
-    WrongLength {
-        /// The registry length for the country.
-        expected: usize,
-        /// The number of characters after removing spaces.
-        found: usize,
-    },
 }
 
 /// An [`Expense`](crate::Expense) or [`Item`](crate::Item) whose parts do not

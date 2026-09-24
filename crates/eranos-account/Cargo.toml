@@ -1,0 +1,28 @@
+# eranos-account: where a member can be paid, an IBAN or a payment-app
+# username with the account's name. An internal crate: the `eranos` crate
+# re-exports the types callers use.
+[package]
+name = "eranos-account"
+description = "The payment accounts of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `Serialize` and `Deserialize` for accounts, IBANs, and usernames.
+serde = ["dep:serde", "eranos-core/serde"]
+
+[dependencies]
+eranos-core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

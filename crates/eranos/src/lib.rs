@@ -144,6 +144,7 @@ pub use group::{Group, Language};
 #[doc(no_inline)]
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};
+#[doc(no_inline)]
 pub use member::{
     Account, AccountDetails, AccountKind, Email, Iban, Member, PhoneNumber, Username,
 };

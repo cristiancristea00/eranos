@@ -311,6 +311,7 @@ name = "eranos"
 version = "0.4.0"
 dependencies = [
  "criterion",
+ "eranos-account",
  "eranos-calendar",
  "eranos-core",
  "eranos-money",
@@ -323,6 +324,18 @@ dependencies = [
  "serde",
  "serde_json",
  "tabled",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-account"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-core",
+ "proptest",
+ "serde",
+ "serde_json",
  "thiserror 2.0.20",
 ]
 

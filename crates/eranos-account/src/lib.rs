@@ -1,12 +1,19 @@
 //! Where a member can be paid: bank accounts and payment-app usernames.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
+
+mod error;
+mod iban;
 
 use std::fmt;
 use std::str::FromStr;
 
 use eranos_core::text;
 
-use crate::error::AccountError;
-use crate::member::Iban;
+pub use error::{AccountError, IbanError};
+pub use iban::Iban;
 
 /// A named place where a member can receive money, such as `ING` with an
 /// IBAN or `Revolut` with a username.
@@ -26,11 +33,7 @@ use crate::member::Iban;
 /// # Ok::<(), eranos::error::AccountError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "AccountRecord")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Account {
     details: AccountDetails,
     name: String,
@@ -176,12 +179,13 @@ struct AccountRecord {
     name: String,
 }
 
+// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
+// from the private record would appear on the facade's page for `Account`.
 #[cfg(feature = "serde")]
-impl TryFrom<AccountRecord> for Account {
-    type Error = AccountError;
-
-    fn try_from(record: AccountRecord) -> Result<Self, Self::Error> {
-        Self::new(record.details, record.name)
+impl<'de> serde::Deserialize<'de> for Account {
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        let record = AccountRecord::deserialize(deserialiser)?;
+        Self::new(record.details, record.name).map_err(serde::de::Error::custom)
     }
 }
 
