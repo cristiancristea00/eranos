@@ -3,23 +3,19 @@
 use std::fmt;
 use std::str::FromStr;
 
-use zeroize::Zeroizing;
-
 use crate::error::{IbanError, ValueError};
-use crate::secret::Secret;
 
 mod registry;
 
-/// A validated IBAN, held as a secret.
+/// A validated IBAN.
 ///
 /// Parsing checks the country code against the SWIFT IBAN registry, the
 /// length and the account-number format (the BBAN structure) the registry
 /// sets for that country, and the ISO 7064 mod-97 check digits, which must
 /// lie between 02 and 98 and catch every single-character typo and most
-/// transpositions.
-/// The number is wiped from memory when dropped; `Debug` and `Display` show
-/// only a masked form, and the full number is available through
-/// [`expose_secret`](Self::expose_secret).
+/// transpositions. The number is kept in electronic format, uppercase and
+/// without spaces, which [`as_str`](Self::as_str) returns and `Display`
+/// prints.
 ///
 /// # Examples
 ///
@@ -27,9 +23,9 @@ mod registry;
 /// use eranos::Iban;
 ///
 /// let iban = Iban::parse("de89 3704 0044 0532 0130 00")?;
-/// assert_eq!(iban.expose_secret(), "DE89370400440532013000");
+/// assert_eq!(iban.as_str(), "DE89370400440532013000");
 /// assert_eq!(iban.country_code(), "DE");
-/// assert_eq!(iban.to_string(), "DE89 •••• 3000");
+/// assert_eq!(iban.to_string(), "DE89370400440532013000");
 ///
 /// // One mistyped digit fails the check digits.
 /// assert!(Iban::parse("DE89 3704 0044 0532 0130 01").is_err());
@@ -37,8 +33,8 @@ mod registry;
 /// assert!(Iban::parse("DE46 37O4 0044 0532 0130 00").is_err());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
-#[derive(Clone, PartialEq, Eq)]
-pub struct Iban(Secret);
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Iban(String);
 
 impl Iban {
     /// Parses an IBAN in electronic (`DE89370400440532013000`) or print
@@ -52,9 +48,7 @@ impl Iban {
     }
 
     fn validate(text: &str) -> Result<Self, IbanError> {
-        // Normalised never outgrows the input, so the buffer never
-        // reallocates and leaves no unwiped copy behind.
-        let mut normalised = Zeroizing::new(String::with_capacity(text.len()));
+        let mut normalised = String::with_capacity(text.len());
         for character in text.chars() {
             match character {
                 'a'..='z' | 'A'..='Z' | '0'..='9' => {
@@ -95,33 +89,20 @@ impl Iban {
         if matches!(bytes.get(2..4), Some(b"00" | b"01" | b"99")) || mod_97(bytes) != 1 {
             return Err(IbanError::InvalidChecksum);
         }
-        Ok(Self(Secret::from_zeroising(normalised)))
+        Ok(Self(normalised))
+    }
+
+    /// The number in electronic format: uppercase, without spaces.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 
     /// The two-letter country code, such as `"DE"`.
     #[must_use]
     pub fn country_code(&self) -> &str {
         // Parsing guaranteed at least four ASCII characters.
-        self.0.expose().get(..2).unwrap_or_default()
-    }
-
-    /// The number with everything but the first and last four characters
-    /// hidden, such as `DE89 •••• 3000`; safe to show and log.
-    #[must_use]
-    pub fn masked(&self) -> String {
-        let number = self.0.expose();
-        // Parsing guaranteed at least 15 ASCII characters.
-        let head = number.get(..4).unwrap_or_default();
-        let tail = number
-            .get(number.len().saturating_sub(4)..)
-            .unwrap_or_default();
-        format!("{head} •••• {tail}")
-    }
-
-    /// The full number in electronic format: uppercase, without spaces.
-    #[must_use]
-    pub fn expose_secret(&self) -> &str {
-        self.0.expose()
+        self.0.get(..2).unwrap_or_default()
     }
 }
 
@@ -169,15 +150,9 @@ fn mod_97(bytes: &[u8]) -> u32 {
         })
 }
 
-impl fmt::Debug for Iban {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_tuple("Iban").field(&self.masked()).finish()
-    }
-}
-
 impl fmt::Display for Iban {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.masked())
+        formatter.write_str(&self.0)
     }
 }
 
@@ -192,7 +167,7 @@ impl FromStr for Iban {
 #[cfg(feature = "serde")]
 impl serde::Serialize for Iban {
     fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.serialize_str(self.expose_secret())
+        serialiser.serialize_str(self.as_str())
     }
 }
 

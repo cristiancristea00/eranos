@@ -1,15 +1,12 @@
 //! Accounts tell other members where to send a repayment. These tests keep
 //! the account label present and trimmed, keep IBANs and usernames
 //! convertible into account details of the right kind, and keep usernames
-//! out of debug output, and therefore out of logs and crash reports, however
-//! deeply they are nested.
+//! printed as they were entered.
 
 use super::*;
 
-use crate::member::Member;
-
-/// The username every test holds; distinctive, so a leak is easy to find.
-const USERNAME: &str = "@ana.popescu.secret";
+/// The username most tests hold.
+const USERNAME: &str = "@ana.popescu";
 
 fn iban() -> Iban {
     Iban::parse("RO49AAAA1B31007593840000").unwrap()
@@ -76,7 +73,7 @@ fn kind_reports_the_kind_of_details() {
 #[test]
 fn usernames_are_trimmed() {
     // Surrounding whitespace.
-    assert_eq!(Username::new(" \t@ana \n").unwrap().expose_secret(), "@ana");
+    assert_eq!(Username::new(" \t@ana \n").unwrap().as_str(), "@ana");
     // `FromStr` parses the same way.
     assert_eq!("@ana".parse::<Username>(), Username::new("@ana"));
 }
@@ -97,38 +94,26 @@ fn a_blank_username_is_rejected() {
     }
 }
 
-/// A username would leak into logs through the debug output of anything
-/// that holds it.
+/// Payment screens would show the username differently from how it was
+/// entered, or debug output would show something else than the value.
 #[test]
-fn usernames_never_appear_in_debug_output() {
-    // The username itself.
-    assert_eq!(format!("{:?}", username()), "Username([REDACTED])");
-    // The account details and the account.
+fn usernames_print_as_entered() {
+    // Display and debug output.
+    assert_eq!(username().to_string(), USERNAME);
+    assert_eq!(format!("{:?}", username()), "Username(\"@ana.popescu\")");
+    // Nested in account details.
     let details = AccountDetails::from(username());
-    let account = Account::new(username(), "Revolut").unwrap();
-    // A member holding the account.
-    let member = Member::builder("Ana")
-        .account(account.clone())
-        .build()
-        .unwrap();
-    for debug in [
+    assert_eq!(
         format!("{details:?}"),
-        format!("{account:?}"),
-        format!("{account:#?}"),
-        format!("{member:?}"),
-        format!("{member:#?}"),
-    ] {
-        assert!(!debug.contains(USERNAME), "{debug}");
-        assert!(!debug.contains("ana.popescu"), "{debug}");
-        assert!(debug.contains("[REDACTED]"), "{debug}");
-    }
+        "Username(Username(\"@ana.popescu\"))"
+    );
 }
 
 /// Payment screens would show a different username than the one entered.
 #[test]
-fn expose_secret_returns_the_username() {
+fn as_str_returns_the_username() {
     // The stored text.
-    assert_eq!(username().expose_secret(), USERNAME);
+    assert_eq!(username().as_str(), USERNAME);
     // Equality compares the text.
     assert_eq!(username(), Username::new(USERNAME).unwrap());
     assert_ne!(username(), Username::new("@bob").unwrap());

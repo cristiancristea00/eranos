@@ -15,7 +15,7 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 7. [Settlement strategies](#7-settlement-strategies)
 8. [Validation and errors](#8-validation-and-errors)
 9. [The serialised form](#9-the-serialised-form)
-10. [Account details and secrets](#10-account-details-and-secrets)
+10. [Account details](#10-account-details)
 11. [Future bindings](#11-future-bindings)
 12. [Key numbers](#12-key-numbers)
 
@@ -42,13 +42,12 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   pinned exactly), `jiff` (calendar dates, times of day, and their ISO 8601
   parser, without its clock or time zones), and `rlibphonenumber`
   (libphonenumber's numbering plans, pinned exactly); besides them
-  `thiserror` (derive only), `uuid` (v7 identifiers), `zeroize` (wiping
-  secrets), and optionally `serde`. Everything else, including IBAN
-  validation and the email rules, is in the crate. The licences the apps'
-  notices must list are Apache-2.0 (iso4217-static, and rlibphonenumber with
-  libphonenumber's metadata), Unicode-3.0 (ICU4X), and Unlicense or MIT
-  (jiff), besides those of the crates they bring; `deny.toml` does not
-  check licences.
+  `thiserror` (derive only), `uuid` (v7 identifiers), and optionally
+  `serde`. Everything else, including IBAN validation and the email rules,
+  is in the crate. The licences the apps' notices must list are Apache-2.0
+  (iso4217-static, and rlibphonenumber with libphonenumber's metadata),
+  Unicode-3.0 (ICU4X), and Unlicense or MIT (jiff), besides those of the
+  crates they bring; `deny.toml` does not check licences.
 
 ## 2. Module map
 
@@ -63,7 +62,7 @@ flowchart TD
     MEMBER["member<br/>Member, Email, PhoneNumber,<br/>Account, Iban, Username"]
     CATEGORY["category<br/>Category"]
     MONEY["money<br/>Currency, Money, Cost, ExchangeRate,<br/>Percentage, Parts, allocation"]
-    BASE["id · calendar · error · text · secret"]
+    BASE["id · calendar · error · text"]
     GROUP --> RESOLUTION
     GROUP --> LEDGER
     GROUP --> SETTLEMENT
@@ -108,15 +107,15 @@ flowchart TD
  └─────────────────┬─────────────────────┘                        │
                    ▼                                              ▼
          ┌──────────────────────────────────────────────────────────┐
-         │ id · calendar · error · text · secret                    │
+         │ id · calendar · error · text                             │
          └──────────────────────────────────────────────────────────┘
 ```
 
 </details>
 
 The root re-exports the types callers name; the modules group them for the
-documentation. `resolution`, `secret`, and `text` are private, and
-`money::allocation` is crate-private: they are free to change.
+documentation. `resolution` and `text` are private, and `money::allocation`
+is crate-private: they are free to change.
 
 ## 3. Data model
 
@@ -388,12 +387,12 @@ inputs, never the derived totals:
   silently dropped. New optional fields get `#[serde(default)]`, so files
   written by older releases keep loading.
 
-## 10. Account details and secrets
+## 10. Account details
 
-IBANs and usernames are held in a buffer that is zeroed when dropped
-(`zeroize`), print as `DE89 •••• 3000` or `[REDACTED]` in `Debug` and
-`Display`, and are readable only through `expose_secret()`. IBANs are
-validated against the SWIFT IBAN Registry (release 103): the country code,
+IBANs and usernames are validated values, held, printed, and serialised in
+clear text like every other value: `as_str()` returns an IBAN in electronic
+format and a username as entered, trimmed. IBANs are validated against the
+SWIFT IBAN Registry (release 103): the country code,
 the country's length and BBAN structure (which positions hold digits and
 which letters), and the ISO 7064 mod-97 check digits, which must lie
 between 02 and 98 and catch every single-character typo.
@@ -404,9 +403,7 @@ off without global logger state; a binding or an app that installs a logger
 keeps the `rlibphonenumber` target below `trace`, so members' numbers stay
 out of its logs.
 
-Copies made outside the library (the caller's strings, a deserialiser's
-buffers, the Swift or Kotlin side of a binding) are out of its reach, and
-the serialised form contains the details in clear text. Encryption at rest
+The serialised form contains the details in clear text. Encryption at rest
 belongs to each platform's secure storage (Keychain, Keystore, Web Crypto),
 which holds keys the library never sees.
 

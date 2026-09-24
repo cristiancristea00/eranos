@@ -26,7 +26,6 @@ jiff = { workspace = true }
 rlibphonenumber = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
-zeroize = { workspace = true }
 serde = { workspace = true, optional = true }
 
 [dev-dependencies]

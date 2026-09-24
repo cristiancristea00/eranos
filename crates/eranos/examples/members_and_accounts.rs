@@ -1,6 +1,6 @@
-//! Members with contact details and payment accounts: IBANs are validated
-//! and masked, secrets never reach debug output, and a member who leaves is
-//! archived rather than removed.
+//! Members with contact details and payment accounts: IBANs, emails, and
+//! phone numbers are validated, and a member who leaves is archived rather
+//! than removed.
 //!
 //! Run with `cargo run -p eranos --example members_and_accounts`.
 
@@ -64,11 +64,11 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
     println!("{table}");
 }
 
-/// An account as the apps would show it: IBANs masked, usernames hidden.
+/// An account with its label and its details.
 fn describe(account: &Account) -> String {
     let details = match account.details() {
-        AccountDetails::Iban(iban) => iban.masked(),
-        AccountDetails::Username(_) => "username on file".to_owned(),
+        AccountDetails::Iban(iban) => iban.as_str().to_owned(),
+        AccountDetails::Username(username) => username.as_str().to_owned(),
         _ => format!("{:?}", account.kind()),
     };
     format!("{}: {details}", account.name())
@@ -142,34 +142,14 @@ fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
     print_members(group);
     println!(
         "The phone number was stored in E.164 form, +40712345678, and the table shows it\n\
-         grouped for reading; the IBAN was stored in its electronic form, and the table\n\
-         shows it masked, the way the apps should."
+         grouped for reading; the IBAN was stored in its electronic form, uppercase and\n\
+         without spaces, the way banking apps accept it."
     );
     Ok((ana, bob))
 }
 
-fn secrets(member: &Member) {
-    section("2. Account details are secrets");
-    println!(
-        "IBANs and usernames are wiped from memory when dropped, and debug output never\n\
-         shows them. Printing Ana's accounts in debug form, as a log line would:"
-    );
-    for account in member.accounts() {
-        println!("  {account:?}");
-    }
-    println!("The full value takes an explicit call, for the moment it is really needed:");
-    for account in member.accounts() {
-        let secret = match account.details() {
-            AccountDetails::Iban(iban) => iban.expose_secret(),
-            AccountDetails::Username(username) => username.expose_secret(),
-            _ => "",
-        };
-        println!("  {}.expose_secret() = {secret}", account.name());
-    }
-}
-
 fn validation() {
-    section("3. What validation accepts");
+    section("2. What validation accepts");
     println!(
         "IBANs are checked against the SWIFT registry: the country, its length, which\n\
          positions hold digits and which letters, and the mod-97 check digits, which catch\n\
@@ -180,7 +160,7 @@ fn validation() {
     let iban = |input: &'static str| CheckRow {
         input,
         kind: "IBAN",
-        result: outcome(Iban::parse(input), |iban| iban.masked()),
+        result: outcome(Iban::parse(input), |iban| iban.as_str().to_owned()),
     };
     let email = |input: &'static str| CheckRow {
         input,
@@ -211,7 +191,7 @@ fn validation() {
 }
 
 fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
-    section("4. A flatmate moves out");
+    section("3. A flatmate moves out");
     let rent = Expense::builder(
         Money::parse("900.00", Currency::EUR)?,
         CalendarDate::new(1, 9, 2026)?,
@@ -272,7 +252,6 @@ fn main() -> Result<(), Box<dyn Error>> {
          email, phone, and the accounts they can be paid to are optional."
     );
     let (ana, bob) = members(&mut group)?;
-    secrets(group.member(ana).ok_or("Ana was added")?);
     validation();
     moving_out(&mut group, ana, bob)
 }

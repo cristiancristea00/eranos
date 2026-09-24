@@ -2,7 +2,7 @@
 //! registry's own example valid for every country, catch single-digit typos,
 //! letters typed for digits, and check digits no bank issues before a
 //! repayment bounces, reject numbers of an unknown country or the wrong
-//! length, and keep the full number out of debug output and logs.
+//! length, and keep every number in the electronic format banks accept.
 
 use super::*;
 
@@ -31,7 +31,7 @@ fn every_registry_example_validates() {
         assert!(example.starts_with(country.code), "{example}");
         assert_eq!(example.len(), usize::from(country.length), "{example}");
         let iban = Iban::parse(example).unwrap();
-        assert_eq!(iban.expose_secret(), *example);
+        assert_eq!(iban.as_str(), *example);
         assert_eq!(iban.country_code(), country.code);
     }
 }
@@ -157,11 +157,11 @@ fn check_digits_outside_02_to_98_are_rejected() {
 fn print_format_and_lowercase_are_accepted() {
     // The German example.
     let iban = Iban::parse("de89 3704 0044 0532 0130 00").unwrap();
-    assert_eq!(iban.expose_secret(), GERMAN);
+    assert_eq!(iban.as_str(), GERMAN);
     // Every example.
     for example in registry::EXAMPLES {
         let example_iban = Iban::parse(&print_format(example)).unwrap();
-        assert_eq!(example_iban.expose_secret(), *example);
+        assert_eq!(example_iban.as_str(), *example);
     }
     // Other whitespace between the groups.
     assert_eq!(
@@ -298,51 +298,42 @@ fn a_malformed_prefix_is_rejected() {
     }
 }
 
-/// Screens and logs would show more of the number than the first and last
-/// four characters, or the wrong ones.
+/// A payment screen would label the account with the wrong country.
 #[test]
-fn country_code_and_masked_show_only_the_ends() {
-    // The German example.
-    let iban = Iban::parse(GERMAN).unwrap();
-    assert_eq!(iban.country_code(), "DE");
-    assert_eq!(iban.masked(), "DE89 •••• 3000");
-    // The shortest and the longest numbers in the registry.
-    assert_eq!(
-        Iban::parse("NO9386011117947").unwrap().masked(),
-        "NO93 •••• 7947"
-    );
+fn country_code_is_the_first_two_letters() {
+    // The German example, and the shortest and the longest numbers in the
+    // registry.
+    assert_eq!(Iban::parse(GERMAN).unwrap().country_code(), "DE");
+    assert_eq!(Iban::parse("NO9386011117947").unwrap().country_code(), "NO");
     assert_eq!(
         Iban::parse("RU0304452522540817810538091310419")
             .unwrap()
-            .masked(),
-        "RU03 •••• 0419"
+            .country_code(),
+        "RU"
     );
 }
 
-/// The full account number would leak into logs through `{:?}` or `{}`.
+/// Screens and debug output would show the number in another form than the
+/// one banks accept.
 #[test]
-fn debug_and_display_never_show_the_full_number() {
-    // The German example.
-    let iban = Iban::parse(GERMAN).unwrap();
-    assert_eq!(format!("{iban:?}"), "Iban(\"DE89 •••• 3000\")");
-    assert_eq!(iban.to_string(), "DE89 •••• 3000");
-    // The hidden middle of every example stays hidden.
+fn debug_and_display_show_the_electronic_format() {
+    // The German example, entered in print format.
+    let iban = Iban::parse("de89 3704 0044 0532 0130 00").unwrap();
+    assert_eq!(format!("{iban:?}"), "Iban(\"DE89370400440532013000\")");
+    assert_eq!(iban.to_string(), GERMAN);
+    // Every example.
     for example in registry::EXAMPLES {
-        let example_iban = Iban::parse(example).unwrap();
-        let hidden: String = example.chars().skip(4).take(example.len() - 8).collect();
-        assert!(!format!("{example_iban:?}").contains(&hidden), "{example}");
-        assert!(!format!("{example_iban:#?}").contains(&hidden), "{example}");
-        assert!(!example_iban.to_string().contains(&hidden), "{example}");
+        assert_eq!(Iban::parse(example).unwrap().to_string(), *example);
     }
 }
 
 /// Payment screens would show the number with spaces or in lowercase, which
 /// some banking apps refuse to paste.
 #[test]
-fn expose_secret_returns_the_electronic_format() {
+fn as_str_returns_the_electronic_format() {
     // Uppercase, without spaces.
     let iban = Iban::parse(" gb29 nwbk 6016 1331 9268 19 ").unwrap();
-    assert_eq!(iban.expose_secret(), "GB29NWBK60161331926819");
+    assert_eq!(iban.as_str(), "GB29NWBK60161331926819");
 }
 
 /// The same account typed in two formats would count as two accounts, or

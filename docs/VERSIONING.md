@@ -21,8 +21,8 @@ change to the allocation order, the FNV-1a tie rotation, the rounding rule,
 or a strategy's payment choice changes what users see without any API
 change, and counts as breaking.
 
-Private modules (`resolution`, `secret`, `text`, `money::allocation`) and
-the internal layout of `Group` move freely.
+Private modules (`resolution`, `text`, `money::allocation`) and the
+internal layout of `Group` move freely.
 
 ## 2. What moves the number
 
@@ -70,8 +70,7 @@ an old format stays until a breaking release says otherwise.
 ## 5. What the version does not promise
 
 - **Performance.** Timings are documented, not guaranteed.
-- **`Debug` output.** Its format may change in any release; secrets stay
-  redacted.
+- **`Debug` output.** Its format may change in any release.
 - **Error messages.** The `Display` text of errors may be reworded; match on
   the variants.
 - **Publishing.** The crate is `publish = false`: the apps consume it from

@@ -176,7 +176,7 @@ failure); `#[allow]` is itself a lint error.
   serialise, behaviour, licence, artefact) and British words (full stop, per
   cent, towards); a list of three or more items takes a comma before its
   final "and" or "or". Names that belong to other code keep their spelling
-  inside code spans: `Serialize`, `skip_serializing_if`, `Zeroizing`,
+  inside code spans: `Serialize`, `skip_serializing_if`,
   `CARGO_TERM_COLOR`, `actions/upload-artifact`.
 - **Tests are claims.** Unit tests live in `<module>/tests.rs` (declared
   with `#[cfg(test)] mod tests;` at the bottom of the module); every test

@@ -64,8 +64,6 @@ thiserror = "2.0.20"
 # `v7` pulls getrandom for the random bits; a wasm32-unknown-unknown build
 # additionally needs the `js` feature, which the wasm binding crate enables.
 uuid = { version = "1.26", features = ["v7"] }
-# Wipes account numbers and usernames from memory when they are dropped.
-zeroize = "1.9"
 # Behind eranos's optional `serde` feature, and xtask's reading of `cargo
 # metadata`; only the derive macros are used.
 serde = { version = "1.0.229", features = ["derive"] }

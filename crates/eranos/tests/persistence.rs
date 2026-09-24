@@ -359,16 +359,15 @@ fn a_bare_group_round_trips_through_json() {
 }
 
 /// Account details are stored in clear text, for the app's secure storage,
-/// but never appear in debug output that could reach logs.
+/// and print in full, like every other value.
 #[test]
-fn secrets_serialise_but_never_print() {
+fn account_details_serialise_and_print_in_clear_text() {
     let (group, ana, _, _) = group();
     let text = serde_json::to_string(&group).unwrap();
     assert!(text.contains("RO49AAAA1B31007593840000"));
     let debug = format!("{:?}", group.member(ana).unwrap());
-    assert!(!debug.contains("RO49AAAA1B31007593840000"));
-    assert!(!debug.contains("@ana"));
-    assert!(debug.contains("RO49 •••• 0000"));
+    assert!(debug.contains("RO49AAAA1B31007593840000"), "{debug}");
+    assert!(debug.contains("@ana"), "{debug}");
 }
 
 /// Value types serialise on their own in the same shapes as inside a

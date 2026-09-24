@@ -5,13 +5,12 @@ use std::str::FromStr;
 
 use crate::error::{Field, ValueError};
 use crate::member::Iban;
-use crate::secret::Secret;
 use crate::text;
 
 /// A named place where a member can receive money, such as `ING` with an
 /// IBAN or `Revolut` with a username.
 ///
-/// The name is a label and is not secret; the account details are.
+/// The name is a label; the details say where the money goes.
 ///
 /// # Examples
 ///
@@ -53,7 +52,7 @@ impl Account {
         })
     }
 
-    /// The secret account details.
+    /// The account details.
     #[must_use]
     pub const fn details(&self) -> &AccountDetails {
         &self.details
@@ -72,7 +71,7 @@ impl Account {
     }
 }
 
-/// The secret details of an [`Account`].
+/// The details of an [`Account`]: where the money goes.
 ///
 /// Serialised as `{"iban": "…"}` or `{"username": "…"}`, in clear text.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -112,7 +111,7 @@ impl From<Username> for AccountDetails {
     }
 }
 
-/// The kind of an [`Account`], without its secret details.
+/// The kind of an [`Account`], without its details.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
@@ -127,12 +126,11 @@ pub enum AccountKind {
     Username,
 }
 
-/// A username in a payment app, held as a secret.
+/// A username in a payment app, such as `@ana`.
 ///
-/// The text is wiped from memory when dropped and redacted in `Debug`; it is
-/// available through [`expose_secret`](Self::expose_secret).
-#[derive(Clone, PartialEq, Eq)]
-pub struct Username(Secret);
+/// [`as_str`](Self::as_str) returns it and `Display` prints it, trimmed.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Username(String);
 
 impl Username {
     /// Returns the username `text`, trimmed.
@@ -147,19 +145,19 @@ impl Username {
                 field: Field::Username,
             });
         }
-        Ok(Self(Secret::new(trimmed.to_owned())))
+        Ok(Self(trimmed.to_owned()))
     }
 
     /// The username.
     #[must_use]
-    pub fn expose_secret(&self) -> &str {
-        self.0.expose()
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
-impl fmt::Debug for Username {
+impl fmt::Display for Username {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_tuple("Username").field(&self.0).finish()
+        formatter.write_str(&self.0)
     }
 }
 
@@ -191,7 +189,7 @@ impl TryFrom<AccountRecord> for Account {
 #[cfg(feature = "serde")]
 impl serde::Serialize for Username {
     fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
-        serialiser.serialize_str(self.expose_secret())
+        serialiser.serialize_str(self.as_str())
     }
 }
 

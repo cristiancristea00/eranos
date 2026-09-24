@@ -91,7 +91,6 @@ pub mod settlement;
 pub mod transfer;
 
 mod resolution;
-mod secret;
 #[cfg(feature = "serde")]
 mod serde_text;
 mod text;
