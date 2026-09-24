@@ -191,6 +191,7 @@ impl MemberSummary {
 ///
 /// The text form is `owes 12.00 EUR`, `gets back 12.00 EUR`, or `settled`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Balance {
     /// The others owe this much to the member.
     GetsBack(Money),
