@@ -6,3 +6,9 @@ rules:
         # Actions are referenced by release tag, which Dependabot security
         # updates bump; no action needs a commit SHA.
         "*": ref-pin
+  dependabot-cooldown:
+    # A cooldown delays version updates only. dependabot.yml turns those off
+    # for every ecosystem (open-pull-requests-limit: 0), and security updates
+    # ignore cooldowns, so the setting this audit asks for would do nothing.
+    # Turn the audit back on together with version updates.
+    disable: true

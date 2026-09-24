@@ -1,0 +1,28 @@
+# Security updates only: `open-pull-requests-limit: 0` turns off version
+# updates for an ecosystem, and security-update pull requests are not subject
+# to it. They also need Dependabot alerts and Dependabot security updates
+# switched on in the repository settings. Dependabot's commits carry no
+# Signed-off-by trailer, so the sign-off AGENTS.md requires is added when
+# merging.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    # Required by the schema; it schedules version updates only.
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    commit-message:
+      # ci(deps): bump actions/checkout from 7.0.1 to 7.0.2
+      prefix: ci
+      include: scope
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 0
+    commit-message:
+      # build(deps): … for dependencies, build(deps-dev): … for
+      # dev-dependencies
+      prefix: build
+      include: scope
