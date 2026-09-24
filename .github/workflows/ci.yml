@@ -106,7 +106,9 @@ jobs:
       - run: cargo test --workspace --no-default-features --locked
 
   test-other-os:
-    name: Test (${{ matrix.os }})
+    # No matrix context in the name: GitHub appends the matrix values to a
+    # job it runs, but shows a skipped job's name unexpanded.
+    name: Test on other OS
     # Dispatched by hand only: macOS minutes count about ten times and Windows
     # minutes about twice against the 2,000 included each month.
     if: github.event_name == 'workflow_dispatch'
