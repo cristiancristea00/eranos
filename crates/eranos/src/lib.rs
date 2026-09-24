@@ -103,7 +103,36 @@ pub mod category {
     #[doc(inline)]
     pub use eranos_category::Category;
 }
-pub mod error;
+pub mod error {
+    //! Error types, one per module: every function reports the failure of
+    //! its own module, and no error wraps another.
+    //!
+    //! No error echoes the text it rejected: inputs include account numbers
+    //! and contact details, and error messages end up in logs.
+
+    #[doc(inline)]
+    pub use eranos_account::{AccountError, IbanError};
+    #[doc(inline)]
+    pub use eranos_calendar::CalendarError;
+    #[doc(inline)]
+    pub use eranos_category::CategoryError;
+    #[doc(inline)]
+    pub use eranos_contact::ContactError;
+    #[doc(inline)]
+    pub use eranos_core::IdError;
+    #[doc(inline)]
+    pub use eranos_expense::ExpenseError;
+    #[doc(inline)]
+    pub use eranos_group::{GroupError, LanguageError};
+    #[doc(inline)]
+    pub use eranos_member::MemberError;
+    #[doc(inline)]
+    pub use eranos_money::MoneyError;
+    #[doc(inline)]
+    pub use eranos_settlement::SettlementError;
+    #[doc(inline)]
+    pub use eranos_transfer::TransferError;
+}
 pub mod expense {
     //! Expenses: what was bought, who paid, and how the cost is shared.
 
@@ -113,7 +142,16 @@ pub mod expense {
         MemberPercentage, Split, Tip, TipDistribution, TipValue,
     };
 }
-pub mod group;
+pub mod group {
+    //! Groups: the members, categories, expenses, and transfers of a trip, a
+    //! household, or any shared spending, with their totals kept current.
+
+    #[cfg(feature = "serde")]
+    #[doc(inline)]
+    pub use eranos_group::SavedGroup;
+    #[doc(inline)]
+    pub use eranos_group::{Group, GroupBuilder, Language};
+}
 pub mod id {
     //! Identifiers for groups and their entries.
     //!
@@ -181,7 +219,9 @@ pub use expense::{
     TipDistribution, TipValue,
 };
 #[cfg(feature = "serde")]
+#[doc(no_inline)]
 pub use group::SavedGroup;
+#[doc(no_inline)]
 pub use group::{Group, Language};
 #[doc(no_inline)]
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};

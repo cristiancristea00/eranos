@@ -65,7 +65,7 @@ companion that pins concrete numbers.
 | the exact solver finds the true minimum (checked against an exhaustive search)                          | `eranos-settlement/src/minimum/tests.rs`                                                                 |
 | every plan clears every balance, pays only from debtors to creditors, and never overpays                | `eranos-settlement/src/minimum/tests.rs`, `eranos-settlement/src/greedy/tests.rs`, `tests/properties.rs` |
 | greedy needs at most n − 1 payments; the exact plan never more than greedy                              | `eranos-settlement/src/greedy/tests.rs`, `tests/properties.rs`                                           |
-| incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing | `group/tests.rs`                                                                                         |
+| incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing | `eranos-group/src/tests.rs`                                                                              |
 | paid, consumed, and spent agree; balances sum to zero; category totals add up                           | `tests/properties.rs`                                                                                    |
 | the order entries arrive in does not change the group, its totals, or its plans                         | `tests/properties.rs`                                                                                    |
 | removing an expense and adding it back restores the totals exactly                                      | `tests/properties.rs`                                                                                    |

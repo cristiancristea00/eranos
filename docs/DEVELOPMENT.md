@@ -143,8 +143,9 @@ breaking.
 ### 3.6 A new error variant
 
 Error enums are `#[non_exhaustive]`, so a variant is a `feat`. The variant
-joins its module's enum in `error.rs`, in alphabetical order; its message is
-lowercase, has no trailing full stop, and never repeats the rejected text.
+joins its crate's enum in that crate's `error.rs`, in alphabetical order;
+its message is lowercase, has no trailing full stop, and never repeats the
+rejected text.
 Pin the message in its enum's list in `tests/errors.rs`, and name the variant
 in the `# Errors` section of every function that can return it.
 

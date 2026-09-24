@@ -1,33 +1,10 @@
-//! Error types, one per module: every function reports the failure of its
-//! own module, and no error wraps another.
-//!
-//! No error echoes the text it rejected: inputs include account numbers and
-//! contact details, and error messages end up in logs.
+//! The failures of building a group, of changing it, and of reading a
+//! language tag.
 
-#[doc(inline)]
-pub use eranos_account::{AccountError, IbanError};
-#[doc(inline)]
-pub use eranos_calendar::CalendarError;
-#[doc(inline)]
-pub use eranos_category::CategoryError;
-#[doc(inline)]
-pub use eranos_contact::ContactError;
-#[doc(inline)]
-pub use eranos_core::IdError;
-#[doc(inline)]
-pub use eranos_expense::ExpenseError;
-#[doc(inline)]
-pub use eranos_member::MemberError;
-#[doc(inline)]
-pub use eranos_money::MoneyError;
-#[doc(inline)]
-pub use eranos_settlement::SettlementError;
-#[doc(inline)]
-pub use eranos_transfer::TransferError;
+use eranos_core::{CategoryId, ExpenseId, MemberId, TransferId};
+use eranos_money::Currency;
 
-use crate::group::FORMAT;
-use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
-use crate::money::Currency;
+use crate::FORMAT;
 
 /// A language tag that could not be read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]

@@ -1,0 +1,48 @@
+# eranos-group: a group of people sharing expenses, the one place its entries
+# change, and its saved form. An internal crate: the `eranos` crate
+# re-exports the types callers use.
+[package]
+name = "eranos-group"
+description = "The groups of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `Serialize` and `Deserialize` for a group and every type it stores, and
+# `SavedGroup`. A deserialised group is rebuilt through the same validation
+# as its `add_*` methods.
+serde = [
+    "dep:serde",
+    "eranos-category/serde",
+    "eranos-core/serde",
+    "eranos-expense/serde",
+    "eranos-member/serde",
+    "eranos-money/serde",
+    "eranos-transfer/serde",
+]
+
+[dependencies]
+eranos-category = { workspace = true }
+eranos-core = { workspace = true }
+eranos-expense = { workspace = true }
+eranos-ledger = { workspace = true }
+eranos-member = { workspace = true }
+eranos-money = { workspace = true }
+eranos-settlement = { workspace = true }
+eranos-transfer = { workspace = true }
+icu_locale_core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+# The tests date their entries.
+eranos-calendar = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

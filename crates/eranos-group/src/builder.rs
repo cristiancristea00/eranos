@@ -1,11 +1,10 @@
 //! Creating groups.
 
-use eranos_core::text;
+use eranos_core::{GroupId, text};
+use eranos_money::Currency;
 
 use crate::error::GroupError;
-use crate::group::{Group, Language};
-use crate::id::GroupId;
-use crate::money::Currency;
+use crate::{Group, Language};
 
 /// Builds a [`Group`]; created by [`Group::builder`].
 #[derive(Debug, Clone)]

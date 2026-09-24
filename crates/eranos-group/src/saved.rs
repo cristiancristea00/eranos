@@ -7,18 +7,18 @@
 //! end, because an expense may reference a member who was archived after it
 //! was added.
 
+use eranos_category::Category;
+use eranos_core::{CategoryId, GroupId, MemberId};
+use eranos_expense::Expense;
+use eranos_member::Member;
+use eranos_money::Currency;
+use eranos_transfer::Transfer;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::{FORMAT, Group};
-use crate::category::Category;
+use crate::Language;
 use crate::error::GroupError;
-use crate::expense::Expense;
-use crate::group::Language;
-use crate::id::{CategoryId, GroupId, MemberId};
-use crate::member::Member;
-use crate::money::Currency;
-use crate::transfer::Transfer;
 
 #[derive(Serialize)]
 struct GroupView<'group> {
@@ -55,7 +55,10 @@ struct GroupView<'group> {
 ///
 /// ```
 /// use eranos::error::GroupError;
-/// use eranos::{Currency, Group, SavedGroup};
+/// use eranos::{Currency, Group};
+/// # // The facade re-exports `SavedGroup` only with its own `serde` feature,
+/// # // which a test of this crate alone does not turn on.
+/// use eranos_group::SavedGroup;
 ///
 /// let group = Group::builder(Currency::EUR, "Lisbon").build()?;
 /// let json = serde_json::to_string(&group)?;

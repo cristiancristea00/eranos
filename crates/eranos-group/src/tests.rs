@@ -6,13 +6,13 @@
 //! change re-converts every entry. The random-operations property drives
 //! all of it at once.
 
+use eranos_calendar::CalendarDate;
+use eranos_expense::{ExpenseBuilder, MemberParts, Split};
+use eranos_money::{Cost, Parts};
+use eranos_transfer::TransferBuilder;
 use proptest::prelude::*;
 
 use super::*;
-use crate::calendar::CalendarDate;
-use crate::expense::{ExpenseBuilder, MemberParts, Split};
-use crate::money::{Cost, Parts};
-use crate::transfer::TransferBuilder;
 
 fn eur(text: &str) -> Money {
     Money::parse(text, Currency::EUR).unwrap()
@@ -244,7 +244,7 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
     group.add_transfer(transfer(carol, ana, "12.00")).unwrap();
     assert_eq!(
         group.summary().member(carol).balance(),
-        crate::ledger::Balance::Settled
+        eranos_ledger::Balance::Settled
     );
     // Unarchived, she joins expenses again.
     group.unarchive_member(carol).unwrap();
@@ -500,7 +500,7 @@ fn expenses_move_the_totals_incrementally() {
         .unwrap();
     assert_eq!(
         group.summary().member(bob).balance(),
-        crate::ledger::Balance::Owes(eur("30.00"))
+        eranos_ledger::Balance::Owes(eur("30.00"))
     );
     assert_eq!(group.expense(hotel).map(Expense::name), Some("Shared"));
     assert_eq!(
@@ -520,7 +520,7 @@ fn expenses_move_the_totals_incrementally() {
     assert_eq!(group.summary().total_spent(), eur("60.00"));
     assert_eq!(
         group.summary().member(ana).balance(),
-        crate::ledger::Balance::Owes(eur("30.00"))
+        eranos_ledger::Balance::Owes(eur("30.00"))
     );
     assert_eq!(group.ledger, rebuilt(&group));
 
@@ -558,7 +558,7 @@ fn transfers_move_balances_exactly() {
     let repayment = group.add_transfer(transfer(bob, ana, "10.00")).unwrap();
     assert_eq!(
         group.summary().member(bob).balance(),
-        crate::ledger::Balance::Settled
+        eranos_ledger::Balance::Settled
     );
     assert_eq!(group.transfer_amount(repayment), Some(eur("10.00")));
     assert_eq!(group.transfer(repayment).map(Transfer::from), Some(bob));
@@ -575,11 +575,11 @@ fn transfers_move_balances_exactly() {
     assert_eq!(group.transfer_amount(repayment), Some(eur("10.00")));
     assert_eq!(
         group.summary().member(carol).balance(),
-        crate::ledger::Balance::Settled
+        eranos_ledger::Balance::Settled
     );
     assert_eq!(
         group.summary().member(bob).balance(),
-        crate::ledger::Balance::Owes(eur("10.00"))
+        eranos_ledger::Balance::Owes(eur("10.00"))
     );
     assert_eq!(group.ledger, rebuilt(&group));
 

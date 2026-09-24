@@ -1,7 +1,12 @@
 //! Groups: the members, categories, expenses, and transfers of a trip, a
 //! household, or any shared spending, with their totals kept current.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
 
 mod builder;
+mod error;
 mod language;
 #[cfg(feature = "serde")]
 mod saved;
@@ -10,24 +15,19 @@ use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 
 pub use builder::GroupBuilder;
+pub use error::{GroupError, LanguageError};
 pub use language::Language;
 #[cfg(feature = "serde")]
 pub use saved::SavedGroup;
 
-use eranos_core::text;
-use eranos_expense::resolve_expense;
+use eranos_category::Category;
+use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId, text};
+use eranos_expense::{Expense, resolve_expense};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
-use eranos_settlement::Settlements;
-use eranos_transfer::resolve_transfer;
-
-use crate::category::Category;
-use crate::error::{GroupError, SettlementError};
-use crate::expense::Expense;
-use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
-use crate::member::Member;
-use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
-use crate::settlement::{Settlement, SettlementStrategy};
-use crate::transfer::Transfer;
+use eranos_member::Member;
+use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
+use eranos_settlement::{Settlement, SettlementError, SettlementStrategy, Settlements};
+use eranos_transfer::{Transfer, resolve_transfer};
 
 /// The version of the saved form. Every other version is refused: a newer
 /// one would be read with fields silently dropped, and no earlier one is

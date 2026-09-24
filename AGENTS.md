@@ -155,7 +155,7 @@ failure); `#[allow]` is itself a lint error.
   show the record on the facade's pages); a group loads through
   `SavedGroup::into_group`, which replays its entries through the `add_*`
   methods; a change older readers cannot accept bumps the `FORMAT` constant
-  in `group.rs`.
+  of `eranos-group`.
 - **Doc comments follow rustdoc conventions**: a one-sentence summary, then
   `# Errors`, `# Panics`, and `# Examples` sections where they apply.
   Examples use `?`, never `unwrap`, and compile with warnings denied. Types

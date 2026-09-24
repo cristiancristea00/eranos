@@ -1,5 +1,7 @@
-# eranos: the library. Pure and synchronous (no I/O, no async, and no global
-# state but the phone-number metadata, decoded once on first use, and what
+# eranos: the library, which re-exports the types callers use from the
+# internal eranos-* crates and holds the integration tests, the examples, and
+# the benchmarks. Pure and synchronous (no I/O, no async, and no global state
+# but the phone-number metadata, decoded once on first use, and what
 # identifier generation holds), so every rule is unit-testable and the
 # binding crates can wrap it without adapting to a runtime.
 [package]
@@ -16,13 +18,13 @@ readme = "../../README.md"
 # deserialised `Group` is rebuilt through the same validation as its `add_*`
 # methods.
 serde = [
-    "dep:serde",
     "eranos-account/serde",
     "eranos-calendar/serde",
     "eranos-category/serde",
     "eranos-contact/serde",
     "eranos-core/serde",
     "eranos-expense/serde",
+    "eranos-group/serde",
     "eranos-member/serde",
     "eranos-money/serde",
     "eranos-transfer/serde",
@@ -39,14 +41,12 @@ eranos-category = { workspace = true }
 eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
 eranos-expense = { workspace = true }
+eranos-group = { workspace = true }
 eranos-ledger = { workspace = true }
 eranos-member = { workspace = true }
 eranos-money = { workspace = true }
 eranos-settlement = { workspace = true }
 eranos-transfer = { workspace = true }
-icu_locale_core = { workspace = true }
-thiserror = { workspace = true }
-serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
