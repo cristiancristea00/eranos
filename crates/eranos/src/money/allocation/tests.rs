@@ -158,7 +158,7 @@ fn division_rounds_half_away_from_zero() {
     // Exact halves go away from zero on both sides.
     assert_eq!(divide_rounding_half_away(5, 2), 3);
     assert_eq!(divide_rounding_half_away(-5, 2), -3);
-    // Below half rounds toward zero, above half away from it.
+    // Below half rounds towards zero, above half away from it.
     assert_eq!(divide_rounding_half_away(4, 3), 1);
     assert_eq!(divide_rounding_half_away(5, 3), 2);
     assert_eq!(divide_rounding_half_away(-4, 3), -1);

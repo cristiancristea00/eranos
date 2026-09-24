@@ -11,8 +11,8 @@ publish.workspace = true
 readme = "../../README.md"
 
 [features]
-# Serialize/Deserialize on every domain type. A deserialized `Group` is rebuilt
-# through the same validation as its insert methods.
+# `Serialize` and `Deserialize` on every domain type. A deserialised `Group`
+# is rebuilt through the same validation as its insert methods.
 serde = ["dep:serde", "uuid/serde"]
 
 [dependencies]

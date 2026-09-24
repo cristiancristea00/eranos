@@ -74,7 +74,7 @@ impl Account {
 
 /// The secret details of an [`Account`].
 ///
-/// Serialized as `{"iban": "…"}` or `{"username": "…"}`, in clear text.
+/// Serialised as `{"iban": "…"}` or `{"username": "…"}`, in clear text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -171,7 +171,7 @@ impl FromStr for Username {
     }
 }
 
-/// The serialized form of an [`Account`], validated on the way in.
+/// The serialised form of an [`Account`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct AccountRecord {
@@ -190,15 +190,15 @@ impl TryFrom<AccountRecord> for Account {
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for Username {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.expose_secret())
+    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+        serialiser.serialize_str(self.expose_secret())
     }
 }
 
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Username {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialize(deserializer, "a non-empty username")
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        crate::serde_text::deserialise(deserialiser, "a non-empty username")
     }
 }
 

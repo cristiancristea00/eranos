@@ -330,7 +330,7 @@ fn results_out_of_range_overflow() {
 /// Saved amounts would fail to load or load with another value.
 #[cfg(feature = "serde")]
 #[test]
-fn amounts_serialize_as_minor_units_and_currency() {
+fn amounts_serialise_as_minor_units_and_currency() {
     // Round trip.
     let amount = euros(1_234);
     let json = serde_json::to_string(&amount).unwrap();

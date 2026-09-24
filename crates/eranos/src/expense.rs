@@ -58,7 +58,7 @@ pub struct Expense {
     amount: Money,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     tip: Option<Tip>,
-    // Derived from amount and tip by `build`, so never serialized.
+    // Derived from amount and tip by `build`, so never serialised.
     #[cfg_attr(feature = "serde", serde(skip))]
     total: Money,
     date: Date,
@@ -208,7 +208,7 @@ pub enum ExpenseSplit {
     /// The whole amount is divided by one [`Split`].
     Whole(Split),
     /// Every [`Item`] is divided by its own split.
-    Itemized(Vec<Item>),
+    Itemised(Vec<Item>),
 }
 
 impl ExpenseSplit {
@@ -217,7 +217,7 @@ impl ExpenseSplit {
     pub fn participants(&self) -> BTreeSet<MemberId> {
         match self {
             Self::Whole(split) => split.members().collect(),
-            Self::Itemized(items) => items
+            Self::Itemised(items) => items
                 .iter()
                 .flat_map(|item| item.split().members())
                 .collect(),
@@ -315,7 +315,7 @@ impl ExpenseBuilder {
     /// amount.
     pub fn items(mut self, items: impl IntoIterator<Item = Item>) -> Self {
         self.split
-            .set_second(ExpenseSplit::Itemized(items.into_iter().collect()));
+            .set_second(ExpenseSplit::Itemised(items.into_iter().collect()));
         self
     }
 
@@ -354,7 +354,7 @@ impl ExpenseBuilder {
             .resolve(ExpenseError::MissingSplit, ExpenseError::ConflictingSplit)?;
         match &split {
             ExpenseSplit::Whole(split) => split.validate(amount)?,
-            ExpenseSplit::Itemized(items) => validate_items(items, amount)?,
+            ExpenseSplit::Itemised(items) => validate_items(items, amount)?,
         }
         let tip_amount = match self.tip {
             Some(tip) => tip.amount_on(amount)?,
@@ -445,7 +445,7 @@ impl<T> Choice<T> {
     }
 }
 
-/// The serialized form of an [`Expense`], validated on the way in.
+/// The serialised form of an [`Expense`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct ExpenseRecord {
@@ -479,7 +479,7 @@ impl TryFrom<ExpenseRecord> for Expense {
             .payers(record.payers);
         let builder = match record.split {
             ExpenseSplit::Whole(split) => builder.split(split),
-            ExpenseSplit::Itemized(items) => builder.items(items),
+            ExpenseSplit::Itemised(items) => builder.items(items),
         };
         match record.description {
             Some(description) => builder.description(description).build(),

@@ -1,4 +1,4 @@
-//! An itemized restaurant bill: every line is split among the people who
+//! An itemised restaurant bill: every line is split among the people who
 //! had it, quantities multiply the unit price, and the tip is shared either
 //! in proportion to what each person ordered or equally.
 //!
@@ -119,7 +119,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let carol = group.add_member(Member::builder("Carol").build()?);
     let day = Date::new(2026, 9, 23)?;
 
-    println!("{}: an itemized bill", group.name());
+    println!("{}: an itemised bill", group.name());
     println!("{}", "═".repeat(group.name().chars().count() + 19));
     println!(
         "Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,\n\

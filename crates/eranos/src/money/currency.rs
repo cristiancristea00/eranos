@@ -147,15 +147,15 @@ impl FromStr for Currency {
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for Currency {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.code())
+    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+        serialiser.serialize_str(self.code())
     }
 }
 
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Currency {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialize(deserializer, "an ISO 4217 currency code")
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        crate::serde_text::deserialise(deserialiser, "an ISO 4217 currency code")
     }
 }
 

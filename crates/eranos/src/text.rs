@@ -1,4 +1,4 @@
-//! Normalization shared by every text field: surrounding whitespace never
+//! Normalisation shared by every text field: surrounding whitespace never
 //! counts, and an optional field left blank is absent.
 
 use crate::error::{Field, ValueError};

@@ -24,7 +24,7 @@ no I/O.
 | Category   | `Category`   | A label the group defines, such as "Food"                                         |
 | Expense    | `Expense`    | What was bought: amount, date, payers, split, optional tip, category, rate        |
 | Split      | `Split`      | How an amount is divided: equally, by percentages, by parts, or by exact amounts  |
-| Item       | `Item`       | A receipt line of an itemized expense, with its own quantity and split            |
+| Item       | `Item`       | A receipt line of an itemised expense, with its own quantity and split            |
 | Tip        | `Tip`        | A fixed amount or a percentage on top, shared proportionally or equally           |
 | Transfer   | `Transfer`   | Money one member paid another, such as a repayment                                |
 | Summary    | `Summary`    | Spending, paid, consumed, balances, and totals per category, always current       |
@@ -125,7 +125,7 @@ balances, and payments, and asserts its own numbers:
 | ---------------------- | ------------------------------------------------------------------------------------------ |
 | `quickstart`           | A trip in a few lines: members, expenses, totals, settlement                               |
 | `split_methods`        | Equal, percentage, parts (half a share for a child), exact amounts, two payers             |
-| `restaurant_bill`      | Itemized receipt with quantities and per-item splits; proportional vs equal tip            |
+| `restaurant_bill`      | Itemised receipt with quantities and per-item splits; proportional vs equal tip            |
 | `multi_currency`       | Foreign expenses and a cash repayment at fixed rates; moving the books to another currency |
 | `settling_up`          | The three strategies on one group, then recording the payments                             |
 | `members_and_accounts` | Contact details, IBAN validation and masking, archiving a member                           |
@@ -157,7 +157,7 @@ suites in [docs/TESTING.md](docs/TESTING.md).
 ## Versioning
 
 eranos follows [Semantic Versioning](https://semver.org/); before 1.0 a
-breaking change bumps the minor version. The public Rust API, the serialized
+breaking change bumps the minor version. The public Rust API, the serialised
 format, and the rounding results are all part of the contract:
 [docs/VERSIONING.md](docs/VERSIONING.md).
 

@@ -2,7 +2,7 @@
 //! settle up. These tests keep obviously broken addresses and numbers out,
 //! keep surrounding whitespace from making two entries of the same contact
 //! differ, and keep phone numbers stored in the one `+digits` form that
-//! dialers and messaging apps accept.
+//! diallers and messaging apps accept.
 
 use super::*;
 
@@ -84,7 +84,7 @@ fn surrounding_whitespace_is_trimmed_from_an_email() {
 }
 
 /// Numbers typed in a common local style would be refused, or stored with
-/// their separators and fail in a dialer.
+/// their separators and fail in a dialler.
 #[test]
 fn phone_separators_are_dropped() {
     // Spaces, parentheses, dashes, and dots.
@@ -112,7 +112,7 @@ fn phone_separators_are_dropped() {
     );
 }
 
-/// A number without its country code would be stored and dialed in the
+/// A number without its country code would be stored and dialled in the
 /// wrong country.
 #[test]
 fn a_phone_number_needs_a_leading_plus() {
@@ -193,7 +193,7 @@ fn surrounding_whitespace_is_trimmed_from_a_phone_number() {
 /// Saved contact details would fail to load, or broken ones would load.
 #[cfg(feature = "serde")]
 #[test]
-fn contact_details_serialize_as_their_text_form() {
+fn contact_details_serialise_as_their_text_form() {
     // Email round trip.
     let email = Email::parse("ana@example.com").unwrap();
     assert_eq!(
@@ -205,7 +205,7 @@ fn contact_details_serialize_as_their_text_form() {
         email
     );
     assert!(serde_json::from_str::<Email>("\"ana.example.com\"").is_err());
-    // Phone round trip, normalized on the way in.
+    // Phone round trip, normalised on the way in.
     let phone = PhoneNumber::parse("+40712345678").unwrap();
     assert_eq!(serde_json::to_string(&phone).unwrap(), "\"+40712345678\"");
     assert_eq!(

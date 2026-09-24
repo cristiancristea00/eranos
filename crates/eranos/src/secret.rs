@@ -1,7 +1,7 @@
 //! Text that is wiped from memory when dropped and never printed.
 //!
 //! Copies made before the text reached the library (the caller's buffers, or
-//! a deserializer's scratch space) are outside its reach.
+//! a deserialiser's scratch space) are outside its reach.
 
 use std::fmt;
 
@@ -17,8 +17,8 @@ impl Secret {
         Self(Zeroizing::new(text))
     }
 
-    /// Takes ownership of an already zeroizing buffer.
-    pub(crate) const fn from_zeroizing(text: Zeroizing<String>) -> Self {
+    /// Takes ownership of an already zeroising buffer.
+    pub(crate) const fn from_zeroising(text: Zeroizing<String>) -> Self {
         Self(text)
     }
 

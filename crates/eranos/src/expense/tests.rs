@@ -20,7 +20,7 @@ fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, Currency::EUR)
 }
 
-fn percent(text: &str) -> Percentage {
+fn per_cent(text: &str) -> Percentage {
     Percentage::parse(text).unwrap()
 }
 
@@ -48,14 +48,14 @@ fn full_expense() -> Expense {
     dinner()
         .description("Birthday")
         .category(CategoryId::from_bytes([9; 16]))
-        .tip(Tip::percentage(percent("10")))
+        .tip(Tip::percentage(per_cent("10")))
         .time(Time::new(20, 30).unwrap())
         .exchange_rate(ExchangeRate::parse("4.9765").unwrap())
         .payers(Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_900))]))
         .split(Split::percentages([
-            (ANA, percent("50")),
-            (BOB, percent("25")),
-            (CAROL, percent("25")),
+            (ANA, per_cent("50")),
+            (BOB, per_cent("25")),
+            (CAROL, per_cent("25")),
         ]))
         .build()
         .unwrap()
@@ -63,7 +63,7 @@ fn full_expense() -> Expense {
 
 /// The dinner as a receipt paid by Bob: a pizza for Ana and two glasses of
 /// wine for Ana and Carol.
-fn itemized_expense() -> Expense {
+fn itemised_expense() -> Expense {
     let wine = Item::builder("Wine", euros(2_000))
         .quantity(2)
         .shared_by([ANA, CAROL])
@@ -287,14 +287,14 @@ fn repeating_a_setter_keeps_the_last_value() {
         .unwrap();
     assert_eq!(
         items_twice.split(),
-        &ExpenseSplit::Itemized(vec![item("Wine", 9_000)])
+        &ExpenseSplit::Itemised(vec![item("Wine", 9_000)])
     );
 }
 
-/// An itemized expense without lines would be accepted and nobody would
+/// An itemised expense without lines would be accepted and nobody would
 /// share its cost.
 #[test]
-fn an_itemized_expense_without_items_is_rejected() {
+fn an_itemised_expense_without_items_is_rejected() {
     // An empty receipt.
     assert_eq!(
         dinner().paid_by(ANA).items([]).build(),
@@ -312,7 +312,7 @@ fn items_must_add_up_to_the_amount() {
         .items([item("Pizza", 5_000), item("Wine", 4_000)])
         .build()
         .unwrap();
-    assert!(matches!(expense.split(), ExpenseSplit::Itemized(items) if items.len() == 2));
+    assert!(matches!(expense.split(), ExpenseSplit::Itemised(items) if items.len() == 2));
     // Lines of 50.00 and 30.00.
     assert_eq!(
         dinner()
@@ -355,7 +355,7 @@ fn an_item_in_another_currency_is_rejected() {
 /// once in the tip itself.
 #[test]
 fn the_participants_divide_the_amount_before_the_tip() {
-    let tipped = || dinner().paid_by(ANA).tip(Tip::percentage(percent("10")));
+    let tipped = || dinner().paid_by(ANA).tip(Tip::percentage(per_cent("10")));
     // Shares of the 90.00 amount.
     let split = Split::amounts([(ANA, euros(4_500)), (BOB, euros(4_500))]);
     assert!(tipped().split(split).build().is_ok());
@@ -382,7 +382,7 @@ fn the_payers_cover_the_amount_plus_the_tip() {
     let tipped = || {
         dinner()
             .split(Split::equal([ANA, BOB]))
-            .tip(Tip::percentage(percent("10")))
+            .tip(Tip::percentage(per_cent("10")))
     };
     // Payments adding up to the 99.00 total.
     let payers = Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_900))]);
@@ -417,8 +417,8 @@ fn total_and_tip_amount_include_the_tip() {
             .unwrap()
     };
     // A percentage tip.
-    let expense = tipped(Tip::percentage(percent("10")));
-    assert_eq!(expense.tip(), Some(Tip::percentage(percent("10"))));
+    let expense = tipped(Tip::percentage(per_cent("10")));
+    assert_eq!(expense.tip(), Some(Tip::percentage(per_cent("10"))));
     assert_eq!(expense.tip_amount(), euros(900));
     assert_eq!(expense.total(), euros(9_900));
     // A fixed tip.
@@ -473,7 +473,7 @@ fn a_total_out_of_range_is_rejected() {
     );
     // A percentage tip that does not fit on its own.
     assert_eq!(
-        largest().tip(Tip::percentage(percent("200"))).build(),
+        largest().tip(Tip::percentage(per_cent("200"))).build(),
         Err(ExpenseError::Overflow)
     );
 }
@@ -536,9 +536,9 @@ fn members_are_the_payers_and_the_participants() {
         .build()
         .unwrap();
     assert_eq!(paid_by_a_participant.members(), BTreeSet::from([ANA, BOB]));
-    // Itemized expenses.
+    // Itemised expenses.
     assert_eq!(
-        itemized_expense().members(),
+        itemised_expense().members(),
         BTreeSet::from([ANA, BOB, CAROL])
     );
 }
@@ -552,7 +552,7 @@ fn participants_are_everyone_who_shares_the_cost() {
     assert_eq!(whole.participants(), BTreeSet::from([ANA, CAROL]));
     // Items shared by overlapping members.
     assert_eq!(
-        itemized_expense().split().participants(),
+        itemised_expense().split().participants(),
         BTreeSet::from([ANA, CAROL])
     );
 }
@@ -563,16 +563,16 @@ fn to_builder_rebuilds_an_equal_expense() {
     // Every optional field set, whole split.
     let expense = full_expense();
     assert_eq!(expense.to_builder().build().unwrap(), expense);
-    // Itemized split.
-    let itemized = itemized_expense();
-    assert_eq!(itemized.to_builder().build().unwrap(), itemized);
+    // Itemised split.
+    let itemised = itemised_expense();
+    assert_eq!(itemised.to_builder().build().unwrap(), itemised);
 }
 
 /// Turning a whole expense into a receipt, or back, would be refused as a
 /// conflict with the split it already has.
 #[test]
 fn a_rebuilt_expense_accepts_a_new_form_of_split() {
-    // Whole into itemized.
+    // Whole into itemised.
     let expense = full_expense()
         .to_builder()
         .items([item("Pizza", 9_000)])
@@ -580,10 +580,10 @@ fn a_rebuilt_expense_accepts_a_new_form_of_split() {
         .unwrap();
     assert_eq!(
         expense.split(),
-        &ExpenseSplit::Itemized(vec![item("Pizza", 9_000)])
+        &ExpenseSplit::Itemised(vec![item("Pizza", 9_000)])
     );
-    // Itemized into whole.
-    let whole_expense = itemized_expense()
+    // Itemised into whole.
+    let whole_expense = itemised_expense()
         .to_builder()
         .split(Split::equal([BOB]))
         .build()
@@ -599,7 +599,7 @@ fn a_rebuilt_expense_accepts_a_new_form_of_split() {
 #[test]
 fn a_rebuilt_expense_accepts_a_new_form_of_payers() {
     // A single payer into a list.
-    let expense = itemized_expense()
+    let expense = itemised_expense()
         .to_builder()
         .payers(Split::amounts([(ANA, euros(4_500)), (BOB, euros(4_500))]))
         .build()
@@ -691,19 +691,19 @@ fn expenses_round_trip_through_serde() {
     let json = serde_json::to_string(&expense).unwrap();
     assert!(!json.contains("total"));
     assert_eq!(serde_json::from_str::<Expense>(&json).unwrap(), expense);
-    // An itemized split without a description.
-    let itemized = itemized_expense();
-    let itemized_json = serde_json::to_string(&itemized).unwrap();
-    assert!(!itemized_json.contains("description"));
+    // An itemised split without a description.
+    let itemised = itemised_expense();
+    let itemised_json = serde_json::to_string(&itemised).unwrap();
+    assert!(!itemised_json.contains("description"));
     assert_eq!(
-        serde_json::from_str::<Expense>(&itemized_json).unwrap(),
-        itemized
+        serde_json::from_str::<Expense>(&itemised_json).unwrap(),
+        itemised
     );
     // Loading validates like the builder.
-    let tampered = itemized_json.replace(
+    let tampered = itemised_json.replace(
         r#""amount":{"minor_units":9000"#,
         r#""amount":{"minor_units":9001"#,
     );
-    assert_ne!(tampered, itemized_json);
+    assert_ne!(tampered, itemised_json);
     assert!(serde_json::from_str::<Expense>(&tampered).is_err());
 }

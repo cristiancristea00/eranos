@@ -476,13 +476,13 @@ fn the_rotation_of_every_pass_is_pinned() {
             .build()
             .unwrap()
     });
-    let itemized = Expense::builder("Pinned", eur(301), day())
+    let itemised = Expense::builder("Pinned", eur(301), day())
         .payers(Split::equal([ana, bob]))
         .items(items)
         .tip(Tip::fixed(eur(2)).distributed(TipDistribution::Equal))
         .build()
         .unwrap();
-    let shares = resolve_expense(entry(1), &itemized, Currency::EUR).unwrap();
+    let shares = resolve_expense(entry(1), &itemised, Currency::EUR).unwrap();
     assert_eq!(
         rows(&shares),
         vec![(ana, 151, 101), (bob, 152, 100), (carol, 0, 102)]

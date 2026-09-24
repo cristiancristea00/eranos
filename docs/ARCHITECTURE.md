@@ -14,7 +14,7 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 6. [The ledger and its caches](#6-the-ledger-and-its-caches)
 7. [Settlement strategies](#7-settlement-strategies)
 8. [Validation and errors](#8-validation-and-errors)
-9. [The serialized form](#9-the-serialized-form)
+9. [The serialised form](#9-the-serialised-form)
 10. [Account details and secrets](#10-account-details-and-secrets)
 11. [Future bindings](#11-future-bindings)
 12. [Key numbers](#12-key-numbers)
@@ -128,7 +128,7 @@ keeps it.
 An **expense** has a name, an amount in its own currency, a date and an
 optional time, optional description and category, an optional tip, the
 payers (a `Split` of the total), and how the cost is shared: an
-`ExpenseSplit::Whole(Split)` or `ExpenseSplit::Itemized(Vec<Item>)`. A split
+`ExpenseSplit::Whole(Split)` or `ExpenseSplit::Itemised(Vec<Item>)`. A split
 is `Equal`, `Percentages` (basis points summing to exactly 10 000), `Parts`
 (hundredths, so 0.5 for a child), or `Amounts` (summing exactly to what is
 divided). An **item** has a unit price, a quantity, and its own split; the
@@ -178,7 +178,7 @@ currency:
 
 ```mermaid
 flowchart TD
-    BASE["1. Base shares, entry currency<br/>whole: one allocation<br/>itemized: one per line, summed per member"]
+    BASE["1. Base shares, entry currency<br/>whole: one allocation<br/>itemised: one per line, summed per member"]
     TIP["2. Tip<br/>fixed, or amount × rate rounded half up;<br/>allocated by base share or equally"]
     PAYERS["3. Payers<br/>the payer split divides amount + tip"]
     CONVERT{"4. Entry currency<br/>= group currency?"}
@@ -194,7 +194,7 @@ flowchart TD
 
 ```text
  1. Base shares (entry currency)   whole: one allocation
-                                   itemized: one per line, summed per member
+                                   itemised: one per line, summed per member
                  │
                  ▼
  2. Tip           fixed, or amount × rate (half up);
@@ -268,7 +268,7 @@ always names the strategy; there is no default and no automatic fallback.
 | `Greedy`           | largest debtor pays largest creditor, ties to the lower ID                                                                     | O(n log n)             | at most n − 1                                 |
 | `Direct`           | every netted pair debt becomes a payment                                                                                       | O(pairs)               | the most; each traces back to shared expenses |
 
-Minimizing the number of payments is NP-hard (Verhoeff, "Settling multiple
+Minimising the number of payments is NP-hard (Verhoeff, "Settling multiple
 debts efficiently", 2004): n balances need n − g payments, where g is the
 largest number of disjoint groups that each sum to zero. The solver:
 
@@ -309,17 +309,17 @@ present exactly when the entry is foreign) and against the ledger's range.
 | `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                                 |
 
 Every error enum is `#[non_exhaustive]` and built with `thiserror`. Messages
-are lowercase without a trailing period and never repeat the rejected text,
+are lowercase without a trailing full stop and never repeat the rejected text,
 because inputs include account numbers and contact details.
 
-## 9. The serialized form
+## 9. The serialised form
 
-With the `serde` feature every type serializes. A group serializes only its
+With the `serde` feature every type serialises. A group serialises only its
 inputs, never the derived totals:
 
 ```text
 {
-  "format": 1,
+  "format": 2,
   "id": "…", "name": "Lisbon", "currency": "EUR", "language": "pt-PT",
   "members":    [{"id": "…", "archived": true, "member": {"first_name": "Ana", …}}],
   "categories": [{"id": "…", "entry": {"name": "Food"}}],
@@ -353,9 +353,9 @@ validated against the SWIFT IBAN Registry (release 103): country code, the
 country's length, and the ISO 7064 mod-97 check digits, which catch every
 single-character typo.
 
-Copies made outside the library (the caller's strings, a deserializer's
+Copies made outside the library (the caller's strings, a deserialiser's
 buffers, the Swift or Kotlin side of a binding) are out of its reach, and
-the serialized form contains the details in clear text. Encryption at rest
+the serialised form contains the details in clear text. Encryption at rest
 belongs to each platform's secure storage (Keychain, Keystore, Web Crypto),
 which holds keys the library never sees.
 
@@ -363,7 +363,7 @@ which holds keys the library never sees.
 
 The core is shaped for binding crates added as workspace siblings:
 
-- **`eranos-ffi` (UniFFI, Swift and Kotlin)**, following matrix-rust-sdk:
+- **`eranos-ffi` (UniFFI for Swift and Kotlin)**, following matrix-rust-sdk:
   a `#[derive(uniffi::Object)]` wrapper holding `Mutex<eranos::Group>`
   (UniFFI objects cannot take `&mut self`), mirror records with `From`
   conversions, one flat error enum, and identifiers as strings (UniFFI has no

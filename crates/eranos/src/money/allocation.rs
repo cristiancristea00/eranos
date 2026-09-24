@@ -7,7 +7,7 @@ use std::cmp::Reverse;
 /// `total`.
 ///
 /// Largest-remainder (Hamilton) method: every part is `total × weight / Σ
-/// weights` rounded toward zero, and the leftover units go one each to the
+/// weights` rounded towards zero, and the leftover units go one each to the
 /// parts with the largest remainders, so every part is its exact share
 /// rounded down or up. Equal remainders are ordered from position `rotation %
 /// len` onwards, which spreads the leftover of even splits across callers
@@ -23,7 +23,7 @@ pub(crate) fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
     let weight_sum: i128 = weights.iter().map(|&weight| weight_of(weight)).sum();
     let total = i128::from(total);
     // |total| ≤ 2^63 and weight < 2^64, so every product fits in i128.
-    // Division rounds toward zero, so every part has the sign of `total`.
+    // Division rounds towards zero, so every part has the sign of `total`.
     let (mut parts, remainders): (Vec<i128>, Vec<u128>) = weights
         .iter()
         .map(|&weight| {

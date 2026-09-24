@@ -135,7 +135,7 @@ fn rates_with_more_digits_than_fit_are_rejected() {
 /// Rates built from stored digits would accept a zero rate or compare
 /// unequal to the same rate typed as text.
 #[test]
-fn from_decimal_validates_and_normalizes() {
+fn from_decimal_validates_and_normalises() {
     // A zero mantissa.
     assert_eq!(
         ExchangeRate::from_decimal(0, 0),
@@ -155,7 +155,7 @@ fn from_decimal_validates_and_normalizes() {
         ExchangeRate::from_decimal(10, 19),
         Err(ValueError::InvalidExchangeRate)
     );
-    // Normalization.
+    // Normalisation.
     assert_eq!(ExchangeRate::from_decimal(49_765, 4), Ok(rate("4.9765")));
     assert_eq!(ExchangeRate::from_decimal(49_700, 4), Ok(rate("4.97")));
     assert_eq!(ExchangeRate::from_decimal(1_000, 3), Ok(rate("1")));
@@ -204,7 +204,7 @@ fn convert_rounds_to_the_nearest_minor_unit() {
     );
 }
 
-/// Conversions would round halves toward zero or toward even, which the EU
+/// Conversions would round halves towards zero or towards even, which the EU
 /// rules for currency conversion forbid.
 #[test]
 fn exact_halves_round_away_from_zero() {
@@ -298,7 +298,7 @@ fn conversions_out_of_range_overflow() {
 /// Saved rates would fail to load, or a zero rate would load.
 #[cfg(feature = "serde")]
 #[test]
-fn rates_serialize_as_their_text_form() {
+fn rates_serialise_as_their_text_form() {
     // Round trip.
     assert_eq!(
         serde_json::to_string(&rate("4.9765")).unwrap(),
@@ -308,7 +308,7 @@ fn rates_serialize_as_their_text_form() {
         serde_json::from_str::<ExchangeRate>("\"4.9700\"").unwrap(),
         rate("4.97")
     );
-    // Deserializing validates like parsing.
+    // Deserialising validates like parsing.
     assert!(serde_json::from_str::<ExchangeRate>("\"0\"").is_err());
     // Only strings are rates.
     assert!(serde_json::from_str::<ExchangeRate>("4.97").is_err());

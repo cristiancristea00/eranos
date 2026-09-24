@@ -11,7 +11,7 @@ fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, Currency::EUR)
 }
 
-fn percent(text: &str) -> Percentage {
+fn per_cent(text: &str) -> Percentage {
     Percentage::parse(text).unwrap()
 }
 
@@ -24,8 +24,8 @@ fn tips_are_shared_proportionally_by_default() {
     assert_eq!(fixed.value(), TipValue::Fixed(euros(500)));
     assert_eq!(fixed.distribution(), TipDistribution::Proportional);
     // Percentage tips.
-    let percentage = Tip::percentage(percent("10"));
-    assert_eq!(percentage.value(), TipValue::Percentage(percent("10")));
+    let percentage = Tip::percentage(per_cent("10"));
+    assert_eq!(percentage.value(), TipValue::Percentage(per_cent("10")));
     assert_eq!(percentage.distribution(), TipDistribution::Proportional);
     // The distribution's own default.
     assert_eq!(TipDistribution::default(), TipDistribution::Proportional);
@@ -39,10 +39,10 @@ fn distributed_changes_only_the_distribution() {
     assert_eq!(fixed.value(), TipValue::Fixed(euros(500)));
     assert_eq!(fixed.distribution(), TipDistribution::Equal);
     // Percentage tips, switched back and forth.
-    let percentage = Tip::percentage(percent("10"))
+    let percentage = Tip::percentage(per_cent("10"))
         .distributed(TipDistribution::Equal)
         .distributed(TipDistribution::Proportional);
-    assert_eq!(percentage, Tip::percentage(percent("10")));
+    assert_eq!(percentage, Tip::percentage(per_cent("10")));
 }
 
 /// A percentage tip would charge another amount than the percentage says.
@@ -50,18 +50,18 @@ fn distributed_changes_only_the_distribution() {
 fn a_percentage_tip_is_that_share_of_the_amount() {
     // 10 % of 90.00 is 9.00.
     assert_eq!(
-        Tip::percentage(percent("10")).amount_on(euros(9_000)),
+        Tip::percentage(per_cent("10")).amount_on(euros(9_000)),
         Ok(euros(900))
     );
     // Tips above 100 % are allowed.
     assert_eq!(
-        Tip::percentage(percent("150")).amount_on(euros(1_000)),
+        Tip::percentage(per_cent("150")).amount_on(euros(1_000)),
         Ok(euros(1_500))
     );
     // Currencies without decimals: 10 % of 1234 JPY is 123.4, so 123.
     let yen = Money::from_minor_units(1_234, Currency::JPY);
     assert_eq!(
-        Tip::percentage(percent("10")).amount_on(yen),
+        Tip::percentage(per_cent("10")).amount_on(yen),
         Ok(Money::from_minor_units(123, Currency::JPY))
     );
 }
@@ -71,22 +71,22 @@ fn a_percentage_tip_is_that_share_of_the_amount() {
 fn percentage_tips_round_to_the_nearest_minor_unit() {
     // 12.5 % of 0.99 is 12.375 cents, so 12.
     assert_eq!(
-        Tip::percentage(percent("12.5")).amount_on(euros(99)),
+        Tip::percentage(per_cent("12.5")).amount_on(euros(99)),
         Ok(euros(12))
     );
     // 15 % of 0.10 is 1.5 cents, so 2.
     assert_eq!(
-        Tip::percentage(percent("15")).amount_on(euros(10)),
+        Tip::percentage(per_cent("15")).amount_on(euros(10)),
         Ok(euros(2))
     );
     // 12.5 % of 1.00 is 12.5 cents, so 13.
     assert_eq!(
-        Tip::percentage(percent("12.5")).amount_on(euros(100)),
+        Tip::percentage(per_cent("12.5")).amount_on(euros(100)),
         Ok(euros(13))
     );
     // 0.01 % of 0.49 is 0.0049 cents, so 0.
     assert_eq!(
-        Tip::percentage(percent("0.01")).amount_on(euros(49)),
+        Tip::percentage(per_cent("0.01")).amount_on(euros(49)),
         Ok(euros(0))
     );
 }
@@ -152,7 +152,7 @@ fn a_negative_fixed_tip_is_rejected() {
 fn a_tip_out_of_range_is_rejected() {
     // 200 % of the largest amount.
     assert_eq!(
-        Tip::percentage(percent("200")).amount_on(euros(i64::MAX)),
+        Tip::percentage(per_cent("200")).amount_on(euros(i64::MAX)),
         Err(ExpenseError::Overflow)
     );
     // The largest percentage of the largest amount.
@@ -172,7 +172,7 @@ fn a_tip_out_of_range_is_rejected() {
 #[test]
 fn tips_round_trip_through_serde() {
     // Round trip.
-    let tip = Tip::percentage(percent("10")).distributed(TipDistribution::Equal);
+    let tip = Tip::percentage(per_cent("10")).distributed(TipDistribution::Equal);
     let json = serde_json::to_string(&tip).unwrap();
     assert_eq!(
         json,
@@ -181,5 +181,5 @@ fn tips_round_trip_through_serde() {
     assert_eq!(serde_json::from_str::<Tip>(&json).unwrap(), tip);
     // A tip saved without a distribution is shared proportionally.
     let loaded: Tip = serde_json::from_str(r#"{"value":{"percentage":1000}}"#).unwrap();
-    assert_eq!(loaded, Tip::percentage(percent("10")));
+    assert_eq!(loaded, Tip::percentage(per_cent("10")));
 }

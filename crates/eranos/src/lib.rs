@@ -51,7 +51,7 @@
 //!
 //! Amounts are whole numbers of minor units ([`Money`]), never floats. Every
 //! division, whether a [`Split`] among members, a [`Tip`], an [`Item`] of an
-//! itemized bill, or a conversion at an [`ExchangeRate`], hands out its
+//! itemised bill, or a conversion at an [`ExchangeRate`], hands out its
 //! leftover minor units by the largest-remainder method, so the parts always
 //! add up to the whole. Ties rotate with the expense's identifier: over many
 //! expenses, the extra cent of an even split does not always land on the
@@ -68,8 +68,8 @@
 //! # Features
 //!
 //! - `serde`: `Serialize` and `Deserialize` for every domain type. A
-//!   deserialized [`Group`] is rebuilt through the same checks as its insert
-//!   methods. Account details serialize in clear text, so store serialized
+//!   deserialised [`Group`] is rebuilt through the same checks as its insert
+//!   methods. Account details serialise in clear text, so store serialised
 //!   groups in the platform's secure storage.
 //!
 //! # Examples

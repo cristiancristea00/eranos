@@ -21,14 +21,14 @@ and the test suites in [TESTING.md](TESTING.md).
   coverage); the first `cargo` command in the repository installs them.
 - **Homebrew tools**: `brew bundle --file Brewfile.develop` installs
   `cargo-llvm-cov` and `cargo-mutants`. Neither is needed to build or test.
-- **VS Code** (optional): the workspace recommends rust-analyzer, CodeLLDB,
+- **VS Code** (optional): the workspace recommends `rust-analyzer`, CodeLLDB,
   and the Markdown and TOML extensions; the `gates` task runs every gate.
 
 ## 2. Building and testing
 
 ```sh
 cargo build -p eranos                            # the library
-cargo build -p eranos --features serde           # with serialization
+cargo build -p eranos --features serde           # with serialisation
 cargo test --workspace --all-features            # every suite, doctests included
 cargo test -p eranos --lib money::allocation     # one module's unit tests
 cargo test -p eranos --test scenarios            # one integration suite
@@ -108,12 +108,12 @@ breaking.
 3. With `serde`: add `#[serde(skip_serializing_if = …)]` for an optional
    field, and the field with `#[serde(default)]` to the type's `*Record`
    struct, so data written before the field existed still loads.
-4. Pin the serialized shape in `tests/persistence.rs`.
+4. Pin the serialised shape in `tests/persistence.rs`.
 
 ### 3.6 A new error variant
 
 Error enums are `#[non_exhaustive]`, so a variant is a `feat`. The message is
-lowercase, has no trailing period, and never repeats the rejected text. Name
+lowercase, has no trailing full stop, and never repeats the rejected text. Name
 the variant in the `# Errors` section of every function that can return it.
 
 ### 3.7 A lint exception

@@ -15,8 +15,8 @@ use crate::money::{Money, Percentage};
 /// ```
 /// use eranos::{Currency, Money, Percentage, Tip, TipDistribution};
 ///
-/// let ten_percent = Tip::percentage(Percentage::parse("10")?);
-/// assert_eq!(ten_percent.distribution(), TipDistribution::Proportional);
+/// let ten_per_cent = Tip::percentage(Percentage::parse("10")?);
+/// assert_eq!(ten_per_cent.distribution(), TipDistribution::Proportional);
 ///
 /// let round_up = Tip::fixed(Money::parse("5.00", Currency::EUR)?).distributed(TipDistribution::Equal);
 /// assert_eq!(round_up.distribution(), TipDistribution::Equal);

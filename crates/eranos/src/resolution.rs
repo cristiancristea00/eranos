@@ -48,7 +48,7 @@ pub(crate) fn resolve_expense(
 
     let base = match expense.split() {
         ExpenseSplit::Whole(split) => split.divide(amount, pass(PASS_SPLIT)),
-        ExpenseSplit::Itemized(items) => {
+        ExpenseSplit::Itemised(items) => {
             let mut totals: BTreeMap<MemberId, i64> = BTreeMap::new();
             for (position, item) in (0_u64..).zip(items) {
                 let line = item

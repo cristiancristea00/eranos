@@ -171,7 +171,7 @@ impl MemberBuilder {
     }
 }
 
-/// The serialized form of a [`Member`], validated on the way in.
+/// The serialised form of a [`Member`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct MemberRecord {

@@ -1,4 +1,4 @@
-//! Receipt lines of an itemized expense.
+//! Receipt lines of an itemised expense.
 
 use crate::error::{ExpenseError, Field};
 use crate::expense::{Choice, Split};
@@ -6,7 +6,7 @@ use crate::id::MemberId;
 use crate::money::Money;
 use crate::text;
 
-/// One line of an itemized expense: a unit price times a quantity, divided
+/// One line of an itemised expense: a unit price times a quantity, divided
 /// among its own members by its own [`Split`].
 ///
 /// The line totals of an expense's items must add up to exactly the
@@ -184,7 +184,7 @@ impl ItemBuilder {
     }
 }
 
-/// The serialized form of an [`Item`], validated on the way in.
+/// The serialised form of an [`Item`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct ItemRecord {

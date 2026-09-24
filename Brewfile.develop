@@ -1,7 +1,7 @@
 # What a developer's machine needs from Homebrew:
 # `brew bundle --file Brewfile.develop`.
 #
-# Not here: rustup (install it from rustup.rs; it materializes
+# Not here: rustup (install it from rustup.rs; it materialises
 # rust-toolchain.toml, including the llvm-tools component coverage needs).
 
 # The coverage report; the bottle is a download rather than a compile.

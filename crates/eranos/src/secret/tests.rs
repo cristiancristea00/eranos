@@ -30,9 +30,9 @@ fn expose_returns_the_whole_text() {
         Secret::new(String::from(ACCOUNT_NUMBER)).expose(),
         ACCOUNT_NUMBER
     );
-    // A zeroizing buffer.
+    // A zeroising buffer.
     let buffer = Zeroizing::new(String::from(ACCOUNT_NUMBER));
-    assert_eq!(Secret::from_zeroizing(buffer).expose(), ACCOUNT_NUMBER);
+    assert_eq!(Secret::from_zeroising(buffer).expose(), ACCOUNT_NUMBER);
     // Empty text.
     assert_eq!(Secret::new(String::new()).expose(), "");
 }
@@ -44,7 +44,7 @@ fn equality_compares_the_text() {
     // Same text.
     assert_eq!(
         Secret::new(String::from(ACCOUNT_NUMBER)),
-        Secret::from_zeroizing(Zeroizing::new(String::from(ACCOUNT_NUMBER)))
+        Secret::from_zeroising(Zeroizing::new(String::from(ACCOUNT_NUMBER)))
     );
     // Different text.
     assert_ne!(
@@ -72,9 +72,9 @@ fn a_secret_keeps_the_callers_buffer() {
     let pointer = text.as_ptr();
     let secret = Secret::new(text);
     assert_eq!(secret.expose().as_ptr(), pointer);
-    // A zeroizing buffer.
+    // A zeroising buffer.
     let buffer = Zeroizing::new(String::from(ACCOUNT_NUMBER));
     let buffer_pointer = buffer.as_ptr();
-    let secret_from_buffer = Secret::from_zeroizing(buffer);
+    let secret_from_buffer = Secret::from_zeroising(buffer);
     assert_eq!(secret_from_buffer.expose().as_ptr(), buffer_pointer);
 }

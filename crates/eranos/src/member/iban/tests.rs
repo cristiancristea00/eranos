@@ -269,8 +269,8 @@ fn equality_compares_the_electronic_format() {
 /// Saved accounts would fail to load, or a mistyped number would load.
 #[cfg(feature = "serde")]
 #[test]
-fn ibans_serialize_as_the_electronic_format() {
-    // Round trip, normalized on the way in.
+fn ibans_serialise_as_the_electronic_format() {
+    // Round trip, normalised on the way in.
     let iban = Iban::parse(GERMAN).unwrap();
     assert_eq!(
         serde_json::to_string(&iban).unwrap(),

@@ -1,4 +1,4 @@
-//! Deserialization of the types whose serialized form is their text form.
+//! Deserialisation of the types whose serialised form is their text form.
 
 use std::fmt;
 use std::marker::PhantomData;
@@ -7,15 +7,15 @@ use std::str::FromStr;
 use serde::Deserializer;
 use serde::de::{Error, Visitor};
 
-/// Deserializes a string and parses it with `T`'s [`FromStr`], so the value
+/// Deserialises a string and parses it with `T`'s [`FromStr`], so the value
 /// passes the same validation as when it is parsed directly.
-pub(crate) fn deserialize<'de, D, T>(deserializer: D, expected: &'static str) -> Result<T, D::Error>
+pub(crate) fn deserialise<'de, D, T>(deserialiser: D, expected: &'static str) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
     T: FromStr,
     T::Err: fmt::Display,
 {
-    deserializer.deserialize_str(TextVisitor {
+    deserialiser.deserialize_str(TextVisitor {
         expected,
         target: PhantomData,
     })

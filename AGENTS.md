@@ -70,7 +70,7 @@ for test helpers and benchmark fixtures, which panic to report failure);
   initialisms stay short: id, iban, iso, uuid, utc, ffi, fnv, bcp, json, url,
   api, io, os, cpu, ui; `max` and `min` count as dictionary words. The rule
   covers locals, parameters, closure bindings, test helpers, and every
-  serialized field name.
+  serialised field name.
 - **Money is never a float.** Amounts are `i64` minor units; every division
   goes through `money::allocation::allocate`, every conversion through
   `ExchangeRate::convert`, and every percentage through
@@ -92,10 +92,10 @@ for test helpers and benchmark fixtures, which panic to report failure);
   built with builders and edited with `to_builder`; public enums are
   `#[non_exhaustive]`; getters have no `get_` prefix; errors are
   `#[non_exhaustive]` thiserror enums whose messages are lowercase, carry no
-  trailing period, and never echo the text they rejected (inputs include
+  trailing full stop, and never echo the text they rejected (inputs include
   account numbers).
-- **Serialized data outlives releases.** A new field gets
-  `#[serde(default)]`; a type with invariants deserializes through its
+- **Serialised data outlives releases.** A new field gets
+  `#[serde(default)]`; a type with invariants deserialises through its
   validating constructor (`serde(try_from = …)`); `Group` replays its
   entries through the insert methods; a change older readers cannot accept
   bumps the `FORMAT` constant in `group/serde.rs`.
@@ -124,6 +124,13 @@ for test helpers and benchmark fixtures, which panic to report failure);
   alternative, a failure the code prevents, a platform constraint, a
   command, a cross-reference, or a format trap. One canonical home per topic
   in the docs; elsewhere one sentence and a relative link.
+- **British English with the Oxford comma.** Prose, commit messages, and
+  every identifier we own use British spelling with -ise (organise,
+  serialise, behaviour, licence, artefact) and British words (full stop, per
+  cent, towards); a list of three or more items takes a comma before its
+  final "and" or "or". Names that belong to other code keep their spelling
+  inside code spans: `Serialize`, `skip_serializing_if`, `Zeroizing`,
+  `CARGO_TERM_COLOR`, `actions/upload-artifact`.
 - **Tests are claims.** Unit tests live in `<module>/tests.rs` (declared
   with `#[cfg(test)] mod tests;` at the bottom of the module); every test
   module has a `//!` doc and every test a `///` doc stating what breaks in

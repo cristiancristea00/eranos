@@ -105,7 +105,7 @@ fn every_public_type_is_send_and_sync() {
     }
 }
 
-/// A new group starts empty, with its normalized details.
+/// A new group starts empty, with its normalised details.
 #[test]
 fn a_new_group_starts_empty() {
     let id = GroupId::from_bytes([9; 16]);
@@ -342,13 +342,13 @@ fn an_expense_must_fit_the_group() {
         group.add_expense(shared("5.00", ana, &[ana, stranger]))
     });
     let missing = CategoryId::from_bytes([200; 16]);
-    let categorized = shared("5.00", ana, &[ana])
+    let categorised = shared("5.00", ana, &[ana])
         .to_builder()
         .category(missing)
         .build()
         .unwrap();
     assert_unchanged(&mut group, &GroupError::UnknownCategory(missing), |group| {
-        group.add_expense(categorized)
+        group.add_expense(categorised)
     });
     // A foreign expense needs a rate; a local one must not have one.
     let foreign = Expense::builder("Taxi", Money::parse("50.00", Currency::RON).unwrap(), day())

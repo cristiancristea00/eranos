@@ -89,7 +89,7 @@ fn surrounding_whitespace_is_trimmed() {
 /// load.
 #[cfg(feature = "serde")]
 #[test]
-fn tags_serialize_as_their_text_form() {
+fn tags_serialise_as_their_text_form() {
     // Round trip.
     let language = Language::parse("ro-RO").unwrap();
     assert_eq!(serde_json::to_string(&language).unwrap(), "\"ro-RO\"");

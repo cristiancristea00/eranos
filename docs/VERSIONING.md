@@ -10,8 +10,8 @@ changes it).
 
 | Surface                  | What is covered                                                                                                               |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behavior                                       |
-| The serialized form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialized-form) and the `FORMAT` number                          |
+| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour                                      |
+| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                         |
 | The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order |
 | The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                |
 
@@ -30,9 +30,9 @@ Before 1.0.0, the minor version plays the role of the major one:
 
 | Change                                                                                                                                                                      | Before 1.0 | From 1.0  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------- |
-| breaking (`!` commit): removed or changed API, a new variant in a matchable position, a serialized shape older releases cannot read, different numbers for the same entries | 0.**y**.0  | **x**.0.0 |
-| `feat`: new API, a new error variant (every enum is `#[non_exhaustive]`), a new optional serialized field                                                                   | 0.y.**z**  | x.**y**.0 |
-| `fix` that restores documented behavior                                                                                                                                     | 0.y.**z**  | x.y.**z** |
+| breaking (`!` commit): removed or changed API, a new variant in a matchable position, a serialised shape older releases cannot read, different numbers for the same entries | 0.**y**.0  | **x**.0.0 |
+| `feat`: new API, a new error variant (every enum is `#[non_exhaustive]`), a new optional serialised field                                                                   | 0.y.**z**  | x.**y**.0 |
+| `fix` that restores documented behaviour                                                                                                                                    | 0.y.**z**  | x.y.**z** |
 | `docs`, `test`, `style`, `chore`, `refactor`, `ci`, `build`, `perf` without visible change                                                                                  | none       | none      |
 
 A `fix` that changes numbers users already saw is still breaking: record it
@@ -49,7 +49,7 @@ as `fix!` with a `BREAKING CHANGE:` footer naming what changes.
 
 Mark the old item `#[deprecated(since = "…", note = "use … instead")]` in a
 minor release and remove it in the next breaking one; the footer of the
-breaking commit names what disappeared and its replacement. A serialized
+breaking commit names what disappeared and its replacement. A serialised
 shape is never removed while `FORMAT` stays the same: reading support for
 an old format stays until a breaking release says otherwise.
 

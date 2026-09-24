@@ -10,7 +10,7 @@ on:
     branches: ["**"]
   pull_request:
   # Sent only to repositories with a merge queue, which needs an
-  # organization; a repository owned by a personal account never receives it.
+  # organisation; a repository owned by a personal account never receives it.
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -243,7 +243,7 @@ jobs:
       - name: Render one HTML page
         # gcovr reads only Cobertura, and takes only line counts from it; the
         # sources come from the checkout. One file with its styles and scripts
-        # inlined is what an unzipped artifact can hold.
+        # inlined is what an unzipped artefact can hold.
         run: >-
           pipx run --spec gcovr==8.6 gcovr
           --cobertura-add-tracefile target/coverage.xml
@@ -256,21 +256,21 @@ jobs:
         uses: actions/upload-artifact@v7.0.1
         with:
           # Not zipped, so the page opens in the browser, and the file name is
-          # the artifact's name. It is stored uncompressed against the 500 MB
-          # of artifact storage, hence the short retention.
+          # the artefact's name. It is stored uncompressed against the 500 MB
+          # of artefact storage, hence the short retention.
           path: target/eranos-coverage.html
           archive: false
           retention-days: 7
           if-no-files-found: error
-      - name: Summarize
+      - name: Summarise
         env:
           # Through the environment, not a template inside the script.
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          ARTEFACT_URL: ${{ steps.upload.outputs.artifact-url }}
         run: |
           {
             echo '## Coverage'
             echo
-            echo "Annotated source with line counts: [eranos-coverage.html]($ARTIFACT_URL)"
+            echo "Annotated source with line counts: [eranos-coverage.html]($ARTEFACT_URL)"
             echo
             echo '| File | Regions | Functions | Lines |'
             echo '| :--- | ---: | ---: | ---: |'

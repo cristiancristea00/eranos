@@ -33,7 +33,7 @@ fn percentages_parse_to_basis_points() {
 
 /// Percentages typed with their sign or stray spaces would be refused.
 #[test]
-fn a_percent_sign_and_whitespace_are_accepted() {
+fn a_per_cent_sign_and_whitespace_are_accepted() {
     // A trailing sign, with or without a space.
     assert_eq!(percentage("12.5%").basis_points(), 1_250);
     assert_eq!(percentage("12.5 %").basis_points(), 1_250);
@@ -219,7 +219,7 @@ fn parts_convert_to_and_from_hundredths() {
 /// Saved ratios would fail to load, or zero parts would load.
 #[cfg(feature = "serde")]
 #[test]
-fn ratios_serialize_as_integers() {
+fn ratios_serialise_as_integers() {
     // Percentages as basis points.
     assert_eq!(serde_json::to_string(&percentage("12.5")).unwrap(), "1250");
     assert_eq!(

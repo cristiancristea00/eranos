@@ -250,7 +250,7 @@ fn a_balance_reads_the_sign_of_the_net() {
 }
 
 /// Per-member category totals list only that member's categories,
-/// uncategorized first, and never leak another member's rows.
+/// uncategorised first, and never leak another member's rows.
 #[test]
 fn member_category_totals_list_only_that_member() {
     let (ana, bob) = (member(1), member(2));

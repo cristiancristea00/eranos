@@ -20,7 +20,7 @@ every command.
 - **Money must add up.** Every test that divides an amount checks the parts
   against the whole; the properties check it for random inputs.
 - **Numbers users see are pinned.** Hand-computed splits, the rounding
-  rule, the FNV-1a tie rotation, and the serialized shapes are asserted
+  rule, the FNV-1a tie rotation, and the serialised shapes are asserted
   literally, so a change to any of them fails a test before it changes what
   a group owes (see [VERSIONING.md](VERSIONING.md)).
 - **Incremental equals rebuilt.** The group keeps its totals incrementally;
@@ -170,5 +170,5 @@ both together.
 | rounding, allocation, conversion | the gates, then `cargo mutants -p eranos --file crates/eranos/src/money/allocation.rs`                                          |
 | a settlement strategy            | the gates, then `cargo bench -p eranos --bench settlement`                                                                      |
 | the ledger or group mutations    | the gates, then `cargo bench -p eranos --bench ledger`                                                                          |
-| serialized shapes                | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading |
+| serialised shapes                | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading |
 | docs or README                   | `cargo test -p eranos --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                    |

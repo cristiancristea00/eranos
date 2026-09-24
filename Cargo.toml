@@ -9,7 +9,7 @@ resolver = "3"
 members = ["crates/eranos"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.97"
 description = "Group expense tracking: exact money splitting, cached balances, and repayment plans"
@@ -169,7 +169,7 @@ overflow-checks = true
 incremental = true
 
 # Release (and `cargo bench`, which inherits it): fat LTO with one codegen
-# unit gives the optimizer the whole program. Panics unwind, because the
+# unit gives the optimiser the whole program. Panics unwind, because the
 # UniFFI scaffolding catches them at the boundary and turns them into errors
 # on the Swift and Kotlin side. Line tables keep crash backtraces resolvable.
 [profile.release]

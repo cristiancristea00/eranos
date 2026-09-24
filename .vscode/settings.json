@@ -25,9 +25,9 @@
     // The serde code sits behind a cargo feature; without this its modules
     // are greyed out and unchecked in the editor.
     "rust-analyzer.cargo.features": "all",
-    // Its own target subdirectory, so rust-analyzer's checks never contend
+    // Its own target subdirectory, so `rust-analyzer`'s checks never contend
     // with terminal cargo builds for the target-dir lock. The cost is
-    // duplicated build artifacts.
+    // duplicated build artefacts.
     "rust-analyzer.cargo.targetDir": true,
     // The codebase imports one `use` per module path (`use crate::money::{…}`).
     "rust-analyzer.imports.granularity.group": "module",
@@ -52,7 +52,7 @@
     "files.eol": "\n",
 
     // ------------------------------------------------------------ search + fs
-    // Build artifacts stay out of search results and out of the file watcher,
+    // Build artefacts stay out of search results and out of the file watcher,
     // which target/ would churn through on every build. CLAUDE.md and
     // GEMINI.md are symlinks to AGENTS.md, so following them would triple
     // every search hit in the instructions.

@@ -9,7 +9,7 @@ use crate::text;
 /// Money one member paid directly to another, usually to settle up.
 ///
 /// A transfer moves balances: the sender's debt shrinks and the recipient's
-/// credit shrinks. It is not spending, so it counts toward no total or
+/// credit shrinks. It is not spending, so it counts towards no total or
 /// category. Like an expense, a transfer in another currency than its
 /// group's needs an [`ExchangeRate`] into the group currency.
 ///
@@ -228,7 +228,7 @@ impl TransferBuilder {
     }
 }
 
-/// The serialized form of a [`Transfer`], validated on the way in.
+/// The serialised form of a [`Transfer`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct TransferRecord {

@@ -91,7 +91,7 @@ impl Summary {
         })
     }
 
-    /// The spending in one category (`None` for uncategorized expenses).
+    /// The spending in one category (`None` for uncategorised expenses).
     #[must_use]
     pub fn category_total(&self, category: Option<CategoryId>) -> Money {
         Money::from_minor_units(
@@ -100,7 +100,7 @@ impl Summary {
         )
     }
 
-    /// The spending of every category with expenses, uncategorized first,
+    /// The spending of every category with expenses, uncategorised first,
     /// then ordered by category.
     #[must_use]
     pub fn category_totals(
@@ -112,7 +112,7 @@ impl Summary {
     }
 
     /// One member's share of the spending in one category (`None` for
-    /// uncategorized expenses).
+    /// uncategorised expenses).
     #[must_use]
     pub fn member_category_total(&self, member: MemberId, category: Option<CategoryId>) -> Money {
         let total = self
@@ -124,7 +124,7 @@ impl Summary {
     }
 
     /// One member's share of the spending in every category they have
-    /// expenses in, uncategorized first, then ordered by category.
+    /// expenses in, uncategorised first, then ordered by category.
     pub fn member_category_totals(
         &self,
         member: MemberId,
@@ -146,7 +146,7 @@ pub struct MemberSummary {
 }
 
 impl MemberSummary {
-    /// What the member paid toward expenses.
+    /// What the member paid towards expenses.
     #[must_use]
     pub const fn paid(&self) -> Money {
         Money::from_minor_units(self.totals.paid, self.currency)
@@ -275,7 +275,7 @@ impl ExpenseShares {
     }
 }
 
-/// What one member paid toward and consumed of one expense.
+/// What one member paid towards and consumed of one expense.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemberShare {
     pub(crate) member: MemberId,

@@ -1,5 +1,5 @@
 //! End-to-end scenarios through the public API, worked out by hand: a
-//! weekend trip with every split method, an itemized restaurant bill, a
+//! weekend trip with every split method, an itemised restaurant bill, a
 //! multi-currency trip, and a household where a member moves out. The
 //! amounts divide evenly, so every expected number is exact; the numbers in
 //! the comments are the hand calculation the assertions pin.
@@ -234,10 +234,10 @@ fn recording_a_settlement_settles_everyone() -> TestResult {
     Ok(())
 }
 
-/// An itemized bill charges each member for their own items, and the two
+/// An itemised bill charges each member for their own items, and the two
 /// tip distributions differ exactly as documented.
 #[test]
-fn an_itemized_bill_charges_each_member_for_their_items() -> TestResult {
+fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     let mut group = Group::builder("Dinner", Currency::EUR).build()?;
     let ana = group.add_member(member("Ana"));
     let bob = group.add_member(member("Bob"));

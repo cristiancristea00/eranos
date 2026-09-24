@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Road trip: saving and loading a group");
     println!("═════════════════════════════════════");
     println!(
-        "With the `serde` feature every type serializes. A group saves only what was\n\
+        "With the `serde` feature every type serialises. A group saves only what was\n\
          entered: its details, members, categories, expenses, and transfers. The totals,\n\
          balances, and settlements are recomputed when it is loaded."
     );

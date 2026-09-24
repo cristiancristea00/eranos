@@ -303,7 +303,7 @@ fn times_order_chronologically() {
 /// A saved date would fail to load, or an impossible one would load.
 #[cfg(feature = "serde")]
 #[test]
-fn dates_serialize_as_their_text_form() {
+fn dates_serialise_as_their_text_form() {
     // Round trip.
     let september_23 = date(2026, 9, 23);
     assert_eq!(
@@ -314,7 +314,7 @@ fn dates_serialize_as_their_text_form() {
         serde_json::from_str::<Date>("\"2026-09-23\"").unwrap(),
         september_23
     );
-    // Deserializing validates like parsing.
+    // Deserialising validates like parsing.
     assert!(serde_json::from_str::<Date>("\"2026-02-30\"").is_err());
     // Only strings are dates.
     assert!(serde_json::from_str::<Date>("20260923").is_err());
@@ -323,12 +323,12 @@ fn dates_serialize_as_their_text_form() {
 /// A saved time would fail to load, or an impossible one would load.
 #[cfg(feature = "serde")]
 #[test]
-fn times_serialize_as_their_text_form() {
+fn times_serialise_as_their_text_form() {
     // Round trip.
     let time = Time::new(7, 5).unwrap();
     assert_eq!(serde_json::to_string(&time).unwrap(), "\"07:05\"");
     assert_eq!(serde_json::from_str::<Time>("\"07:05\"").unwrap(), time);
-    // Deserializing validates like parsing.
+    // Deserialising validates like parsing.
     assert!(serde_json::from_str::<Time>("\"24:00\"").is_err());
     // Only strings are times.
     assert!(serde_json::from_str::<Time>("705").is_err());

@@ -21,7 +21,7 @@ fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, Currency::EUR)
 }
 
-fn percent(text: &str) -> Percentage {
+fn per_cent(text: &str) -> Percentage {
     Percentage::parse(text).unwrap()
 }
 
@@ -43,9 +43,9 @@ fn members_are_listed_in_the_order_given() {
     assert_eq!(Split::equal(order).members().collect::<Vec<_>>(), order);
     // Percentages.
     let split = Split::percentages([
-        (CAROL, percent("20")),
-        (ANA, percent("30")),
-        (BOB, percent("50")),
+        (CAROL, per_cent("20")),
+        (ANA, per_cent("30")),
+        (BOB, per_cent("50")),
     ]);
     assert_eq!(split.members().collect::<Vec<_>>(), order);
     // Parts.
@@ -108,7 +108,7 @@ fn a_member_listed_twice_is_rejected() {
         Err(ExpenseError::DuplicateMember { member: BOB })
     );
     // Percentages, parts, and amounts.
-    let percentages = Split::percentages([(BOB, percent("50")), (BOB, percent("50"))]);
+    let percentages = Split::percentages([(BOB, per_cent("50")), (BOB, per_cent("50"))]);
     let parts_twice = Split::parts([(CAROL, Parts::ONE), (CAROL, Parts::ONE)]);
     let amounts = Split::amounts([(ANA, euros(500)), (ANA, euros(500))]);
     assert_eq!(
@@ -152,13 +152,13 @@ fn a_zero_percentage_is_rejected() {
 #[test]
 fn percentages_must_add_up_to_exactly_100() {
     // Exactly 100 %.
-    let split = Split::percentages([(ANA, percent("70")), (BOB, percent("30"))]);
+    let split = Split::percentages([(ANA, per_cent("70")), (BOB, per_cent("30"))]);
     assert_eq!(split.validate(euros(1_000)), Ok(()));
     let single_member_split = Split::percentages([(ANA, Percentage::HUNDRED)]);
     assert_eq!(single_member_split.validate(euros(1_000)), Ok(()));
     // One basis point short or over.
-    let short = Split::percentages([(ANA, percent("50")), (BOB, percent("49.99"))]);
-    let over = Split::percentages([(ANA, percent("50")), (BOB, percent("50.01"))]);
+    let short = Split::percentages([(ANA, per_cent("50")), (BOB, per_cent("49.99"))]);
+    let over = Split::percentages([(ANA, per_cent("50")), (BOB, per_cent("50.01"))]);
     assert_eq!(
         short.validate(euros(1_000)),
         Err(ExpenseError::PercentagesDoNotAddUp {
@@ -328,14 +328,14 @@ fn parts_divide_in_proportion() {
 #[test]
 fn percentages_divide_in_proportion() {
     // 70 % and 30 %.
-    let split = Split::percentages([(ANA, percent("70")), (BOB, percent("30"))]);
+    let split = Split::percentages([(ANA, per_cent("70")), (BOB, per_cent("30"))]);
     assert_eq!(split.divide(10_000, 0), vec![(ANA, 7_000), (BOB, 3_000)]);
     // The leftover cent goes to the largest remainder, whatever the
     // rotation.
     let uneven_thirds_split = Split::percentages([
-        (ANA, percent("33.33")),
-        (BOB, percent("33.33")),
-        (CAROL, percent("33.34")),
+        (ANA, per_cent("33.33")),
+        (BOB, per_cent("33.33")),
+        (CAROL, per_cent("33.34")),
     ]);
     for rotation in 0..3 {
         assert_eq!(

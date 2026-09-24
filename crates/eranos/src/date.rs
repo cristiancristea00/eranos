@@ -226,26 +226,26 @@ mod serde_impls {
     use super::{Date, Time};
 
     impl Serialize for Date {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.collect_str(self)
+        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+            serialiser.collect_str(self)
         }
     }
 
     impl<'de> Deserialize<'de> for Date {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialize(deserializer, "a `YYYY-MM-DD` date")
+        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+            crate::serde_text::deserialise(deserialiser, "a `YYYY-MM-DD` date")
         }
     }
 
     impl Serialize for Time {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.collect_str(self)
+        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+            serialiser.collect_str(self)
         }
     }
 
     impl<'de> Deserialize<'de> for Time {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialize(deserializer, "an `hh:mm` time")
+        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+            crate::serde_text::deserialise(deserialiser, "an `hh:mm` time")
         }
     }
 }

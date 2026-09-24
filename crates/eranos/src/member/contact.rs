@@ -101,24 +101,24 @@ impl PhoneNumber {
             .trim()
             .strip_prefix('+')
             .ok_or(ValueError::InvalidPhoneNumber)?;
-        let mut normalized = String::with_capacity(rest.len() + 1);
-        normalized.push('+');
+        let mut normalised = String::with_capacity(rest.len() + 1);
+        normalised.push('+');
         for character in rest.chars() {
             match character {
-                '0'..='9' => normalized.push(character),
+                '0'..='9' => normalised.push(character),
                 ' ' | '-' | '.' | '(' | ')' => {}
                 _ => return Err(ValueError::InvalidPhoneNumber),
             }
         }
-        let digits = normalized.len() - 1;
+        let digits = normalised.len() - 1;
         if (7..=15).contains(&digits) {
-            Ok(Self(normalized))
+            Ok(Self(normalised))
         } else {
             Err(ValueError::InvalidPhoneNumber)
         }
     }
 
-    /// The normalized number: `+` followed by digits only.
+    /// The normalised number: `+` followed by digits only.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
@@ -146,26 +146,26 @@ mod serde_impls {
     use super::{Email, PhoneNumber};
 
     impl Serialize for Email {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(self.as_str())
+        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+            serialiser.serialize_str(self.as_str())
         }
     }
 
     impl<'de> Deserialize<'de> for Email {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialize(deserializer, "an email address")
+        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+            crate::serde_text::deserialise(deserialiser, "an email address")
         }
     }
 
     impl Serialize for PhoneNumber {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            serializer.serialize_str(self.as_str())
+        fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+            serialiser.serialize_str(self.as_str())
         }
     }
 
     impl<'de> Deserialize<'de> for PhoneNumber {
-        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-            crate::serde_text::deserialize(deserializer, "a phone number such as +40712345678")
+        fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+            crate::serde_text::deserialise(deserialiser, "a phone number such as +40712345678")
         }
     }
 }

@@ -166,8 +166,8 @@ pub enum ExpenseError {
     /// A split lists no member.
     #[error("a split needs at least one member")]
     EmptySplit,
-    /// An itemized expense without items.
-    #[error("an itemized expense needs at least one item")]
+    /// An itemised expense without items.
+    #[error("an itemised expense needs at least one item")]
     NoItems,
     /// A member appears more than once in one split.
     #[error("member {member} appears more than once in a split")]

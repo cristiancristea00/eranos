@@ -128,7 +128,7 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
          100 %. Mia's room is smaller, so she takes 20 %."
     );
     let rent = group.add_expense(
-        Expense::builder("Apartment", eur("500.00")?, day)
+        Expense::builder("Flat", eur("500.00")?, day)
             .paid_by(bob)
             .split(Split::percentages([
                 (ana, Percentage::parse("40")?),

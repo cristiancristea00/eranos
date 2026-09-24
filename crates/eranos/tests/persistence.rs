@@ -1,4 +1,4 @@
-//! The serialized form of a group (feature `serde`). The apps persist and
+//! The serialised form of a group (feature `serde`). The apps persist and
 //! sync groups in this form, so a round trip must be the identity, the JSON
 //! shape is pinned (renaming a field breaks every stored group), and a
 //! tampered or corrupted file must be refused rather than loaded into an
@@ -24,7 +24,7 @@ fn day() -> Date {
     Date::new(2026, 9, 23).unwrap()
 }
 
-/// A group using every serialized feature, and its members.
+/// A group using every serialised feature, and its members.
 fn group() -> (Group, MemberId, MemberId, MemberId) {
     let mut group = Group::builder("Lisbon", Currency::EUR)
         .description("Autumn trip")
@@ -125,7 +125,7 @@ fn a_group_round_trips_through_json() {
 fn the_json_shape_is_pinned() {
     let (group, ana, _, carol) = group();
     let value = json_of(&group);
-    assert_eq!(value["format"], json!(1));
+    assert_eq!(value["format"], json!(2));
     assert_eq!(value["name"], json!("Lisbon"));
     assert_eq!(value["currency"], json!("EUR"));
     assert_eq!(value["language"], json!("pt-PT"));
@@ -160,7 +160,7 @@ fn the_json_shape_is_pinned() {
         json!({"equal": [value["members"][1]["id"]]})
     );
     assert_eq!(
-        bill["split"]["itemized"][1]["split"]["parts"][1][1],
+        bill["split"]["itemised"][1]["split"]["parts"][1][1],
         json!(150)
     );
     assert_eq!(bill.get("total"), None);
@@ -217,11 +217,19 @@ fn a_tampered_file_is_refused() {
             .remove("exchange_rate");
     });
     assert!(unrated.contains("exchange rate from RON"), "{unrated}");
-    // A newer format is refused instead of read with fields dropped.
+    // A newer format is refused instead of read with fields dropped, and an
+    // older one because no earlier shape is read.
     let newer = tamper(&|value| {
-        value["format"] = json!(2);
+        value["format"] = json!(3);
     });
-    assert!(newer.contains("unsupported group format 2"), "{newer}");
+    assert!(newer.contains("unsupported group format 3"), "{newer}");
+    let older = tamper(&|value| {
+        value["format"] = json!(1);
+    });
+    assert!(
+        older.contains("unsupported group format 1: this version reads format 2"),
+        "{older}"
+    );
 }
 
 /// A file must also be refused when each entry is valid on its own but the
@@ -276,7 +284,7 @@ fn a_bare_group_round_trips_through_json() {
 /// Account details are stored in clear text, for the app's secure storage,
 /// but never appear in debug output that could reach logs.
 #[test]
-fn secrets_serialize_but_never_print() {
+fn secrets_serialise_but_never_print() {
     let (group, ana, _, _) = group();
     let text = serde_json::to_string(&group).unwrap();
     assert!(text.contains("RO49AAAA1B31007593840000"));
@@ -286,10 +294,10 @@ fn secrets_serialize_but_never_print() {
     assert!(debug.contains("RO49 •••• 0000"));
 }
 
-/// Value types serialize on their own in the same shapes as inside a
+/// Value types serialise on their own in the same shapes as inside a
 /// group.
 #[test]
-fn value_types_serialize_on_their_own() {
+fn value_types_serialise_on_their_own() {
     assert_eq!(
         serde_json::to_value(eur("12.34")).unwrap(),
         json!({"minor_units": 1234, "currency": "EUR"})

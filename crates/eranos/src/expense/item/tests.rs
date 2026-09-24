@@ -1,4 +1,4 @@
-//! Itemized receipts divide each line among the members who shared it. These
+//! Itemised receipts divide each line among the members who shared it. These
 //! tests keep every line valid (a name, a positive price, at least one unit,
 //! a split that divides the line total), keep the two ways of naming who
 //! shares a line from silently overriding each other, and keep edits made
@@ -124,7 +124,7 @@ fn an_item_without_a_split_is_rejected() {
     );
 }
 
-/// A line without a name would appear blank on the itemized receipt.
+/// A line without a name would appear blank on the itemised receipt.
 #[test]
 fn the_item_name_is_trimmed_and_required() {
     // Surrounding whitespace.

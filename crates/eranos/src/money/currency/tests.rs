@@ -195,14 +195,14 @@ fn from_str_parses_like_from_code() {
 /// Saved amounts would load in the wrong currency, or an unknown one.
 #[cfg(feature = "serde")]
 #[test]
-fn currencies_serialize_as_their_code() {
+fn currencies_serialise_as_their_code() {
     // Round trip.
     assert_eq!(serde_json::to_string(&Currency::EUR).unwrap(), "\"EUR\"");
     assert_eq!(
         serde_json::from_str::<Currency>("\"EUR\"").unwrap(),
         Currency::EUR
     );
-    // Deserializing looks the code up like parsing.
+    // Deserialising looks the code up like parsing.
     assert_eq!(
         serde_json::from_str::<Currency>("\"ron\"").unwrap(),
         Currency::RON

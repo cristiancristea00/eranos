@@ -37,7 +37,7 @@ impl Percentage {
     /// 100 %: the total a percentage split must reach.
     pub const HUNDRED: Self = Self(10_000);
 
-    /// Returns the percentage with `basis_points` hundredths of a percent.
+    /// Returns the percentage with `basis_points` hundredths of a per cent.
     #[must_use]
     pub const fn from_basis_points(basis_points: u32) -> Self {
         Self(basis_points)

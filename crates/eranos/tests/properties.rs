@@ -1,5 +1,5 @@
 //! Properties of random groups through the public API: every split method,
-//! itemized bills, both tip distributions, several payers, foreign
+//! itemised bills, both tip distributions, several payers, foreign
 //! currencies, and transfers. Whatever the entries, the books must balance
 //! (paid, consumed, and spent agree; balances sum to zero; categories add up),
 //! every strategy's plan must clear every balance, the fewest-payments plan
@@ -142,7 +142,7 @@ impl ExpenseRecipe {
             let amount = money(self.amount);
             Expense::builder("Whole", amount, day()).split(self.split.build(members, amount))
         };
-        let itemized = |items: &Vec<(i64, u32, SplitRecipe)>| {
+        let itemised = |items: &Vec<(i64, u32, SplitRecipe)>| {
             let items: Vec<Item> = items
                 .iter()
                 .map(|(price, quantity, split)| {
@@ -158,9 +158,9 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::builder("Itemized", money(amount), day()).items(items)
+            Expense::builder("Itemised", money(amount), day()).items(items)
         };
-        let mut builder = self.items.as_ref().map_or_else(whole, itemized);
+        let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some((fixed, value, equal)) = self.tip {
             let tip = if fixed {
                 Tip::fixed(money(i64::from(value)))

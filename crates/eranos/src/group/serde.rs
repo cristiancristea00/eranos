@@ -1,7 +1,7 @@
-//! The serialized form of a group: its details and entries, never the
+//! The serialised form of a group: its details and entries, never the
 //! derived totals.
 //!
-//! Deserializing replays every entry through the same checks as the insert
+//! Deserialising replays every entry through the same checks as the insert
 //! methods, so a hand-edited or corrupted file cannot produce an
 //! inconsistent group. Members are replayed unarchived and archived at the
 //! end, because an expense may reference a member who was archived after it
@@ -22,9 +22,10 @@ use crate::member::Member;
 use crate::money::Currency;
 use crate::transfer::Transfer;
 
-/// The version of the serialized form. A newer one is rejected rather than
-/// read with fields silently dropped.
-const FORMAT: u32 = 1;
+/// The version of the serialised form. Every other version is refused: a
+/// newer one would be read with fields silently dropped, and no earlier one
+/// is read.
+const FORMAT: u32 = 2;
 
 #[derive(Serialize)]
 struct GroupView<'group> {
@@ -86,7 +87,7 @@ struct MemberRecord {
 }
 
 impl Serialize for Group {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
         GroupView {
             format: FORMAT,
             id: self.id,
@@ -125,13 +126,13 @@ impl Serialize for Group {
                 })
                 .collect(),
         }
-        .serialize(serializer)
+        .serialize(serialiser)
     }
 }
 
 impl<'de> Deserialize<'de> for Group {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        GroupRecord::deserialize(deserializer)?
+    fn deserialize<D: Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        GroupRecord::deserialize(deserialiser)?
             .replay()
             .map_err(D::Error::custom)
     }
@@ -154,7 +155,7 @@ enum ReplayError {
 impl GroupRecord {
     /// Rebuilds the group through the same checks as the insert methods.
     ///
-    /// Not generic over the deserializer, so it is compiled once rather
+    /// Not generic over the deserialiser, so it is compiled once rather
     /// than for every format the apps read.
     fn replay(self) -> Result<Group, ReplayError> {
         if self.format != FORMAT {

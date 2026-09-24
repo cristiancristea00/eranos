@@ -157,7 +157,7 @@ fn expense_errors() -> Vec<(ExpenseError, &'static str)> {
         ),
         (
             ExpenseError::NoItems,
-            "an itemized expense needs at least one item",
+            "an itemised expense needs at least one item",
         ),
         (
             ExpenseError::DuplicateMember { member: MEMBER },
@@ -425,7 +425,7 @@ fn settlement_error_messages_are_pinned() {
     }
 }
 
-/// A capitalized or punctuated message would read wrongly when the apps
+/// A capitalised or punctuated message would read wrongly when the apps
 /// embed it in a longer sentence.
 #[test]
 fn no_message_starts_like_a_sentence_or_ends_with_a_period() {
@@ -434,7 +434,7 @@ fn no_message_starts_like_a_sentence_or_ends_with_a_period() {
         assert!(!message.is_empty());
         assert!(starts_in_lowercase_or_with_a_code(message), "{message:?}");
     }
-    // No trailing period.
+    // No trailing full stop.
     for message in every_message() {
         assert!(!message.ends_with('.'), "{message:?}");
     }

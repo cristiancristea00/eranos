@@ -52,7 +52,7 @@ impl Category {
     }
 }
 
-/// The serialized form of a [`Category`], validated on the way in.
+/// The serialised form of a [`Category`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct CategoryRecord {

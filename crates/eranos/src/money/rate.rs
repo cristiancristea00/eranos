@@ -30,7 +30,7 @@ const MAX_SCALE: u8 = 18;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ExchangeRate {
-    // Normalized: no trailing zero digits in the mantissa while scale > 0, so
+    // Normalised: no trailing zero digits in the mantissa while scale > 0, so
     // equal rates have equal fields.
     mantissa: u64,
     scale: u8,
@@ -150,15 +150,15 @@ impl FromStr for ExchangeRate {
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for ExchangeRate {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_str(self)
+    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+        serialiser.collect_str(self)
     }
 }
 
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for ExchangeRate {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialize(deserializer, "a positive decimal exchange rate")
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        crate::serde_text::deserialise(deserialiser, "a positive decimal exchange rate")
     }
 }
 

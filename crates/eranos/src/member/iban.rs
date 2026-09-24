@@ -48,26 +48,26 @@ impl Iban {
     }
 
     fn validate(text: &str) -> Result<Self, IbanError> {
-        // Normalized never outgrows the input, so the buffer never
+        // Normalised never outgrows the input, so the buffer never
         // reallocates and leaves no unwiped copy behind.
-        let mut normalized = Zeroizing::new(String::with_capacity(text.len()));
+        let mut normalised = Zeroizing::new(String::with_capacity(text.len()));
         for character in text.chars() {
             match character {
                 'a'..='z' | 'A'..='Z' | '0'..='9' => {
-                    normalized.push(character.to_ascii_uppercase());
+                    normalised.push(character.to_ascii_uppercase());
                 }
                 character if character.is_whitespace() => {}
                 _ => return Err(IbanError::InvalidCharacter),
             }
         }
-        let bytes = normalized.as_bytes();
+        let bytes = normalised.as_bytes();
         let valid_prefix = bytes
             .get(..2)
             .is_some_and(|country| country.iter().all(u8::is_ascii_uppercase))
             && bytes
                 .get(2..4)
                 .is_some_and(|check| check.iter().all(u8::is_ascii_digit));
-        let country = normalized
+        let country = normalised
             .get(..2)
             .filter(|_| valid_prefix)
             .ok_or(IbanError::InvalidFormat)?;
@@ -86,7 +86,7 @@ impl Iban {
         if mod_97(bytes) != 1 {
             return Err(IbanError::InvalidChecksum);
         }
-        Ok(Self(Secret::from_zeroizing(normalized)))
+        Ok(Self(Secret::from_zeroising(normalised)))
     }
 
     /// The two-letter country code, such as `"DE"`.
@@ -152,15 +152,15 @@ impl FromStr for Iban {
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for Iban {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.expose_secret())
+    fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
+        serialiser.serialize_str(self.expose_secret())
     }
 }
 
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Iban {
-    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        crate::serde_text::deserialize(deserializer, "an IBAN")
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        crate::serde_text::deserialise(deserialiser, "an IBAN")
     }
 }
 
