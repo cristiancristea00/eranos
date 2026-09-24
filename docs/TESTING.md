@@ -43,7 +43,7 @@ every command.
 | API         | `crates/eranos/tests/api.rs`            | public API: every type `Send + Sync`  | `cargo test -p eranos --test api`                        |
 | Doctests    | every `# Examples` block and the README | public API                            | `cargo test --workspace --doc`                           |
 | Examples    | `crates/eranos/examples/*.rs`           | public API; they assert their numbers | `cargo run -p eranos --example <name>`                   |
-| Benchmarks  | `crates/eranos/benches/*.rs`            | public API                            | `cargo bench -p eranos`                                  |
+| Benchmarks  | `crates/eranos/benches/*.rs`            | public API                            | `cargo bench -p eranos --features serde --bench '*'`     |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -165,8 +165,11 @@ includes `sequential-ids`, so an audit of `eranos-core` also runs once with
 
 `benches/settlement.rs` times every strategy on groups of growing size (the
 exact solver's worst case: every member pays one expense everyone shares),
-and `benches/ledger.rs` times adding, replacing, and removing one expense in
-a group of 10 000. The timings quoted on `SettlementStrategy` and in
+`benches/ledger.rs` times adding, replacing, and removing one expense in a
+group of 10 000, and `benches/group.rs` times a currency change and loading
+a saved group (feature `serde`) with 1 000 and 10 000 expenses, the
+operations that touch every entry. The timings quoted on
+`SettlementStrategy` and in
 [ARCHITECTURE § 12](ARCHITECTURE.md#12-key-numbers) come from them; update
 both together.
 
@@ -178,6 +181,7 @@ both together.
 | rounding, allocation, conversion  | the gates, then `cargo mutants --file crates/eranos-money/src/allocation.rs`                                                       |
 | a settlement strategy             | the gates, then `cargo bench -p eranos --bench settlement`                                                                         |
 | the ledger or group mutations     | the gates, then `cargo bench -p eranos --bench ledger`                                                                             |
+| a currency change or loading      | the gates, then `cargo bench -p eranos --features serde --bench group`                                                             |
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading    |
 | a libphonenumber metadata release | the gates, then `cargo test -p eranos-contact --lib` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
 | docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                     |

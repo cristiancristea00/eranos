@@ -494,12 +494,14 @@ The core is shaped for binding crates added as workspace siblings:
 
 ## 12. Key numbers
 
-Release build on an Apple M4 Pro (`cargo bench -p eranos`):
+Release build on an Apple M4 Pro (`cargo bench -p eranos --features serde --bench '*'`):
 
-| Operation                               | Size                                            | Time                     |
-| --------------------------------------- | ----------------------------------------------- | ------------------------ |
-| `MinimumTransfers`                      | 12 / 16 / 20 open balances                      | 18 µs / 0.36 ms / 7.2 ms |
-| `Greedy`                                | 100 / 1 000 members                             | 3.5 µs / 55 µs           |
-| `Direct`                                | 100 members sharing every expense (4 950 pairs) | 110 µs                   |
-| add or remove an expense of six members | group of 10 000 expenses                        | ≈ 1 µs                   |
-| read a member's totals                  | any                                             | ≈ 3 ns                   |
+| Operation                               | Size                                            | Time                              |
+| --------------------------------------- | ----------------------------------------------- | --------------------------------- |
+| `MinimumTransfers`                      | 12 / 16 / 20 / 24 open balances                 | 18 µs / 0.36 ms / 7.2 ms / 0.14 s |
+| `Greedy`                                | 100 / 1 000 members                             | 3.5 µs / 55 µs                    |
+| `Direct`                                | 100 members sharing every expense (4 950 pairs) | 110 µs                            |
+| add or remove an expense of six members | group of 10 000 expenses                        | ≈ 1 µs                            |
+| read a member's totals                  | any                                             | ≈ 3 ns                            |
+| change the currency                     | group of 10 000 expenses                        | 9.8 ms                            |
+| load a saved group from JSON            | group of 10 000 expenses                        | 20 ms                             |

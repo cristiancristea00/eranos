@@ -70,5 +70,9 @@ harness = false
 name = "ledger"
 harness = false
 
+[[bench]]
+name = "group"
+harness = false
+
 [lints]
 workspace = true

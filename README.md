@@ -148,9 +148,9 @@ cargo run -p eranos --all-features --example grand_tour   # the same identifiers
 ## Development
 
 ```sh
-cargo xtask gates                           # every commit gate, in order
-cargo test --workspace --all-features       # unit, integration, property, and doc tests
-cargo bench -p eranos                       # settlement and ledger benchmarks
+cargo xtask gates                                   # every commit gate, in order
+cargo test --workspace --all-features               # unit, integration, property, and doc tests
+cargo bench -p eranos --features serde --bench '*'  # every benchmark
 ```
 
 The gates and conventions are in [AGENTS.md](AGENTS.md), every command and

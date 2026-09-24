@@ -69,7 +69,10 @@ fn group(size: usize) -> Group {
 
 fn strategies(criterion: &mut Criterion) {
     let cases = [
-        (SettlementStrategy::MinimumTransfers, vec![4, 8, 12, 16, 20]),
+        (
+            SettlementStrategy::MinimumTransfers,
+            vec![4, 8, 12, 16, 20, 24],
+        ),
         (SettlementStrategy::Greedy, vec![4, 20, 100, 1_000]),
         (SettlementStrategy::Direct, vec![4, 20, 100]),
     ];

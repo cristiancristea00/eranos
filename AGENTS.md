@@ -272,6 +272,7 @@ balance-changing mutation clears. Diagrams, rules, and numbers:
   `cargo mutants --file <file>` is the occasional companion
   audit: coverage says a line ran, mutation testing says a test would have
   noticed it was wrong.
-- Benchmarks are wall-clock timings: run `cargo bench -p eranos` on an idle
-  machine, and update the timings quoted on `SettlementStrategy` and in
+- Benchmarks are wall-clock timings: run
+  `cargo bench -p eranos --features serde --bench '*'` on an idle machine,
+  and update the timings quoted on `SettlementStrategy` and in
   docs/ARCHITECTURE.md together.

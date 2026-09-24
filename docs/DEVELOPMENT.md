@@ -221,14 +221,19 @@ When code in one crate needs something another crate holds:
 ```sh
 cargo run -p eranos --example quickstart
 cargo run -p eranos --features serde --example persistence
-cargo bench -p eranos                               # everything; minutes
-cargo bench -p eranos --bench settlement -- --quick # a fast sanity pass
-cargo bench -p eranos --bench ledger -- "replace"   # one benchmark by name
+cargo bench -p eranos --features serde --bench '*'  # everything; minutes
+cargo bench -p eranos --bench settlement -- --quick  # a fast sanity pass
+cargo bench -p eranos --bench ledger -- "replace"    # one benchmark by name
+cargo bench -p eranos --features serde --bench '*' -- --save-baseline main
+cargo bench -p eranos --features serde --bench '*' -- --baseline main
 ```
 
 Benchmarks run the release profile (fat LTO), so the first run compiles for
 a while. Timings are wall-clock: run them on an idle machine before quoting
-them.
+them. `--bench '*'` runs the criterion benchmarks alone: the library's own
+test harness also runs under `cargo bench` and refuses criterion's options,
+such as `--save-baseline`, which keeps a run to compare a change against
+with `--baseline`.
 
 ## 5. Coverage and mutation testing
 
