@@ -364,8 +364,12 @@ impl MemberPair {
 }
 
 // Written out, so that it does not depend on the order of the fields: by
-// `from`, then `to`.
+// `from`, then `to`. Both comparisons are `#[inline]`: the crates above sort
+// and search by them, and without the attribute each comparison is a call
+// into this crate, which slows the direct settlement of 100 members by about
+// half.
 impl Ord for MemberPair {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         self.from
             .cmp(&other.from)
@@ -374,6 +378,7 @@ impl Ord for MemberPair {
 }
 
 impl PartialOrd for MemberPair {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
