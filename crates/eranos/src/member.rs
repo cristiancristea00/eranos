@@ -1,10 +1,9 @@
 //! The people in a group, their contact details, and where they can be paid.
 
-mod contact;
-
-pub use contact::{Email, PhoneNumber};
 #[doc(inline)]
 pub use eranos_account::{Account, AccountDetails, AccountKind, Iban, Username};
+#[doc(inline)]
+pub use eranos_contact::{Email, PhoneNumber};
 
 use eranos_core::text;
 

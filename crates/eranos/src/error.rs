@@ -9,6 +9,8 @@ pub use eranos_account::{AccountError, IbanError};
 #[doc(inline)]
 pub use eranos_calendar::CalendarError;
 #[doc(inline)]
+pub use eranos_contact::ContactError;
+#[doc(inline)]
 pub use eranos_core::IdError;
 #[doc(inline)]
 pub use eranos_money::MoneyError;
@@ -16,21 +18,6 @@ pub use eranos_money::MoneyError;
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
 use crate::money::{Currency, Money};
-
-/// A contact detail that could not be read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum ContactError {
-    /// An email address that breaks the RFC 5321 and 5322 rules: no local
-    /// part or domain around an `@`, a malformed one, one too long, or
-    /// whitespace or an invisible character.
-    #[error("invalid email address")]
-    InvalidEmail,
-    /// A phone number that does not start with `+`, holds a letter or an
-    /// extension, or is not valid in its country's numbering plan.
-    #[error("invalid phone number: expected `+` and a number valid in its country")]
-    InvalidPhoneNumber,
-}
 
 /// A [`Member`](crate::Member) that could not be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]

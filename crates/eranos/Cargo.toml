@@ -19,6 +19,7 @@ serde = [
     "dep:serde",
     "eranos-account/serde",
     "eranos-calendar/serde",
+    "eranos-contact/serde",
     "eranos-core/serde",
     "eranos-money/serde",
 ]
@@ -30,13 +31,12 @@ sequential-ids = ["eranos-core/sequential-ids"]
 [dependencies]
 eranos-account = { workspace = true }
 eranos-calendar = { workspace = true }
+eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
 eranos-money = { workspace = true }
 icu_casemap = { workspace = true }
 icu_locale_core = { workspace = true }
 icu_normalizer = { workspace = true }
-icu_properties = { workspace = true }
-rlibphonenumber = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, optional = true }
 

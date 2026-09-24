@@ -1,0 +1,29 @@
+# eranos-contact: a member's email address and phone number, validated. An
+# internal crate: the `eranos` crate re-exports the types callers use.
+[package]
+name = "eranos-contact"
+description = "The contact details of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `Serialize` and `Deserialize` for emails and phone numbers, as their text.
+serde = ["dep:serde", "eranos-core/serde"]
+
+[dependencies]
+eranos-core = { workspace = true }
+icu_properties = { workspace = true }
+rlibphonenumber = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

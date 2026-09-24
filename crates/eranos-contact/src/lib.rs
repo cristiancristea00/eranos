@@ -1,5 +1,11 @@
 //! Email addresses, checked against RFC 5321 and 5322, and phone numbers,
 //! checked against libphonenumber's numbering plans.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use.
+#![doc(test(attr(deny(warnings))))]
+
+mod error;
 
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -9,7 +15,7 @@ use icu_properties::CodePointMapData;
 use icu_properties::props::{GeneralCategory, GeneralCategoryGroup};
 use rlibphonenumber::{PHONE_NUMBER_UTIL, PhoneNumberFormat};
 
-use crate::error::ContactError;
+pub use error::ContactError;
 
 /// An email address: a local part and a domain around an `@`, as RFC 5321
 /// and 5322 define them, with the characters outside ASCII that RFC 6531

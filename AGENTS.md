@@ -99,7 +99,7 @@ failure); `#[allow]` is itself a lint error.
   rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the
   embedded libphonenumber metadata on first use and is never written after;
   the invariant that rules out its panic is stated at the call in
-  `member/contact.rs`.
+  `eranos-contact`.
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
   cached settlements. The one other writer is `Ledger::move_category`, with

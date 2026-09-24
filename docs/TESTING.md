@@ -172,12 +172,12 @@ both together.
 
 ## 8. What to run for a given change
 
-| Change                            | Run                                                                                                                                        |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| anything                          | the gates in [AGENTS.md](../AGENTS.md#gates-before-committing)                                                                             |
-| rounding, allocation, conversion  | the gates, then `cargo mutants --file crates/eranos-money/src/allocation.rs`                                                               |
-| a settlement strategy             | the gates, then `cargo bench -p eranos --bench settlement`                                                                                 |
-| the ledger or group mutations     | the gates, then `cargo bench -p eranos --bench ledger`                                                                                     |
-| serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading            |
-| a libphonenumber metadata release | the gates, then `cargo test -p eranos --lib member::contact` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
-| docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                             |
+| Change                            | Run                                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| anything                          | the gates in [AGENTS.md](../AGENTS.md#gates-before-committing)                                                                     |
+| rounding, allocation, conversion  | the gates, then `cargo mutants --file crates/eranos-money/src/allocation.rs`                                                       |
+| a settlement strategy             | the gates, then `cargo bench -p eranos --bench settlement`                                                                         |
+| the ledger or group mutations     | the gates, then `cargo bench -p eranos --bench ledger`                                                                             |
+| serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading    |
+| a libphonenumber metadata release | the gates, then `cargo test -p eranos-contact --lib` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
+| docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                     |
