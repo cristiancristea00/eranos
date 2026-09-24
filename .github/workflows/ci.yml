@@ -234,8 +234,10 @@ jobs:
         with:
           tool: cargo-llvm-cov@0.9.1
       # Unit and integration tests; the stable toolchain does not measure
-      # doctests.
+      # doctests. Each feature set compiles an identifier generator the
+      # other leaves out, so the report merges both runs.
       - run: cargo llvm-cov --no-report --workspace --all-features --locked
+      - run: cargo llvm-cov --no-report --workspace --no-default-features --locked
       - name: Export the reports
         run: |
           cargo llvm-cov report --cobertura --output-path target/coverage.xml

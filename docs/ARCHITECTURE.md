@@ -26,7 +26,9 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   is pure synchronous Rust: no I/O, no async runtime, no clock except for
   generating identifiers, and no global state except the lock that
   generation reads the clock under, so the identifiers of concurrent threads
-  stay in creation order, and the phone-number metadata, which
+  stay in creation order (or, with the `sequential-ids` feature for
+  examples and tests, the counter that replaces the clock), and the
+  phone-number metadata, which
   rlibphonenumber decodes once, on first use, into a table nothing writes
   to.
 - **Exact money.** A split that loses or invents a cent is a bug users see.

@@ -118,8 +118,12 @@ those declare the same exception once, at the top of their file, with
 
 ## 5. Coverage
 
-`cargo llvm-cov --workspace --all-features --html` measures lines and
-regions for the unit, integration, and property tests. It does not count
+Coverage merges a run with every feature and one without the default
+features ([DEVELOPMENT.md § 5](DEVELOPMENT.md#5-coverage-and-mutation-testing)
+has the commands), because each compiles code the other leaves out: the
+serde code, and either the clock-based identifier generator or the
+`sequential-ids` counter. It measures lines and regions for the unit,
+integration, and property tests. It does not count
 doctests on the stable toolchain, so an item covered only by its example
 shows as missed. Coverage is a diagnostic, never a gate; a gap is a reading
 list: either a missing test or dead code. CI measures the same way on every
@@ -153,7 +157,9 @@ mutation testing says a test would have noticed it was wrong. It is an
 occasional audit, run one file at a time (`.cargo/mutants.toml` sets the
 package, every feature, and a timeout floor); the arithmetic in
 `money/allocation.rs`, `resolution.rs`, and `settlement/minimum.rs` is where
-survivors matter most.
+survivors matter most. Every feature includes `sequential-ids`, so an audit
+of `id.rs` also runs once with `--no-default-features` to reach the
+clock-based generator.
 
 ## 7. Benchmarks
 

@@ -73,6 +73,10 @@
 //!   `into_group`, which reports a refused file as a
 //!   [`GroupError`](error::GroupError). Account details serialise in clear
 //!   text, so store serialised groups in the platform's secure storage.
+//! - `sequential-ids`: identifiers count up from one instead of reading the
+//!   clock and the random source, so a program that builds the same entries
+//!   in the same order prints the same identifiers on every run. It is for
+//!   examples and tests: identifiers from two devices would collide.
 //!
 //! # Examples
 //!

@@ -1,7 +1,7 @@
 # eranos: the library. Pure and synchronous (no I/O, no async, and no global
-# state but the phone-number metadata, decoded once on first use), so every
-# rule is unit-testable and the binding crates can wrap it without adapting
-# to a runtime.
+# state but the phone-number metadata, decoded once on first use, and what
+# identifier generation holds), so every rule is unit-testable and the
+# binding crates can wrap it without adapting to a runtime.
 [package]
 name = "eranos"
 description.workspace = true
@@ -16,6 +16,10 @@ readme = "../../README.md"
 # deserialised `Group` is rebuilt through the same validation as its `add_*`
 # methods.
 serde = ["dep:serde", "uuid/serde"]
+# Identifiers count up from one instead of reading the clock and the random
+# source, so examples and tests print the same text on every run. Never for
+# apps: identifiers from two devices would collide.
+sequential-ids = []
 
 [dependencies]
 icu_casemap = { workspace = true }

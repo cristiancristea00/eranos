@@ -73,6 +73,9 @@ an old format stays until a breaking release says otherwise.
 - **`Debug` output.** Its format may change in any release.
 - **Error messages.** The `Display` text of errors may be reworded; match on
   the variants.
+- **Sequential identifiers.** The identifiers the `sequential-ids` feature
+  generates may change in any release; the feature is for examples and
+  tests.
 - **Publishing.** The crate is `publish = false`: the apps consume it from
   this repository.
 

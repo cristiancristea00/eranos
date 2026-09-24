@@ -138,9 +138,10 @@ cargo run -p eranos --features serde --example persistence
 
 ## Features
 
-| Feature | Default | Enables                                                                                                       |
-| ------- | ------- | ------------------------------------------------------------------------------------------------------------- |
-| `serde` | no      | `Serialize`/`Deserialize` for a group and every type it stores; a loaded group is re-validated entry by entry |
+| Feature          | Default | Enables                                                                                                                                               |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serde`          | no      | `Serialize`/`Deserialize` for a group and every type it stores; a loaded group is re-validated entry by entry                                         |
+| `sequential-ids` | no      | Identifiers count up from one, so examples and tests print the same text on every run; never for apps, whose identifiers would collide across devices |
 
 ## Development
 

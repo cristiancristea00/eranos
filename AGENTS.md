@@ -21,8 +21,8 @@ Signed-off-by: <committer name> <<committer email>>
 ```
 
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
-- Scopes in use: `money`, `member`, `expense`, `transfer`, `group`, `ledger`,
-  `settlement`, `serde`, `docs`, `build`, `xtask`.
+- Scopes in use: `core`, `money`, `member`, `expense`, `transfer`, `group`,
+  `ledger`, `settlement`, `serde`, `docs`, `build`, `xtask`.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -89,14 +89,16 @@ failure); `#[allow]` is itself a lint error.
   written down, next to the code, as a comment or an
   `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
-  state**, with two exceptions. ID generation reads the clock and the OS
+  state**, with three exceptions. ID generation reads the clock and the OS
   random source (UUID v7), under one private lock in `id.rs` that keeps the
   IDs of concurrent threads in creation order: an entity gets its ID when
   it is built, and loading a saved group restores the IDs through serde,
-  never through a public setter. Phone-number validation reads rlibphonenumber's
-  `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the embedded
-  libphonenumber metadata on first use and is never written after; the
-  invariant that rules out its panic is stated at the call in
+  never through a public setter. With the `sequential-ids` feature, which
+  is for examples and tests, generation reads neither and takes the next
+  value of one counter in `id.rs` instead. Phone-number validation reads
+  rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the
+  embedded libphonenumber metadata on first use and is never written after;
+  the invariant that rules out its panic is stated at the call in
   `member/contact.rs`.
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
@@ -225,13 +227,16 @@ balance-changing mutation clears. Diagrams, rules, and numbers:
   changes stored shares and must fail a pinned test first: the rotation
   hash and several hand-computed splits are pinned on purpose. See
   [docs/VERSIONING.md](docs/VERSIONING.md) before changing any of them.
-- `cargo test --no-default-features` compiles out the serde code; run both
-  feature sets before claiming a change is tested.
-- Coverage is a diagnostic, never a gate:
-  `cargo llvm-cov --workspace --all-features --html`. It does not count
-  doctests on the stable toolchain. Every line, region, and function is
-  covered; a new gap is either a missing test or a branch that cannot run,
-  which is restructured away rather than kept
+- `cargo test --no-default-features` compiles out the serde code and
+  generates identifiers from the clock, where `--all-features` counts them;
+  run both feature sets before claiming a change is tested.
+- Coverage is a diagnostic, never a gate: a run with every feature and one
+  without the default features, merged into one report
+  ([docs/DEVELOPMENT.md § 5](docs/DEVELOPMENT.md#5-coverage-and-mutation-testing)),
+  because each compiles an identifier generator the other leaves out. It
+  does not count doctests on the stable toolchain. Every line, region, and
+  function is covered; a new gap is either a missing test or a branch that
+  cannot run, which is restructured away rather than kept
   ([docs/TESTING.md](docs/TESTING.md#5-coverage)).
   `cargo mutants -p eranos --file <file>` is the occasional companion
   audit: coverage says a line ran, mutation testing says a test would have

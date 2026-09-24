@@ -1,13 +1,16 @@
 //! Identifiers link entries across devices, files, and app screens. These
 //! tests keep generated IDs unique and ordered by creation, keep the text
 //! form a standard hyphenated UUID that reads back as the same ID, and keep
-//! the byte form and its ordering stable for storage.
+//! the byte form and its ordering stable for storage. Under the
+//! `sequential-ids` feature they keep the counted IDs in the same shape;
+//! the tests share the counter, so they pin order, never a value.
 
 use super::*;
 
 use std::collections::HashSet;
 use std::iter;
 use std::thread;
+#[cfg(not(feature = "sequential-ids"))]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use proptest::prelude::*;
@@ -167,6 +170,7 @@ macro_rules! identifier_tests {
 /// thread at once (1,612 times in 12 seconds with 64 threads). Sixty-four
 /// threads, more than there are cores, generate across the next second
 /// boundary, and each must see its identifiers strictly increase.
+#[cfg(not(feature = "sequential-ids"))]
 #[test]
 fn identifiers_stay_in_creation_order_across_a_second_boundary() {
     let second = || {
@@ -195,6 +199,27 @@ fn identifiers_stay_in_creation_order_across_a_second_boundary() {
     for worker in workers {
         worker.join().unwrap();
     }
+}
+
+/// Examples that print identifiers would differ from run to run, or a
+/// counted identifier would not be told from one generated from the clock.
+#[cfg(feature = "sequential-ids")]
+#[test]
+fn sequential_ids_count_up_with_every_random_bit_zero() {
+    // Two types share the counter, in the order this thread asked.
+    let first = GroupId::generate().to_bytes();
+    let second = MemberId::generate().to_bytes();
+    assert!(first[..6] < second[..6]);
+    // Only the version and variant bits are set outside the counter.
+    for bytes in [first, second] {
+        assert_eq!(bytes[6], 0x70);
+        assert_eq!(bytes[7], 0);
+        assert_eq!(bytes[8], 0x80);
+        assert_eq!(bytes[9..], [0; 7]);
+    }
+    // The counter is far below the clock, so a counted identifier sorts
+    // before every UUID v7 generated from the time.
+    assert!(MemberId::from_bytes(second) < MemberId::from_bytes(Uuid::now_v7().into_bytes()));
 }
 
 identifier_tests!(group_id, GroupId);
