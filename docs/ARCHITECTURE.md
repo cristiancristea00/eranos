@@ -333,7 +333,9 @@ asynchronous request dropped before it completes keeps nothing.
 scratch ledger and swaps it in only if everything succeeded: entries in any
 other currency become converted costs at the supplied rate (including
 entries in the old group currency, which were local), and entries in the new
-currency become local.
+currency become local. Its asynchronous form yields once per 1 024 entries
+and swaps only after its last yield, so a call dropped at a yield changes
+nothing.
 
 ## 7. Settlement strategies
 

@@ -22,7 +22,7 @@ pub use language::Language;
 pub use saved::SavedGroup;
 
 use eranos_category::Category;
-use eranos_core::cooperative::Cooperative;
+use eranos_core::cooperative::{Cooperative, Pacer};
 use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId, text};
 use eranos_expense::{Expense, resolve_expense};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
@@ -35,6 +35,10 @@ use eranos_transfer::{Transfer, resolve_transfer};
 /// one would be read with fields silently dropped, and no earlier one is
 /// read.
 pub(crate) const FORMAT: u32 = 2;
+
+/// The entries a currency change re-resolves between two yields: about
+/// 1 ms of work on the reference machine.
+const ENTRIES_PER_YIELD: u64 = 1_024;
 
 /// A group of people sharing expenses: a trip, a day out, a household.
 ///
@@ -289,6 +293,55 @@ impl Group {
         currency: Currency,
         rates: &[CurrencyRate],
     ) -> Result<(), GroupError> {
+        self.change_currency_async(currency, rates).complete()
+    }
+
+    /// Moves the group to another currency, as
+    /// [`change_currency`](Self::change_currency) does, yielding while it
+    /// re-converts the entries.
+    ///
+    /// It yields once per 1 024 entries and changes the group only after
+    /// its last yield, so a call dropped before it completes leaves the
+    /// group as it was.
+    ///
+    /// # Errors
+    ///
+    /// As for [`change_currency`](Self::change_currency).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::cooperative::block_on;
+    /// use eranos::{
+    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, Group, Member, Money, Split,
+    /// };
+    ///
+    /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
+    /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
+    ///
+    /// // Awaited like any future; `block_on` runs it on this thread.
+    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
+    /// block_on(group.change_currency_async(Currency::RON, &[rate]))?;
+    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn change_currency_async(
+        &mut self,
+        currency: Currency,
+        rates: &[CurrencyRate],
+    ) -> Cooperative<impl Future<Output = Result<(), GroupError>> + Send> {
+        Cooperative::new(self.change_currency_paced(currency, rates))
+    }
+
+    /// The computation of
+    /// [`change_currency_async`](Self::change_currency_async).
+    async fn change_currency_paced(
+        &mut self,
+        currency: Currency,
+        rates: &[CurrencyRate],
+    ) -> Result<(), GroupError> {
         if currency == self.currency {
             return Ok(());
         }
@@ -314,6 +367,7 @@ impl Group {
 
         // `rate_for` gives every other currency its rate and `currency` none,
         // so every cost has the kind `check_cost` asks for.
+        let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
         let mut delta = Delta::default();
         let mut expenses = BTreeMap::new();
         for (&id, record) in &self.expenses {
@@ -322,6 +376,7 @@ impl Group {
             let resolved = resolve_expense(&expense, currency).map_err(|_| GroupError::Overflow)?;
             delta.add_expense(&resolved, expense.category(), 1);
             expenses.insert(id, ExpenseRecord { expense, resolved });
+            pacer.advance(1).await;
         }
         let mut transfers = BTreeMap::new();
         for (&id, record) in &self.transfers {
@@ -330,7 +385,10 @@ impl Group {
             let amount = resolve_transfer(&transfer, currency).map_err(|_| GroupError::Overflow)?;
             delta.add_transfer(pair(&transfer), amount, 1);
             transfers.insert(id, TransferRecord { amount, transfer });
+            pacer.advance(1).await;
         }
+        // Nothing is written before the last yield, so a call dropped at
+        // any of them leaves the group as it was.
         let mut ledger = Ledger::new(currency);
         ledger.apply(&delta).map_err(|_| GroupError::Overflow)?;
 

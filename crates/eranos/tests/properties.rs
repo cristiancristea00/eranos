@@ -16,9 +16,9 @@
 
 use eranos::cooperative::block_on;
 use eranos::{
-    CalendarDate, CategoryTotal, Cost, Currency, ExchangeRate, Expense, ExpenseId, Group, Item,
-    Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts, Percentage,
-    SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
+    CalendarDate, CategoryTotal, Cost, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseId,
+    Group, Item, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
+    Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
 };
 use proptest::prelude::*;
 
@@ -315,6 +315,28 @@ proptest! {
             let awaited = group.clone();
             prop_assert_eq!(block_on(awaited.settlement_async(strategy)), group.settlement(strategy));
         }
+    }
+
+    /// A currency change awaited in an executor would leave another group
+    /// than the one made on the caller's thread.
+    #[test]
+    fn an_awaited_currency_change_equals_a_computed_one(recipe in group_recipe()) {
+        let (members, expenses, transfers) = entries(&recipe);
+        let mut computed = group(&base(&members), &expenses, &transfers);
+        let mut awaited = computed.clone();
+        let rate = |text| ExchangeRate::parse(text).unwrap();
+        let rates = [
+            CurrencyRate::new(Currency::BHD, rate("2.65")),
+            CurrencyRate::new(Currency::EUR, rate("1.1")),
+            CurrencyRate::new(Currency::JPY, rate("0.0067")),
+            CurrencyRate::new(Currency::RON, rate("0.22")),
+        ];
+        prop_assert_eq!(
+            block_on(awaited.change_currency_async(Currency::USD, &rates)),
+            computed.change_currency(Currency::USD, &rates)
+        );
+        prop_assert_eq!(&awaited, &computed);
+        prop_assert_eq!(awaited.summary(), computed.summary());
     }
 
     /// The same entries in the opposite order give an equal group, totals,

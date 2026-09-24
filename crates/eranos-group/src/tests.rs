@@ -762,6 +762,50 @@ fn a_currency_change_reconverts_every_entry() {
     assert_eq!(group.ledger, rebuilt(&group));
 }
 
+/// A currency change dropped at one of its yields would leave some entries
+/// converted and others not: it changes nothing until it completes.
+#[test]
+fn a_currency_change_changes_nothing_until_it_completes() {
+    // 2 100 entries: the change yields after the 1 024th and the 2 048th.
+    let (mut group, ana, bob, _) = trip();
+    for _ in 0..2_000 {
+        group.add_expense(shared("1.00", ana, &[ana, bob])).unwrap();
+    }
+    for _ in 0..100 {
+        group.add_transfer(transfer(bob, ana, "0.50")).unwrap();
+    }
+    let rates = [CurrencyRate::new(Currency::EUR, two())];
+    let mut context = Context::from_waker(Waker::noop());
+    for yields in 1..=2 {
+        let mut changed = group.clone();
+        {
+            let call = changed.change_currency_async(Currency::RON, &rates);
+            let mut call = pin!(call.into_future());
+            for _ in 0..yields {
+                assert!(call.as_mut().poll(&mut context).is_pending());
+            }
+        }
+        assert_eq!(changed, group);
+        assert_eq!(changed.ledger, group.ledger);
+    }
+
+    // Polled to the end, it yields twice and converts every entry.
+    {
+        let call = group.change_currency_async(Currency::RON, &rates);
+        let mut call = pin!(call.into_future());
+        for _ in 0..2 {
+            assert!(call.as_mut().poll(&mut context).is_pending());
+        }
+        assert_eq!(call.as_mut().poll(&mut context), Poll::Ready(Ok(())));
+    }
+    assert_eq!(group.currency(), Currency::RON);
+    assert_eq!(
+        group.summary().total_spent(),
+        Money::parse("4000.00", Currency::RON).unwrap()
+    );
+    assert_eq!(group.ledger, rebuilt(&group));
+}
+
 /// A transfer would be totalled in the wrong currency if its cost were not
 /// checked as an expense's is: a foreign transfer needs its rate, and one in
 /// the group currency must not carry one, when it is added or replaced.
