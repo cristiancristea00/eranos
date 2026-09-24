@@ -158,7 +158,12 @@ pub mod money {
     #[doc(inline)]
     pub use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
 }
-pub mod settlement;
+pub mod settlement {
+    //! Settling up: turning balances into payments between members.
+
+    #[doc(inline)]
+    pub use eranos_settlement::{Payment, Settlement, SettlementStrategy};
+}
 pub mod transfer;
 
 #[doc(no_inline)]
@@ -183,6 +188,7 @@ pub use member::{
 };
 #[doc(no_inline)]
 pub use money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
+#[doc(no_inline)]
 pub use settlement::{Payment, Settlement, SettlementStrategy};
 pub use transfer::Transfer;
 

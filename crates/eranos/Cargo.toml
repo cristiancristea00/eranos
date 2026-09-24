@@ -41,6 +41,7 @@ eranos-expense = { workspace = true }
 eranos-ledger = { workspace = true }
 eranos-member = { workspace = true }
 eranos-money = { workspace = true }
+eranos-settlement = { workspace = true }
 icu_locale_core = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, optional = true }

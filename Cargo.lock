@@ -320,6 +320,7 @@ dependencies = [
  "eranos-ledger",
  "eranos-member",
  "eranos-money",
+ "eranos-settlement",
  "icu_locale_core",
  "proptest",
  "serde",
@@ -438,6 +439,18 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-settlement"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-core",
+ "eranos-ledger",
+ "eranos-money",
+ "proptest",
  "thiserror 2.0.20",
 ]
 

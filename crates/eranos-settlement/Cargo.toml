@@ -1,0 +1,24 @@
+# eranos-settlement: turning a group's balances into payments, by the
+# strategy the caller names. An internal crate: the `eranos` crate re-exports
+# the types callers use.
+[package]
+name = "eranos-settlement"
+description = "The settlement strategies of eranos, re-exported by the eranos crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+eranos-core = { workspace = true }
+eranos-ledger = { workspace = true }
+eranos-money = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# The documentation examples use the paths callers use.
+eranos = { workspace = true }
+proptest = { workspace = true }
+
+[lints]
+workspace = true

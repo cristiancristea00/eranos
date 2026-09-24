@@ -4,21 +4,26 @@
 //! pays what they owe and each creditor receives what they are owed, so
 //! nobody pays more than their debt. The strategies differ in how many
 //! payments they need and how much work that takes.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use. [`Settlements`], the group's cache of plans, and
+//! [`settle`] are the group's, and the facade does not re-export them.
+#![doc(test(attr(deny(warnings))))]
 
 mod direct;
+mod error;
 mod greedy;
 mod minimum;
 
 use std::sync::OnceLock;
 
+use eranos_core::MemberId;
 use eranos_ledger::{Ledger, MemberPair};
+use eranos_money::{Currency, Money};
 
-use crate::error::SettlementError;
-use crate::id::MemberId;
-use crate::money::{Currency, Money};
+pub use error::SettlementError;
 
-/// How [`Group::settlement`](crate::Group::settlement) turns balances into
-/// payments.
+/// How `Group::settlement` turns balances into payments.
 ///
 /// There is no default: the strategies trade the number of payments against
 /// computation time, and the caller chooses. `n` below is the number of
@@ -87,9 +92,8 @@ impl SettlementStrategy {
 
 /// The payments that settle a group, all in the group currency.
 ///
-/// Recording every payment as a transfer, with
-/// [`Transfer::from_payment`](crate::Transfer::from_payment), brings every
-/// balance to zero.
+/// Recording every payment as a transfer, with `Transfer::from_payment`,
+/// brings every balance to zero.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settlement {
     payments: Vec<Payment>,
@@ -173,7 +177,7 @@ impl Flow {
 /// The cache holds no ledger: its owner asks with the same ledger every
 /// time and clears it whenever a balance changes, as the group does.
 #[derive(Debug, Clone, Default)]
-pub(crate) struct Settlements {
+pub struct Settlements {
     direct: OnceLock<Result<Settlement, SettlementError>>,
     greedy: OnceLock<Result<Settlement, SettlementError>>,
     minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
@@ -182,7 +186,11 @@ pub(crate) struct Settlements {
 impl Settlements {
     /// The settlement of `ledger` by `strategy`, computed the first time it
     /// is asked for.
-    pub(crate) fn get(
+    ///
+    /// # Errors
+    ///
+    /// As for [`settle`], computed once and kept like a plan.
+    pub fn get(
         &self,
         strategy: SettlementStrategy,
         ledger: &Ledger,
@@ -194,7 +202,7 @@ impl Settlements {
     }
 
     /// Drops every kept settlement.
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.direct.take();
         self.greedy.take();
         self.minimum_transfers.take();
@@ -213,7 +221,12 @@ impl Settlements {
 }
 
 /// Settles the balances of `ledger` with `strategy`.
-pub(crate) fn settle(
+///
+/// # Errors
+///
+/// [`SettlementError::OutOfMemory`] when the exact solver's table does not
+/// fit in memory, for [`SettlementStrategy::MinimumTransfers`] only.
+pub fn settle(
     strategy: SettlementStrategy,
     ledger: &Ledger,
 ) -> Result<Settlement, SettlementError> {

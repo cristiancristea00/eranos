@@ -4,9 +4,9 @@
 //! until it is cleared.
 
 use eranos_ledger::Delta;
+use eranos_money::Currency;
 
 use super::*;
-use crate::money::Currency;
 
 fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])

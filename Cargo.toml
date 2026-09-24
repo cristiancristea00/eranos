@@ -19,6 +19,7 @@ members = [
     "crates/eranos-ledger",
     "crates/eranos-member",
     "crates/eranos-money",
+    "crates/eranos-settlement",
     "crates/xtask",
 ]
 
@@ -44,6 +45,7 @@ eranos-expense = { path = "crates/eranos-expense" }
 eranos-ledger = { path = "crates/eranos-ledger" }
 eranos-member = { path = "crates/eranos-member" }
 eranos-money = { path = "crates/eranos-money" }
+eranos-settlement = { path = "crates/eranos-settlement" }
 
 # --- Library -----------------------------------------------------------------
 # Category names compare by Unicode's canonical caseless match (D145): NFD,

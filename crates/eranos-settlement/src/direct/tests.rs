@@ -2,8 +2,9 @@
 //! direction the debt runs. A sign read the wrong way would send money from
 //! the creditor to the debtor.
 
+use eranos_core::MemberId;
+
 use super::*;
-use crate::id::MemberId;
 
 fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])

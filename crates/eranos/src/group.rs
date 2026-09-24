@@ -17,6 +17,7 @@ pub use saved::SavedGroup;
 use eranos_core::text;
 use eranos_expense::resolve_expense;
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
+use eranos_settlement::Settlements;
 
 use crate::category::Category;
 use crate::error::{GroupError, SettlementError};
@@ -24,7 +25,7 @@ use crate::expense::Expense;
 use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use crate::member::Member;
 use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
-use crate::settlement::{Settlement, SettlementStrategy, Settlements};
+use crate::settlement::{Settlement, SettlementStrategy};
 use crate::transfer::{Transfer, resolve_transfer};
 
 /// The version of the saved form. Every other version is refused: a newer

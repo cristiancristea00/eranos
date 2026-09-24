@@ -7,7 +7,7 @@
 use proptest::prelude::*;
 
 use super::*;
-use crate::settlement::greedy;
+use crate::greedy;
 
 fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])

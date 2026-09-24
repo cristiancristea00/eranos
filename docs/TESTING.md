@@ -57,19 +57,19 @@ The README is compiled as a doctest through a `#[cfg(doctest)]` item in
 Property tests (proptest) carry the invariants; each has a hand-computed
 companion that pins concrete numbers.
 
-| Invariant                                                                                               | Where                                                                              |
-| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| an allocation's parts add up to its total, each its exact share rounded down or up                      | `eranos-money/src/allocation/tests.rs`                                             |
-| paid and consumed shares of an expense each add up to its total, in any currency                        | `eranos-expense/src/resolution/tests.rs`                                           |
-| the pairwise debts of an expense net to each member's paid minus consumed                               | `eranos-expense/src/resolution/tests.rs`                                           |
-| the exact solver finds the true minimum (checked against an exhaustive search)                          | `settlement/minimum/tests.rs`                                                      |
-| every plan clears every balance, pays only from debtors to creditors, and never overpays                | `settlement/minimum/tests.rs`, `settlement/greedy/tests.rs`, `tests/properties.rs` |
-| greedy needs at most n − 1 payments; the exact plan never more than greedy                              | `settlement/greedy/tests.rs`, `tests/properties.rs`                                |
-| incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing | `group/tests.rs`                                                                   |
-| paid, consumed, and spent agree; balances sum to zero; category totals add up                           | `tests/properties.rs`                                                              |
-| the order entries arrive in does not change the group, its totals, or its plans                         | `tests/properties.rs`                                                              |
-| removing an expense and adding it back restores the totals exactly                                      | `tests/properties.rs`                                                              |
-| a group round-trips through JSON unchanged                                                              | `tests/persistence.rs`                                                             |
+| Invariant                                                                                               | Where                                                                                                    |
+| ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| an allocation's parts add up to its total, each its exact share rounded down or up                      | `eranos-money/src/allocation/tests.rs`                                                                   |
+| paid and consumed shares of an expense each add up to its total, in any currency                        | `eranos-expense/src/resolution/tests.rs`                                                                 |
+| the pairwise debts of an expense net to each member's paid minus consumed                               | `eranos-expense/src/resolution/tests.rs`                                                                 |
+| the exact solver finds the true minimum (checked against an exhaustive search)                          | `eranos-settlement/src/minimum/tests.rs`                                                                 |
+| every plan clears every balance, pays only from debtors to creditors, and never overpays                | `eranos-settlement/src/minimum/tests.rs`, `eranos-settlement/src/greedy/tests.rs`, `tests/properties.rs` |
+| greedy needs at most n − 1 payments; the exact plan never more than greedy                              | `eranos-settlement/src/greedy/tests.rs`, `tests/properties.rs`                                           |
+| incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing | `group/tests.rs`                                                                                         |
+| paid, consumed, and spent agree; balances sum to zero; category totals add up                           | `tests/properties.rs`                                                                                    |
+| the order entries arrive in does not change the group, its totals, or its plans                         | `tests/properties.rs`                                                                                    |
+| removing an expense and adding it back restores the totals exactly                                      | `tests/properties.rs`                                                                                    |
+| a group round-trips through JSON unchanged                                                              | `tests/persistence.rs`                                                                                   |
 
 ## 4. Writing a test here
 
@@ -157,7 +157,7 @@ mutation testing says a test would have noticed it was wrong. It is an
 occasional audit, run one file at a time (`.cargo/mutants.toml` sets the
 workspace's tests, every feature, and a timeout floor); the arithmetic in
 `eranos-money/src/allocation.rs`, `eranos-expense/src/resolution.rs`, and
-`settlement/minimum.rs` is where survivors matter most. Every feature
+`eranos-settlement/src/minimum.rs` is where survivors matter most. Every feature
 includes `sequential-ids`, so an audit of `eranos-core` also runs once with
 `--no-default-features` to reach the clock-based generator.
 

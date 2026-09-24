@@ -115,10 +115,10 @@ breaking.
 1. Add the variant to `SettlementStrategy` with a doc comment stating its
    algorithm, cost, guarantee, and a measured timing.
 2. Implement it as `pub(super) fn settle(…) -> Vec<Flow>` in a new
-   `settlement/<name>.rs`, reading the ledger's balances or pair debts, and
-   dispatch to it in `settlement::settle`.
-3. Add its cache slot to `Settlements` in `group.rs` (the `match` there is
-   exhaustive, so the compiler points at it).
+   `crates/eranos-settlement/src/<name>.rs`, reading the ledger's balances or
+   pair debts, and dispatch to it in the crate's `settle`.
+3. Add its cache slot to `Settlements` beside it (the `match` in
+   `Settlements::slot` is exhaustive, so the compiler points at it).
 4. Add it to `SettlementStrategy::all()`; the property tests then check that
    its plans clear every balance.
 5. Benchmark it in `benches/settlement.rs` and record the timing in

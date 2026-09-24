@@ -8,11 +8,11 @@
 
 use std::collections::BTreeMap;
 
+use eranos_core::MemberId;
 use eranos_ledger::MemberPair;
 
 use super::Flow;
 use crate::error::SettlementError;
-use crate::id::MemberId;
 
 /// Settles `balances` (member, net; positive = is owed, ordered by member)
 /// with the fewest payments.

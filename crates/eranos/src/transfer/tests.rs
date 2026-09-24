@@ -9,7 +9,7 @@ use eranos_ledger::{Delta, Ledger, MemberPair};
 use super::*;
 
 use crate::money::Currency;
-use crate::settlement::{self, SettlementStrategy};
+use crate::settlement::SettlementStrategy;
 
 // Three members, in ID order.
 const ANA: MemberId = MemberId::from_bytes([1; 16]);
@@ -186,7 +186,7 @@ fn a_payment_becomes_the_transfer_that_records_it() {
     delta.add_transfer(MemberPair { from: ANA, to: BOB }, 3_000, 1);
     let mut ledger = Ledger::new(Currency::EUR);
     ledger.apply(&delta).unwrap();
-    let settlement = settlement::settle(SettlementStrategy::Greedy, &ledger).unwrap();
+    let settlement = eranos_settlement::settle(SettlementStrategy::Greedy, &ledger).unwrap();
     let payment = &settlement.payments()[0];
     // Same fields, no optional details, and an identifier of its own.
     let transfer = Transfer::from_payment(payment, september_24());
