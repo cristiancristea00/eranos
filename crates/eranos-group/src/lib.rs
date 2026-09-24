@@ -10,6 +10,7 @@ mod error;
 mod language;
 #[cfg(feature = "serde")]
 mod saved;
+mod shared;
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
@@ -20,6 +21,7 @@ pub use error::{GroupError, LanguageError};
 pub use language::Language;
 #[cfg(feature = "serde")]
 pub use saved::SavedGroup;
+pub use shared::SharedGroup;
 
 use eranos_category::Category;
 use eranos_core::cooperative::{Cooperative, Pacer};

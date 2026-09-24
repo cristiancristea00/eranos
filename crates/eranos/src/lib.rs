@@ -166,7 +166,7 @@ pub mod group {
     #[doc(inline)]
     pub use eranos_group::SavedGroup;
     #[doc(inline)]
-    pub use eranos_group::{Group, GroupBuilder, Language};
+    pub use eranos_group::{Group, GroupBuilder, Language, SharedGroup};
 }
 pub mod id {
     //! Identifiers for groups and their entries.
@@ -238,7 +238,7 @@ pub use expense::{
 #[doc(no_inline)]
 pub use group::SavedGroup;
 #[doc(no_inline)]
-pub use group::{Group, Language};
+pub use group::{Group, Language, SharedGroup};
 #[doc(no_inline)]
 pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 #[doc(no_inline)]

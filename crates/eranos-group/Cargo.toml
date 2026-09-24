@@ -24,6 +24,7 @@ serde = [
 ]
 
 [dependencies]
+async-lock = { workspace = true }
 eranos-category = { workspace = true }
 eranos-core = { workspace = true }
 eranos-expense = { workspace = true }

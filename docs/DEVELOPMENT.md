@@ -220,6 +220,24 @@ When code in one crate needs something another crate holds:
    and compare `target/doc/eranos/all.html`, and the method anchors of the
    pages the change touches, with the documentation before it.
 
+### 3.10 A new group method
+
+1. Add it to `Group` in `crates/eranos-group/src/lib.rs`, under the section
+   of the field it reads or changes, with its `# Errors`.
+2. A method whose time grows with the group, as a currency change's does,
+   is written as `<name>_async`: an `async fn` that reports its work to a
+   `Pacer`, returned in a `Cooperative`, with the synchronous method as its
+   `.complete()`. A change writes nothing to the group before its last
+   yield, so a dropped call changes nothing.
+3. Mirror it on `SharedGroup` in `crates/eranos-group/src/shared.rs`, in the
+   same section and under the same name: a read through `read_with`, a
+   change through `write_with`, each returning owned values; a method that
+   yields awaits the group's `_async` method while it holds the lock.
+4. Compare its result with the group's in the shared group's tests
+   (`every_read_returns_what_the_group_returns` or
+   `every_change_does_what_the_group_does`), and add its future to
+   `every_call_is_send_static_and_small`.
+
 ## 4. Examples and benchmarks
 
 ```sh

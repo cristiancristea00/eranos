@@ -46,11 +46,14 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   pinned exactly), `jiff` (calendar dates, times of day, and their ISO 8601
   parser, without its clock or time zones), and `rlibphonenumber`
   (libphonenumber's numbering plans, pinned exactly); besides them
-  `thiserror` (derive only), `uuid` (v7 identifiers), and optionally
+  `thiserror` (derive only), `uuid` (v7 identifiers), `async-lock` (the
+  read-write lock behind `SharedGroup`, without `std`), and optionally
   `serde`. Everything else, including IBAN validation and the email rules,
   is in the crates. The licences the apps' notices must list are Apache-2.0
   (iso4217-static, and rlibphonenumber with libphonenumber's metadata),
-  Unicode-3.0 (ICU4X), and Unlicense or MIT (jiff), besides those of the
+  Unicode-3.0 (ICU4X), Unlicense or MIT (jiff), and Apache-2.0 or MIT
+  (thiserror, uuid, and async-lock with event-listener,
+  event-listener-strategy, and pin-project-lite), besides those of the
   crates they bring; `deny.toml` does not check licences.
 
 ## 2. Crate map
@@ -66,7 +69,7 @@ facade's edges only the one to the group.
 ```mermaid
 flowchart TD
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
-    GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup"]
+    GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup,<br/>SharedGroup"]
     EXPENSE["eranos-expense<br/>Expense, Split, Item, Tip<br/>(+ resolve_expense)"]
     TRANSFER["eranos-transfer<br/>Transfer (+ resolve_transfer)"]
     MEMBER["eranos-member<br/>Member"]
@@ -111,7 +114,8 @@ flowchart TD
  ┌──────────────────────────────────────────────────────────────────────────┐
  │ eranos             the facade: re-exports; tests, examples, benchmarks   │
  ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-group       Group, GroupBuilder, Language, SavedGroup             │
+ │ eranos-group       Group, GroupBuilder, Language, SavedGroup,            │
+ │                    SharedGroup                                           │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-expense     Expense, Split, Item, Tip (+ resolve_expense)         │
  │ eranos-transfer    Transfer (+ resolve_transfer)                         │
@@ -136,21 +140,21 @@ flowchart TD
 
 </details>
 
-| Crate               | Holds                                                                                                                                                               | Depends on                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `eranos`            | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                               |
-| `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `GroupError`, `LanguageError`                                                                                    | category, core, expense, ledger, member, money, settlement, transfer; icu_locale_core |
-| `eranos-expense`    | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                         |
-| `eranos-transfer`   | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                     |
-| `eranos-member`     | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                |
-| `eranos-category`   | `Category`, `CategoryError`                                                                                                                                         | core; icu_casemap, icu_normalizer                                                     |
-| `eranos-settlement` | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                           | core, ledger, money                                                                   |
-| `eranos-account`    | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                         | core                                                                                  |
-| `eranos-contact`    | `Email`, `PhoneNumber`, `ContactError`                                                                                                                              | core; icu_properties, rlibphonenumber                                                 |
-| `eranos-ledger`     | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                           |
-| `eranos-calendar`   | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                            |
-| `eranos-money`      | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                  |
-| `eranos-core`       | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                  |
+| Crate               | Holds                                                                                                                                                               | Depends on                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `eranos`            | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                           |
+| `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupError`, `LanguageError`                                                                     | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core |
+| `eranos-expense`    | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                                     |
+| `eranos-transfer`   | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                                 |
+| `eranos-member`     | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                            |
+| `eranos-category`   | `Category`, `CategoryError`                                                                                                                                         | core; icu_casemap, icu_normalizer                                                                 |
+| `eranos-settlement` | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                           | core, ledger, money                                                                               |
+| `eranos-account`    | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                         | core                                                                                              |
+| `eranos-contact`    | `Email`, `PhoneNumber`, `ContactError`                                                                                                                              | core; icu_properties, rlibphonenumber                                                             |
+| `eranos-ledger`     | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                                       |
+| `eranos-calendar`   | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                                        |
+| `eranos-money`      | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                              |
+| `eranos-core`       | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                              |
 
 The facade's modules (`eranos::money`, `eranos::member`, …) and its root
 re-export what the table lists before a semicolon, and nothing else: what

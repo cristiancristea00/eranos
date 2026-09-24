@@ -17,6 +17,8 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::calendar::CalendarDate>();
         assert_send_and_sync::<eranos::calendar::TimeOfDay>();
         assert_send_and_sync::<eranos::category::Category>();
+        // Cooperative futures, around a future that is itself both.
+        assert_send_and_sync::<eranos::cooperative::Cooperative<std::future::Ready<()>>>();
         // Errors.
         assert_send_and_sync::<eranos::error::AccountError>();
         assert_send_and_sync::<eranos::error::CalendarError>();
@@ -50,6 +52,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::group::Language>();
         #[cfg(feature = "serde")]
         assert_send_and_sync::<eranos::group::SavedGroup>();
+        assert_send_and_sync::<eranos::group::SharedGroup>();
         // Identifiers.
         assert_send_and_sync::<eranos::id::CategoryId>();
         assert_send_and_sync::<eranos::id::ExpenseId>();
