@@ -1,7 +1,8 @@
 //! Tips are added on top of an expense and covered by its payers. These
-//! tests keep percentage tips rounded to the nearest minor unit, with halves
-//! going up, keep fixed tips in the expense's currency and never negative,
-//! and keep how a tip is shared independent of how it is expressed.
+//! tests keep the default tip at nothing, keep percentage tips rounded to
+//! the nearest minor unit, with halves going up, keep fixed tips in the
+//! expense's currency and never negative, and keep how a tip is shared
+//! independent of how it is expressed.
 
 use super::*;
 
@@ -13,6 +14,16 @@ fn euros(minor_units: i64) -> Money {
 
 fn per_cent(text: &str) -> Percentage {
     Percentage::parse(text).unwrap()
+}
+
+/// An expense without a tip would be charged one, or its tip would need a
+/// currency the expense has not given it yet.
+#[test]
+fn the_default_tip_is_none_at_all() {
+    let tip = Tip::default();
+    assert_eq!(tip.value(), TipValue::Percentage(Percentage::ZERO));
+    assert_eq!(tip.distribution(), TipDistribution::Proportional);
+    assert_eq!(tip.amount_on(euros(9_000)), Ok(euros(0)));
 }
 
 /// Tips entered without choosing a distribution would be shared equally,

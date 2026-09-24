@@ -101,10 +101,11 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
         expense.split(),
         &ExpenseSplit::Whole(Split::equal([ANA, BOB, CAROL]))
     );
-    // Optional fields are absent, and the category is the built-in one.
+    // Optional fields are absent or at their defaults: the built-in
+    // category and no tip.
     assert_eq!(expense.description(), None);
     assert_eq!(expense.category(), CategoryId::UNCATEGORISED);
-    assert_eq!(expense.tip(), None);
+    assert_eq!(expense.tip(), Tip::default());
     assert_eq!(expense.time(), None);
     // Without a tip, the total is the amount.
     assert_eq!(expense.total(), euros(9_000));
@@ -412,7 +413,7 @@ fn total_and_tip_amount_include_the_tip() {
     };
     // A percentage tip.
     let expense = tipped(Tip::percentage(per_cent("10")));
-    assert_eq!(expense.tip(), Some(Tip::percentage(per_cent("10"))));
+    assert_eq!(expense.tip(), Tip::percentage(per_cent("10")));
     assert_eq!(expense.tip_amount(), euros(900));
     assert_eq!(expense.total(), euros(9_900));
     // A fixed tip.
@@ -424,8 +425,8 @@ fn total_and_tip_amount_include_the_tip() {
     assert_eq!(zero_tip_expense.tip_amount(), euros(0));
     assert_eq!(zero_tip_expense.total(), euros(9_000));
     // A cleared tip.
-    let cleared_tip_expense = zero_tip_expense.to_builder().tip(None).build().unwrap();
-    assert_eq!(cleared_tip_expense.tip(), None);
+    let cleared_tip_expense = expense.to_builder().tip(Tip::default()).build().unwrap();
+    assert_eq!(cleared_tip_expense.tip(), Tip::default());
     assert_eq!(cleared_tip_expense.total(), euros(9_000));
 }
 
@@ -696,10 +697,23 @@ fn expenses_round_trip_through_serde() {
     let json = serde_json::to_string(&expense).unwrap();
     assert!(!json.contains("total"));
     assert_eq!(serde_json::from_str::<Expense>(&json).unwrap(), expense);
-    // An itemised split without a description.
+    // An itemised split without a description or a tip.
     let itemised = itemised_expense();
     let itemised_json = serde_json::to_string(&itemised).unwrap();
     assert!(!itemised_json.contains("description"));
+    assert!(!itemised_json.contains(r#""tip":"#));
+    // A fixed zero tip is not the default, so it is written.
+    let zero_tip = itemised
+        .to_builder()
+        .tip(Tip::fixed(euros(0)))
+        .build()
+        .unwrap();
+    let zero_tip_json = serde_json::to_string(&zero_tip).unwrap();
+    assert!(zero_tip_json.contains(r#""tip":{"value":{"fixed":"#));
+    assert_eq!(
+        serde_json::from_str::<Expense>(&zero_tip_json).unwrap(),
+        zero_tip
+    );
     assert_eq!(
         serde_json::from_str::<Expense>(&itemised_json).unwrap(),
         itemised

@@ -133,8 +133,8 @@ entry to replace by it.
 An **expense** has a name, a cost (an amount in its own currency, local or
 converted into the group currency at a fixed rate), a date and an optional
 time, an optional description, a category (Uncategorised unless another is
-set), an optional tip, the payers (a `Split` of the total), and how the cost
-is shared: an `ExpenseSplit::Whole(Split)` or
+set), a tip (none unless set), the payers (a `Split` of the total), and how
+the cost is shared: an `ExpenseSplit::Whole(Split)` or
 `ExpenseSplit::Itemised(Vec<Item>)`. A split is `Equal`, `Percentages`
 (basis points summing to exactly 10 000), `Parts` (hundredths, so 0.5 for a
 child), or `Amounts` (summing exactly to what is divided). An **item** has a
@@ -356,8 +356,9 @@ inputs, never the derived totals:
 - Identifiers are hyphenated UUIDs, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD`, times `hh:mm`, percentages basis points,
   parts hundredths. Absent optional fields are omitted, and so are the
-  built-in category and an expense's category when it is the built-in one:
-  every group has it again when it loads. Keys follow the field order of
+  built-in category, an expense's category when it is the built-in one
+  (every group has it again when it loads), and a tip equal to
+  `Tip::default()`, no tip at all. Keys follow the field order of
   [AGENTS.md](../AGENTS.md): `format` and `id` first, then the required
   fields, then the optional ones, each alphabetically.
 - Loading replays the entries through the `add_*` methods: members (all

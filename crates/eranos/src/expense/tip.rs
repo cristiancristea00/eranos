@@ -8,7 +8,8 @@ use crate::money::{Money, Percentage};
 /// of the amount, shared among the participants proportionally (the default)
 /// or equally.
 ///
-/// The payers cover the amount plus the tip.
+/// The payers cover the amount plus the tip. An expense without a tip has
+/// [`Tip::default`], 0 % shared proportionally, which needs no currency.
 ///
 /// # Examples
 ///
@@ -20,6 +21,8 @@ use crate::money::{Money, Percentage};
 ///
 /// let round_up = Tip::fixed(Money::parse("5.00", Currency::EUR)?).distributed(TipDistribution::Equal);
 /// assert_eq!(round_up.distribution(), TipDistribution::Equal);
+///
+/// assert_eq!(Tip::default(), Tip::percentage(Percentage::ZERO));
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -92,6 +95,13 @@ impl Tip {
                     .ok_or(ExpenseError::Overflow)
             }
         }
+    }
+}
+
+impl Default for Tip {
+    /// No tip: 0 % of the amount, shared proportionally.
+    fn default() -> Self {
+        Self::percentage(Percentage::ZERO)
     }
 }
 

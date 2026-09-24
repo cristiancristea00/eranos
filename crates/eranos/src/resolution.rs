@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use crate::error::GroupError;
-use crate::expense::{Expense, ExpenseSplit, Tip, TipDistribution};
+use crate::expense::{Expense, ExpenseSplit, TipDistribution};
 use crate::id::MemberId;
 use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare};
 use crate::money::allocation::{allocate, rotation};
@@ -64,10 +64,7 @@ pub(crate) fn resolve_expense(
 
     let mut shares = base.clone();
     if tip > 0 {
-        let weights: Vec<u64> = match expense
-            .tip()
-            .map_or_else(TipDistribution::default, Tip::distribution)
-        {
+        let weights: Vec<u64> = match expense.tip().distribution() {
             TipDistribution::Equal => vec![1; base.len()],
             TipDistribution::Proportional => base
                 .iter()

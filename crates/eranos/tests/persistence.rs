@@ -207,6 +207,8 @@ fn the_json_shape_is_pinned() {
     );
     assert_eq!(bill["category"], json!(food.to_string()));
     assert_eq!(tram.get("category"), None);
+    // Neither is a tip when it is the default, no tip at all.
+    assert_eq!(tram.get("tip"), None);
 }
 
 /// Loading a file with an entry the library would never accept must fail,

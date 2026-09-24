@@ -68,8 +68,8 @@ pub struct Expense {
     exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     time: Option<Time>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    tip: Option<Tip>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_default_tip"))]
+    tip: Tip,
 }
 
 impl Expense {
@@ -251,9 +251,9 @@ impl Expense {
         self.time
     }
 
-    /// The tip, if any.
+    /// The tip: [`Tip::default`], no tip, unless another was set.
     #[must_use]
-    pub const fn tip(&self) -> Option<Tip> {
+    pub const fn tip(&self) -> Tip {
         self.tip
     }
 
@@ -322,7 +322,7 @@ pub struct ExpenseBuilder {
     category: CategoryId,
     description: Option<String>,
     time: Option<Time>,
-    tip: Option<Tip>,
+    tip: Tip,
 }
 
 impl ExpenseBuilder {
@@ -400,9 +400,9 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Sets the tip, or clears it with `None`.
-    pub fn tip(mut self, tip: impl Into<Option<Tip>>) -> Self {
-        self.tip = tip.into();
+    /// Replaces the tip; [`Tip::default`] removes it.
+    pub const fn tip(mut self, tip: Tip) -> Self {
+        self.tip = tip;
         self
     }
 
@@ -434,10 +434,7 @@ impl ExpenseBuilder {
             ExpenseSplit::Itemised(items) => validate_items(items, amount)?,
             ExpenseSplit::Whole(split) => split.validate(amount)?,
         }
-        let tip_amount = match self.tip {
-            Some(tip) => tip.amount_on(amount)?,
-            None => Money::zero(amount.currency()),
-        };
+        let tip_amount = self.tip.amount_on(amount)?;
         let total = amount
             .checked_add(tip_amount)
             .map_err(|_| ExpenseError::Overflow)?;
@@ -486,9 +483,9 @@ fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
     })
 }
 
-/// A builder with the required fields set and every optional one empty;
-/// the constructors and the serialised form start here.
-const fn starting(
+/// A builder with the required fields set and every optional one at its
+/// default; the constructors and the serialised form start here.
+fn starting(
     cost: Cost,
     date: Date,
     name: String,
@@ -505,8 +502,14 @@ const fn starting(
         category: CategoryId::UNCATEGORISED,
         description: None,
         time: None,
-        tip: None,
+        tip: Tip::default(),
     }
+}
+
+/// Whether `tip` is the default, which the serialised form leaves out.
+#[cfg(feature = "serde")]
+fn is_default_tip(tip: &Tip) -> bool {
+    *tip == Tip::default()
 }
 
 /// Whether `category` is the built-in one, which the serialised form leaves
@@ -535,7 +538,7 @@ struct ExpenseRecord {
     #[serde(default)]
     time: Option<Time>,
     #[serde(default)]
-    tip: Option<Tip>,
+    tip: Tip,
 }
 
 #[cfg(feature = "serde")]
