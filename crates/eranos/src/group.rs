@@ -159,9 +159,9 @@ impl Group {
     // --- Categories ----------------------------------------------------------
 
     /// Every category, in the order they were created, with the built-in
-    /// Uncategorised one first.
-    pub fn categories(&self) -> impl ExactSizeIterator<Item = (CategoryId, &Category)> + '_ {
-        self.categories.iter().map(|(&id, category)| (id, category))
+    /// Uncategorised one first; each carries its identifier.
+    pub fn categories(&self) -> impl ExactSizeIterator<Item = &Category> + '_ {
+        self.categories.values()
     }
 
     /// The category with this identifier.
@@ -356,11 +356,10 @@ impl Group {
 
     // --- Expenses ------------------------------------------------------------
 
-    /// Every expense, in the order they were created.
-    pub fn expenses(&self) -> impl ExactSizeIterator<Item = (ExpenseId, &Expense)> + '_ {
-        self.expenses
-            .iter()
-            .map(|(&id, record)| (id, &record.expense))
+    /// Every expense, in the order they were created; each carries its
+    /// identifier.
+    pub fn expenses(&self) -> impl ExactSizeIterator<Item = &Expense> + '_ {
+        self.expenses.values().map(|record| &record.expense)
     }
 
     /// The expense with this identifier.
@@ -470,11 +469,10 @@ impl Group {
 
     // --- Members -------------------------------------------------------------
 
-    /// Every member, archived ones included, in the order they were created.
-    pub fn members(&self) -> impl ExactSizeIterator<Item = (MemberId, &Member)> + '_ {
-        self.members
-            .iter()
-            .map(|(&id, record)| (id, &record.member))
+    /// Every member, archived ones included, in the order they were created;
+    /// each carries its identifier.
+    pub fn members(&self) -> impl ExactSizeIterator<Item = &Member> + '_ {
+        self.members.values().map(|record| &record.member)
     }
 
     /// The member with this identifier.
@@ -629,11 +627,10 @@ impl Group {
 
     // --- Transfers -----------------------------------------------------------
 
-    /// Every transfer, in the order they were created.
-    pub fn transfers(&self) -> impl ExactSizeIterator<Item = (TransferId, &Transfer)> + '_ {
-        self.transfers
-            .iter()
-            .map(|(&id, record)| (id, &record.transfer))
+    /// Every transfer, in the order they were created; each carries its
+    /// identifier.
+    pub fn transfers(&self) -> impl ExactSizeIterator<Item = &Transfer> + '_ {
+        self.transfers.values().map(|record| &record.transfer)
     }
 
     /// The transfer with this identifier.

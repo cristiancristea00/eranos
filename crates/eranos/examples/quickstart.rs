@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     group.add_expense(cabin.build()?)?;
     group.add_expense(groceries.build()?)?;
     print_table(
-        group.expenses().map(|(_, expense)| ExpenseRow {
+        group.expenses().map(|expense| ExpenseRow {
             amount: expense.total(),
             name: expense.name().to_owned(),
             participants: names(&group, expense.split().participants()),
@@ -122,8 +122,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         summary.total_spent()
     );
     print_table(
-        group.members().map(|(id, member)| {
-            let totals = summary.member(id);
+        group.members().map(|member| {
+            let totals = summary.member(member.id());
             MemberRow {
                 balance: totals.balance(),
                 consumed: totals.share(),

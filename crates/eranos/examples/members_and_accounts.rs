@@ -86,7 +86,7 @@ fn outcome<Value>(
 
 fn print_members(group: &Group) {
     print_table(
-        group.members().map(|(_, member)| MemberRow {
+        group.members().map(|member| MemberRow {
             accounts: member
                 .accounts()
                 .iter()
@@ -110,11 +110,11 @@ fn print_members(group: &Group) {
 fn print_balances(group: &Group) {
     let summary = group.summary();
     print_table(
-        group.members().map(|(id, member)| BalanceRow {
-            balance: summary.member(id).balance(),
-            consumed: summary.member(id).share(),
+        group.members().map(|member| BalanceRow {
+            balance: summary.member(member.id()).balance(),
+            consumed: summary.member(member.id()).share(),
             name: member.first_name().to_owned(),
-            status: if group.is_archived(id) {
+            status: if group.is_archived(member.id()) {
                 "archived"
             } else {
                 "active"

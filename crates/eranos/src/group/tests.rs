@@ -167,7 +167,7 @@ fn details_change_in_place() {
 #[test]
 fn members_are_added_replaced_and_listed_in_creation_order() {
     let (mut group, ana, bob, carol) = trip();
-    let ids: Vec<MemberId> = group.members().map(|(id, _)| id).collect();
+    let ids: Vec<MemberId> = group.members().map(Member::id).collect();
     assert_eq!(ids, vec![ana, bob, carol]);
     assert!(ana < bob && bob < carol);
     // Replacing returns the previous details.
@@ -347,7 +347,7 @@ fn categories_keep_unique_names() {
         group.replace_category(removed)
     });
     assert_eq!(
-        group.categories().map(|(id, _)| id).collect::<Vec<_>>(),
+        group.categories().map(Category::id).collect::<Vec<_>>(),
         vec![CategoryId::UNCATEGORISED, food]
     );
     assert_eq!(group.category(food).map(Category::name), Some("food"));
@@ -557,7 +557,7 @@ fn expenses_move_the_totals_incrementally() {
         group.add_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
     });
     assert_eq!(
-        group.expenses().map(|(id, _)| id).collect::<Vec<_>>(),
+        group.expenses().map(Expense::id).collect::<Vec<_>>(),
         vec![hotel]
     );
 }
@@ -1050,9 +1050,9 @@ fn apply(
 ) -> bool {
     let money = |amount| Money::from_minor_units(Currency::EUR, amount);
     let expense_at =
-        |current: &Group, position: usize| current.expenses().map(|(id, _)| id).nth(position);
+        |current: &Group, position: usize| current.expenses().map(Expense::id).nth(position);
     let transfer_at =
-        |current: &Group, position: usize| current.transfers().map(|(id, _)| id).nth(position);
+        |current: &Group, position: usize| current.transfers().map(Transfer::id).nth(position);
     match operation.clone() {
         Operation::AddExpense {
             amount,

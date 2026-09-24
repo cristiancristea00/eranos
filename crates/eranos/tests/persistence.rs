@@ -173,7 +173,7 @@ fn the_json_shape_is_pinned() {
     );
     assert_eq!(members[0]["phone"], json!("+40712345678"));
     // Entries carry their identifier; amounts are minor units plus a code.
-    let (bill_id, _) = group.expenses().next().unwrap();
+    let bill_id = group.expenses().next().unwrap().id();
     let bill = &value["expenses"][0];
     assert_eq!(bill["id"], json!(bill_id.to_string()));
     assert_eq!(
@@ -201,10 +201,11 @@ fn the_json_shape_is_pinned() {
     assert_eq!(value["transfers"][0]["note"], json!("Wine"));
     // The built-in category is not written, and neither is an expense's
     // category when it is the built-in one.
-    let (food, _) = group
+    let food = group
         .categories()
-        .find(|(_, category)| category.name() == "Food")
-        .unwrap();
+        .find(|category| category.name() == "Food")
+        .unwrap()
+        .id();
     assert_eq!(
         value["categories"],
         json!([{"id": food.to_string(), "name": "Food"}])

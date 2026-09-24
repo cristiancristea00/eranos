@@ -106,8 +106,8 @@ fn spend(
 fn print_balances(group: &Group) {
     let summary = group.summary();
     print_table(
-        group.members().map(|(id, member)| {
-            let totals = summary.member(id);
+        group.members().map(|member| {
+            let totals = summary.member(member.id());
             BalanceRow {
                 balance: totals.balance(),
                 consumed: totals.share(),
@@ -213,7 +213,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     spend(&mut group, "Coffee", "2.00", ana, &[dan, eva])?;
     spend(&mut group, "Snacks", "1.00", filip, &[ana])?;
     print_table(
-        group.expenses().map(|(_, expense)| ExpenseRow {
+        group.expenses().map(|expense| ExpenseRow {
             amount: expense.total(),
             name: expense.name().to_owned(),
             participants: names(&group, expense.split().participants()),

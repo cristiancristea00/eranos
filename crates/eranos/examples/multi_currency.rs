@@ -68,9 +68,9 @@ fn name(group: &Group, member: MemberId) -> String {
 
 /// Every expense and transfer, as entered and in the group currency.
 fn print_entries(group: &Group) {
-    let expenses = group.expenses().map(|(id, expense)| EntryRow {
+    let expenses = group.expenses().map(|expense| EntryRow {
         converted: group
-            .expense_shares(id)
+            .expense_shares(expense.id())
             .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
         name: expense.name().to_owned(),
         original: expense.total(),
@@ -82,9 +82,9 @@ fn print_entries(group: &Group) {
             .join(", "),
         rate: expense.exchange_rate(),
     });
-    let transfers = group.transfers().map(|(id, transfer)| EntryRow {
+    let transfers = group.transfers().map(|transfer| EntryRow {
         converted: group
-            .transfer_amount(id)
+            .transfer_amount(transfer.id())
             .unwrap_or_else(|| Money::zero(group.currency())),
         name: format!("Transfer to {}", name(group, transfer.to())),
         original: transfer.amount(),
@@ -97,8 +97,8 @@ fn print_entries(group: &Group) {
 fn print_balances(group: &Group) {
     let summary = group.summary();
     print_table(
-        group.members().map(|(id, member)| {
-            let totals = summary.member(id);
+        group.members().map(|member| {
+            let totals = summary.member(member.id());
             BalanceRow {
                 balance: totals.balance(),
                 consumed: totals.share(),

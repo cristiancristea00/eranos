@@ -257,8 +257,8 @@ fn totals(group: &Group) {
     let summary = group.summary();
     println!("{} spent over five expenses:", summary.total_spent());
     print_table(
-        group.members().map(|(id, member)| {
-            let member_totals = summary.member(id);
+        group.members().map(|member| {
+            let member_totals = summary.member(member.id());
             TotalRow {
                 balance: member_totals.balance().to_string(),
                 consumed: member_totals.share(),

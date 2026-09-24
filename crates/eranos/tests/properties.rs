@@ -325,7 +325,7 @@ proptest! {
         let (members, expenses, transfers) = entries(&recipe);
         let mut group = group(&base(&members), &expenses, &transfers);
         let summary = group.summary().clone();
-        let ids: Vec<ExpenseId> = group.expenses().map(|(id, _)| id).collect();
+        let ids: Vec<ExpenseId> = group.expenses().map(Expense::id).collect();
         for id in ids {
             let expense = group.remove_expense(id).unwrap();
             prop_assert_eq!(group.add_expense(expense), Ok(id));
