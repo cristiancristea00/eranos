@@ -1,9 +1,9 @@
 //! Tips added on top of an expense.
 
 use eranos_money::allocation::apply_basis_points;
+use eranos_money::{Money, Percentage};
 
 use crate::error::ExpenseError;
-use crate::money::{Money, Percentage};
 
 /// A tip added on top of an expense's amount: a fixed amount or a percentage
 /// of the amount, shared among the participants proportionally (the default)

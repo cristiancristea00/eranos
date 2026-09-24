@@ -9,13 +9,12 @@
 
 use std::collections::BTreeMap;
 
+use eranos_core::MemberId;
 use eranos_ledger::{Debt, MemberPair, MemberShare, ResolvedExpense};
 use eranos_money::allocation::{allocate, rotation};
+use eranos_money::{Currency, ExchangeRate, Money, MoneyError};
 
-use crate::error::MoneyError;
-use crate::expense::{Expense, ExpenseSplit, TipDistribution};
-use crate::id::MemberId;
-use crate::money::{Currency, ExchangeRate, Money};
+use crate::{Expense, ExpenseSplit, TipDistribution};
 
 /// Allocation passes; each gets its own tie rotation.
 const PASS_SPLIT: u64 = 0;
@@ -38,7 +37,7 @@ const PASS_DEBTS: u64 = 2 << 32;
 ///
 /// [`MoneyError::Overflow`] when the conversion leaves the range of an
 /// amount.
-pub(crate) fn resolve_expense(
+pub fn resolve_expense(
     expense: &Expense,
     currency: Currency,
 ) -> Result<ResolvedExpense, MoneyError> {

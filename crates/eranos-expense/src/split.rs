@@ -2,11 +2,11 @@
 
 use std::collections::BTreeSet;
 
+use eranos_core::MemberId;
 use eranos_money::allocation::allocate;
+use eranos_money::{Money, Parts, Percentage};
 
 use crate::error::ExpenseError;
-use crate::id::MemberId;
-use crate::money::{Money, Parts, Percentage};
 
 /// How an amount is divided among members: who pays for an expense, who
 /// shares its cost, or who shares one item.
@@ -296,11 +296,11 @@ impl MemberPercentage {
 /// derived implementation would write as objects.
 #[cfg(feature = "serde")]
 mod serde_impls {
+    use eranos_core::MemberId;
+    use eranos_money::{Money, Parts, Percentage};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     use super::{MemberAmount, MemberParts, MemberPercentage};
-    use crate::id::MemberId;
-    use crate::money::{Money, Parts, Percentage};
 
     impl Serialize for MemberAmount {
         fn serialize<S: Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {

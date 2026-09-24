@@ -22,6 +22,7 @@ serde = [
     "eranos-category/serde",
     "eranos-contact/serde",
     "eranos-core/serde",
+    "eranos-expense/serde",
     "eranos-member/serde",
     "eranos-money/serde",
 ]
@@ -36,6 +37,7 @@ eranos-calendar = { workspace = true }
 eranos-category = { workspace = true }
 eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
+eranos-expense = { workspace = true }
 eranos-ledger = { workspace = true }
 eranos-member = { workspace = true }
 eranos-money = { workspace = true }

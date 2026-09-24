@@ -6,11 +6,10 @@
 //! one minor unit of its exact value, and none depends on the order the
 //! members were listed in.
 
-use super::*;
-
+use eranos_money::Currency;
 use proptest::prelude::*;
 
-use crate::money::Currency;
+use super::*;
 
 // Three members, in ID order.
 const ANA: MemberId = MemberId::from_bytes([1; 16]);

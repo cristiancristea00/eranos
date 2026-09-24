@@ -1,5 +1,12 @@
 //! Expenses: what was bought, who paid, and how the cost is shared.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use. [`resolve_expense`], which divides an expense into
+//! group-currency shares for the ledger, is the group's, and the facade does
+//! not re-export it.
+#![doc(test(attr(deny(warnings))))]
 
+mod error;
 mod item;
 mod resolution;
 mod split;
@@ -7,17 +14,15 @@ mod tip;
 
 use std::collections::BTreeSet;
 
+pub use error::ExpenseError;
 pub use item::{Item, ItemBuilder};
-pub(crate) use resolution::resolve_expense;
+pub use resolution::resolve_expense;
 pub use split::{MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{Tip, TipDistribution, TipValue};
 
-use eranos_core::text;
-
-use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::error::ExpenseError;
-use crate::id::{CategoryId, ExpenseId, MemberId};
-use crate::money::{Cost, ExchangeRate, Money};
+use eranos_calendar::{CalendarDate, TimeOfDay};
+use eranos_core::{CategoryId, ExpenseId, MemberId, text};
+use eranos_money::{Cost, ExchangeRate, Money};
 
 /// Something bought for the group: its amount, who paid, and how its cost is
 /// shared.
@@ -30,7 +35,7 @@ use crate::money::{Cost, ExchangeRate, Money};
 /// several, and a whole split or items. An expense gets its identifier when
 /// it is built, and keeps it through every edit. Expenses are values: to
 /// change one, edit a copy with [`to_builder`](Self::to_builder) and pass it
-/// to [`Group::replace_expense`](crate::Group::replace_expense).
+/// to `Group::replace_expense`.
 ///
 /// # Examples
 ///

@@ -6,9 +6,9 @@
 //! in force, also between the forms of payers and of splits, and keep a
 //! replaced cost's rate only when the new cost has one.
 
-use super::*;
+use eranos_money::{Currency, Percentage};
 
-use crate::money::{Currency, Percentage};
+use super::*;
 
 // Four members, in ID order.
 const ANA: MemberId = MemberId::from_bytes([1; 16]);

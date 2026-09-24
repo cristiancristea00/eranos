@@ -21,10 +21,10 @@ change to the allocation order, the FNV-1a tie rotation, the rounding rule,
 or a strategy's payment choice changes what users see without any API
 change, and counts as breaking.
 
-Private modules (`expense::resolution`), the items of the internal crates
-that the facade does not re-export (`eranos_core::text`,
-`eranos_money::allocation`), and the internal layout of `Group` move
-freely.
+The items of the internal crates that the facade does not re-export (such
+as `eranos_core::text`, `eranos_money::allocation`, and
+`eranos_expense::resolve_expense`), private modules, and the internal
+layout of `Group` move freely.
 
 ## 2. What moves the number
 

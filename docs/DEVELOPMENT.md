@@ -45,7 +45,7 @@ commit; `cargo xtask help` lists the commands. The alias lives in
 
 ### 3.1 A new split method
 
-1. Add the variant to `Split` in `crates/eranos/src/expense/split.rs`; the
+1. Add the variant to `Split` in `crates/eranos-expense/src/split.rs`; the
    enum is `#[non_exhaustive]`, so this is a `feat`.
 2. Give it a constructor next to `Split::equal`, its rules in
    `Split::validate`, and its weights in `Split::divide`. Every division
@@ -53,8 +53,8 @@ commit; `cargo xtask help` lists the commands. The alias lives in
    needs its own exact division that still adds up to the total. `divide`
    trusts `validate`: an empty split divides into no shares and all-zero
    weights split equally, so `validate` must refuse both.
-3. Pin it with a hand-computed case in `expense/split/tests.rs` and in
-   `tests/scenarios.rs`, and add it to the random recipes in
+3. Pin it with a hand-computed case in `eranos-expense/src/split/tests.rs`
+   and in `tests/scenarios.rs`, and add it to the random recipes in
    `tests/properties.rs` so the invariants cover it.
 4. Document it on the variant and in ARCHITECTURE § 3.
 

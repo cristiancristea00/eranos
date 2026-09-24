@@ -7,13 +7,13 @@
 
 use std::collections::BTreeSet;
 
+use eranos_calendar::CalendarDate;
+use eranos_core::ExpenseId;
+use eranos_money::{Cost, Parts, Percentage};
 use proptest::prelude::*;
 
 use super::*;
-use crate::calendar::CalendarDate;
-use crate::expense::{Item, MemberAmount, MemberParts, Split, Tip, TipDistribution};
-use crate::id::ExpenseId;
-use crate::money::{Cost, Parts, Percentage};
+use crate::{Item, MemberAmount, MemberParts, Split, Tip, TipDistribution};
 
 /// `expense` under the identifier `id`, which seeds its tie rotation.
 fn identified(expense: &Expense, id: ExpenseId) -> Expense {

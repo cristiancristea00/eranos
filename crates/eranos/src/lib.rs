@@ -104,7 +104,15 @@ pub mod category {
     pub use eranos_category::Category;
 }
 pub mod error;
-pub mod expense;
+pub mod expense {
+    //! Expenses: what was bought, who paid, and how the cost is shared.
+
+    #[doc(inline)]
+    pub use eranos_expense::{
+        Expense, ExpenseBuilder, ExpenseSplit, Item, ItemBuilder, MemberAmount, MemberParts,
+        MemberPercentage, Split, Tip, TipDistribution, TipValue,
+    };
+}
 pub mod group;
 pub mod id {
     //! Identifiers for groups and their entries.
@@ -157,6 +165,7 @@ pub mod transfer;
 pub use calendar::{CalendarDate, TimeOfDay};
 #[doc(no_inline)]
 pub use category::Category;
+#[doc(no_inline)]
 pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,

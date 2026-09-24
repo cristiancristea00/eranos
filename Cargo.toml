@@ -15,6 +15,7 @@ members = [
     "crates/eranos-category",
     "crates/eranos-contact",
     "crates/eranos-core",
+    "crates/eranos-expense",
     "crates/eranos-ledger",
     "crates/eranos-member",
     "crates/eranos-money",
@@ -39,6 +40,7 @@ eranos-calendar = { path = "crates/eranos-calendar" }
 eranos-category = { path = "crates/eranos-category" }
 eranos-contact = { path = "crates/eranos-contact" }
 eranos-core = { path = "crates/eranos-core" }
+eranos-expense = { path = "crates/eranos-expense" }
 eranos-ledger = { path = "crates/eranos-ledger" }
 eranos-member = { path = "crates/eranos-member" }
 eranos-money = { path = "crates/eranos-money" }

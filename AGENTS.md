@@ -90,16 +90,16 @@ failure); `#[allow]` is itself a lint error.
   `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
   state**, with three exceptions. ID generation reads the clock and the OS
-  random source (UUID v7), under one private lock in `eranos-core` that keeps the
-  IDs of concurrent threads in creation order: an entity gets its ID when
-  it is built, and loading a saved group restores the IDs through serde,
-  never through a public setter. With the `sequential-ids` feature, which
-  is for examples and tests, generation reads neither and takes the next
-  value of one counter in `eranos-core` instead. Phone-number validation reads
-  rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the
-  embedded libphonenumber metadata on first use and is never written after;
-  the invariant that rules out its panic is stated at the call in
-  `eranos-contact`.
+  random source (UUID v7), under one private lock in `eranos-core` that
+  keeps the IDs of concurrent threads in creation order: an entity gets its
+  ID when it is built, and loading a saved group restores the IDs through
+  serde, never through a public setter. With the `sequential-ids` feature,
+  which is for examples and tests, generation reads neither and takes the
+  next value of one counter in `eranos-core` instead. Phone-number
+  validation reads rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that
+  decodes the embedded libphonenumber metadata on first use and is never
+  written after; the invariant that rules out its panic is stated at the
+  call in `eranos-contact`.
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
   cached settlements. The one other writer is `Ledger::move_category`, with
@@ -215,8 +215,8 @@ the internal `eranos-*` crates beside it, with binding crates (`eranos-ffi`
 for UniFFI, `eranos-wasm`) planned as siblings. A `Group` owns its members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced
-(`expense/resolution.rs`: exact splits, tips, conversion, and the pairwise
-debts behind the direct settlement; a transfer's conversion is in
+(`eranos-expense/src/resolution.rs`: exact splits, tips, conversion, and the
+pairwise debts behind the direct settlement; a transfer's conversion is in
 `transfer.rs`) and applied to the `Ledger` as a range-checked `Delta`; the
 `Summary` is part of the ledger and is updated by every change. Only
 `change_currency` resolves every entry again and rebuilds the ledger.

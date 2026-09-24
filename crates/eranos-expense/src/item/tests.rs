@@ -4,10 +4,11 @@
 //! shares a line, and keep the last split setter in force, on a new item and
 //! on one edited through `to_builder`.
 
+use eranos_money::Currency;
+
 use super::*;
 
-use crate::expense::MemberAmount;
-use crate::money::Currency;
+use crate::MemberAmount;
 
 // Two members, in ID order.
 const ANA: MemberId = MemberId::from_bytes([1; 16]);

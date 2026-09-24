@@ -115,9 +115,10 @@ flowchart TD
 </details>
 
 The root re-exports the types callers name; the modules group them for the
-documentation. The `text` rules of `eranos-core` and the `allocation` rules
-of `eranos-money` are not re-exported, and the resolution inside `expense`
-and `transfer` is private: they are free to change.
+documentation. The `text` rules of `eranos-core`, the `allocation` rules of
+`eranos-money`, and the resolution of `eranos-expense` are not
+re-exported, and the transfer's resolution is private: they are free to
+change.
 
 ## 3. Data model
 

@@ -4,9 +4,9 @@
 //! expense's currency and never negative, and keep how a tip is shared
 //! independent of how it is expressed.
 
-use super::*;
+use eranos_money::Currency;
 
-use crate::money::Currency;
+use super::*;
 
 fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)
