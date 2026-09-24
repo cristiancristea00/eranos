@@ -230,17 +230,25 @@ fn a_transfer_keeps_its_identifier_through_edits() {
 }
 
 /// The exchange rate fixed when a group changes currency would not be
-/// stored, or could not be removed.
+/// stored, could not be removed, or would change something else.
 #[test]
-fn set_exchange_rate_replaces_or_clears_the_rate() {
+fn with_exchange_rate_replaces_or_clears_the_rate() {
     let rate = ExchangeRate::parse("0.2011").unwrap();
-    // Replaced.
-    let mut transfer = full_repayment();
-    transfer.set_exchange_rate(Some(rate));
-    assert_eq!(transfer.cost(), euros(3_000).at(rate));
+    // Replaced, and only the cost changes.
+    let transfer = full_repayment();
+    let converted = transfer.clone().with_exchange_rate(Some(rate));
+    assert_eq!(converted.cost(), euros(3_000).at(rate));
+    assert_eq!(
+        converted,
+        transfer
+            .to_builder()
+            .cost(euros(3_000).at(rate))
+            .build()
+            .unwrap()
+    );
     // Cleared.
-    transfer.set_exchange_rate(None);
-    assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
+    let local = converted.with_exchange_rate(None);
+    assert_eq!(local.cost(), Cost::from(euros(3_000)));
 }
 
 /// Saved repayments would fail to load, or an impossible one would load.

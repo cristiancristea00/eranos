@@ -238,7 +238,10 @@ impl Group {
             .ok_or(GroupError::UnknownCategory(id))?;
         for record in self.expenses.values_mut() {
             if record.expense.category() == id {
-                record.expense.set_category(CategoryId::UNCATEGORISED);
+                record.expense = record
+                    .expense
+                    .clone()
+                    .with_category(CategoryId::UNCATEGORISED);
             }
         }
         self.ledger.move_category(id, CategoryId::UNCATEGORISED);
@@ -337,16 +340,16 @@ impl Group {
         let mut delta = Delta::default();
         let mut expenses = BTreeMap::new();
         for (&id, record) in &self.expenses {
-            let mut expense = record.expense.clone();
-            expense.set_exchange_rate(rate_for(expense.amount().currency())?);
+            let rate = rate_for(record.expense.amount().currency())?;
+            let expense = record.expense.clone().with_exchange_rate(rate);
             let resolved = resolve_expense(&expense, currency).map_err(|_| GroupError::Overflow)?;
             delta.add_expense(&resolved, expense.category(), 1);
             expenses.insert(id, ExpenseRecord { expense, resolved });
         }
         let mut transfers = BTreeMap::new();
         for (&id, record) in &self.transfers {
-            let mut transfer = record.transfer.clone();
-            transfer.set_exchange_rate(rate_for(transfer.amount().currency())?);
+            let rate = rate_for(record.transfer.amount().currency())?;
+            let transfer = record.transfer.clone().with_exchange_rate(rate);
             let amount = resolve_transfer(&transfer, currency).map_err(|_| GroupError::Overflow)?;
             delta.add_transfer(pair(&transfer), amount, 1);
             transfers.insert(id, TransferRecord { amount, transfer });

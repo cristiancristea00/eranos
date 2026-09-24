@@ -226,8 +226,28 @@ impl Expense {
         self.category
     }
 
-    pub(crate) const fn set_category(&mut self, category: CategoryId) {
+    /// The same expense in the category `category`, identifier included:
+    /// what a group does to the expenses of a category it removes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, CategoryId, Currency, Expense, Money, Split};
+    /// use eranos::id::MemberId;
+    ///
+    /// let (ana, food) = (MemberId::generate(), CategoryId::generate());
+    /// let (amount, day) = (Money::parse("12.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
+    /// let lunch = Expense::builder(amount, day, "Lunch", ana, Split::equal([ana]))
+    ///     .category(food)
+    ///     .build()?;
+    /// let moved = lunch.clone().with_category(CategoryId::UNCATEGORISED);
+    /// assert_eq!((moved.id(), moved.category()), (lunch.id(), CategoryId::UNCATEGORISED));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub const fn with_category(mut self, category: CategoryId) -> Self {
         self.category = category;
+        self
     }
 
     /// The description, if any.
@@ -243,8 +263,27 @@ impl Expense {
         self.cost().exchange_rate()
     }
 
-    pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {
+    /// The same expense at `exchange_rate` into its group's currency, or as a
+    /// local cost with `None`, identifier included: what a group does to its
+    /// expenses when it changes currency.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, Currency, ExchangeRate, Expense, Money, Split};
+    /// use eranos::id::MemberId;
+    ///
+    /// let ana = MemberId::generate();
+    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(23, 9, 2026)?);
+    /// let museum = Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?;
+    /// let rate = ExchangeRate::parse("4.97")?;
+    /// assert_eq!(museum.with_exchange_rate(Some(rate)).cost(), amount.at(rate));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub const fn with_exchange_rate(mut self, exchange_rate: Option<ExchangeRate>) -> Self {
         self.exchange_rate = exchange_rate;
+        self
     }
 
     /// The time of day, if recorded.

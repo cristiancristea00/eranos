@@ -155,8 +155,27 @@ impl Transfer {
         self.cost().exchange_rate()
     }
 
-    pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {
+    /// The same transfer at `exchange_rate` into its group's currency, or as
+    /// a local cost with `None`, identifier included: what a group does to
+    /// its transfers when it changes currency.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, Currency, ExchangeRate, Money, Transfer};
+    /// use eranos::id::MemberId;
+    ///
+    /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
+    /// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(24, 9, 2026)?);
+    /// let repayment = Transfer::builder(amount, day, bob, ana).build()?;
+    /// let rate = ExchangeRate::parse("4.97")?;
+    /// assert_eq!(repayment.with_exchange_rate(Some(rate)).cost(), amount.at(rate));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    #[must_use]
+    pub const fn with_exchange_rate(mut self, exchange_rate: Option<ExchangeRate>) -> Self {
         self.exchange_rate = exchange_rate;
+        self
     }
 
     /// A note, if any.

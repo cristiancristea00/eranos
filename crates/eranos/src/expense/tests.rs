@@ -692,17 +692,42 @@ fn builder_setters_replace_each_field() {
 }
 
 /// The exchange rate fixed when a group changes currency would not be
-/// stored, or could not be removed.
+/// stored, could not be removed, or would change something else.
 #[test]
-fn set_exchange_rate_replaces_or_clears_the_rate() {
+fn with_exchange_rate_replaces_or_clears_the_rate() {
     let rate = ExchangeRate::parse("0.2011").unwrap();
-    // Replaced.
-    let mut expense = full_expense();
-    expense.set_exchange_rate(Some(rate));
-    assert_eq!(expense.cost(), euros(9_000).at(rate));
+    // Replaced, and only the cost changes.
+    let expense = full_expense();
+    let converted = expense.clone().with_exchange_rate(Some(rate));
+    assert_eq!(converted.cost(), euros(9_000).at(rate));
+    assert_eq!(
+        converted,
+        expense
+            .to_builder()
+            .cost(euros(9_000).at(rate))
+            .build()
+            .unwrap()
+    );
     // Cleared.
-    expense.set_exchange_rate(None);
-    assert_eq!(expense.cost(), Cost::from(euros(9_000)));
+    let local = converted.with_exchange_rate(None);
+    assert_eq!(local.cost(), Cost::from(euros(9_000)));
+}
+
+/// The expenses of a removed category would lose their identifier or
+/// another detail when they move to Uncategorised.
+#[test]
+fn with_category_moves_the_expense_and_keeps_the_rest() {
+    let expense = full_expense();
+    let moved = expense.clone().with_category(CategoryId::UNCATEGORISED);
+    assert_eq!(moved.category(), CategoryId::UNCATEGORISED);
+    assert_eq!(
+        moved,
+        expense
+            .to_builder()
+            .category(CategoryId::UNCATEGORISED)
+            .build()
+            .unwrap()
+    );
 }
 
 /// Saved expenses would fail to load, load with another total, or an
