@@ -5,11 +5,10 @@
 //! settlement's payment identical to ones built by hand.
 
 use eranos_ledger::{Delta, Ledger, MemberPair};
+use eranos_money::Currency;
+use eranos_settlement::SettlementStrategy;
 
 use super::*;
-
-use crate::money::Currency;
-use crate::settlement::SettlementStrategy;
 
 // Three members, in ID order.
 const ANA: MemberId = MemberId::from_bytes([1; 16]);

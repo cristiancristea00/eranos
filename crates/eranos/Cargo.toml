@@ -25,6 +25,7 @@ serde = [
     "eranos-expense/serde",
     "eranos-member/serde",
     "eranos-money/serde",
+    "eranos-transfer/serde",
 ]
 # Identifiers count up from one instead of reading the clock and the random
 # source, so examples and tests print the same text on every run. Never for
@@ -42,6 +43,7 @@ eranos-ledger = { workspace = true }
 eranos-member = { workspace = true }
 eranos-money = { workspace = true }
 eranos-settlement = { workspace = true }
+eranos-transfer = { workspace = true }
 icu_locale_core = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, optional = true }

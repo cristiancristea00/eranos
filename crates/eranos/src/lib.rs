@@ -164,7 +164,12 @@ pub mod settlement {
     #[doc(inline)]
     pub use eranos_settlement::{Payment, Settlement, SettlementStrategy};
 }
-pub mod transfer;
+pub mod transfer {
+    //! Transfers: money one member paid another, such as a repayment.
+
+    #[doc(inline)]
+    pub use eranos_transfer::{Transfer, TransferBuilder};
+}
 
 #[doc(no_inline)]
 pub use calendar::{CalendarDate, TimeOfDay};
@@ -190,6 +195,7 @@ pub use member::{
 pub use money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
 #[doc(no_inline)]
 pub use settlement::{Payment, Settlement, SettlementStrategy};
+#[doc(no_inline)]
 pub use transfer::Transfer;
 
 /// Compiles the README's Rust code blocks as doctests, so its examples

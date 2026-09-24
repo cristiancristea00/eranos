@@ -22,6 +22,8 @@ pub use eranos_member::MemberError;
 pub use eranos_money::MoneyError;
 #[doc(inline)]
 pub use eranos_settlement::SettlementError;
+#[doc(inline)]
+pub use eranos_transfer::TransferError;
 
 use crate::group::FORMAT;
 use crate::id::{CategoryId, ExpenseId, MemberId, TransferId};
@@ -34,18 +36,6 @@ pub enum LanguageError {
     /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
     #[error("invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`")]
     InvalidLanguage,
-}
-
-/// A [`Transfer`](crate::Transfer) that cannot exist.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
-#[non_exhaustive]
-pub enum TransferError {
-    /// The amount is zero or negative.
-    #[error("the amount must be positive")]
-    NonPositiveAmount,
-    /// The sender and the recipient are the same member.
-    #[error("a transfer needs two different members")]
-    SameMember,
 }
 
 /// A [`Group`](crate::Group) that could not be built, or an operation that

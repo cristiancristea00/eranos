@@ -1,12 +1,19 @@
 //! Transfers: money one member paid another, such as a repayment.
+//!
+//! An internal crate of eranos: depend on `eranos`, which re-exports the
+//! types callers use. [`resolve_transfer`], which converts a transfer into
+//! the group currency for the ledger, is the group's, and the facade does
+//! not re-export it.
+#![doc(test(attr(deny(warnings))))]
 
-use eranos_core::text;
+mod error;
 
-use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::error::{MoneyError, TransferError};
-use crate::id::{MemberId, TransferId};
-use crate::money::{Cost, Currency, ExchangeRate, Money};
-use crate::settlement::Payment;
+use eranos_calendar::{CalendarDate, TimeOfDay};
+use eranos_core::{MemberId, TransferId, text};
+use eranos_money::{Cost, Currency, ExchangeRate, Money, MoneyError};
+use eranos_settlement::Payment;
+
+pub use error::TransferError;
 
 /// Money one member paid directly to another, usually to settle up.
 ///
@@ -72,7 +79,7 @@ impl Transfer {
     /// The transfer recording `payment`, made on `date`, under a newly
     /// generated identifier.
     ///
-    /// Recording every payment of a [`Settlement`](crate::Settlement) brings
+    /// Recording every payment of a [`Settlement`](eranos_settlement::Settlement) brings
     /// every balance to zero.
     #[must_use]
     pub fn from_payment(payment: &Payment, date: CalendarDate) -> Self {
@@ -330,7 +337,7 @@ impl<'de> serde::Deserialize<'de> for Transfer {
 ///
 /// [`MoneyError::Overflow`] when the conversion leaves the range of an
 /// amount.
-pub(crate) fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
+pub fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
     match transfer.cost().conversion() {
         None => Ok(transfer.amount().minor_units()),
         Some(rate) => Ok(rate.convert(transfer.amount(), currency)?.minor_units()),

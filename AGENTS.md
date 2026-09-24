@@ -216,8 +216,8 @@ for UniFFI, `eranos-wasm`) planned as siblings. A `Group` owns its members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced
 (`eranos-expense/src/resolution.rs`: exact splits, tips, conversion, and the
-pairwise debts behind the direct settlement; a transfer's conversion is in
-`transfer.rs`) and applied to the `Ledger` as a range-checked `Delta`; the
+pairwise debts behind the direct settlement; a transfer's conversion is
+`eranos_transfer::resolve_transfer`) and applied to the `Ledger` as a range-checked `Delta`; the
 `Summary` is part of the ledger and is updated by every change. Only
 `change_currency` resolves every entry again and rebuilds the ledger.
 Settlements are computed from the ledger on request, by the strategy the

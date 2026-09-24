@@ -321,6 +321,7 @@ dependencies = [
  "eranos-member",
  "eranos-money",
  "eranos-settlement",
+ "eranos-transfer",
  "icu_locale_core",
  "proptest",
  "serde",
@@ -451,6 +452,21 @@ dependencies = [
  "eranos-ledger",
  "eranos-money",
  "proptest",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-transfer"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-calendar",
+ "eranos-core",
+ "eranos-ledger",
+ "eranos-money",
+ "eranos-settlement",
+ "serde",
+ "serde_json",
  "thiserror 2.0.20",
 ]
 
