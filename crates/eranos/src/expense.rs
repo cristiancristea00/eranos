@@ -14,16 +14,16 @@ pub use tip::{Tip, TipDistribution, TipValue};
 use crate::date::{Date, Time};
 use crate::error::{ExpenseError, Field};
 use crate::id::{CategoryId, MemberId};
-use crate::money::{ExchangeRate, Money};
+use crate::money::{Cost, ExchangeRate, Money};
 use crate::text;
 
 /// Something bought for the group: its amount, who paid, and how its cost is
 /// shared.
 ///
-/// The amount is in the expense's own currency; an expense in another
-/// currency than its group's needs an [`ExchangeRate`] into the group
-/// currency, fixed when the expense is entered. A tip is added on top of the
-/// amount, and the payers cover amount plus tip. Expenses are values: to
+/// The [`Cost`] is the amount in the expense's own currency and, for an
+/// expense in another currency than its group's, the [`ExchangeRate`] into
+/// the group currency, fixed when the expense is entered. A tip is added on
+/// top of the amount, and the payers cover amount plus tip. Expenses are values: to
 /// change one, edit a copy with [`to_builder`](Self::to_builder) and pass it
 /// to [`Group::replace_expense`](crate::Group::replace_expense).
 ///
@@ -71,17 +71,19 @@ pub struct Expense {
 }
 
 impl Expense {
-    /// Starts an expense with its required name, amount, and date.
-    pub fn builder(name: impl Into<String>, amount: Money, date: Date) -> ExpenseBuilder {
+    /// Starts an expense with its required name, cost, and date.
+    ///
+    /// A [`Money`] amount is a local cost, in the group currency;
+    /// [`Money::at`] makes a converted one.
+    pub fn builder(name: impl Into<String>, cost: impl Into<Cost>, date: Date) -> ExpenseBuilder {
         ExpenseBuilder {
             name: name.into(),
             description: None,
             category: None,
-            amount,
+            cost: cost.into(),
             tip: None,
             date,
             time: None,
-            exchange_rate: None,
             payers: Choice::Unset,
             split: Choice::Unset,
         }
@@ -96,11 +98,10 @@ impl Expense {
             name: self.name.clone(),
             description: self.description.clone(),
             category: self.category,
-            amount: self.amount,
+            cost: self.cost(),
             tip: self.tip,
             date: self.date,
             time: self.time,
-            exchange_rate: self.exchange_rate,
             payers: Choice::Inherited(self.payers.clone()),
             split: Choice::Inherited(self.split.clone()),
         }
@@ -122,6 +123,13 @@ impl Expense {
     #[must_use]
     pub const fn category(&self) -> Option<CategoryId> {
         self.category
+    }
+
+    /// The cost before the tip: the amount and, for an expense in another
+    /// currency than its group's, the rate into the group currency.
+    #[must_use]
+    pub const fn cost(&self) -> Cost {
+        Cost::from_parts(self.amount, self.exchange_rate)
     }
 
     /// The amount before the tip, in the expense's currency.
@@ -164,11 +172,11 @@ impl Expense {
         self.time
     }
 
-    /// The rate from the expense's currency into its group's currency, for a
-    /// foreign-currency expense.
+    /// The rate from the expense's currency into its group's currency:
+    /// [`ExchangeRate::ONE`] for a local cost.
     #[must_use]
-    pub const fn exchange_rate(&self) -> Option<ExchangeRate> {
-        self.exchange_rate
+    pub const fn exchange_rate(&self) -> ExchangeRate {
+        self.cost().exchange_rate()
     }
 
     /// Who paid, and how much each.
@@ -233,11 +241,10 @@ pub struct ExpenseBuilder {
     name: String,
     description: Option<String>,
     category: Option<CategoryId>,
-    amount: Money,
+    cost: Cost,
     tip: Option<Tip>,
     date: Date,
     time: Option<Time>,
-    exchange_rate: Option<ExchangeRate>,
     payers: Choice<Split>,
     split: Choice<ExpenseSplit>,
 }
@@ -261,9 +268,13 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Replaces the amount (before the tip).
-    pub const fn amount(mut self, amount: Money) -> Self {
-        self.amount = amount;
+    /// Replaces the cost (before the tip).
+    ///
+    /// A [`Money`] amount makes the cost local; to change the amount of a
+    /// converted cost and keep its rate, pass
+    /// `expense.cost().with_amount(amount)`.
+    pub fn cost(mut self, cost: impl Into<Cost>) -> Self {
+        self.cost = cost.into();
         self
     }
 
@@ -282,13 +293,6 @@ impl ExpenseBuilder {
     /// Sets the time of day, or clears it with `None`.
     pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
         self.time = time.into();
-        self
-    }
-
-    /// Sets the rate from the expense's currency into the group currency, or
-    /// clears it with `None`.
-    pub fn exchange_rate(mut self, exchange_rate: impl Into<Option<ExchangeRate>>) -> Self {
-        self.exchange_rate = exchange_rate.into();
         self
     }
 
@@ -322,8 +326,7 @@ impl ExpenseBuilder {
     /// Validates the expense and returns it.
     ///
     /// Only the expense itself is checked here; whether its members,
-    /// category, and exchange rate fit a group is checked when it is added
-    /// to one.
+    /// category, and cost fit a group is checked when it is added to one.
     ///
     /// # Errors
     ///
@@ -342,7 +345,7 @@ impl ExpenseBuilder {
     ///   divide the amount, the payers' split the total.
     pub fn build(self) -> Result<Expense, ExpenseError> {
         let name = text::required(self.name, Field::ExpenseName)?;
-        let amount = self.amount;
+        let amount = self.cost.amount();
         if !amount.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);
         }
@@ -373,7 +376,7 @@ impl ExpenseBuilder {
             total,
             date: self.date,
             time: self.time,
-            exchange_rate: self.exchange_rate,
+            exchange_rate: self.cost.conversion(),
             payers,
             split,
         })
@@ -471,11 +474,11 @@ impl TryFrom<ExpenseRecord> for Expense {
     type Error = ExpenseError;
 
     fn try_from(record: ExpenseRecord) -> Result<Self, Self::Error> {
-        let builder = Self::builder(record.name, record.amount, record.date)
+        let cost = Cost::from_parts(record.amount, record.exchange_rate);
+        let builder = Self::builder(record.name, cost, record.date)
             .category(record.category)
             .tip(record.tip)
             .time(record.time)
-            .exchange_rate(record.exchange_rate)
             .payers(record.payers);
         let builder = match record.split {
             ExpenseSplit::Whole(split) => builder.split(split),

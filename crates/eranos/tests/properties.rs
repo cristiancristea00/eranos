@@ -13,8 +13,8 @@
 )]
 
 use eranos::{
-    Currency, Date, ExchangeRate, Expense, ExpenseId, Group, Item, Member, MemberId, Money, Parts,
-    Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer, TransferId,
+    Cost, Currency, Date, ExchangeRate, Expense, ExpenseId, Group, Item, Member, MemberId, Money,
+    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer, TransferId,
     error::GroupError,
 };
 use proptest::prelude::*;
@@ -138,9 +138,10 @@ impl ExpenseRecipe {
             }
         };
         let money = |minor_units| Money::from_minor_units(minor_units, currency);
+        let cost = |amount: Money| rate.map_or_else(|| Cost::from(amount), |rate| amount.at(rate));
         let whole = || {
             let amount = money(self.amount);
-            Expense::builder("Whole", amount, day()).split(self.split.build(members, amount))
+            Expense::builder("Whole", cost(amount), day()).split(self.split.build(members, amount))
         };
         let itemised = |items: &Vec<(i64, u32, SplitRecipe)>| {
             let items: Vec<Item> = items
@@ -158,7 +159,7 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::builder("Itemised", money(amount), day()).items(items)
+            Expense::builder("Itemised", cost(money(amount)), day()).items(items)
         };
         let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some((fixed, value, equal)) = self.tip {
@@ -175,15 +176,9 @@ impl ExpenseRecipe {
             builder = builder.tip(tip.distributed(distribution));
         }
         // The payers divide the total, known only once the tip is resolved.
-        let draft = builder
-            .clone()
-            .paid_by(members[0])
-            .exchange_rate(rate)
-            .build()
-            .unwrap();
+        let draft = builder.clone().paid_by(members[0]).build().unwrap();
         builder
             .payers(self.payers.build(members, draft.total()))
-            .exchange_rate(rate)
             .build()
             .unwrap()
     }

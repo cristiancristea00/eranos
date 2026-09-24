@@ -11,7 +11,7 @@ use proptest::prelude::*;
 use super::*;
 use crate::date::Date;
 use crate::expense::Split;
-use crate::money::Parts;
+use crate::money::{Cost, Parts};
 
 fn eur(text: &str) -> Money {
     Money::parse(text, Currency::EUR).unwrap()
@@ -350,7 +350,8 @@ fn an_expense_must_fit_the_group() {
     assert_unchanged(&mut group, &GroupError::UnknownCategory(missing), |group| {
         group.add_expense(categorised)
     });
-    // A foreign expense needs a rate; a local one must not have one.
+    // A foreign expense needs a converted cost; one in the group currency
+    // must not have one, even at a rate of 1.
     let foreign = Expense::builder("Taxi", Money::parse("50.00", Currency::RON).unwrap(), day())
         .paid_by(ana)
         .split(Split::equal([ana, bob]))
@@ -365,7 +366,7 @@ fn an_expense_must_fit_the_group() {
     );
     let rated = shared("5.00", ana, &[ana])
         .to_builder()
-        .exchange_rate(ExchangeRate::parse("1").unwrap())
+        .cost(eur("5.00").at(ExchangeRate::ONE))
         .build()
         .unwrap();
     assert_unchanged(&mut group, &GroupError::UnexpectedExchangeRate, |group| {
@@ -374,7 +375,7 @@ fn an_expense_must_fit_the_group() {
     // With its rate, the foreign expense counts in the group currency.
     let converted = foreign
         .to_builder()
-        .exchange_rate(ExchangeRate::parse("0.2").unwrap())
+        .cost(foreign.amount().at(ExchangeRate::parse("0.2").unwrap()))
         .build()
         .unwrap();
     group.add_expense(converted).unwrap();
@@ -458,10 +459,11 @@ fn transfers_move_balances_exactly() {
     let cash = Transfer::builder(
         carol,
         ana,
-        Money::parse("50.00", Currency::RON).unwrap(),
+        Money::parse("50.00", Currency::RON)
+            .unwrap()
+            .at(ExchangeRate::parse("0.2").unwrap()),
         day(),
     )
-    .exchange_rate(ExchangeRate::parse("0.2").unwrap())
     .build()
     .unwrap();
     let previous = group.replace_transfer(repayment, cash).unwrap();
@@ -550,12 +552,17 @@ fn a_currency_change_reconverts_every_entry() {
     let local = group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
-    let foreign = Expense::builder("Taxi", Money::parse("50.00", Currency::RON).unwrap(), day())
-        .paid_by(bob)
-        .split(Split::equal([ana, bob]))
-        .exchange_rate(ExchangeRate::parse("0.2").unwrap())
-        .build()
-        .unwrap();
+    let foreign = Expense::builder(
+        "Taxi",
+        Money::parse("50.00", Currency::RON)
+            .unwrap()
+            .at(ExchangeRate::parse("0.2").unwrap()),
+        day(),
+    )
+    .paid_by(bob)
+    .split(Split::equal([ana, bob]))
+    .build()
+    .unwrap();
     let foreign = group.add_expense(foreign).unwrap();
     let repayment = group.add_transfer(transfer(bob, ana, "5.00")).unwrap();
     let eur_to_ron = ExchangeRate::parse("5").unwrap();
@@ -591,12 +598,12 @@ fn a_currency_change_reconverts_every_entry() {
     let ron = |text| Money::parse(text, Currency::RON).unwrap();
     assert_eq!(group.summary().total_spent(), ron("100.00"));
     assert_eq!(
-        group.expense(local).and_then(Expense::exchange_rate),
-        Some(eur_to_ron)
+        group.expense(local).map(Expense::cost),
+        Some(eur("10.00").at(eur_to_ron))
     );
     assert_eq!(
-        group.expense(foreign).and_then(Expense::exchange_rate),
-        None
+        group.expense(foreign).map(Expense::cost),
+        Some(Cost::from(ron("50.00")))
     );
     assert_eq!(group.transfer_amount(repayment), Some(ron("25.00")));
     assert_eq!(group.ledger, rebuilt(&group));
@@ -706,10 +713,16 @@ fn a_currency_change_needs_a_rate_for_every_transfer_too() {
     group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
-    let cash = Transfer::builder(bob, ana, Money::parse("100", Currency::HUF).unwrap(), day())
-        .exchange_rate(ExchangeRate::parse("0.0025").unwrap())
-        .build()
-        .unwrap();
+    let cash = Transfer::builder(
+        bob,
+        ana,
+        Money::parse("100", Currency::HUF)
+            .unwrap()
+            .at(ExchangeRate::parse("0.0025").unwrap()),
+        day(),
+    )
+    .build()
+    .unwrap();
     group.add_transfer(cash).unwrap();
     // A rate for the euro expense, none for the forint transfer.
     assert_unchanged(
@@ -767,10 +780,9 @@ fn a_replacement_out_of_range_is_refused() {
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
         group.replace_expense(second, paid_for(cents(HUGE), ana, bob))
     });
-    let foreign = Expense::builder("Foreign", huge_in_lei(), day())
+    let foreign = Expense::builder("Foreign", huge_in_lei().at(two()), day())
         .paid_by(ana)
         .split(Split::equal([bob]))
-        .exchange_rate(two())
         .build()
         .unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
@@ -819,8 +831,7 @@ fn a_transfer_out_of_range_is_refused() {
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
         group.add_transfer(sent(ana, bob, cents(EXTRA)))
     });
-    let foreign = Transfer::builder(bob, ana, huge_in_lei(), day())
-        .exchange_rate(two())
+    let foreign = Transfer::builder(bob, ana, huge_in_lei().at(two()), day())
         .build()
         .unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
@@ -925,7 +936,7 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
                 .expense(id)
                 .unwrap()
                 .to_builder()
-                .amount(money(amount))
+                .cost(money(amount))
                 .paid_by(members[payer]);
             let Ok(expense) = expense.build() else {
                 return false;

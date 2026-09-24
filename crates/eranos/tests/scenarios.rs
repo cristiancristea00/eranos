@@ -312,11 +312,14 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     let ron = |text| Money::parse(text, Currency::RON);
 
     // 500.00 RON at 0.2 EUR is 100.00 EUR, split in two.
-    let hostel = Expense::builder("Hostel", ron("500.00")?, day(22))
-        .paid_by(ana)
-        .split(Split::equal([ana, bob]))
-        .exchange_rate(ExchangeRate::parse("0.2")?)
-        .build()?;
+    let hostel = Expense::builder(
+        "Hostel",
+        ron("500.00")?.at(ExchangeRate::parse("0.2")?),
+        day(22),
+    )
+    .paid_by(ana)
+    .split(Split::equal([ana, bob]))
+    .build()?;
     group.add_expense(hostel)?;
     // A 40.00 EUR train in the group currency needs no rate.
     group.add_expense(
@@ -332,9 +335,13 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     );
 
     // Bob pays back 150.00 RON in cash at 0.2: 30.00 EUR.
-    let cash = Transfer::builder(bob, ana, ron("150.00")?, day(23))
-        .exchange_rate(ExchangeRate::parse("0.2")?)
-        .build()?;
+    let cash = Transfer::builder(
+        bob,
+        ana,
+        ron("150.00")?.at(ExchangeRate::parse("0.2")?),
+        day(23),
+    )
+    .build()?;
     group.add_transfer(cash)?;
     assert_eq!(group.summary().member(bob).balance(), Balance::Settled);
 
@@ -400,7 +407,7 @@ fn a_flatmate_moves_out() -> TestResult {
         .expense(rent)
         .expect("rent exists")
         .to_builder()
-        .amount(eur("1100.00"))
+        .cost(eur("1100.00"))
         .build()?;
     group.replace_expense(rent, corrected)?;
     assert_eq!(

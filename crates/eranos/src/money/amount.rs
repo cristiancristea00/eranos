@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::error::ValueError;
-use crate::money::Currency;
+use crate::money::{Cost, Currency, ExchangeRate};
 
 /// An amount of money: a whole number of minor units (cents) in one currency.
 ///
@@ -140,6 +140,27 @@ impl Money {
     #[must_use]
     pub const fn is_negative(self) -> bool {
         self.minor_units < 0
+    }
+
+    /// This amount, in another currency than its group's, at `rate` into
+    /// the group currency.
+    ///
+    /// The result is a [`Cost::Converted`] cost even at [`ExchangeRate::ONE`],
+    /// the rate of a currency pegged at par.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Currency, ExchangeRate, Money};
+    ///
+    /// // Fuel paid in RON, for a group in EUR: 1 RON = 0.2 EUR.
+    /// let fuel = Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?);
+    /// assert_eq!(fuel.exchange_rate(), ExchangeRate::parse("0.2")?);
+    /// # Ok::<(), eranos::error::ValueError>(())
+    /// ```
+    #[must_use]
+    pub const fn at(self, rate: ExchangeRate) -> Cost {
+        Cost::Converted { amount: self, rate }
     }
 
     /// Adds two amounts of the same currency.

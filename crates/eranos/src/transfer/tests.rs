@@ -26,11 +26,12 @@ fn repayment() -> TransferBuilder {
     Transfer::builder(BOB, ANA, euros(3_000), september_24())
 }
 
-/// The repayment with every optional field set.
+/// The repayment with every optional field set, converted at 1 EUR =
+/// 4.9765 RON.
 fn full_repayment() -> Transfer {
     repayment()
+        .cost(euros(3_000).at(ExchangeRate::parse("4.9765").unwrap()))
         .time(Time::new(9, 15).unwrap())
-        .exchange_rate(ExchangeRate::parse("4.9765").unwrap())
         .note("Dinner")
         .build()
         .unwrap()
@@ -41,14 +42,15 @@ fn full_repayment() -> Transfer {
 #[test]
 fn a_transfer_keeps_its_fields_and_defaults() {
     let transfer = repayment().build().unwrap();
-    // Required fields.
+    // Required fields; a plain amount is a local cost, at a rate of 1.
     assert_eq!(transfer.from(), BOB);
     assert_eq!(transfer.to(), ANA);
+    assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
     assert_eq!(transfer.amount(), euros(3_000));
+    assert_eq!(transfer.exchange_rate(), ExchangeRate::ONE);
     assert_eq!(transfer.date(), september_24());
     // Optional fields are absent.
     assert_eq!(transfer.time(), None);
-    assert_eq!(transfer.exchange_rate(), None);
     assert_eq!(transfer.note(), None);
 }
 
@@ -75,12 +77,12 @@ fn a_non_positive_amount_is_rejected() {
     // Zero and negative amounts.
     for amount in [euros(0), euros(-3_000)] {
         assert_eq!(
-            repayment().amount(amount).build(),
+            repayment().cost(amount).build(),
             Err(TransferError::NonPositiveAmount)
         );
     }
     // The smallest positive amount.
-    assert!(repayment().amount(euros(1)).build().is_ok());
+    assert!(repayment().cost(euros(1)).build().is_ok());
 }
 
 /// A note left blank would be stored as an empty string and shown as an
@@ -98,25 +100,35 @@ fn the_note_is_trimmed_and_blank_clears_it() {
     assert_eq!(cleared_note_transfer.note(), None);
 }
 
-/// A time or exchange rate could not be added, or not removed once added.
+/// A time could not be added, or not removed once added.
 #[test]
-fn time_and_exchange_rate_are_set_and_cleared_with_none() {
+fn the_time_is_set_and_cleared_with_none() {
     // Set.
     let transfer = full_repayment();
     assert_eq!(transfer.time(), Some(Time::new(9, 15).unwrap()));
-    assert_eq!(
-        transfer.exchange_rate(),
-        Some(ExchangeRate::parse("4.9765").unwrap())
-    );
     // Cleared.
-    let transfer = transfer
+    let untimed_transfer = transfer.to_builder().time(None).build().unwrap();
+    assert_eq!(untimed_transfer.time(), None);
+}
+
+/// Correcting a repayment's amount would keep a rate the new cost does not
+/// have, or drop the rate of a corrected conversion.
+#[test]
+fn a_replaced_cost_brings_its_own_rate() {
+    let transfer = full_repayment();
+    let rate = ExchangeRate::parse("4.9765").unwrap();
+    assert_eq!(transfer.cost(), euros(3_000).at(rate));
+    assert_eq!(transfer.exchange_rate(), rate);
+    // A plain amount makes the cost local.
+    let local_transfer = transfer.to_builder().cost(euros(1_000)).build().unwrap();
+    assert_eq!(local_transfer.cost(), Cost::from(euros(1_000)));
+    // A corrected conversion keeps its rate.
+    let corrected_transfer = transfer
         .to_builder()
-        .time(None)
-        .exchange_rate(None)
+        .cost(transfer.cost().with_amount(euros(1_000)))
         .build()
         .unwrap();
-    assert_eq!(transfer.time(), None);
-    assert_eq!(transfer.exchange_rate(), None);
+    assert_eq!(corrected_transfer.cost(), euros(1_000).at(rate));
 }
 
 /// Editing a repayment would silently drop fields that were not edited.
@@ -143,7 +155,7 @@ fn builder_setters_replace_each_field() {
         .to_builder()
         .from(CAROL)
         .to(BOB)
-        .amount(euros(1_000))
+        .cost(euros(1_000))
         .date(september_25)
         .build()
         .unwrap();
@@ -179,10 +191,10 @@ fn set_exchange_rate_replaces_or_clears_the_rate() {
     // Replaced.
     let mut transfer = full_repayment();
     transfer.set_exchange_rate(Some(rate));
-    assert_eq!(transfer.exchange_rate(), Some(rate));
+    assert_eq!(transfer.cost(), euros(3_000).at(rate));
     // Cleared.
     transfer.set_exchange_rate(None);
-    assert_eq!(transfer.exchange_rate(), None);
+    assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
 }
 
 /// Saved repayments would fail to load, or an impossible one would load.
@@ -193,10 +205,13 @@ fn transfers_round_trip_through_serde() {
     let transfer = full_repayment();
     let json = serde_json::to_string(&transfer).unwrap();
     assert_eq!(serde_json::from_str::<Transfer>(&json).unwrap(), transfer);
-    // No optional field set; absent fields are left out.
+    assert!(json.contains(r#""exchange_rate":"4.9765""#));
+    // No optional field set and a local cost; absent fields are left out.
     let minimal_transfer = repayment().build().unwrap();
     let minimal_json = serde_json::to_string(&minimal_transfer).unwrap();
-    assert!(!minimal_json.contains("note") && !minimal_json.contains("time"));
+    for field in ["note", "time", "exchange_rate"] {
+        assert!(!minimal_json.contains(field), "{field}");
+    }
     assert_eq!(
         serde_json::from_str::<Transfer>(&minimal_json).unwrap(),
         minimal_transfer

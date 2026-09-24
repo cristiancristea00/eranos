@@ -36,6 +36,15 @@ fn parse_reads_positive_decimals() {
     assert_eq!("4.9765".parse::<ExchangeRate>(), Ok(rate("4.9765")));
 }
 
+/// A rate of 1 typed by hand would differ from the rate of a local cost, and
+/// a conversion at par would not match it.
+#[test]
+fn one_is_the_rate_typed_as_1() {
+    assert_eq!(ExchangeRate::ONE, rate("1"));
+    assert_eq!(ExchangeRate::ONE, rate("1.000"));
+    assert_eq!(ExchangeRate::ONE.to_string(), "1");
+}
+
 /// The same rate typed with and without trailing zeros would count as two
 /// different rates.
 #[test]

@@ -2,8 +2,9 @@
 //! These tests keep invalid expenses out (a blank name, a non-positive
 //! amount, payers or splits missing or set twice, items or shares that do not
 //! add up), keep the payers covering the amount plus the tip while the
-//! participants divide the amount alone, and keep edits made through
-//! `to_builder` free to switch between the forms of payers and of splits.
+//! participants divide the amount alone, keep edits made through
+//! `to_builder` free to switch between the forms of payers and of splits,
+//! and keep a replaced cost's rate only when the new cost has one.
 
 use super::*;
 
@@ -41,16 +42,16 @@ fn item(name: &str, minor_units: i64) -> Item {
         .unwrap()
 }
 
-/// The dinner with every optional field set: a 10 % tip, Ana and Bob paying
-/// the 99.00 total between them, and three members sharing the 90.00 by
-/// percentage.
+/// The dinner with every optional field set and converted at 1 EUR =
+/// 4.9765 RON: a 10 % tip, Ana and Bob paying the 99.00 total between them,
+/// and three members sharing the 90.00 by percentage.
 fn full_expense() -> Expense {
     dinner()
         .description("Birthday")
         .category(CategoryId::from_bytes([9; 16]))
         .tip(Tip::percentage(per_cent("10")))
         .time(Time::new(20, 30).unwrap())
-        .exchange_rate(ExchangeRate::parse("4.9765").unwrap())
+        .cost(euros(9_000).at(ExchangeRate::parse("4.9765").unwrap()))
         .payers(Split::amounts([(ANA, euros(5_000)), (BOB, euros(4_900))]))
         .split(Split::percentages([
             (ANA, per_cent("50")),
@@ -84,9 +85,11 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
         .split(Split::equal([ANA, BOB, CAROL]))
         .build()
         .unwrap();
-    // Required fields.
+    // Required fields; a plain amount is a local cost, at a rate of 1.
     assert_eq!(expense.name(), "Dinner");
+    assert_eq!(expense.cost(), Cost::from(euros(9_000)));
     assert_eq!(expense.amount(), euros(9_000));
+    assert_eq!(expense.exchange_rate(), ExchangeRate::ONE);
     assert_eq!(expense.date(), september_23());
     assert_eq!(expense.payers(), &Split::equal([ANA]));
     assert_eq!(
@@ -98,7 +101,6 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
     assert_eq!(expense.category(), None);
     assert_eq!(expense.tip(), None);
     assert_eq!(expense.time(), None);
-    assert_eq!(expense.exchange_rate(), None);
     // Without a tip, the total is the amount.
     assert_eq!(expense.total(), euros(9_000));
     assert_eq!(expense.tip_amount(), euros(0));
@@ -138,7 +140,7 @@ fn a_non_positive_amount_is_rejected() {
     for amount in [euros(0), euros(-9_000)] {
         assert_eq!(
             dinner()
-                .amount(amount)
+                .cost(amount)
                 .paid_by(ANA)
                 .split(Split::equal([ANA]))
                 .build(),
@@ -501,21 +503,41 @@ fn optional_fields_are_set_and_cleared_with_none() {
     let expense = full_expense();
     assert_eq!(expense.category(), Some(CategoryId::from_bytes([9; 16])));
     assert_eq!(expense.time(), Some(Time::new(20, 30).unwrap()));
-    assert_eq!(
-        expense.exchange_rate(),
-        Some(ExchangeRate::parse("4.9765").unwrap())
-    );
     // Cleared.
     let expense = expense
         .to_builder()
         .category(None)
         .time(None)
-        .exchange_rate(None)
         .build()
         .unwrap();
     assert_eq!(expense.category(), None);
     assert_eq!(expense.time(), None);
-    assert_eq!(expense.exchange_rate(), None);
+}
+
+/// Correcting an expense's amount would keep a rate the new cost does not
+/// have, or drop the rate of a corrected conversion.
+#[test]
+fn a_replaced_cost_brings_its_own_rate() {
+    let expense = full_expense();
+    let rate = ExchangeRate::parse("4.9765").unwrap();
+    assert_eq!(expense.cost(), euros(9_000).at(rate));
+    assert_eq!(expense.exchange_rate(), rate);
+    // A plain amount makes the cost local; Ana pays the new total.
+    let local_expense = expense
+        .to_builder()
+        .cost(euros(4_000))
+        .paid_by(ANA)
+        .build()
+        .unwrap();
+    assert_eq!(local_expense.cost(), Cost::from(euros(4_000)));
+    // A corrected conversion keeps its rate.
+    let corrected_expense = expense
+        .to_builder()
+        .cost(expense.cost().with_amount(euros(4_000)))
+        .paid_by(ANA)
+        .build()
+        .unwrap();
+    assert_eq!(corrected_expense.cost(), euros(4_000).at(rate));
 }
 
 /// A member who only paid, or only shared, would be missing from the
@@ -636,7 +658,7 @@ fn a_rebuilt_expense_still_rejects_both_forms() {
     );
 }
 
-/// Editing an expense's name, amount, or date would be lost or skip
+/// Editing an expense's name, cost, or date would be lost or skip
 /// validation.
 #[test]
 fn builder_setters_replace_each_field() {
@@ -647,12 +669,12 @@ fn builder_setters_replace_each_field() {
             .build()
             .unwrap()
     };
-    // Name, amount, and date replaced.
+    // Name, cost, and date replaced.
     let lunch_date = Date::new(2026, 9, 24).unwrap();
     let lunch = base()
         .to_builder()
         .name("Lunch")
-        .amount(euros(3_000))
+        .cost(euros(3_000))
         .date(lunch_date)
         .build()
         .unwrap();
@@ -660,9 +682,9 @@ fn builder_setters_replace_each_field() {
     assert_eq!(lunch.amount(), euros(3_000));
     assert_eq!(lunch.total(), euros(3_000));
     assert_eq!(lunch.date(), lunch_date);
-    // A replaced amount is validated again.
+    // A replaced cost is validated again.
     assert_eq!(
-        base().to_builder().amount(euros(0)).build(),
+        base().to_builder().cost(euros(0)).build(),
         Err(ExpenseError::NonPositiveAmount)
     );
 }
@@ -675,10 +697,10 @@ fn set_exchange_rate_replaces_or_clears_the_rate() {
     // Replaced.
     let mut expense = full_expense();
     expense.set_exchange_rate(Some(rate));
-    assert_eq!(expense.exchange_rate(), Some(rate));
+    assert_eq!(expense.cost(), euros(9_000).at(rate));
     // Cleared.
     expense.set_exchange_rate(None);
-    assert_eq!(expense.exchange_rate(), None);
+    assert_eq!(expense.cost(), Cost::from(euros(9_000)));
 }
 
 /// Saved expenses would fail to load, load with another total, or an
@@ -698,6 +720,19 @@ fn expenses_round_trip_through_serde() {
     assert_eq!(
         serde_json::from_str::<Expense>(&itemised_json).unwrap(),
         itemised
+    );
+    // A conversion at 1 keeps its rate; a local cost is written without one.
+    let pegged = itemised
+        .to_builder()
+        .cost(euros(9_000).at(ExchangeRate::ONE))
+        .build()
+        .unwrap();
+    let pegged_json = serde_json::to_string(&pegged).unwrap();
+    assert!(pegged_json.contains(r#""exchange_rate":"1""#));
+    assert!(!itemised_json.contains("exchange_rate"));
+    assert_eq!(
+        serde_json::from_str::<Expense>(&pegged_json).unwrap(),
+        pegged
     );
     // Loading validates like the builder.
     let tampered = itemised_json.replace(

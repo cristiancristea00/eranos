@@ -294,14 +294,16 @@ pub enum GroupError {
         /// The expenses that reference the category.
         expenses: Vec<ExpenseId>,
     },
-    /// An entry in a foreign currency without an exchange rate into the
-    /// group currency.
+    /// An entry in another currency than the group's has no exchange rate
+    /// into the group currency: its cost is local, or a currency change
+    /// gave no rate for its currency.
     #[error("an exchange rate from {currency} into the group currency is required")]
     MissingExchangeRate {
         /// The currency without a rate.
         currency: Currency,
     },
-    /// An entry in the group currency that carries an exchange rate.
+    /// An entry in the group currency has a converted cost; only a local
+    /// cost is in the group currency.
     #[error("an entry in the group currency cannot have an exchange rate")]
     UnexpectedExchangeRate,
     /// The same currency appears twice among the rates of a currency change.

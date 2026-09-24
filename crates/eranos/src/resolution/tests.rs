@@ -12,7 +12,7 @@ use proptest::prelude::*;
 use super::*;
 use crate::date::Date;
 use crate::expense::{Item, Split, Tip, TipDistribution};
-use crate::money::{Parts, Percentage};
+use crate::money::{Cost, Parts, Percentage};
 
 fn member(number: u8) -> MemberId {
     MemberId::from_bytes([number; 16])
@@ -196,12 +196,15 @@ fn several_payers_are_each_owed_their_proportion() {
 #[test]
 fn a_foreign_expense_converts_its_total_once() {
     let (ana, bob) = (member(1), member(2));
-    let museum = Expense::builder("Museum", eur(1000), day())
-        .paid_by(ana)
-        .split(Split::equal([ana, bob]))
-        .exchange_rate(ExchangeRate::parse("4.9765").unwrap())
-        .build()
-        .unwrap();
+    let museum = Expense::builder(
+        "Museum",
+        eur(1000).at(ExchangeRate::parse("4.9765").unwrap()),
+        day(),
+    )
+    .paid_by(ana)
+    .split(Split::equal([ana, bob]))
+    .build()
+    .unwrap();
     let shares = resolve_expense(entry(1), &museum, Currency::RON).unwrap();
 
     // 10.00 EUR × 4.9765 = 49.765 RON, rounded half up to 49.77.
@@ -217,13 +220,16 @@ fn a_foreign_expense_converts_its_total_once() {
 #[test]
 fn a_foreign_tip_is_part_of_the_converted_total() {
     let ana = member(1);
-    let lunch = Expense::builder("Lunch", Money::from_minor_units(3000, Currency::JPY), day())
-        .paid_by(ana)
-        .split(Split::equal([ana]))
-        .tip(Tip::fixed(Money::from_minor_units(300, Currency::JPY)))
-        .exchange_rate(ExchangeRate::parse("0.0061").unwrap())
-        .build()
-        .unwrap();
+    let lunch = Expense::builder(
+        "Lunch",
+        Money::from_minor_units(3000, Currency::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
+        day(),
+    )
+    .paid_by(ana)
+    .split(Split::equal([ana]))
+    .tip(Tip::fixed(Money::from_minor_units(300, Currency::JPY)))
+    .build()
+    .unwrap();
     let shares = resolve_expense(entry(1), &lunch, Currency::EUR).unwrap();
 
     // 3 300 JPY × 0.0061 = 20.13 EUR, of which one eleventh is tip.
@@ -231,8 +237,9 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
     assert_eq!(shares.tip, eur(183));
 }
 
-/// Rates are checked against the currencies: a foreign entry without one
-/// cannot be totalled, and a rate on a group-currency entry is a mistake.
+/// Costs are checked against the currencies: a foreign entry with a local
+/// cost cannot be totalled, and a group-currency entry with a converted cost
+/// is a mistake, even at a rate of 1.
 #[test]
 fn a_rate_must_match_the_currencies() {
     let ana = member(1);
@@ -242,7 +249,7 @@ fn a_rate_must_match_the_currencies() {
             .split(Split::equal([ana]))
     };
 
-    // Foreign without a rate.
+    // Foreign with a local cost.
     let foreign = builder().build().unwrap();
     assert_eq!(
         resolve_expense(entry(1), &foreign, Currency::RON),
@@ -250,14 +257,41 @@ fn a_rate_must_match_the_currencies() {
             currency: Currency::EUR
         })
     );
-    // Group currency with a rate.
+    // Group currency with a converted cost.
     let rated = builder()
-        .exchange_rate(ExchangeRate::parse("1").unwrap())
+        .cost(eur(500).at(ExchangeRate::ONE))
         .build()
         .unwrap();
     assert_eq!(
         resolve_expense(entry(1), &rated, Currency::EUR),
         Err(GroupError::UnexpectedExchangeRate)
+    );
+}
+
+/// A currency pegged at par, such as the Bermudian dollar to the US dollar,
+/// would be refused or converted at another rate.
+#[test]
+fn a_conversion_at_one_converts_a_pegged_currency() {
+    let ana = member(1);
+    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
+    let builder = |cost: Cost| {
+        Expense::builder("Ferry", cost, day())
+            .paid_by(ana)
+            .split(Split::equal([ana]))
+    };
+    // At 1, the amount is taken as is.
+    let pegged = builder(bermudian_dollars.at(ExchangeRate::ONE))
+        .build()
+        .unwrap();
+    let shares = resolve_expense(entry(1), &pegged, Currency::USD).unwrap();
+    assert_eq!(shares.total, Money::from_minor_units(5_000, Currency::USD));
+    // As a local cost, it is not in the group currency.
+    let local = builder(Cost::from(bermudian_dollars)).build().unwrap();
+    assert_eq!(
+        resolve_expense(entry(1), &local, Currency::USD),
+        Err(GroupError::MissingExchangeRate {
+            currency: Currency::BMD
+        })
     );
 }
 
@@ -268,12 +302,12 @@ fn a_conversion_out_of_range_is_an_overflow() {
     let ana = member(1);
     let huge = Expense::builder(
         "Huge",
-        Money::from_minor_units(i64::MAX / 2, Currency::JPY),
+        Money::from_minor_units(i64::MAX / 2, Currency::JPY)
+            .at(ExchangeRate::parse("1000").unwrap()),
         day(),
     )
     .paid_by(ana)
     .split(Split::equal([ana]))
-    .exchange_rate(ExchangeRate::parse("1000").unwrap())
     .build()
     .unwrap();
     assert_eq!(
@@ -288,12 +322,15 @@ fn a_conversion_out_of_range_is_an_overflow() {
 fn a_payer_converted_to_nothing_is_owed_nothing() {
     let (ana, bob) = (member(1), member(2));
     // 2 JPY paid 1 + 1 at 0.0061 EUR per JPY is 1 cent in total.
-    let sweets = Expense::builder("Sweets", Money::from_minor_units(2, Currency::JPY), day())
-        .payers(Split::equal([ana, bob]))
-        .split(Split::equal([ana, bob]))
-        .exchange_rate(ExchangeRate::parse("0.0061").unwrap())
-        .build()
-        .unwrap();
+    let sweets = Expense::builder(
+        "Sweets",
+        Money::from_minor_units(2, Currency::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
+        day(),
+    )
+    .payers(Split::equal([ana, bob]))
+    .split(Split::equal([ana, bob]))
+    .build()
+    .unwrap();
     let shares = resolve_expense(entry(1), &sweets, Currency::EUR).unwrap();
     assert_eq!(shares.total, eur(1));
     let paid: Vec<i64> = rows(&shares).iter().map(|&(_, paid, _)| paid).collect();
@@ -345,10 +382,9 @@ fn a_transfer_converts_like_an_expense() {
     let cash = Transfer::builder(
         ana,
         bob,
-        Money::from_minor_units(10_000, Currency::RON),
+        Money::from_minor_units(10_000, Currency::RON).at(ExchangeRate::parse("0.2011").unwrap()),
         day(),
     )
-    .exchange_rate(ExchangeRate::parse("0.2011").unwrap())
     .build()
     .unwrap();
     assert_eq!(resolve_transfer(&cash, Currency::EUR), Ok(2011));
@@ -368,7 +404,7 @@ fn a_transfer_converts_like_an_expense() {
     );
     let rated = local
         .to_builder()
-        .exchange_rate(ExchangeRate::parse("2").unwrap())
+        .cost(local.amount().at(ExchangeRate::parse("2").unwrap()))
         .build()
         .unwrap();
     assert_eq!(
@@ -392,12 +428,12 @@ fn random_expense(
             (member(number), Parts::from_hundredths(hundredths).unwrap())
         }))
     };
-    let currency = if foreign.is_some() {
-        Currency::JPY
-    } else {
-        Currency::EUR
+    let cost = match foreign {
+        None => Cost::from(eur(amount)),
+        Some((mantissa, scale)) => Money::from_minor_units(amount, Currency::JPY)
+            .at(ExchangeRate::from_decimal(mantissa, scale).unwrap()),
     };
-    let mut builder = Expense::builder("Random", Money::from_minor_units(amount, currency), day())
+    let mut builder = Expense::builder("Random", cost, day())
         .payers(parts(payer_parts))
         .split(parts(participant_parts));
     if let Some(basis_points) = tip_basis_points {
@@ -409,9 +445,6 @@ fn random_expense(
         builder = builder.tip(
             Tip::percentage(Percentage::from_basis_points(basis_points)).distributed(distribution),
         );
-    }
-    if let Some((mantissa, scale)) = foreign {
-        builder = builder.exchange_rate(ExchangeRate::from_decimal(mantissa, scale).unwrap());
     }
     builder.build().unwrap()
 }
@@ -503,12 +536,15 @@ fn the_rotation_of_every_pass_is_pinned() {
     );
 
     // A conversion's re-division: 300 JPY at 0.00673 is 2.02 EUR among three.
-    let foreign = Expense::builder("Pinned", Money::from_minor_units(300, Currency::JPY), day())
-        .paid_by(ana)
-        .split(Split::equal([ana, bob, carol]))
-        .exchange_rate(ExchangeRate::parse("0.00673").unwrap())
-        .build()
-        .unwrap();
+    let foreign = Expense::builder(
+        "Pinned",
+        Money::from_minor_units(300, Currency::JPY).at(ExchangeRate::parse("0.00673").unwrap()),
+        day(),
+    )
+    .paid_by(ana)
+    .split(Split::equal([ana, bob, carol]))
+    .build()
+    .unwrap();
     let converted = resolve_expense(entry(2), &foreign, Currency::EUR).unwrap();
     assert_eq!(
         rows(&converted),

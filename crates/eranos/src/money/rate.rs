@@ -37,6 +37,14 @@ pub struct ExchangeRate {
 }
 
 impl ExchangeRate {
+    /// The rate 1, at which one unit of the source currency is worth one
+    /// unit of the target: the rate of a local [`Cost`](crate::Cost), and of
+    /// a currency pegged at par.
+    pub const ONE: Self = Self {
+        mantissa: 1,
+        scale: 0,
+    };
+
     /// Returns the rate `mantissa / 10^scale`: `from_decimal(49765, 4)` is
     /// 4.9765.
     ///

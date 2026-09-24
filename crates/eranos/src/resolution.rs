@@ -84,7 +84,7 @@ pub(crate) fn resolve_expense(
     let paid = expense.payers().divide(total, pass(PASS_PAYERS));
 
     let (total, tip, shares, paid) =
-        match convert(expense.total(), expense.exchange_rate(), currency)? {
+        match convert(expense.total(), expense.cost().conversion(), currency)? {
             None => (total, tip, shares, paid),
             Some(converted) => {
                 let reallocate = |parts: &[(MemberId, i64)], number: u64| {
@@ -143,7 +143,7 @@ pub(crate) fn resolve_expense(
 /// As for [`resolve_expense`].
 pub(crate) fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, GroupError> {
     Ok(
-        convert(transfer.amount(), transfer.exchange_rate(), currency)?
+        convert(transfer.amount(), transfer.cost().conversion(), currency)?
             .unwrap_or_else(|| transfer.amount().minor_units()),
     )
 }

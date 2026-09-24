@@ -49,7 +49,7 @@ flowchart TD
     TRANSFER["transfer<br/>Transfer"]
     MEMBER["member<br/>Member, Email, PhoneNumber,<br/>Account, Iban, Username"]
     CATEGORY["category<br/>Category"]
-    MONEY["money<br/>Currency, Money, ExchangeRate,<br/>Percentage, Parts, allocation"]
+    MONEY["money<br/>Currency, Money, Cost, ExchangeRate,<br/>Percentage, Parts, allocation"]
     BASE["id · date · error · text · secret"]
     GROUP --> RESOLUTION
     GROUP --> LEDGER
@@ -89,10 +89,10 @@ flowchart TD
  └────┬────┘   └────┬─────┘      │                                │
       └──────┬──────┴────────────┘                                │
              ▼                                                    │
- ┌─────────────────────────────────────┐                          │
- │ money: Currency, Money, rates,      │                          │
- │ Percentage, Parts, allocation       │                          │
- └─────────────────┬───────────────────┘                          │
+ ┌───────────────────────────────────────┐                        │
+ │ money: Currency, Money, Cost, rates,  │                        │
+ │ Percentage, Parts, allocation         │                        │
+ └─────────────────┬─────────────────────┘                        │
                    ▼                                              ▼
          ┌──────────────────────────────────────────────────────────┐
          │ id · date · error · text · secret                        │
@@ -125,16 +125,18 @@ every value it receives. `add_*` generates the identifier, `insert_*` takes
 one from the caller (imports, sync, deterministic tests), and `replace_*`
 keeps it.
 
-An **expense** has a name, an amount in its own currency, a date and an
-optional time, optional description and category, an optional tip, the
-payers (a `Split` of the total), and how the cost is shared: an
+An **expense** has a name, a cost (an amount in its own currency, local or
+converted into the group currency at a fixed rate), a date and an optional
+time, optional description and category, an optional tip, the payers (a
+`Split` of the total), and how the cost is shared: an
 `ExpenseSplit::Whole(Split)` or `ExpenseSplit::Itemised(Vec<Item>)`. A split
 is `Equal`, `Percentages` (basis points summing to exactly 10 000), `Parts`
 (hundredths, so 0.5 for a child), or `Amounts` (summing exactly to what is
 divided). An **item** has a unit price, a quantity, and its own split; the
 line totals must add up to the amount. A **tip** is fixed or a percentage of
 the amount, added on top, and shared `Proportional`ly (by consumption) or
-`Equal`ly. A **transfer** is money one member paid another.
+`Equal`ly. A **transfer** is money one member paid another, with a cost
+like an expense's.
 
 **Archived members** keep their history and balance and may send and
 receive transfers, but cannot join a new expense; a replacement may keep an
@@ -152,6 +154,13 @@ cannot be removed.
   18 decimal places) meaning "one unit of the entry's currency is this many
   units of the group's". Conversion multiplies in checked `i128` and rounds
   **half away from zero**, the rule of EU Regulation 1103/97 art. 5.
+- `Cost` is an entry's amount with its conversion: `Local(Money)` is in the
+  group currency and converts at 1; `Converted { amount, rate }`, made by
+  `Money::at`, is in another currency. A rate of 1 does not make a cost
+  local, because a currency pegged at par (BMD to USD) converts at exactly
+  1. Only the group knows its currency, so it checks the kind of cost when
+  an entry is added: `MissingExchangeRate` for a local cost in another
+  currency, `UnexpectedExchangeRate` for a converted one in its own.
 - `Percentage` is basis points (33.33 % = 3 333) and `Parts` hundredths
   (1.5 = 150): both exact integers.
 - **Allocation.** Every division is `allocate(total, weights, rotation)`:
@@ -251,9 +260,9 @@ Settlements are computed on the first request per strategy and cached in
 `OnceLock`s, which keep `Group` `Send + Sync`; every balance-changing
 mutation clears them. `change_currency` re-resolves every entry against the
 new rates into a scratch ledger and swaps it in only if everything
-succeeded: entries in any other currency take the supplied rate (including
-entries in the old group currency, which had none), and entries already in
-the new currency drop theirs.
+succeeded: entries in any other currency become converted costs at the
+supplied rate (including entries in the old group currency, which were
+local), and entries in the new currency become local.
 
 ## 7. Settlement strategies
 
@@ -297,8 +306,9 @@ process before an allocation fails, which is why the documentation of
 Validation happens in two stages. A builder's `build()` checks the entry on
 its own (names, positive amounts, sums, currencies inside the entry, tips).
 The group's `add_*`/`insert_*`/`replace_*` check the entry against the
-group (members exist and are not archived, the category exists, a rate is
-present exactly when the entry is foreign) and against the ledger's range.
+group (members exist and are not archived, the category exists, and the
+cost is converted exactly when the entry is foreign) and against the
+ledger's range.
 
 | Error             | Returned by                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------ |

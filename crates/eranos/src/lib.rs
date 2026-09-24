@@ -107,7 +107,7 @@ pub use ledger::{Balance, ExpenseShares, MemberShare, MemberSummary, Summary};
 pub use member::{
     Account, AccountDetails, AccountKind, Email, Iban, Member, PhoneNumber, Username,
 };
-pub use money::{Currency, ExchangeRate, Money, Parts, Percentage};
+pub use money::{Cost, Currency, ExchangeRate, Money, Parts, Percentage};
 pub use settlement::{Payment, Settlement, SettlementStrategy};
 pub use transfer::Transfer;
 

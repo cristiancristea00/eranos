@@ -23,7 +23,7 @@ struct EntryRow {
     #[tabled(rename = "Entered as")]
     original: Money,
     #[tabled(rename = "Rate")]
-    rate: String,
+    rate: ExchangeRate,
     #[tabled(rename = "In the group currency")]
     converted: Money,
 }
@@ -66,10 +66,6 @@ fn name(group: &Group, member: MemberId) -> String {
         .to_owned()
 }
 
-fn rate_text(rate: Option<ExchangeRate>) -> String {
-    rate.map_or_else(|| "(none)".to_owned(), |rate| rate.to_string())
-}
-
 /// Every expense and transfer, as entered and in the group currency.
 fn print_entries(group: &Group) {
     let expenses = group.expenses().map(|(id, expense)| EntryRow {
@@ -81,7 +77,7 @@ fn print_entries(group: &Group) {
             .collect::<Vec<_>>()
             .join(", "),
         original: expense.total(),
-        rate: rate_text(expense.exchange_rate()),
+        rate: expense.exchange_rate(),
         converted: group
             .expense_shares(id)
             .map_or_else(|| Money::zero(group.currency()), ExpenseShares::total),
@@ -90,7 +86,7 @@ fn print_entries(group: &Group) {
         name: format!("Transfer to {}", name(group, transfer.to())),
         payer: name(group, transfer.from()),
         original: transfer.amount(),
-        rate: rate_text(transfer.exchange_rate()),
+        rate: transfer.exchange_rate(),
         converted: group
             .transfer_amount(id)
             .unwrap_or_else(|| Money::zero(group.currency())),
@@ -122,23 +118,21 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     group.add_expense(
         Expense::builder(
             "Fuel",
-            Money::parse("400.00", Currency::RON)?,
+            Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
             Date::new(2026, 8, 1)?,
         )
         .paid_by(ana)
         .split(both.clone())
-        .exchange_rate(ExchangeRate::parse("0.2")?)
         .build()?,
     )?;
     group.add_expense(
         Expense::builder(
             "Dinner",
-            Money::parse("24000.00", Currency::HUF)?,
+            Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
             Date::new(2026, 8, 2)?,
         )
         .paid_by(bob)
         .split(both.clone())
-        .exchange_rate(ExchangeRate::parse("0.0025")?)
         .build()?,
     )?;
     group.add_expense(
@@ -154,7 +148,7 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     print_entries(group);
     println!(
         "The rate says how many {} one unit of the entry's currency is worth: 400.00 RON at\n\
-         0.2 is 80.00 EUR. The ferry was paid in the group currency and needs no rate.",
+         0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.",
         group.currency()
     );
     Ok(())
@@ -165,10 +159,9 @@ fn repayment(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<
     let cash = Transfer::builder(
         ana,
         bob,
-        Money::parse("100.00", Currency::RON)?,
+        Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
         Date::new(2026, 8, 4)?,
     )
-    .exchange_rate(ExchangeRate::parse("0.2")?)
     .note("Cash at the border")
     .build()?;
     group.add_transfer(cash)?;
@@ -186,7 +179,7 @@ fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
     println!(
         "Changing the group currency needs a rate into the new currency for every other\n\
          currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n\
-         take the new rate; entries already in RON drop theirs."
+         take the new rate; entries already in RON become local costs, at 1."
     );
     group.change_currency(
         Currency::RON,

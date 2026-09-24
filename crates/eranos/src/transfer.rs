@@ -3,15 +3,16 @@
 use crate::date::{Date, Time};
 use crate::error::TransferError;
 use crate::id::MemberId;
-use crate::money::{ExchangeRate, Money};
+use crate::money::{Cost, ExchangeRate, Money};
 use crate::text;
 
 /// Money one member paid directly to another, usually to settle up.
 ///
 /// A transfer moves balances: the sender's debt shrinks and the recipient's
 /// credit shrinks. It is not spending, so it counts towards no total or
-/// category. Like an expense, a transfer in another currency than its
-/// group's needs an [`ExchangeRate`] into the group currency.
+/// category. Like an expense, it has a [`Cost`]: a transfer in another
+/// currency than its group's carries the [`ExchangeRate`] into the group
+/// currency.
 ///
 /// # Examples
 ///
@@ -47,20 +48,22 @@ pub struct Transfer {
 }
 
 impl Transfer {
-    /// Starts a transfer of `amount` from `from` to `to` on `date`.
-    pub const fn builder(
+    /// Starts a transfer of `cost` from `from` to `to` on `date`.
+    ///
+    /// A [`Money`] amount is a local cost, in the group currency;
+    /// [`Money::at`] makes a converted one.
+    pub fn builder(
         from: MemberId,
         to: MemberId,
-        amount: Money,
+        cost: impl Into<Cost>,
         date: Date,
     ) -> TransferBuilder {
         TransferBuilder {
             from,
             to,
-            amount,
+            cost: cost.into(),
             date,
             time: None,
-            exchange_rate: None,
             note: None,
         }
     }
@@ -70,10 +73,9 @@ impl Transfer {
         TransferBuilder {
             from: self.from,
             to: self.to,
-            amount: self.amount,
+            cost: self.cost(),
             date: self.date,
             time: self.time,
-            exchange_rate: self.exchange_rate,
             note: self.note.clone(),
         }
     }
@@ -88,6 +90,13 @@ impl Transfer {
     #[must_use]
     pub const fn to(&self) -> MemberId {
         self.to
+    }
+
+    /// The cost: the amount and, for a transfer in another currency than
+    /// its group's, the rate into the group currency.
+    #[must_use]
+    pub const fn cost(&self) -> Cost {
+        Cost::from_parts(self.amount, self.exchange_rate)
     }
 
     /// The amount, in the transfer's own currency.
@@ -108,11 +117,11 @@ impl Transfer {
         self.time
     }
 
-    /// The rate from the transfer's currency into its group's currency, for
-    /// a foreign-currency transfer.
+    /// The rate from the transfer's currency into its group's currency:
+    /// [`ExchangeRate::ONE`] for a local cost.
     #[must_use]
-    pub const fn exchange_rate(&self) -> Option<ExchangeRate> {
-        self.exchange_rate
+    pub const fn exchange_rate(&self) -> ExchangeRate {
+        self.cost().exchange_rate()
     }
 
     /// A note, if any.
@@ -151,10 +160,9 @@ impl Transfer {
 pub struct TransferBuilder {
     from: MemberId,
     to: MemberId,
-    amount: Money,
+    cost: Cost,
     date: Date,
     time: Option<Time>,
-    exchange_rate: Option<ExchangeRate>,
     note: Option<String>,
 }
 
@@ -171,9 +179,13 @@ impl TransferBuilder {
         self
     }
 
-    /// Replaces the amount.
-    pub const fn amount(mut self, amount: Money) -> Self {
-        self.amount = amount;
+    /// Replaces the cost.
+    ///
+    /// A [`Money`] amount makes the cost local; to change the amount of a
+    /// converted cost and keep its rate, pass
+    /// `transfer.cost().with_amount(amount)`.
+    pub fn cost(mut self, cost: impl Into<Cost>) -> Self {
+        self.cost = cost.into();
         self
     }
 
@@ -186,13 +198,6 @@ impl TransferBuilder {
     /// Sets the time of day, or clears it with `None`.
     pub fn time(mut self, time: impl Into<Option<Time>>) -> Self {
         self.time = time.into();
-        self
-    }
-
-    /// Sets the rate from the transfer's currency into the group currency,
-    /// or clears it with `None`.
-    pub fn exchange_rate(mut self, exchange_rate: impl Into<Option<ExchangeRate>>) -> Self {
-        self.exchange_rate = exchange_rate.into();
         self
     }
 
@@ -213,16 +218,17 @@ impl TransferBuilder {
         if self.from == self.to {
             return Err(TransferError::SameMember);
         }
-        if !self.amount.is_positive() {
+        let amount = self.cost.amount();
+        if !amount.is_positive() {
             return Err(TransferError::NonPositiveAmount);
         }
         Ok(Transfer {
             from: self.from,
             to: self.to,
-            amount: self.amount,
+            amount,
             date: self.date,
             time: self.time,
-            exchange_rate: self.exchange_rate,
+            exchange_rate: self.cost.conversion(),
             note: self.note.and_then(text::optional),
         })
     }
@@ -249,9 +255,8 @@ impl TryFrom<TransferRecord> for Transfer {
     type Error = TransferError;
 
     fn try_from(record: TransferRecord) -> Result<Self, Self::Error> {
-        let builder = Self::builder(record.from, record.to, record.amount, record.date)
-            .time(record.time)
-            .exchange_rate(record.exchange_rate);
+        let cost = Cost::from_parts(record.amount, record.exchange_rate);
+        let builder = Self::builder(record.from, record.to, cost, record.date).time(record.time);
         match record.note {
             Some(note) => builder.note(note).build(),
             None => builder.build(),

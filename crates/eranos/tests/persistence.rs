@@ -70,18 +70,23 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
         .build()
         .unwrap();
     group.add_expense(bill).unwrap();
-    let tram = Expense::builder("Tram", Money::parse("30.00", Currency::RON).unwrap(), day())
-        .payers(Split::amounts([
-            (ana, Money::parse("20.00", Currency::RON).unwrap()),
-            (carol, Money::parse("10.00", Currency::RON).unwrap()),
-        ]))
-        .split(Split::percentages([
-            (ana, Percentage::parse("50").unwrap()),
-            (carol, Percentage::parse("50").unwrap()),
-        ]))
-        .exchange_rate(ExchangeRate::parse("0.2011").unwrap())
-        .build()
-        .unwrap();
+    let tram = Expense::builder(
+        "Tram",
+        Money::parse("30.00", Currency::RON)
+            .unwrap()
+            .at(ExchangeRate::parse("0.2011").unwrap()),
+        day(),
+    )
+    .payers(Split::amounts([
+        (ana, Money::parse("20.00", Currency::RON).unwrap()),
+        (carol, Money::parse("10.00", Currency::RON).unwrap()),
+    ]))
+    .split(Split::percentages([
+        (ana, Percentage::parse("50").unwrap()),
+        (carol, Percentage::parse("50").unwrap()),
+    ]))
+    .build()
+    .unwrap();
     group.add_expense(tram).unwrap();
     group
         .add_transfer(

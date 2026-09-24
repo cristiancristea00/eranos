@@ -22,7 +22,8 @@ no I/O.
 | Member     | `Member`     | A person: first name (required), last name, email, phone, payment accounts        |
 | Account    | `Account`    | Where a member can be paid: an IBAN or a payment-app username, held as a secret   |
 | Category   | `Category`   | A label the group defines, such as "Food"                                         |
-| Expense    | `Expense`    | What was bought: amount, date, payers, split, optional tip, category, rate        |
+| Expense    | `Expense`    | What was bought: cost, date, payers, split, optional tip and category             |
+| Cost       | `Cost`       | An amount in the group currency, or in another one at a fixed exchange rate       |
 | Split      | `Split`      | How an amount is divided: equally, by percentages, by parts, or by exact amounts  |
 | Item       | `Item`       | A receipt line of an itemised expense, with its own quantity and split            |
 | Tip        | `Tip`        | A fixed amount or a percentage on top, shared proportionally or equally           |
@@ -100,8 +101,9 @@ flowchart LR
   identifier, so the extra cent of an even split does not always land on
   the same person, and a synced expense divides identically on every device.
 - **Every currency, one ledger.** An expense in another currency than the
-  group's carries an exchange rate fixed when it is entered; it is converted
-  once, exactly, into the group currency.
+  group's has a converted cost, with an exchange rate fixed when it is
+  entered; it is converted once, exactly, into the group currency. A plain
+  amount is a local cost, in the group currency at a rate of 1.
 - **Totals are incremental.** Each change moves the totals by exactly its
   own shares, checked for overflow before anything is written: a failed
   change leaves the group untouched.

@@ -200,8 +200,8 @@ impl Group {
     ///
     /// `rates` must hold, for every currency the group's entries use other
     /// than `currency`, the rate into `currency`; entries in the old group
-    /// currency count too. Every entry in such a currency takes that rate,
-    /// and entries already in `currency` drop theirs. Everything is
+    /// currency count too. Every entry in such a currency gets a converted
+    /// cost at that rate, and entries in `currency` a local one. Everything is
     /// recomputed, which takes time proportional to the number of entries;
     /// on an error nothing changes. Moving to the current currency does
     /// nothing.
@@ -539,9 +539,9 @@ impl Group {
     ///   a payer or participant is not an active member.
     /// - [`GroupError::UnknownCategory`] when the category does not exist.
     /// - [`GroupError::MissingExchangeRate`] when the expense is in another
-    ///   currency and has no rate, and
+    ///   currency and its cost is local, and
     ///   [`GroupError::UnexpectedExchangeRate`] when it is in the group
-    ///   currency and has one.
+    ///   currency and its cost is converted.
     /// - [`GroupError::Overflow`] when a total would leave the range of an
     ///   amount.
     pub fn add_expense(&mut self, expense: Expense) -> Result<ExpenseId, GroupError> {
