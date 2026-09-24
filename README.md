@@ -170,13 +170,30 @@ format, and the rounding results are all part of the contract:
 eranos/
 ├── .github/                   the CI workflow; Dependabot and zizmor configuration
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
-├── crates/eranos/
-│   ├── src/                   the library; every module has its unit tests in <module>/tests.rs
-│   ├── tests/                 scenarios, properties, persistence, errors, api (public API only)
-│   ├── examples/              runnable scenarios
-│   └── benches/               criterion benchmarks
-├── crates/xtask/              the repository's automation: `cargo xtask gates`
+├── crates/
+│   ├── eranos/                the facade callers depend on
+│   │   ├── src/               re-exports of the types the internal crates hold
+│   │   ├── tests/             scenarios, properties, persistence, errors, api (public API only)
+│   │   ├── examples/          runnable scenarios
+│   │   └── benches/           criterion benchmarks
+│   ├── eranos-core/           identifiers and text rules
+│   ├── eranos-calendar/       dates and times of day
+│   ├── eranos-money/          amounts, currencies, rates, ratios, and apportionment
+│   ├── eranos-account/        payment accounts: IBANs and usernames
+│   ├── eranos-contact/        emails and phone numbers
+│   ├── eranos-member/         members
+│   ├── eranos-category/       categories
+│   ├── eranos-ledger/         totals and balances
+│   ├── eranos-expense/        expenses, splits, items, and tips
+│   ├── eranos-settlement/     settlement strategies
+│   ├── eranos-transfer/       transfers
+│   ├── eranos-group/          groups and their saved form
+│   └── xtask/                 the repository's automation: `cargo xtask gates`
 ├── docs/                      architecture, development, testing, versioning
 ├── deny.toml                  the rules of the CI dependency audit
 └── AGENTS.md                  conventions and gates (CLAUDE.md and GEMINI.md link to it)
 ```
+
+Every crate keeps each module's unit tests in `<module>/tests.rs`;
+[docs/ARCHITECTURE.md § 2](docs/ARCHITECTURE.md#2-crate-map) maps the crates
+and what depends on what.
