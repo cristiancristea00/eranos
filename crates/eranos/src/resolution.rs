@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::error::GroupError;
+use crate::error::MoneyError;
 use crate::expense::{Expense, ExpenseSplit, TipDistribution};
 use crate::id::MemberId;
 use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare};
@@ -30,15 +30,17 @@ const PASS_DEBTS: u64 = 2 << 32;
 
 /// Divides one expense among its members in the group currency.
 ///
+/// The group has checked the kind of the expense's cost against
+/// `currency` (`Group::check_cost`, or the rates of a currency change).
+///
 /// # Errors
 ///
-/// [`GroupError::MissingExchangeRate`] or [`GroupError::UnexpectedExchangeRate`]
-/// when the rate does not match the currencies, and [`GroupError::Overflow`]
-/// when the conversion leaves the range of an amount.
+/// [`MoneyError::Overflow`] when the conversion leaves the range of an
+/// amount.
 pub(crate) fn resolve_expense(
     expense: &Expense,
     currency: Currency,
-) -> Result<ExpenseShares, GroupError> {
+) -> Result<ExpenseShares, MoneyError> {
     let seed = expense.id().to_bytes();
     let pass = |number: u64| rotation(seed, number);
     let amount = expense.amount().minor_units();
@@ -137,33 +139,22 @@ pub(crate) fn resolve_expense(
 /// # Errors
 ///
 /// As for [`resolve_expense`].
-pub(crate) fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, GroupError> {
+pub(crate) fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
     Ok(
         convert(transfer.amount(), transfer.cost().conversion(), currency)?
             .unwrap_or_else(|| transfer.amount().minor_units()),
     )
 }
 
-/// Converts `amount` into `currency`: `None` when it already is in
-/// `currency`, which then must not carry a rate.
+/// Converts `amount` at `rate` into `currency`: `None` for an amount without
+/// a rate, which the group's checks have kept to amounts in `currency`.
 fn convert(
     amount: Money,
     rate: Option<ExchangeRate>,
     currency: Currency,
-) -> Result<Option<i64>, GroupError> {
-    if amount.currency() == currency {
-        return match rate {
-            None => Ok(None),
-            Some(_) => Err(GroupError::UnexpectedExchangeRate),
-        };
-    }
-    let rate = rate.ok_or_else(|| GroupError::MissingExchangeRate {
-        currency: amount.currency(),
-    })?;
-    let converted = rate
-        .convert(amount, currency)
-        .map_err(|_| GroupError::Overflow)?;
-    Ok(Some(converted.minor_units()))
+) -> Result<Option<i64>, MoneyError> {
+    rate.map(|rate| Ok(rate.convert(amount, currency)?.minor_units()))
+        .transpose()
 }
 
 /// What every participant owes every payer.

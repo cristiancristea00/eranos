@@ -207,8 +207,10 @@ cannot be removed.
 
 Every figure a user enters is in the entry's own currency and is validated
 there (items add up to the amount, percentages to 100 %, amounts to what
-they divide). Resolution then produces the entry's shares in the group
-currency:
+they divide). The group then checks that the entry's cost suits the group
+currency, a local cost in it and a converted one in any other, so
+resolution fails only when a conversion leaves the range of an amount.
+Resolution produces the entry's shares in the group currency:
 
 ```mermaid
 flowchart TD

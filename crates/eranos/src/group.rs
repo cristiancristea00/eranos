@@ -21,7 +21,7 @@ use crate::expense::Expense;
 use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
 use crate::ledger::{Delta, ExpenseShares, Ledger, Summary};
 use crate::member::Member;
-use crate::money::{Currency, CurrencyRate, ExchangeRate, Money};
+use crate::money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
 use crate::resolution::{resolve_expense, resolve_transfer};
 use crate::settlement::{self, Settlement, SettlementStrategy};
 use crate::text;
@@ -333,12 +333,14 @@ impl Group {
             }
         };
 
+        // `rate_for` gives every other currency its rate and `currency` none,
+        // so every cost has the kind `check_cost` asks for.
         let mut delta = Delta::default();
         let mut expenses = BTreeMap::new();
         for (&id, record) in &self.expenses {
             let mut expense = record.expense.clone();
             expense.set_exchange_rate(rate_for(expense.amount().currency())?);
-            let shares = resolve_expense(&expense, currency)?;
+            let shares = resolve_expense(&expense, currency).map_err(|_| GroupError::Overflow)?;
             delta.add_expense(&shares, expense.category(), 1);
             expenses.insert(id, ExpenseRecord { expense, shares });
         }
@@ -346,7 +348,7 @@ impl Group {
         for (&id, record) in &self.transfers {
             let mut transfer = record.transfer.clone();
             transfer.set_exchange_rate(rate_for(transfer.amount().currency())?);
-            let amount = resolve_transfer(&transfer, currency)?;
+            let amount = resolve_transfer(&transfer, currency).map_err(|_| GroupError::Overflow)?;
             delta.add_transfer(transfer.pair(), amount, 1);
             transfers.insert(id, TransferRecord { amount, transfer });
         }
@@ -400,7 +402,7 @@ impl Group {
             return Err(GroupError::DuplicateExpense(id));
         }
         self.check_expense(&expense, None)?;
-        let shares = resolve_expense(&expense, self.currency)?;
+        let shares = resolve_expense(&expense, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
         delta.add_expense(&shares, expense.category(), 1);
         self.ledger
@@ -428,7 +430,7 @@ impl Group {
             .get(&id)
             .ok_or(GroupError::UnknownExpense(id))?;
         self.check_expense(&expense, Some(&previous.expense))?;
-        let shares = resolve_expense(&expense, self.currency)?;
+        let shares = resolve_expense(&expense, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
         delta.add_expense(&previous.shares, previous.expense.category(), -1);
         delta.add_expense(&shares, expense.category(), 1);
@@ -673,7 +675,8 @@ impl Group {
             return Err(GroupError::DuplicateTransfer(id));
         }
         self.check_transfer(&transfer)?;
-        let amount = resolve_transfer(&transfer, self.currency)?;
+        let amount =
+            resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
         delta.add_transfer(transfer.pair(), amount, 1);
         self.ledger
@@ -700,7 +703,8 @@ impl Group {
             .get(&id)
             .ok_or(GroupError::UnknownTransfer(id))?;
         self.check_transfer(&transfer)?;
-        let amount = resolve_transfer(&transfer, self.currency)?;
+        let amount =
+            resolve_transfer(&transfer, self.currency).map_err(|_| GroupError::Overflow)?;
         let mut delta = Delta::default();
         delta.add_transfer(previous.transfer.pair(), previous.amount, -1);
         delta.add_transfer(transfer.pair(), amount, 1);
@@ -766,8 +770,19 @@ impl Group {
 
     // --- Checks --------------------------------------------------------------
 
-    /// Checks the references of `expense`; `previous` is the version it
-    /// replaces, whose archived members it may keep.
+    /// Checks that `cost` suits the group currency: a local cost in it, and a
+    /// converted one in any other currency, even at a rate of 1.
+    fn check_cost(&self, cost: Cost) -> Result<(), GroupError> {
+        let currency = cost.amount().currency();
+        match (cost.conversion(), currency == self.currency) {
+            (None, false) => Err(GroupError::MissingExchangeRate { currency }),
+            (None, true) | (Some(_), false) => Ok(()),
+            (Some(_), true) => Err(GroupError::UnexpectedExchangeRate),
+        }
+    }
+
+    /// Checks the references and the cost of `expense`; `previous` is the
+    /// version it replaces, whose archived members it may keep.
     fn check_expense(
         &self,
         expense: &Expense,
@@ -784,20 +799,20 @@ impl Group {
             }
         }
         let category = expense.category();
-        if self.categories.contains_key(&category) {
-            Ok(())
-        } else {
-            Err(GroupError::UnknownCategory(category))
+        if !self.categories.contains_key(&category) {
+            return Err(GroupError::UnknownCategory(category));
         }
+        self.check_cost(expense.cost())
     }
 
+    /// Checks the members and the cost of `transfer`.
     fn check_transfer(&self, transfer: &Transfer) -> Result<(), GroupError> {
         for member in [transfer.from(), transfer.to()] {
             if !self.members.contains_key(&member) {
                 return Err(GroupError::UnknownMember(member));
             }
         }
-        Ok(())
+        self.check_cost(transfer.cost())
     }
 }
 

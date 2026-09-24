@@ -254,54 +254,24 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
     assert_eq!(shares.tip, eur(183));
 }
 
-/// Costs are checked against the currencies: a foreign entry with a local
-/// cost cannot be totalled, and a group-currency entry with a converted cost
-/// is a mistake, even at a rate of 1.
-#[test]
-fn a_rate_must_match_the_currencies() {
-    let ana = member(1);
-    let builder = || Expense::builder(eur(500), day(), "Snack", ana, Split::equal([ana]));
-
-    // Foreign with a local cost.
-    let foreign = builder().build().unwrap();
-    assert_eq!(
-        resolve_expense(&identified(&foreign, entry(1)), Currency::RON),
-        Err(GroupError::MissingExchangeRate {
-            currency: Currency::EUR
-        })
-    );
-    // Group currency with a converted cost.
-    let rated = builder()
-        .cost(eur(500).at(ExchangeRate::ONE))
-        .build()
-        .unwrap();
-    assert_eq!(
-        resolve_expense(&identified(&rated, entry(1)), Currency::EUR),
-        Err(GroupError::UnexpectedExchangeRate)
-    );
-}
-
 /// A currency pegged at par, such as the Bermudian dollar to the US dollar,
-/// would be refused or converted at another rate.
+/// would be converted at another rate.
 #[test]
 fn a_conversion_at_one_converts_a_pegged_currency() {
     let ana = member(1);
     let bermudian_dollars = Money::from_minor_units(Currency::BMD, 5_000);
-    let builder = |cost: Cost| Expense::builder(cost, day(), "Ferry", ana, Split::equal([ana]));
     // At 1, the amount is taken as is.
-    let pegged = builder(bermudian_dollars.at(ExchangeRate::ONE))
-        .build()
-        .unwrap();
+    let pegged = Expense::builder(
+        bermudian_dollars.at(ExchangeRate::ONE),
+        day(),
+        "Ferry",
+        ana,
+        Split::equal([ana]),
+    )
+    .build()
+    .unwrap();
     let shares = resolve_expense(&identified(&pegged, entry(1)), Currency::USD).unwrap();
     assert_eq!(shares.total, Money::from_minor_units(Currency::USD, 5_000));
-    // As a local cost, it is not in the group currency.
-    let local = builder(Cost::from(bermudian_dollars)).build().unwrap();
-    assert_eq!(
-        resolve_expense(&identified(&local, entry(1)), Currency::USD),
-        Err(GroupError::MissingExchangeRate {
-            currency: Currency::BMD
-        })
-    );
 }
 
 /// A conversion beyond the range of an amount is refused instead of
@@ -321,7 +291,7 @@ fn a_conversion_out_of_range_is_an_overflow() {
     .unwrap();
     assert_eq!(
         resolve_expense(&identified(&huge, entry(1)), Currency::EUR),
-        Err(GroupError::Overflow)
+        Err(MoneyError::Overflow)
     );
 }
 
@@ -376,7 +346,7 @@ fn the_leftover_cent_rotates_with_the_expense_id() {
     assert_eq!(carriers.len(), 3);
 }
 
-/// A transfer converts like an expense and obeys the same rate rules.
+/// A transfer converts like an expense.
 #[test]
 fn a_transfer_converts_like_an_expense() {
     let (ana, bob) = (member(1), member(2));
@@ -395,29 +365,6 @@ fn a_transfer_converts_like_an_expense() {
     .build()
     .unwrap();
     assert_eq!(resolve_transfer(&cash, Currency::EUR), Ok(2011));
-    let unrated = Transfer::builder(
-        Money::from_minor_units(Currency::RON, 10_000),
-        day(),
-        ana,
-        bob,
-    )
-    .build()
-    .unwrap();
-    assert_eq!(
-        resolve_transfer(&unrated, Currency::EUR),
-        Err(GroupError::MissingExchangeRate {
-            currency: Currency::RON
-        })
-    );
-    let rated = local
-        .to_builder()
-        .cost(local.amount().at(ExchangeRate::parse("2").unwrap()))
-        .build()
-        .unwrap();
-    assert_eq!(
-        resolve_transfer(&rated, Currency::EUR),
-        Err(GroupError::UnexpectedExchangeRate)
-    );
 }
 
 /// Builds a random valid expense from primitive draws: participants and

@@ -726,6 +726,73 @@ fn a_currency_change_reconverts_every_entry() {
     assert_eq!(group.ledger, rebuilt(&group));
 }
 
+/// A transfer would be totalled in the wrong currency if its cost were not
+/// checked as an expense's is: a foreign transfer needs its rate, and one in
+/// the group currency must not carry one, when it is added or replaced.
+#[test]
+fn a_transfer_cost_must_suit_the_group_currency() {
+    let (mut group, ana, bob, _) = trip();
+    let lei = || {
+        Transfer::builder(
+            Money::parse("100.00", Currency::RON).unwrap(),
+            day(),
+            ana,
+            bob,
+        )
+        .build()
+        .unwrap()
+    };
+    let missing = GroupError::MissingExchangeRate {
+        currency: Currency::RON,
+    };
+    assert_unchanged(&mut group, &missing, |group| group.add_transfer(lei()));
+    let rated = Transfer::builder(
+        eur("25.00").at(ExchangeRate::parse("2").unwrap()),
+        day(),
+        ana,
+        bob,
+    )
+    .build()
+    .unwrap();
+    assert_unchanged(&mut group, &GroupError::UnexpectedExchangeRate, |group| {
+        group.add_transfer(rated)
+    });
+    // A replacement is checked the same way.
+    let cash = group.add_transfer(transfer(ana, bob, "25.00")).unwrap();
+    assert_unchanged(&mut group, &missing, |group| {
+        group.replace_transfer(replacement_transfer(cash, &lei()))
+    });
+}
+
+/// A currency pegged at par, such as the Bermudian dollar to the US dollar,
+/// is still another currency: a local cost in it would be counted as
+/// dollars.
+#[test]
+fn a_pegged_currency_needs_its_rate_even_at_par() {
+    let mut group = Group::builder(Currency::USD, "Bermuda").build().unwrap();
+    let ana = group.add_member(person("Ana")).unwrap();
+    let bermudian_dollars = Money::from_minor_units(Currency::BMD, 5_000);
+    let ferry = |cost: Cost| {
+        Expense::builder(cost, day(), "Ferry", ana, Split::equal([ana]))
+            .build()
+            .unwrap()
+    };
+    assert_unchanged(
+        &mut group,
+        &GroupError::MissingExchangeRate {
+            currency: Currency::BMD,
+        },
+        |group| group.add_expense(ferry(Cost::from(bermudian_dollars))),
+    );
+    group
+        .add_expense(ferry(bermudian_dollars.at(ExchangeRate::ONE)))
+        .unwrap();
+    assert_eq!(
+        group.summary().total_spent(),
+        Money::from_minor_units(Currency::USD, 5_000)
+    );
+}
+
 /// Groups compare by their details and entries, never by their caches.
 #[test]
 fn equality_ignores_the_caches() {
@@ -745,8 +812,8 @@ fn equality_ignores_the_caches() {
     assert_ne!(copy, archived);
 }
 
-/// A change whose totals would overflow is refused and leaves the group
-/// unchanged.
+/// A change whose totals would overflow, or whose conversion leaves the
+/// range of an amount, is refused and leaves the group unchanged.
 #[test]
 fn an_overflowing_expense_is_refused() {
     let (mut group, ana, bob, _) = trip();
@@ -759,6 +826,18 @@ fn an_overflowing_expense_is_refused() {
     group.add_expense(huge()).unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
         group.add_expense(huge())
+    });
+    let foreign = Expense::builder(
+        huge_in_lei().at(two()),
+        day(),
+        "Foreign",
+        ana,
+        Split::equal([bob]),
+    )
+    .build()
+    .unwrap();
+    assert_unchanged(&mut group, &GroupError::Overflow, |group| {
+        group.add_expense(foreign)
     });
 }
 
