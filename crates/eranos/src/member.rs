@@ -36,11 +36,7 @@ use crate::id::MemberId;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "MemberRecord")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Member {
     id: MemberId,
     first_name: String,
@@ -203,22 +199,28 @@ struct MemberRecord {
     phone: Option<PhoneNumber>,
 }
 
+/// Builds the member `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
-impl TryFrom<MemberRecord> for Member {
-    type Error = MemberError;
+fn from_record(record: MemberRecord) -> Result<Member, MemberError> {
+    let builder = MemberBuilder {
+        id: Some(record.id),
+        ..Member::builder(record.first_name)
+    }
+    .email(record.email)
+    .phone(record.phone)
+    .accounts(record.accounts);
+    match record.last_name {
+        Some(last_name) => builder.last_name(last_name).build(),
+        None => builder.build(),
+    }
+}
 
-    fn try_from(record: MemberRecord) -> Result<Self, Self::Error> {
-        let builder = MemberBuilder {
-            id: Some(record.id),
-            ..Self::builder(record.first_name)
-        }
-        .email(record.email)
-        .phone(record.phone)
-        .accounts(record.accounts);
-        match record.last_name {
-            Some(last_name) => builder.last_name(last_name).build(),
-            None => builder.build(),
-        }
+// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
+// from the private record would appear on the facade's page for `Member`.
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Member {
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        from_record(MemberRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
     }
 }
 

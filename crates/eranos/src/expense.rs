@@ -48,11 +48,7 @@ use crate::money::{Cost, ExchangeRate, Money};
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "ExpenseRecord")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Expense {
     id: ExpenseId,
     amount: Money,
@@ -583,23 +579,29 @@ struct ExpenseRecord {
     tip: Tip,
 }
 
+/// Builds the expense `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
-impl TryFrom<ExpenseRecord> for Expense {
-    type Error = ExpenseError;
+fn from_record(record: ExpenseRecord) -> Result<Expense, ExpenseError> {
+    let cost = Cost::from_parts(record.amount, record.exchange_rate);
+    let builder = ExpenseBuilder {
+        id: Some(record.id),
+        ..starting(cost, record.date, record.name, record.payers, record.split)
+    }
+    .category(record.category.unwrap_or(CategoryId::UNCATEGORISED))
+    .time(record.time)
+    .tip(record.tip);
+    match record.description {
+        Some(description) => builder.description(description).build(),
+        None => builder.build(),
+    }
+}
 
-    fn try_from(record: ExpenseRecord) -> Result<Self, Self::Error> {
-        let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = ExpenseBuilder {
-            id: Some(record.id),
-            ..starting(cost, record.date, record.name, record.payers, record.split)
-        }
-        .category(record.category.unwrap_or(CategoryId::UNCATEGORISED))
-        .time(record.time)
-        .tip(record.tip);
-        match record.description {
-            Some(description) => builder.description(description).build(),
-            None => builder.build(),
-        }
+// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
+// from the private record would appear on the facade's page for `Expense`.
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Expense {
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        from_record(ExpenseRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
     }
 }
 

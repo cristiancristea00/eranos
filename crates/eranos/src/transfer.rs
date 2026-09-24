@@ -32,11 +32,7 @@ use crate::settlement::Payment;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "TransferRecord")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Transfer {
     id: TransferId,
     amount: Money,
@@ -301,21 +297,27 @@ struct TransferRecord {
     time: Option<TimeOfDay>,
 }
 
+/// Builds the transfer `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
-impl TryFrom<TransferRecord> for Transfer {
-    type Error = TransferError;
+fn from_record(record: TransferRecord) -> Result<Transfer, TransferError> {
+    let cost = Cost::from_parts(record.amount, record.exchange_rate);
+    let builder = TransferBuilder {
+        id: Some(record.id),
+        ..Transfer::builder(cost, record.date, record.from, record.to)
+    }
+    .time(record.time);
+    match record.note {
+        Some(note) => builder.note(note).build(),
+        None => builder.build(),
+    }
+}
 
-    fn try_from(record: TransferRecord) -> Result<Self, Self::Error> {
-        let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = TransferBuilder {
-            id: Some(record.id),
-            ..Self::builder(cost, record.date, record.from, record.to)
-        }
-        .time(record.time);
-        match record.note {
-            Some(note) => builder.note(note).build(),
-            None => builder.build(),
-        }
+// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
+// from the private record would appear on the facade's page for `Transfer`.
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Transfer {
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        from_record(TransferRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
     }
 }
 

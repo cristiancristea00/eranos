@@ -781,4 +781,6 @@ fn expenses_round_trip_through_serde() {
     );
     assert_ne!(tampered, itemised_json);
     assert!(serde_json::from_str::<Expense>(&tampered).is_err());
+    // A record that is not an expense's shape is refused before its checks.
+    assert!(serde_json::from_str::<Expense>(r#"{"name":"Dinner"}"#).is_err());
 }

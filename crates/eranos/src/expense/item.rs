@@ -35,11 +35,7 @@ use crate::money::Money;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "ItemRecord")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Item {
     name: String,
     split: Split,
@@ -207,14 +203,20 @@ struct ItemRecord {
     unit_price: Money,
 }
 
+/// Builds the item `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
-impl TryFrom<ItemRecord> for Item {
-    type Error = ExpenseError;
+fn from_record(record: ItemRecord) -> Result<Item, ExpenseError> {
+    Item::builder_with_split(record.name, record.split, record.unit_price)
+        .quantity(record.quantity)
+        .build()
+}
 
-    fn try_from(record: ItemRecord) -> Result<Self, Self::Error> {
-        Self::builder_with_split(record.name, record.split, record.unit_price)
-            .quantity(record.quantity)
-            .build()
+// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
+// from the private record would appear on the facade's page for `Item`.
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Item {
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        from_record(ItemRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
     }
 }
 

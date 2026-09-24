@@ -244,4 +244,6 @@ fn items_round_trip_through_serde() {
     let zero_quantity = json.replace(r#""quantity":3"#, r#""quantity":0"#);
     assert_ne!(zero_quantity, json);
     assert!(serde_json::from_str::<Item>(&zero_quantity).is_err());
+    // A record that is not an item's shape is refused before its checks.
+    assert!(serde_json::from_str::<Item>(r#"{"name":"Beer"}"#).is_err());
 }

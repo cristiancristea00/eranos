@@ -31,11 +31,7 @@ use crate::id::CategoryId;
 /// # Ok::<(), eranos::error::CategoryError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(try_from = "CategoryRecord")
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Category {
     id: CategoryId,
     name: String,
@@ -137,15 +133,22 @@ struct CategoryRecord {
     name: String,
 }
 
+/// Builds the category `record` describes, with the name check of
+/// `Category::new`.
 #[cfg(feature = "serde")]
-impl TryFrom<CategoryRecord> for Category {
-    type Error = CategoryError;
+fn from_record(record: CategoryRecord) -> Result<Category, CategoryError> {
+    Ok(Category {
+        id: record.id,
+        name: text::required(record.name, CategoryError::EmptyName)?,
+    })
+}
 
-    fn try_from(record: CategoryRecord) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: record.id,
-            name: text::required(record.name, CategoryError::EmptyName)?,
-        })
+// Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
+// from the private record would appear on the facade's page for `Category`.
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Category {
+    fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
+        from_record(CategoryRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
     }
 }
 

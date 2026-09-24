@@ -274,4 +274,6 @@ fn transfers_round_trip_through_serde() {
     let to_oneself = minimal_json.replace(&ANA.to_string(), &BOB.to_string());
     assert_ne!(to_oneself, minimal_json);
     assert!(serde_json::from_str::<Transfer>(&to_oneself).is_err());
+    // A record that is not a transfer's shape is refused before its checks.
+    assert!(serde_json::from_str::<Transfer>(r#"{"note":"Dinner"}"#).is_err());
 }
