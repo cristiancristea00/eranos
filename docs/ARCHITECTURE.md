@@ -7,7 +7,7 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 ## Contents
 
 1. [Goals and constraints](#1-goals-and-constraints)
-2. [Module map](#2-module-map)
+2. [Crate map](#2-crate-map)
 3. [Data model](#3-data-model)
 4. [Money and rounding](#4-money-and-rounding)
 5. [Resolving an entry](#5-resolving-an-entry)
@@ -48,76 +48,114 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   (libphonenumber's numbering plans, pinned exactly); besides them
   `thiserror` (derive only), `uuid` (v7 identifiers), and optionally
   `serde`. Everything else, including IBAN validation and the email rules,
-  is in the crate. The licences the apps' notices must list are Apache-2.0
+  is in the crates. The licences the apps' notices must list are Apache-2.0
   (iso4217-static, and rlibphonenumber with libphonenumber's metadata),
   Unicode-3.0 (ICU4X), and Unlicense or MIT (jiff), besides those of the
   crates they bring; `deny.toml` does not check licences.
 
-## 2. Module map
+## 2. Crate map
+
+The library is thirteen crates. Callers depend on `eranos`, the facade,
+which re-exports the types they use from twelve internal crates; each
+internal crate owns one part of the domain, holds its own error type, and
+depends only on crates below it. Every crate depends on `eranos-core`, and
+the facade on all twelve; the graph leaves those edges out.
 
 ```mermaid
 flowchart TD
-    GROUP["group<br/>Group, GroupBuilder, Language<br/>(+ serde replay)"]
-    EXPENSE["expense<br/>Expense, Split, Item, Tip<br/>(+ resolution: shares, pair debts)"]
-    TRANSFER["transfer<br/>Transfer (+ resolution)"]
-    LEDGER["ledger<br/>Summary, MemberSummary, Balance,<br/>ExpenseShares; Delta, Ledger"]
-    SETTLEMENT["settlement<br/>SettlementStrategy, Settlement, Payment<br/>minimum · greedy · direct"]
-    MEMBER["member<br/>Member, Email, PhoneNumber,<br/>Account, Iban, Username"]
-    CATEGORY["category<br/>Category"]
-    MONEY["money<br/>Currency, Money, Cost, ExchangeRate,<br/>Percentage, Parts, allocation"]
-    BASE["id · calendar · error · text"]
+    FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
+    GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup"]
+    EXPENSE["eranos-expense<br/>Expense, Split, Item, Tip<br/>(+ resolve_expense)"]
+    TRANSFER["eranos-transfer<br/>Transfer (+ resolve_transfer)"]
+    MEMBER["eranos-member<br/>Member"]
+    CATEGORY["eranos-category<br/>Category"]
+    SETTLEMENT["eranos-settlement<br/>SettlementStrategy, Settlement, Payment<br/>(+ Settlements)"]
+    ACCOUNT["eranos-account<br/>Account, Iban, Username"]
+    CONTACT["eranos-contact<br/>Email, PhoneNumber"]
+    LEDGER["eranos-ledger<br/>Summary, Balance, ExpenseShares<br/>(+ Ledger, Delta)"]
+    CALENDAR["eranos-calendar<br/>CalendarDate, TimeOfDay"]
+    MONEY["eranos-money<br/>Money, Currency, Cost, rates, ratios<br/>(+ allocation)"]
+    CORE["eranos-core<br/>identifiers (+ text rules)"]
+    FACADE --> GROUP
     GROUP --> EXPENSE
     GROUP --> TRANSFER
-    GROUP --> LEDGER
-    GROUP --> SETTLEMENT
     GROUP --> MEMBER
     GROUP --> CATEGORY
+    GROUP --> SETTLEMENT
+    GROUP --> LEDGER
+    GROUP --> MONEY
     EXPENSE --> LEDGER
-    TRANSFER --> LEDGER
-    TRANSFER --> SETTLEMENT
-    SETTLEMENT --> LEDGER
+    EXPENSE --> CALENDAR
     EXPENSE --> MONEY
+    TRANSFER --> SETTLEMENT
+    TRANSFER --> CALENDAR
     TRANSFER --> MONEY
+    MEMBER --> ACCOUNT
+    MEMBER --> CONTACT
+    SETTLEMENT --> LEDGER
+    SETTLEMENT --> MONEY
     LEDGER --> MONEY
-    MONEY --> BASE
-    MEMBER --> BASE
+    MONEY --> CORE
+    CALENDAR --> CORE
+    ACCOUNT --> CORE
+    CONTACT --> CORE
+    CATEGORY --> CORE
 ```
 
 <details>
 <summary>ASCII version (for renderers without Mermaid)</summary>
 
 ```text
-                         ┌─────────────────────────────┐
-                         │ group                       │
-                         │ Group, GroupBuilder,        │
-                         │ Language (+ serde replay)   │
-                         └──┬──────┬──────┬──────┬─────┘
-             ┌──────────────┘      │      │      └──────────────┐
-             ▼                     ▼      ▼                     ▼
- ┌───────────────────────┐ ┌────────────┐ ┌───────────────┐ ┌───────────┐
- │ expense · transfer    │ │ ledger     │ │ settlement    │ │ member    │
- │ (+ resolution: entry  │►│ Summary,   │◄│ minimum,      │ │ category  │
- │ → shares, pair debts) │ │ Delta      │ │ greedy, direct│ └─────┬─────┘
- └──┬──────────┬─────────┘ └─────┬──────┘ └───────▲───────┘       │
-    │          └─ transfer ──────┼────── Payment ─┘               │
-    ├────────────────────────────┘                                │
-    ▼                                                             │
- ┌───────────────────────────────────────┐                        │
- │ money: Currency, Money, Cost, rates,  │                        │
- │ Percentage, Parts, allocation         │                        │
- └─────────────────┬─────────────────────┘                        │
-                   ▼                                              ▼
-         ┌──────────────────────────────────────────────────────────┐
-         │ id · calendar · error · text                             │
-         └──────────────────────────────────────────────────────────┘
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │ eranos             the facade: re-exports; tests, examples, benchmarks   │
+ ├──────────────────────────────────────────────────────────────────────────┤
+ │ eranos-group       Group, GroupBuilder, Language, SavedGroup             │
+ ├──────────────────────────────────────────────────────────────────────────┤
+ │ eranos-expense     Expense, Split, Item, Tip (+ resolve_expense)         │
+ │ eranos-transfer    Transfer (+ resolve_transfer)                         │
+ │ eranos-member      Member                                                │
+ │ eranos-category    Category                                              │
+ ├──────────────────────────────────────────────────────────────────────────┤
+ │ eranos-settlement  SettlementStrategy, Settlement, Payment               │
+ │                    (+ Settlements)                                       │
+ │ eranos-account     Account, Iban, Username                               │
+ │ eranos-contact     Email, PhoneNumber                                    │
+ ├──────────────────────────────────────────────────────────────────────────┤
+ │ eranos-ledger      Summary, Balance, ExpenseShares (+ Ledger, Delta)     │
+ │ eranos-calendar    CalendarDate, TimeOfDay                               │
+ ├──────────────────────────────────────────────────────────────────────────┤
+ │ eranos-money       Money, Currency, Cost, rates, ratios (+ allocation)   │
+ ├──────────────────────────────────────────────────────────────────────────┤
+ │ eranos-core        identifiers (+ text rules)                            │
+ └──────────────────────────────────────────────────────────────────────────┘
+   A crate depends only on crates in the bands below its own; the table
+   lists each crate's direct dependencies.
 ```
 
 </details>
 
-The root re-exports the types callers name; the modules group them for the
-documentation. The `text` rules of `eranos-core`, the `allocation` rules of
-`eranos-money`, and the resolution of expenses and transfers are not
-re-exported: they are free to change.
+| Crate               | Holds                                                                                                                                                               | Depends on                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `eranos`            | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                               |
+| `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `GroupError`, `LanguageError`                                                                                    | category, core, expense, ledger, member, money, settlement, transfer; icu_locale_core |
+| `eranos-expense`    | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                         |
+| `eranos-transfer`   | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                     |
+| `eranos-member`     | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                |
+| `eranos-category`   | `Category`, `CategoryError`                                                                                                                                         | core; icu_casemap, icu_normalizer                                                     |
+| `eranos-settlement` | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                           | core, ledger, money                                                                   |
+| `eranos-account`    | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                         | core                                                                                  |
+| `eranos-contact`    | `Email`, `PhoneNumber`, `ContactError`                                                                                                                              | core; icu_properties, rlibphonenumber                                                 |
+| `eranos-ledger`     | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                           |
+| `eranos-calendar`   | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                            |
+| `eranos-money`      | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                  |
+| `eranos-core`       | the five identifiers, `IdError`; `text`, `serde_text`                                                                                                               | uuid                                                                                  |
+
+The facade's modules (`eranos::money`, `eranos::member`, …) and its root
+re-export what the table lists before a semicolon, and nothing else: what
+follows one is machinery the crates above use, free to change. Every crate
+but `eranos-ledger` and `eranos-core` depends on `thiserror` for its error,
+and every crate but `eranos-ledger` and `eranos-settlement` has a `serde`
+feature, which the facade's enables.
 
 ## 3. Data model
 
