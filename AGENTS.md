@@ -90,9 +90,10 @@ failure); `#[allow]` is itself a lint error.
   `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
   state**, with two exceptions. ID generation reads the clock and the OS
-  random source (UUID v7): an entity gets its ID when it is built, and
-  loading a saved group restores the IDs through serde, never through a
-  public setter. Phone-number validation reads rlibphonenumber's
+  random source (UUID v7), under one private lock in `id.rs` that keeps the
+  IDs of concurrent threads in creation order: an entity gets its ID when
+  it is built, and loading a saved group restores the IDs through serde,
+  never through a public setter. Phone-number validation reads rlibphonenumber's
   `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the embedded
   libphonenumber metadata on first use and is never written after; the
   invariant that rules out its panic is stated at the call in

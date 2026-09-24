@@ -8,6 +8,7 @@ use super::*;
 use std::collections::HashSet;
 use std::iter;
 use std::thread;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use proptest::prelude::*;
 
@@ -161,6 +162,43 @@ macro_rules! identifier_tests {
             }
         }
     };
+}
+
+/// A regression witness: with uuid's shared v7 context alone, a thread
+/// paused between reading the clock and taking uuid's lock across a second
+/// boundary pushed the context almost a second ahead, and the identifiers
+/// generated once the clock caught up sorted before earlier ones, in every
+/// thread at once (1,612 times in 12 seconds with 64 threads). Sixty-four
+/// threads, more than there are cores, generate across the next second
+/// boundary, and each must see its identifiers strictly increase.
+#[test]
+fn identifiers_stay_in_creation_order_across_a_second_boundary() {
+    let second = || {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    };
+    let started = second();
+    let workers: Vec<_> = iter::repeat_with(|| {
+        thread::spawn(move || {
+            let mut previous = MemberId::generate();
+            // The clock is read once per batch, so the threads spend their
+            // time contending for the generator.
+            while second() == started {
+                for _ in 0..1_000 {
+                    let next = MemberId::generate();
+                    assert!(previous < next, "{previous} came before {next}");
+                    previous = next;
+                }
+            }
+        })
+    })
+    .take(64)
+    .collect();
+    for worker in workers {
+        worker.join().unwrap();
+    }
 }
 
 identifier_tests!(group_id, GroupId);

@@ -24,9 +24,11 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 - **One core for every app.** iOS, Android, and the web share the rules, so
   a group computes the same totals and the same cents everywhere. The core
   is pure synchronous Rust: no I/O, no async runtime, no clock except for
-  generating identifiers, and no global state except the phone-number
-  metadata, which rlibphonenumber decodes once, on first use, into a table
-  nothing writes to.
+  generating identifiers, and no global state except the lock that
+  generation reads the clock under, so the identifiers of concurrent threads
+  stay in creation order, and the phone-number metadata, which
+  rlibphonenumber decodes once, on first use, into a table nothing writes
+  to.
 - **Exact money.** A split that loses or invents a cent is a bug users see.
   Every amount is an integer; every division is exact by construction.
 - **Changes are cheap and atomic.** Adding, editing, or removing an entry
