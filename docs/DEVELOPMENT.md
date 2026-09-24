@@ -57,20 +57,26 @@ The full gate sequence, run before every commit, is in
 
 ### 3.2 An ISO 4217 amendment
 
-The currency table is `crates/eranos/src/money/currency/iso4217.rs`, one
-line per code, sorted by code: `CODE decimal_places "Name";`. SIX Group
-publishes the current list at
+The codes, minor units, and names come from `iso4217-static`, pinned
+exactly in `Cargo.toml` and generated from the list SIX Group publishes at
 <https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml>.
+`crates/eranos/src/money/currency/iso4217.rs` lists, in code order, the
+codes that get a constant.
 
-1. Add, change, or remove the lines the amendment names. Keep codes with a
-   numeric minor unit only; "N.A." codes are not currencies here.
-2. Update the publication date in the file's header comment.
-3. `cargo test -p eranos --lib money::currency` checks the order and the
-   pinned decimal places.
+1. Move the exact pin to the release that carries the amendment, and build
+   without `--locked` so `Cargo.lock` follows.
+2. `cargo test -p eranos --lib money::currency`:
+   `all_matches_every_iso4217_static_code_with_a_minor_unit` names the codes
+   to add to the list, `decimal_places_follow_iso_4217` names a changed
+   minor unit, and a code the release dropped fails the build at its
+   constant.
+3. Update the list, `CURRENCY_COUNT`, the pinned decimal places, and the
+   publication date in [ARCHITECTURE.md § 4](ARCHITECTURE.md#4-money-and-rounding).
 
-Removing a code removes a public constant: that is a breaking change
-([VERSIONING.md](VERSIONING.md)). A changed number of decimal places
-changes stored amounts' meaning and is breaking too.
+An added code is a `feat`. A removed code removes a public constant, and a
+changed number of decimal places changes the meaning of stored amounts;
+both are breaking ([VERSIONING.md](VERSIONING.md)), and saved groups in a
+removed currency stop loading.
 
 ### 3.3 An IBAN registry update
 

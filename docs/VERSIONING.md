@@ -11,7 +11,7 @@ changes it).
 | Surface                  | What is covered                                                                                                               |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour                                      |
-| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                         |
+| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                          |
 | The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order |
 | The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                |
 
@@ -37,6 +37,13 @@ Before 1.0.0, the minor version plays the role of the major one:
 
 A `fix` that changes numbers users already saw is still breaking: record it
 as `fix!` with a `BREAKING CHANGE:` footer naming what changes.
+
+A dependency whose data decides which values are valid (`iso4217-static`)
+is pinned exactly (`=x.y.z`), so its data changes only with an eranos
+release. Saved groups load through the same checks as input, so moving the
+pin is a `feat` when it only adds values and breaking when it removes one
+or changes what one means, such as a withdrawn currency or a changed minor
+unit.
 
 ## 3. Bumping, step by step
 

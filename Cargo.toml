@@ -18,6 +18,14 @@ publish = false
 
 [workspace.dependencies]
 # --- Library -----------------------------------------------------------------
+# The ISO 4217 currencies: codes, minor units, names, and numeric codes, which
+# its proc macro generates from SIX Group's List One when eranos is compiled.
+# Pinned exactly: a release that changes the list changes which saved amounts
+# load and what they mean, so it arrives only with an eranos release
+# (docs/DEVELOPMENT.md § 3.2). Without the default `serde` feature: eranos
+# serialises the code itself. Its type stays inside `Currency`, so replacing
+# it is not a breaking change.
+iso4217-static = { version = "=0.2.4", default-features = false }
 # Calendar dates and times of day, and the ISO 8601 parser behind
 # `Date::parse` and `Time::parse`. Without the default features: no clock, no
 # time zone database, and no `std`, none of which a date without a time zone

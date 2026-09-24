@@ -78,8 +78,10 @@ failure); `#[allow]` is itself a lint error.
   `ExchangeRate::convert`, and every percentage through
   `allocation::apply_basis_points`, so parts always add up and rounding is
   the documented rule (largest remainder; half away from zero).
-- **Library code does not panic.** `unwrap` and `expect` warn outside
-  tests; arithmetic on user amounts is checked and becomes an error. An
+- **Library code does not panic.** `unwrap` and `expect` warn everywhere
+  but in tests and in constant initialisers, where a failure stops the
+  build rather than a running app; arithmetic on user amounts is checked
+  and becomes an error. An
   invariant that makes a failure impossible is written down, next to the
   code, as a comment or an `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
@@ -116,9 +118,9 @@ failure); `#[allow]` is itself a lint error.
   constructor that takes fields follow the same order: `Date::new(day,
   month, year)`, `Money::from_minor_units(currency, minor_units)`,
   `Expense::builder(cost, date, name, payer, split)`; a `parse` takes its
-  text first. No field order carries meaning: `Date` and `Time` write their
-  ordering out by hand, and a table row in the examples fixes its columns
-  with `#[tabled(order = N)]`.
+  text first. No field order carries meaning: `Currency`, `Date`, and
+  `Time` write their ordering out by hand, and a table row in the examples
+  fixes its columns with `#[tabled(order = N)]`.
 - **Accessors follow their fields.** An `impl` starts with its
   constructors and associated constants, then lists the getters and
   setters in field order: for each field, the method named after it, then

@@ -1,7 +1,13 @@
 //! ISO 4217 currencies.
+//!
+//! The codes, minor units, and names come from `iso4217-static`, generated
+//! from SIX Group's List One and pinned exactly; its type stays private.
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
+
+use iso4217_static::Currency as IsoCurrency;
 
 use crate::error::ValueError;
 
@@ -23,45 +29,41 @@ use crate::error::ValueError;
 /// assert_eq!(Currency::BHD.decimal_places(), 3);
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Currency(iso4217::Code);
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Currency {
+    /// The minor unit of `iso`: `lookup` refuses a code without one, so
+    /// `decimal_places` needs no fallback.
+    decimal_places: u8,
+    iso: IsoCurrency,
+}
 
-/// Declares every currency: a private enum of the codes (whose order is the
-/// ordering of `Currency`), a lookup table sorted by code, and one public
-/// constant per code.
+// Written out because the fields are in alphabetical order: a derived
+// ordering would compare the decimal places first, and the crate's own
+// ordering is by numeric code.
+impl Ord for Currency {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.code().cmp(other.code())
+    }
+}
+
+impl PartialOrd for Currency {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Declares one public constant per code, looked up in `iso4217-static` when
+/// the crate is compiled, and `all`, which lists them in the order given.
 macro_rules! currencies {
-    ($($code:ident $decimal_places:literal $name:literal;)+) => {
-        /// Every code, in code order.
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        #[expect(clippy::upper_case_acronyms, reason = "the variants are the ISO 4217 codes")]
-        pub(super) enum Code {
-            $($code),+
-        }
-
-        impl Code {
-            pub(super) const fn text(self) -> &'static str {
-                match self {
-                    $(Self::$code => stringify!($code)),+
-                }
-            }
-
-            pub(super) const fn decimal_places(self) -> u8 {
-                match self {
-                    $(Self::$code => $decimal_places),+
-                }
-            }
-        }
-
-        /// Every currency with its code, sorted by code for binary search.
-        pub(super) const TABLE: &[(&str, Currency)] = &[$((stringify!($code), Currency::$code)),+];
-
+    ($($code:ident)+) => {
         impl Currency {
             $(
-                #[doc = concat!(
-                    "The ", $name, " (`", stringify!($code), "`), with ",
-                    stringify!($decimal_places), " decimal places."
-                )]
-                pub const $code: Self = Self(Code::$code);
+                #[doc = concat!("The currency with ISO 4217 code `", stringify!($code), "`.")]
+                pub const $code: Self = Self::lookup(stringify!($code)).expect(concat!(
+                    "iso4217-static lists ",
+                    stringify!($code),
+                    " with a minor unit"
+                ));
             )+
 
             /// Every currency, ordered by code.
@@ -78,8 +80,6 @@ macro_rules! currencies {
 
 mod iso4217;
 
-use iso4217::TABLE;
-
 impl Currency {
     /// Looks up an ISO 4217 code, ignoring ASCII case and surrounding
     /// whitespace.
@@ -89,39 +89,44 @@ impl Currency {
     /// [`ValueError::UnknownCurrency`] when the code is not an active ISO 4217
     /// code with a minor unit.
     pub fn from_code(code: &str) -> Result<Self, ValueError> {
-        let code = code.trim();
-        let [first, second, third] = *code.as_bytes() else {
-            return Err(ValueError::UnknownCurrency);
-        };
-        let upper = [
-            first.to_ascii_uppercase(),
-            second.to_ascii_uppercase(),
-            third.to_ascii_uppercase(),
-        ];
-        TABLE
-            .binary_search_by(|(candidate, _)| candidate.as_bytes().cmp(&upper))
-            .ok()
-            .and_then(|position| TABLE.get(position))
-            .map(|&(_, currency)| currency)
-            .ok_or(ValueError::UnknownCurrency)
+        Self::lookup(&code.trim().to_ascii_uppercase()).ok_or(ValueError::UnknownCurrency)
     }
 
-    /// The three-letter code, such as `"EUR"`.
-    #[must_use]
-    pub const fn code(self) -> &'static str {
-        self.0.text()
+    /// The currency whose code is exactly `code`, three uppercase ASCII
+    /// letters, if `iso4217-static` lists it with a minor unit. The constants
+    /// call it when the crate is compiled, so a code the pinned release lacks
+    /// fails the build.
+    const fn lookup(code: &str) -> Option<Self> {
+        let Ok(iso) = IsoCurrency::from_str_slice(code) else {
+            return None;
+        };
+        // Precious metals, drawing rights, and testing codes have no minor
+        // unit and are not currencies here.
+        let Some(decimal_places) = iso.minor_unit() else {
+            return None;
+        };
+        Some(Self {
+            decimal_places,
+            iso,
+        })
     }
 
     /// The number of decimal places of the minor unit: 2 for `EUR` (cents),
     /// 0 for `JPY`, 3 for `BHD`.
     #[must_use]
     pub const fn decimal_places(self) -> u8 {
-        self.0.decimal_places()
+        self.decimal_places
     }
 
     /// `10^decimal_places`: how many minor units make one major unit.
     pub(crate) fn minor_units_per_major(self) -> i64 {
         10_i64.pow(u32::from(self.decimal_places()))
+    }
+
+    /// The three-letter code, such as `"EUR"`.
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        self.iso.as_str()
     }
 }
 

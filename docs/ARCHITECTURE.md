@@ -33,11 +33,11 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 - **Deterministic everywhere.** The same entries give the same shares, the
   same totals, and the same settlement on every device and in any order of
   arrival; this is what future sync relies on.
-- **Few dependencies.** `jiff` (calendar dates, times of day, and their ISO
-  8601 parser, without its clock or time zones), `thiserror` (derive only),
-  `uuid` (v7 identifiers), `zeroize` (wiping secrets), and optionally
-  `serde`. Everything else, including the ISO 4217 table and IBAN
-  validation, is in the crate.
+- **Few dependencies.** `iso4217-static` (the ISO 4217 list, pinned
+  exactly), `jiff` (calendar dates, times of day, and their ISO 8601 parser,
+  without its clock or time zones), `thiserror` (derive only), `uuid` (v7
+  identifiers), `zeroize` (wiping secrets), and optionally `serde`.
+  Everything else, including IBAN validation, is in the crate.
 
 ## 2. Module map
 
@@ -154,9 +154,12 @@ cannot be removed.
 
 - `Money` is `i64` minor units plus a `Currency`. `Currency` covers every
   active ISO 4217 code with a minor unit (165 codes, from the SIX "List One"
-  published 2026-09-17), with the ISO number of decimal places: 0 for JPY, 2
-  for EUR, 3 for BHD, 4 for CLF. Precious metals, drawing rights, and test
-  codes have no minor unit and are not currencies here.
+  published 2026-01-01, which `iso4217-static` 0.2.4 is generated from),
+  with the ISO number of decimal places: 0 for JPY, 2 for EUR, 3 for BHD, 4
+  for CLF. Precious metals, drawing rights, and test codes have no minor
+  unit and are not currencies here. `Currency` holds the crate's value and
+  its minor unit, read once when a code is looked up, so no crate type is
+  part of the API.
 - `ExchangeRate` is an exact positive decimal (`mantissa / 10^scale`, up to
   18 decimal places) meaning "one unit of the entry's currency is this many
   units of the group's". Conversion multiplies in checked `i128` and rounds

@@ -1,32 +1,59 @@
-//! Every amount carries a currency from the ISO 4217 table. These tests keep
-//! the table sorted and unique, which the binary search in `from_code`
-//! depends on, keep each currency's decimal places right, since they scale
-//! every amount entered, shown, and converted, and keep lookups tolerant of
-//! case and whitespace but strict about codes that are not currencies.
+//! Every amount carries a currency from ISO 4217, whose data comes from
+//! `iso4217-static`. These tests keep the constants equal to the crate's
+//! codes with a minor unit and in code order, keep each currency's decimal
+//! places right, since they scale every amount entered, shown, and
+//! converted, and keep lookups tolerant of case and whitespace but strict
+//! about codes that are not currencies.
+
+use std::collections::BTreeSet;
 
 use super::*;
 
 /// The number of active ISO 4217 codes with a minor unit.
 const CURRENCY_COUNT: usize = 165;
 
-/// Lookups would miss currencies, because the binary search needs sorted,
-/// unique codes.
+/// A code a pin bump adds would be accepted by `from_code` but missing from
+/// `all` and the constants.
 #[test]
-fn the_table_is_sorted_and_unique() {
-    // Strictly increasing codes.
-    for pair in TABLE.windows(2) {
-        assert!(pair[0].0 < pair[1].0, "{} before {}", pair[0].0, pair[1].0);
-    }
-    // One entry per currency.
-    assert_eq!(TABLE.len(), CURRENCY_COUNT);
+fn all_matches_every_iso4217_static_code_with_a_minor_unit() {
+    let listed: BTreeSet<&str> = Currency::all()
+        .iter()
+        .map(|currency| currency.code())
+        .collect();
+    let in_crate: BTreeSet<&str> = (0..=999_u16)
+        .filter_map(|number| IsoCurrency::from_u16(number).ok())
+        .filter(|iso| iso.minor_unit().is_some())
+        .map(|iso| iso.as_str())
+        .collect();
+    // Codes the crate has and the list lacks, named for iso4217.rs.
+    let missing: Vec<&&str> = in_crate.difference(&listed).collect();
+    assert!(missing.is_empty(), "add to iso4217.rs: {missing:?}");
+    assert_eq!(listed, in_crate);
 }
 
-/// A malformed code in the table could never be looked up or would print
-/// wrongly.
+/// Precious metals, drawing rights, and testing codes would become
+/// currencies with made-up decimal places, or text that is not an exact code
+/// would be looked up.
+#[test]
+fn lookup_finds_only_exact_codes_with_a_minor_unit() {
+    // An exact code with a minor unit.
+    assert_eq!(Currency::lookup("EUR"), Some(Currency::EUR));
+    // Codes without a minor unit.
+    for code in ["XAU", "XDR", "XTS", "XXX"] {
+        assert_eq!(Currency::lookup(code), None, "{code}");
+    }
+    // Text that is not an exact code; `from_code` trims and uppercases first.
+    for code in ["XYZ", "eur", " EUR", "EURO", "€"] {
+        assert_eq!(Currency::lookup(code), None, "{code:?}");
+    }
+}
+
+/// A malformed code could never be looked up or would print wrongly.
 #[test]
 fn every_code_is_three_uppercase_ascii_letters() {
     // Shape of every code.
-    for (code, _) in TABLE {
+    for currency in Currency::all() {
+        let code = currency.code();
         assert_eq!(code.len(), 3, "{code}");
         assert!(code.bytes().all(|byte| byte.is_ascii_uppercase()), "{code}");
     }
@@ -101,25 +128,41 @@ fn short_and_long_codes_are_rejected() {
 }
 
 /// Amounts would be entered, shown, or converted with the wrong number of
-/// decimals.
+/// decimals, or a pin bump would change a minor unit, and so the meaning of
+/// stored amounts, unnoticed.
 #[test]
 fn decimal_places_follow_iso_4217() {
-    // Two decimals.
-    for currency in [Currency::EUR, Currency::USD, Currency::RON, Currency::HUF] {
+    let none = [
+        "BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "UYI", "VND",
+        "VUV", "XAF", "XOF", "XPF",
+    ];
+    let three = ["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"];
+    let four = ["CLF", "UYW"];
+    // No, three, and four decimals.
+    for (codes, places) in [(&none[..], 0), (&three[..], 3), (&four[..], 4)] {
+        for code in codes {
+            assert_eq!(
+                Currency::from_code(code).map(Currency::decimal_places),
+                Ok(places),
+                "{code}"
+            );
+        }
+    }
+    // Every other currency has two.
+    let others: Vec<&Currency> = Currency::all()
+        .iter()
+        .filter(|currency| {
+            let code = currency.code();
+            !none.contains(&code) && !three.contains(&code) && !four.contains(&code)
+        })
+        .collect();
+    for currency in &others {
         assert_eq!(currency.decimal_places(), 2, "{currency}");
     }
-    // No decimals.
-    for currency in [Currency::JPY, Currency::KRW, Currency::ISK] {
-        assert_eq!(currency.decimal_places(), 0, "{currency}");
-    }
-    // Three decimals.
-    for currency in [Currency::BHD, Currency::KWD, Currency::TND] {
-        assert_eq!(currency.decimal_places(), 3, "{currency}");
-    }
-    // Four decimals.
-    for currency in [Currency::CLF, Currency::UYW] {
-        assert_eq!(currency.decimal_places(), 4, "{currency}");
-    }
+    assert_eq!(
+        others.len(),
+        CURRENCY_COUNT - none.len() - three.len() - four.len()
+    );
 }
 
 /// Currency pickers built from `all` would miss currencies or list them out
@@ -127,15 +170,18 @@ fn decimal_places_follow_iso_4217() {
 #[test]
 fn all_lists_every_currency_in_code_order() {
     let every_currency = Currency::all();
-    // Every table entry, in table order, and the lookup of its code.
+    // One entry per currency, strictly increasing by code and by ordering.
     assert_eq!(every_currency.len(), CURRENCY_COUNT);
-    for (currency, (code, _)) in every_currency.iter().zip(TABLE) {
-        assert_eq!(currency.code(), *code);
-        assert_eq!(Currency::from_code(code), Ok(*currency));
-    }
-    // Ordering is by code.
+    assert!(
+        every_currency
+            .windows(2)
+            .all(|pair| pair[0].code() < pair[1].code())
+    );
     assert!(every_currency.windows(2).all(|pair| pair[0] < pair[1]));
+    // Ordering is by code: 978 and 840 in numeric order would put USD first.
     assert!(Currency::AED < Currency::EUR && Currency::EUR < Currency::ZWG);
+    assert!(Currency::EUR < Currency::USD);
+    assert_eq!(Currency::EUR.cmp(&Currency::EUR), Ordering::Equal);
     // Every code looks up its own currency.
     for &currency in every_currency {
         assert_eq!(Currency::from_code(currency.code()), Ok(currency));
