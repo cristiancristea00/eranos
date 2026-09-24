@@ -82,8 +82,9 @@ for test helpers and benchmark fixtures, which panic to report failure);
   code, as a comment or an `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
   state.** The one exception is ID generation (UUID v7 reads the clock and
-  the OS random source), which is why every `add_*` has an `insert_*`
-  counterpart taking a caller's ID.
+  the OS random source): an entity gets its ID when it is built, and
+  loading a saved group restores the IDs through serde, never through a
+  public setter.
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
   cached settlements. Nothing else writes to the ledger, so the incremental
@@ -129,7 +130,7 @@ for test helpers and benchmark fixtures, which panic to report failure);
 - **Serialised data outlives releases.** A new field gets
   `#[serde(default)]`; a type with invariants deserialises through its
   validating constructor (`serde(try_from = …)`); `Group` replays its
-  entries through the insert methods; a change older readers cannot accept
+  entries through the `add_*` methods; a change older readers cannot accept
   bumps the `FORMAT` constant in `group/serde.rs`.
 - **Doc comments follow rustdoc conventions**: a one-sentence summary, then
   `# Errors`, `# Panics`, and `# Examples` sections where they apply.

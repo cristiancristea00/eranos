@@ -270,10 +270,10 @@ fn totals(group: &Group) {
 fn main() -> Result<(), Box<dyn Error>> {
     let mut group = Group::builder(Currency::EUR, "Family holiday").build()?;
     let family = Family {
-        ana: group.add_member(Member::builder("Ana").build()?),
-        bob: group.add_member(Member::builder("Bob").build()?),
+        ana: group.add_member(Member::builder("Ana").build()?)?,
+        bob: group.add_member(Member::builder("Bob").build()?)?,
         day: Date::new(14, 7, 2026)?,
-        mia: group.add_member(Member::builder("Mia").build()?),
+        mia: group.add_member(Member::builder("Mia").build()?)?,
     };
 
     println!("Family holiday: every way to split an expense");

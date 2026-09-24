@@ -575,6 +575,16 @@ fn participants_are_everyone_who_shares_the_cost() {
     );
 }
 
+/// Two expenses would share an identifier, and with it their tie rotation,
+/// or an edited expense would become another entry.
+#[test]
+fn an_expense_keeps_its_identifier_through_edits() {
+    let expense = full_expense();
+    assert_ne!(full_expense().id(), expense.id());
+    let renamed = expense.to_builder().name("Supper").build().unwrap();
+    assert_eq!(renamed.id(), expense.id());
+}
+
 /// Editing an expense would silently drop fields that were not edited.
 #[test]
 fn to_builder_rebuilds_an_equal_expense() {

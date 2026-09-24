@@ -200,8 +200,8 @@ fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut group = Group::builder(Currency::EUR, "Danube road trip").build()?;
-    let ana = group.add_member(Member::builder("Ana").build()?);
-    let bob = group.add_member(Member::builder("Bob").build()?);
+    let ana = group.add_member(Member::builder("Ana").build()?)?;
+    let bob = group.add_member(Member::builder("Bob").build()?)?;
 
     println!("{}: expenses in several currencies", group.name());
     println!("═════════════════════════════════════════════════");

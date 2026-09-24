@@ -41,8 +41,8 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut group = Group::builder(Currency::EUR, "Road trip").build()?;
-    let ana = group.add_member(Member::builder("Ana").build()?);
-    let bob = group.add_member(Member::builder("Bob").build()?);
+    let ana = group.add_member(Member::builder("Ana").build()?)?;
+    let bob = group.add_member(Member::builder("Bob").build()?)?;
     group.add_expense(
         Expense::builder(
             Money::parse("70.00", Currency::EUR)?,

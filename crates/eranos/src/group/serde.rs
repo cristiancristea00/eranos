@@ -1,13 +1,11 @@
 //! The serialised form of a group: its details and entries, never the
 //! derived totals.
 //!
-//! Deserialising replays every entry through the same checks as the insert
+//! Deserialising replays every entry through the same checks as the `add_*`
 //! methods, so a hand-edited or corrupted file cannot produce an
 //! inconsistent group. Members are replayed unarchived and archived at the
 //! end, because an expense may reference a member who was archived after it
 //! was added.
-
-use std::collections::BTreeSet;
 
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -17,7 +15,7 @@ use crate::category::Category;
 use crate::error::{GroupError, ValueError};
 use crate::expense::Expense;
 use crate::group::Language;
-use crate::id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
+use crate::id::{GroupId, MemberId};
 use crate::member::Member;
 use crate::money::Currency;
 use crate::transfer::Transfer;
@@ -31,31 +29,19 @@ const FORMAT: u32 = 2;
 struct GroupView<'group> {
     format: u32,
     id: GroupId,
-    categories: Vec<Entry<CategoryId, &'group Category>>,
+    categories: Vec<&'group Category>,
     currency: Currency,
-    expenses: Vec<Entry<ExpenseId, &'group Expense>>,
-    members: Vec<MemberView<'group>>,
+    expenses: Vec<&'group Expense>,
+    members: Vec<&'group Member>,
     name: &'group str,
-    transfers: Vec<Entry<TransferId, &'group Transfer>>,
+    transfers: Vec<&'group Transfer>,
+    /// The archived members, in identifier order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    archived: Vec<MemberId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<&'group str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     language: Option<&'group Language>,
-}
-
-#[derive(Serialize)]
-struct MemberView<'group> {
-    id: MemberId,
-    member: &'group Member,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
-    archived: bool,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Entry<Id, Value> {
-    id: Id,
-    #[serde(rename = "entry")]
-    value: Value,
 }
 
 #[derive(Deserialize)]
@@ -65,25 +51,19 @@ struct GroupRecord {
     currency: Currency,
     name: String,
     #[serde(default)]
-    categories: Vec<Entry<CategoryId, Category>>,
+    archived: Vec<MemberId>,
+    #[serde(default)]
+    categories: Vec<Category>,
     #[serde(default)]
     description: Option<String>,
     #[serde(default)]
-    expenses: Vec<Entry<ExpenseId, Expense>>,
+    expenses: Vec<Expense>,
     #[serde(default)]
     language: Option<Language>,
     #[serde(default)]
-    members: Vec<MemberRecord>,
+    members: Vec<Member>,
     #[serde(default)]
-    transfers: Vec<Entry<TransferId, Transfer>>,
-}
-
-#[derive(Deserialize)]
-struct MemberRecord {
-    id: MemberId,
-    member: Member,
-    #[serde(default)]
-    archived: bool,
+    transfers: Vec<Transfer>,
 }
 
 impl Serialize for Group {
@@ -91,37 +71,25 @@ impl Serialize for Group {
         GroupView {
             format: FORMAT,
             id: self.id,
-            categories: self
-                .categories
-                .iter()
-                .map(|(&id, value)| Entry { id, value })
-                .collect(),
+            categories: self.categories.values().collect(),
             currency: self.currency,
             expenses: self
                 .expenses
-                .iter()
-                .map(|(&id, record)| Entry {
-                    id,
-                    value: &record.expense,
-                })
+                .values()
+                .map(|record| &record.expense)
                 .collect(),
-            members: self
-                .members
-                .iter()
-                .map(|(&id, record)| MemberView {
-                    id,
-                    member: &record.member,
-                    archived: record.archived,
-                })
-                .collect(),
+            members: self.members.values().map(|record| &record.member).collect(),
             name: &self.name,
             transfers: self
                 .transfers
+                .values()
+                .map(|record| &record.transfer)
+                .collect(),
+            archived: self
+                .members
                 .iter()
-                .map(|(&id, record)| Entry {
-                    id,
-                    value: &record.transfer,
-                })
+                .filter(|(_, record)| record.archived)
+                .map(|(&id, _)| id)
                 .collect(),
             description: self.description.as_deref(),
             language: self.language.as_ref(),
@@ -153,7 +121,7 @@ enum ReplayError {
 }
 
 impl GroupRecord {
-    /// Rebuilds the group through the same checks as the insert methods.
+    /// Rebuilds the group through the same checks as the `add_*` methods.
     ///
     /// Not generic over the deserialiser, so it is compiled once rather
     /// than for every format the apps read.
@@ -161,34 +129,26 @@ impl GroupRecord {
         if self.format != FORMAT {
             return Err(ReplayError::Format(self.format));
         }
-        let mut builder = Group::builder(self.currency, self.name)
-            .id(self.id)
-            .language(self.language);
+        let mut builder = Group::builder(self.currency, self.name).language(self.language);
         if let Some(description) = self.description {
             builder = builder.description(description);
         }
         let mut group = builder.build()?;
-        let archived: BTreeSet<MemberId> = self
-            .members
-            .iter()
-            .filter(|member| member.archived)
-            .map(|member| member.id)
-            .collect();
+        group.id = self.id;
         for member in self.members {
-            group.insert_member(member.id, member.member)?;
+            group.add_member(member)?;
         }
-        for Entry { id, value } in self.categories {
-            group.insert_category(id, value)?;
+        for category in self.categories {
+            group.add_category(category)?;
         }
-        for Entry { id, value } in self.expenses {
-            group.insert_expense(id, value)?;
+        for expense in self.expenses {
+            group.add_expense(expense)?;
         }
-        for Entry { id, value } in self.transfers {
-            group.insert_transfer(id, value)?;
+        for transfer in self.transfers {
+            group.add_transfer(transfer)?;
         }
-        // Every ID in `archived` is one of the members inserted above.
-        for (id, member) in &mut group.members {
-            member.archived = archived.contains(id);
+        for member in self.archived {
+            group.archive_member(member)?;
         }
         Ok(group)
     }

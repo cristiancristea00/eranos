@@ -14,7 +14,7 @@
 
 use eranos::{
     Cost, Currency, Date, ExchangeRate, Expense, ExpenseId, Group, Item, Member, MemberId, Money,
-    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer, TransferId,
+    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
     error::GroupError,
 };
 use proptest::prelude::*;
@@ -202,68 +202,60 @@ fn group_recipe() -> impl Strategy<Value = GroupRecipe> {
         })
 }
 
-/// The members, expenses, and transfers of a group, with their IDs.
-type Entries = (
-    Vec<MemberId>,
-    Vec<(ExpenseId, Expense)>,
-    Vec<(TransferId, Transfer)>,
-);
+/// The members of a recipe, and its entries built once, so the same
+/// entries, with the same identifiers, can go into several groups.
+type Entries = (Vec<Member>, Vec<Expense>, Vec<Transfer>);
 
-/// The members and the entries of a recipe, with fixed IDs so the same
-/// entries can be replayed into another group.
 fn entries(recipe: &GroupRecipe) -> Entries {
-    let members: Vec<MemberId> = (1..=MEMBERS)
-        .map(|number| MemberId::from_bytes([u8::try_from(number).unwrap(); 16]))
-        .collect();
+    let members: Vec<Member> =
+        std::iter::repeat_with(|| Member::builder("Member").build().unwrap())
+            .take(MEMBERS)
+            .collect();
+    let ids: Vec<MemberId> = members.iter().map(Member::id).collect();
     let expenses = recipe
         .expenses
         .iter()
-        .zip(1_u8..)
-        .map(|(expense, number)| (ExpenseId::from_bytes([number; 16]), expense.build(&members)))
+        .map(|expense| expense.build(&ids))
         .collect();
     let transfers = recipe
         .transfers
         .iter()
         .filter(|&&(from, to, _)| from != to)
-        .zip(1_u8..)
-        .map(|(&(from, to, amount), number)| {
-            let transfer = Transfer::builder(
+        .map(|&(from, to, amount)| {
+            Transfer::builder(
                 Money::from_minor_units(Currency::EUR, amount),
                 day(),
-                members[from],
-                members[to],
+                ids[from],
+                ids[to],
             )
             .build()
-            .unwrap();
-            (TransferId::from_bytes([number; 16]), transfer)
+            .unwrap()
         })
         .collect();
     (members, expenses, transfers)
 }
 
-fn group(
-    members: &[MemberId],
-    expenses: &[(ExpenseId, Expense)],
-    transfers: &[(TransferId, Transfer)],
-) -> Group {
-    let mut group = Group::builder(Currency::EUR, "Random")
-        .id(eranos::GroupId::from_bytes([0; 16]))
-        .build()
-        .unwrap();
-    for &member in members {
-        group
-            .insert_member(member, Member::builder("Member").build().unwrap())
-            .unwrap();
+/// A group of `members` without entries; clones of it share its identifier.
+fn base(members: &[Member]) -> Group {
+    let mut group = Group::builder(Currency::EUR, "Random").build().unwrap();
+    for member in members {
+        group.add_member(member.clone()).unwrap();
     }
-    for (id, expense) in expenses {
+    group
+}
+
+/// `base` with the entries added in the order given.
+fn group(base: &Group, expenses: &[Expense], transfers: &[Transfer]) -> Group {
+    let mut group = base.clone();
+    for expense in expenses {
         // A conversion far out of range is refused; nothing else may be.
-        match group.insert_expense(*id, expense.clone()) {
-            Ok(()) | Err(GroupError::Overflow) => {}
+        match group.add_expense(expense.clone()) {
+            Ok(_) | Err(GroupError::Overflow) => {}
             Err(error) => panic!("a valid expense was refused: {error}"),
         }
     }
-    for (id, transfer) in transfers {
-        group.insert_transfer(*id, transfer.clone()).unwrap();
+    for transfer in transfers {
+        group.add_transfer(transfer.clone()).unwrap();
     }
     group
 }
@@ -274,7 +266,7 @@ proptest! {
     #[test]
     fn the_books_balance(recipe in group_recipe()) {
         let (members, expenses, transfers) = entries(&recipe);
-        let group = group(&members, &expenses, &transfers);
+        let group = group(&base(&members), &expenses, &transfers);
         let summary = group.summary();
         let total = |values: Vec<Money>| values.iter().map(|value| i128::from(value.minor_units())).sum::<i128>();
         let spent = i128::from(summary.total_spent().minor_units());
@@ -293,7 +285,7 @@ proptest! {
     #[test]
     fn every_plan_clears_every_balance(recipe in group_recipe()) {
         let (members, expenses, transfers) = entries(&recipe);
-        let group = group(&members, &expenses, &transfers);
+        let group = group(&base(&members), &expenses, &transfers);
         let open = group.summary().members().filter(|(_, member)| !member.net().is_zero()).count();
         let minimum = group.settlement(SettlementStrategy::MinimumTransfers).unwrap().len();
         let greedy = group.settlement(SettlementStrategy::Greedy).unwrap().len();
@@ -316,10 +308,11 @@ proptest! {
     #[test]
     fn the_order_of_entries_does_not_matter(recipe in group_recipe()) {
         let (members, mut expenses, mut transfers) = entries(&recipe);
-        let forward = group(&members, &expenses, &transfers);
+        let base = base(&members);
+        let forward = group(&base, &expenses, &transfers);
         expenses.reverse();
         transfers.reverse();
-        let backward = group(&members, &expenses, &transfers);
+        let backward = group(&base, &expenses, &transfers);
         prop_assert_eq!(&forward, &backward);
         prop_assert_eq!(forward.summary(), backward.summary());
         for strategy in SettlementStrategy::all() {
@@ -327,17 +320,17 @@ proptest! {
         }
     }
 
-    /// Removing an expense and inserting it again under its identifier
-    /// restores the exact same totals.
+    /// Removing an expense and adding it back, under the identifier it
+    /// carries, restores the exact same totals.
     #[test]
-    fn removing_and_reinserting_restores_the_totals(recipe in group_recipe()) {
+    fn removing_and_adding_back_restores_the_totals(recipe in group_recipe()) {
         let (members, expenses, transfers) = entries(&recipe);
-        let mut group = group(&members, &expenses, &transfers);
+        let mut group = group(&base(&members), &expenses, &transfers);
         let summary = group.summary().clone();
         let ids: Vec<ExpenseId> = group.expenses().map(|(id, _)| id).collect();
         for id in ids {
             let expense = group.remove_expense(id).unwrap();
-            group.insert_expense(id, expense).unwrap();
+            prop_assert_eq!(group.add_expense(expense), Ok(id));
             prop_assert_eq!(group.summary(), &summary);
         }
     }

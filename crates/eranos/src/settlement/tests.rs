@@ -96,7 +96,7 @@ fn a_settled_ledger_has_no_payments() {
 }
 
 /// A payment becomes the transfer that records it, with the same members,
-/// amount, and the given date.
+/// amount, and the given date, as a new entry every time.
 #[test]
 fn a_payment_becomes_its_transfer() {
     let settlement = settle(SettlementStrategy::Greedy, &ledger()).unwrap();
@@ -106,9 +106,11 @@ fn a_payment_becomes_its_transfer() {
     assert_eq!(
         transfer,
         Transfer::builder(payment.amount(), date, payment.from(), payment.to())
+            .with_id(transfer.id())
             .build()
             .unwrap()
     );
+    assert_ne!(payment.to_transfer(date).id(), transfer.id());
 }
 
 /// The exact solver's refusal reaches the caller, and the other strategies

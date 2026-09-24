@@ -1,8 +1,9 @@
 //! Members are the people every expense and balance names. These tests keep
 //! the required first name present and trimmed, keep optional details absent
 //! rather than blank, keep contact details and accounts settable and
-//! clearable, and keep edits made through `to_builder` from touching the
-//! member they were copied from.
+//! clearable, keep a member's identifier through every edit and save, and
+//! keep edits made through `to_builder` from touching the member they were
+//! copied from.
 
 use super::*;
 
@@ -137,10 +138,21 @@ fn to_builder_copies_every_field() {
     assert_eq!(member.to_builder().build().unwrap(), member);
 }
 
+/// Two members would share an identifier, or an edited member would become
+/// another member.
+#[test]
+fn a_member_keeps_its_identifier_through_edits() {
+    let member = ana();
+    assert_ne!(ana().id(), member.id());
+    let renamed = member.to_builder().first_name("Anna").build().unwrap();
+    assert_eq!(renamed.id(), member.id());
+}
+
 /// Editing a copy of a member would change the member shown elsewhere.
 #[test]
 fn edits_through_to_builder_leave_the_original_unchanged() {
     let original = ana();
+    let snapshot = original.clone();
     // Every field edited.
     let edited = original
         .to_builder()
@@ -157,7 +169,7 @@ fn edits_through_to_builder_leave_the_original_unchanged() {
     assert_eq!(edited.phone(), None);
     assert!(edited.accounts().is_empty());
     // The original keeps its values.
-    assert_eq!(original, ana());
+    assert_eq!(original, snapshot);
     assert_eq!(original.first_name(), "Ana");
 }
 
@@ -182,16 +194,25 @@ fn members_round_trip_through_serde() {
     let member = ana();
     let json = serde_json::to_string(&member).unwrap();
     assert_eq!(serde_json::from_str::<Member>(&json).unwrap(), member);
-    // Only the first name; absent details are left out.
+    // Only the first name, after the identifier; absent details are left
+    // out.
     let minimal_member = Member::builder("Ana").build().unwrap();
+    let id = minimal_member.id();
     let minimal_json = serde_json::to_string(&minimal_member).unwrap();
-    assert_eq!(minimal_json, r#"{"first_name":"Ana"}"#);
+    assert_eq!(
+        minimal_json,
+        format!(r#"{{"id":"{id}","first_name":"Ana"}}"#)
+    );
     assert_eq!(
         serde_json::from_str::<Member>(&minimal_json).unwrap(),
         minimal_member
     );
     // Loading trims and validates like the builder.
-    let loaded: Member = serde_json::from_str(r#"{"first_name":" Ana ","last_name":" "}"#).unwrap();
+    let padded = format!(r#"{{"id":"{id}","first_name":" Ana ","last_name":" "}}"#);
+    let loaded: Member = serde_json::from_str(&padded).unwrap();
     assert_eq!(loaded, minimal_member);
-    assert!(serde_json::from_str::<Member>(r#"{"first_name":"  "}"#).is_err());
+    let blank = format!(r#"{{"id":"{id}","first_name":"  "}}"#);
+    assert!(serde_json::from_str::<Member>(&blank).is_err());
+    // The identifier is required.
+    assert!(serde_json::from_str::<Member>(r#"{"first_name":"Ana"}"#).is_err());
 }

@@ -29,8 +29,8 @@ use crate::transfer::Transfer;
 /// use eranos::{Currency, Date, Group, Member, Money, SettlementStrategy, Transfer};
 ///
 /// let mut group = Group::builder(Currency::EUR, "Flat").build()?;
-/// let ana = group.add_member(Member::builder("Ana").build()?);
-/// let bob = group.add_member(Member::builder("Bob").build()?);
+/// let ana = group.add_member(Member::builder("Ana").build()?)?;
+/// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let day = Date::new(23, 9, 2026)?;
 /// // Bob paid Ana 20.00 too much.
 /// group.add_transfer(Transfer::builder(Money::parse("20.00", Currency::EUR)?, day, bob, ana).build()?)?;
@@ -146,7 +146,8 @@ impl Payment {
         self.members.to
     }
 
-    /// The transfer recording this payment, made on `date`.
+    /// The transfer recording this payment, made on `date`, under a newly
+    /// generated identifier.
     #[must_use]
     pub fn to_transfer(&self, date: Date) -> Transfer {
         Transfer::new_unchecked(self.amount, date, self.members.from, self.members.to)

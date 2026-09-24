@@ -109,8 +109,9 @@ documentation. `resolution`, `secret`, and `text` are private, and
 
 A `Group` has an ID, a name (the only required text), a description, a
 **required** currency (every total is in it), and a language tag for the
-apps. It owns four maps keyed by UUID v7 identifiers, so iteration order is
-creation order on every device:
+apps. It owns four maps keyed by the UUID v7 identifiers of their entries,
+so iteration order is the order the entries were built in, on every
+device:
 
 | Map        | Values                                        | Notes                                                 |
 | ---------- | --------------------------------------------- | ----------------------------------------------------- |
@@ -123,9 +124,11 @@ Entities are immutable values built by builders (`Member::builder`,
 `Expense::builder`, …) and edited through `to_builder`; the group validates
 every value it receives. A builder's constructor takes every required value:
 an expense has four, for one payer or several and for a whole split or
-items, and an item two, for an equal split or any other. `add_*` generates the identifier, `insert_*` takes
-one from the caller (imports, sync, deterministic tests), and `replace_*`
-keeps it.
+items, and an item two, for an equal split or any other. Every member,
+category, expense, and transfer carries its identifier, generated when it
+is built and kept by `to_builder`, so an edit stays the same entry: `add_*`
+refuses an identifier the group already holds, and `replace_*` finds the
+entry to replace by it.
 
 An **expense** has a name, a cost (an amount in its own currency, local or
 converted into the group currency at a fixed rate), a date and an optional
@@ -255,7 +258,7 @@ computing it from the other four could overflow when each of them fits.
 | -------------------------------------------------- | -------------------------------- | ----------------- |
 | add, replace, remove an expense                    | O(k log m), k = members involved | cleared           |
 | add, replace, remove a transfer                    | O(log m)                         | cleared           |
-| add, update, archive a member; any category change | O(log m)                         | kept              |
+| add, replace, archive a member; any category change | O(log m)                        | kept              |
 | change the group currency                          | O(entries), full rebuild         | cleared           |
 | read the summary                                   | O(1) or O(log m)                 | —                 |
 
@@ -308,7 +311,7 @@ process before an allocation fails, which is why the documentation of
 
 Validation happens in two stages. A builder's `build()` checks the entry on
 its own (names, positive amounts, sums, currencies inside the entry, tips).
-The group's `add_*`/`insert_*`/`replace_*` check the entry against the
+The group's `add_*`/`replace_*` check the entry against the
 group (members exist and are not archived, the category exists, and the
 cost is converted exactly when the entry is foreign) and against the
 ledger's range.
@@ -334,16 +337,17 @@ inputs, never the derived totals:
 {
   "format": 2,
   "id": "…",
-  "categories": [{"id": "…", "entry": {"name": "Food"}}],
+  "categories": [{"id": "…", "name": "Food"}],
   "currency": "EUR",
-  "expenses":   [{"id": "…", "entry": {
+  "expenses":   [{"id": "…",
                   "amount": {"currency": "EUR", "minor_units": 9000},
                   "date": "2026-09-23", "name": "Dinner", "payers": {"equal": ["…"]},
                   "split": {"whole": {"percentages": [["…", 5000], …]}},
-                  "tip": {"value": {"percentage": 1000}, "distribution": "proportional"}}}],
-  "members":    [{"id": "…", "member": {"first_name": "Ana", …}, "archived": true}],
+                  "tip": {"value": {"percentage": 1000}, "distribution": "proportional"}}],
+  "members":    [{"id": "…", "first_name": "Ana", …}],
   "name": "Lisbon",
-  "transfers":  [{"id": "…", "entry": {"amount": …, "date": "…", "from": "…", "to": "…"}}],
+  "transfers":  [{"id": "…", "amount": …, "date": "…", "from": "…", "to": "…"}],
+  "archived":   ["…"],
   "language": "pt-PT"
 }
 ```
@@ -353,9 +357,9 @@ inputs, never the derived totals:
   parts hundredths. Absent optional fields are omitted. Keys follow the
   field order of [AGENTS.md](../AGENTS.md): `format` and `id` first, then
   the required fields, then the optional ones, each alphabetically.
-- Loading replays the entries through the insert methods: members (all
-  unarchived first), categories, expenses, transfers, then the archive
-  flags, because an expense may reference a member archived after it was
+- Loading replays the entries through the `add_*` methods: members (all
+  unarchived first), categories, expenses, transfers, then the `archived`
+  list, because an expense may reference a member archived after it was
   added. A hand-edited or corrupted file is refused, never loaded
   inconsistently.
 - `format` is checked: a newer one is refused rather than read with fields

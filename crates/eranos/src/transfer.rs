@@ -2,7 +2,7 @@
 
 use crate::date::{Date, Time};
 use crate::error::TransferError;
-use crate::id::MemberId;
+use crate::id::{MemberId, TransferId};
 use crate::ledger::MemberPair;
 use crate::money::{Cost, ExchangeRate, Money};
 use crate::text;
@@ -13,7 +13,8 @@ use crate::text;
 /// credit shrinks. It is not spending, so it counts towards no total or
 /// category. Like an expense, it has a [`Cost`]: a transfer in another
 /// currency than its group's carries the [`ExchangeRate`] into the group
-/// currency.
+/// currency. A transfer gets its identifier when it is built, and keeps it
+/// through every edit.
 ///
 /// # Examples
 ///
@@ -36,6 +37,7 @@ use crate::text;
     serde(try_from = "TransferRecord")
 )]
 pub struct Transfer {
+    id: TransferId,
     amount: Money,
     date: Date,
     from: MemberId,
@@ -60,6 +62,7 @@ impl Transfer {
         to: MemberId,
     ) -> TransferBuilder {
         TransferBuilder {
+            id: None,
             cost: cost.into(),
             date,
             from,
@@ -69,9 +72,11 @@ impl Transfer {
         }
     }
 
-    /// Starts a builder holding a copy of this transfer, to edit it.
+    /// Starts a builder holding a copy of this transfer, to edit it; the
+    /// copy keeps the identifier.
     pub fn to_builder(&self) -> TransferBuilder {
         TransferBuilder {
+            id: Some(self.id),
             cost: self.cost(),
             date: self.date,
             from: self.from,
@@ -81,14 +86,15 @@ impl Transfer {
         }
     }
 
-    /// A transfer the caller guarantees is valid: two different members and
-    /// a positive amount.
+    /// A transfer the caller guarantees is valid, two different members and
+    /// a positive amount, under a newly generated identifier.
     pub(crate) fn new_unchecked(amount: Money, date: Date, from: MemberId, to: MemberId) -> Self {
         debug_assert!(
             from != to && amount.is_positive(),
             "an unchecked transfer must be valid"
         );
         Self {
+            id: TransferId::generate(),
             amount,
             date,
             from,
@@ -97,6 +103,12 @@ impl Transfer {
             note: None,
             time: None,
         }
+    }
+
+    /// The identifier.
+    #[must_use]
+    pub const fn id(&self) -> TransferId {
+        self.id
     }
 
     /// The amount, in the transfer's own currency.
@@ -167,6 +179,7 @@ impl Transfer {
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct TransferBuilder {
+    id: Option<TransferId>,
     cost: Cost,
     date: Date,
     from: MemberId,
@@ -176,6 +189,14 @@ pub struct TransferBuilder {
 }
 
 impl TransferBuilder {
+    /// Uses `id` instead of a generated identifier, so a test can compare a
+    /// built transfer with one made elsewhere.
+    #[cfg(test)]
+    pub(crate) const fn with_id(mut self, id: TransferId) -> Self {
+        self.id = Some(id);
+        self
+    }
+
     /// Replaces the cost.
     ///
     /// A [`Money`] amount makes the cost local; to change the amount of a
@@ -216,7 +237,8 @@ impl TransferBuilder {
         self
     }
 
-    /// Validates the transfer and returns it.
+    /// Validates the transfer and returns it, under a newly generated
+    /// identifier unless the builder came from [`Transfer::to_builder`].
     ///
     /// # Errors
     ///
@@ -232,6 +254,7 @@ impl TransferBuilder {
             return Err(TransferError::NonPositiveAmount);
         }
         Ok(Transfer {
+            id: self.id.unwrap_or_else(TransferId::generate),
             amount,
             date: self.date,
             from: self.from,
@@ -247,6 +270,7 @@ impl TransferBuilder {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct TransferRecord {
+    id: TransferId,
     amount: Money,
     date: Date,
     from: MemberId,
@@ -265,7 +289,11 @@ impl TryFrom<TransferRecord> for Transfer {
 
     fn try_from(record: TransferRecord) -> Result<Self, Self::Error> {
         let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = Self::builder(cost, record.date, record.from, record.to).time(record.time);
+        let builder = TransferBuilder {
+            id: Some(record.id),
+            ..Self::builder(cost, record.date, record.from, record.to)
+        }
+        .time(record.time);
         match record.note {
             Some(note) => builder.note(note).build(),
             None => builder.build(),

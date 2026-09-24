@@ -1,12 +1,14 @@
 //! Expense categories, defined per group.
 
 use crate::error::{Field, ValueError};
+use crate::id::CategoryId;
 use crate::text;
 
 /// A category a group sorts its expenses into, such as "Food" or "Fuel".
 ///
 /// Every group defines its own categories; names are unique within a group,
-/// compared case-insensitively.
+/// compared case-insensitively. A category gets its identifier when it is
+/// created, and [`renamed`](Self::renamed) keeps it.
 ///
 /// # Examples
 ///
@@ -16,6 +18,9 @@ use crate::text;
 /// let food = Category::new("  Food ")?;
 /// assert_eq!(food.name(), "Food");
 /// assert!(Category::new(" ").is_err());
+///
+/// let groceries = food.renamed("Groceries")?;
+/// assert_eq!(groceries.id(), food.id());
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,19 +30,42 @@ use crate::text;
     serde(try_from = "CategoryRecord")
 )]
 pub struct Category {
+    id: CategoryId,
     name: String,
 }
 
 impl Category {
-    /// Returns a category named `name`, trimmed.
+    /// Returns a category named `name`, trimmed, under a newly generated
+    /// identifier.
     ///
     /// # Errors
     ///
     /// [`ValueError::Empty`] when the name is blank.
     pub fn new(name: impl Into<String>) -> Result<Self, ValueError> {
+        let name = text::required(name, Field::CategoryName)?;
         Ok(Self {
+            id: CategoryId::generate(),
+            name,
+        })
+    }
+
+    /// The same category under the name `name`, trimmed; the identifier is
+    /// kept.
+    ///
+    /// # Errors
+    ///
+    /// [`ValueError::Empty`] when the name is blank.
+    pub fn renamed(&self, name: impl Into<String>) -> Result<Self, ValueError> {
+        Ok(Self {
+            id: self.id,
             name: text::required(name, Field::CategoryName)?,
         })
+    }
+
+    /// The identifier.
+    #[must_use]
+    pub const fn id(&self) -> CategoryId {
+        self.id
     }
 
     /// The name.
@@ -56,6 +84,7 @@ impl Category {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct CategoryRecord {
+    id: CategoryId,
     name: String,
 }
 
@@ -64,7 +93,10 @@ impl TryFrom<CategoryRecord> for Category {
     type Error = ValueError;
 
     fn try_from(record: CategoryRecord) -> Result<Self, Self::Error> {
-        Self::new(record.name)
+        Ok(Self {
+            id: record.id,
+            name: text::required(record.name, Field::CategoryName)?,
+        })
     }
 }
 

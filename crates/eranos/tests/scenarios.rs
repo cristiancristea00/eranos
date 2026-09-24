@@ -61,10 +61,10 @@ fn weekend() -> Weekend {
     let mut group = Group::builder(Currency::EUR, "Weekend in Brașov")
         .build()
         .unwrap();
-    let ana = group.add_member(member("Ana"));
-    let bob = group.add_member(member("Bob"));
-    let carol = group.add_member(member("Carol"));
-    let dan = group.add_member(member("Dan"));
+    let ana = group.add_member(member("Ana")).unwrap();
+    let bob = group.add_member(member("Bob")).unwrap();
+    let carol = group.add_member(member("Carol")).unwrap();
+    let dan = group.add_member(member("Dan")).unwrap();
     let lodging = group
         .add_category(Category::new("Lodging").unwrap())
         .unwrap();
@@ -255,9 +255,9 @@ fn recording_a_settlement_settles_everyone() -> TestResult {
 #[test]
 fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     let mut group = Group::builder(Currency::EUR, "Dinner").build()?;
-    let ana = group.add_member(member("Ana"));
-    let bob = group.add_member(member("Bob"));
-    let carol = group.add_member(member("Carol"));
+    let ana = group.add_member(member("Ana"))?;
+    let bob = group.add_member(member("Bob"))?;
+    let carol = group.add_member(member("Carol"))?;
     let items = || -> Result<Vec<Item>, eranos::error::ExpenseError> {
         Ok(vec![
             // Ana's steak and Bob's pasta.
@@ -313,8 +313,8 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
 #[test]
 fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     let mut group = Group::builder(Currency::EUR, "Bucharest").build()?;
-    let ana = group.add_member(member("Ana"));
-    let bob = group.add_member(member("Bob"));
+    let ana = group.add_member(member("Ana"))?;
+    let bob = group.add_member(member("Bob"))?;
     let ron = |text| Money::parse(text, Currency::RON);
 
     // 500.00 RON at 0.2 EUR is 100.00 EUR, split in two.
@@ -378,8 +378,8 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
 #[test]
 fn a_flatmate_moves_out() -> TestResult {
     let mut group = Group::builder(Currency::EUR, "Flat 4B").build()?;
-    let ana = group.add_member(member("Ana"));
-    let bob = group.add_member(member("Bob"));
+    let ana = group.add_member(member("Ana"))?;
+    let bob = group.add_member(member("Bob"))?;
     let rent = group.add_expense(
         Expense::builder(
             eur("1200.00"),
@@ -425,7 +425,7 @@ fn a_flatmate_moves_out() -> TestResult {
         .to_builder()
         .cost(eur("1100.00"))
         .build()?;
-    group.replace_expense(rent, corrected)?;
+    group.replace_expense(corrected)?;
     assert_eq!(
         group.summary().member(bob).balance(),
         Balance::GetsBack(eur("50.00"))

@@ -7,6 +7,7 @@ mod language;
 mod serde;
 
 use std::collections::BTreeMap;
+use std::collections::btree_map::Entry;
 use std::sync::OnceLock;
 
 pub use builder::GroupBuilder;
@@ -40,9 +41,9 @@ use crate::transfer::Transfer;
 /// use eranos::{Currency, Date, Expense, Group, Member, Money, SettlementStrategy, Split};
 ///
 /// let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
-/// let ana = group.add_member(Member::builder("Ana").build()?);
-/// let bob = group.add_member(Member::builder("Bob").build()?);
-/// let carol = group.add_member(Member::builder("Carol").build()?);
+/// let ana = group.add_member(Member::builder("Ana").build()?)?;
+/// let bob = group.add_member(Member::builder("Bob").build()?)?;
+/// let carol = group.add_member(Member::builder("Carol").build()?)?;
 ///
 /// let day = Date::new(23, 9, 2026)?;
 /// let eur = |text| Money::parse(text, Currency::EUR);
@@ -167,51 +168,34 @@ impl Group {
         self.categories.get(&id)
     }
 
-    /// Adds a category under a newly generated identifier.
+    /// Adds a category under its identifier.
     ///
     /// # Errors
     ///
-    /// [`GroupError::DuplicateCategoryName`] when another category has the
-    /// same name, compared case-insensitively.
-    pub fn add_category(&mut self, category: Category) -> Result<CategoryId, GroupError> {
-        let id = unused_id(&self.categories, CategoryId::generate);
-        self.insert_category(id, category)?;
-        Ok(id)
-    }
-
-    /// Adds a category under an existing identifier.
-    ///
-    /// # Errors
-    ///
-    /// - [`GroupError::DuplicateCategory`] when the identifier is taken.
+    /// - [`GroupError::DuplicateCategory`] when the group already has a
+    ///   category with this identifier.
     /// - [`GroupError::DuplicateCategoryName`] when another category has the
     ///   same name, compared case-insensitively.
-    pub fn insert_category(
-        &mut self,
-        id: CategoryId,
-        category: Category,
-    ) -> Result<(), GroupError> {
+    pub fn add_category(&mut self, category: Category) -> Result<CategoryId, GroupError> {
+        let id = category.id();
         if self.categories.contains_key(&id) {
             return Err(GroupError::DuplicateCategory(id));
         }
         self.check_category_name(&category, None)?;
         self.categories.insert(id, category);
-        Ok(())
+        Ok(id)
     }
 
-    /// Replaces a category's details, returning the previous ones; its
-    /// expenses keep it.
+    /// Replaces the category with the identifier of `category`, returning
+    /// the previous version; its expenses keep it.
     ///
     /// # Errors
     ///
     /// - [`GroupError::UnknownCategory`] when there is no such category.
     /// - [`GroupError::DuplicateCategoryName`] when another category has the
     ///   new name.
-    pub fn rename_category(
-        &mut self,
-        id: CategoryId,
-        category: Category,
-    ) -> Result<Category, GroupError> {
+    pub fn replace_category(&mut self, category: Category) -> Result<Category, GroupError> {
+        let id = category.id();
         if !self.categories.contains_key(&id) {
             return Err(GroupError::UnknownCategory(id));
         }
@@ -297,7 +281,7 @@ impl Group {
     /// use eranos::{Currency, Date, ExchangeRate, Expense, Group, Member, Money, Split};
     ///
     /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
-    /// let ana = group.add_member(Member::builder("Ana").build()?);
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
     /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
     /// group.add_expense(Expense::builder(amount, day, "Museum", ana, Split::equal([ana])).build()?)?;
     ///
@@ -336,7 +320,7 @@ impl Group {
         for (&id, record) in &self.expenses {
             let mut expense = record.expense.clone();
             expense.set_exchange_rate(rate_for(expense.amount().currency())?);
-            let shares = resolve_expense(id, &expense, currency)?;
+            let shares = resolve_expense(&expense, currency)?;
             delta.add_expense(&shares, expense.category(), 1);
             expenses.insert(id, ExpenseRecord { expense, shares });
         }
@@ -378,10 +362,12 @@ impl Group {
         self.expenses.get(&id).map(|record| &record.shares)
     }
 
-    /// Adds an expense under a newly generated identifier.
+    /// Adds an expense under its identifier.
     ///
     /// # Errors
     ///
+    /// - [`GroupError::DuplicateExpense`] when the group already has an
+    ///   expense with this identifier.
     /// - [`GroupError::UnknownMember`] or [`GroupError::ArchivedMember`] when
     ///   a payer or participant is not an active member.
     /// - [`GroupError::UnknownCategory`] when the category does not exist.
@@ -392,24 +378,12 @@ impl Group {
     /// - [`GroupError::Overflow`] when a total would leave the range of an
     ///   amount.
     pub fn add_expense(&mut self, expense: Expense) -> Result<ExpenseId, GroupError> {
-        let id = unused_id(&self.expenses, ExpenseId::generate);
-        self.insert_expense(id, expense)?;
-        Ok(id)
-    }
-
-    /// Adds an expense under an existing identifier, such as one synced from
-    /// another device.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::DuplicateExpense`] when the identifier is taken, and
-    /// the errors of [`add_expense`](Self::add_expense).
-    pub fn insert_expense(&mut self, id: ExpenseId, expense: Expense) -> Result<(), GroupError> {
+        let id = expense.id();
         if self.expenses.contains_key(&id) {
             return Err(GroupError::DuplicateExpense(id));
         }
         self.check_expense(&expense, None)?;
-        let shares = resolve_expense(id, &expense, self.currency)?;
+        let shares = resolve_expense(&expense, self.currency)?;
         let mut delta = Delta::default();
         delta.add_expense(&shares, expense.category(), 1);
         self.ledger
@@ -417,10 +391,11 @@ impl Group {
             .map_err(|_| GroupError::Overflow)?;
         self.expenses.insert(id, ExpenseRecord { expense, shares });
         self.invalidate_settlements();
-        Ok(())
+        Ok(id)
     }
 
-    /// Replaces an expense, returning the previous version.
+    /// Replaces the expense with the identifier of `expense`, returning the
+    /// previous version.
     ///
     /// The replacement may keep members who were archived after the
     /// original was added, but may not add archived members.
@@ -428,18 +403,15 @@ impl Group {
     /// # Errors
     ///
     /// [`GroupError::UnknownExpense`] when there is no such expense, and the
-    /// errors of [`add_expense`](Self::add_expense).
-    pub fn replace_expense(
-        &mut self,
-        id: ExpenseId,
-        expense: Expense,
-    ) -> Result<Expense, GroupError> {
+    /// errors of [`add_expense`](Self::add_expense) about the expense itself.
+    pub fn replace_expense(&mut self, expense: Expense) -> Result<Expense, GroupError> {
+        let id = expense.id();
         let previous = self
             .expenses
             .get(&id)
             .ok_or(GroupError::UnknownExpense(id))?;
         self.check_expense(&expense, Some(&previous.expense))?;
-        let shares = resolve_expense(id, &expense, self.currency)?;
+        let shares = resolve_expense(&expense, self.currency)?;
         let mut delta = Delta::default();
         delta.add_expense(&previous.shares, previous.expense.category(), -1);
         delta.add_expense(&shares, expense.category(), 1);
@@ -504,45 +476,34 @@ impl Group {
         self.members.get(&id).is_some_and(|record| record.archived)
     }
 
-    /// Adds a member under a newly generated identifier.
-    pub fn add_member(&mut self, member: Member) -> MemberId {
-        let id = unused_id(&self.members, MemberId::generate);
-        self.members.insert(
-            id,
-            MemberRecord {
-                archived: false,
-                member,
-            },
-        );
-        id
-    }
-
-    /// Adds a member under an existing identifier, such as one synced from
-    /// another device.
+    /// Adds a member under its identifier.
     ///
     /// # Errors
     ///
-    /// [`GroupError::DuplicateMember`] when the identifier is taken.
-    pub fn insert_member(&mut self, id: MemberId, member: Member) -> Result<(), GroupError> {
-        if self.members.contains_key(&id) {
-            return Err(GroupError::DuplicateMember(id));
+    /// [`GroupError::DuplicateMember`] when the group already has a member
+    /// with this identifier.
+    pub fn add_member(&mut self, member: Member) -> Result<MemberId, GroupError> {
+        let id = member.id();
+        match self.members.entry(id) {
+            Entry::Occupied(_) => Err(GroupError::DuplicateMember(id)),
+            Entry::Vacant(slot) => {
+                slot.insert(MemberRecord {
+                    archived: false,
+                    member,
+                });
+                Ok(id)
+            }
         }
-        self.members.insert(
-            id,
-            MemberRecord {
-                archived: false,
-                member,
-            },
-        );
-        Ok(())
     }
 
-    /// Replaces a member's details, returning the previous ones.
+    /// Replaces the details of the member with the identifier of `member`,
+    /// returning the previous ones; an archived member stays archived.
     ///
     /// # Errors
     ///
     /// [`GroupError::UnknownMember`] when there is no such member.
-    pub fn update_member(&mut self, id: MemberId, member: Member) -> Result<Member, GroupError> {
+    pub fn replace_member(&mut self, member: Member) -> Result<Member, GroupError> {
+        let id = member.id();
         let record = self
             .members
             .get_mut(&id)
@@ -676,13 +637,15 @@ impl Group {
             .map(|record| Money::from_minor_units(self.currency, record.amount))
     }
 
-    /// Adds a transfer under a newly generated identifier.
+    /// Adds a transfer under its identifier.
     ///
     /// Archived members may send and receive transfers, so they can settle
     /// up.
     ///
     /// # Errors
     ///
+    /// - [`GroupError::DuplicateTransfer`] when the group already has a
+    ///   transfer with this identifier.
     /// - [`GroupError::UnknownMember`] when the sender or the recipient is
     ///   not a member.
     /// - [`GroupError::MissingExchangeRate`] or
@@ -690,22 +653,7 @@ impl Group {
     /// - [`GroupError::Overflow`] when a total would leave the range of an
     ///   amount.
     pub fn add_transfer(&mut self, transfer: Transfer) -> Result<TransferId, GroupError> {
-        let id = unused_id(&self.transfers, TransferId::generate);
-        self.insert_transfer(id, transfer)?;
-        Ok(id)
-    }
-
-    /// Adds a transfer under an existing identifier.
-    ///
-    /// # Errors
-    ///
-    /// [`GroupError::DuplicateTransfer`] when the identifier is taken, and
-    /// the errors of [`add_transfer`](Self::add_transfer).
-    pub fn insert_transfer(
-        &mut self,
-        id: TransferId,
-        transfer: Transfer,
-    ) -> Result<(), GroupError> {
+        let id = transfer.id();
         if self.transfers.contains_key(&id) {
             return Err(GroupError::DuplicateTransfer(id));
         }
@@ -719,20 +667,19 @@ impl Group {
         self.transfers
             .insert(id, TransferRecord { amount, transfer });
         self.invalidate_settlements();
-        Ok(())
+        Ok(id)
     }
 
-    /// Replaces a transfer, returning the previous version.
+    /// Replaces the transfer with the identifier of `transfer`, returning
+    /// the previous version.
     ///
     /// # Errors
     ///
     /// [`GroupError::UnknownTransfer`] when there is no such transfer, and
-    /// the errors of [`add_transfer`](Self::add_transfer).
-    pub fn replace_transfer(
-        &mut self,
-        id: TransferId,
-        transfer: Transfer,
-    ) -> Result<Transfer, GroupError> {
+    /// the errors of [`add_transfer`](Self::add_transfer) about the transfer
+    /// itself.
+    pub fn replace_transfer(&mut self, transfer: Transfer) -> Result<Transfer, GroupError> {
+        let id = transfer.id();
         let previous = self
             .transfers
             .get(&id)
@@ -868,19 +815,6 @@ impl PartialEq for Group {
 }
 
 impl Eq for Group {}
-
-/// An identifier from `generate` that `taken` does not hold yet.
-///
-/// A UUID v7 collision is all but impossible, but a silent overwrite would
-/// lose an entry, so a taken identifier is drawn again.
-fn unused_id<Id: Ord, Value>(taken: &BTreeMap<Id, Value>, mut generate: impl FnMut() -> Id) -> Id {
-    loop {
-        let id = generate();
-        if !taken.contains_key(&id) {
-            return id;
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests;

@@ -12,7 +12,7 @@ pub use tip::{Tip, TipDistribution, TipValue};
 
 use crate::date::{Date, Time};
 use crate::error::{ExpenseError, Field};
-use crate::id::{CategoryId, MemberId};
+use crate::id::{CategoryId, ExpenseId, MemberId};
 use crate::money::{Cost, ExchangeRate, Money};
 use crate::text;
 
@@ -24,9 +24,10 @@ use crate::text;
 /// the group currency, fixed when the expense is entered. A tip is added on
 /// top of the amount, and the payers cover amount plus tip. Four
 /// constructors name the payers and the split up front: one payer or
-/// several, and a whole split or items. Expenses are values: to change one,
-/// edit a copy with [`to_builder`](Self::to_builder) and pass it to
-/// [`Group::replace_expense`](crate::Group::replace_expense).
+/// several, and a whole split or items. An expense gets its identifier when
+/// it is built, and keeps it through every edit. Expenses are values: to
+/// change one, edit a copy with [`to_builder`](Self::to_builder) and pass it
+/// to [`Group::replace_expense`](crate::Group::replace_expense).
 ///
 /// # Examples
 ///
@@ -50,6 +51,7 @@ use crate::text;
     serde(try_from = "ExpenseRecord")
 )]
 pub struct Expense {
+    id: ExpenseId,
     amount: Money,
     date: Date,
     name: String,
@@ -147,12 +149,14 @@ impl Expense {
         )
     }
 
-    /// Starts a builder holding a copy of this expense, to edit it.
+    /// Starts a builder holding a copy of this expense, to edit it; the copy
+    /// keeps the identifier.
     ///
     /// Calling `split` or `items` on it replaces the split, and `paid_by` or
     /// `payers` the payers, whichever form they had.
     pub fn to_builder(&self) -> ExpenseBuilder {
         ExpenseBuilder {
+            id: Some(self.id),
             cost: self.cost(),
             date: self.date,
             name: self.name.clone(),
@@ -163,6 +167,12 @@ impl Expense {
             time: self.time,
             tip: self.tip,
         }
+    }
+
+    /// The identifier.
+    #[must_use]
+    pub const fn id(&self) -> ExpenseId {
+        self.id
     }
 
     /// The amount before the tip, in the expense's currency.
@@ -299,6 +309,7 @@ impl ExpenseSplit {
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseBuilder {
+    id: Option<ExpenseId>,
     cost: Cost,
     date: Date,
     name: String,
@@ -311,6 +322,14 @@ pub struct ExpenseBuilder {
 }
 
 impl ExpenseBuilder {
+    /// Uses `id` instead of a generated identifier, so a test can pin the
+    /// tie rotation it seeds.
+    #[cfg(test)]
+    pub(crate) const fn with_id(mut self, id: ExpenseId) -> Self {
+        self.id = Some(id);
+        self
+    }
+
     /// Replaces the cost (before the tip).
     ///
     /// A [`Money`] amount makes the cost local; to change the amount of a
@@ -383,7 +402,8 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Validates the expense and returns it.
+    /// Validates the expense and returns it, under a newly generated
+    /// identifier unless the builder came from [`Expense::to_builder`].
     ///
     /// Only the expense itself is checked here; whether its members,
     /// category, and cost fit a group is checked when it is added to one.
@@ -419,6 +439,7 @@ impl ExpenseBuilder {
             .map_err(|_| ExpenseError::Overflow)?;
         payers.validate(total)?;
         Ok(Expense {
+            id: self.id.unwrap_or_else(ExpenseId::generate),
             amount,
             date: self.date,
             name,
@@ -471,6 +492,7 @@ const fn starting(
     split: ExpenseSplit,
 ) -> ExpenseBuilder {
     ExpenseBuilder {
+        id: None,
         cost,
         date,
         name,
@@ -487,6 +509,7 @@ const fn starting(
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct ExpenseRecord {
+    id: ExpenseId,
     amount: Money,
     date: Date,
     name: String,
@@ -510,10 +533,13 @@ impl TryFrom<ExpenseRecord> for Expense {
 
     fn try_from(record: ExpenseRecord) -> Result<Self, Self::Error> {
         let cost = Cost::from_parts(record.amount, record.exchange_rate);
-        let builder = starting(cost, record.date, record.name, record.payers, record.split)
-            .category(record.category)
-            .time(record.time)
-            .tip(record.tip);
+        let builder = ExpenseBuilder {
+            id: Some(record.id),
+            ..starting(cost, record.date, record.name, record.payers, record.split)
+        }
+        .category(record.category)
+        .time(record.time)
+        .tip(record.tip);
         match record.description {
             Some(description) => builder.description(description).build(),
             None => builder.build(),

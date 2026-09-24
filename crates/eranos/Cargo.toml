@@ -12,7 +12,7 @@ readme = "../../README.md"
 
 [features]
 # `Serialize` and `Deserialize` on every domain type. A deserialised `Group`
-# is rebuilt through the same validation as its insert methods.
+# is rebuilt through the same validation as its `add_*` methods.
 serde = ["dep:serde", "uuid/serde"]
 
 [dependencies]

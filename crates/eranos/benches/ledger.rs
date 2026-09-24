@@ -17,21 +17,34 @@ use eranos::{
 
 const EXISTING: i64 = 10_000;
 
+/// `members` sharing by parts 1, 2, 3, and so on.
+fn parts(members: &[MemberId]) -> Split {
+    Split::parts(
+        members
+            .iter()
+            .zip(1_u32..)
+            .map(|(&member, weight)| (member, Parts::from_whole(weight).unwrap_or(Parts::ONE))),
+    )
+}
+
 fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
-    let parts = members
-        .iter()
-        .zip(1_u32..)
-        .map(|(&member, weight)| (member, Parts::from_whole(weight).unwrap_or(Parts::ONE)));
     let day = Date::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
     Expense::builder(
         Money::from_minor_units(Currency::EUR, minor_units),
         day,
         "Expense",
         payer,
-        Split::parts(parts),
+        parts(members),
     )
     .build()
     .unwrap_or_else(|error| panic!("{error}"))
+}
+
+/// A member of their own, since a group holds each member once.
+fn member() -> Member {
+    Member::builder("Member")
+        .build()
+        .unwrap_or_else(|error| panic!("{error}"))
 }
 
 /// A household of six with `EXISTING` expenses, each paid by the next member
@@ -40,12 +53,13 @@ fn household() -> (Group, Vec<MemberId>) {
     let mut group = Group::builder(Currency::EUR, "Benchmark")
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
-    let member = Member::builder("Member")
-        .build()
-        .unwrap_or_else(|error| panic!("{error}"));
-    let members: Vec<MemberId> = iter::repeat_with(|| group.add_member(member.clone()))
-        .take(6)
-        .collect();
+    let members: Vec<MemberId> = iter::repeat_with(|| {
+        group
+            .add_member(member())
+            .unwrap_or_else(|error| panic!("{error}"))
+    })
+    .take(6)
+    .collect();
     for (index, &payer) in (0..EXISTING).zip(members.iter().cycle()) {
         let minor_units = 100 + (index % 9_973) * 7;
         group
@@ -63,7 +77,14 @@ fn mutations(criterion: &mut Criterion) {
         panic!("the household has six members");
     };
     let added = expense(12_345, first, &members);
-    let replacement = expense(54_321, second, &[first, second, reader]);
+    // A new version of `added`, so it replaces `added` under its identifier.
+    let replacement = added
+        .to_builder()
+        .cost(Money::from_minor_units(Currency::EUR, 54_321))
+        .paid_by(second)
+        .split(parts(&[first, second, reader]))
+        .build()
+        .unwrap_or_else(|error| panic!("{error}"));
     // Computed once, so every mutation below also pays for dropping the
     // cached settlement.
     group
@@ -78,17 +99,13 @@ fn mutations(criterion: &mut Criterion) {
             black_box(group.remove_expense(id).ok());
         });
     });
-    let id = group
+    group
         .add_expense(added.clone())
         .unwrap_or_else(|error| panic!("{error}"));
     criterion.bench_function("ledger/replace an expense", |bencher| {
         bencher.iter(|| {
-            black_box(
-                group
-                    .replace_expense(id, black_box(replacement.clone()))
-                    .ok(),
-            );
-            black_box(group.replace_expense(id, black_box(added.clone())).ok());
+            black_box(group.replace_expense(black_box(replacement.clone())).ok());
+            black_box(group.replace_expense(black_box(added.clone())).ok());
         });
     });
     criterion.bench_function("ledger/read a member's totals", |bencher| {

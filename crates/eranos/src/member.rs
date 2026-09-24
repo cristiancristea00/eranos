@@ -9,13 +9,15 @@ pub use contact::{Email, PhoneNumber};
 pub use iban::Iban;
 
 use crate::error::{Field, ValueError};
+use crate::id::MemberId;
 use crate::text;
 
 /// A person who pays for or shares expenses.
 ///
-/// Only the first name is required. Members are values: to change one, edit
-/// a copy with [`to_builder`](Self::to_builder) and pass it to
-/// [`Group::update_member`](crate::Group::update_member).
+/// Only the first name is required. A member gets its identifier when it is
+/// built, and keeps it through every edit. Members are values: to change
+/// one, edit a copy with [`to_builder`](Self::to_builder) and pass it to
+/// [`Group::replace_member`](crate::Group::replace_member).
 ///
 /// # Examples
 ///
@@ -41,6 +43,7 @@ use crate::text;
     serde(try_from = "MemberRecord")
 )]
 pub struct Member {
+    id: MemberId,
     first_name: String,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     accounts: Vec<Account>,
@@ -56,6 +59,7 @@ impl Member {
     /// Starts a member with the required first name.
     pub fn builder(first_name: impl Into<String>) -> MemberBuilder {
         MemberBuilder {
+            id: None,
             first_name: first_name.into(),
             accounts: Vec::new(),
             email: None,
@@ -64,15 +68,23 @@ impl Member {
         }
     }
 
-    /// Starts a builder holding a copy of this member, to edit it.
+    /// Starts a builder holding a copy of this member, to edit it; the copy
+    /// keeps the identifier.
     pub fn to_builder(&self) -> MemberBuilder {
         MemberBuilder {
+            id: Some(self.id),
             first_name: self.first_name.clone(),
             accounts: self.accounts.clone(),
             email: self.email.clone(),
             last_name: self.last_name.clone(),
             phone: self.phone.clone(),
         }
+    }
+
+    /// The identifier.
+    #[must_use]
+    pub const fn id(&self) -> MemberId {
+        self.id
     }
 
     /// The first name, the only required field.
@@ -111,6 +123,7 @@ impl Member {
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct MemberBuilder {
+    id: Option<MemberId>,
     first_name: String,
     accounts: Vec<Account>,
     email: Option<Email>,
@@ -155,14 +168,18 @@ impl MemberBuilder {
         self
     }
 
-    /// Validates the names and returns the member.
+    /// Validates the names and returns the member, under a newly generated
+    /// identifier unless the builder came from
+    /// [`Member::to_builder`].
     ///
     /// # Errors
     ///
     /// [`ValueError::Empty`] when the first name is blank.
     pub fn build(self) -> Result<Member, ValueError> {
+        let first_name = text::required(self.first_name, Field::FirstName)?;
         Ok(Member {
-            first_name: text::required(self.first_name, Field::FirstName)?,
+            id: self.id.unwrap_or_else(MemberId::generate),
+            first_name,
             accounts: self.accounts,
             email: self.email,
             last_name: self.last_name.and_then(text::optional),
@@ -175,6 +192,7 @@ impl MemberBuilder {
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
 struct MemberRecord {
+    id: MemberId,
     first_name: String,
     #[serde(default)]
     accounts: Vec<Account>,
@@ -191,10 +209,13 @@ impl TryFrom<MemberRecord> for Member {
     type Error = ValueError;
 
     fn try_from(record: MemberRecord) -> Result<Self, Self::Error> {
-        let builder = Self::builder(record.first_name)
-            .email(record.email)
-            .phone(record.phone)
-            .accounts(record.accounts);
+        let builder = MemberBuilder {
+            id: Some(record.id),
+            ..Self::builder(record.first_name)
+        }
+        .email(record.email)
+        .phone(record.phone)
+        .accounts(record.accounts);
         match record.last_name {
             Some(last_name) => builder.last_name(last_name).build(),
             None => builder.build(),

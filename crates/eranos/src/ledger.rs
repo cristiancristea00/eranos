@@ -23,8 +23,8 @@ use crate::money::{Currency, Money};
 /// use eranos::{Balance, Currency, Date, Expense, Group, Member, Money, Split};
 ///
 /// let mut group = Group::builder(Currency::EUR, "Weekend").build()?;
-/// let ana = group.add_member(Member::builder("Ana").build()?);
-/// let bob = group.add_member(Member::builder("Bob").build()?);
+/// let ana = group.add_member(Member::builder("Ana").build()?)?;
+/// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
 /// group.add_expense(Expense::builder(amount, day, "Groceries", ana, Split::equal([ana, bob])).build()?)?;
 ///
@@ -219,9 +219,9 @@ impl fmt::Display for Balance {
 /// use eranos::{Currency, Date, Expense, Group, Member, Money, Split};
 ///
 /// let mut group = Group::builder(Currency::EUR, "Trip").build()?;
-/// let ana = group.add_member(Member::builder("Ana").build()?);
-/// let bob = group.add_member(Member::builder("Bob").build()?);
-/// let carol = group.add_member(Member::builder("Carol").build()?);
+/// let ana = group.add_member(Member::builder("Ana").build()?)?;
+/// let bob = group.add_member(Member::builder("Bob").build()?)?;
+/// let carol = group.add_member(Member::builder("Carol").build()?)?;
 /// let (amount, day) = (Money::parse("10.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
 /// let everyone = Split::equal([ana, bob, carol]);
 /// let taxi = group.add_expense(Expense::builder(amount, day, "Taxi", ana, everyone).build()?)?;

@@ -82,9 +82,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     section("1. Members");
-    let ana = group.add_member(Member::builder("Ana").build()?);
-    let bob = group.add_member(Member::builder("Bob").build()?);
-    let carol = group.add_member(Member::builder("Carol").build()?);
+    let ana = group.add_member(Member::builder("Ana").build()?)?;
+    let bob = group.add_member(Member::builder("Bob").build()?)?;
+    let carol = group.add_member(Member::builder("Carol").build()?)?;
     println!(
         "{} people joined the group: {}.",
         group.members().len(),

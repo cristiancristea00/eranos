@@ -176,11 +176,23 @@ fn builder_setters_replace_each_field() {
 /// repayments entered by hand.
 #[test]
 fn new_unchecked_matches_a_built_transfer() {
-    // Same fields, no optional details.
+    // Same fields, no optional details, and an identifier of its own.
+    let transfer = Transfer::new_unchecked(euros(3_000), september_24(), BOB, ANA);
     assert_eq!(
-        Transfer::new_unchecked(euros(3_000), september_24(), BOB, ANA),
-        repayment().build().unwrap()
+        transfer,
+        repayment().with_id(transfer.id()).build().unwrap()
     );
+    assert_ne!(repayment().build().unwrap().id(), transfer.id());
+}
+
+/// Two transfers would share an identifier, or an edited transfer would
+/// become another entry.
+#[test]
+fn a_transfer_keeps_its_identifier_through_edits() {
+    let transfer = full_repayment();
+    assert_ne!(full_repayment().id(), transfer.id());
+    let edited = transfer.to_builder().note("Lunch").build().unwrap();
+    assert_eq!(edited.id(), transfer.id());
 }
 
 /// The exchange rate fixed when a group changes currency would not be

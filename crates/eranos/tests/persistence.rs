@@ -31,18 +31,26 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
         .language(Language::parse("pt-PT").unwrap())
         .build()
         .unwrap();
-    let ana = group.add_member(
-        Member::builder("Ana")
-            .last_name("Popescu")
-            .email(Email::parse("ana@example.com").unwrap())
-            .phone(PhoneNumber::parse("+40712345678").unwrap())
-            .account(Account::new(Iban::parse("RO49AAAA1B31007593840000").unwrap(), "ING").unwrap())
-            .account(Account::new(Username::new("@ana").unwrap(), "Revolut").unwrap())
-            .build()
-            .unwrap(),
-    );
-    let bob = group.add_member(Member::builder("Bob").build().unwrap());
-    let carol = group.add_member(Member::builder("Carol").build().unwrap());
+    let ana = group
+        .add_member(
+            Member::builder("Ana")
+                .last_name("Popescu")
+                .email(Email::parse("ana@example.com").unwrap())
+                .phone(PhoneNumber::parse("+40712345678").unwrap())
+                .account(
+                    Account::new(Iban::parse("RO49AAAA1B31007593840000").unwrap(), "ING").unwrap(),
+                )
+                .account(Account::new(Username::new("@ana").unwrap(), "Revolut").unwrap())
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    let bob = group
+        .add_member(Member::builder("Bob").build().unwrap())
+        .unwrap();
+    let carol = group
+        .add_member(Member::builder("Carol").build().unwrap())
+        .unwrap();
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
 
     let bill = Expense::itemised_builder(
@@ -132,28 +140,41 @@ fn the_json_shape_is_pinned() {
     let (group, ana, _, carol) = group();
     let value = json_of(&group);
     assert_eq!(value["format"], json!(2));
+    assert_eq!(value["id"], json!(group.id().to_string()));
     assert_eq!(value["name"], json!("Lisbon"));
     assert_eq!(value["currency"], json!("EUR"));
     assert_eq!(value["language"], json!("pt-PT"));
-    // Members carry their ID, the archive flag only when set, and details.
+    // The version leads, then the identifier; every entry starts with its
+    // own identifier.
+    let text = serde_json::to_string(&group).unwrap();
+    let start = format!(
+        r#"{{"format":2,"id":"{}","categories":[{{"id":"#,
+        group.id()
+    );
+    assert!(text.starts_with(&start), "{text}");
+    let first_member = format!(r#""members":[{{"id":"{ana}","first_name":"Ana","#);
+    assert!(text.contains(&first_member), "{text}");
+    // Members carry their details; the archived ones are listed apart.
     let members = value["members"].as_array().unwrap();
     assert_eq!(members[0]["id"], json!(ana.to_string()));
-    assert_eq!(members[0].get("archived"), None);
     assert_eq!(members[2]["id"], json!(carol.to_string()));
-    assert_eq!(members[2]["archived"], json!(true));
+    assert_eq!(value["archived"], json!([carol.to_string()]));
+    assert_eq!(members[0].get("archived"), None);
     assert_eq!(
-        members[0]["member"]["accounts"],
+        members[0]["accounts"],
         json!([
-            {"name": "ING", "details": {"iban": "RO49AAAA1B31007593840000"}},
-            {"name": "Revolut", "details": {"username": "@ana"}},
+            {"details": {"iban": "RO49AAAA1B31007593840000"}, "name": "ING"},
+            {"details": {"username": "@ana"}, "name": "Revolut"},
         ])
     );
-    assert_eq!(members[0]["member"]["phone"], json!("+40712345678"));
-    // Entries are `{id, entry}`; amounts are minor units plus a code.
-    let bill = &value["expenses"][0]["entry"];
+    assert_eq!(members[0]["phone"], json!("+40712345678"));
+    // Entries carry their identifier; amounts are minor units plus a code.
+    let (bill_id, _) = group.expenses().next().unwrap();
+    let bill = &value["expenses"][0];
+    assert_eq!(bill["id"], json!(bill_id.to_string()));
     assert_eq!(
         bill["amount"],
-        json!({"minor_units": 2100, "currency": "EUR"})
+        json!({"currency": "EUR", "minor_units": 2100})
     );
     assert_eq!(bill["date"], json!("2026-09-23"));
     assert_eq!(bill["time"], json!("20:30"));
@@ -170,11 +191,15 @@ fn the_json_shape_is_pinned() {
         json!(150)
     );
     assert_eq!(bill.get("total"), None);
-    let tram = &value["expenses"][1]["entry"];
+    let tram = &value["expenses"][1];
     assert_eq!(tram["exchange_rate"], json!("0.2011"));
     assert_eq!(tram["split"]["whole"]["percentages"][0][1], json!(5000));
-    assert_eq!(value["transfers"][0]["entry"]["note"], json!("Wine"));
-    assert_eq!(value["categories"][0]["entry"], json!({"name": "Food"}));
+    assert_eq!(value["transfers"][0]["note"], json!("Wine"));
+    let (food, _) = group.categories().next().unwrap();
+    assert_eq!(
+        value["categories"][0],
+        json!({"id": food.to_string(), "name": "Food"})
+    );
 }
 
 /// Loading a file with an entry the library would never accept must fail,
@@ -193,7 +218,7 @@ fn a_tampered_file_is_refused() {
 
     // Percentages that no longer add up to 100 %.
     let unbalanced = tamper(&|value| {
-        value["expenses"][1]["entry"]["split"]["whole"]["percentages"][0][1] = json!(4999);
+        value["expenses"][1]["split"]["whole"]["percentages"][0][1] = json!(4999);
     });
     assert!(
         unbalanced.contains("percentages add up to 9999"),
@@ -202,22 +227,21 @@ fn a_tampered_file_is_refused() {
     // An expense paid by someone who is not a member.
     let stranger = MemberId::from_bytes([200; 16]).to_string();
     let unknown_payer = tamper(&|value| {
-        value["expenses"][0]["entry"]["payers"] = json!({"equal": [stranger]});
+        value["expenses"][0]["payers"] = json!({"equal": [stranger]});
     });
     assert!(unknown_payer.contains("unknown member"), "{unknown_payer}");
     // An IBAN with a typo.
     let typo = tamper(&|value| {
-        value["members"][0]["member"]["accounts"][0]["details"]["iban"] =
-            json!("RO49AAAA1B31007593840001");
+        value["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
     });
     assert!(typo.contains("check digits"), "{typo}");
     // A blank first name, and a foreign expense that lost its rate.
     let blank_name = tamper(&|value| {
-        value["members"][1]["member"]["first_name"] = json!("  ");
+        value["members"][1]["first_name"] = json!("  ");
     });
     assert!(blank_name.contains("first name"), "{blank_name}");
     let unrated = tamper(&|value| {
-        value["expenses"][1]["entry"]
+        value["expenses"][1]
             .as_object_mut()
             .unwrap()
             .remove("exchange_rate");
@@ -261,16 +285,28 @@ fn an_inconsistent_file_is_refused() {
     // Two categories with one name, in different cases.
     let other = CategoryId::from_bytes([201; 16]).to_string();
     let homonyms = tamper(&|value| {
-        let copy = json!({"id": other, "entry": {"name": "FOOD"}});
+        let copy = json!({"id": other, "name": "FOOD"});
         value["categories"].as_array_mut().unwrap().push(copy);
     });
     assert!(homonyms.contains("already has this name"), "{homonyms}");
     // A transfer from someone who is not a member.
     let stranger = MemberId::from_bytes([200; 16]).to_string();
-    let unknown_sender = tamper(&|value| value["transfers"][0]["entry"]["from"] = json!(stranger));
+    let unknown_sender = tamper(&|value| value["transfers"][0]["from"] = json!(stranger));
     assert!(
         unknown_sender.contains("unknown member"),
         "{unknown_sender}"
+    );
+    // An expense listed twice.
+    let repeated = tamper(&|value| {
+        let copy = value["expenses"][0].clone();
+        value["expenses"].as_array_mut().unwrap().push(copy);
+    });
+    assert!(repeated.contains("already exists"), "{repeated}");
+    // Someone archived who is not a member.
+    let archived_stranger = tamper(&|value| value["archived"] = json!([stranger]));
+    assert!(
+        archived_stranger.contains("unknown member"),
+        "{archived_stranger}"
     );
 }
 

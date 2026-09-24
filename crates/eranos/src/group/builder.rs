@@ -10,7 +10,6 @@ use crate::text;
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct GroupBuilder {
-    id: Option<GroupId>,
     currency: Currency,
     name: String,
     description: Option<String>,
@@ -20,19 +19,11 @@ pub struct GroupBuilder {
 impl GroupBuilder {
     pub(super) const fn new(currency: Currency, name: String) -> Self {
         Self {
-            id: None,
             currency,
             name,
             description: None,
             language: None,
         }
-    }
-
-    /// Uses an existing identifier instead of generating one, for a group
-    /// that already exists elsewhere.
-    pub const fn id(mut self, id: GroupId) -> Self {
-        self.id = Some(id);
-        self
     }
 
     /// Sets the description; blank text clears it.
@@ -48,7 +39,8 @@ impl GroupBuilder {
         self
     }
 
-    /// Validates the name and returns the empty group.
+    /// Validates the name and returns the empty group, under a newly
+    /// generated identifier.
     ///
     /// # Errors
     ///
@@ -56,7 +48,7 @@ impl GroupBuilder {
     pub fn build(self) -> Result<Group, ValueError> {
         let name = text::required(self.name, Field::GroupName)?;
         Ok(Group::new(
-            self.id.unwrap_or_else(GroupId::generate),
+            GroupId::generate(),
             self.currency,
             name,
             self.description.and_then(text::optional),

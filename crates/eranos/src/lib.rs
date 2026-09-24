@@ -18,9 +18,9 @@
 //! };
 //!
 //! let mut group = Group::builder(Currency::EUR, "Lisbon").build()?;
-//! let ana = group.add_member(Member::builder("Ana").build()?);
-//! let bob = group.add_member(Member::builder("Bob").build()?);
-//! let carol = group.add_member(Member::builder("Carol").build()?);
+//! let ana = group.add_member(Member::builder("Ana").build()?)?;
+//! let bob = group.add_member(Member::builder("Bob").build()?)?;
+//! let carol = group.add_member(Member::builder("Carol").build()?)?;
 //!
 //! // Ana paid dinner for three, plus a 10 % tip.
 //! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, Date::new(23, 9, 2026)?);
@@ -66,7 +66,7 @@
 //! # Features
 //!
 //! - `serde`: `Serialize` and `Deserialize` for every domain type. A
-//!   deserialised [`Group`] is rebuilt through the same checks as its insert
+//!   deserialised [`Group`] is rebuilt through the same checks as its `add_*`
 //!   methods. Account details serialise in clear text, so store serialised
 //!   groups in the platform's secure storage.
 //!

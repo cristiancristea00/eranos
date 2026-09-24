@@ -28,9 +28,9 @@ fn person(name: &str) -> Member {
 /// A group with three members, in creation order.
 fn trip() -> (Group, MemberId, MemberId, MemberId) {
     let mut group = Group::builder(Currency::EUR, "Trip").build().unwrap();
-    let ana = group.add_member(person("Ana"));
-    let bob = group.add_member(person("Bob"));
-    let carol = group.add_member(person("Carol"));
+    let ana = group.add_member(person("Ana")).unwrap();
+    let bob = group.add_member(person("Bob")).unwrap();
+    let carol = group.add_member(person("Carol")).unwrap();
     (group, ana, bob, carol)
 }
 
@@ -52,16 +52,29 @@ fn transfer(from: MemberId, to: MemberId, amount: &str) -> Transfer {
         .unwrap()
 }
 
+/// `expense` as a new version of the expense `id`.
+fn replacement_expense(id: ExpenseId, expense: &Expense) -> Expense {
+    expense.to_builder().with_id(id).build().unwrap()
+}
+
+/// `transfer` as a new version of the transfer `id`.
+fn replacement_transfer(id: TransferId, transfer: &Transfer) -> Transfer {
+    transfer.to_builder().with_id(id).build().unwrap()
+}
+
 /// The ledger recomputed from scratch from the group's entries, checking
-/// every stored resolution along the way.
+/// every stored resolution, and that every entry is kept under its own
+/// identifier, along the way.
 fn rebuilt(group: &Group) -> Ledger {
     let mut delta = Delta::default();
     for (&id, record) in &group.expenses {
-        let shares = resolve_expense(id, &record.expense, group.currency).unwrap();
+        assert_eq!(id, record.expense.id());
+        let shares = resolve_expense(&record.expense, group.currency).unwrap();
         assert_eq!(shares, record.shares);
         delta.add_expense(&shares, record.expense.category(), 1);
     }
-    for record in group.transfers.values() {
+    for (&id, record) in &group.transfers {
+        assert_eq!(id, record.transfer.id());
         assert_eq!(
             resolve_transfer(&record.transfer, group.currency).unwrap(),
             record.amount
@@ -104,17 +117,17 @@ fn every_public_type_is_send_and_sync() {
     }
 }
 
-/// A new group starts empty, with its normalised details.
+/// A new group starts empty, with its normalised details and an
+/// identifier of its own.
 #[test]
 fn a_new_group_starts_empty() {
-    let id = GroupId::from_bytes([9; 16]);
     let group = Group::builder(Currency::EUR, "  Lisbon ")
-        .id(id)
         .description(" ")
         .language(Language::parse("pt-PT").unwrap())
         .build()
         .unwrap();
-    assert_eq!(group.id(), id);
+    let other = Group::builder(Currency::EUR, "Lisbon").build().unwrap();
+    assert_ne!(group.id(), other.id());
     assert_eq!(group.name(), "Lisbon");
     assert_eq!(group.description(), None);
     assert_eq!(group.currency(), Currency::EUR);
@@ -149,32 +162,39 @@ fn details_change_in_place() {
     assert_eq!(*group.summary(), summary);
 }
 
-/// Members get fresh increasing identifiers, and an imported identifier
-/// cannot be reused.
+/// Members are listed in the order they were built, a replacement keeps a
+/// member's identifier, and the same member is added only once.
 #[test]
-fn members_are_added_updated_and_listed_in_creation_order() {
+fn members_are_added_replaced_and_listed_in_creation_order() {
     let (mut group, ana, bob, carol) = trip();
     let ids: Vec<MemberId> = group.members().map(|(id, _)| id).collect();
     assert_eq!(ids, vec![ana, bob, carol]);
     assert!(ana < bob && bob < carol);
-    // Updating returns the previous details.
-    let previous = group.update_member(bob, person("Robert")).unwrap();
+    // Replacing returns the previous details.
+    let robert = group
+        .member(bob)
+        .unwrap()
+        .to_builder()
+        .first_name("Robert")
+        .build()
+        .unwrap();
+    let previous = group.replace_member(robert).unwrap();
     assert_eq!(previous.first_name(), "Bob");
     assert_eq!(group.member(bob).map(Member::first_name), Some("Robert"));
-    // An imported identifier works once.
-    let imported = MemberId::from_bytes([7; 16]);
-    group.insert_member(imported, person("Dan")).unwrap();
+    // The same member is added once, under its own identifier.
+    let dan = person("Dan");
+    assert_eq!(group.add_member(dan.clone()), Ok(dan.id()));
     assert_unchanged(
         &mut group,
-        &GroupError::DuplicateMember(imported),
-        |group| group.insert_member(imported, person("Dan")),
+        &GroupError::DuplicateMember(dan.id()),
+        |group| group.add_member(dan),
     );
-    // Unknown members are reported.
-    let stranger = MemberId::from_bytes([200; 16]);
-    assert_unchanged(&mut group, &GroupError::UnknownMember(stranger), |group| {
-        group.update_member(stranger, person("Eve"))
+    // A member the group does not have cannot be replaced.
+    let eve = person("Eve");
+    assert_unchanged(&mut group, &GroupError::UnknownMember(eve.id()), |group| {
+        group.replace_member(eve.clone())
     });
-    assert_eq!(group.member(stranger), None);
+    assert_eq!(group.member(eve.id()), None);
 }
 
 /// Archiving keeps a member's history and balance but keeps them out of new
@@ -191,6 +211,16 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
     group.archive_member(carol).unwrap();
     group.archive_member(carol).unwrap();
     assert!(group.is_archived(carol));
+    // New details keep her archived.
+    let renamed = group
+        .member(carol)
+        .unwrap()
+        .to_builder()
+        .last_name("Ionescu")
+        .build()
+        .unwrap();
+    group.replace_member(renamed).unwrap();
+    assert!(group.is_archived(carol));
     assert!(!group.is_archived(MemberId::from_bytes([200; 16])));
 
     // A new expense with Carol is refused.
@@ -199,17 +229,29 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
     });
     // Replacing an expense she was in may keep her, in any role.
     group
-        .replace_expense(dinner, shared("36.00", ana, &[ana, bob, carol]))
+        .replace_expense(replacement_expense(
+            dinner,
+            &shared("36.00", ana, &[ana, bob, carol]),
+        ))
         .unwrap();
     group
-        .replace_expense(dinner, shared("36.00", carol, &[ana, bob, carol]))
+        .replace_expense(replacement_expense(
+            dinner,
+            &shared("36.00", carol, &[ana, bob, carol]),
+        ))
         .unwrap();
     group
-        .replace_expense(dinner, shared("36.00", ana, &[ana, bob, carol]))
+        .replace_expense(replacement_expense(
+            dinner,
+            &shared("36.00", ana, &[ana, bob, carol]),
+        ))
         .unwrap();
     // Replacing one she was not in cannot add her.
     assert_unchanged(&mut group, &GroupError::ArchivedMember(carol), |group| {
-        group.replace_expense(lunch, shared("10.00", ana, &[ana, bob, carol]))
+        group.replace_expense(replacement_expense(
+            lunch,
+            &shared("10.00", ana, &[ana, bob, carol]),
+        ))
     });
     group.remove_expense(lunch).unwrap();
     // She can still settle up.
@@ -281,16 +323,18 @@ fn categories_keep_unique_names_and_their_expenses() {
         |group| group.add_category(Category::new("FOOD").unwrap()),
     );
     // Renaming to its own name in another case is fine; to another's is not.
-    group
-        .rename_category(food, Category::new("food").unwrap())
-        .unwrap();
+    let renamed = group.category(food).unwrap().renamed("food").unwrap();
+    group.replace_category(renamed).unwrap();
+    let clashing = group.category(fuel).unwrap().renamed("Food").unwrap();
     assert_unchanged(
         &mut group,
         &GroupError::DuplicateCategoryName { existing: food },
-        |group| group.rename_category(fuel, Category::new("Food").unwrap()),
+        |group| group.replace_category(clashing),
     );
+    // The same category is added once.
+    let again = group.category(fuel).unwrap().renamed("Other").unwrap();
     assert_unchanged(&mut group, &GroupError::DuplicateCategory(fuel), |group| {
-        group.insert_category(fuel, Category::new("Other").unwrap())
+        group.add_category(again)
     });
 
     // A category in use stays.
@@ -309,17 +353,13 @@ fn categories_keep_unique_names_and_their_expenses() {
     );
     assert_eq!(group.summary().category_total(Some(food)), eur("20.00"));
     // An unused one goes, and unknown ones are reported.
-    assert_eq!(
-        group
-            .remove_category(fuel)
-            .map(|category| category.name().to_owned()),
-        Ok("Fuel".to_owned())
-    );
+    let removed = group.remove_category(fuel).unwrap();
+    assert_eq!(removed.name(), "Fuel");
     assert_unchanged(&mut group, &GroupError::UnknownCategory(fuel), |group| {
         group.remove_category(fuel)
     });
     assert_unchanged(&mut group, &GroupError::UnknownCategory(fuel), |group| {
-        group.rename_category(fuel, Category::new("Fuel").unwrap())
+        group.replace_category(removed)
     });
     assert_eq!(
         group.categories().map(|(id, _)| id).collect::<Vec<_>>(),
@@ -404,7 +444,10 @@ fn expenses_move_the_totals_incrementally() {
 
     // Replacing moves the totals to the new version and returns the old one.
     let previous = group
-        .replace_expense(hotel, shared("60.00", bob, &[ana, bob]))
+        .replace_expense(replacement_expense(
+            hotel,
+            &shared("60.00", bob, &[ana, bob]),
+        ))
         .unwrap();
     assert_eq!(previous.amount(), eur("90.00"));
     assert_eq!(group.summary().total_spent(), eur("60.00"));
@@ -424,14 +467,14 @@ fn expenses_move_the_totals_incrementally() {
         group.remove_expense(hotel)
     });
     assert_unchanged(&mut group, &GroupError::UnknownExpense(hotel), |group| {
-        group.replace_expense(hotel, shared("1.00", ana, &[ana]))
+        group.replace_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
     });
     // An imported identifier works once.
     group
-        .insert_expense(hotel, shared("1.00", ana, &[ana]))
+        .add_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
         .unwrap();
     assert_unchanged(&mut group, &GroupError::DuplicateExpense(hotel), |group| {
-        group.insert_expense(hotel, shared("1.00", ana, &[ana]))
+        group.add_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
     });
     assert_eq!(
         group.expenses().map(|(id, _)| id).collect::<Vec<_>>(),
@@ -467,7 +510,9 @@ fn transfers_move_balances_exactly() {
     )
     .build()
     .unwrap();
-    let previous = group.replace_transfer(repayment, cash).unwrap();
+    let previous = group
+        .replace_transfer(replacement_transfer(repayment, &cash))
+        .unwrap();
     assert_eq!(previous.amount(), eur("10.00"));
     assert_eq!(group.transfer_amount(repayment), Some(eur("10.00")));
     assert_eq!(
@@ -488,7 +533,7 @@ fn transfers_move_balances_exactly() {
     assert_unchanged(
         &mut group,
         &GroupError::DuplicateTransfer(repayment),
-        |group| group.insert_transfer(repayment, transfer(ana, bob, "1.00")),
+        |group| group.add_transfer(replacement_transfer(repayment, &transfer(ana, bob, "1.00"))),
     );
     group.remove_transfer(repayment).unwrap();
     assert_unchanged(
@@ -499,7 +544,9 @@ fn transfers_move_balances_exactly() {
     assert_unchanged(
         &mut group,
         &GroupError::UnknownTransfer(repayment),
-        |group| group.replace_transfer(repayment, transfer(ana, bob, "1.00")),
+        |group| {
+            group.replace_transfer(replacement_transfer(repayment, &transfer(ana, bob, "1.00")))
+        },
     );
     assert_eq!(group.transfers().len(), 0);
     assert_eq!(group.transfer_amount(repayment), None);
@@ -524,7 +571,7 @@ fn settlements_are_cached_until_a_balance_changes() {
     );
 
     // Members and categories do not move balances, so the cache stays.
-    group.add_member(person("Dan"));
+    group.add_member(person("Dan")).unwrap();
     group.add_category(Category::new("Food").unwrap()).unwrap();
     assert!(std::ptr::eq(
         first,
@@ -634,25 +681,16 @@ fn equality_ignores_the_caches() {
 #[test]
 fn an_overflowing_expense_is_refused() {
     let (mut group, ana, bob, _) = trip();
-    let huge = Money::from_minor_units(Currency::EUR, i64::MAX);
-    let first = Expense::builder(huge, day(), "Huge", ana, Split::equal([bob]))
-        .build()
-        .unwrap();
-    group.add_expense(first.clone()).unwrap();
+    let huge = || {
+        let amount = Money::from_minor_units(Currency::EUR, i64::MAX);
+        Expense::builder(amount, day(), "Huge", ana, Split::equal([bob]))
+            .build()
+            .unwrap()
+    };
+    group.add_expense(huge()).unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.add_expense(first)
+        group.add_expense(huge())
     });
-}
-
-/// A generated identifier that is already taken is drawn again instead of
-/// overwriting the entry that holds it.
-#[test]
-fn a_taken_identifier_is_drawn_again() {
-    let taken = BTreeMap::from([(1, "first"), (2, "second")]);
-    let mut draws = [1, 2, 1, 3, 4].into_iter();
-    assert_eq!(unused_id(&taken, || draws.next().unwrap()), 3);
-    // It stops at the first free one.
-    assert_eq!(draws.next(), Some(4));
 }
 
 /// Archiving or unarchiving someone who is not a member is an error, not a
@@ -775,7 +813,10 @@ fn a_replacement_out_of_range_is_refused() {
     let second = group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     // LARGE and HUGE together are past i64::MAX.
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_expense(second, paid_for(cents(HUGE), ana, bob))
+        group.replace_expense(replacement_expense(
+            second,
+            &paid_for(cents(HUGE), ana, bob),
+        ))
     });
     let foreign = Expense::builder(
         huge_in_lei().at(two()),
@@ -787,7 +828,7 @@ fn a_replacement_out_of_range_is_refused() {
     .build()
     .unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_expense(second, foreign)
+        group.replace_expense(replacement_expense(second, &foreign))
     });
 }
 
@@ -842,14 +883,20 @@ fn a_transfer_out_of_range_is_refused() {
     let repayment = group.add_transfer(sent(bob, ana, cents(EXTRA))).unwrap();
     // The other way round, Ana would be owed 1e19.
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_transfer(repayment, sent(ana, bob, cents(EXTRA)))
+        group.replace_transfer(replacement_transfer(
+            repayment,
+            &sent(ana, bob, cents(EXTRA)),
+        ))
     });
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_transfer(repayment, foreign)
+        group.replace_transfer(replacement_transfer(repayment, &foreign))
     });
     let stranger = MemberId::from_bytes([200; 16]);
     assert_unchanged(&mut group, &GroupError::UnknownMember(stranger), |group| {
-        group.replace_transfer(repayment, sent(stranger, ana, cents(EXTRA)))
+        group.replace_transfer(replacement_transfer(
+            repayment,
+            &sent(stranger, ana, cents(EXTRA)),
+        ))
     });
 }
 
@@ -961,7 +1008,7 @@ fn apply(group: &mut Group, members: &[MemberId], operation: &Operation) -> bool
             let Ok(expense) = expense.build() else {
                 return false;
             };
-            group.replace_expense(id, expense).is_ok()
+            group.replace_expense(expense).is_ok()
         }
         Operation::Unarchive { member } => group.unarchive_member(members[member]).is_ok(),
     }
@@ -974,7 +1021,7 @@ proptest! {
     #[test]
     fn random_changes_keep_the_group_consistent(operations in proptest::collection::vec(operation(), 1..40)) {
         let mut group = Group::builder(Currency::EUR, "Random").build().unwrap();
-        let members: Vec<MemberId> = ["Ana", "Bob", "Carol", "Dan", "Eve"].iter().map(|name| group.add_member(person(name))).collect();
+        let members: Vec<MemberId> = ["Ana", "Bob", "Carol", "Dan", "Eve"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
         for operation in &operations {
             let before = group.clone();
             if !apply(&mut group, &members, operation) {

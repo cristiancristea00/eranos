@@ -1,7 +1,8 @@
 //! Categories sort a group's expenses, and their names must be unique within
 //! the group whatever their letter case. These tests keep names trimmed and
-//! present, and keep the folded name that uniqueness is checked on the same
-//! for names that differ only in case, in any script.
+//! present, keep the folded name that uniqueness is checked on the same for
+//! names that differ only in case, in any script, and keep a category's
+//! identifier through a rename and a save.
 
 use super::*;
 
@@ -76,19 +77,39 @@ fn different_names_fold_differently() {
     assert_eq!(category("FOOD").name(), "FOOD");
 }
 
-/// Saved categories would fail to load, or one with a blank name would load.
+/// Two categories would share an identifier, or a renamed one would lose its
+/// expenses by getting a new one.
+#[test]
+fn a_rename_keeps_the_identifier() {
+    let food = category("Food");
+    assert_ne!(category("Food").id(), food.id());
+    // Renamed, trimmed, and validated like `new`.
+    let groceries = food.renamed(" Groceries ").unwrap();
+    assert_eq!(groceries.id(), food.id());
+    assert_eq!(groceries.name(), "Groceries");
+    assert_eq!(
+        food.renamed(" "),
+        Err(ValueError::Empty {
+            field: Field::CategoryName
+        })
+    );
+}
+
+/// Saved categories would fail to load, load under another identifier, or
+/// load with a blank name.
 #[cfg(feature = "serde")]
 #[test]
 fn categories_round_trip_through_serde() {
-    // Round trip.
+    // Round trip, the identifier first.
     let food = category("Food");
     let json = serde_json::to_string(&food).unwrap();
-    assert_eq!(json, r#"{"name":"Food"}"#);
+    assert_eq!(json, format!(r#"{{"id":"{}","name":"Food"}}"#, food.id()));
     assert_eq!(serde_json::from_str::<Category>(&json).unwrap(), food);
     // Loading trims and validates like `new`.
-    assert_eq!(
-        serde_json::from_str::<Category>(r#"{"name":" Food "}"#).unwrap(),
-        food
-    );
-    assert!(serde_json::from_str::<Category>(r#"{"name":" "}"#).is_err());
+    let padded = format!(r#"{{"id":"{}","name":" Food "}}"#, food.id());
+    assert_eq!(serde_json::from_str::<Category>(&padded).unwrap(), food);
+    let blank = format!(r#"{{"id":"{}","name":" "}}"#, food.id());
+    assert!(serde_json::from_str::<Category>(&blank).is_err());
+    // The identifier is required.
+    assert!(serde_json::from_str::<Category>(r#"{"name":"Food"}"#).is_err());
 }

@@ -34,12 +34,18 @@ fn group(size: usize) -> Group {
     let mut group = Group::builder(Currency::EUR, "Benchmark")
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
-    let member = Member::builder("Member")
-        .build()
-        .unwrap_or_else(|error| panic!("{error}"));
-    let members: Vec<MemberId> = iter::repeat_with(|| group.add_member(member.clone()))
-        .take(size)
-        .collect();
+    // A member of their own for each slot, since a group holds each member
+    // once.
+    let members: Vec<MemberId> = iter::repeat_with(|| {
+        let member = Member::builder("Member")
+            .build()
+            .unwrap_or_else(|error| panic!("{error}"));
+        group
+            .add_member(member)
+            .unwrap_or_else(|error| panic!("{error}"))
+    })
+    .take(size)
+    .collect();
     let mut draws = Draws(0x9e37_79b9_7f4a_7c15);
     let day = Date::new(23, 9, 2026).unwrap_or_else(|error| panic!("{error}"));
     for &payer in &members {

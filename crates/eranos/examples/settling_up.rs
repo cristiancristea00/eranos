@@ -194,7 +194,7 @@ fn strategies(group: &Group) -> Result<[usize; 3], Box<dyn Error>> {
 fn main() -> Result<(), Box<dyn Error>> {
     let mut group = Group::builder(Currency::EUR, "Ski week").build()?;
     let mut add = |name| -> Result<MemberId, Box<dyn Error>> {
-        Ok(group.add_member(Member::builder(name).build()?))
+        Ok(group.add_member(Member::builder(name).build()?)?)
     };
     let (ana, bob, carol) = (add("Ana")?, add("Bob")?, add("Carol")?);
     let (dan, eva, filip) = (add("Dan")?, add("Eva")?, add("Filip")?);

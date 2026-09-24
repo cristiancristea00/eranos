@@ -66,7 +66,7 @@ companion that pins concrete numbers.
 | incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing | `group/tests.rs`                                                                   |
 | paid, consumed, and spent agree; balances sum to zero; category totals add up                           | `tests/properties.rs`                                                              |
 | the order entries arrive in does not change the group, its totals, or its plans                         | `tests/properties.rs`                                                              |
-| removing and re-inserting an expense restores the totals exactly                                        | `tests/properties.rs`                                                              |
+| removing an expense and adding it back restores the totals exactly                                      | `tests/properties.rs`                                                              |
 | a group round-trips through JSON unchanged                                                              | `tests/persistence.rs`                                                             |
 
 ## 4. Writing a test here
@@ -92,10 +92,12 @@ Names are claims in snake_case, never `test_*`:
 ### Helpers and fixtures
 
 Helpers are plain functions at the top of the test file (`member(1)`,
-`eur("12.00")`, `day()`). Identifiers that must be reproducible use
-`MemberId::from_bytes([number; 16])` and the `insert_*` methods, because
-`add_*` generates time-based IDs; the tie rotation depends on the ID, so a
-test that pins which member receives a leftover cent must fix it.
+`eur("12.00")`, `day()`). An entity gets a time-based ID when it is built;
+the tie rotation depends on an expense's ID, so a unit test that pins
+which member receives a leftover cent builds it with the test-only
+`ExpenseBuilder::with_id`. An integration test sees only the public API:
+it builds its entries once and clones them, and a base group, wherever
+two groups must be equal.
 
 ### Lints in tests
 
@@ -131,12 +133,10 @@ follows three rules:
   hand-built deltas, because no group entry can push some of them out of
   range.
 - **A branch that cannot run is removed, not kept as a fallback.** A
-  function whose failure is impossible becomes infallible (`allocate`), a
-  loop ends on its own condition instead of through a fallback that never
-  runs (the exact solver's walk back), and a retry that needs a UUID
-  collision takes its generator as a parameter so a test can collide
-  (`unused_id`). A lossless integer conversion falls back with
-  `unwrap_or_default()` and a comment saying why it cannot fail.
+  function whose failure is impossible becomes infallible (`allocate`), and
+  a loop ends on its own condition instead of through a fallback that never
+  runs (the exact solver's walk back). A lossless integer conversion falls
+  back with `unwrap_or_default()` and a comment saying why it cannot fail.
 - **Generic functions stay small.** A generic function is measured per
   instantiation and the report keeps the best single one, so logic that
   every instantiation shares lives in a non-generic function (the replay

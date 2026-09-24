@@ -135,8 +135,8 @@ fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
             )?)
             .account(Account::new(Username::new("@ana")?, "Revolut")?)
             .build()?,
-    );
-    let bob = group.add_member(Member::builder("Bob").build()?);
+    )?;
+    let bob = group.add_member(Member::builder("Bob").build()?)?;
     print_members(group);
     println!(
         "The phone number was stored without its spaces, and the IBAN in its electronic\n\

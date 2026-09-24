@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 use crate::error::GroupError;
 use crate::expense::{Expense, ExpenseSplit, Tip, TipDistribution};
-use crate::id::{ExpenseId, MemberId};
+use crate::id::MemberId;
 use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare};
 use crate::money::allocation::{allocate, rotation};
 use crate::money::{Currency, ExchangeRate, Money};
@@ -36,11 +36,10 @@ const PASS_DEBTS: u64 = 2 << 32;
 /// when the rate does not match the currencies, and [`GroupError::Overflow`]
 /// when the conversion leaves the range of an amount.
 pub(crate) fn resolve_expense(
-    id: ExpenseId,
     expense: &Expense,
     currency: Currency,
 ) -> Result<ExpenseShares, GroupError> {
-    let seed = id.to_bytes();
+    let seed = expense.id().to_bytes();
     let pass = |number: u64| rotation(seed, number);
     let amount = expense.amount().minor_units();
     let tip = expense.tip_amount().minor_units();

@@ -110,9 +110,9 @@ fn consumed(shares: &ExpenseShares, member: MemberId) -> Result<Money, Box<dyn E
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut group = Group::builder(Currency::EUR, "Dinner at Caru' cu Bere").build()?;
-    let ana = group.add_member(Member::builder("Ana").build()?);
-    let bob = group.add_member(Member::builder("Bob").build()?);
-    let carol = group.add_member(Member::builder("Carol").build()?);
+    let ana = group.add_member(Member::builder("Ana").build()?)?;
+    let bob = group.add_member(Member::builder("Bob").build()?)?;
+    let carol = group.add_member(Member::builder("Carol").build()?)?;
     let day = Date::new(23, 9, 2026)?;
 
     println!("{}: an itemised bill", group.name());
