@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use crate::error::MoneyError;
 use crate::expense::{Expense, ExpenseSplit, TipDistribution};
 use crate::id::MemberId;
-use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare, ResolvedExpense};
+use crate::ledger::{Debt, MemberPair, MemberShare, ResolvedExpense};
 use crate::money::allocation::{allocate, rotation};
 use crate::money::{Currency, ExchangeRate, Money};
 
@@ -119,21 +119,18 @@ pub(crate) fn resolve_expense(
         members.entry(member).or_default().1 = consumed;
     }
     let money = |minor_units| Money::from_minor_units(currency, minor_units);
-    Ok(ResolvedExpense {
+    let members = members
+        .into_iter()
+        .map(|(member, (payment, consumed))| {
+            MemberShare::new(member, money(payment), money(consumed))
+        })
+        .collect();
+    Ok(ResolvedExpense::new(
         debts,
-        shares: ExpenseShares {
-            members: members
-                .into_iter()
-                .map(|(member, (payment, consumed))| MemberShare {
-                    member,
-                    paid: money(payment),
-                    share: money(consumed),
-                })
-                .collect(),
-            tip: money(tip),
-            total: money(total),
-        },
-    })
+        members,
+        money(tip),
+        money(total),
+    ))
 }
 
 /// Converts `amount` at `rate` into `currency`: `None` for an amount without

@@ -308,6 +308,16 @@ pub struct MemberShare {
 }
 
 impl MemberShare {
+    /// Returns what `member` paid towards and consumed of one expense.
+    #[must_use]
+    pub const fn new(member: MemberId, paid: Money, share: Money) -> Self {
+        Self {
+            member,
+            paid,
+            share,
+        }
+    }
+
     /// The member.
     #[must_use]
     pub const fn member(&self) -> MemberId {
@@ -375,6 +385,26 @@ pub(crate) struct Debt {
 pub(crate) struct ResolvedExpense {
     pub(crate) debts: Vec<Debt>,
     pub(crate) shares: ExpenseShares,
+}
+
+impl ResolvedExpense {
+    /// Returns the expense with these debts and, in `members`, sorted by
+    /// member, what each involved member paid and consumed.
+    pub(crate) const fn new(
+        debts: Vec<Debt>,
+        members: Vec<MemberShare>,
+        tip: Money,
+        total: Money,
+    ) -> Self {
+        Self {
+            debts,
+            shares: ExpenseShares {
+                members,
+                tip,
+                total,
+            },
+        }
+    }
 }
 
 /// A value outside the ledger's range.

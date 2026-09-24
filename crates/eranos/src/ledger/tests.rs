@@ -31,28 +31,19 @@ fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> Res
     for &(participant, share) in participants {
         members.entry(participant).or_default().1 = share;
     }
-    ResolvedExpense {
-        debts: participants
-            .iter()
-            .filter(|&&(participant, _)| participant != payer)
-            .map(|&(debtor, amount)| Debt {
-                amount,
-                members: pair(debtor, payer),
-            })
-            .collect(),
-        shares: ExpenseShares {
-            members: members
-                .into_iter()
-                .map(|(member, (paid, share))| MemberShare {
-                    member,
-                    paid: eur(paid),
-                    share: eur(share),
-                })
-                .collect(),
-            tip: eur(0),
-            total: eur(total),
-        },
-    }
+    let debts = participants
+        .iter()
+        .filter(|&&(participant, _)| participant != payer)
+        .map(|&(debtor, amount)| Debt {
+            amount,
+            members: pair(debtor, payer),
+        })
+        .collect();
+    let members = members
+        .into_iter()
+        .map(|(member, (paid, share))| MemberShare::new(member, eur(paid), eur(share)))
+        .collect();
+    ResolvedExpense::new(debts, members, eur(0), eur(total))
 }
 
 fn applied(ledger: &mut Ledger, change: impl FnOnce(&mut Delta)) -> Result<(), Overflow> {

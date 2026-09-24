@@ -40,13 +40,13 @@ fn day() -> CalendarDate {
 fn rows(resolved: &ResolvedExpense) -> Vec<(MemberId, i64, i64)> {
     resolved
         .shares
-        .members
+        .members()
         .iter()
         .map(|share| {
             (
-                share.member,
-                share.paid.minor_units(),
-                share.share.minor_units(),
+                share.member(),
+                share.paid().minor_units(),
+                share.share().minor_units(),
             )
         })
         .collect()
@@ -98,8 +98,8 @@ fn a_single_payer_is_owed_every_other_share() {
     assert_eq!(resolved.debts.len(), 2);
     assert!(resolved.debts.iter().all(|debt| debt.members.to == ana));
     assert_eq!(debt_nets(&resolved)[&ana], 1000 - rows(&resolved)[0].2);
-    assert_eq!(resolved.shares.total, eur(1000));
-    assert_eq!(resolved.shares.tip, eur(0));
+    assert_eq!(resolved.shares.total(), eur(1000));
+    assert_eq!(resolved.shares.tip(), eur(0));
 }
 
 /// A proportional tip follows consumption: whoever ordered twice as much
@@ -124,7 +124,7 @@ fn a_proportional_tip_follows_the_shares() {
 
     // 60.00 + 6.00 and 30.00 + 3.00; Ana paid the 99.00 total.
     assert_eq!(rows(&resolved), vec![(ana, 9900, 6600), (bob, 0, 3300)]);
-    assert_eq!(resolved.shares.tip, eur(900));
+    assert_eq!(resolved.shares.tip(), eur(900));
 }
 
 /// An equal tip ignores consumption: the 9.00 tip is 4.50 each.
@@ -227,7 +227,7 @@ fn a_foreign_expense_converts_its_total_once() {
 
     // 10.00 EUR × 4.9765 = 49.765 RON, rounded half up to 49.77.
     assert_eq!(
-        resolved.shares.total,
+        resolved.shares.total(),
         Money::from_minor_units(Currency::RON, 4977)
     );
     let consumed: Vec<i64> = rows(&resolved).iter().map(|&(_, _, share)| share).collect();
@@ -254,8 +254,8 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
     let resolved = resolve_expense(&identified(&lunch, entry(1)), Currency::EUR).unwrap();
 
     // 3 300 JPY × 0.0061 = 20.13 EUR, of which one eleventh is tip.
-    assert_eq!(resolved.shares.total, eur(2013));
-    assert_eq!(resolved.shares.tip, eur(183));
+    assert_eq!(resolved.shares.total(), eur(2013));
+    assert_eq!(resolved.shares.tip(), eur(183));
 }
 
 /// A currency pegged at par, such as the Bermudian dollar to the US dollar,
@@ -276,7 +276,7 @@ fn a_conversion_at_one_converts_a_pegged_currency() {
     .unwrap();
     let resolved = resolve_expense(&identified(&pegged, entry(1)), Currency::USD).unwrap();
     assert_eq!(
-        resolved.shares.total,
+        resolved.shares.total(),
         Money::from_minor_units(Currency::USD, 5_000)
     );
 }
@@ -318,7 +318,7 @@ fn a_payer_converted_to_nothing_is_owed_nothing() {
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&sweets, entry(1)), Currency::EUR).unwrap();
-    assert_eq!(resolved.shares.total, eur(1));
+    assert_eq!(resolved.shares.total(), eur(1));
     let paid: Vec<i64> = rows(&resolved).iter().map(|&(_, paid, _)| paid).collect();
     assert_eq!(paid.iter().sum::<i64>(), 1);
     assert!(paid.contains(&0));
@@ -408,12 +408,12 @@ proptest! {
     ) {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, equal_tip, foreign);
         let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), Currency::EUR).unwrap();
-        let total = resolved.shares.total.minor_units();
+        let total = resolved.shares.total().minor_units();
         prop_assert_eq!(rows(&resolved).iter().map(|&(_, paid, _)| paid).sum::<i64>(), total);
         prop_assert_eq!(rows(&resolved).iter().map(|&(_, _, share)| share).sum::<i64>(), total);
-        prop_assert!(resolved.shares.tip.minor_units() <= total);
+        prop_assert!(resolved.shares.tip().minor_units() <= total);
         if foreign.is_none() {
-            prop_assert_eq!(resolved.shares.total, expense.total());
+            prop_assert_eq!(resolved.shares.total(), expense.total());
         }
     }
 
