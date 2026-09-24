@@ -10,8 +10,9 @@ use proptest::prelude::*;
 
 use super::*;
 use crate::calendar::CalendarDate;
-use crate::expense::{MemberParts, Split};
+use crate::expense::{ExpenseBuilder, MemberParts, Split};
 use crate::money::{Cost, Parts};
+use crate::transfer::TransferBuilder;
 
 fn eur(text: &str) -> Money {
     Money::parse(text, Currency::EUR).unwrap()
@@ -52,14 +53,28 @@ fn transfer(from: MemberId, to: MemberId, amount: &str) -> Transfer {
         .unwrap()
 }
 
-/// `expense` as a new version of the expense `id`.
-fn replacement_expense(id: ExpenseId, expense: &Expense) -> Expense {
-    expense.to_builder().with_id(id).build().unwrap()
+/// A new version of the group's expense `id`, made as an app makes one: the
+/// stored expense's builder, changed by `edit`.
+fn edited_expense(
+    group: &Group,
+    id: ExpenseId,
+    edit: impl FnOnce(ExpenseBuilder) -> ExpenseBuilder,
+) -> Expense {
+    edit(group.expense(id).unwrap().to_builder())
+        .build()
+        .unwrap()
 }
 
-/// `transfer` as a new version of the transfer `id`.
-fn replacement_transfer(id: TransferId, transfer: &Transfer) -> Transfer {
-    transfer.to_builder().with_id(id).build().unwrap()
+/// A new version of the group's transfer `id`, made as an app makes one:
+/// the stored transfer's builder, changed by `edit`.
+fn edited_transfer(
+    group: &Group,
+    id: TransferId,
+    edit: impl FnOnce(TransferBuilder) -> TransferBuilder,
+) -> Transfer {
+    edit(group.transfer(id).unwrap().to_builder())
+        .build()
+        .unwrap()
 }
 
 /// The ledger recomputed from scratch from the group's entries, checking
@@ -211,30 +226,18 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
         group.add_expense(shared("5.00", ana, &[ana, carol]))
     });
     // Replacing an expense she was in may keep her, in any role.
-    group
-        .replace_expense(replacement_expense(
-            dinner,
-            &shared("36.00", ana, &[ana, bob, carol]),
-        ))
-        .unwrap();
-    group
-        .replace_expense(replacement_expense(
-            dinner,
-            &shared("36.00", carol, &[ana, bob, carol]),
-        ))
-        .unwrap();
-    group
-        .replace_expense(replacement_expense(
-            dinner,
-            &shared("36.00", ana, &[ana, bob, carol]),
-        ))
-        .unwrap();
+    let dearer = edited_expense(&group, dinner, |builder| builder.cost(eur("36.00")));
+    group.replace_expense(dearer).unwrap();
+    let paid_by_her = edited_expense(&group, dinner, |builder| builder.paid_by(carol));
+    group.replace_expense(paid_by_her).unwrap();
+    let paid_back = edited_expense(&group, dinner, |builder| builder.paid_by(ana));
+    group.replace_expense(paid_back).unwrap();
     // Replacing one she was not in cannot add her.
+    let with_her = edited_expense(&group, lunch, |builder| {
+        builder.split(Split::equal([ana, bob, carol]))
+    });
     assert_unchanged(&mut group, &GroupError::ArchivedMember(carol), |group| {
-        group.replace_expense(replacement_expense(
-            lunch,
-            &shared("10.00", ana, &[ana, bob, carol]),
-        ))
+        group.replace_expense(with_her)
     });
     group.remove_expense(lunch).unwrap();
     // She can still settle up.
@@ -506,12 +509,13 @@ fn expenses_move_the_totals_incrementally() {
     );
 
     // Replacing moves the totals to the new version and returns the old one.
-    let previous = group
-        .replace_expense(replacement_expense(
-            hotel,
-            &shared("60.00", bob, &[ana, bob]),
-        ))
-        .unwrap();
+    let cheaper = edited_expense(&group, hotel, |builder| {
+        builder
+            .cost(eur("60.00"))
+            .paid_by(bob)
+            .split(Split::equal([ana, bob]))
+    });
+    let previous = group.replace_expense(cheaper).unwrap();
     assert_eq!(previous.amount(), eur("90.00"));
     assert_eq!(group.summary().total_spent(), eur("60.00"));
     assert_eq!(
@@ -521,23 +525,20 @@ fn expenses_move_the_totals_incrementally() {
     assert_eq!(group.ledger, rebuilt(&group));
 
     // Removing restores the empty ledger exactly.
-    assert_eq!(
-        group.remove_expense(hotel).map(|expense| expense.amount()),
-        Ok(eur("60.00"))
-    );
+    let removed = group.remove_expense(hotel).unwrap();
+    assert_eq!(removed.amount(), eur("60.00"));
     assert_eq!(group.ledger, empty);
     assert_unchanged(&mut group, &GroupError::UnknownExpense(hotel), |group| {
         group.remove_expense(hotel)
     });
     assert_unchanged(&mut group, &GroupError::UnknownExpense(hotel), |group| {
-        group.replace_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
+        group.replace_expense(removed.clone())
     });
-    // An imported identifier works once.
-    group
-        .add_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
-        .unwrap();
+    // An entry with a known identifier, such as one synced from another
+    // device, is added once.
+    group.add_expense(removed.clone()).unwrap();
     assert_unchanged(&mut group, &GroupError::DuplicateExpense(hotel), |group| {
-        group.add_expense(replacement_expense(hotel, &shared("1.00", ana, &[ana])))
+        group.add_expense(removed)
     });
     assert_eq!(
         group.expenses().map(Expense::id).collect::<Vec<_>>(),
@@ -563,19 +564,13 @@ fn transfers_move_balances_exactly() {
     assert_eq!(group.transfer(repayment).map(Transfer::from), Some(bob));
 
     // A cash repayment in another currency converts with its rate.
-    let cash = Transfer::builder(
-        Money::parse("50.00", Currency::RON)
-            .unwrap()
-            .at(ExchangeRate::parse("0.2").unwrap()),
-        day(),
-        carol,
-        ana,
-    )
-    .build()
-    .unwrap();
-    let previous = group
-        .replace_transfer(replacement_transfer(repayment, &cash))
-        .unwrap();
+    let lei = Money::parse("50.00", Currency::RON).unwrap();
+    let cash = edited_transfer(&group, repayment, |builder| {
+        builder
+            .cost(lei.at(ExchangeRate::parse("0.2").unwrap()))
+            .from(carol)
+    });
+    let previous = group.replace_transfer(cash).unwrap();
     assert_eq!(previous.amount(), eur("10.00"));
     assert_eq!(group.transfer_amount(repayment), Some(eur("10.00")));
     assert_eq!(
@@ -593,12 +588,13 @@ fn transfers_move_balances_exactly() {
     assert_unchanged(&mut group, &GroupError::UnknownMember(stranger), |group| {
         group.add_transfer(transfer(ana, stranger, "1.00"))
     });
+    let copy = group.transfer(repayment).unwrap().clone();
     assert_unchanged(
         &mut group,
         &GroupError::DuplicateTransfer(repayment),
-        |group| group.add_transfer(replacement_transfer(repayment, &transfer(ana, bob, "1.00"))),
+        |group| group.add_transfer(copy),
     );
-    group.remove_transfer(repayment).unwrap();
+    let removed = group.remove_transfer(repayment).unwrap();
     assert_unchanged(
         &mut group,
         &GroupError::UnknownTransfer(repayment),
@@ -607,9 +603,7 @@ fn transfers_move_balances_exactly() {
     assert_unchanged(
         &mut group,
         &GroupError::UnknownTransfer(repayment),
-        |group| {
-            group.replace_transfer(replacement_transfer(repayment, &transfer(ana, bob, "1.00")))
-        },
+        |group| group.replace_transfer(removed),
     );
     assert_eq!(group.transfers().len(), 0);
     assert_eq!(group.transfer_amount(repayment), None);
@@ -759,8 +753,9 @@ fn a_transfer_cost_must_suit_the_group_currency() {
     });
     // A replacement is checked the same way.
     let cash = group.add_transfer(transfer(ana, bob, "25.00")).unwrap();
+    let unrated = edited_transfer(&group, cash, |builder| builder.cost(lei().cost()));
     assert_unchanged(&mut group, &missing, |group| {
-        group.replace_transfer(replacement_transfer(cash, &lei()))
+        group.replace_transfer(unrated)
     });
 }
 
@@ -963,23 +958,15 @@ fn a_replacement_out_of_range_is_refused() {
     group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     let second = group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     // LARGE and HUGE together are past i64::MAX.
+    let huge = edited_expense(&group, second, |builder| builder.cost(cents(HUGE)));
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_expense(replacement_expense(
-            second,
-            &paid_for(cents(HUGE), ana, bob),
-        ))
+        group.replace_expense(huge)
     });
-    let foreign = Expense::builder(
-        huge_in_lei().at(two()),
-        day(),
-        "Foreign",
-        ana,
-        Split::equal([bob]),
-    )
-    .build()
-    .unwrap();
+    let foreign = edited_expense(&group, second, |builder| {
+        builder.cost(huge_in_lei().at(two()))
+    });
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_expense(replacement_expense(second, &foreign))
+        group.replace_expense(foreign)
     });
 }
 
@@ -1033,21 +1020,18 @@ fn a_transfer_out_of_range_is_refused() {
 
     let repayment = group.add_transfer(sent(bob, ana, cents(EXTRA))).unwrap();
     // The other way round, Ana would be owed 1e19.
+    let reversed = edited_transfer(&group, repayment, |builder| builder.from(ana).to(bob));
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_transfer(replacement_transfer(
-            repayment,
-            &sent(ana, bob, cents(EXTRA)),
-        ))
+        group.replace_transfer(reversed)
     });
+    let converted = edited_transfer(&group, repayment, |builder| builder.cost(foreign.cost()));
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
-        group.replace_transfer(replacement_transfer(repayment, &foreign))
+        group.replace_transfer(converted)
     });
     let stranger = MemberId::from_bytes([200; 16]);
+    let from_a_stranger = edited_transfer(&group, repayment, |builder| builder.from(stranger));
     assert_unchanged(&mut group, &GroupError::UnknownMember(stranger), |group| {
-        group.replace_transfer(replacement_transfer(
-            repayment,
-            &sent(stranger, ana, cents(EXTRA)),
-        ))
+        group.replace_transfer(from_a_stranger)
     });
 }
 
