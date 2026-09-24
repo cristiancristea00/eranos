@@ -170,9 +170,10 @@ commit was tested, and those checks show on the pull request.
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a
 month, with macOS minutes counting about ten times and Windows minutes about
-twice. Jobs are billed in whole minutes, so a push costs roughly 15 to 20;
-the macOS and Windows jobs run only when dispatched from the Actions tab or
-with `gh workflow run ci.yml --ref main`. When the minutes run out, runs stop
+twice. Every job is billed in whole minutes, so a push costs about 7 (10
+while the caches are cold) and a run with macOS and Windows about 25. Those
+two jobs run only when dispatched from the Actions tab or with
+`gh workflow run ci.yml --ref main`. When the minutes run out, runs stop
 until the next month; nothing is billed. The plan has no branch protection,
 so a failing run blocks nothing: it is a report.
 
