@@ -441,7 +441,7 @@ The core is shaped for binding crates added as workspace siblings:
   generation reads the clock and the random source, which
   `wasm32-unknown-unknown` provides only through JavaScript.
 - Public types have no lifetimes or generic parameters on their data, IDs
-  are `Copy`, and every public type is `Send + Sync`, which a unit test
+  are `Copy`, and every public type is `Send + Sync`, which `tests/api.rs`
   asserts.
 
 ## 12. Key numbers

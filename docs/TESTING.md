@@ -40,6 +40,7 @@ every command.
 | Properties  | `crates/eranos/tests/properties.rs`     | public API                            | `cargo test -p eranos --test properties`                 |
 | Persistence | `crates/eranos/tests/persistence.rs`    | public API, feature `serde`           | `cargo test -p eranos --all-features --test persistence` |
 | Errors      | `crates/eranos/tests/errors.rs`         | public API: every error message       | `cargo test -p eranos --test errors`                     |
+| API         | `crates/eranos/tests/api.rs`            | public API: every type `Send + Sync`  | `cargo test -p eranos --test api`                        |
 | Doctests    | every `# Examples` block and the README | public API                            | `cargo test -p eranos --doc`                             |
 | Examples    | `crates/eranos/examples/*.rs`           | public API; they assert their numbers | `cargo run -p eranos --example <name>`                   |
 | Benchmarks  | `crates/eranos/benches/*.rs`            | public API                            | `cargo bench -p eranos`                                  |

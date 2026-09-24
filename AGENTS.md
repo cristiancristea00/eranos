@@ -112,6 +112,8 @@ failure); `#[allow]` is itself a lint error.
   rejected (inputs include account numbers). No error wraps another and
   none converts into another: a function reports its own module's failure,
   and a caller that mixes modules uses `Box<dyn Error>` or its own type.
+  Every public type is `Send` and `Sync`, and a new one joins the list in
+  `tests/api.rs` that asserts it.
 - **A builder starts complete.** A type with a builder names its
   constructors `builder` or a variant of it (`itemised_builder`,
   `builder_with_payers`, `builder_with_split`), and `to_builder` starts an

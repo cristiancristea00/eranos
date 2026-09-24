@@ -100,23 +100,6 @@ fn assert_unchanged<T: std::fmt::Debug>(
     assert_eq!(group.ledger, before.ledger);
 }
 
-const fn assert_send_sync<T: Send + Sync>() {}
-
-/// Every public type crosses threads, which the future binding crates rely
-/// on (`UniFFI` objects must be `Send + Sync`).
-#[test]
-fn every_public_type_is_send_and_sync() {
-    const {
-        assert_send_sync::<Group>();
-        assert_send_sync::<Summary>();
-        assert_send_sync::<Settlement>();
-        assert_send_sync::<Expense>();
-        assert_send_sync::<Member>();
-        assert_send_sync::<Transfer>();
-        assert_send_sync::<GroupError>();
-    }
-}
-
 /// A new group starts empty, with its normalised details and an
 /// identifier of its own.
 #[test]
