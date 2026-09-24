@@ -453,7 +453,10 @@ serialise. A group serialises only its inputs, never the derived totals:
   `into_group` reports it as a `GroupError`, so an app can tell a newer
   file from a damaged one. An entry that could never have been built fails
   the read in both cases, since every entity deserialises through its
-  validating constructor.
+  validating constructor. `into_group_async` replays the same steps,
+  yielding once per 1 024 of them; it owns the saved form, so a dropped
+  load leaves nothing behind, and a copy of the `SavedGroup` starts it
+  again.
 - `format` is checked: a newer one is refused rather than read with fields
   silently dropped (`GroupError::UnsupportedFormat`). New optional fields
   get `#[serde(default)]`, so files written by older releases keep

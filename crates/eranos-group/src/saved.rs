@@ -7,7 +7,10 @@
 //! end, because an expense may reference a member who was archived after it
 //! was added.
 
+use std::future::Future;
+
 use eranos_category::Category;
+use eranos_core::cooperative::{Cooperative, Pacer};
 use eranos_core::{CategoryId, GroupId, MemberId};
 use eranos_expense::Expense;
 use eranos_member::Member;
@@ -16,7 +19,7 @@ use eranos_transfer::Transfer;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::{FORMAT, Group};
+use super::{ENTRIES_PER_YIELD, FORMAT, Group};
 use crate::Language;
 use crate::error::GroupError;
 
@@ -157,6 +160,46 @@ impl SavedGroup {
     ///   others: a repeated identifier or category name, an unknown or
     ///   archived member, an unknown category, or a missing exchange rate.
     pub fn into_group(self) -> Result<Group, GroupError> {
+        self.into_group_async().complete()
+    }
+
+    /// Loads the group as [`into_group`](Self::into_group) does, yielding
+    /// while it replays the entries.
+    ///
+    /// It yields once per 1 024 replayed steps: a member, a category, an
+    /// expense, a transfer, or an archiving. The call owns the saved form,
+    /// so it can move to another task or thread, and a call dropped before
+    /// it completes leaves nothing behind; a copy of the `SavedGroup` can
+    /// start the load again.
+    ///
+    /// # Errors
+    ///
+    /// As for [`into_group`](Self::into_group).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::cooperative::block_on;
+    /// use eranos::{Currency, Group};
+    /// # // The facade re-exports `SavedGroup` only with its own `serde` feature,
+    /// # // which a test of this crate alone does not turn on.
+    /// use eranos_group::SavedGroup;
+    ///
+    /// let group = Group::builder(Currency::EUR, "Lisbon").build()?;
+    /// let saved: SavedGroup = serde_json::from_str(&serde_json::to_string(&group)?)?;
+    ///
+    /// // Awaited like any future; `block_on` runs it on this thread.
+    /// assert_eq!(block_on(saved.into_group_async())?, group);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn into_group_async(
+        self,
+    ) -> Cooperative<impl Future<Output = Result<Group, GroupError>> + Send + 'static> {
+        Cooperative::new(self.into_group_paced())
+    }
+
+    /// The computation of [`into_group_async`](Self::into_group_async).
+    async fn into_group_paced(self) -> Result<Group, GroupError> {
         if self.format != FORMAT {
             return Err(GroupError::UnsupportedFormat {
                 format: self.format,
@@ -168,20 +211,26 @@ impl SavedGroup {
         }
         let mut group = builder.build()?;
         group.id = self.id;
+        let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
         for member in self.members {
             group.add_member(member)?;
+            pacer.advance(1).await;
         }
         for category in self.categories {
             group.add_category(category)?;
+            pacer.advance(1).await;
         }
         for expense in self.expenses {
             group.add_expense(expense)?;
+            pacer.advance(1).await;
         }
         for transfer in self.transfers {
             group.add_transfer(transfer)?;
+            pacer.advance(1).await;
         }
         for member in self.archived {
             group.archive_member(member)?;
+            pacer.advance(1).await;
         }
         Ok(group)
     }

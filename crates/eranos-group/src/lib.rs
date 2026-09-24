@@ -36,8 +36,8 @@ use eranos_transfer::{Transfer, resolve_transfer};
 /// read.
 pub(crate) const FORMAT: u32 = 2;
 
-/// The entries a currency change re-resolves between two yields: about
-/// 1 ms of work on the reference machine.
+/// The entries a currency change re-resolves, or a load replays, between
+/// two yields: about a millisecond of work on the reference machine.
 const ENTRIES_PER_YIELD: u64 = 1_024;
 
 /// A group of people sharing expenses: a trip, a day out, a household.

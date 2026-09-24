@@ -9,6 +9,11 @@
     reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"
 )]
 
+use std::future::IntoFuture;
+use std::pin::pin;
+use std::task::{Context, Poll, Waker};
+
+use eranos::cooperative::block_on;
 use eranos::error::GroupError;
 use eranos::{
     Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, Group,
@@ -396,6 +401,51 @@ fn a_saved_group_names_why_the_group_refuses_it() {
     let mut typo = json_of(&group);
     typo["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
     assert!(serde_json::from_value::<SavedGroup>(typo).is_err());
+}
+
+/// A load would hold its thread for the whole file, or leave half a group
+/// behind when it is dropped: it yields once per 1 024 replayed steps, a
+/// dropped load leaves nothing, and a copy of the saved form loads the
+/// same group.
+#[test]
+fn a_saved_group_loads_asynchronously() {
+    // 3 members, 2 000 expenses, and 100 transfers: 2 103 steps, so the
+    // load yields after the 1 024th and the 2 048th.
+    let mut group = Group::builder(Currency::EUR, "Club").build().unwrap();
+    let members: Vec<MemberId> = ["Ana", "Bob", "Carol"]
+        .into_iter()
+        .map(|name| {
+            group
+                .add_member(Member::builder(name).build().unwrap())
+                .unwrap()
+        })
+        .collect();
+    let everyone = Split::equal(members.iter().copied());
+    for _ in 0..2_000 {
+        let expense = Expense::builder(eur("3.00"), day(), "Coffee", members[0], everyone.clone());
+        group.add_expense(expense.build().unwrap()).unwrap();
+    }
+    for _ in 0..100 {
+        let transfer = Transfer::builder(eur("1.00"), day(), members[1], members[0]);
+        group.add_transfer(transfer.build().unwrap()).unwrap();
+    }
+    let saved: SavedGroup = serde_json::from_value(json_of(&group)).unwrap();
+
+    let mut context = Context::from_waker(Waker::noop());
+    {
+        let mut load = pin!(saved.clone().into_group_async().into_future());
+        assert!(load.as_mut().poll(&mut context).is_pending());
+    }
+    let mut load = pin!(saved.clone().into_group_async().into_future());
+    for _ in 0..2 {
+        assert!(load.as_mut().poll(&mut context).is_pending());
+    }
+    let Poll::Ready(Ok(loaded)) = load.as_mut().poll(&mut context) else {
+        panic!("the load did not complete after its two yields");
+    };
+    assert_eq!(loaded, group);
+    assert_eq!(loaded.summary(), group.summary());
+    assert_eq!(block_on(saved.into_group_async()), Ok(group));
 }
 
 /// A group with none of the optional details round-trips as well, without
