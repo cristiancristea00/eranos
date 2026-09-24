@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use crate::error::GroupError;
 use crate::expense::{Expense, ExpenseSplit, Tip, TipDistribution};
 use crate::id::{ExpenseId, MemberId};
-use crate::ledger::{Debt, ExpenseShares, MemberShare};
+use crate::ledger::{Debt, ExpenseShares, MemberPair, MemberShare};
 use crate::money::allocation::{allocate, rotation};
 use crate::money::{Currency, ExchangeRate, Money};
 use crate::transfer::Transfer;
@@ -195,8 +195,10 @@ fn debts(
             if debtor != creditor && portion > 0 {
                 debts.push(Debt {
                     amount: portion,
-                    creditor,
-                    debtor,
+                    members: MemberPair {
+                        from: debtor,
+                        to: creditor,
+                    },
                 });
             }
         }

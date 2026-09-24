@@ -16,8 +16,22 @@ fn member(number: u8) -> MemberId {
 fn ledger() -> Ledger {
     let mut delta = Delta::default();
     // A transfer from 1 to 3 leaves 3 owing 1; the same for 2 and 4.
-    delta.add_transfer(member(1), member(3), 500, 1);
-    delta.add_transfer(member(2), member(4), 300, 1);
+    delta.add_transfer(
+        MemberPair {
+            from: member(1),
+            to: member(3),
+        },
+        500,
+        1,
+    );
+    delta.add_transfer(
+        MemberPair {
+            from: member(2),
+            to: member(4),
+        },
+        300,
+        1,
+    );
     let mut ledger = Ledger::new(Currency::RON);
     ledger.apply(&delta).unwrap();
     ledger
@@ -92,7 +106,14 @@ fn an_exact_plan_too_large_to_compute_is_an_error() {
     let hub = member(100);
     let mut delta = Delta::default();
     for number in 1..=63 {
-        delta.add_transfer(member(number), hub, i64::from(number), 1);
+        delta.add_transfer(
+            MemberPair {
+                from: member(number),
+                to: hub,
+            },
+            i64::from(number),
+            1,
+        );
     }
     let mut ledger = Ledger::new(Currency::EUR);
     ledger.apply(&delta).unwrap();

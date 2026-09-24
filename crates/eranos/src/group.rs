@@ -274,7 +274,7 @@ impl Group {
             let mut transfer = record.transfer.clone();
             transfer.set_exchange_rate(rate_for(transfer.amount().currency())?);
             let amount = resolve_transfer(&transfer, currency)?;
-            delta.add_transfer(transfer.from(), transfer.to(), amount, 1);
+            delta.add_transfer(transfer.pair(), amount, 1);
             transfers.insert(id, TransferRecord { amount, transfer });
         }
         let mut ledger = Ledger::new(currency);
@@ -710,7 +710,7 @@ impl Group {
         self.check_transfer(&transfer)?;
         let amount = resolve_transfer(&transfer, self.currency)?;
         let mut delta = Delta::default();
-        delta.add_transfer(transfer.from(), transfer.to(), amount, 1);
+        delta.add_transfer(transfer.pair(), amount, 1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
@@ -738,13 +738,8 @@ impl Group {
         self.check_transfer(&transfer)?;
         let amount = resolve_transfer(&transfer, self.currency)?;
         let mut delta = Delta::default();
-        delta.add_transfer(
-            previous.transfer.from(),
-            previous.transfer.to(),
-            previous.amount,
-            -1,
-        );
-        delta.add_transfer(transfer.from(), transfer.to(), amount, 1);
+        delta.add_transfer(previous.transfer.pair(), previous.amount, -1);
+        delta.add_transfer(transfer.pair(), amount, 1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;
@@ -770,12 +765,7 @@ impl Group {
             .get(&id)
             .ok_or(GroupError::UnknownTransfer(id))?;
         let mut delta = Delta::default();
-        delta.add_transfer(
-            record.transfer.from(),
-            record.transfer.to(),
-            record.amount,
-            -1,
-        );
+        delta.add_transfer(record.transfer.pair(), record.amount, -1);
         self.ledger
             .apply(&delta)
             .map_err(|_| GroupError::Overflow)?;

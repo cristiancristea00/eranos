@@ -17,8 +17,10 @@ fn member(number: u8) -> MemberId {
 fn flow(amount: i64, from: u8, to: u8) -> Flow {
     Flow {
         amount,
-        from: member(from),
-        to: member(to),
+        members: MemberPair {
+            from: member(from),
+            to: member(to),
+        },
     }
 }
 
@@ -37,12 +39,12 @@ fn after(balances: &[(MemberId, i64)], flows: &[Flow]) -> Vec<i64> {
         .map(|&(member, net)| {
             let received: i64 = flows
                 .iter()
-                .filter(|flow| flow.to == member)
+                .filter(|flow| flow.members.to == member)
                 .map(|flow| flow.amount)
                 .sum();
             let sent: i64 = flows
                 .iter()
-                .filter(|flow| flow.from == member)
+                .filter(|flow| flow.members.from == member)
                 .map(|flow| flow.amount)
                 .sum();
             net - received + sent
@@ -203,7 +205,7 @@ proptest! {
         let flows = settle(&open).unwrap();
         prop_assert!(after(&open, &flows).iter().all(|&net| net == 0));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
-        for &Flow { amount, from, to } in &flows {
+        for &Flow { amount, members: MemberPair { from, to } } in &flows {
             let net = |member: MemberId| open.iter().find(|entry| entry.0 == member).map_or(0, |entry| entry.1);
             prop_assert!(amount > 0);
             prop_assert!(net(from) < 0 && net(to) > 0);

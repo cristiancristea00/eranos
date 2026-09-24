@@ -12,8 +12,8 @@ mod minimum;
 use crate::date::Date;
 use crate::error::SettlementError;
 use crate::id::MemberId;
-use crate::ledger::Ledger;
-use crate::money::Money;
+use crate::ledger::{Ledger, MemberPair};
+use crate::money::{Currency, Money};
 use crate::transfer::Transfer;
 
 /// How [`Group::settlement`](crate::Group::settlement) turns balances into
@@ -124,21 +124,20 @@ impl Settlement {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Payment {
     amount: Money,
-    from: MemberId,
-    to: MemberId,
+    members: MemberPair,
 }
 
 impl Payment {
     /// The member who pays.
     #[must_use]
     pub const fn from(&self) -> MemberId {
-        self.from
+        self.members.from
     }
 
     /// The member who is paid.
     #[must_use]
     pub const fn to(&self) -> MemberId {
-        self.to
+        self.members.to
     }
 
     /// The amount, in the group currency.
@@ -150,7 +149,7 @@ impl Payment {
     /// The transfer recording this payment, made on `date`.
     #[must_use]
     pub fn to_transfer(&self, date: Date) -> Transfer {
-        Transfer::new_unchecked(self.from, self.to, self.amount, date)
+        Transfer::new_unchecked(self.members.from, self.members.to, self.amount, date)
     }
 }
 
@@ -159,8 +158,17 @@ impl Payment {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Flow {
     amount: i64,
-    from: MemberId,
-    to: MemberId,
+    members: MemberPair,
+}
+
+impl Flow {
+    /// The payment this flow makes, in `currency`.
+    const fn into_payment(self, currency: Currency) -> Payment {
+        Payment {
+            amount: Money::from_minor_units(self.amount, currency),
+            members: self.members,
+        }
+    }
 }
 
 /// Settles the balances of `ledger` with `strategy`.
@@ -174,16 +182,12 @@ pub(crate) fn settle(
         SettlementStrategy::Direct => direct::settle(ledger.pairs()),
     };
     // By payer, then recipient, as `Settlement::payments` promises; the
-    // amount only breaks ties, as it always has.
-    flows.sort_unstable_by_key(|flow| (flow.from, flow.to, flow.amount));
+    // amount breaks ties.
+    flows.sort_unstable_by_key(|flow| (flow.members, flow.amount));
     let currency = ledger.currency();
     let payments = flows
         .into_iter()
-        .map(|flow| Payment {
-            amount: Money::from_minor_units(flow.amount, currency),
-            from: flow.from,
-            to: flow.to,
-        })
+        .map(|flow| flow.into_payment(currency))
         .collect();
     Ok(Settlement { payments, strategy })
 }

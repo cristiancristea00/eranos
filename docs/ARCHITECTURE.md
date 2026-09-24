@@ -239,7 +239,8 @@ other participant owes the payer their share".
 
 The `Ledger` holds the `Summary` (total spent; per member paid, consumed,
 sent, received, and net; per category; per member per category) and the
-netted debt of every pair of members, keyed `(lower, higher)`.
+netted debt of every pair of members, keyed by a `MemberPair` whose `from`
+is the lower member.
 
 A change becomes a `Delta` in exact 128-bit arithmetic: adding an entry
 adds its resolution, removing subtracts it, replacing does both. Applying a

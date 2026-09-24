@@ -18,6 +18,11 @@ fn eur(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, Currency::EUR)
 }
 
+/// The pair of `from` owing or paying `to`.
+const fn pair(from: MemberId, to: MemberId) -> MemberPair {
+    MemberPair { from, to }
+}
+
 /// An expense of `total` paid by `payer` and consumed by `participants`,
 /// with the payer owed every other share.
 fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> ExpenseShares {
@@ -32,8 +37,7 @@ fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> Exp
             .filter(|&&(participant, _)| participant != payer)
             .map(|&(debtor, amount)| Debt {
                 amount,
-                creditor: payer,
-                debtor,
+                members: pair(debtor, payer),
             })
             .collect(),
         members: members
@@ -77,7 +81,7 @@ fn an_expense_moves_every_total_by_its_shares() {
     assert_eq!(summary.category_total(None), eur(0));
     assert_eq!(summary.member_category_total(bob, food), eur(2000));
     // Bob owes Ana his share, pairwise.
-    assert_eq!(ledger.pairs().get(&(ana, bob)), Some(&-2000));
+    assert_eq!(ledger.pairs().get(&pair(ana, bob)), Some(&-2000));
     assert_eq!(ledger.balances(), vec![(ana, 2000), (bob, -2000)]);
 }
 
@@ -96,10 +100,13 @@ fn removing_an_entry_restores_the_ledger_exactly() {
         delta.add_expense(&second, Some(category(2)), 1);
     })
     .unwrap();
-    applied(&mut ledger, |delta| delta.add_transfer(bob, ana, 700, 1)).unwrap();
+    applied(&mut ledger, |delta| {
+        delta.add_transfer(pair(bob, ana), 700, 1);
+    })
+    .unwrap();
     applied(&mut ledger, |delta| {
         delta.add_expense(&second, Some(category(2)), -1);
-        delta.add_transfer(bob, ana, 700, -1);
+        delta.add_transfer(pair(bob, ana), 700, -1);
     })
     .unwrap();
     assert_eq!(ledger, before);
@@ -119,7 +126,10 @@ fn a_transfer_moves_balances_but_not_spending() {
     let mut ledger = Ledger::new(Currency::EUR);
     let lunch = expense(2000, ana, &[(ana, 1000), (bob, 1000)]);
     applied(&mut ledger, |delta| delta.add_expense(&lunch, None, 1)).unwrap();
-    applied(&mut ledger, |delta| delta.add_transfer(bob, ana, 1000, 1)).unwrap();
+    applied(&mut ledger, |delta| {
+        delta.add_transfer(pair(bob, ana), 1000, 1);
+    })
+    .unwrap();
 
     let summary = ledger.summary();
     assert_eq!(summary.total_spent(), eur(2000));
@@ -132,19 +142,29 @@ fn a_transfer_moves_balances_but_not_spending() {
     assert!(ledger.balances().is_empty());
 }
 
-/// Pairs are keyed (lower, higher) whichever way the debt runs, so debts in
-/// both directions net against each other.
+/// Pairs would be listed, and payments sorted, by recipient before payer.
+#[test]
+fn member_pairs_order_by_the_first_member_then_the_second() {
+    let (ana, bob, carol) = (member(1), member(2), member(3));
+    assert!(pair(ana, carol) < pair(bob, ana));
+    assert!(pair(ana, bob) < pair(ana, carol));
+    assert_eq!(pair(ana, bob).cmp(&pair(ana, bob)), Ordering::Equal);
+    assert_eq!(pair(ana, bob).reversed(), pair(bob, ana));
+}
+
+/// Pairs are keyed from the lower member whichever way the debt runs, so
+/// debts in both directions net against each other.
 #[test]
 fn pair_debts_net_in_both_directions() {
     let (ana, bob) = (member(1), member(2));
     let mut delta = Delta::default();
     // Bob owes Ana 5.00, and Ana owes Bob 3.00.
-    delta.add_debt(bob, ana, 500);
-    delta.add_debt(ana, bob, 300);
+    delta.add_debt(pair(bob, ana), 500);
+    delta.add_debt(pair(ana, bob), 300);
     let mut ledger = Ledger::new(Currency::EUR);
     ledger.apply(&delta).unwrap();
-    // Lower (Ana) owes higher (Bob) −2.00: Bob owes Ana 2.00.
-    assert_eq!(ledger.pairs().get(&(ana, bob)), Some(&-200));
+    // Ana, the lower member, owes Bob −2.00: Bob owes Ana 2.00.
+    assert_eq!(ledger.pairs().get(&pair(ana, bob)), Some(&-200));
     assert_eq!(ledger.pairs().len(), 1);
 }
 
@@ -169,15 +189,18 @@ fn an_overflowing_change_is_refused_whole() {
     let mut empty = Ledger::new(Currency::EUR);
     assert_eq!(
         applied(&mut empty, |delta| delta.add_transfer(
-            ana,
-            bob,
+            pair(ana, bob),
             i64::MAX,
             -1
         )),
         Ok(())
     );
     assert_eq!(
-        applied(&mut empty, |delta| delta.add_transfer(ana, bob, 1, -1)),
+        applied(&mut empty, |delta| delta.add_transfer(
+            pair(ana, bob),
+            1,
+            -1
+        )),
         Err(Overflow)
     );
 }
@@ -214,7 +237,7 @@ fn every_value_is_range_checked() {
             ..Delta::default()
         },
         Delta {
-            pairs: BTreeMap::from([((ana, bob), beyond)]),
+            pairs: BTreeMap::from([(pair(ana, bob), beyond)]),
             ..Delta::default()
         },
     ]);

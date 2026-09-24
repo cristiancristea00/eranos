@@ -3,24 +3,19 @@
 use std::collections::BTreeMap;
 
 use super::Flow;
-use crate::id::MemberId;
+use crate::ledger::MemberPair;
 
-/// One payment per pair of members with a netted debt; `pairs` maps (lower,
-/// higher) to what lower owes higher.
-pub(super) fn settle(pairs: &BTreeMap<(MemberId, MemberId), i64>) -> Vec<Flow> {
+/// One payment per pair of members with a netted debt; `pairs` maps every
+/// pair, keyed with the lower member as `from`, to what `from` owes `to`.
+pub(super) fn settle(pairs: &BTreeMap<MemberPair, i64>) -> Vec<Flow> {
     pairs
         .iter()
-        .filter_map(|(&(lower, higher), &amount)| match amount.signum() {
-            1 => Some(Flow {
-                amount,
-                from: lower,
-                to: higher,
-            }),
+        .filter_map(|(&members, &amount)| match amount.signum() {
+            1 => Some(Flow { amount, members }),
             // The ledger keeps every value above i64::MIN, so negating fits.
             -1 => Some(Flow {
                 amount: -amount,
-                from: higher,
-                to: lower,
+                members: members.reversed(),
             }),
             _ => None,
         })

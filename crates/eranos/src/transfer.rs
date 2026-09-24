@@ -3,6 +3,7 @@
 use crate::date::{Date, Time};
 use crate::error::TransferError;
 use crate::id::MemberId;
+use crate::ledger::MemberPair;
 use crate::money::{Cost, ExchangeRate, Money};
 use crate::text;
 
@@ -128,6 +129,14 @@ impl Transfer {
     #[must_use]
     pub fn note(&self) -> Option<&str> {
         self.note.as_deref()
+    }
+
+    /// The sender and the recipient.
+    pub(crate) const fn pair(&self) -> MemberPair {
+        MemberPair {
+            from: self.from,
+            to: self.to,
+        }
     }
 
     pub(crate) const fn set_exchange_rate(&mut self, exchange_rate: Option<ExchangeRate>) {

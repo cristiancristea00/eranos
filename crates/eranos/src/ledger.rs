@@ -4,6 +4,7 @@
 //! every new value is computed and range-checked first, and only then
 //! written, so a change that would overflow leaves the totals untouched.
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 use std::fmt;
@@ -304,12 +305,43 @@ impl MemberShare {
     }
 }
 
-/// An amount one member owes another because of one entry.
+/// Two members in a direction: `from` owes or pays `to`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct MemberPair {
+    pub(crate) from: MemberId,
+    pub(crate) to: MemberId,
+}
+
+impl MemberPair {
+    /// The same two members the other way round.
+    pub(crate) const fn reversed(self) -> Self {
+        Self {
+            from: self.to,
+            to: self.from,
+        }
+    }
+}
+
+// Written out, so that it does not depend on the order of the fields: by
+// `from`, then `to`.
+impl Ord for MemberPair {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.from, self.to).cmp(&(other.from, other.to))
+    }
+}
+
+impl PartialOrd for MemberPair {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// An amount one member owes another because of one entry: `members.from`
+/// owes `members.to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Debt {
     pub(crate) amount: i64,
-    pub(crate) creditor: MemberId,
-    pub(crate) debtor: MemberId,
+    pub(crate) members: MemberPair,
 }
 
 /// A value outside the ledger's range.
@@ -341,7 +373,7 @@ pub(crate) struct Delta {
     member_categories: BTreeMap<(MemberId, Option<CategoryId>), i128>,
     /// paid, share, sent, received, net
     members: BTreeMap<MemberId, [i128; 5]>,
-    pairs: BTreeMap<(MemberId, MemberId), i128>,
+    pairs: BTreeMap<MemberPair, i128>,
     total_spent: i128,
 }
 
@@ -369,30 +401,32 @@ impl Delta {
                 .or_default() += consumed;
         }
         for debt in &shares.debts {
-            self.add_debt(debt.debtor, debt.creditor, sign * i128::from(debt.amount));
+            self.add_debt(debt.members, sign * i128::from(debt.amount));
         }
     }
 
     /// Adds (`sign` 1) or removes (`sign` −1) one transfer of `amount` minor
-    /// units in the group currency.
-    pub(crate) fn add_transfer(&mut self, from: MemberId, to: MemberId, amount: i64, sign: i128) {
+    /// units in the group currency, from `pair.from` to `pair.to`.
+    pub(crate) fn add_transfer(&mut self, pair: MemberPair, amount: i64, sign: i128) {
         let amount = sign * i128::from(amount);
-        let sender = self.members.entry(from).or_default();
+        let sender = self.members.entry(pair.from).or_default();
         sender[2] += amount;
         sender[4] += amount;
-        let recipient = self.members.entry(to).or_default();
+        let recipient = self.members.entry(pair.to).or_default();
         recipient[3] += amount;
         recipient[4] -= amount;
         // Paying someone back is, pairwise, the recipient now owing it back.
-        self.add_debt(to, from, amount);
+        self.add_debt(pair.reversed(), amount);
     }
 
-    fn add_debt(&mut self, debtor: MemberId, creditor: MemberId, amount: i128) {
-        // Pairs are keyed (lower, higher) and hold what lower owes higher.
-        if debtor < creditor {
-            *self.pairs.entry((debtor, creditor)).or_default() += amount;
+    /// Records that `pair.from` owes `pair.to` another `amount`.
+    fn add_debt(&mut self, pair: MemberPair, amount: i128) {
+        // Pairs are keyed with the lower member as `from` and hold what
+        // `from` owes `to`.
+        if pair.from < pair.to {
+            *self.pairs.entry(pair).or_default() += amount;
         } else {
-            *self.pairs.entry((creditor, debtor)).or_default() -= amount;
+            *self.pairs.entry(pair.reversed()).or_default() -= amount;
         }
     }
 }
@@ -401,8 +435,9 @@ impl Delta {
 /// netted debt between every pair of members.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Ledger {
-    /// (lower, higher) → what lower owes higher; negative when higher owes.
-    pairs: BTreeMap<(MemberId, MemberId), i64>,
+    /// Keyed with the lower member as `from`: what `from` owes `to`,
+    /// negative when `to` owes `from`.
+    pairs: BTreeMap<MemberPair, i64>,
     summary: Summary,
 }
 
@@ -422,7 +457,7 @@ impl Ledger {
         self.summary.currency
     }
 
-    pub(crate) const fn pairs(&self) -> &BTreeMap<(MemberId, MemberId), i64> {
+    pub(crate) const fn pairs(&self) -> &BTreeMap<MemberPair, i64> {
         &self.pairs
     }
 

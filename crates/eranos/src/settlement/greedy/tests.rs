@@ -15,8 +15,10 @@ fn member(number: u8) -> MemberId {
 fn flow(amount: i64, from: u8, to: u8) -> Flow {
     Flow {
         amount,
-        from: member(from),
-        to: member(to),
+        members: MemberPair {
+            from: member(from),
+            to: member(to),
+        },
     }
 }
 
@@ -67,8 +69,8 @@ proptest! {
         let count = nets.iter().filter(|&&net| net != 0).count();
         prop_assert!(flows.len() <= count.saturating_sub(1));
         for &(member, net) in &open {
-            let received: i64 = flows.iter().filter(|flow| flow.to == member).map(|flow| flow.amount).sum();
-            let sent: i64 = flows.iter().filter(|flow| flow.from == member).map(|flow| flow.amount).sum();
+            let received: i64 = flows.iter().filter(|flow| flow.members.to == member).map(|flow| flow.amount).sum();
+            let sent: i64 = flows.iter().filter(|flow| flow.members.from == member).map(|flow| flow.amount).sum();
             prop_assert_eq!(net - received + sent, 0);
             prop_assert!(net >= 0 || received == 0);
             prop_assert!(net <= 0 || sent == 0);

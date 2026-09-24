@@ -49,10 +49,21 @@ fn rows(shares: &ExpenseShares) -> Vec<(MemberId, i64, i64)> {
 fn debt_nets(shares: &ExpenseShares) -> BTreeMap<MemberId, i64> {
     let mut nets = BTreeMap::new();
     for debt in &shares.debts {
-        *nets.entry(debt.creditor).or_insert(0) += debt.amount;
-        *nets.entry(debt.debtor).or_insert(0) -= debt.amount;
+        *nets.entry(debt.members.to).or_insert(0) += debt.amount;
+        *nets.entry(debt.members.from).or_insert(0) -= debt.amount;
     }
     nets
+}
+
+/// A debt of `amount` from `debtor` to `creditor`.
+const fn debt(amount: i64, debtor: MemberId, creditor: MemberId) -> Debt {
+    Debt {
+        amount,
+        members: MemberPair {
+            from: debtor,
+            to: creditor,
+        },
+    }
 }
 
 /// A single payer is owed every other participant's share, and an even
@@ -74,7 +85,7 @@ fn a_single_payer_is_owed_every_other_share() {
     // Ana paid everything and is owed the other two shares.
     assert_eq!(rows(&shares)[0].1, 1000);
     assert_eq!(shares.debts.len(), 2);
-    assert!(shares.debts.iter().all(|debt| debt.creditor == ana));
+    assert!(shares.debts.iter().all(|debt| debt.members.to == ana));
     assert_eq!(debt_nets(&shares)[&ana], 1000 - rows(&shares)[0].2);
     assert_eq!(shares.total, eur(1000));
     assert_eq!(shares.tip, eur(0));
@@ -144,15 +155,7 @@ fn items_divide_by_their_own_splits() {
     // Ana: 12.00 + 4.50 = 16.50 plus 16.50/21 of the 2.10 tip (1.65).
     // Bob: 4.50 plus 0.45 of tip; Bob paid the 23.10 total.
     assert_eq!(rows(&shares), vec![(ana, 0, 1815), (bob, 2310, 495)]);
-    assert_eq!(shares.debts.len(), 1);
-    assert_eq!(
-        (
-            shares.debts[0].debtor,
-            shares.debts[0].creditor,
-            shares.debts[0].amount
-        ),
-        (ana, bob, 1815)
-    );
+    assert_eq!(shares.debts, vec![debt(1815, ana, bob)]);
 }
 
 /// With several payers every participant owes every payer in proportion to
@@ -168,20 +171,15 @@ fn several_payers_are_each_owed_their_proportion() {
     let shares = resolve_expense(entry(1), &hotel, Currency::EUR).unwrap();
 
     // Ana's 60.00 covers 15.00 of each share, Bob's 40.00 the other 10.00.
-    let debts: Vec<(MemberId, MemberId, i64)> = shares
-        .debts
-        .iter()
-        .map(|debt| (debt.debtor, debt.creditor, debt.amount))
-        .collect();
     assert_eq!(
-        debts,
+        shares.debts,
         vec![
-            (bob, ana, 1500),
-            (carol, ana, 1500),
-            (dan, ana, 1500),
-            (ana, bob, 1000),
-            (carol, bob, 1000),
-            (dan, bob, 1000),
+            debt(1500, bob, ana),
+            debt(1500, carol, ana),
+            debt(1500, dan, ana),
+            debt(1000, ana, bob),
+            debt(1000, carol, bob),
+            debt(1000, dan, bob),
         ]
     );
     // Every member's debts net to what they paid minus what they consumed.
@@ -491,7 +489,7 @@ proptest! {
         for (member, paid, share) in rows(&shares) {
             prop_assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
         }
-        prop_assert!(shares.debts.iter().all(|debt| debt.amount > 0 && debt.debtor != debt.creditor));
+        prop_assert!(shares.debts.iter().all(|debt| debt.amount > 0 && debt.members.from != debt.members.to));
     }
 }
 
@@ -520,18 +518,13 @@ fn the_rotation_of_every_pass_is_pinned() {
         rows(&shares),
         vec![(ana, 151, 101), (bob, 152, 100), (carol, 0, 102)]
     );
-    let debts: Vec<(MemberId, MemberId, i64)> = shares
-        .debts
-        .iter()
-        .map(|debt| (debt.debtor, debt.creditor, debt.amount))
-        .collect();
     assert_eq!(
-        debts,
+        shares.debts,
         vec![
-            (bob, ana, 50),
-            (carol, ana, 51),
-            (ana, bob, 51),
-            (carol, bob, 51)
+            debt(50, bob, ana),
+            debt(51, carol, ana),
+            debt(51, ana, bob),
+            debt(51, carol, bob)
         ]
     );
 
@@ -563,25 +556,20 @@ fn the_rotation_of_every_pass_is_pinned() {
         .split(Split::equal([ana, bob, carol, dan]))
         .build()
         .unwrap();
-    let hotel_debts: Vec<(MemberId, MemberId, i64)> =
+    assert_eq!(
         resolve_expense(entry(3), &hotel, Currency::EUR)
             .unwrap()
-            .debts
-            .iter()
-            .map(|debt| (debt.debtor, debt.creditor, debt.amount))
-            .collect();
-    assert_eq!(
-        hotel_debts,
+            .debts,
         vec![
-            (bob, ana, 33),
-            (carol, ana, 33),
-            (dan, ana, 34),
-            (ana, bob, 33),
-            (carol, bob, 34),
-            (dan, bob, 33),
-            (ana, carol, 34),
-            (bob, carol, 34),
-            (dan, carol, 33),
+            debt(33, bob, ana),
+            debt(33, carol, ana),
+            debt(34, dan, ana),
+            debt(33, ana, bob),
+            debt(34, carol, bob),
+            debt(33, dan, bob),
+            debt(34, ana, carol),
+            debt(34, bob, carol),
+            debt(33, dan, carol),
         ]
     );
 }
@@ -599,13 +587,8 @@ fn a_zero_portion_is_no_debt() {
         .build()
         .unwrap();
     let shares = resolve_expense(entry(1), &snack, Currency::EUR).unwrap();
-    let debts: Vec<(MemberId, MemberId, i64)> = shares
-        .debts
-        .iter()
-        .map(|debt| (debt.debtor, debt.creditor, debt.amount))
-        .collect();
     assert_eq!(
-        debts,
-        vec![(carol, ana, 98), (dan, ana, 1), (carol, bob, 1)]
+        shares.debts,
+        vec![debt(98, carol, ana), debt(1, dan, ana), debt(1, carol, bob)]
     );
 }

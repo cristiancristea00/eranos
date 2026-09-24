@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use super::Flow;
 use crate::error::SettlementError;
 use crate::id::MemberId;
+use crate::ledger::MemberPair;
 
 /// Settles `balances` (member, net; positive = is owed, ordered by member)
 /// with the fewest payments.
@@ -50,8 +51,10 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
             if let Some(creditor) = creditors.get_mut(&-net).and_then(Vec::pop) {
                 flows.push(Flow {
                     amount: -net,
-                    from: member,
-                    to: creditor,
+                    members: MemberPair {
+                        from: member,
+                        to: creditor,
+                    },
                 });
                 paired.push(member);
                 paired.push(creditor);
@@ -181,8 +184,10 @@ fn settle_group(group: &[(MemberId, i64)]) -> Vec<Flow> {
         let amount = (*debt).min(*credit);
         flows.push(Flow {
             amount,
-            from: *debtor_id,
-            to: *creditor_id,
+            members: MemberPair {
+                from: *debtor_id,
+                to: *creditor_id,
+            },
         });
         *debt -= amount;
         *credit -= amount;

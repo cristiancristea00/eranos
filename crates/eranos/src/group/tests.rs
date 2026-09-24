@@ -62,12 +62,7 @@ fn rebuilt(group: &Group) -> Ledger {
             resolve_transfer(&record.transfer, group.currency).unwrap(),
             record.amount
         );
-        delta.add_transfer(
-            record.transfer.from(),
-            record.transfer.to(),
-            record.amount,
-            1,
-        );
+        delta.add_transfer(record.transfer.pair(), record.amount, 1);
     }
     let mut ledger = Ledger::new(group.currency);
     ledger.apply(&delta).unwrap();
