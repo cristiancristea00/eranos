@@ -56,8 +56,23 @@ impl Category {
         })
     }
 
-    /// The built-in category, under [`CategoryId::UNCATEGORISED`].
-    pub(crate) fn uncategorised() -> Self {
+    /// Returns the built-in category every group has, "Uncategorised", under
+    /// [`CategoryId::UNCATEGORISED`].
+    ///
+    /// The apps show its name in the user's language, and a group refuses to
+    /// rename or remove it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Category, CategoryId};
+    ///
+    /// let built_in = Category::uncategorised();
+    /// assert_eq!(built_in.id(), CategoryId::UNCATEGORISED);
+    /// assert_eq!(built_in.name(), "Uncategorised");
+    /// ```
+    #[must_use]
+    pub fn uncategorised() -> Self {
         Self {
             id: CategoryId::UNCATEGORISED,
             name: "Uncategorised".to_owned(),
@@ -89,13 +104,24 @@ impl Category {
         &self.name
     }
 
-    /// The name's canonical caseless form, on which uniqueness is checked:
-    /// Unicode's D145, `NFD(toCasefold(NFD(name)))`.
+    /// The name's canonical caseless form, on which a group checks that
+    /// names are unique: Unicode's D145, `NFD(toCasefold(NFD(name)))`.
     ///
     /// The folding is the default one: Turkic folding would make `Istanbul`
     /// and `istanbul` two names, and folding by the group's language would let
     /// a change of language create duplicates.
-    pub(crate) fn folded_name(&self) -> String {
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::Category;
+    ///
+    /// let street = Category::new("Straße")?;
+    /// assert_eq!(street.folded_name(), Category::new("STRASSE")?.folded_name());
+    /// # Ok::<(), eranos::error::CategoryError>(())
+    /// ```
+    #[must_use]
+    pub fn folded_name(&self) -> String {
         let normaliser = DecomposingNormalizerBorrowed::new_nfd();
         let decomposed = normaliser.normalize(&self.name);
         let folded = CaseMapper::new().fold_string(&decomposed);

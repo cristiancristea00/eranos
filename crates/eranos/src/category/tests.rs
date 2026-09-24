@@ -1,9 +1,10 @@
 //! Categories sort a group's expenses, and their names must be unique within
 //! the group whatever their letter case or the way an accent is encoded.
-//! These tests keep names trimmed and present, keep the folded name that
-//! uniqueness is checked on the same for names that differ only in case, in
-//! any script, or in the encoding of an accent, and keep a category's
-//! identifier through a rename and a save.
+//! These tests keep names trimmed and present, keep the built-in category
+//! the same everywhere, keep the folded name that uniqueness is checked on
+//! the same for names that differ only in case, in any script, or in the
+//! encoding of an accent, and keep a category's identifier through a rename
+//! and a save.
 
 use super::*;
 
@@ -19,6 +20,16 @@ fn category_names_are_trimmed() {
     assert_eq!(category("  Food \n").name(), "Food");
     // Inner whitespace stays.
     assert_eq!(category("Eating out").name(), "Eating out");
+}
+
+/// Devices that named or identified the built-in category differently would
+/// sort a synced expense into different categories.
+#[test]
+fn the_built_in_category_is_the_same_everywhere() {
+    let built_in = Category::uncategorised();
+    assert_eq!(built_in.id(), CategoryId::UNCATEGORISED);
+    assert_eq!(built_in.name(), "Uncategorised");
+    assert_eq!(built_in, Category::uncategorised());
 }
 
 /// A category without a name would appear as a blank entry in every picker.
