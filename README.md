@@ -1,5 +1,7 @@
 # eranos
 
+[![CI](https://github.com/cristiancristea00/eranos/actions/workflows/ci.yml/badge.svg)](https://github.com/cristiancristea00/eranos/actions/workflows/ci.yml)
+
 eranos is a Rust library for tracking what a group of people spends
 together — a trip, a day out, a household — and for settling up afterwards.
 It records who paid for what and how each expense is shared, keeps every
@@ -163,6 +165,7 @@ format, and the rounding results are all part of the contract:
 
 ```text
 eranos/
+├── .github/                   the CI workflow; Dependabot and zizmor configuration
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
 ├── crates/eranos/
 │   ├── src/                   the library; every module has its unit tests in <module>/tests.rs
@@ -170,5 +173,6 @@ eranos/
 │   ├── examples/              runnable scenarios
 │   └── benches/               criterion benchmarks
 ├── docs/                      architecture, development, testing, versioning
+├── deny.toml                  the rules of the CI dependency audit
 └── AGENTS.md                  conventions and gates (CLAUDE.md and GEMINI.md link to it)
 ```

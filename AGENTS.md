@@ -51,7 +51,8 @@ done)
 
 Run all of them; clippy findings are fixed, not silenced. The examples
 assert their key numbers, so running them is a check, not a demonstration.
-The VS Code task `gates` runs the same sequence.
+The VS Code task `gates` runs the same sequence, and CI runs it on every push
+([docs/DEVELOPMENT.md § 6](docs/DEVELOPMENT.md#6-continuous-integration)).
 
 Clippy is strict on every target (library, tests, examples, benches): the
 pedantic, nursery, and cargo groups plus the restriction lints listed, each

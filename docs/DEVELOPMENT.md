@@ -11,7 +11,8 @@ and the test suites in [TESTING.md](TESTING.md).
 3. [Making a change](#3-making-a-change)
 4. [Examples and benchmarks](#4-examples-and-benchmarks)
 5. [Coverage and mutation testing](#5-coverage-and-mutation-testing)
-6. [Troubleshooting](#6-troubleshooting)
+6. [Continuous integration](#6-continuous-integration)
+7. [Troubleshooting](#7-troubleshooting)
 
 ## 1. Prerequisites
 
@@ -149,7 +150,47 @@ Coverage does not count doctests on the stable toolchain, so a function
 covered only by its example shows as missed. Mutation testing takes seconds
 per mutant; run it one file at a time. Reading both: [TESTING.md](TESTING.md).
 
-## 6. Troubleshooting
+## 6. Continuous integration
+
+`.github/workflows/ci.yml` runs on every branch push, on pull requests from
+forks, on the merge queue, and on a manual dispatch. A pull request from a
+branch of this repository starts no jobs of its own: the push of its head
+commit was tested, and those checks show on the pull request.
+
+| Job | What it runs |
+| --- | --- |
+| Lint | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied |
+| Test | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode |
+| MSRV | the tests with Rust 1.97, the `rust-version` |
+| Mobile targets | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, and `x86_64-linux-android` |
+| Dependency audit | `cargo deny check advisories sources`, with the rules in `deny.toml` |
+| Workflow lint | actionlint and zizmor, configured in `.github/zizmor.yml` |
+| Coverage | the coverage page and its summary, below |
+| Test (macOS, Windows) | the tests on `macos-26` and `windows-2025`, on a manual dispatch only |
+
+The repository is private on the GitHub Free plan: 2,000 Actions minutes a
+month, with macOS minutes counting about ten times and Windows minutes about
+twice. Jobs are billed in whole minutes, so a push costs roughly 15 to 20;
+the macOS and Windows jobs run only when dispatched from the Actions tab or
+with `gh workflow run ci.yml --ref main`. When the minutes run out, runs stop
+until the next month; nothing is billed. The plan has no branch protection,
+so a failing run blocks nothing: it is a report.
+
+- **The coverage page.** The Coverage job uploads `eranos-coverage.html`,
+  the annotated source with line counts, as one file that opens in the
+  browser for anyone signed in with access to the repository. The run's
+  summary links to it and adds a table of regions, functions, and lines per
+  file from cargo-llvm-cov. Pages are kept for 7 days.
+- **Dependabot** opens security-update pull requests only
+  (`.github/dependabot.yml`). They need Dependabot alerts and Dependabot
+  security updates switched on under Settings, Advanced Security. Its
+  commits carry no `Signed-off-by`, so squash-merge them with a signed-off
+  message.
+- **Changing the workflow.** Actions are referenced by release tag. Before
+  pushing a change, run `actionlint` and `zizmor --offline .github/` (both
+  are in Homebrew); CI runs the same two checks.
+
+## 7. Troubleshooting
 
 - **`the README code blocks fail as doctests`**: every fence in README.md
   needs a language tag; an untagged fence is compiled as Rust.

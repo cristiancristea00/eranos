@@ -118,7 +118,9 @@ those declare the same exception once, at the top of their file, with
 regions for the unit, integration, and property tests. It does not count
 doctests on the stable toolchain, so an item covered only by its example
 shows as missed. Coverage is a diagnostic, never a gate; a gap is a reading
-list: either a missing test or dead code.
+list: either a missing test or dead code. CI measures the same way on every
+push and publishes the result as a page:
+[DEVELOPMENT.md § 6](DEVELOPMENT.md#6-continuous-integration).
 
 The suites cover every line, region, and function. Keeping it that way
 follows three rules:
