@@ -77,7 +77,7 @@ flowchart TD
     LEDGER["eranos-ledger<br/>Summary, Balance, ExpenseShares<br/>(+ Ledger, Delta)"]
     CALENDAR["eranos-calendar<br/>CalendarDate, TimeOfDay"]
     MONEY["eranos-money<br/>Money, Currency, Cost, rates, ratios<br/>(+ allocation)"]
-    CORE["eranos-core<br/>identifiers (+ text rules)"]
+    CORE["eranos-core<br/>identifiers, cooperative futures<br/>(+ text rules, pacer)"]
     FACADE --> GROUP
     GROUP --> EXPENSE
     GROUP --> TRANSFER
@@ -128,7 +128,7 @@ flowchart TD
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-money       Money, Currency, Cost, rates, ratios (+ allocation)   │
  ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-core        identifiers (+ text rules)                            │
+ │ eranos-core        identifiers and cooperative futures (+ text, pacer)   │
  └──────────────────────────────────────────────────────────────────────────┘
    A crate depends only on crates in the bands below its own; the table
    lists each crate's direct dependencies.
@@ -150,7 +150,7 @@ flowchart TD
 | `eranos-ledger`     | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                           |
 | `eranos-calendar`   | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                            |
 | `eranos-money`      | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                  |
-| `eranos-core`       | the five identifiers, `IdError`; `text`, `serde_text`                                                                                                               | uuid                                                                                  |
+| `eranos-core`       | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                  |
 
 The facade's modules (`eranos::money`, `eranos::member`, …) and its root
 re-export what the table lists before a semicolon, and nothing else: what

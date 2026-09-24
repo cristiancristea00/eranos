@@ -10,12 +10,15 @@
 //!
 //! The `text` module trims text and keeps blank optional text absent, and
 //! `serde_text` (feature `serde`) reads the values whose serialised form is
-//! their text form.
+//! their text form. [`cooperative`] holds the futures of the library's long
+//! computations, which yield at points of their own choosing, and their two
+//! drivers.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use.
 #![doc(test(attr(deny(warnings))))]
 
+pub mod cooperative;
 mod error;
 #[cfg(feature = "serde")]
 pub mod serde_text;

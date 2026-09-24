@@ -103,6 +103,22 @@ pub mod category {
     #[doc(inline)]
     pub use eranos_category::Category;
 }
+pub mod cooperative {
+    //! Driving the library's asynchronous calls.
+    //!
+    //! A long computation, such as the exact settlement or a currency change,
+    //! is a [`Cooperative`] future: it pends only by yielding, so it runs to
+    //! completion on the calling thread with [`Cooperative::complete`], which
+    //! the synchronous calls use, or in any executor, where each yield lets
+    //! other tasks run. [`block_on`] drives a future that waits for another
+    //! thread, such as one for a shared group's lock.
+
+    #[doc(inline)]
+    pub use eranos_core::cooperative::Cooperative;
+    #[cfg(not(target_family = "wasm"))]
+    #[doc(inline)]
+    pub use eranos_core::cooperative::block_on;
+}
 pub mod error {
     //! Error types, one per module: every function reports the failure of
     //! its own module, and no error wraps another.
