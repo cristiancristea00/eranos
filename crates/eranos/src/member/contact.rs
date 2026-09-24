@@ -1,5 +1,5 @@
 //! Email addresses, checked against RFC 5321 and 5322, and phone numbers,
-//! validated for shape only.
+//! checked against libphonenumber's numbering plans.
 
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 use icu_properties::CodePointMapData;
 use icu_properties::props::{GeneralCategory, GeneralCategoryGroup};
+use rlibphonenumber::{PHONE_NUMBER_UTIL, PhoneNumberFormat};
 
 use crate::error::ValueError;
 
@@ -229,11 +230,14 @@ fn general_category(character: char) -> GeneralCategory {
     CodePointMapData::<GeneralCategory>::new().get(character)
 }
 
-/// A phone number in international (E.164) shape: `+` followed by 7 to 15
-/// digits.
+/// A phone number that is valid in its country's numbering plan, stored in
+/// E.164 form: `+`, the country code, and the national number, digits only.
 ///
-/// Spaces, dashes, dots, and parentheses between the digits are accepted and
-/// dropped, so the stored form is `+` and digits only.
+/// The number starts with `+`. Separators such as spaces, dashes, dots,
+/// slashes, and parentheses are dropped, and so is a national trunk 0 after
+/// the country code (`+44 (0)20 …`); letters, extensions, and `tel:` URIs are
+/// refused. The plans are libphonenumber's, embedded through the exactly
+/// pinned `rlibphonenumber`.
 ///
 /// # Examples
 ///
@@ -243,42 +247,55 @@ fn general_category(character: char) -> GeneralCategory {
 /// let phone = PhoneNumber::parse("+40 (712) 345-678")?;
 /// assert_eq!(phone.as_str(), "+40712345678");
 /// assert!(PhoneNumber::parse("0712 345 678").is_err()); // no country code
+/// assert!(PhoneNumber::parse("+40 612 345 678").is_err()); // no such range in Romania
 /// # Ok::<(), eranos::error::ValueError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PhoneNumber(String);
 
 impl PhoneNumber {
-    /// Parses a phone number, dropping separators.
+    /// Parses a phone number, ignoring surrounding whitespace, and stores its
+    /// E.164 form.
     ///
     /// # Errors
     ///
     /// [`ValueError::InvalidPhoneNumber`] when the text does not start with
-    /// `+`, contains characters other than digits and separators, or has
-    /// fewer than 7 or more than 15 digits.
+    /// `+`, holds a letter or an extension, or is not a valid number in its
+    /// country's numbering plan.
     pub fn parse(text: &str) -> Result<Self, ValueError> {
-        let rest = text
-            .trim()
-            .strip_prefix('+')
-            .ok_or(ValueError::InvalidPhoneNumber)?;
-        let mut normalised = String::with_capacity(rest.len() + 1);
-        normalised.push('+');
-        for character in rest.chars() {
-            match character {
-                '0'..='9' => normalised.push(character),
-                ' ' | '-' | '.' | '(' | ')' => {}
-                _ => return Err(ValueError::InvalidPhoneNumber),
-            }
+        let text = text.trim();
+        // Letters are refused before libphonenumber sees them: it reads three
+        // or more as a vanity number, and would store `+1 800 FLOWERS` as
+        // `+18003569377`.
+        if !text.starts_with('+') || text.chars().any(char::is_alphabetic) {
+            return Err(ValueError::InvalidPhoneNumber);
         }
-        let digits = normalised.len() - 1;
-        if (7..=15).contains(&digits) {
-            Ok(Self(normalised))
-        } else {
-            Err(ValueError::InvalidPhoneNumber)
+        // `PHONE_NUMBER_UTIL` decodes the metadata of the pinned
+        // rlibphonenumber on first use, and a country's patterns compile the
+        // first time one of its numbers is checked; either panics only if that
+        // fixed data is corrupt or a pattern does not compile under `lite`.
+        // Every test run decodes it, and the test
+        // `every_regions_example_numbers_are_accepted` checks every region's
+        // patterns, so a failure fails the tests, never an app.
+        let plans = &*PHONE_NUMBER_UTIL;
+        let number = plans
+            .parse(text, None)
+            .map_err(|_| ValueError::InvalidPhoneNumber)?;
+        // E.164 has no place for an extension, and dropping it would dial
+        // another line.
+        let has_extension = number
+            .extension
+            .as_deref()
+            .is_some_and(|extension| !extension.is_empty());
+        if has_extension || !plans.is_valid_number(&number) {
+            return Err(ValueError::InvalidPhoneNumber);
         }
+        Ok(Self(
+            plans.format(&number, PhoneNumberFormat::E164).into_owned(),
+        ))
     }
 
-    /// The normalised number: `+` followed by digits only.
+    /// The number in E.164 form: `+` followed by digits only.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0

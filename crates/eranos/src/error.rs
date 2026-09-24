@@ -59,8 +59,9 @@ pub enum ValueError {
     /// places.
     #[error("invalid percentage: expected a number with at most 2 decimal places")]
     InvalidPercentage,
-    /// A phone number that is not `+` followed by 7 to 15 digits.
-    #[error("invalid phone number: expected `+` followed by 7 to 15 digits")]
+    /// A phone number that does not start with `+`, holds a letter or an
+    /// extension, or is not valid in its country's numbering plan.
+    #[error("invalid phone number: expected `+` and a number valid in its country")]
     InvalidPhoneNumber,
     /// A time of day that does not exist, has seconds, or is not ISO 8601
     /// text.

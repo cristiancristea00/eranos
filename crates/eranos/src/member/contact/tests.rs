@@ -1,9 +1,11 @@
 //! Email addresses and phone numbers are how members reach each other to
 //! settle up. These tests keep addresses to the RFC 5321 and 5322 rules,
-//! which refuse the typos mobile keyboards make, keep obviously broken
-//! numbers out, keep surrounding whitespace from making two entries of the
-//! same contact differ, and keep phone numbers stored in the one `+digits`
-//! form that diallers and messaging apps accept.
+//! which refuse the typos mobile keyboards make, keep numbers to their
+//! country's numbering plan, keep surrounding whitespace from making two
+//! entries of the same contact differ, and keep phone numbers stored in the
+//! one E.164 form that diallers and messaging apps accept.
+
+use rlibphonenumber::PhoneNumberType;
 
 use super::*;
 
@@ -288,6 +290,7 @@ fn phone_separators_are_dropped() {
         "+40 (712) 345-678",
         "+40.712.345.678",
         "+40-712-345-678",
+        "+40/712/345/678",
         "+40712345678",
     ] {
         assert_eq!(
@@ -320,60 +323,165 @@ fn a_phone_number_needs_a_leading_plus() {
             "{text}"
         );
     }
-    // A sign alone or a second sign.
-    for text in ["+", "++40712345678", "+40+712345678"] {
+    // A sign alone, a sign inside the number, a full-width sign, and a `tel:`
+    // URI.
+    for text in ["+", "+40+712345678", "＋40712345678", "tel:+40-721-234-567"] {
         assert_eq!(
             PhoneNumber::parse(text),
             Err(ValueError::InvalidPhoneNumber),
             "{text}"
         );
     }
-}
-
-/// A number too short or too long for E.164 would be stored and never
-/// connect.
-#[test]
-fn a_phone_number_has_7_to_15_digits() {
-    // The bounds.
-    assert_eq!(PhoneNumber::parse("+1234567").unwrap().as_str(), "+1234567");
+    // A doubled leading sign is read as one.
     assert_eq!(
-        PhoneNumber::parse("+123456789012345").unwrap().as_str(),
-        "+123456789012345"
-    );
-    // One digit fewer or more.
-    for text in ["+123456", "+1234567890123456"] {
-        assert_eq!(
-            PhoneNumber::parse(text),
-            Err(ValueError::InvalidPhoneNumber),
-            "{text}"
-        );
-    }
-    // Separators do not count as digits.
-    assert_eq!(
-        PhoneNumber::parse("+1 2 3 4 5 6"),
-        Err(ValueError::InvalidPhoneNumber)
+        PhoneNumber::parse("++40712345678").unwrap().as_str(),
+        "+40712345678"
     );
 }
 
-/// A number with letters or unknown symbols would be stored and fail to
-/// dial.
+/// A number no plan assigns would be stored, and a call would reach no one or
+/// someone else.
 #[test]
-fn letters_and_other_symbols_are_rejected_in_a_phone_number() {
-    // Letters, extensions, and symbols other than the separators.
-    for text in [
-        "+40712345abc",
-        "+40 712 345 678 ext 9",
-        "+40/712/345/678",
-        "+40_712_345_678",
-        "+40\t712345678",
-        "+4071234567８",
+fn a_phone_number_must_be_valid_in_its_countrys_plan() {
+    // Numbers of several plans, with their E.164 forms.
+    for (text, stored) in [
+        ("+40 712 345 678", "+40712345678"),
+        ("+44 20 7946 0958", "+442079460958"),
+        ("+1 (201) 555-0123", "+12015550123"),
+        ("+33 6 12 34 56 78", "+33612345678"),
+        ("+49 30 901820", "+4930901820"),
+        ("+86 138 0013 8000", "+8613800138000"),
+        ("+7 912 345 67 89", "+79123456789"),
+        ("+800 1234 5678", "+80012345678"),
     ] {
+        assert_eq!(PhoneNumber::parse(text).unwrap().as_str(), stored, "{text}");
+    }
+    // Lengths no plan uses, a Romanian range that does not exist, numbers too
+    // short or too long for Romania, an unassigned country code, the United
+    // Kingdom's drama range, an unassigned area code, and a number too long
+    // for Israel.
+    for text in [
+        "+1234567",
+        "+123456789012345",
+        "+123456",
+        "+1234567890123456",
+        "+1 2 3 4 5 6",
+        "+40 612 345 678",
+        "+40 712 345 67",
+        "+40 712 345 6789",
+        "+999 123 4567",
+        "+44 7700 900123",
+        "+1 555 555 5555",
+        "+97233142764978",
+    ] {
+        assert_eq!(
+            PhoneNumber::parse(text),
+            Err(ValueError::InvalidPhoneNumber),
+            "{text}"
+        );
+    }
+}
+
+/// A number with letters, an extension, or unknown symbols would be stored
+/// and dial another line or fail to dial.
+#[test]
+fn letters_extensions_and_other_symbols_are_rejected_in_a_phone_number() {
+    // Letters, which libphonenumber would read as a vanity number.
+    for text in ["+40712345abc", "+1 800 FLOWERS"] {
+        assert_eq!(
+            PhoneNumber::parse(text),
+            Err(ValueError::InvalidPhoneNumber),
+            "{text}"
+        );
+    }
+    // Extensions in their written forms, which E.164 cannot hold.
+    for text in [
+        "+40 712 345 678 ext 9",
+        "+40 721 234 567 ext. 12",
+        "+44 20 7946 0958 x 123",
+        "+40 721 234 567#12",
+        "+40 721 234 567~12",
+        "+40 721 234 567,12",
+        "+40 721 234 567;12",
+    ] {
+        assert_eq!(
+            PhoneNumber::parse(text),
+            Err(ValueError::InvalidPhoneNumber),
+            "{text}"
+        );
+    }
+    // Other symbols, and whitespace other than spaces inside the number.
+    for text in ["+40_712_345_678", "+40\t712345678"] {
         assert_eq!(
             PhoneNumber::parse(text),
             Err(ValueError::InvalidPhoneNumber),
             "{text:?}"
         );
     }
+}
+
+/// A number typed with full-width or Arabic-Indic digits would be refused,
+/// although diallers read it.
+#[test]
+fn other_digit_forms_are_read_as_digits() {
+    // Full-width and Arabic-Indic digits after an ASCII sign.
+    assert_eq!(
+        PhoneNumber::parse("+4071234567８").unwrap().as_str(),
+        "+40712345678"
+    );
+    assert_eq!(
+        PhoneNumber::parse("+٤٠ ٧٢١ ٢٣٤ ٥٦٧").unwrap().as_str(),
+        "+40721234567"
+    );
+    // A full-width sign.
+    assert_eq!(
+        PhoneNumber::parse("＋４０ ７２１ ２３４ ５６７"),
+        Err(ValueError::InvalidPhoneNumber)
+    );
+}
+
+/// A number typed with its national trunk 0 would be stored with it and fail
+/// when dialled from abroad.
+#[test]
+fn a_trunk_zero_after_the_country_code_is_dropped() {
+    // In parentheses or written out.
+    for (text, stored) in [
+        ("+44 (0)20 7946 0958", "+442079460958"),
+        ("+40 (0) 721 234 567", "+40721234567"),
+        ("+40 0721 234 567", "+40721234567"),
+        // Italy's leading 0 is part of the number, and stays.
+        ("+39 02 1234 5678", "+390212345678"),
+    ] {
+        assert_eq!(PhoneNumber::parse(text).unwrap().as_str(), stored, "{text}");
+    }
+}
+
+/// A country whose patterns the pinned metadata cannot compile, or whose
+/// numbers do not survive a round trip, would refuse or panic on every number
+/// from there.
+#[test]
+fn every_regions_example_numbers_are_accepted() {
+    let plans = &*PHONE_NUMBER_UTIL;
+    let regional = plans.get_supported_regions().flat_map(|region| {
+        [PhoneNumberType::FixedLine, PhoneNumberType::Mobile]
+            .into_iter()
+            .filter_map(move |kind| {
+                plans
+                    .get_example_number_for_type_and_region(region, kind)
+                    .ok()
+            })
+    });
+    let global = plans
+        .get_supported_global_network_calling_codes()
+        .filter_map(|code| plans.get_example_number_for_non_geo_entity(code).ok());
+    let mut checked = 0;
+    for example in regional.chain(global) {
+        let stored = plans.format(&example, PhoneNumberFormat::E164).into_owned();
+        assert_eq!(PhoneNumber::parse(&stored).unwrap().as_str(), stored);
+        checked += 1;
+    }
+    // At least one number per region.
+    assert!(checked >= plans.get_supported_regions().len(), "{checked}");
 }
 
 /// A number pasted with a stray space or newline would be refused.
@@ -410,4 +518,5 @@ fn contact_details_serialise_as_their_text_form() {
         phone
     );
     assert!(serde_json::from_str::<PhoneNumber>("\"0712345678\"").is_err());
+    assert!(serde_json::from_str::<PhoneNumber>("\"+40612345678\"").is_err());
 }

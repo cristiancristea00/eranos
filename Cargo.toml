@@ -47,6 +47,14 @@ iso4217-static = { version = "=0.2.4", default-features = false }
 # uses. Its types stay inside `Date` and `Time`, so replacing it is not a
 # breaking change.
 jiff = { version = "0.2.37", default-features = false }
+# Phone numbers: libphonenumber's numbering plans, embedded. Pinned exactly:
+# each release carries new metadata that can refuse a number an earlier one
+# accepted, and loading checks saved numbers the same way, so a new version is
+# a breaking eranos release (docs/DEVELOPMENT.md § 3.8). `lite` matches with
+# regex-lite; `global_static` provides the shared `PHONE_NUMBER_UTIL`, without
+# which 2.2.12 does not compile; `protox` compiles the crate's protobuf schema
+# without a system `protoc`. Its types stay inside `PhoneNumber`.
+rlibphonenumber = { version = "=2.2.12", default-features = false, features = ["builtin_metadata", "global_static", "lite", "protox"] }
 # Typed errors. The derive stays out of the public API, so replacing it with
 # hand-written impls is not a breaking change.
 thiserror = "2.0.20"

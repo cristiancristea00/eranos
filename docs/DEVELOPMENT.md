@@ -155,6 +155,23 @@ remove, goes into `allowed-duplicate-crates` in `clippy.toml`, with the
 dependency, the cause, and the upstream issue; it comes out when that
 release lands.
 
+### 3.8 A libphonenumber metadata release
+
+`rlibphonenumber` embeds libphonenumber's numbering plans and is pinned
+exactly in `Cargo.toml`. It follows each libphonenumber release within days
+(<https://github.com/vloldik/rlibphonenumber/releases>); Dependabot opens
+only security updates, so check for a new one by hand.
+
+1. Move the exact pin, run `cargo update -p rlibphonenumber`, and read the
+   `Cargo.lock` diff: a new crate in two versions is a decision for
+   [§ 3.7](#37-a-lint-exception), not a routine update.
+2. Run the gates; `every_regions_example_numbers_are_accepted` compiles
+   every region's patterns under `lite`, where a pattern the regex engine
+   cannot compile shows up.
+3. Raise the minor version and commit as `build(member)!:`, with a
+   `BREAKING CHANGE:` footer naming the metadata versions: a withdrawn range
+   refuses stored numbers ([VERSIONING.md](VERSIONING.md)).
+
 ## 4. Examples and benchmarks
 
 ```sh

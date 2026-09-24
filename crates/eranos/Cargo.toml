@@ -1,6 +1,7 @@
-# eranos: the library. Pure and synchronous (no I/O, no async, no global
-# state), so every rule is unit-testable and the binding crates can wrap it
-# without adapting to a runtime.
+# eranos: the library. Pure and synchronous (no I/O, no async, and no global
+# state but the phone-number metadata, decoded once on first use), so every
+# rule is unit-testable and the binding crates can wrap it without adapting
+# to a runtime.
 [package]
 name = "eranos"
 description.workspace = true
@@ -22,6 +23,7 @@ icu_normalizer = { workspace = true }
 icu_properties = { workspace = true }
 iso4217-static = { workspace = true }
 jiff = { workspace = true }
+rlibphonenumber = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 zeroize = { workspace = true }

@@ -23,8 +23,10 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 
 - **One core for every app.** iOS, Android, and the web share the rules, so
   a group computes the same totals and the same cents everywhere. The core
-  is pure synchronous Rust: no I/O, no async runtime, no global state, and
-  no clock except for generating identifiers.
+  is pure synchronous Rust: no I/O, no async runtime, no clock except for
+  generating identifiers, and no global state except the phone-number
+  metadata, which rlibphonenumber decodes once, on first use, into a table
+  nothing writes to.
 - **Exact money.** A split that loses or invents a cent is a bug users see.
   Every amount is an integer; every division is exact by construction.
 - **Changes are cheap and atomic.** Adding, editing, or removing an entry
@@ -33,14 +35,20 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 - **Deterministic everywhere.** The same entries give the same shares, the
   same totals, and the same settlement on every device and in any order of
   arrival; this is what future sync relies on.
-- **Few dependencies.** `icu_casemap` and `icu_normalizer` (Unicode
-  caseless matching of category names), `icu_locale_core` (UTS #35 language
-  tags), `icu_properties` (the Unicode categories of email characters),
-  `iso4217-static` (the ISO 4217 list, pinned exactly), `jiff` (calendar
-  dates, times of day, and their ISO 8601 parser, without its clock or time
-  zones), `thiserror` (derive only), `uuid` (v7 identifiers), `zeroize`
-  (wiping secrets), and optionally `serde`. Everything else, including IBAN
-  validation and the email rules, is in the crate.
+- **Dependencies for the rules others maintain.** `icu_casemap` and
+  `icu_normalizer` (Unicode caseless matching of category names),
+  `icu_locale_core` (UTS #35 language tags), `icu_properties` (the Unicode
+  categories of email characters), `iso4217-static` (the ISO 4217 list,
+  pinned exactly), `jiff` (calendar dates, times of day, and their ISO 8601
+  parser, without its clock or time zones), and `rlibphonenumber`
+  (libphonenumber's numbering plans, pinned exactly); besides them
+  `thiserror` (derive only), `uuid` (v7 identifiers), `zeroize` (wiping
+  secrets), and optionally `serde`. Everything else, including IBAN
+  validation and the email rules, is in the crate. The licences the apps'
+  notices must list are Apache-2.0 (iso4217-static, and rlibphonenumber with
+  libphonenumber's metadata), Unicode-3.0 (ICU4X), and Unlicense or MIT
+  (jiff), besides those of the crates they bring; `deny.toml` does not
+  check licences.
 
 ## 2. Module map
 
@@ -389,6 +397,12 @@ validated against the SWIFT IBAN Registry (release 103): the country code,
 the country's length and BBAN structure (which positions hold digits and
 which letters), and the ISO 7064 mod-97 check digits, which must lie
 between 02 and 98 and catch every single-character typo.
+
+rlibphonenumber writes national numbers to the `log` facade at `trace`
+level while it parses them, and a library cannot turn a dependency's logging
+off without global logger state; a binding or an app that installs a logger
+keeps the `rlibphonenumber` target below `trace`, so members' numbers stay
+out of its logs.
 
 Copies made outside the library (the caller's strings, a deserialiser's
 buffers, the Swift or Kotlin side of a binding) are out of its reach, and

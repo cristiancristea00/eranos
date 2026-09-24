@@ -259,6 +259,11 @@ fn a_tampered_file_is_refused() {
         value["members"][0]["email"] = json!("ana..popescu@example.com");
     });
     assert!(email.contains("invalid email address"), "{email}");
+    // A phone number in a range its country does not have.
+    let phone = tamper(&|value| {
+        value["members"][0]["phone"] = json!("+40612345678");
+    });
+    assert!(phone.contains("invalid phone number"), "{phone}");
     // A blank first name, and a foreign expense that lost its rate.
     let blank_name = tamper(&|value| {
         value["members"][1]["first_name"] = json!("  ");

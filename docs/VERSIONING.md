@@ -43,7 +43,12 @@ is pinned exactly (`=x.y.z`), so its data changes only with an eranos
 release. Saved groups load through the same checks as input, so moving the
 pin is a `feat` when it only adds values and breaking when it removes one
 or changes what one means, such as a withdrawn currency or a changed minor
-unit.
+unit. `rlibphonenumber` is pinned the same way, and every move of its pin is
+breaking: its libphonenumber metadata can withdraw a range, and then groups
+holding such a number stop loading, while an older device refuses numbers
+in a new range ([DEVELOPMENT § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)).
+An IBAN registry release that changes a length or a structure is breaking
+for the same reason.
 
 ## 3. Bumping, step by step
 

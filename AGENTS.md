@@ -81,14 +81,18 @@ failure); `#[allow]` is itself a lint error.
 - **Library code does not panic.** `unwrap` and `expect` warn everywhere
   but in tests and in constant initialisers, where a failure stops the
   build rather than a running app; arithmetic on user amounts is checked
-  and becomes an error. An
-  invariant that makes a failure impossible is written down, next to the
-  code, as a comment or an `#[expect(..., reason = "...")]`.
+  and becomes an error. An invariant that makes a failure impossible is
+  written down, next to the code, as a comment or an
+  `#[expect(..., reason = "...")]`.
 - **The library reads no clock, touches no file, and holds no global
-  state.** The one exception is ID generation (UUID v7 reads the clock and
-  the OS random source): an entity gets its ID when it is built, and
+  state**, with two exceptions. ID generation reads the clock and the OS
+  random source (UUID v7): an entity gets its ID when it is built, and
   loading a saved group restores the IDs through serde, never through a
-  public setter.
+  public setter. Phone-number validation reads rlibphonenumber's
+  `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the embedded
+  libphonenumber metadata on first use and is never written after; the
+  invariant that rules out its panic is stated at the call in
+  `member/contact.rs`.
 - **A group changes in one way**: validate the entry, resolve it, build a
   `Delta`, apply it (range-checked before anything is written), then drop the
   cached settlements. The one other writer is `Ledger::move_category`, with

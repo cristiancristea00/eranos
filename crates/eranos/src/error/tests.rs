@@ -35,7 +35,7 @@ fn value_errors() -> Vec<(ValueError, &'static str)> {
         (ValueError::InvalidEmail, "invalid email address"),
         (
             ValueError::InvalidPhoneNumber,
-            "invalid phone number: expected `+` followed by 7 to 15 digits",
+            "invalid phone number: expected `+` and a number valid in its country",
         ),
         (
             ValueError::InvalidIban(IbanError::InvalidChecksum),
@@ -452,8 +452,9 @@ fn rejected_input_never_appears_in_a_message() {
     for email in ["ana.popescu@@example.com", "ana..popescu@example.com"] {
         assert_not_echoed(email, &Email::parse(email).unwrap_err());
     }
-    let phone = "+40 712 345 67x";
-    assert_not_echoed(phone, &PhoneNumber::parse(phone).unwrap_err());
+    for phone in ["+40 712 345 67x", "+40 612 345 678", "+1 800 FLOWERS"] {
+        assert_not_echoed(phone, &PhoneNumber::parse(phone).unwrap_err());
+    }
     // Amounts, ratios, and rates.
     assert_not_echoed(
         "12,345",

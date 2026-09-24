@@ -172,7 +172,7 @@ fn validation() {
          positions hold digits and which letters, and the mod-97 check digits, which catch\n\
          any single mistyped character. Emails are checked against the rules of RFC 5321\n\
          and 5322, which refuse the doubled dots and stray commas of hurried typing, and\n\
-         phone numbers for shape only."
+         phone numbers against their country's numbering plan, stored in E.164 form."
     );
     let iban = |input: &'static str| CheckRow {
         input,
@@ -200,6 +200,8 @@ fn validation() {
             email("ana..popescu@example.com"),
             phone("+40 (712) 345-678"),
             phone("0712 345 678"),
+            phone("+40 612 345 678"),
+            phone("+44 (0)20 7946 0958"),
         ],
         3,
     );

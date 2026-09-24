@@ -14,8 +14,14 @@ allow-indexing-slicing-in-tests = true
 # that are never built, and it fires in every target, so it cannot be an
 # `#[expect]`. Each entry names the dependency and the upstream fix; an entry
 # goes when no dependency needs it.
+# - bitflags: jiff-core's weak `defmt?/alloc` feature lists defmt, and with
+#   it bitflags 1, which is never built (BurntSushi/jiff#643), beside the
+#   bitflags 2 of rlibphonenumber's dependencies.
 # - syn: jiff lists jiff-static (syn 2) under a `cfg(any())` that never holds,
-#   and jiff-core's weak `defmt?/alloc` feature lists defmt-macros (syn 2)
-#   (rust-lang/cargo#10801); only syn 3 is built. BurntSushi/jiff#650 (jiff
-#   on syn 3) and BurntSushi/jiff#643 (defmt out of the lockfile) remove it.
-allowed-duplicate-crates = ["syn"]
+#   and defmt-macros (syn 2) through the same weak feature
+#   (rust-lang/cargo#10801), which BurntSushi/jiff#650 and #643 remove; and
+#   rlibphonenumber's build compiles syn 2 for its own macros, prost-derive,
+#   and the logos code generators.
+# - thiserror and thiserror-impl: rlibphonenumber 2.2 depends on thiserror 1,
+#   built beside eranos's thiserror 2.
+allowed-duplicate-crates = ["bitflags", "syn", "thiserror", "thiserror-impl"]
