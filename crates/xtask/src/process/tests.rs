@@ -200,6 +200,34 @@ fn writing_replaces_a_file_or_fails_under_its_path() {
     );
 }
 
+/// Creating makes a directory and every one above it, and leaves one that
+/// is there as it is; a path under a file cannot be created and fails as a
+/// creation of that path, so the C and C++ gates stop before a compiler
+/// writes into a directory that is not there.
+#[test]
+fn creating_makes_every_missing_directory_or_fails_under_its_path() {
+    let root = std::env::temp_dir().join(format!("xtask-create-{}", std::process::id()));
+    let nested = root.join("nested").join("deeper");
+    System.create(&nested).unwrap();
+    fs::write(nested.join("kept.txt"), "kept").unwrap();
+    System.create(&nested).unwrap();
+    assert_eq!(fs::read_to_string(nested.join("kept.txt")).unwrap(), "kept");
+
+    let blocked = nested.join("kept.txt").join("inside");
+    let failure = System.create(&blocked).unwrap_err();
+    fs::remove_dir_all(&root).unwrap();
+    assert!(
+        matches!(&failure, Failure::Create { directory, .. } if *directory == blocked.display().to_string()),
+        "{failure:?}"
+    );
+    assert!(
+        failure
+            .to_string()
+            .starts_with(&format!("{} could not be created: ", blocked.display())),
+        "{failure}"
+    );
+}
+
 /// The Swift package's gates run exactly where Xcode's tools do: on macOS.
 #[test]
 fn only_macos_builds_for_apple_platforms() {

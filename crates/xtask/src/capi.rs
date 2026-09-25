@@ -123,8 +123,9 @@ pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), F
         .ok_or(Failure::Variable(VARIABLE))?;
     runner.run(&library())?;
     for package in [C_PACKAGE, CPP_PACKAGE] {
-        runner.clear(&directory(package, "generated"))?;
-        runner.clear(&directory(package, "build"))?;
+        for name in ["generated", "build"] {
+            runner.clear(&directory(package, name))?;
+        }
         runner.create(&directory(package, "build"))?;
         runner.run(&headers(package))?;
         for step in tests(package, &llvm, metadata) {

@@ -249,6 +249,7 @@ fn a_failing_package_stops_the_gates_at_its_step() {
         crate::java::sources(&metadata)[0].clone(),
         crate::web::node(),
         crate::kmp::checks("/JAVA_HOME_21", true)[0].clone(),
+        crate::capi::library(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

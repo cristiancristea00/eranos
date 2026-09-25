@@ -180,6 +180,31 @@ fn a_missing_llvm_stops_the_gates_before_any_step() {
     assert!(recorder.steps.is_empty());
 }
 
+/// A failure at any point stops the gates there, so no check reads what a
+/// failed step did not make: the library, the headers, the tests' build or
+/// run, the coverage summary, or a check that fails, or a directory that
+/// could not be cleared.
+#[test]
+fn a_failure_stops_the_c_and_cpp_gates_where_it_happens() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    for failing in [
+        library(),
+        headers(C_PACKAGE),
+        tests(C_PACKAGE, "/LLVM_HOME", &metadata)[0].clone(),
+        coverage(C_PACKAGE, "/LLVM_HOME"),
+        checks(C_PACKAGE, "/LLVM_HOME")[0].clone(),
+    ] {
+        let mut recorder = Recorder::new();
+        recorder.failing = Some(failing.clone());
+        assert!(matches!(run(&mut recorder, &metadata), Err(Failure::Usage)));
+        assert_eq!(recorder.steps.last(), Some(&failing));
+    }
+    let mut blocked = Recorder::new();
+    blocked.failing_files = Some(FileOperation::Clear);
+    assert!(matches!(run(&mut blocked, &metadata), Err(Failure::Usage)));
+    assert_eq!(blocked.steps, [library()]);
+}
+
 /// A build directory that could not be made would leave the compiler
 /// without a place for the tests; the gates stop there, before the headers
 /// are generated.
