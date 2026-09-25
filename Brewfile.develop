@@ -10,3 +10,46 @@ brew "cargo-llvm-cov"
 # The mutation audit. No bottle exists, so it is compiled, which takes a few
 # minutes.
 cargo "cargo-mutants"
+
+# --- The bindings -------------------------------------------------------------
+# The Swift, Kotlin, Java, KMP, web, C, and C++ packages, their tests, and
+# their formatters and linters. Xcode comes from the App Store.
+
+# The JDK the Java package builds and tests with, and that Gradle, Kotlin,
+# and the Android tools run on. Keg-only: JAVA_HOME points at it
+# (docs/DEVELOPMENT.md § 1).
+brew "openjdk@25"
+
+# The Node LTS the web package is tested on. Keg-only, so it sits beside
+# any other Node.
+brew "node@24"
+
+# clang-format and clang-tidy for the C and C++ layers, and llvm-cov for
+# their coverage, all of one LLVM release. Keg-only.
+brew "llvm"
+
+# The C++ layer's documentation.
+brew "doxygen"
+
+# The Kotlin formatter.
+brew "ktlint"
+
+# The Swift linter, with the configuration in bindings/swift.
+brew "swiftlint"
+
+# The workflow linters and the dependency audit, as CI runs them.
+brew "actionlint"
+brew "zizmor"
+brew "cargo-deny"
+
+# The Android SDK command-line tools; their `sdkmanager` installs the NDK,
+# the platform, and the build tools (docs/DEVELOPMENT.md § 1).
+cask "android-commandlinetools"
+
+# Builds the Android libraries with the NDK's linkers.
+cargo "cargo-ndk", source: "https://github.com/bbqsrc/cargo-ndk?tag=v4.1.2"
+
+# Generates the C and C++ headers. Pinned to the release of the `diplomat`
+# crate the C bridge uses: a tool of another release reads the bridge
+# differently.
+cargo "diplomat-tool", source: "https://github.com/rust-diplomat/diplomat?tag=v0.16.1"

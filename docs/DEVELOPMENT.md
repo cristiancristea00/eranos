@@ -20,7 +20,30 @@ and the test suites in [TESTING.md](TESTING.md).
   the stable channel with `rustfmt`, `clippy`, and `llvm-tools` (for
   coverage); the first `cargo` command in the repository installs them.
 - **Homebrew tools**: `brew bundle --file Brewfile.develop` installs
-  `cargo-llvm-cov` and `cargo-mutants`. Neither is needed to build or test.
+  `cargo-llvm-cov` and `cargo-mutants`, neither of which is needed to build
+  or test the library, and the bindings' toolchains: JDK 25, Node 24, LLVM
+  (clang-format, clang-tidy, and llvm-cov), Doxygen, ktlint, SwiftLint,
+  actionlint, zizmor, cargo-deny, the Android command-line tools,
+  cargo-ndk 4.1.2, and diplomat-tool 0.16.1, the last two built from their
+  release tags.
+- **Paths**: the JDK, Node 24, and LLVM are keg-only, and the Android tools
+  look for their SDK:
+
+  ```sh
+  export JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
+  export ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
+  export PATH="$(brew --prefix node@24)/bin:$(brew --prefix llvm)/bin:$PATH"
+  ```
+
+- **Android SDK packages**, once, after accepting their licences:
+
+  ```sh
+  sdkmanager --licenses
+  sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.1.0" "ndk;30.0.16248370"
+  ```
+
+- **Xcode**, from the App Store, for the Swift package and every Apple
+  target.
 - **VS Code** (optional): the workspace recommends `rust-analyzer`, CodeLLDB,
   and the Markdown and TOML extensions; the `gates` task runs every gate.
 
