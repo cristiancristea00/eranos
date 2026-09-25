@@ -1,6 +1,8 @@
 # The gates of AGENTS.md, plus an MSRV build, compile checks for the mobile
 # targets, a dependency audit, a lint of the workflow files, and a coverage
-# page. Coverage is reported, never enforced.
+# page; on a manual dispatch, every gate with the bindings' toolchains, on
+# Linux and on macOS, and the coverage of the binding glue. Coverage is
+# reported, never enforced.
 name: CI
 
 on:
@@ -14,6 +16,11 @@ on:
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
+    inputs:
+      bindings:
+        description: Also run every gate with the bindings' toolchains, on Linux and on macOS
+        type: boolean
+        default: false
 
 permissions:
   # Cloning a private repository needs read access; no job writes.
@@ -317,4 +324,156 @@ jobs:
               | (.files[] | "| `\(.filename | ltrimstr($root))` | \(.summary.regions | cell) | \(.summary.functions | cell) | \(.summary.lines | cell) |"),
                 "| **Total** | \(.totals.regions | cell) | \(.totals.functions | cell) | \(.totals.lines | cell) |"
             ' target/coverage.json
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  bindings-linux:
+    name: Bindings on Linux
+    # Every gate of AGENTS.md, with the toolchains of the Kotlin, Java, web,
+    # Kotlin Multiplatform, C, and C++ packages, which a push does not
+    # install; the Swift package and the Apple targets need macOS. Only on a
+    # dispatch that asks for the bindings, like the job after it.
+    if: github.event_name == 'workflow_dispatch' && inputs.bindings
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env: &bindings-env
+      # Without debug information, which no gate reads: with it, the builds
+      # for every target pass 40 GB, more than a runner's disk leaves free.
+      CARGO_PROFILE_DEV_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The Kotlin Multiplatform package's Gradle 9.0 runs on JDK 21, which the
+      # gates find through JAVA_HOME_21; JDK 25, installed last, becomes
+      # JAVA_HOME, which the Kotlin and Java packages build and test with.
+      - id: jdk-21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+          set-default: false
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+      # The packages of docs/DEVELOPMENT.md § 1, into the image's SDK.
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.1.0 ndk;30.0.16248370
+          log-accepted-android-sdk-licenses: false
+      # An image may name another NDK, which cargo-ndk would take.
+      - name: Name the NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >>"$GITHUB_ENV"
+      # LLVM 23, whose clang-format and clang-tidy check the C and C++
+      # layers, as Homebrew installs it: another release formats and lints
+      # otherwise. Its tools sit unsuffixed in /usr/lib/llvm-23/bin.
+      - name: Install LLVM
+        run: |
+          curl --fail --silent --show-error --location https://apt.llvm.org/llvm.sh --output "$RUNNER_TEMP/llvm.sh"
+          sudo bash "$RUNNER_TEMP/llvm.sh" 23 all
+          echo "LLVM_HOME=/usr/lib/llvm-23" >>"$GITHUB_ENV"
+      # The releases Homebrew installs: an older Doxygen reports other
+      # warnings, and another ktlint formats otherwise.
+      - name: Install Doxygen and ktlint
+        run: |
+          curl --fail --silent --show-error --location \
+            https://github.com/doxygen/doxygen/releases/download/Release_1_18_0/doxygen-1.18.0.linux.bin.tar.gz |
+            tar --extract --gzip --directory "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/doxygen-1.18.0/bin" >>"$GITHUB_PATH"
+          mkdir "$RUNNER_TEMP/ktlint"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/ktlint/ktlint" \
+            https://github.com/pinterest/ktlint/releases/download/1.8.0/ktlint
+          chmod +x "$RUNNER_TEMP/ktlint/ktlint"
+          echo "$RUNNER_TEMP/ktlint" >>"$GITHUB_PATH"
+      # From the release tags that Brewfile.develop names, each for the
+      # release of the crate it serves.
+      - name: Install cargo-ndk, diplomat-tool, and uniffi-bindgen-react-native
+        run: |
+          cargo install --locked --git https://github.com/bbqsrc/cargo-ndk --tag v4.1.2 cargo-ndk
+          cargo install --locked --git https://github.com/rust-diplomat/diplomat --tag v0.16.1 diplomat-tool
+          cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-5 uniffi-bindgen-react-native
+      - run: cargo xtask gates
+        env:
+          JAVA_HOME_21: ${{ steps.jdk-21.outputs.path }}
+
+  bindings-macos:
+    name: Bindings on macOS
+    # Every gate, the Swift package and the Kotlin Multiplatform package's
+    # Apple targets included, then the coverage of the Rust tests and of the
+    # binding glue, which only the Swift tests reach whole. Only on a
+    # dispatch that asks for the bindings: macOS minutes count about ten
+    # times.
+    if: github.event_name == 'workflow_dispatch' && inputs.bindings
+    runs-on: macos-26
+    timeout-minutes: 180
+    env: *bindings-env
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - id: jdk-21
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+          set-default: false
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools platforms;android-36 build-tools;36.1.0 ndk;30.0.16248370
+          log-accepted-android-sdk-licenses: false
+      - name: Name the NDK
+        run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >>"$GITHUB_ENV"
+      # The tools a developer's Brewfile.develop installs, but for the Android
+      # command-line tools, the JDKs, and Node, which the steps above set up.
+      - name: Install LLVM, Doxygen, ktlint, and SwiftLint
+        run: |
+          brew install llvm doxygen ktlint swiftlint
+          echo "LLVM_HOME=$(brew --prefix llvm)" >>"$GITHUB_ENV"
+      - name: Install cargo-ndk, diplomat-tool, and uniffi-bindgen-react-native
+        run: |
+          cargo install --locked --git https://github.com/bbqsrc/cargo-ndk --tag v4.1.2 cargo-ndk
+          cargo install --locked --git https://github.com/rust-diplomat/diplomat --tag v0.16.1 diplomat-tool
+          cargo install --locked --git https://github.com/jhugman/uniffi-bindgen-react-native --tag 0.31.0-5 uniffi-bindgen-react-native
+      - uses: taiki-e/install-action@v2.87.19
+        with:
+          tool: cargo-llvm-cov@0.9.1
+      - run: cargo xtask gates
+        env:
+          JAVA_HOME_21: ${{ steps.jdk-21.outputs.path }}
+      - run: cargo xtask coverage
+      - name: Export the report
+        run: cargo llvm-cov report --html --output-dir target/coverage-bindings
+      - name: Upload the report
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: eranos-coverage-bindings
+          path: target/coverage-bindings/html
+          retention-days: 7
+          if-no-files-found: error
+      - name: Summarise
+        run: |
+          {
+            echo '## Coverage with the binding glue'
+            echo
+            echo '```text'
+            cargo llvm-cov report --summary-only
+            echo '```'
           } >>"$GITHUB_STEP_SUMMARY"

@@ -122,8 +122,10 @@ It runs these, in this order, and stops at the first that fails:
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
 demonstration. A test in `crates/xtask` reads this list, so the command and
-the list cannot drift apart. The VS Code task `gates` runs `cargo xtask
-gates`, and CI runs the same steps as its jobs on every push
+the list cannot drift apart. The VS Code task `gates` runs
+`cargo xtask gates`, and CI runs the Rust steps as its jobs on every push,
+and every step, on Linux and on macOS, on a dispatch that asks for the
+bindings
 ([docs/DEVELOPMENT.md § 6](docs/DEVELOPMENT.md#6-continuous-integration)).
 
 Clippy is strict on every target (library, tests, examples, benches): the

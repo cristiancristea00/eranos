@@ -543,13 +543,18 @@ commit was tested, and those checks show on the pull request.
 | Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                   |
 | Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                     |
 | Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                       |
+| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, on a dispatch that asks for the bindings only                                                                                          |
+| Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                 |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a
 month, with macOS minutes counting about ten times and Windows minutes about
 twice. Every job is billed in whole minutes, so a push costs about 7 (10
 while the caches are cold) and a run with macOS and Windows about 25. Those
 two jobs run only when dispatched from the Actions tab or with
-`gh workflow run ci.yml --ref main`. When the minutes run out, runs stop
+`gh workflow run ci.yml --ref main`, and the two binding jobs only on a
+dispatch that asks for them, by the Actions tab's checkbox or with
+`gh workflow run ci.yml --ref main -f bindings=true`; they install every
+binding's toolchain and run every gate. When the minutes run out, runs stop
 until the next month; nothing is billed. The plan has no branch protection,
 so a failing run blocks nothing: it is a report.
 
