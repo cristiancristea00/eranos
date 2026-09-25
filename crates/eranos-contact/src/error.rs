@@ -14,3 +14,27 @@ pub enum ContactError {
     #[error("invalid phone number: expected `+` and a number valid in its country")]
     InvalidPhoneNumber,
 }
+
+/// Builds a value from a [`ContactError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromContactError: Sized {
+    /// The value for [`ContactError::InvalidEmail`].
+    fn invalid_email(message: String) -> Self;
+
+    /// The value for [`ContactError::InvalidPhoneNumber`].
+    fn invalid_phone_number(message: String) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_contact_error(error: ContactError) -> Self {
+        let message = error.to_string();
+        match error {
+            ContactError::InvalidEmail => Self::invalid_email(message),
+            ContactError::InvalidPhoneNumber => Self::invalid_phone_number(message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

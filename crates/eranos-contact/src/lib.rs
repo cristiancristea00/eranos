@@ -2,7 +2,9 @@
 //! checked against libphonenumber's numbering plans.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromContactError`],
+//! through which a crate that tells every failure apart converts one without
+//! the wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -15,7 +17,7 @@ use icu_properties::CodePointMapData;
 use icu_properties::props::{GeneralCategory, GeneralCategoryGroup};
 use rlibphonenumber::{PHONE_NUMBER_UTIL, PhoneNumberFormat};
 
-pub use error::ContactError;
+pub use error::{ContactError, FromContactError};
 
 /// An email address: a local part and a domain around an `@`, as RFC 5321
 /// and 5322 define them, with the characters outside ASCII that RFC 6531

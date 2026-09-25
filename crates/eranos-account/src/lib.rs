@@ -1,9 +1,10 @@
 //! Where a member can be paid: bank accounts and payment-app usernames.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use. The facade does not re-export [`FromAccountDetails`],
-//! through which a crate that tells every kind of account apart converts
-//! account details without the wildcard arm a `match` outside this crate
+//! types callers use. The facade does not re-export the conversion traits
+//! [`FromAccountDetails`], [`FromAccountError`], and [`FromIbanError`],
+//! through which a crate that tells every variant apart converts account
+//! details or a failure without the wildcard arm a `match` outside this crate
 //! would need.
 #![doc(test(attr(deny(warnings))))]
 
@@ -15,7 +16,7 @@ use std::str::FromStr;
 
 use eranos_core::text;
 
-pub use error::{AccountError, IbanError};
+pub use error::{AccountError, FromAccountError, FromIbanError, IbanError};
 pub use iban::Iban;
 
 /// A named place where a member can receive money, such as `ING` with an

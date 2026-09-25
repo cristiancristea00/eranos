@@ -6,7 +6,9 @@
 //! ISO 8601 parser; the jiff types stay private.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromCalendarError`],
+//! through which a crate that tells every failure apart converts one without
+//! the wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -17,7 +19,7 @@ use std::str::FromStr;
 
 use jiff::civil;
 
-pub use error::CalendarError;
+pub use error::{CalendarError, FromCalendarError};
 
 /// A calendar date in the proleptic Gregorian calendar, between years 1 and
 /// 9999.

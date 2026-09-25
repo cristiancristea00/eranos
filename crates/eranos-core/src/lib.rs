@@ -15,7 +15,9 @@
 //! drivers.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromIdError`], through
+//! which a crate that tells every failure apart converts one without the
+//! wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 pub mod cooperative;
@@ -35,7 +37,7 @@ use std::sync::{Mutex, PoisonError};
 use uuid::Builder;
 use uuid::Uuid;
 
-pub use error::IdError;
+pub use error::{FromIdError, IdError};
 
 /// Held while an identifier is generated. uuid's shared v7 context reads the
 /// clock before it takes its own lock, and when a thread is paused between

@@ -13,3 +13,27 @@ pub enum CalendarError {
     #[error("invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds")]
     InvalidTime,
 }
+
+/// Builds a value from a [`CalendarError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromCalendarError: Sized {
+    /// The value for [`CalendarError::InvalidDate`].
+    fn invalid_date(message: String) -> Self;
+
+    /// The value for [`CalendarError::InvalidTime`].
+    fn invalid_time(message: String) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_calendar_error(error: CalendarError) -> Self {
+        let message = error.to_string();
+        match error {
+            CalendarError::InvalidDate => Self::invalid_date(message),
+            CalendarError::InvalidTime => Self::invalid_time(message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

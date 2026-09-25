@@ -1,7 +1,9 @@
 //! Expense categories, defined per group.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromCategoryError`],
+//! through which a crate that tells every failure apart converts one without
+//! the wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -10,7 +12,7 @@ use eranos_core::{CategoryId, text};
 use icu_casemap::CaseMapper;
 use icu_normalizer::DecomposingNormalizerBorrowed;
 
-pub use error::CategoryError;
+pub use error::{CategoryError, FromCategoryError};
 
 /// A category a group sorts its expenses into, such as "Food" or "Fuel".
 ///

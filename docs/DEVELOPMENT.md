@@ -174,7 +174,11 @@ joins its crate's enum in that crate's `error.rs`, in alphabetical order;
 its message is lowercase, has no trailing full stop, and never repeats the
 rejected text. Pin the message in its enum's list in `tests/errors.rs`, and
 name the variant in the `# Errors` section of every function that can
-return it.
+return it. Give the enum's conversion trait (`FromGroupError` and the like,
+beside the enum) a method for it, in variant order, taking what the
+variant holds and the message, and its arm in the provided `from_…`; add
+its row to the conversion test in the crate's `error/tests.rs`. The binding
+core then fails to build until it reports the new failure.
 
 ### 3.7 A lint exception
 

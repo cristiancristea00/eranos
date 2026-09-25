@@ -2,7 +2,9 @@
 //! can be paid to.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromMemberError`],
+//! through which a crate that tells every failure apart converts one without
+//! the wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -11,7 +13,7 @@ use eranos_account::Account;
 use eranos_contact::{Email, PhoneNumber};
 use eranos_core::{MemberId, text};
 
-pub use error::MemberError;
+pub use error::{FromMemberError, MemberError};
 
 /// A person who pays for or shares expenses.
 ///

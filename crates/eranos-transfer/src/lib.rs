@@ -2,8 +2,10 @@
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. [`resolve_transfer`], which converts a transfer into
-//! the group currency for the ledger, is the group's, and the facade does
-//! not re-export it.
+//! the group currency for the ledger, is the group's, and the facade does not
+//! re-export it; nor does it re-export [`FromTransferError`], through which a
+//! crate that tells every failure apart converts one without the wildcard arm
+//! a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -13,7 +15,7 @@ use eranos_core::{MemberId, TransferId, text};
 use eranos_money::{Cost, Currency, ExchangeRate, Money, MoneyError};
 use eranos_settlement::Payment;
 
-pub use error::TransferError;
+pub use error::{FromTransferError, TransferError};
 
 /// Money one member paid directly to another, usually to settle up.
 ///

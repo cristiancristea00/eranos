@@ -2,7 +2,10 @@
 //! household, or any shared spending, with their totals kept current.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromGroupError`] and
+//! [`FromLanguageError`], through which a crate that tells every failure
+//! apart converts one without the wildcard arm a `match` outside this crate
+//! would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod builder;
@@ -17,7 +20,7 @@ use std::collections::btree_map::Entry;
 use std::future::Future;
 
 pub use builder::GroupBuilder;
-pub use error::{GroupError, LanguageError};
+pub use error::{FromGroupError, FromLanguageError, GroupError, LanguageError};
 pub use language::Language;
 #[cfg(feature = "serde")]
 pub use saved::SavedGroup;

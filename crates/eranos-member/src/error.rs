@@ -8,3 +8,23 @@ pub enum MemberError {
     #[error("the first name must not be empty")]
     EmptyFirstName,
 }
+
+/// Builds a value from a [`MemberError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromMemberError: Sized {
+    /// The value for [`MemberError::EmptyFirstName`].
+    fn empty_first_name(message: String) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_member_error(error: MemberError) -> Self {
+        let message = error.to_string();
+        match error {
+            MemberError::EmptyFirstName => Self::empty_first_name(message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

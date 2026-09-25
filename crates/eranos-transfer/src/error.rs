@@ -11,3 +11,27 @@ pub enum TransferError {
     #[error("a transfer needs two different members")]
     SameMember,
 }
+
+/// Builds a value from a [`TransferError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromTransferError: Sized {
+    /// The value for [`TransferError::NonPositiveAmount`].
+    fn non_positive_amount(message: String) -> Self;
+
+    /// The value for [`TransferError::SameMember`].
+    fn same_member(message: String) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_transfer_error(error: TransferError) -> Self {
+        let message = error.to_string();
+        match error {
+            TransferError::NonPositiveAmount => Self::non_positive_amount(message),
+            TransferError::SameMember => Self::same_member(message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

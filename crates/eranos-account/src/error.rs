@@ -15,6 +15,31 @@ pub enum AccountError {
     InvalidIban(IbanError),
 }
 
+/// Builds a value from an [`AccountError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromAccountError: Sized {
+    /// The value for [`AccountError::EmptyName`].
+    fn empty_name(message: String) -> Self;
+
+    /// The value for [`AccountError::EmptyUsername`].
+    fn empty_username(message: String) -> Self;
+
+    /// The value for [`AccountError::InvalidIban`].
+    fn invalid_iban(message: String, reason: IbanError) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_account_error(error: &AccountError) -> Self {
+        let message = error.to_string();
+        match error {
+            AccountError::EmptyName => Self::empty_name(message),
+            AccountError::EmptyUsername => Self::empty_username(message),
+            AccountError::InvalidIban(reason) => Self::invalid_iban(message, *reason),
+        }
+    }
+}
+
 /// Why an IBAN was rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
@@ -47,3 +72,41 @@ pub enum IbanError {
         found: usize,
     },
 }
+
+/// Builds a value from an [`IbanError`], the reason inside
+/// [`AccountError::InvalidIban`], one method per reason.
+pub trait FromIbanError: Sized {
+    /// The value for [`IbanError::InvalidCharacter`].
+    fn invalid_character() -> Self;
+
+    /// The value for [`IbanError::InvalidChecksum`].
+    fn invalid_checksum() -> Self;
+
+    /// The value for [`IbanError::InvalidFormat`].
+    fn invalid_format() -> Self;
+
+    /// The value for [`IbanError::InvalidStructure`].
+    fn invalid_structure() -> Self;
+
+    /// The value for [`IbanError::UnknownCountry`].
+    fn unknown_country() -> Self;
+
+    /// The value for [`IbanError::WrongLength`].
+    fn wrong_length(expected: usize, found: usize) -> Self;
+
+    /// The value for `error`, from the method of its variant.
+    #[must_use]
+    fn from_iban_error(error: &IbanError) -> Self {
+        match error {
+            IbanError::InvalidCharacter => Self::invalid_character(),
+            IbanError::InvalidChecksum => Self::invalid_checksum(),
+            IbanError::InvalidFormat => Self::invalid_format(),
+            IbanError::InvalidStructure => Self::invalid_structure(),
+            IbanError::UnknownCountry => Self::unknown_country(),
+            IbanError::WrongLength { expected, found } => Self::wrong_length(*expected, *found),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

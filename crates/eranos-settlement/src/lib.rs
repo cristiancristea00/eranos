@@ -8,9 +8,10 @@
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. [`Settlements`], the group's cache of plans,
 //! [`settle`], and [`settle_async`] are the group's, and the facade does not
-//! re-export them; nor does it re-export [`FromSettlementStrategy`], through
-//! which a crate that tells every strategy apart converts one without the
-//! wildcard arm a `match` outside this crate would need.
+//! re-export them; nor does it re-export [`FromSettlementError`] and
+//! [`FromSettlementStrategy`], through which a crate that tells every variant
+//! apart converts a failure or a strategy without the wildcard arm a `match`
+//! outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod direct;
@@ -26,7 +27,7 @@ use eranos_core::cooperative::Cooperative;
 use eranos_ledger::{Ledger, MemberPair};
 use eranos_money::{Currency, Money};
 
-pub use error::SettlementError;
+pub use error::{FromSettlementError, SettlementError};
 
 /// How `Group::settlement` turns balances into payments.
 ///

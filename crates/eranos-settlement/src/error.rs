@@ -13,3 +13,23 @@ pub enum SettlementError {
         balances: usize,
     },
 }
+
+/// Builds a value from a [`SettlementError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromSettlementError: Sized {
+    /// The value for [`SettlementError::OutOfMemory`].
+    fn out_of_memory(balances: usize, message: String) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_settlement_error(error: &SettlementError) -> Self {
+        let message = error.to_string();
+        match error {
+            SettlementError::OutOfMemory { balances } => Self::out_of_memory(*balances, message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

@@ -46,3 +46,55 @@ pub enum MoneyError {
     #[error("unknown currency code")]
     UnknownCurrency,
 }
+
+/// Builds a value from a [`MoneyError`], one method per failure, each
+/// given what its variant holds and the error's message.
+pub trait FromMoneyError: Sized {
+    /// The value for [`MoneyError::CurrencyMismatch`].
+    fn currency_mismatch(left: Currency, message: String, right: Currency) -> Self;
+
+    /// The value for [`MoneyError::InvalidAmount`].
+    fn invalid_amount(message: String) -> Self;
+
+    /// The value for [`MoneyError::InvalidExchangeRate`].
+    fn invalid_exchange_rate(message: String) -> Self;
+
+    /// The value for [`MoneyError::InvalidParts`].
+    fn invalid_parts(message: String) -> Self;
+
+    /// The value for [`MoneyError::InvalidPercentage`].
+    fn invalid_percentage(message: String) -> Self;
+
+    /// The value for [`MoneyError::Overflow`].
+    fn overflow(message: String) -> Self;
+
+    /// The value for [`MoneyError::TooManyDecimals`].
+    fn too_many_decimals(allowed: u8, currency: Currency, message: String) -> Self;
+
+    /// The value for [`MoneyError::UnknownCurrency`].
+    fn unknown_currency(message: String) -> Self;
+
+    /// The value for `error`, from the method of its variant, given the error's
+    /// message.
+    #[must_use]
+    fn from_money_error(error: &MoneyError) -> Self {
+        let message = error.to_string();
+        match error {
+            MoneyError::CurrencyMismatch { left, right } => {
+                Self::currency_mismatch(*left, message, *right)
+            }
+            MoneyError::InvalidAmount => Self::invalid_amount(message),
+            MoneyError::InvalidExchangeRate => Self::invalid_exchange_rate(message),
+            MoneyError::InvalidParts => Self::invalid_parts(message),
+            MoneyError::InvalidPercentage => Self::invalid_percentage(message),
+            MoneyError::Overflow => Self::overflow(message),
+            MoneyError::TooManyDecimals { allowed, currency } => {
+                Self::too_many_decimals(*allowed, *currency, message)
+            }
+            MoneyError::UnknownCurrency => Self::unknown_currency(message),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;
