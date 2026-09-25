@@ -2,7 +2,8 @@
 //! group's spending and everyone's balance, and it is never recomputed: a
 //! delta applied twice, a row left behind at zero, a pair keyed the wrong
 //! way round, or a half-applied change after an overflow would leave the
-//! numbers permanently wrong.
+//! numbers permanently wrong. A balance converted through `FromBalance`
+//! keeps its standing.
 
 use super::*;
 
@@ -389,4 +390,44 @@ fn a_member_summary_names_its_member() {
     // One member looked up, with totals or without.
     assert_eq!(summary.member(bob).member(), bob);
     assert_eq!(summary.member(carol).member(), carol);
+}
+
+/// A balance as a crate outside this one converts it.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedBalance {
+    GetsBack(Money),
+    Owes(Money),
+    Settled,
+}
+
+impl FromBalance for ConvertedBalance {
+    fn gets_back(amount: Money) -> Self {
+        Self::GetsBack(amount)
+    }
+
+    fn owes(amount: Money) -> Self {
+        Self::Owes(amount)
+    }
+
+    fn settled() -> Self {
+        Self::Settled
+    }
+}
+
+/// A conversion that called another variant's method would tell a member
+/// who is owed money that they owe it.
+#[test]
+fn a_balance_converts_through_the_method_of_its_variant() {
+    assert_eq!(
+        ConvertedBalance::from_balance(Balance::GetsBack(eur(1_200))),
+        ConvertedBalance::GetsBack(eur(1_200))
+    );
+    assert_eq!(
+        ConvertedBalance::from_balance(Balance::Owes(eur(300))),
+        ConvertedBalance::Owes(eur(300))
+    );
+    assert_eq!(
+        ConvertedBalance::from_balance(Balance::Settled),
+        ConvertedBalance::Settled
+    );
 }

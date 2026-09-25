@@ -1,8 +1,9 @@
 //! Tips are added on top of an expense and covered by its payers. These
 //! tests keep the default tip at nothing, keep percentage tips rounded to
 //! the nearest minor unit, with halves going up, keep fixed tips in the
-//! expense's currency and never negative, and keep how a tip is shared
-//! independent of how it is expressed.
+//! expense's currency and never negative, keep how a tip is shared
+//! independent of how it is expressed, and keep both through their
+//! conversion traits.
 
 use eranos_money::Currency;
 
@@ -193,4 +194,61 @@ fn tips_round_trip_through_serde() {
     // A tip saved without a distribution is shared proportionally.
     let loaded: Tip = serde_json::from_str(r#"{"value":{"percentage":1000}}"#).unwrap();
     assert_eq!(loaded, Tip::percentage(per_cent("10")));
+}
+
+/// A tip's value as a crate outside this one converts it.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedValue {
+    Fixed(Money),
+    Percentage(Percentage),
+}
+
+impl FromTipValue for ConvertedValue {
+    fn fixed(amount: Money) -> Self {
+        Self::Fixed(amount)
+    }
+
+    fn percentage(percentage: Percentage) -> Self {
+        Self::Percentage(percentage)
+    }
+}
+
+/// A tip's distribution as a crate outside this one converts it.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedDistribution {
+    Equal,
+    Proportional,
+}
+
+impl FromTipDistribution for ConvertedDistribution {
+    fn equal() -> Self {
+        Self::Equal
+    }
+
+    fn proportional() -> Self {
+        Self::Proportional
+    }
+}
+
+/// A conversion that called another variant's method would hand the
+/// bindings a fixed tip as a percentage, or an equal share of a tip as a
+/// proportional one.
+#[test]
+fn a_tip_converts_through_the_methods_of_its_variants() {
+    assert_eq!(
+        ConvertedValue::from_tip_value(TipValue::Fixed(euros(500))),
+        ConvertedValue::Fixed(euros(500))
+    );
+    assert_eq!(
+        ConvertedValue::from_tip_value(TipValue::Percentage(per_cent("10"))),
+        ConvertedValue::Percentage(per_cent("10"))
+    );
+    assert_eq!(
+        ConvertedDistribution::from_tip_distribution(TipDistribution::Equal),
+        ConvertedDistribution::Equal
+    );
+    assert_eq!(
+        ConvertedDistribution::from_tip_distribution(TipDistribution::Proportional),
+        ConvertedDistribution::Proportional
+    );
 }

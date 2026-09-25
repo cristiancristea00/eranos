@@ -5,7 +5,9 @@
 //! by the rules of the `allocation` module.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromCost`], through
+//! which a crate that tells every kind of cost apart converts one without
+//! the wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 pub mod allocation;
@@ -17,7 +19,7 @@ mod rate;
 mod ratio;
 
 pub use amount::Money;
-pub use cost::Cost;
+pub use cost::{Cost, FromCost};
 pub use currency::Currency;
 pub use error::MoneyError;
 pub use rate::{CurrencyRate, ExchangeRate};

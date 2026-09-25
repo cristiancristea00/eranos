@@ -138,5 +138,43 @@ pub enum TipDistribution {
     Proportional,
 }
 
+/// Builds a value from a [`TipValue`], one method per way of expressing a
+/// tip.
+pub trait FromTipValue: Sized {
+    /// The value for a fixed `amount`.
+    fn fixed(amount: Money) -> Self;
+
+    /// The value for a `percentage` of the expense's amount.
+    fn percentage(percentage: Percentage) -> Self;
+
+    /// The value for `value`, from the method of its variant.
+    #[must_use]
+    fn from_tip_value(value: TipValue) -> Self {
+        match value {
+            TipValue::Fixed(amount) => Self::fixed(amount),
+            TipValue::Percentage(percentage) => Self::percentage(percentage),
+        }
+    }
+}
+
+/// Builds a value from a [`TipDistribution`], one method per way of sharing
+/// a tip.
+pub trait FromTipDistribution: Sized {
+    /// The value for a tip shared equally.
+    fn equal() -> Self;
+
+    /// The value for a tip shared in proportion to each participant's share.
+    fn proportional() -> Self;
+
+    /// The value for `distribution`, from the method of its variant.
+    #[must_use]
+    fn from_tip_distribution(distribution: TipDistribution) -> Self {
+        match distribution {
+            TipDistribution::Equal => Self::equal(),
+            TipDistribution::Proportional => Self::proportional(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

@@ -7,7 +7,9 @@
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. [`Ledger`], [`Delta`], and the pair types are the
 //! machinery the group writes through, and the facade does not re-export
-//! them.
+//! them; nor does it re-export [`FromBalance`], through which a crate that
+//! tells every standing apart converts a balance without the wildcard arm a
+//! `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 use std::cmp::Ordering;
@@ -244,6 +246,28 @@ impl fmt::Display for Balance {
             Self::GetsBack(amount) => write!(formatter, "gets back {amount}"),
             Self::Owes(amount) => write!(formatter, "owes {amount}"),
             Self::Settled => formatter.write_str("settled"),
+        }
+    }
+}
+
+/// Builds a value from a [`Balance`], one method per standing.
+pub trait FromBalance: Sized {
+    /// The value for a member the others owe `amount`.
+    fn gets_back(amount: Money) -> Self;
+
+    /// The value for a member who owes the others `amount`.
+    fn owes(amount: Money) -> Self;
+
+    /// The value for a member who owes nothing and is owed nothing.
+    fn settled() -> Self;
+
+    /// The value for `balance`, from the method of its variant.
+    #[must_use]
+    fn from_balance(balance: Balance) -> Self {
+        match balance {
+            Balance::GetsBack(amount) => Self::gets_back(amount),
+            Balance::Owes(amount) => Self::owes(amount),
+            Balance::Settled => Self::settled(),
         }
     }
 }

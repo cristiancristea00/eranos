@@ -3,7 +3,11 @@
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. [`resolve_expense`], which divides an expense into
 //! group-currency shares for the ledger, is the group's, and the facade does
-//! not re-export it.
+//! not re-export it; nor does it re-export the conversion traits
+//! ([`FromExpenseSplit`], [`FromSplit`], [`FromTipDistribution`], and
+//! [`FromTipValue`]), through which a crate that tells every variant of an
+//! enum apart converts it without the wildcard arm a `match` outside this
+//! crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -17,8 +21,8 @@ use std::collections::BTreeSet;
 pub use error::ExpenseError;
 pub use item::{Item, ItemBuilder};
 pub use resolution::resolve_expense;
-pub use split::{MemberAmount, MemberParts, MemberPercentage, Split};
-pub use tip::{Tip, TipDistribution, TipValue};
+pub use split::{FromSplit, MemberAmount, MemberParts, MemberPercentage, Split};
+pub use tip::{FromTipDistribution, FromTipValue, Tip, TipDistribution, TipValue};
 
 use eranos_calendar::{CalendarDate, TimeOfDay};
 use eranos_core::{CategoryId, ExpenseId, MemberId, text};
@@ -344,6 +348,25 @@ impl ExpenseSplit {
                 .flat_map(|item| item.split().members())
                 .collect(),
             Self::Whole(split) => split.members().collect(),
+        }
+    }
+}
+
+/// Builds a value from an [`ExpenseSplit`], one method per way of sharing a
+/// cost.
+pub trait FromExpenseSplit: Sized {
+    /// The value for a cost shared item by item.
+    fn itemised(items: &[Item]) -> Self;
+
+    /// The value for a cost shared as a whole by `split`.
+    fn whole(split: &Split) -> Self;
+
+    /// The value for `expense_split`, from the method of its variant.
+    #[must_use]
+    fn from_expense_split(expense_split: &ExpenseSplit) -> Self {
+        match expense_split {
+            ExpenseSplit::Itemised(items) => Self::itemised(items),
+            ExpenseSplit::Whole(split) => Self::whole(split),
         }
     }
 }

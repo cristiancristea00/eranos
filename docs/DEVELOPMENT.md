@@ -71,10 +71,13 @@ their own, and smaller units, at those seconds.
    needs its own exact division that still adds up to the total. `divide`
    trusts `validate`: an empty split divides into no shares and all-zero
    weights split equally, so `validate` must refuse both.
-3. Pin it with a hand-computed case in `eranos-expense/src/split/tests.rs`
+3. Add its method to `FromSplit`, in variant order, and its arm to
+   `from_split`; every implementation, such as the binding core's, then
+   fails to build until it handles the new variant.
+4. Pin it with a hand-computed case in `eranos-expense/src/split/tests.rs`
    and in `tests/scenarios.rs`, and add it to the random recipes in
    `tests/properties.rs` so the invariants cover it.
-4. Document it on the variant and in ARCHITECTURE § 3.
+5. Document it on the variant and in ARCHITECTURE § 3.
 
 ### 3.2 An ISO 4217 amendment
 
@@ -143,7 +146,9 @@ breaking.
    `Settlements::slot` is exhaustive, so the compiler points at it).
 4. Add it to `SettlementStrategy::all()`; the property tests then check that
    its plans clear every balance.
-5. Benchmark it in `benches/settlement.rs` and record the timing in
+5. Add its method to `FromSettlementStrategy`, in variant order, and its
+   arm to `from_settlement_strategy`.
+6. Benchmark it in `benches/settlement.rs` and record the timing in
    ARCHITECTURE § 13.
 
 ### 3.5 A new field on an entity
@@ -208,7 +213,11 @@ When code in one crate needs something another crate holds:
    match on an enum belongs in the enum's crate, since a match on another
    crate's `#[non_exhaustive]` enum needs a wildcard arm that never runs,
    and a rule of the group, such as whether a cost suits its currency, in
-   the group.
+   the group. A crate that must tell every variant of another crate's enum
+   apart, as the binding core does, implements the enum's conversion trait
+   (`FromSplit`, `FromCost`, and the like): one method per variant, in
+   variant order, and a provided `from_…` that matches in the enum's own
+   crate, so a new variant fails the implementing crate's build.
 2. Otherwise make the item a documented public item of its crate. If
    callers need it, re-export it in the facade module of its crate with
    `#[doc(inline)]`, and at the facade's root with `#[doc(no_inline)]`;

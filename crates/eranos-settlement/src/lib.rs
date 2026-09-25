@@ -8,7 +8,9 @@
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. [`Settlements`], the group's cache of plans,
 //! [`settle`], and [`settle_async`] are the group's, and the facade does not
-//! re-export them.
+//! re-export them; nor does it re-export [`FromSettlementStrategy`], through
+//! which a crate that tells every strategy apart converts one without the
+//! wildcard arm a `match` outside this crate would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod direct;
@@ -90,6 +92,28 @@ impl SettlementStrategy {
     #[must_use]
     pub const fn all() -> [Self; 3] {
         [Self::Direct, Self::Greedy, Self::MinimumTransfers]
+    }
+}
+
+/// Builds a value from a [`SettlementStrategy`], one method per strategy.
+pub trait FromSettlementStrategy: Sized {
+    /// The value for the direct strategy.
+    fn direct() -> Self;
+
+    /// The value for the greedy strategy.
+    fn greedy() -> Self;
+
+    /// The value for the strategy of the fewest payments.
+    fn minimum_transfers() -> Self;
+
+    /// The value for `strategy`, from the method of its variant.
+    #[must_use]
+    fn from_settlement_strategy(strategy: SettlementStrategy) -> Self {
+        match strategy {
+            SettlementStrategy::Direct => Self::direct(),
+            SettlementStrategy::Greedy => Self::greedy(),
+            SettlementStrategy::MinimumTransfers => Self::minimum_transfers(),
+        }
     }
 }
 

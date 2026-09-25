@@ -142,7 +142,9 @@ failure); `#[allow]` is itself a lint error.
   only what callers use, with `#[doc(inline)]` in its module and
   `#[doc(no_inline)]` at its root: machinery such as `Ledger`, `Delta`,
   `resolve_expense`, and `Settlements` stays public in its crate and out of
-  the facade. No `#[doc(hidden)]`, no glob re-exports, and nothing public
+  the facade, and so do the conversion traits (`FromSplit` and the like)
+  through which another crate tells every variant of an enum apart without
+  a wildcard arm. No `#[doc(hidden)]`, no glob re-exports, and nothing public
   for tests. Doc examples use `eranos::` paths; unit tests use `crate::`
   and `eranos_<crate>::` paths, never `eranos::`, which would link a second
   copy of the crate under test; no dev-dependency enables a feature, so
@@ -177,8 +179,9 @@ failure); `#[allow]` is itself a lint error.
   and methods that read several fields, such as `build`, come last.
   `Group` heads each field's methods with a section comment.
 - **Variants are alphabetical.** Enum variants are declared in
-  alphabetical order, and so are the arms of a `match` over them and the
-  alternatives of an or-pattern; a catch-all arm stays last. A list of
+  alphabetical order, and so are the arms of a `match` over them, the
+  alternatives of an or-pattern, and the methods of the enum's conversion
+  trait; a catch-all arm stays last. A list of
   every variant, such as `SettlementStrategy::all`, follows the
   declaration.
 - **Serialised data outlives releases.** A new field gets

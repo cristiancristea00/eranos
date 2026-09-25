@@ -4,7 +4,8 @@
 //! percentages or amounts that do not add up) out, and keep every division
 //! exact: the shares add up to the amount to the minor unit, each is within
 //! one minor unit of its exact value, and none depends on the order the
-//! members were listed in.
+//! members were listed in; a conversion through `FromSplit` keeps the way of
+//! dividing and its shares.
 
 use eranos_money::Currency;
 use proptest::prelude::*;
@@ -585,4 +586,65 @@ proptest! {
             Split::parts(reversed).divide(total, rotation)
         );
     }
+}
+
+/// A split as a crate outside this one converts it.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedSplit {
+    Amounts(Vec<MemberAmount>),
+    Equal(Vec<MemberId>),
+    Parts(Vec<MemberParts>),
+    Percentages(Vec<MemberPercentage>),
+}
+
+impl FromSplit for ConvertedSplit {
+    fn amounts(shares: &[MemberAmount]) -> Self {
+        Self::Amounts(shares.to_vec())
+    }
+
+    fn equal(members: &[MemberId]) -> Self {
+        Self::Equal(members.to_vec())
+    }
+
+    fn parts(shares: &[MemberParts]) -> Self {
+        Self::Parts(shares.to_vec())
+    }
+
+    fn percentages(shares: &[MemberPercentage]) -> Self {
+        Self::Percentages(shares.to_vec())
+    }
+}
+
+/// A conversion that called another variant's method, or lost a share,
+/// would hand the bindings another division than the library's.
+#[test]
+fn a_split_converts_through_the_method_of_its_variant() {
+    let amounts = vec![
+        MemberAmount::new(euros(700), ANA),
+        MemberAmount::new(euros(300), BOB),
+    ];
+    let shares = vec![
+        MemberParts::new(ANA, parts("2")),
+        MemberParts::new(BOB, parts("0.5")),
+    ];
+    let percentages = vec![
+        MemberPercentage::new(ANA, per_cent("60")),
+        MemberPercentage::new(BOB, per_cent("40")),
+    ];
+    assert_eq!(
+        ConvertedSplit::from_split(&Split::amounts(amounts.clone())),
+        ConvertedSplit::Amounts(amounts)
+    );
+    assert_eq!(
+        ConvertedSplit::from_split(&Split::equal([ANA, CAROL])),
+        ConvertedSplit::Equal(vec![ANA, CAROL])
+    );
+    assert_eq!(
+        ConvertedSplit::from_split(&Split::parts(shares.clone())),
+        ConvertedSplit::Parts(shares)
+    );
+    assert_eq!(
+        ConvertedSplit::from_split(&Split::percentages(percentages.clone())),
+        ConvertedSplit::Percentages(percentages)
+    );
 }

@@ -3,8 +3,9 @@
 //! invalid expenses out (a blank name, a non-positive amount, items or
 //! shares that do not add up), keep the payers covering the amount plus the
 //! tip while the participants divide the amount alone, keep the last setter
-//! in force, also between the forms of payers and of splits, and keep a
-//! replaced cost's rate only when the new cost has one.
+//! in force, also between the forms of payers and of splits, keep a
+//! replaced cost's rate only when the new cost has one, and keep the way a
+//! cost is shared through `FromExpenseSplit`.
 
 use eranos_money::{Currency, Percentage};
 
@@ -783,4 +784,39 @@ fn expenses_round_trip_through_serde() {
     assert!(serde_json::from_str::<Expense>(&tampered).is_err());
     // A record that is not an expense's shape is refused before its checks.
     assert!(serde_json::from_str::<Expense>(r#"{"name":"Dinner"}"#).is_err());
+}
+
+/// An expense's division as a crate outside this one converts it.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedExpenseSplit {
+    Itemised(Vec<Item>),
+    Whole(Split),
+}
+
+impl FromExpenseSplit for ConvertedExpenseSplit {
+    fn itemised(items: &[Item]) -> Self {
+        Self::Itemised(items.to_vec())
+    }
+
+    fn whole(split: &Split) -> Self {
+        Self::Whole(split.clone())
+    }
+}
+
+/// A conversion that called another variant's method would hand the
+/// bindings an itemised bill as one split, or one split as a bill.
+#[test]
+fn an_expense_split_converts_through_the_method_of_its_variant() {
+    let wine = Item::builder([ANA, BOB], "Wine", euros(2_400))
+        .build()
+        .unwrap();
+    assert_eq!(
+        ConvertedExpenseSplit::from_expense_split(&ExpenseSplit::Itemised(vec![wine.clone()])),
+        ConvertedExpenseSplit::Itemised(vec![wine])
+    );
+    let split = Split::equal([ANA, BOB]);
+    assert_eq!(
+        ConvertedExpenseSplit::from_expense_split(&ExpenseSplit::Whole(split.clone())),
+        ConvertedExpenseSplit::Whole(split)
+    );
 }

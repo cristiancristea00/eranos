@@ -137,5 +137,23 @@ impl From<Money> for Cost {
     }
 }
 
+/// Builds a value from a [`Cost`], one method per kind of cost.
+pub trait FromCost: Sized {
+    /// The value for an `amount` in another currency, converted at `rate`.
+    fn converted(amount: Money, rate: ExchangeRate) -> Self;
+
+    /// The value for an `amount` in the group currency.
+    fn local(amount: Money) -> Self;
+
+    /// The value for `cost`, from the method of its variant.
+    #[must_use]
+    fn from_cost(cost: Cost) -> Self {
+        match cost {
+            Cost::Converted { amount, rate } => Self::converted(amount, rate),
+            Cost::Local(amount) => Self::local(amount),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

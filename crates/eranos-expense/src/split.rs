@@ -342,5 +342,31 @@ mod serde_impls {
     }
 }
 
+/// Builds a value from a [`Split`], one method per way of dividing.
+pub trait FromSplit: Sized {
+    /// The value for an exact amount per member.
+    fn amounts(shares: &[MemberAmount]) -> Self;
+
+    /// The value for an equal division among `members`.
+    fn equal(members: &[MemberId]) -> Self;
+
+    /// The value for a number of parts per member.
+    fn parts(shares: &[MemberParts]) -> Self;
+
+    /// The value for a percentage per member.
+    fn percentages(shares: &[MemberPercentage]) -> Self;
+
+    /// The value for `split`, from the method of its variant.
+    #[must_use]
+    fn from_split(split: &Split) -> Self {
+        match split {
+            Split::Amounts(shares) => Self::amounts(shares),
+            Split::Equal(members) => Self::equal(members),
+            Split::Parts(shares) => Self::parts(shares),
+            Split::Percentages(shares) => Self::percentages(shares),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

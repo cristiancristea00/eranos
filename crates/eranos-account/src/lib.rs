@@ -1,7 +1,10 @@
 //! Where a member can be paid: bank accounts and payment-app usernames.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use.
+//! types callers use. The facade does not re-export [`FromAccountDetails`],
+//! through which a crate that tells every kind of account apart converts
+//! account details without the wildcard arm a `match` outside this crate
+//! would need.
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
@@ -112,6 +115,24 @@ impl From<Iban> for AccountDetails {
 impl From<Username> for AccountDetails {
     fn from(username: Username) -> Self {
         Self::Username(username)
+    }
+}
+
+/// Builds a value from [`AccountDetails`], one method per kind of account.
+pub trait FromAccountDetails: Sized {
+    /// The value for a bank account's `iban`.
+    fn iban(iban: &Iban) -> Self;
+
+    /// The value for a payment app's `username`.
+    fn username(username: &Username) -> Self;
+
+    /// The value for `details`, from the method of its variant.
+    #[must_use]
+    fn from_account_details(details: &AccountDetails) -> Self {
+        match details {
+            AccountDetails::Iban(iban) => Self::iban(iban),
+            AccountDetails::Username(username) => Self::username(username),
+        }
     }
 }
 

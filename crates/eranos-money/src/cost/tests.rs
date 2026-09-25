@@ -2,7 +2,8 @@
 //! converts into it at a fixed rate. These tests keep a plain amount local
 //! at a rate of 1, keep a conversion's rate through a corrected amount and a
 //! save, and keep a conversion at 1 apart from a local cost, because a
-//! pegged currency converts at exactly 1.
+//! pegged currency converts at exactly 1; a conversion through `FromCost`
+//! keeps the kind and the rate.
 
 use super::*;
 
@@ -107,5 +108,38 @@ fn costs_serialise_by_kind() {
     assert_eq!(
         serde_json::from_str::<Cost>(&converted_json).unwrap(),
         converted
+    );
+}
+
+/// A cost as a crate outside this one converts it.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedCost {
+    Converted { amount: Money, rate: ExchangeRate },
+    Local(Money),
+}
+
+impl FromCost for ConvertedCost {
+    fn converted(amount: Money, rate: ExchangeRate) -> Self {
+        Self::Converted { amount, rate }
+    }
+
+    fn local(amount: Money) -> Self {
+        Self::Local(amount)
+    }
+}
+
+/// A conversion that called another variant's method would hand the
+/// bindings a foreign amount as a local one, or lose its rate.
+#[test]
+fn a_cost_converts_through_the_method_of_its_variant() {
+    let rate = ExchangeRate::parse("0.2").unwrap();
+    let lei = Money::from_minor_units(Currency::RON, 5_000);
+    assert_eq!(
+        ConvertedCost::from_cost(lei.at(rate)),
+        ConvertedCost::Converted { amount: lei, rate }
+    );
+    assert_eq!(
+        ConvertedCost::from_cost(Cost::from(euros(1_000))),
+        ConvertedCost::Local(euros(1_000))
     );
 }

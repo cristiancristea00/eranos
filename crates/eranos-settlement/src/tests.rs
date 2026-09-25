@@ -1,7 +1,7 @@
 //! Tests for turning a ledger into a settlement. The payments are what the
 //! apps ask members to send, so they must be in the group currency and
-//! sorted the same way on every device, and a kept plan must last exactly
-//! until it is cleared.
+//! sorted the same way on every device, a kept plan must last exactly until
+//! it is cleared, and a strategy converts through its own method.
 
 use std::future::IntoFuture;
 use std::pin::pin;
@@ -196,4 +196,32 @@ fn an_exact_plan_too_large_to_compute_is_an_error() {
     for strategy in [SettlementStrategy::Greedy, SettlementStrategy::Direct] {
         assert_eq!(settle(strategy, &ledger).unwrap().len(), 63);
     }
+}
+
+/// A strategy as a crate outside this one converts it: to its name.
+struct StrategyName(&'static str);
+
+impl FromSettlementStrategy for StrategyName {
+    fn direct() -> Self {
+        Self("direct")
+    }
+
+    fn greedy() -> Self {
+        Self("greedy")
+    }
+
+    fn minimum_transfers() -> Self {
+        Self("minimum transfers")
+    }
+}
+
+/// A conversion that called another variant's method would show the
+/// bindings a plan made by another strategy than the one it names.
+#[test]
+fn a_strategy_converts_through_the_method_of_its_variant() {
+    let names: Vec<&str> = SettlementStrategy::all()
+        .into_iter()
+        .map(|strategy| StrategyName::from_settlement_strategy(strategy).0)
+        .collect();
+    assert_eq!(names, ["direct", "greedy", "minimum transfers"]);
 }

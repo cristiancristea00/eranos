@@ -1,7 +1,8 @@
 //! Accounts tell other members where to send a repayment. These tests keep
 //! the account label present and trimmed, keep IBANs and usernames
-//! convertible into account details of the right kind, and keep usernames
-//! printed as they were entered.
+//! convertible into account details of the right kind, keep usernames
+//! printed as they were entered, and keep the kind of details through
+//! `FromAccountDetails`.
 
 use super::*;
 
@@ -145,5 +146,36 @@ fn accounts_round_trip_through_serde() {
     assert_eq!(
         serde_json::to_string(&AccountKind::Username).unwrap(),
         "\"username\""
+    );
+}
+
+/// Account details as a crate outside this one converts them.
+#[derive(Debug, PartialEq, Eq)]
+enum ConvertedDetails {
+    Iban(String),
+    Username(String),
+}
+
+impl FromAccountDetails for ConvertedDetails {
+    fn iban(iban: &Iban) -> Self {
+        Self::Iban(iban.as_str().to_owned())
+    }
+
+    fn username(username: &Username) -> Self {
+        Self::Username(username.as_str().to_owned())
+    }
+}
+
+/// A conversion that called another variant's method would show a bank
+/// account as a payment-app username.
+#[test]
+fn account_details_convert_through_the_method_of_their_variant() {
+    assert_eq!(
+        ConvertedDetails::from_account_details(&AccountDetails::from(iban())),
+        ConvertedDetails::Iban(iban().as_str().to_owned())
+    );
+    assert_eq!(
+        ConvertedDetails::from_account_details(&AccountDetails::from(username())),
+        ConvertedDetails::Username(USERNAME.to_owned())
     );
 }
