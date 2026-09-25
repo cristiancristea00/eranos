@@ -1,0 +1,15 @@
+# The style of the C and C++ packages: LLVM's, with four spaces, lines of at
+# most 150 columns, braces on the line that opens them, pointers and
+# references beside their name, `const` after what it qualifies, include
+# blocks as written, and LF with a final newline.
+BasedOnStyle: LLVM
+Standard: c++17
+IndentWidth: 4
+ColumnLimit: 150
+BreakBeforeBraces: Attach
+PointerAlignment: Right
+ReferenceAlignment: Pointer
+QualifierAlignment: Right
+IncludeBlocks: Preserve
+LineEnding: LF
+InsertNewlineAtEOF: true

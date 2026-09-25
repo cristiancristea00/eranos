@@ -4,7 +4,7 @@
 //! on another Node than 24.
 
 use super::*;
-use crate::tests::Recorder;
+use crate::tests::{FileOperation, Recorder};
 
 /// The package would check stale generated TypeScript, or pack a declaration
 /// of a module it no longer has, if the steps ran in another order or
@@ -74,7 +74,7 @@ fn another_node_stops_the_web_gates_before_any_other_step() {
 #[test]
 fn a_failure_stops_the_web_gates_where_it_happens() {
     let mut unclear = Recorder::new();
-    unclear.clearing_fails = true;
+    unclear.failing_files = Some(FileOperation::Clear);
     assert!(matches!(run(&mut unclear), Err(Failure::Usage)));
     assert_eq!(unclear.steps, [node()]);
     assert_eq!(unclear.cleared, [generated_sources()]);

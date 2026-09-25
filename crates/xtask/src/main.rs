@@ -4,6 +4,7 @@
 //! `cargo xtask gates` runs the commit gates AGENTS.md lists, in its order,
 //! and stops at the first that fails; `cargo xtask help` lists the commands.
 
+mod capi;
 mod gates;
 mod java;
 mod kmp;
@@ -31,6 +32,27 @@ enum Failure {
     /// A directory a gate writes into could not be emptied first.
     #[error("{directory} could not be cleared: {source}")]
     Clear {
+        directory: String,
+        #[source]
+        source: io::Error,
+    },
+    /// A package's tests leave a line or a function of its hand-written layer
+    /// unrun.
+    #[error(
+        "the {package} tests run {lines} lines and {functions} functions of the {package} layer, which they cover whole"
+    )]
+    Coverage {
+        functions: String,
+        lines: String,
+        package: &'static str,
+    },
+    /// llvm-cov printed a coverage summary that is not the JSON the gates
+    /// read.
+    #[error("llvm-cov printed a coverage summary the gates cannot read: {0}")]
+    CoverageSummary(#[source] serde_json::Error),
+    /// A directory a gate writes into could not be created.
+    #[error("{directory} could not be created: {source}")]
+    Create {
         directory: String,
         #[source]
         source: io::Error,

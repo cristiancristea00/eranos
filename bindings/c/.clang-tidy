@@ -1,0 +1,48 @@
+# The checks of the C package: the bug-prone patterns, the CERT rules, the
+# static analyser, and the concurrent, miscellaneous, portable, and readable
+# forms, every finding an error. Diplomat's generated headers are left out. A
+# switch over an enumeration lists every enumerator without a default, so
+# that the compiler's -Wswitch refuses one that a new enumerator is missing
+# from. The names follow the package's rule: PascalCase for types, camelCase
+# for functions, variables, parameters, and members (camelBack admits no
+# underscore, so no name carries an affix), and UPPER_CASE for constants,
+# enum values, and macros. Short names are the words and the initialism the
+# repository admits: to and id. Diplomat's headers include one another in
+# cycles, which their include guards resolve. In C a comparison or a logical
+# operator yields an int, which a bool takes; the functions of C11's Annex K
+# that the analyser recommends over fprintf and the like are in neither glibc
+# nor Apple's C library; and the pthread types come from the platform's
+# internal headers, which pthread.h includes.
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  concurrency-*,
+  misc-*,
+  portability-*,
+  readability-*,
+  -bugprone-switch-missing-default-case,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+WarningsAsErrors: '*'
+HeaderFilterRegex: '(.*/)?include/eranos(/.*)?\.h$'
+CheckOptions:
+  misc-include-cleaner.IgnoreHeaders: 'sys/_pthread/.*;bits/.*'
+  readability-implicit-bool-conversion.AllowLogicalOperatorConversion: true
+  misc-header-include-cycle.IgnoredFilesList: 'Eranos[A-Za-z]*\.(d\.)?h(pp)?'
+  readability-identifier-length.IgnoredParameterNames: '^(id|to)$'
+  readability-identifier-length.IgnoredVariableNames: '^(id|to)$'
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.VariableCase: camelBack
+  readability-identifier-naming.ParameterCase: camelBack
+  readability-identifier-naming.MemberCase: camelBack
+  readability-identifier-naming.LocalConstantCase: camelBack
+  readability-identifier-naming.ConstantParameterCase: camelBack
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.StaticConstantCase: UPPER_CASE
+  readability-identifier-naming.MacroDefinitionCase: UPPER_CASE

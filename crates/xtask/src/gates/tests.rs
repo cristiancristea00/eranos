@@ -2,7 +2,7 @@
 //! stopping at the first gate that fails.
 
 use super::*;
-use crate::tests::{METADATA, Recorder};
+use crate::tests::{FileOperation, METADATA, Recorder};
 
 /// The commands AGENTS.md lists under its gates, in its order: the items of
 /// the numbered list in that section, each a command in backticks.
@@ -23,8 +23,8 @@ fn documented_gates() -> Vec<String> {
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
 /// its order, and the last documented gates are the examples, the host
-/// library, the generators, and the Swift, Kotlin, Java, TypeScript, and
-/// Kotlin Multiplatform packages; a check the code dropped, added, or
+/// library, the generators, and the Swift, Kotlin, Java, TypeScript, Kotlin
+/// Multiplatform, and C and C++ packages; a check the code dropped, added, or
 /// reordered would pass a commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
@@ -43,6 +43,7 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos",
             "rustup target add wasm32-unknown-unknown",
             "sh gradlew --warning-mode=fail :eranos:jvmTest",
+            &crate::capi::library().command_line(),
         ]
     );
 }
@@ -227,7 +228,7 @@ fn a_failure_to_build_clear_or_generate_stops_the_generators() {
     assert!(unbuilt.cleared.is_empty());
 
     let mut blocked = Recorder::new();
-    blocked.clearing_fails = true;
+    blocked.failing_files = Some(FileOperation::Clear);
     assert!(matches!(run(&mut blocked), Err(Failure::Usage)));
     assert!(!blocked.steps.contains(&generators[0]));
 

@@ -30,11 +30,13 @@ brew "openjdk@21"
 # any other Node.
 brew "node@24"
 
-# clang-format and clang-tidy for the C and C++ layers, and llvm-cov for
-# their coverage, all of one LLVM release. Keg-only.
+# The clang that builds the C and C++ tests with the sanitizers, their
+# clang-format and clang-tidy, and llvm-profdata and llvm-cov for their
+# coverage, all of one LLVM release. Keg-only: LLVM_HOME points at it
+# (docs/DEVELOPMENT.md § 1).
 brew "llvm"
 
-# The C++ layer's documentation.
+# The C and C++ layers' documentation.
 brew "doxygen"
 
 # The Kotlin formatter.

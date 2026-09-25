@@ -4,7 +4,7 @@
 //! stopping at the first that fails.
 
 use super::*;
-use crate::tests::{METADATA, Recorder};
+use crate::tests::{FileOperation, METADATA, Recorder};
 
 fn metadata() -> Metadata {
     Metadata::parse(METADATA).unwrap()
@@ -80,7 +80,7 @@ fn the_package_is_built_tested_linted_and_documented_in_order() {
 #[test]
 fn a_failure_stops_the_swift_gates_where_it_happens() {
     let mut unclear = Recorder::new();
-    unclear.clearing_fails = true;
+    unclear.failing_files = Some(FileOperation::Clear);
     assert!(matches!(
         run(&mut unclear, &metadata()),
         Err(Failure::Usage)
@@ -88,7 +88,7 @@ fn a_failure_stops_the_swift_gates_where_it_happens() {
     assert_eq!(unclear.steps, libraries(&metadata()));
 
     let mut unwritten = Recorder::new();
-    unwritten.writing_fails = true;
+    unwritten.failing_files = Some(FileOperation::Write);
     assert!(matches!(
         run(&mut unwritten, &metadata()),
         Err(Failure::Usage)

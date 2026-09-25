@@ -151,6 +151,14 @@ pub(crate) trait Runner {
     /// [`Failure::Clear`] when the directory is there and cannot be removed.
     fn clear(&mut self, directory: &Path) -> Result<(), Failure>;
 
+    /// Creates `directory` and every directory above it that is missing; one
+    /// that is there is left as it is.
+    ///
+    /// # Errors
+    ///
+    /// [`Failure::Create`] when a directory cannot be created.
+    fn create(&mut self, directory: &Path) -> Result<(), Failure>;
+
     /// Writes `contents` to the file at `path`, replacing what it held.
     ///
     /// # Errors
@@ -201,6 +209,14 @@ impl Runner for System {
             }),
             _ => Ok(()),
         }
+    }
+
+    fn create(&mut self, directory: &Path) -> Result<(), Failure> {
+        println!("\n==> creating {}", directory.display());
+        fs::create_dir_all(directory).map_err(|source| Failure::Create {
+            directory: directory.display().to_string(),
+            source,
+        })
     }
 
     fn write(&mut self, path: &Path, contents: &str) -> Result<(), Failure> {

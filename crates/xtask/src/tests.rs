@@ -26,38 +26,66 @@ pub(crate) const METADATA: &str = r#"{
     "version": 1
 }"#;
 
+/// A coverage summary as `llvm-cov export -summary-only` prints it, of a
+/// program whose tests ran every line and every function.
+pub(crate) const COVERED: &str = r#"{
+    "data": [{"files": [], "totals": {"functions": {"count": 2, "covered": 2}, "lines": {"count": 3, "covered": 3}}}],
+    "type": "llvm.coverage.json.export",
+    "version": "3.1.0"
+}"#;
+
 /// A runner that records every step instead of running it, answers the
 /// step that prints async-lock's features with `tree`, the one that prints
-/// Node's version with `node`, and every other output with `metadata`,
-/// records every directory it clears and every file it writes, builds for
-/// Apple platforms when `apple`, has set only the environment variables
-/// `variables`, and fails at the step `failing` or, when `clearing_fails` or
-/// `writing_fails`, at clearing or writing.
+/// Node's version with `node`, those that print the C and C++ tests'
+/// coverage with `coverage`, and every other output with `metadata`,
+/// records every directory it clears or creates and every file it writes,
+/// builds for Apple platforms when `apple`, has set only the environment
+/// variables `variables`, and fails at the step `failing` or at every file
+/// operation of the kind `failing_files`.
 #[derive(Debug, Default)]
 pub(crate) struct Recorder {
     pub(crate) apple: bool,
     pub(crate) cleared: Vec<PathBuf>,
+    pub(crate) coverage: String,
+    pub(crate) created: Vec<PathBuf>,
     pub(crate) metadata: String,
     pub(crate) node: String,
     pub(crate) steps: Vec<Step>,
     pub(crate) tree: String,
     pub(crate) variables: Vec<&'static str>,
     pub(crate) written: Vec<PathBuf>,
-    pub(crate) clearing_fails: bool,
     pub(crate) failing: Option<Step>,
-    pub(crate) writing_fails: bool,
+    pub(crate) failing_files: Option<FileOperation>,
+}
+
+/// A kind of file operation a runner does besides running steps.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FileOperation {
+    /// Clearing a directory.
+    Clear,
+    /// Creating a directory.
+    Create,
+    /// Writing a file.
+    Write,
 }
 
 impl Recorder {
     /// A recorder that answers with [`METADATA`], a tree without features,
-    /// and Node 24, builds for Apple platforms, has set every variable the
-    /// Kotlin and Kotlin Multiplatform gates need, and fails at no step.
+    /// Node 24, and [`COVERED`], builds for Apple platforms, has set every
+    /// variable the Kotlin, Kotlin Multiplatform, and C and C++ gates need,
+    /// and fails at no step.
     pub(crate) fn new() -> Self {
         Self {
             apple: true,
+            coverage: COVERED.to_owned(),
             metadata: METADATA.to_owned(),
             node: "v24.21.0\n".to_owned(),
-            variables: [kotlin::VARIABLES.as_slice(), kmp::VARIABLES.as_slice()].concat(),
+            variables: [
+                kotlin::VARIABLES.as_slice(),
+                kmp::VARIABLES.as_slice(),
+                &[capi::VARIABLE],
+            ]
+            .concat(),
             ..Self::default()
         }
     }
@@ -84,6 +112,11 @@ impl Runner for Recorder {
             Ok(self.tree.clone())
         } else if *step == web::node() {
             Ok(self.node.clone())
+        } else if [capi::C_PACKAGE, capi::CPP_PACKAGE]
+            .iter()
+            .any(|&package| *step == capi::coverage(package, "/LLVM_HOME"))
+        {
+            Ok(self.coverage.clone())
         } else {
             Ok(self.metadata.clone())
         }
@@ -91,7 +124,16 @@ impl Runner for Recorder {
 
     fn clear(&mut self, directory: &Path) -> Result<(), Failure> {
         self.cleared.push(directory.to_owned());
-        if self.clearing_fails {
+        if Some(FileOperation::Clear) == self.failing_files {
+            Err(Failure::Usage)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn create(&mut self, directory: &Path) -> Result<(), Failure> {
+        self.created.push(directory.to_owned());
+        if Some(FileOperation::Create) == self.failing_files {
             Err(Failure::Usage)
         } else {
             Ok(())
@@ -100,7 +142,7 @@ impl Runner for Recorder {
 
     fn write(&mut self, path: &Path, _contents: &str) -> Result<(), Failure> {
         self.written.push(path.to_owned());
-        if self.writing_fails {
+        if Some(FileOperation::Write) == self.failing_files {
             Err(Failure::Usage)
         } else {
             Ok(())
@@ -124,9 +166,10 @@ fn words(line: &[&str]) -> Vec<String> {
 /// examples, runs each one, builds the host library, generates every
 /// language's sources into a cleared directory, runs the Swift package's
 /// gates where the machine builds for Apple platforms, and the Kotlin,
-/// Java, TypeScript, and Kotlin Multiplatform packages', the last with its
-/// Apple libraries only where the machine builds them; if it ran less,
-/// `cargo xtask gates` would pass commits the documented gates refuse.
+/// Java, TypeScript, Kotlin Multiplatform, C, and C++ packages', the Kotlin
+/// Multiplatform package with its Apple libraries only where the machine
+/// builds them; if it ran less, `cargo xtask gates` would pass commits the
+/// documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -153,6 +196,25 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     let mut elsewhere_packages = packages.clone();
     packages.extend(kmp::checks("/JAVA_HOME_21", true));
     elsewhere_packages.extend(kmp::checks("/JAVA_HOME_21", false));
+    let mut native = vec![capi::library()];
+    for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
+        native.push(capi::headers(package));
+        native.extend(capi::tests(package, "/LLVM_HOME", &metadata));
+        native.push(capi::coverage(package, "/LLVM_HOME"));
+        native.extend(capi::checks(package, "/LLVM_HOME"));
+    }
+    packages.extend(native.clone());
+    elsewhere_packages.extend(native);
+    let native_cleared = [capi::C_PACKAGE, capi::CPP_PACKAGE]
+        .map(|package| {
+            [
+                capi::directory(package, "generated"),
+                capi::directory(package, "build"),
+            ]
+        })
+        .concat();
+    let native_created =
+        [capi::C_PACKAGE, capi::CPP_PACKAGE].map(|package| capi::directory(package, "build"));
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();
     elsewhere.apple = false;
@@ -170,7 +232,11 @@ fn gates_runs_every_check_every_example_and_every_generator() {
             web::generated_sources(),
             web::bundle(),
         ]
+        .into_iter()
+        .chain(native_cleared.clone())
+        .collect::<Vec<_>>()
     );
+    assert_eq!(elsewhere.created, native_created);
 
     expected.extend(swift::libraries(&metadata));
     expected.extend(swift::package(&metadata));
@@ -188,7 +254,11 @@ fn gates_runs_every_check_every_example_and_every_generator() {
             web::generated_sources(),
             web::bundle(),
         ]
+        .into_iter()
+        .chain(native_cleared)
+        .collect::<Vec<_>>()
     );
+    assert_eq!(recorder.created, native_created);
 }
 
 /// `help` succeeds and runs nothing.

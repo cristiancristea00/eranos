@@ -6,14 +6,22 @@ every command.
 
 ## Contents
 
-1. [What the suite believes](#1-what-the-suite-believes)
-2. [Layout](#2-layout)
-3. [The invariants](#3-the-invariants)
-4. [Writing a test here](#4-writing-a-test-here)
-5. [Coverage](#5-coverage)
-6. [Mutation testing](#6-mutation-testing)
-7. [Benchmarks](#7-benchmarks)
-8. [What to run for a given change](#8-what-to-run-for-a-given-change)
+- [Testing](#testing)
+  - [Contents](#contents)
+  - [1. What the suite believes](#1-what-the-suite-believes)
+  - [2. Layout](#2-layout)
+  - [3. The invariants](#3-the-invariants)
+  - [4. Writing a test here](#4-writing-a-test-here)
+    - [The doc comments are not optional](#the-doc-comments-are-not-optional)
+    - [Naming](#naming)
+    - [Helpers and fixtures](#helpers-and-fixtures)
+    - [Lints in tests](#lints-in-tests)
+    - [Asynchronous code](#asynchronous-code)
+    - [What not to do](#what-not-to-do)
+  - [5. Coverage](#5-coverage)
+  - [6. Mutation testing](#6-mutation-testing)
+  - [7. Benchmarks](#7-benchmarks)
+  - [8. What to run for a given change](#8-what-to-run-for-a-given-change)
 
 ## 1. What the suite believes
 
@@ -53,6 +61,8 @@ every command.
 | Java                 | `bindings/java/src/test/java/eranos/`                       | the `eranos` package, and the generated code's values      | `./gradlew test`, in `bindings/java`                     |
 | TypeScript           | `bindings/typescript/test/*.test.ts`                        | the package's entry point, and the generated code's values | `npm test`, in `bindings/typescript`                     |
 | Kotlin Multiplatform | the Kotlin suite, `bindings/kotlin/eranos/src/test/kotlin/` | the `eranos` package over gobley's bindings, on the JVM    | `./gradlew :eranos:jvmTest`, in `bindings/kmp`           |
+| C                    | `bindings/c/tests/tests.c`                                  | the `eranos.h` layer, and Diplomat's C API beneath it      | `build/tests`, in `bindings/c`, once built               |
+| C++                  | `bindings/cpp/tests/tests.cpp`                              | the `eranos.hpp` layer, and Diplomat's classes beneath it  | `build/tests`, in `bindings/cpp`, once built             |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -205,6 +215,21 @@ compare whole, with no equality written out field by field. The tests
 import what callers use through the package's entry point, `src/index.ts`,
 and reach an internal conversion, such as that of every failure the
 generated code can report, through its own module.
+
+The C and C++ layers are headers of inline functions, which the tests'
+programs compile; llvm-cov reports an inline function that no test calls
+as unrun, so a function a layer defines and nothing reaches shows. Their
+tests run under `AddressSanitizer` and `UndefinedBehaviorSanitizer`, whose
+first finding ends the run, and the gates hold each layer to every line
+and every function of its headers; the headers Diplomat generates are not
+measured. The C++ layer is also held to every region by its tests, since a
+call's failure branches in one template that every call shares. The C
+layer's regions are not: each of its functions branches on its result,
+and a call that the library refuses only on wasm, where the C API does not
+run, never takes its failure branch. Both suites follow the rules of
+[§ 4](#4-writing-a-test-here) in their language: a test is a function
+named for its claim, in camelCase, whose comment says what an app loses
+if it regresses, and the program prints every claim that fails.
 
 ## 6. Mutation testing
 

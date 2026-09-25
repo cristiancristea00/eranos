@@ -18,6 +18,7 @@ members = [
     "crates/eranos-account",
     "crates/eranos-bindings",
     "crates/eranos-calendar",
+    "crates/eranos-capi",
     "crates/eranos-category",
     "crates/eranos-contact",
     "crates/eranos-core",
@@ -139,6 +140,10 @@ uniffi-runtime-wasm = "=0.31.0-5"
 # wasm-bindgen-cli-support 0.2.100, which rewrites the module against glue of
 # its own release and refuses a module built with another.
 wasm-bindgen = "=0.2.100"
+# The bridge of the C and C++ bindings, and the runtime its generated code
+# links; diplomat-tool 0.16.1 reads the bridge of this release alone.
+diplomat = "=0.16.1"
+diplomat-runtime = "=0.16.0"
 
 # --- Development only --------------------------------------------------------
 # Property tests for the arithmetic invariants (exact sums, zero-sum balances,

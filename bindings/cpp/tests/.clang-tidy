@@ -1,0 +1,9 @@
+# The checks of the C++ tests: the package's, less two. A test's numbers are
+# the amounts, dates, and counts its claims name, so they are not magic; and a
+# test reads an optional it expects present with value(), whose exception the
+# runner reports as the test's failure, rather than checking it first.
+InheritParentConfig: true
+Checks: >
+  -bugprone-unchecked-optional-access,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers

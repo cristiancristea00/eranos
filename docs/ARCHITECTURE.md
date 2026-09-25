@@ -75,13 +75,15 @@ package of binaries with no edge in the workspace, holds the generators
 that read the UniFFI library. `eranos-web` and `eranos-kmp` compile the
 source files of `eranos-uniffi`, which they include by path, on other UniFFI
 releases, for WebAssembly and for gobley, so neither has an edge to
-`eranos-uniffi`.
+`eranos-uniffi`. `eranos-capi` exports the binding core through Diplomat,
+whose `diplomat-tool` generates a C API and C++ classes from its bridge.
 
 ```mermaid
 flowchart TD
     UNIFFI["eranos-uniffi<br/>UniFFI mirrors; Group, GroupReader,<br/>Cancellation; value functions"]
     WEB["eranos-web<br/>the sources of eranos-uniffi,<br/>built for WebAssembly"]
     KMP["eranos-kmp<br/>the sources of eranos-uniffi,<br/>built for gobley"]
+    CAPI["eranos-capi<br/>the Diplomat bridge for C and C++;<br/>EranosGroup, its worker, callbacks"]
     BINDINGS["eranos-bindings<br/>records, EranosError, GroupHandle,<br/>GroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
     GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup,<br/>SharedGroup"]
@@ -99,6 +101,7 @@ flowchart TD
     UNIFFI --> BINDINGS
     WEB --> BINDINGS
     KMP --> BINDINGS
+    CAPI --> BINDINGS
     BINDINGS --> FACADE
     FACADE --> GROUP
     GROUP --> EXPENSE
@@ -137,6 +140,8 @@ flowchart TD
  │                    for WebAssembly                                       │
  │ eranos-kmp         the sources of eranos-uniffi on UniFFI 0.29, built    │
  │                    for gobley                                            │
+ │ eranos-capi        the Diplomat bridge for C and C++: opaque records,    │
+ │                    EranosGroup with its worker thread, the callbacks     │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-bindings    what every binding exposes: records, EranosError,     │
  │                    GroupHandle, GroupReader, value helpers               │
@@ -169,26 +174,27 @@ flowchart TD
 
 </details>
 
-| Crate                   | Holds                                                                                                                                                               | Depends on                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `eranos-uniffi-bindgen` | the generators `uniffi-bindgen`, for Swift and Kotlin, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                           | uniffi, uniffi-bindgen-java                                                                        |
-| `eranos-uniffi`         | the `uniffi` mirrors of the core's records, enums, and error; the `Group`, `GroupReader`, and `Cancellation` objects; the value helpers as functions                | eranos-bindings; uniffi                                                                            |
-| `eranos-web`            | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                     | eranos-bindings; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
-| `eranos-kmp`            | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                             | eranos-bindings; uniffi                                                                            |
-| `eranos-bindings`       | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers               | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json      |
-| `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                            |
-| `eranos-group`          | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core  |
-| `eranos-expense`        | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                                      |
-| `eranos-transfer`       | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                                  |
-| `eranos-member`         | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                             |
-| `eranos-category`       | `Category`, `CategoryError`                                                                                                                                         | core; icu_casemap, icu_normalizer                                                                  |
-| `eranos-settlement`     | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                           | core, ledger, money                                                                                |
-| `eranos-account`        | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                         | core                                                                                               |
-| `eranos-contact`        | `Email`, `PhoneNumber`, `ContactError`                                                                                                                              | core; icu_properties, rlibphonenumber                                                              |
-| `eranos-ledger`         | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                                        |
-| `eranos-calendar`       | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                                         |
-| `eranos-money`          | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                               |
-| `eranos-core`           | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                               |
+| Crate                   | Holds                                                                                                                                                                                                                  | Depends on                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `eranos-uniffi-bindgen` | the generators `uniffi-bindgen`, for Swift and Kotlin, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                                                                              | uniffi, uniffi-bindgen-java                                                                        |
+| `eranos-uniffi`         | the `uniffi` mirrors of the core's records, enums, and error; the `Group`, `GroupReader`, and `Cancellation` objects; the value helpers as functions                                                                   | eranos-bindings; uniffi                                                                            |
+| `eranos-web`            | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                                                                        | eranos-bindings; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
+| `eranos-kmp`            | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                                                                                | eranos-bindings; uniffi                                                                            |
+| `eranos-capi`           | the Diplomat bridge for C and C++: an opaque object per record, list, and enum with data, the C-like enums, `EranosError`, `EranosGroup`, `EranosGroupReader`, `EranosCancellation`, and the outcomes of the callbacks | eranos-bindings; diplomat, diplomat-runtime                                                        |
+| `eranos-bindings`       | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers                                                                  | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json      |
+| `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                            | the twelve crates below                                                                            |
+| `eranos-group`          | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                                                                   | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core  |
+| `eranos-expense`        | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                    | calendar, core, ledger, money                                                                      |
+| `eranos-transfer`       | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                     | calendar, core, money, settlement                                                                  |
+| `eranos-member`         | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                               | account, contact, core                                                                             |
+| `eranos-category`       | `Category`, `CategoryError`                                                                                                                                                                                            | core; icu_casemap, icu_normalizer                                                                  |
+| `eranos-settlement`     | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                                                                              | core, ledger, money                                                                                |
+| `eranos-account`        | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                                                                            | core                                                                                               |
+| `eranos-contact`        | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                 | core; icu_properties, rlibphonenumber                                                              |
+| `eranos-ledger`         | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                     | core, money                                                                                        |
+| `eranos-calendar`       | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                           | core; jiff                                                                                         |
+| `eranos-money`          | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                         | core; iso4217-static                                                                               |
+| `eranos-core`           | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                 | uuid                                                                                               |
 
 For the internal crates, the facade's modules (`eranos::money`,
 `eranos::member`, …) and its root re-export what the table lists before a
@@ -532,7 +538,7 @@ which holds keys the library never sees.
 glue crates beside it mirror its types and forward every call to it,
 converting nothing and deciding nothing, so every rule a binding applies is
 tested in Rust: `eranos-uniffi` for Swift, Kotlin, and Java, `eranos-web`
-for browsers and Node, `eranos-kmp` for Kotlin Multiplatform, and, planned,
+for browsers and Node, `eranos-kmp` for Kotlin Multiplatform, and
 `eranos-capi` for C and C++.
 
 - **Records of text and integers.** Values and entries cross as records and
@@ -796,6 +802,86 @@ builds its bundle, on Node 24, the oldest the package supports. Then it
 runs the Kotlin package's tests on the Kotlin Multiplatform package's JVM
 target, against gobley's bindings, builds that package's Android
 libraries, and, on macOS, compiles its layer for every Apple target.
+Then it builds `eranos-capi`'s static library, generates the C and the
+C++ headers from its bridge with `diplomat-tool`, and, for each package,
+builds its tests with the LLVM that `LLVM_HOME` names, runs them under the
+sanitizers, holds every line and function of its layer covered, and
+checks its format, lint, and documentation.
+
+`eranos-capi` is the glue for C and C++, a bridge that Diplomat's macro
+turns into C functions and that `diplomat-tool` reads to write a C header
+and C++ classes, which live in `eranos::detail`. Diplomat carries opaque
+objects, plain structs, and C-like enums, so a record, a list, and an enum
+with data is an opaque object: a record has a constructor of its required
+fields, a getter of every field, and, for an entry, a setter of each; a
+list has `len` and `get`, and `create` and `push` when a caller builds
+one; an enum with data has `kind`, a constructor per variant, and a getter
+per field. A date and a time of day are plain structs. Text crosses as
+bytes, which the bridge checks are UTF-8, reporting `InvalidText`
+otherwise, and text a call returns is written into a `DiplomatWrite`.
+Every group call has a synchronous form, which blocks while another call
+holds the lock, and an asynchronous one, which runs on the group's worker
+thread, started by the first such call, in the order of the calls, and
+reports its outcome to a callback there, a load on a thread of its own.
+Diplomat refuses a callback that must be `Send`, so the bridge moves each
+one in a wrapper that asserts it: the C and C++ APIs document that a
+callback runs on another thread. Only one Diplomat library links into a
+program, since the runtime exports fixed symbol names.
+
+`bindings/c` is the C package: `eranos.h`, which includes a part per
+kind of value under `eranos/`, each of `static inline` functions over
+Diplomat's C API, whose names start with a type's and an underscore and
+are not part of the layer. It follows one naming rule, that of the C++
+layer too: PascalCase for types (`EranosGroup`, `EranosText`), camelCase
+for functions, parameters, and fields (`eranosGroupAddExpense`,
+`minorUnits`), and UPPER_CASE for constants and enum values
+(`ERANOS_SETTLEMENT_STRATEGY_DIRECT`), which alias Diplomat's so that a
+`switch` over an enum takes them; no name carries an affix, and every
+comparison puts its constant first (`NULL != value`, `0 < count`).
+
+- A call the library can refuse returns the error, or NULL on success,
+  and gives its value through its last parameter, an object the caller
+  destroys; an optional value returns whether there is one. Every destroy
+  function takes NULL, as `free` does.
+- Text goes in as UTF-8 ended by a NUL, NULL reading as empty text, and
+  comes back in an `EranosText`, which the call replaces and ends with a
+  NUL; a buffer of Diplomat's grows or ends the program, as the library's
+  own allocations do, so the NUL always has room.
+- An asynchronous call takes a callback struct, a context and a function
+  that receives the error or the value, which it owns; the struct stays
+  valid until its function runs, once. A trampoline for each kind of
+  outcome reads the outcome, destroys it, and calls the function.
+- Every parameter the function does not change is `const`, the pointer
+  itself included (`EranosGroup const *const group`), and a call that
+  changes what later calls see takes its object as not `const`, though
+  Diplomat's function takes it `const`.
+
+`bindings/cpp` is the C++17 package: `eranos.hpp`, which includes a part
+per kind of value under `eranos/`, beside the declarations every part
+names and the conversions to and from Diplomat's classes, which need every
+type complete and so come last, in `eranos/detail/`; a part is a fragment
+of `eranos.hpp` and names it as the header to include. It follows the C++
+Core Guidelines with the naming rule above:
+
+- A value without an invariant is a struct with public fields (`Money`,
+  `Percentage`, `Parts`); a value the library checks is a class with a
+  private constructor and factories that check it (`Currency::of`,
+  `CalendarDate::of`, `Email::parse`), its fields in one private member;
+  every identifier is a class of its own over its text, with `std::hash`.
+  A record is a struct whose constructor takes its required fields, and a
+  variant a `std::variant` of structs (`EqualSplit`, `LocalCost`).
+- A failure throws `eranos::Error`, a `std::runtime_error` with the kind,
+  the failure, and what the failure holds, which it shares, so copying it
+  cannot throw.
+- `Group` owns its handle, so it moves and never copies; an asynchronous
+  call returns a `std::future` whose `get()` throws what the synchronous
+  form throws, and takes an optional `Cancellation`. `GroupReader`
+  releases the lock when it is destroyed or released.
+- Text goes in as `std::string_view` and comes back as `std::string`.
+  Every class and struct is `final`, `const` sits after what it qualifies,
+  on every parameter the function does not move from, and on every member
+  function that changes nothing a later call sees; `noexcept`,
+  `constexpr`, and `[[nodiscard]]` go wherever they apply.
 
 ## 12. Async and concurrency
 

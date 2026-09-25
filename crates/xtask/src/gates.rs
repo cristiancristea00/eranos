@@ -68,6 +68,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     crate::java::run(runner, &metadata)?;
     crate::web::run(runner)?;
     crate::kmp::run(runner)?;
+    crate::capi::run(runner, &metadata)?;
     println!("\nevery gate passed");
     Ok(())
 }

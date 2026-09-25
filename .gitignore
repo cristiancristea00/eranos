@@ -58,3 +58,11 @@
 /bindings/kmp/.kotlin/
 /bindings/kmp/**/build/
 /bindings/kmp/local.properties
+
+# The C and C++ packages' build products (test programs, coverage data, and
+# the documentation) and the headers Diplomat generates from the Rust sources,
+# which `cargo xtask` writes beneath the hand-written ones; none is committed.
+/bindings/c/build/
+/bindings/c/generated/
+/bindings/cpp/build/
+/bindings/cpp/generated/

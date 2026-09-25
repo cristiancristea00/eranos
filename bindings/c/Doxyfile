@@ -1,0 +1,23 @@
+# The documentation of the C layer: every public declaration of eranos.h and
+# its parts, with warnings as errors, so an undocumented declaration or
+# parameter fails the build. The helpers, eranos/detail.h and the functions
+# named eranosDetail that report an outcome to its callback, are left out.
+PROJECT_NAME           = eranos
+INPUT                  = include
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h
+EXCLUDE                = include/eranos/detail.h
+EXCLUDE_SYMBOLS        = eranosDetail*
+OUTPUT_DIRECTORY       = build/docs
+OPTIMIZE_OUTPUT_FOR_C  = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+JAVADOC_AUTOBRIEF      = YES
+EXTRACT_ALL            = NO
+EXTRACT_STATIC         = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = FAIL_ON_WARNINGS
+QUIET                  = YES

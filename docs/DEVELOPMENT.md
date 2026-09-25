@@ -20,23 +20,26 @@ and the test suites in [TESTING.md](TESTING.md).
   the stable channel with `rustfmt`, `clippy`, and `llvm-tools` (for
   coverage); the first `cargo` command in the repository installs them.
 - **Homebrew tools**: `brew bundle --file Brewfile.develop` installs
-  `cargo-llvm-cov` and `cargo-mutants`, neither of which is needed to build
-  or test the library, and the bindings' toolchains: JDKs 25 and 21, Node
-  24, LLVM (clang-format, clang-tidy, and llvm-cov), Doxygen, ktlint,
-  SwiftLint, actionlint, zizmor, cargo-deny, the Android command-line
-  tools, cargo-ndk 4.1.2, diplomat-tool 0.16.1, and
-  uniffi-bindgen-react-native 0.31.0-5, the last three built from their
-  release tags.
+  `cargo-llvm-cov` and `cargo-mutants`, neither of which is needed to
+  build or test the library, and the bindings' toolchains: JDKs 25 and 21,
+  Node 24, LLVM (clang, clang-format, clang-tidy, llvm-profdata, and
+  llvm-cov), Doxygen, ktlint, SwiftLint, actionlint, zizmor, cargo-deny,
+  the Android command-line tools, cargo-ndk 4.1.2, diplomat-tool 0.16.1,
+  and uniffi-bindgen-react-native 0.31.0-5, the last three built from
+  their release tags.
 - **Paths**: the JDKs, Node 24, and LLVM are keg-only, and the Android
   tools look for their SDK; the gates run the TypeScript package on the
-  `node` first on `PATH`, and stop unless it is Node 24, and the Kotlin
-  Multiplatform package's Gradle on the JDK that `JAVA_HOME_21` names:
+  `node` first on `PATH`, and stop unless it is Node 24, the Kotlin
+  Multiplatform package's Gradle on the JDK that `JAVA_HOME_21` names, and
+  the C and C++ packages' compilers and linters from the LLVM that
+  `LLVM_HOME` names, since Xcode's clang has no clang-tidy:
 
   ```sh
   export JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
   export JAVA_HOME_21="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
   export ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
-  export PATH="$(brew --prefix node@24)/bin:$(brew --prefix llvm)/bin:$PATH"
+  export LLVM_HOME="$(brew --prefix llvm)"
+  export PATH="$(brew --prefix node@24)/bin:$LLVM_HOME/bin:$PATH"
   ```
 
 - **Android SDK packages**, once, after accepting their licences:
@@ -80,9 +83,13 @@ the same JDK, and the TypeScript package on Node 24: the library for
 uniffi-bindgen-react-native generates into the package. Last, they build
 the Kotlin Multiplatform package on the JDK 21 that `JAVA_HOME_21` names,
 where gobley's plugins build the library for each target and generate its
-bindings. A run from an empty target directory takes about 5 minutes on an
-Apple M4 Pro, most of it building the library for every Apple target and
-every Android ABI; a warm one takes about 90 seconds in all.
+bindings, and then eranos-capi's static library, from which Diplomat
+generates each of the C and C++ packages' headers, whose tests the LLVM
+that `LLVM_HOME` names builds under the sanitizers and measures. A run
+from an empty target directory takes about 6 minutes on an Apple M4 Pro,
+most of it building the library for every Apple target and every Android
+ABI; a warm one takes about 3 minutes in all, 40 seconds of it
+clang-tidy's pass over the C and C++ tests.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -139,6 +146,21 @@ export JAVA_HOME="$JAVA_HOME_21"                 # Gradle 9.0 runs on JDK 24 at 
 ./gradlew :eranos:jvmTest                        # the Kotlin tests on the JVM, against gobley's bindings
 ./gradlew :eranos:assembleDebug                  # the layer's Android library
 ./gradlew :eranos:compileKotlinIosSimulatorArm64 # the layer for one Apple target
+```
+
+In `bindings/cpp`, once `cargo build -p eranos-capi` wrote the static
+library into `target/debug`; `bindings/c` takes the same commands with
+`c`, `clang`, `-std=c11`, `tests/tests.c`, and `-pthread`, and on Linux the
+libraries that `cargo rustc -p eranos-capi --lib -- --print
+native-static-libs` lists in place of `-liconv`:
+
+```sh
+diplomat-tool cpp generated --entry ../../crates/eranos-capi/src/lib.rs     # Diplomat's headers, beneath the layer
+"$LLVM_HOME/bin/clang++" -std=c++17 -g -fsanitize=address,undefined -Iinclude -isystem generated \
+    tests/tests.cpp ../../target/debug/liberanos_capi.a -liconv -o build/tests  # the tests, under the sanitizers
+build/tests                                                                 # run them
+"$LLVM_HOME/bin/clang-format" -i include/eranos.hpp include/eranos/*.hpp include/eranos/detail/*.hpp tests/tests.cpp  # the formatter, applied
+doxygen Doxyfile                                                            # the documentation, in build/docs/html
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
@@ -459,10 +481,10 @@ cargo llvm-cov clean --workspace      # drop earlier runs
 # Sequential IDs and serde, then clock-based IDs, without the glue crates:
 cargo llvm-cov --no-report --workspace --all-features \
     --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web \
-    --exclude eranos-kmp
+    --exclude eranos-kmp --exclude eranos-capi
 cargo llvm-cov --no-report --workspace --no-default-features \
     --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web \
-    --exclude eranos-kmp
+    --exclude eranos-kmp --exclude eranos-capi
 cargo llvm-cov report --html --open   # HTML report
 cargo llvm-cov report --summary-only  # totals only
 cargo mutants --file crates/eranos-money/src/allocation.rs
@@ -475,7 +497,8 @@ than missed, so its total would still read 100 %. The runs leave out the
 UniFFI glue and its generators, which have no Rust tests: the glue forwards
 every call to the binding core, which the Rust tests cover;
 `eranos-web` compiles the glue's sources for WebAssembly, which stable Rust
-cannot measure, and `eranos-kmp` compiles them again, for gobley.
+cannot measure, `eranos-kmp` compiles them again, for gobley, and the C and
+C++ tests call every function of `eranos-capi`'s bridge.
 
 Coverage does not count doctests on the stable toolchain, so a function
 covered only by its example shows as missed. Mutation testing takes seconds
@@ -533,9 +556,13 @@ so a failing run blocks nothing: it is a report.
 - **`UnsatisfiedLinkError: Unable to load library 'eranos_uniffi'`**: the
   Kotlin tests found no host library; `cargo build --package
   eranos-uniffi` writes it into `target/debug`.
-- **`ANDROID_HOME is not set`** or **`JAVA_HOME_21 is not set`** from the
-  gates, or `SDK location not found` from Gradle: export the variables of
-  [§ 1](#1-prerequisites).
+- **`ANDROID_HOME is not set`**, **`JAVA_HOME_21 is not set`**, or
+  **`LLVM_HOME is not set`** from the gates, or `SDK location not found`
+  from Gradle: export the variables of [§ 1](#1-prerequisites).
+- **`the C tests run … lines and … functions of the C layer`** from the
+  gates: a function of the layer that no test calls, or a branch of one
+  that none takes; `llvm-cov show build/tests -instr-profile=build/tests.profdata include`,
+  in the package's directory, marks each unrun line.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

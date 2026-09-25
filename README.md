@@ -177,6 +177,8 @@ eranos/
 ├── .github/                   the CI workflow; Dependabot and zizmor configuration
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
 ├── bindings/
+│   ├── c/                     the C package, a header over the C API Diplomat generates
+│   ├── cpp/                   the C++ package, a header-only layer over Diplomat's C++ classes
 │   ├── java/                  the Java package, over the UniFFI glue
 │   ├── kmp/                   the Kotlin Multiplatform package, over the glue gobley generates
 │   ├── kotlin/                the Kotlin package for Android and the JVM, over the UniFFI glue
@@ -201,6 +203,7 @@ eranos/
 │   ├── eranos-transfer/       transfers
 │   ├── eranos-group/          groups and their saved form
 │   ├── eranos-bindings/       what every binding exposes, in plain Rust
+│   ├── eranos-capi/           the bindings for C and C++, through Diplomat
 │   ├── eranos-kmp/            the bindings for Kotlin Multiplatform, through UniFFI and gobley
 │   ├── eranos-uniffi/         the bindings for Swift, Kotlin, and Java, through UniFFI
 │   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages

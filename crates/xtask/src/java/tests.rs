@@ -3,7 +3,7 @@
 //! at the first that fails, and none of them without the JDK.
 
 use super::*;
-use crate::tests::{METADATA, Recorder};
+use crate::tests::{FileOperation, METADATA, Recorder};
 
 fn metadata() -> Metadata {
     Metadata::parse(METADATA).unwrap()
@@ -70,7 +70,7 @@ fn a_missing_jdk_stops_the_java_gates_before_any_step() {
 #[test]
 fn a_failure_stops_the_java_gates_where_it_happens() {
     let mut unclear = Recorder::new();
-    unclear.clearing_fails = true;
+    unclear.failing_files = Some(FileOperation::Clear);
     assert!(matches!(
         run(&mut unclear, &metadata()),
         Err(Failure::Usage)
