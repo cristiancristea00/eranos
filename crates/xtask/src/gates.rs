@@ -25,6 +25,17 @@ impl Metadata {
     pub(crate) fn parse(json: &str) -> Result<Self, Failure> {
         serde_json::from_str(json).map_err(Failure::Metadata)
     }
+
+    /// The metadata of the target directory `name` inside this one, such as
+    /// the one cargo-llvm-cov builds in, without the packages: the steps that
+    /// read a target directory read it from there.
+    #[must_use]
+    pub(crate) fn inner(&self, name: &str) -> Self {
+        Self {
+            packages: Vec::new(),
+            target_directory: format!("{}/{name}", self.target_directory),
+        }
+    }
 }
 
 /// A workspace package, with its targets.
@@ -162,12 +173,13 @@ pub(crate) fn check_lock_features(tree: &str) -> Result<(), Failure> {
     }
 }
 
-/// The step that lists the workspace's packages and their targets.
+/// The step that lists the workspace's packages and their targets, and
+/// names cargo's target directory.
 #[must_use]
 pub(crate) fn metadata() -> Step {
     Step::cargo(
         &["metadata", "--no-deps", "--format-version", "1"],
-        "the list of examples",
+        "the workspace's packages",
     )
 }
 

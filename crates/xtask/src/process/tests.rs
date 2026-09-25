@@ -124,6 +124,14 @@ fn the_command_line_puts_the_variables_first() {
         "RUSTDOCFLAGS='-D warnings' cargo doc --workspace"
     );
     assert_eq!(version().command_line(), "cargo --version");
+    let measured = Step::new(&[], "the C tests", "build/tests").with_environment(&[
+        Variable::new("LLVM_PROFILE_FILE", "eranos-%p.profraw"),
+        Variable::new("RUSTC_WRAPPER", "cargo-llvm-cov"),
+    ]);
+    assert_eq!(
+        measured.command_line(),
+        "LLVM_PROFILE_FILE='eranos-%p.profraw' RUSTC_WRAPPER='cargo-llvm-cov' build/tests"
+    );
 }
 
 /// Clearing removes a directory and what it holds, and a missing directory

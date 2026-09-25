@@ -477,32 +477,54 @@ with `--baseline`.
 ## 5. Coverage and mutation testing
 
 ```sh
-cargo llvm-cov clean --workspace      # drop earlier runs
-# Sequential IDs and serde, then clock-based IDs, without the glue crates:
-cargo llvm-cov --no-report --workspace --all-features \
-    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web \
-    --exclude eranos-kmp --exclude eranos-capi
-cargo llvm-cov --no-report --workspace --no-default-features \
-    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web \
-    --exclude eranos-kmp --exclude eranos-capi
-cargo llvm-cov report --html --open   # HTML report
+cargo xtask coverage                  # the Rust tests and the binding glue, in one report
+cargo llvm-cov report --html --open   # the same report as HTML
 cargo llvm-cov report --summary-only  # totals only
 cargo mutants --file crates/eranos-money/src/allocation.rs
 ```
 
-Coverage merges the two runs because each compiles code the other leaves
-out: the serde code, and one of the two identifier generators. A single
-`--all-features` run reports the clock-based generator as absent rather
-than missed, so its total would still read 100 %. The runs leave out the
-UniFFI glue and its generators, which have no Rust tests: the glue forwards
-every call to the binding core, which the Rust tests cover;
-`eranos-web` compiles the glue's sources for WebAssembly, which stable Rust
-cannot measure, `eranos-kmp` compiles them again, for gobley, and the C and
-C++ tests call every function of `eranos-capi`'s bridge.
+`cargo xtask coverage` needs what the gates need for the Kotlin, Java, C,
+and C++ packages, the variables of [§ 1](#1-prerequisites), and on macOS
+Xcode for the Swift one. It drops the earlier runs, runs the workspace's
+tests under cargo-llvm-cov with every feature and without the default
+ones, and then measures the binding glue through the foreign tests: it
+builds eranos-uniffi and eranos-capi with cargo-llvm-cov's instrumentation
+into its target directory, `target/llvm-cov-target`, so the gates' builds
+stay as they are, generates the Swift, Kotlin, and Java sources from that
+library, and runs the Swift tests, on a copy of the package there whose
+`XCFramework` holds the instrumented shared library, and the Kotlin, Java,
+C, and C++ tests on it, each writing the coverage of the glue it runs. The
+report comes last; `cargo llvm-cov report` reads the same runs again in
+another form. The first run on an Apple M4 Pro took about 9 minutes, and a
+run after it takes about 2.
+
+Coverage merges the two Rust runs because each compiles code the other
+leaves out: the serde code, and one of the two identifier generators. A
+single `--all-features` run reports the clock-based generator as absent
+rather than missed, so its total would still read 100 %. The Rust runs
+leave out the glue crates, which have no Rust tests: the glue forwards
+every call to the binding core, which the Rust tests cover. `eranos-web`
+compiles the glue's sources for WebAssembly, which stable Rust cannot
+measure, and `eranos-kmp` compiles them again for gobley, which builds its
+own library, so the report has neither. CI's coverage job runs the Rust
+part alone, as these commands do:
+
+```sh
+cargo llvm-cov clean --workspace      # drop earlier runs
+# Sequential IDs and serde, then clock-based IDs, without the glue crates:
+cargo llvm-cov --no-report --workspace --all-features \
+    --exclude eranos-capi --exclude eranos-kmp --exclude eranos-uniffi \
+    --exclude eranos-uniffi-bindgen --exclude eranos-web
+cargo llvm-cov --no-report --workspace --no-default-features \
+    --exclude eranos-capi --exclude eranos-kmp --exclude eranos-uniffi \
+    --exclude eranos-uniffi-bindgen --exclude eranos-web
+cargo llvm-cov report --summary-only
+```
 
 Coverage does not count doctests on the stable toolchain, so a function
-covered only by its example shows as missed. Mutation testing takes seconds
-per mutant; run it one file at a time. Reading both: [TESTING.md](TESTING.md).
+covered only by its example shows as missed. Mutation testing takes
+seconds per mutant; run it one file at a time. Reading both:
+[TESTING.md](TESTING.md).
 
 ## 6. Continuous integration
 

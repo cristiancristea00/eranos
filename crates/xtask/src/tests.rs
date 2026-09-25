@@ -34,10 +34,18 @@ pub(crate) const COVERED: &str = r#"{
     "version": "3.1.0"
 }"#;
 
+/// What `cargo llvm-cov show-env --sh` prints, cut to two variables: where
+/// a program writes its coverage, and the wrapper that instruments a build.
+pub(crate) const EXPORTS: &str =
+    "export LLVM_PROFILE_FILE='/eranos/target/llvm-cov-target/eranos-%p-%14m.profraw'
+export RUSTC_WRAPPER=/cargo-llvm-cov
+";
+
 /// A runner that records every step instead of running it, answers the
 /// step that prints async-lock's features with `tree`, the one that prints
 /// Node's version with `node`, those that print the C and C++ tests'
-/// coverage with `coverage`, and every other output with `metadata`,
+/// coverage with `coverage`, the one that prints cargo-llvm-cov's
+/// environment with `exports`, and every other output with `metadata`,
 /// records every directory it clears or creates and every file it writes,
 /// builds for Apple platforms when `apple`, has set only the environment
 /// variables `variables`, and fails at the step `failing` or at every file
@@ -48,6 +56,7 @@ pub(crate) struct Recorder {
     pub(crate) cleared: Vec<PathBuf>,
     pub(crate) coverage: String,
     pub(crate) created: Vec<PathBuf>,
+    pub(crate) exports: String,
     pub(crate) metadata: String,
     pub(crate) node: String,
     pub(crate) steps: Vec<Step>,
@@ -78,6 +87,7 @@ impl Recorder {
         Self {
             apple: true,
             coverage: COVERED.to_owned(),
+            exports: EXPORTS.to_owned(),
             metadata: METADATA.to_owned(),
             node: "v24.21.0\n".to_owned(),
             variables: [
@@ -117,6 +127,11 @@ impl Runner for Recorder {
             .any(|&package| *step == capi::coverage(package, "/LLVM_HOME"))
         {
             Ok(self.coverage.clone())
+        } else if step
+            .command_line()
+            .ends_with("cargo llvm-cov show-env --sh")
+        {
+            Ok(self.exports.clone())
         } else {
             Ok(self.metadata.clone())
         }
@@ -261,6 +276,16 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     assert_eq!(recorder.created, native_created);
 }
 
+/// `coverage` measures the Rust tests and the glue, and ends with the
+/// report; if it ran less, the report would read the glue as unrun.
+#[test]
+fn coverage_measures_everything_and_ends_with_the_report() {
+    let mut recorder = Recorder::new();
+    run(&words(&["coverage"]), &mut recorder).unwrap();
+    assert_eq!(recorder.steps.first(), Some(&gates::metadata()));
+    assert_eq!(recorder.steps.last(), Some(&coverage::report()));
+}
+
 /// `help` succeeds and runs nothing.
 #[test]
 fn help_runs_nothing_and_succeeds() {
@@ -286,7 +311,7 @@ fn anything_but_one_known_command_is_a_usage_error() {
 fn a_usage_error_lists_every_command() {
     let message = Failure::Usage.to_string();
     assert!(message.starts_with("unknown command\n\nusage: cargo xtask <command>"));
-    for command in ["gates", "help"] {
+    for command in ["coverage", "gates", "help"] {
         assert!(message.contains(&format!("\n  {command} ")), "{command}");
     }
 }

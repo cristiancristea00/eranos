@@ -67,18 +67,23 @@ pub(crate) fn sources(metadata: &Metadata) -> Vec<Step> {
     ]
 }
 
+/// The step that runs Gradle's `tasks` in the project, reported as `name`,
+/// with the tests loading the host library from `metadata`'s target
+/// directory.
+fn gradle(metadata: &Metadata, tasks: &[&str], name: &str) -> Step {
+    let library = format!("-Peranos.library={}/debug", metadata.target_directory);
+    let mut arguments = vec!["gradlew", "--warning-mode=fail", &library];
+    arguments.extend(tasks);
+    Step::new(&arguments, name, "sh").in_directory(PROJECT)
+}
+
 /// The steps that check the format of the package and of its build scripts,
 /// test it with its coverage, build its documentation, and build its JAR,
 /// each with warnings as errors; every compilation of the layer runs the
 /// lint and Error Prone.
 #[must_use]
 pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
-    let library = format!("-Peranos.library={}/debug", metadata.target_directory);
-    let gradle = |tasks: &[&str], name: &str| {
-        let mut arguments = vec!["gradlew", "--warning-mode=fail", &library];
-        arguments.extend(tasks);
-        Step::new(&arguments, name, "sh").in_directory(PROJECT)
-    };
+    let gradle = |tasks: &[&str], name: &str| gradle(metadata, tasks, name);
     vec![
         gradle(&["formatCheck"], "google-java-format"),
         Step::new(
@@ -94,6 +99,14 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
         gradle(&["javadoc"], "the Java documentation"),
         gradle(&["jar"], "the Java package"),
     ]
+}
+
+/// The step that runs the package's tests again, whatever Gradle holds of
+/// an earlier run, against the host library in `metadata`'s target
+/// directory: the instrumented one, whose coverage the run writes.
+#[must_use]
+pub(crate) fn tests(metadata: &Metadata) -> Step {
+    gradle(metadata, &["test", "--rerun"], "the Java tests")
 }
 
 #[cfg(test)]

@@ -154,13 +154,29 @@ features ([DEVELOPMENT.md § 5](DEVELOPMENT.md#5-coverage-and-mutation-testing)
 has the commands), because each compiles code the other leaves out: the
 serde code, and either the clock-based identifier generator or the
 `sequential-ids` counter. It measures lines and regions for the unit,
-integration, and property tests of every crate but the UniFFI glue and its
+integration, and property tests of every crate but the glue crates and the
 generators, which have no Rust tests: the glue forwards every call to the
 binding core. It does not count doctests on the stable toolchain, so an
 item covered only by its example shows as missed. Coverage is a diagnostic,
 never a gate; a gap is a reading list: either a missing test or dead code.
-CI measures the same way on every push and publishes the result as a page:
-[DEVELOPMENT.md § 6](DEVELOPMENT.md#6-continuous-integration).
+CI measures the Rust tests the same way on every push and publishes the
+result as a page: [DEVELOPMENT.md § 6](DEVELOPMENT.md#6-continuous-integration).
+
+The glue is measured through the foreign tests instead:
+`cargo xtask coverage` builds eranos-uniffi and eranos-capi with the
+instrumentation of the Rust runs, runs the Swift, Kotlin, Java, C, and C++
+tests on that build, and merges what they ran into the same report. The
+Swift, Kotlin, and Java tests run every line, region, and function of
+eranos-uniffi's sources, and the C and C++ tests every line and function
+of eranos-capi's bridge. Two kinds of the bridge's regions stay unrun: the
+check that a text parameter is UTF-8, which only a call given other bytes
+takes and which would need a test for each function, and the failure
+branch of a synchronous call that fails only on wasm, for which the bridge
+is not built. Only the Swift layer passes the UniFFI glue a
+`Cancellation`, so a run off macOS, where the Swift tests do not run,
+reports its two methods unrun. eranos-web and eranos-kmp compile
+eranos-uniffi's sources again and are not measured: stable Rust does not
+measure WebAssembly, and gobley builds its own library.
 
 The suites cover every line, region, and function. Keeping it that way
 follows three rules:

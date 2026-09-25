@@ -367,17 +367,19 @@ read-write lock. Diagrams, rules, and numbers:
 - `cargo test --no-default-features` compiles out the serde code and
   generates identifiers from the clock, where `--all-features` counts them;
   run both feature sets before claiming a change is tested.
-- Coverage is a diagnostic, never a gate: a run with every feature and one
-  without the default features, merged into one report
-  ([docs/DEVELOPMENT.md § 5](docs/DEVELOPMENT.md#5-coverage-and-mutation-testing)),
-  because each compiles an identifier generator the other leaves out. It
-  does not count doctests on the stable toolchain. Every line, region, and
-  function is covered; a new gap is either a missing test or a branch that
-  cannot run, which is restructured away rather than kept
-  ([docs/TESTING.md](docs/TESTING.md#5-coverage)).
-  `cargo mutants --file <file>` is the occasional companion
-  audit: coverage says a line ran, mutation testing says a test would have
-  noticed it was wrong.
+- Coverage is a diagnostic, never a gate: `cargo xtask coverage` merges a
+  run with every feature and one without the default features, because each
+  compiles an identifier generator the other leaves out, with the binding
+  glue, which the Swift, Kotlin, Java, C, and C++ tests run on an
+  instrumented build, into one report
+  ([docs/DEVELOPMENT.md § 5](docs/DEVELOPMENT.md#5-coverage-and-mutation-testing)).
+  It does not count doctests on the stable toolchain. Every line, region,
+  and function is covered but for two kinds of region in the C bridge, which
+  [docs/TESTING.md](docs/TESTING.md#5-coverage) names; a new gap is either a
+  missing test or a branch that cannot run, which is restructured away
+  rather than kept. `cargo mutants --file <file>` is the occasional
+  companion audit: coverage says a line ran, mutation testing says a test
+  would have noticed it was wrong.
 - Benchmarks are wall-clock timings: run
   `cargo bench -p eranos --features serde --bench '*'` on an idle machine,
   and update the timings quoted on `SettlementStrategy` and in

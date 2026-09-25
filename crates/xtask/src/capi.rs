@@ -4,6 +4,7 @@
 //! and run under `AddressSanitizer` and `UndefinedBehaviorSanitizer`, with their
 //! coverage of the layer, format, lint, and documentation.
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -231,6 +232,55 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
             &format!("{llvm}/bin/llvm-profdata"),
         )
         .in_directory(package.directory),
+    ]
+}
+
+/// Where [`measured_tests`] builds `package`'s tests: a directory of their
+/// own in `metadata`'s target directory, beside the library they load.
+#[must_use]
+pub(crate) fn measured_directory(package: Package, metadata: &Metadata) -> PathBuf {
+    Path::new(&metadata.target_directory).join(package.language)
+}
+
+/// The steps that build `package`'s tests with LLVM's compiler at `llvm`,
+/// linked with eranos-capi's shared library in `metadata`'s target
+/// directory, which holds its own profiling runtime, and run them. They
+/// build without the sanitizers and without the layer's own coverage, whose
+/// runtime, clang's, would take over from the library's, whose profile
+/// cargo-llvm-cov reads.
+#[must_use]
+pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<Step> {
+    let libraries = format!("{}/debug", metadata.target_directory);
+    let library = format!("{libraries}/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}");
+    let search = format!("-Wl,-rpath,{libraries}");
+    let program = measured_directory(package, metadata)
+        .join("tests")
+        .to_string_lossy()
+        .into_owned();
+    vec![
+        Step::new(
+            &[
+                package.standard,
+                "-g",
+                "-pthread",
+                "-Iinclude",
+                "-isystem",
+                "generated",
+                package.tests,
+                &library,
+                &search,
+                "-o",
+                &program,
+            ],
+            &format!(
+                "the {} tests' build, on the instrumented library",
+                package.name
+            ),
+            &format!("{llvm}/bin/{}", package.compiler),
+        )
+        .in_directory(package.directory),
+        Step::new(&[], &format!("the {} tests", package.name), &program)
+            .in_directory(package.directory),
     ]
 }
 

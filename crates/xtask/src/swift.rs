@@ -2,6 +2,7 @@
 //! for every Apple platform, the generated Swift in the package, and the
 //! package's build, tests, linters, and documentation.
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::path::{Path, PathBuf};
 
 use crate::Failure;
@@ -276,6 +277,109 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
                 "--warnings-as-errors",
             ],
             "the Swift documentation",
+            "swift",
+        ),
+    ]
+}
+
+/// Where the coverage copies the package, in `metadata`'s target directory,
+/// to test it on the instrumented library, so the package keeps the
+/// `XCFramework` the gates built.
+#[must_use]
+pub(crate) fn measured_package(metadata: &Metadata) -> PathBuf {
+    Path::new(&metadata.target_directory).join("swift")
+}
+
+/// What the coverage clears before it copies the package: the copy's
+/// sources and tests, so a file the package no longer has leaves nothing
+/// behind, its `XCFramework`, and the headers it gathers; the copy's build
+/// stays, so a later run builds only what changed.
+#[must_use]
+pub(crate) fn measured_directories(metadata: &Metadata) -> Vec<PathBuf> {
+    let package = measured_package(metadata);
+    vec![
+        package.join("Sources"),
+        package.join("Tests"),
+        package.join("EranosFFI.xcframework"),
+        PathBuf::from(format!("{}/headers", apple(metadata))),
+    ]
+}
+
+/// The steps that copy the package, with the generated Swift, into
+/// `metadata`'s target directory, make an `XCFramework` of the shared library
+/// there, which holds its own profiling runtime, and run the copy's tests on
+/// it.
+#[must_use]
+pub(crate) fn measured_tests(metadata: &Metadata) -> Vec<Step> {
+    let package = measured_package(metadata).to_string_lossy().into_owned();
+    let headers = format!("{}/headers", apple(metadata));
+    let generated = format!("{}/uniffi/swift", metadata.target_directory);
+    let sources = format!("{package}/Sources/EranosGenerated");
+    let library = format!(
+        "{}/debug/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
+        metadata.target_directory
+    );
+    let framework = format!("{package}/EranosFFI.xcframework");
+    vec![
+        Step::new(
+            &["-p", &package, &headers],
+            "the package's copy and its headers",
+            "mkdir",
+        ),
+        Step::new(
+            &[
+                "-R",
+                &format!("{PACKAGE}/Package.swift"),
+                &format!("{PACKAGE}/Package.resolved"),
+                &format!("{PACKAGE}/Sources"),
+                &format!("{PACKAGE}/Tests"),
+                &package,
+            ],
+            "the Swift package",
+            "cp",
+        ),
+        Step::new(
+            &["-p", &sources],
+            "the generated module's directory",
+            "mkdir",
+        ),
+        Step::new(
+            &[&format!("{generated}/EranosGenerated.swift"), &sources],
+            "the generated Swift",
+            "cp",
+        ),
+        Step::new(
+            &[
+                &format!("{generated}/EranosGeneratedFFI.h"),
+                &format!("{headers}/EranosGeneratedFFI.h"),
+            ],
+            "the C header",
+            "cp",
+        ),
+        Step::new(
+            &[
+                &format!("{generated}/EranosGeneratedFFI.modulemap"),
+                &format!("{headers}/module.modulemap"),
+            ],
+            "the module map",
+            "cp",
+        ),
+        Step::new(
+            &[
+                "-create-xcframework",
+                "-library",
+                &library,
+                "-headers",
+                &headers,
+                "-output",
+                &framework,
+            ],
+            "the XCFramework of the instrumented library",
+            "xcodebuild",
+        ),
+        Step::new(
+            &["test", "--package-path", &package],
+            "the Swift tests",
             "swift",
         ),
     ]

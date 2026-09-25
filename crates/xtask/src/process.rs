@@ -25,9 +25,19 @@ pub(crate) struct Step {
 
 /// An environment variable a step sets for its program.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Variable {
+pub(crate) struct Variable {
     name: String,
     value: String,
+}
+
+impl Variable {
+    /// The variable `name`, set to `value`.
+    pub(crate) fn new(name: &str, value: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            value: value.to_owned(),
+        }
+    }
 }
 
 impl Step {
@@ -61,10 +71,14 @@ impl Step {
     /// `value`.
     #[must_use]
     pub(crate) fn with_variable(mut self, name: &str, value: &str) -> Self {
-        self.environment.push(Variable {
-            name: name.to_owned(),
-            value: value.to_owned(),
-        });
+        self.environment.push(Variable::new(name, value));
+        self
+    }
+
+    /// The same step, also setting every variable of `environment`.
+    #[must_use]
+    pub(crate) fn with_environment(mut self, environment: &[Variable]) -> Self {
+        self.environment.extend_from_slice(environment);
         self
     }
 

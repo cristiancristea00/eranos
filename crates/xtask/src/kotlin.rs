@@ -114,17 +114,22 @@ pub(crate) fn sources(metadata: &Metadata) -> Vec<Step> {
     ]
 }
 
+/// The step that runs Gradle's `tasks` in the project, reported as `name`,
+/// with the tests loading the host library from `metadata`'s target
+/// directory.
+fn gradle(metadata: &Metadata, tasks: &[&str], name: &str) -> Step {
+    let library = format!("-Peranos.library={}/debug", metadata.target_directory);
+    let mut arguments = vec!["gradlew", "--warning-mode=fail", &library];
+    arguments.extend(tasks);
+    Step::new(&arguments, name, "sh").in_directory(PROJECT)
+}
+
 /// The steps that test the package with its coverage, lint it, check its
 /// API against the committed dump, build its documentation, and build the
 /// Android libraries, each with warnings as errors.
 #[must_use]
 pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
-    let library = format!("-Peranos.library={}/debug", metadata.target_directory);
-    let gradle = |tasks: &[&str], name: &str| {
-        let mut arguments = vec!["gradlew", "--warning-mode=fail", &library];
-        arguments.extend(tasks);
-        Step::new(&arguments, name, "sh").in_directory(PROJECT)
-    };
+    let gradle = |tasks: &[&str], name: &str| gradle(metadata, tasks, name);
     vec![
         gradle(
             &[":eranos:test", ":eranos:koverVerify"],
@@ -153,6 +158,14 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
             "the Android libraries",
         ),
     ]
+}
+
+/// The step that runs the package's tests again, whatever Gradle holds of
+/// an earlier run, against the host library in `metadata`'s target
+/// directory: the instrumented one, whose coverage the run writes.
+#[must_use]
+pub(crate) fn tests(metadata: &Metadata) -> Step {
+    gradle(metadata, &[":eranos:test", "--rerun"], "the Kotlin tests")
 }
 
 #[cfg(test)]

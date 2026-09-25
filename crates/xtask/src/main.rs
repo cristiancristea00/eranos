@@ -2,9 +2,12 @@
 //! alias in `.cargo/config.toml`.
 //!
 //! `cargo xtask gates` runs the commit gates AGENTS.md lists, in its order,
-//! and stops at the first that fails; `cargo xtask help` lists the commands.
+//! and stops at the first that fails; `cargo xtask coverage` measures the
+//! Rust tests and the binding glue, which the foreign tests run, in one
+//! report; `cargo xtask help` lists the commands.
 
 mod capi;
+mod coverage;
 mod gates;
 mod java;
 mod kmp;
@@ -23,8 +26,9 @@ use crate::process::{Runner, System};
 const USAGE: &str = "usage: cargo xtask <command>
 
 commands:
-  gates  run every commit gate AGENTS.md lists, stopping at the first failure
-  help   print this message";
+  coverage  measure the Rust tests and the binding glue, which the foreign tests run, in one report
+  gates     run every commit gate AGENTS.md lists, stopping at the first failure
+  help      print this message";
 
 /// Why a command of xtask failed.
 #[derive(Debug, thiserror::Error)]
@@ -120,6 +124,7 @@ fn main() -> ExitCode {
 fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
     let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
     match words.as_slice() {
+        ["coverage"] => coverage::run(runner),
         ["gates"] => gates::run(runner),
         ["help"] => {
             println!("{USAGE}");
