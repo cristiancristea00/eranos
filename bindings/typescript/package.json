@@ -1,0 +1,58 @@
+{
+    "name": "eranos",
+    "version": "0.4.0",
+    "description": "Split and settle shared expenses: the eranos library for the browser and Node, through WebAssembly",
+    "private": true,
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/cristiancristea00/eranos.git"
+    },
+    "engines": {
+        "node": ">=24"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/types/index.d.ts",
+            "default": "./dist/eranos.js"
+        },
+        "./eranos_web.wasm": "./dist/eranos_web.wasm"
+    },
+    "files": [
+        "dist/eranos.js",
+        "dist/eranos.js.map",
+        "dist/eranos_web.wasm",
+        "dist/types/*.d.ts"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json && node build.js",
+        "coverage": "c8 node --import tsx --test \"test/*.test.ts\"",
+        "docs": "typedoc",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "lint": "eslint --max-warnings 0 .",
+        "test": "node --import tsx --test \"test/*.test.ts\"",
+        "typecheck": "tsc -p . && tsc -p test"
+    },
+    "dependencies": {
+        "@ubjs/core": "0.31.0-5",
+        "@ubjs/wasm": "0.31.0-5"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "@types/node": "24.13.6",
+        "c8": "12.0.0",
+        "esbuild": "0.28.2",
+        "eslint": "10.11.0",
+        "eslint-plugin-tsdoc": "0.5.3",
+        "prettier": "3.9.9",
+        "tsx": "4.23.15",
+        "typedoc": "0.28.20",
+        "typescript": "6.0.3",
+        "typescript-eslint": "8.70.1"
+    },
+    "allowScripts": {
+        "esbuild": false,
+        "fsevents": false
+    }
+}

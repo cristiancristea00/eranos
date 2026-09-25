@@ -1,0 +1,13 @@
+{
+    // The declarations of the package: every `@internal` item stripped, and the generated code's declarations written
+    // beside them under `internal/`, which the package leaves out.
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "stripInternal": true,
+        "rootDir": "src",
+        "outDir": "dist/types"
+    }
+}

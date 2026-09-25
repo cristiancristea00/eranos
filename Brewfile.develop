@@ -53,3 +53,11 @@ cargo "cargo-ndk", source: "https://github.com/bbqsrc/cargo-ndk?tag=v4.1.2"
 # crate the C bridge uses: a tool of another release reads the bridge
 # differently.
 cargo "diplomat-tool", source: "https://github.com/rust-diplomat/diplomat?tag=v0.16.1"
+
+# Generates the web package's TypeScript and prepares its WebAssembly module.
+# Pinned to the release of the player packages and of `uniffi-runtime-wasm`
+# that the web crate links: a generator of another release writes code for
+# another runtime. From its release tag, whose lock file `cargo install
+# --locked` reads; the npm package of the same name ships none, and builds
+# the tool on first use.
+cargo "uniffi-bindgen-react-native", source: "https://github.com/jhugman/uniffi-bindgen-react-native?tag=0.31.0-5"

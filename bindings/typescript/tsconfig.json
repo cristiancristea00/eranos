@@ -1,0 +1,30 @@
+{
+    // The layer and the generated code, checked with every strict option: the generated code passes them, and the bundler
+    // resolution reads its imports, which name no file extension. No `types`: the layer runs in browsers as well as in
+    // Node, so it may reach only what both offer, which the DOM library declares.
+    "compilerOptions": {
+        "target": "es2024",
+        "lib": ["es2024", "esnext.disposable", "dom"],
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "types": [],
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
+        "allowJs": true,
+        "checkJs": false,
+        "skipLibCheck": true,
+        "noEmit": true
+    },
+    "include": ["src"],
+    // The generated entry point, which the layer replaces with its own `init`: its call of the player does not type-check.
+    "exclude": ["src/internal/index.ts"]
+}

@@ -66,6 +66,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     }
     crate::kotlin::run(runner, &metadata)?;
     crate::java::run(runner, &metadata)?;
+    crate::web::run(runner)?;
     println!("\nevery gate passed");
     Ok(())
 }

@@ -24,4 +24,8 @@ allow-indexing-slicing-in-tests = true
 #   and the logos code generators.
 # - thiserror and thiserror-impl: rlibphonenumber 2.2 depends on thiserror 1,
 #   built beside eranos's thiserror 2.
-allowed-duplicate-crates = ["bitflags", "syn", "thiserror", "thiserror-impl"]
+# - winnow: toml 0.9.12, with which uniffi_macros 0.31.2 builds eranos-web,
+#   depends on winnow 0.7 and, through toml_parser 1.1, on winnow 1. The
+#   toml 1 of uniffi 0.32 depends on winnow 1 alone, so the entry goes when
+#   uniffi-bindgen-react-native generates for uniffi 0.32.
+allowed-duplicate-crates = ["bitflags", "syn", "thiserror", "thiserror-impl", "winnow"]

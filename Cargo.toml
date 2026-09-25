@@ -4,9 +4,11 @@
 # twelve internal crates beside it, crates/eranos-core to crates/eranos-group,
 # which docs/ARCHITECTURE.md § 2 maps; crates/eranos-bindings holds what every
 # binding exposes, in plain Rust, crates/eranos-uniffi mirrors it for UniFFI,
-# and crates/eranos-uniffi-bindgen holds UniFFI's generators (§ 11). The
-# repository's automation is crates/xtask, run as `cargo xtask`. Every
-# third-party version is pinned here; the members say `{ workspace = true }`.
+# crates/eranos-uniffi-bindgen holds UniFFI's generators, and crates/eranos-web
+# compiles eranos-uniffi's sources for the web (§ 11). The repository's
+# automation is crates/xtask, run as `cargo xtask`. Every third-party version
+# is pinned here, and the members say `{ workspace = true }`, but for the
+# UniFFI release of eranos-web, which its own manifest pins.
 
 [workspace]
 resolver = "3"
@@ -27,6 +29,7 @@ members = [
     "crates/eranos-transfer",
     "crates/eranos-uniffi",
     "crates/eranos-uniffi-bindgen",
+    "crates/eranos-web",
     "crates/xtask",
 ]
 
@@ -127,6 +130,13 @@ uniffi = { version = "=0.32.2", default-features = false }
 # The Java generator, whose `uniffi_bindgen ^0.32.1` resolves to the release
 # above.
 uniffi-bindgen-java = "=0.5.1"
+# The allocator and panic hook that the web bindings' player calls, of the
+# release of uniffi-bindgen-react-native that generates them.
+uniffi-runtime-wasm = "=0.31.0-5"
+# Pinned exactly: uniffi-bindgen-react-native 0.31.0-5 embeds
+# wasm-bindgen-cli-support 0.2.100, which rewrites the module against glue of
+# its own release and refuses a module built with another.
+wasm-bindgen = "=0.2.100"
 
 # --- Development only --------------------------------------------------------
 # Property tests for the arithmetic invariants (exact sums, zero-sum balances,

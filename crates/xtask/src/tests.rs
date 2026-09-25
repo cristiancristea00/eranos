@@ -27,16 +27,18 @@ pub(crate) const METADATA: &str = r#"{
 }"#;
 
 /// A runner that records every step instead of running it, answers the
-/// step that prints async-lock's features with `tree` and every other
-/// output with `metadata`, records every directory it clears and every file
-/// it writes, builds for Apple platforms when `apple`, has set only the
-/// environment variables `variables`, and fails at the step `failing` or,
-/// when `clearing_fails` or `writing_fails`, at clearing or writing.
+/// step that prints async-lock's features with `tree`, the one that prints
+/// Node's version with `node`, and every other output with `metadata`,
+/// records every directory it clears and every file it writes, builds for
+/// Apple platforms when `apple`, has set only the environment variables
+/// `variables`, and fails at the step `failing` or, when `clearing_fails` or
+/// `writing_fails`, at clearing or writing.
 #[derive(Debug, Default)]
 pub(crate) struct Recorder {
     pub(crate) apple: bool,
     pub(crate) cleared: Vec<PathBuf>,
     pub(crate) metadata: String,
+    pub(crate) node: String,
     pub(crate) steps: Vec<Step>,
     pub(crate) tree: String,
     pub(crate) variables: Vec<&'static str>,
@@ -47,13 +49,14 @@ pub(crate) struct Recorder {
 }
 
 impl Recorder {
-    /// A recorder that answers with [`METADATA`] and a tree without
-    /// features, builds for Apple platforms, has set every variable the
+    /// A recorder that answers with [`METADATA`], a tree without features,
+    /// and Node 24, builds for Apple platforms, has set every variable the
     /// Kotlin gates need, and fails at no step.
     pub(crate) fn new() -> Self {
         Self {
             apple: true,
             metadata: METADATA.to_owned(),
+            node: "v24.21.0\n".to_owned(),
             variables: kotlin::VARIABLES.to_vec(),
             ..Self::default()
         }
@@ -79,6 +82,8 @@ impl Runner for Recorder {
         self.record(step)?;
         if *step == gates::lock_features() {
             Ok(self.tree.clone())
+        } else if *step == web::node() {
+            Ok(self.node.clone())
         } else {
             Ok(self.metadata.clone())
         }
@@ -118,9 +123,9 @@ fn words(line: &[&str]) -> Vec<String> {
 /// `gates` runs every check, reads async-lock's features, lists the
 /// examples, runs each one, builds the host library, generates every
 /// language's sources into a cleared directory, runs the Swift package's
-/// gates where the machine builds for Apple platforms, and the Kotlin and
-/// Java packages'; if it ran less, `cargo xtask gates` would pass commits
-/// the documented gates refuse.
+/// gates where the machine builds for Apple platforms, and the Kotlin,
+/// Java, and TypeScript packages'; if it ran less, `cargo xtask gates`
+/// would pass commits the documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -138,6 +143,12 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     packages.extend(kotlin::checks(&metadata));
     packages.extend(java::sources(&metadata));
     packages.extend(java::checks(&metadata));
+    packages.push(web::node());
+    packages.extend(web::library());
+    packages.push(web::install());
+    packages.push(web::generator());
+    packages.extend(web::checks());
+    packages.extend(web::package());
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();
     elsewhere.apple = false;
@@ -151,7 +162,9 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         [
             cleared.clone(),
             kotlin::generated_sources(),
-            java::generated_sources()
+            java::generated_sources(),
+            web::generated_sources(),
+            web::bundle(),
         ]
     );
 
@@ -168,6 +181,8 @@ fn gates_runs_every_check_every_example_and_every_generator() {
             Path::new(WORKSPACE).join("bindings/swift/EranosFFI.xcframework"),
             kotlin::generated_sources(),
             java::generated_sources(),
+            web::generated_sources(),
+            web::bundle(),
         ]
     );
 }
@@ -209,6 +224,16 @@ fn a_missing_variable_names_itself_and_the_setup() {
     assert_eq!(
         Failure::Variable("ANDROID_HOME").to_string(),
         "ANDROID_HOME is not set; docs/DEVELOPMENT.md § 1 says where it points"
+    );
+}
+
+/// Another Node names the version found, the one the gates need, and where
+/// the setup is described, so the fix is on screen.
+#[test]
+fn another_node_names_itself_and_the_setup() {
+    assert_eq!(
+        Failure::Node("v26.1.0".to_owned()).to_string(),
+        "the gates run on Node 24, the oldest the package supports, and found v26.1.0; docs/DEVELOPMENT.md § 1 says how to put it first on PATH"
     );
 }
 

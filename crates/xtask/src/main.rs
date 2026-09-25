@@ -9,6 +9,7 @@ mod java;
 mod kotlin;
 mod process;
 mod swift;
+mod web;
 
 use std::io;
 use std::process::{ExitCode, ExitStatus};
@@ -40,6 +41,12 @@ enum Failure {
     /// The output of `cargo metadata` is not the JSON the gates read.
     #[error("cargo metadata printed JSON the gates cannot read: {0}")]
     Metadata(#[source] serde_json::Error),
+    /// The `node` on `PATH` is not Node 24, which the TypeScript package's
+    /// gates run on.
+    #[error(
+        "the gates run on Node 24, the oldest the package supports, and found {0}; docs/DEVELOPMENT.md § 1 says how to put it first on PATH"
+    )]
+    Node(String),
     /// A step's program could not be started.
     #[error("{step}: the program could not be started: {source}")]
     Start {

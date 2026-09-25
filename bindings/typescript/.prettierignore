@@ -1,0 +1,7 @@
+# What npm, the build, and `cargo xtask` write: the lock file, the installed dependencies, the bundle, the coverage
+# report, and the generated code.
+coverage/
+dist/
+node_modules/
+package-lock.json
+src/internal/

@@ -1,0 +1,8 @@
+# uniffi-bindgen-react-native's settings: the crate it reads the library's
+# metadata from, built for wasm32-unknown-unknown, and where it writes the
+# generated TypeScript beside the WebAssembly module and wasm-bindgen's glue.
+rust:
+    directory: ../..
+    manifestPath: crates/eranos-web/Cargo.toml
+wasm2:
+    tsBindings: src/internal

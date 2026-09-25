@@ -25,10 +25,10 @@ Signed-off-by: <committer name> <<committer email>>
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
   `settlement`, `transfer`, and `group`; `bindings` for the binding core,
   `uniffi` for the UniFFI glue and its generators, `swift` for the Swift
-  package, `kotlin` for the Kotlin package, and `java` for the Java
-  package; and besides them `serde`, `docs`, `examples`, `build`, and
-  `xtask`. A change to the facade alone, or to several crates, takes no
-  scope.
+  package, `kotlin` for the Kotlin package, `java` for the Java package,
+  and `web` for the WebAssembly glue and the TypeScript package; and
+  besides them `serde`, `docs`, `examples`, `build`, and `xtask`. A change
+  to the facade alone, or to several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -89,6 +89,16 @@ It runs these, in this order, and stops at the first that fails:
     `-Xdoclint:all -Werror`, and the JAR, every Gradle run with
     `--warning-mode=fail` and every compilation of the layer with
     `-Xlint:all -Werror` and Error Prone, all in `bindings/java`
+14. `rustup target add wasm32-unknown-unknown`, with Node 24 first on
+    `PATH`, then the TypeScript package: `src/internal` and `dist`
+    cleared, `cargo build --package eranos-web --target
+    wasm32-unknown-unknown --lib`, `npm ci`,
+    `uniffi-bindgen-react-native build wasm2` into `src/internal` from the
+    library just built, and Prettier's check, ESLint with no warnings,
+    `tsc` on the layer and on its tests, the Node tests with c8 at 100 % of
+    lines, branches, functions, and statements, TypeDoc with warnings as
+    errors, and the bundle with its declarations, all in
+    `bindings/typescript`
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
@@ -292,14 +302,15 @@ of the domain, from `eranos-core` (identifiers) up to `eranos-group`
 one error, and a group handle with a synchronous and an asynchronous form
 of every call. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
 through UniFFI, whose generators are the binaries of
-`eranos-uniffi-bindgen`, and the other glue crates are planned as its
-siblings. Each language's package in `bindings/` puts a hand-written layer
-over the generated code: `bindings/swift` for Apple platforms,
-`bindings/kotlin` for Android and the JVM, and `bindings/java` for Java
-([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
-members,
-categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
-into group-currency shares when it is added or replaced
+`eranos-uniffi-bindgen`; `eranos-web` compiles the same sources on the
+UniFFI release that uniffi-bindgen-react-native reads, for WebAssembly;
+the other glue crates are planned as their siblings. Each language's
+package in `bindings/` puts a hand-written layer over the generated code:
+`bindings/swift` for Apple platforms, `bindings/kotlin` for Android and
+the JVM, `bindings/java` for Java, and `bindings/typescript` for browsers
+and Node ([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
+members, categories, expenses, and transfers in ID-keyed maps. Each entry
+is resolved into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the
 pairwise debts behind the direct settlement;
 `eranos_transfer::resolve_transfer` for a transfer) and applied to the

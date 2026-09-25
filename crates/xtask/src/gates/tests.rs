@@ -23,9 +23,9 @@ fn documented_gates() -> Vec<String> {
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
 /// its order, and the last documented gates are the examples, the host
-/// library, the generators, and the Swift, Kotlin, and Java packages; a
-/// check the code dropped, added, or reordered would pass a commit the
-/// documented gates refuse.
+/// library, the generators, and the Swift, Kotlin, Java, and TypeScript
+/// packages; a check the code dropped, added, or reordered would pass a
+/// commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
@@ -41,6 +41,7 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "rustup target add <every Apple target>",
             "rustup target add <every Android target>",
             "cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos",
+            "rustup target add wasm32-unknown-unknown",
         ]
     );
 }
@@ -233,4 +234,22 @@ fn a_failure_to_build_clear_or_generate_stops_the_generators() {
     recorder.failing = generators.first().cloned();
     assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
     assert_eq!(recorder.steps.last(), generators.first());
+}
+
+/// A package whose gates fail stops the gates at its failing step, so the
+/// packages after it never run; if they ran, the gates would end in their
+/// output, and a failure scrolled out of sight could pass for a success.
+#[test]
+fn a_failing_package_stops_the_gates_at_its_step() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    for failing in [
+        crate::kotlin::libraries()[0].clone(),
+        crate::java::sources(&metadata)[0].clone(),
+        crate::web::node(),
+    ] {
+        let mut recorder = Recorder::new();
+        recorder.failing = Some(failing.clone());
+        assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+        assert_eq!(recorder.steps.last(), Some(&failing));
+    }
 }

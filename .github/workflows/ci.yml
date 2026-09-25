@@ -178,9 +178,10 @@ jobs:
       # compiles C code for the target. wasm32-wasip1 compiles the library's
       # `target_family = "wasm"` code as the browser does; the browser's
       # wasm32-unknown-unknown has no clock or random source without uuid's
-      # `js` feature, which the crate that packages the library for the
-      # browser turns on (ARCHITECTURE.md § 11).
-      - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android wasm32-wasip1
+      # `js` feature, which eranos-web, the crate that packages the library
+      # for the browser, turns on (ARCHITECTURE.md § 11), so that target
+      # lints eranos-web alone.
+      - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android wasm32-wasip1 wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2.9.2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -195,6 +196,14 @@ jobs:
           --target aarch64-apple-ios --target aarch64-apple-ios-sim
           --target aarch64-linux-android --target x86_64-linux-android
           --target wasm32-wasip1
+          -- -D warnings
+      - run: >-
+          cargo clippy --package eranos-web --lib --all-features --locked
+          --target wasm32-unknown-unknown
+          -- -D warnings
+      - run: >-
+          cargo clippy --package eranos-web --lib --no-default-features --locked
+          --target wasm32-unknown-unknown
           -- -D warnings
 
   deny:
@@ -252,13 +261,17 @@ jobs:
       # Unit and integration tests; the stable toolchain does not measure
       # doctests. Each feature set compiles an identifier generator the
       # other leaves out, so the report merges both runs. The UniFFI glue and
-      # its generators have no Rust tests: the foreign tests measure the glue.
+      # its generators have no Rust tests: the foreign tests measure the glue,
+      # and eranos-web compiles the sources of eranos-uniffi for WebAssembly,
+      # which stable Rust cannot measure.
       - run: >-
           cargo llvm-cov --no-report --workspace --all-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+          --exclude eranos-web
       - run: >-
           cargo llvm-cov --no-report --workspace --no-default-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+          --exclude eranos-web
       - name: Export the reports
         run: |
           cargo llvm-cov report --cobertura --output-path target/coverage.xml

@@ -24,10 +24,11 @@ and the test suites in [TESTING.md](TESTING.md).
   or test the library, and the bindings' toolchains: JDK 25, Node 24, LLVM
   (clang-format, clang-tidy, and llvm-cov), Doxygen, ktlint, SwiftLint,
   actionlint, zizmor, cargo-deny, the Android command-line tools,
-  cargo-ndk 4.1.2, and diplomat-tool 0.16.1, the last two built from their
-  release tags.
+  cargo-ndk 4.1.2, diplomat-tool 0.16.1, and uniffi-bindgen-react-native
+  0.31.0-5, the last three built from their release tags.
 - **Paths**: the JDK, Node 24, and LLVM are keg-only, and the Android tools
-  look for their SDK:
+  look for their SDK; the gates run the TypeScript package on the `node`
+  first on `PATH`, and stop unless it is Node 24:
 
   ```sh
   export JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
@@ -71,10 +72,12 @@ machine they build the Kotlin package: the library of the four Android
 ABIs through `cargo ndk`, which finds the NDK under `ANDROID_HOME`, then the
 Gradle build, whose JVM `JAVA_HOME` names; the gates stop before the first
 step when either variable is not set. They build the Java package with
-the same JDK. A run from an empty target
-directory takes about 5 minutes on an Apple M4 Pro, most of it building
-the library for every Apple target and every Android ABI; a warm one
-takes about 80 seconds in all.
+the same JDK, and the TypeScript package on Node 24: the library for
+`wasm32-unknown-unknown`, then its TypeScript, which
+uniffi-bindgen-react-native generates into the package. A run from an
+empty target directory takes about 5 minutes on an Apple M4 Pro, most of
+it building the library for every Apple target and every Android ABI; a
+warm one takes about 80 seconds in all.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -105,6 +108,22 @@ generated Java; the tests load the library from `target/debug` unless
 ./gradlew format                               # google-java-format, applied
 ```
 
+In `bindings/typescript`, once the gates built the WebAssembly library and
+generated the TypeScript into `src/internal`; after a change to the glue,
+the first two commands write it again:
+
+```sh
+cargo build -p eranos-web --target wasm32-unknown-unknown --lib                    # the WebAssembly library
+uniffi-bindgen-react-native build wasm2 --config ubrn.config.yaml --no-wasm-build  # the generated TypeScript
+npm test                                                                           # the TypeScript tests, under Node
+npm run coverage                                                                   # with their coverage, which c8 holds at 100 %
+npm run lint                                                                       # ESLint, with the types of both projects
+npm run typecheck                                                                  # tsc on the layer and on its tests
+npm run docs                                                                       # the documentation, in dist/docs
+npm run build                                                                      # the bundle, its declarations, and the module, in dist
+npm run format                                                                     # Prettier, applied
+```
+
 Every internal crate's tests link the facade, which its doc examples use,
 so testing one crate builds the whole workspace, and each crate's doctests
 are a binary of their own. The split also makes a change
@@ -114,11 +133,11 @@ one crate and as thirteen:
 
 | Rebuild after touching                    | One crate | Thirteen crates |
 | ----------------------------------------- | --------: | --------------: |
-| `cargo build -p eranos`, the group        |    0.65 s |          0.67 s |
-| `cargo build -p eranos`, money            |    0.64 s |          1.70 s |
-| the touched crate's unit tests, the group |     1.1 s |           1.2 s |
-| the touched crate's unit tests, money     |     1.1 s |           2.1 s |
-| every test target (`--no-run`), money     |     1.9 s |           6.4 s |
+| `cargo build -p eranos`, the group        | 0.65 s    | 0.67 s          |
+| `cargo build -p eranos`, money            | 0.64 s    | 1.70 s          |
+| the touched crate's unit tests, the group | 1.1 s     | 1.2 s           |
+| the touched crate's unit tests, money     | 1.1 s     | 2.1 s           |
+| every test target (`--no-run`), money     | 1.9 s     | 6.4 s           |
 
 The split buys layers the compiler enforces, crates whose APIs stand on
 their own, and smaller units, at those seconds.
@@ -248,7 +267,9 @@ breaking.
    then records the new API. The Java entry class in
    `bindings/java/src/main/java/eranos/` gets the field, its accessor, its
    builder's setter, and its place in its conversions, equality, hash, and
-   text.
+   text. The TypeScript entry interface in
+   `bindings/typescript/src/entries.ts` gets the field, optional where the
+   library's is, and both of its conversions carry it.
 
 ### 3.6 A new error variant
 
@@ -273,12 +294,14 @@ its payload typed, the conversion from the generated one gets its arm, and
 `Tests/EranosTests/ErrorTests.swift` its row; so does the Kotlin layer's
 failure interface in `bindings/kotlin/eranos/src/main/kotlin/eranos/Failures.kt`,
 whose conversion fails to build without the case, and
-`src/test/kotlin/eranos/ErrorTest.kt`; and the Java layer's failure
+`src/test/kotlin/eranos/ErrorTest.kt`; the Java layer's failure
 interface in `bindings/java/src/main/java/eranos/`, whose conversion in
 `EranosException.java` fails to build without the case, and
-`src/test/java/eranos/ErrorTest.java`. A new error type is also a
-registration in the conversion table of `EranosException.java`, which the
-Java error test checks.
+`src/test/java/eranos/ErrorTest.java`; and the TypeScript layer's failure
+union in `bindings/typescript/src/errors.ts`, whose conversion fails to
+type-check without the case, and `test/errors.test.ts`. A new error type is
+also a registration in the conversion table of `EranosException.java`,
+which the Java error test checks.
 
 ### 3.7 A lint exception
 
@@ -299,7 +322,10 @@ code style everywhere, such as its line length, is set in
 `bindings/kotlin/eranos/detekt.yml`, with the reason beside it. In the
 Java layer, an Error Prone or lint finding is fixed, or suppressed on the
 narrowest declaration with `@SuppressWarnings("CheckName")` and the reason
-in a comment above it.
+in a comment above it. In the TypeScript layer, an ESLint finding is fixed,
+or disabled for its line with
+`// eslint-disable-next-line <rule> -- <reason>` above it; ESLint reports a
+directive whose rule no longer fires there, so it goes with the finding.
 
 ### 3.8 A libphonenumber metadata release
 
@@ -385,6 +411,10 @@ When code in one crate needs something another crate holds:
    `bindings/java/src/main/java/eranos/Group.java`, the blocking one under
    the call's name and its twin with `Async` after it, and a read to its
    `GroupReader`; call them in `GroupTest.java`.
+10. Add both forms to the TypeScript layer's `Group` in
+    `bindings/typescript/src/group.ts`, the Promise under the call's name
+    and its twin with `Sync` after it, and a read to its `GroupReader` in
+    `group_reader.ts`; call them in `test/group.test.ts`.
 
 ## 4. Examples and benchmarks
 
@@ -409,11 +439,11 @@ with `--baseline`.
 
 ```sh
 cargo llvm-cov clean --workspace      # drop earlier runs
-# Sequential IDs and serde, then clock-based IDs, without the UniFFI glue:
+# Sequential IDs and serde, then clock-based IDs, without the glue crates:
 cargo llvm-cov --no-report --workspace --all-features \
-    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
 cargo llvm-cov --no-report --workspace --no-default-features \
-    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
 cargo llvm-cov report --html --open   # HTML report
 cargo llvm-cov report --summary-only  # totals only
 cargo mutants --file crates/eranos-money/src/allocation.rs
@@ -424,7 +454,9 @@ out: the serde code, and one of the two identifier generators. A single
 `--all-features` run reports the clock-based generator as absent rather
 than missed, so its total would still read 100 %. The runs leave out the
 UniFFI glue and its generators, which have no Rust tests: the glue forwards
-every call to the binding core, which the Rust tests cover.
+every call to the binding core, which the Rust tests cover, and
+`eranos-web` compiles the glue's sources for WebAssembly, which stable Rust
+cannot measure.
 
 Coverage does not count doctests on the stable toolchain, so a function
 covered only by its example shows as missed. Mutation testing takes seconds
@@ -437,16 +469,16 @@ forks, on the merge queue, and on a manual dispatch. A pull request from a
 branch of this repository starts no jobs of its own: the push of its head
 commit was tested, and those checks show on the pull request.
 
-| Job                     | What it runs                                                                                                                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lint                    | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied, and the check that no package turns on a feature of async-lock                                      |
-| Test                    | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode                                                                            |
-| MSRV                    | the tests with Rust 1.97, the `rust-version`                                                                                                                                              |
-| Mobile and wasm targets | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, `x86_64-linux-android`, and `wasm32-wasip1`, which compiles the library's wasm code as the browser does |
-| Dependency audit        | `cargo deny check advisories sources`, with the rules in `deny.toml`                                                                                                                      |
-| Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                 |
-| Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                   |
-| Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                     |
+| Job                     | What it runs                                                                                                                                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint                    | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied, and the check that no package turns on a feature of async-lock                                                                                        |
+| Test                    | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode                                                                                                                              |
+| MSRV                    | the tests with Rust 1.97, the `rust-version`                                                                                                                                                                                                |
+| Mobile and wasm targets | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, `x86_64-linux-android`, and `wasm32-wasip1`, which compiles the library's wasm code as the browser does, and for `eranos-web` on `wasm32-unknown-unknown` |
+| Dependency audit        | `cargo deny check advisories sources`, with the rules in `deny.toml`                                                                                                                                                                        |
+| Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                   |
+| Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                     |
+| Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                       |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a
 month, with macOS minutes counting about ten times and Windows minutes about
@@ -484,6 +516,12 @@ so a failing run blocks nothing: it is a report.
   eranos-uniffi` writes it into `target/debug`.
 - **`ANDROID_HOME is not set`** from the gates, or `SDK location not
   found` from Gradle: export the variables of [§ 1](#1-prerequisites).
+- **`the gates run on Node 24`**: another Node is first on `PATH`; put
+  Node 24 before it, as [§ 1](#1-prerequisites) does.
+- **`Cannot find module '…/src/internal/eranos.js'`** from the
+  TypeScript tests: the generated TypeScript is missing; the gates, or the first two
+  commands of the TypeScript package in [§ 2](#2-building-and-testing),
+  write it.
 - **Benchmarks take minutes to start**: the release profile's fat LTO;
   `-- --quick` shortens the measurements, not the build.
 - **`cargo test --no-default-features` fails where `--all-features`

@@ -39,3 +39,13 @@
 /bindings/java/.gradle/
 /bindings/java/build/
 /bindings/java/src/generated/
+
+# The TypeScript package's installed dependencies, build products (the
+# bundle, the declarations, and the documentation), and coverage report, and
+# what `cargo xtask` writes into it: the generated TypeScript beside the
+# WebAssembly module and wasm-bindgen's glue, all built from the Rust
+# sources; none is committed.
+/bindings/typescript/coverage/
+/bindings/typescript/dist/
+/bindings/typescript/node_modules/
+/bindings/typescript/src/internal/
