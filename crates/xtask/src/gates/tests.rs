@@ -23,9 +23,9 @@ fn documented_gates() -> Vec<String> {
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
 /// its order, and the last documented gates are the examples, the host
-/// library, the generators, and the Swift, Kotlin, Java, and TypeScript
-/// packages; a check the code dropped, added, or reordered would pass a
-/// commit the documented gates refuse.
+/// library, the generators, and the Swift, Kotlin, Java, TypeScript, and
+/// Kotlin Multiplatform packages; a check the code dropped, added, or
+/// reordered would pass a commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
@@ -42,6 +42,7 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "rustup target add <every Android target>",
             "cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos",
             "rustup target add wasm32-unknown-unknown",
+            "sh gradlew --warning-mode=fail :eranos:jvmTest",
         ]
     );
 }
@@ -246,6 +247,7 @@ fn a_failing_package_stops_the_gates_at_its_step() {
         crate::kotlin::libraries()[0].clone(),
         crate::java::sources(&metadata)[0].clone(),
         crate::web::node(),
+        crate::kmp::checks("/JAVA_HOME_21", true)[0].clone(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

@@ -37,21 +37,22 @@ every command.
 
 ## 2. Layout
 
-| Suite       | Location                                   | Reaches                                                    | Runs with                                                |
-| ----------- | ------------------------------------------ | ---------------------------------------------------------- | -------------------------------------------------------- |
-| Unit tests  | `crates/<crate>/src/<module>/tests.rs`     | private items (`use super::*`)                             | `cargo test --workspace --lib`                           |
-| Scenarios   | `crates/eranos/tests/scenarios.rs`         | public API                                                 | `cargo test -p eranos --test scenarios`                  |
-| Properties  | `crates/eranos/tests/properties.rs`        | public API                                                 | `cargo test -p eranos --test properties`                 |
-| Persistence | `crates/eranos/tests/persistence.rs`       | public API, feature `serde`                                | `cargo test -p eranos --all-features --test persistence` |
-| Errors      | `crates/eranos/tests/errors.rs`            | public API: every error message                            | `cargo test -p eranos --test errors`                     |
-| API         | `crates/eranos/tests/api.rs`               | public API: every type `Send + Sync`                       | `cargo test -p eranos --test api`                        |
-| Doctests    | every `# Examples` block and the README    | public API                                                 | `cargo test --workspace --doc`                           |
-| Examples    | `crates/eranos/examples/*.rs`              | public API; they assert their numbers                      | `cargo run -p eranos --example <name>`                   |
-| Benchmarks  | `crates/eranos/benches/*.rs`               | public API                                                 | `cargo bench -p eranos --features serde --bench '*'`     |
-| Swift       | `bindings/swift/Tests/EranosTests/*.swift` | the `Eranos` module, and the generated code's values       | `swift test --package-path bindings/swift`               |
-| Kotlin      | `bindings/kotlin/eranos/src/test/kotlin/`  | the `eranos` package, and the generated code's values      | `./gradlew :eranos:test`, in `bindings/kotlin`           |
-| Java        | `bindings/java/src/test/java/eranos/`      | the `eranos` package, and the generated code's values      | `./gradlew test`, in `bindings/java`                     |
-| TypeScript  | `bindings/typescript/test/*.test.ts`       | the package's entry point, and the generated code's values | `npm test`, in `bindings/typescript`                     |
+| Suite                | Location                                                    | Reaches                                                    | Runs with                                                |
+| -------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------- |
+| Unit tests           | `crates/<crate>/src/<module>/tests.rs`                      | private items (`use super::*`)                             | `cargo test --workspace --lib`                           |
+| Scenarios            | `crates/eranos/tests/scenarios.rs`                          | public API                                                 | `cargo test -p eranos --test scenarios`                  |
+| Properties           | `crates/eranos/tests/properties.rs`                         | public API                                                 | `cargo test -p eranos --test properties`                 |
+| Persistence          | `crates/eranos/tests/persistence.rs`                        | public API, feature `serde`                                | `cargo test -p eranos --all-features --test persistence` |
+| Errors               | `crates/eranos/tests/errors.rs`                             | public API: every error message                            | `cargo test -p eranos --test errors`                     |
+| API                  | `crates/eranos/tests/api.rs`                                | public API: every type `Send + Sync`                       | `cargo test -p eranos --test api`                        |
+| Doctests             | every `# Examples` block and the README                     | public API                                                 | `cargo test --workspace --doc`                           |
+| Examples             | `crates/eranos/examples/*.rs`                               | public API; they assert their numbers                      | `cargo run -p eranos --example <name>`                   |
+| Benchmarks           | `crates/eranos/benches/*.rs`                                | public API                                                 | `cargo bench -p eranos --features serde --bench '*'`     |
+| Swift                | `bindings/swift/Tests/EranosTests/*.swift`                  | the `Eranos` module, and the generated code's values       | `swift test --package-path bindings/swift`               |
+| Kotlin               | `bindings/kotlin/eranos/src/test/kotlin/`                   | the `eranos` package, and the generated code's values      | `./gradlew :eranos:test`, in `bindings/kotlin`           |
+| Java                 | `bindings/java/src/test/java/eranos/`                       | the `eranos` package, and the generated code's values      | `./gradlew test`, in `bindings/java`                     |
+| TypeScript           | `bindings/typescript/test/*.test.ts`                        | the package's entry point, and the generated code's values | `npm test`, in `bindings/typescript`                     |
+| Kotlin Multiplatform | the Kotlin suite, `bindings/kotlin/eranos/src/test/kotlin/` | the `eranos` package over gobley's bindings, on the JVM    | `./gradlew :eranos:jvmTest`, in `bindings/kmp`           |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -191,6 +192,10 @@ the generated source set left out; branches are not held to 100 %, for
 the reason the Kotlin layer's are not. Records write their equality
 themselves, and JaCoCo leaves those methods out; the classes that write
 theirs out go through the same `assertValue`.
+
+The Kotlin Multiplatform package runs the Kotlin layer's tests on its JVM
+target, against gobley's bindings, and measures nothing: its layer is the
+Kotlin package's, whose coverage Kover holds.
 
 The TypeScript layer's tests hold it to every line, branch, function, and
 statement, which c8 reads from Node's coverage and enforces through

@@ -21,17 +21,20 @@ and the test suites in [TESTING.md](TESTING.md).
   coverage); the first `cargo` command in the repository installs them.
 - **Homebrew tools**: `brew bundle --file Brewfile.develop` installs
   `cargo-llvm-cov` and `cargo-mutants`, neither of which is needed to build
-  or test the library, and the bindings' toolchains: JDK 25, Node 24, LLVM
-  (clang-format, clang-tidy, and llvm-cov), Doxygen, ktlint, SwiftLint,
-  actionlint, zizmor, cargo-deny, the Android command-line tools,
-  cargo-ndk 4.1.2, diplomat-tool 0.16.1, and uniffi-bindgen-react-native
-  0.31.0-5, the last three built from their release tags.
-- **Paths**: the JDK, Node 24, and LLVM are keg-only, and the Android tools
-  look for their SDK; the gates run the TypeScript package on the `node`
-  first on `PATH`, and stop unless it is Node 24:
+  or test the library, and the bindings' toolchains: JDKs 25 and 21, Node
+  24, LLVM (clang-format, clang-tidy, and llvm-cov), Doxygen, ktlint,
+  SwiftLint, actionlint, zizmor, cargo-deny, the Android command-line
+  tools, cargo-ndk 4.1.2, diplomat-tool 0.16.1, and
+  uniffi-bindgen-react-native 0.31.0-5, the last three built from their
+  release tags.
+- **Paths**: the JDKs, Node 24, and LLVM are keg-only, and the Android
+  tools look for their SDK; the gates run the TypeScript package on the
+  `node` first on `PATH`, and stop unless it is Node 24, and the Kotlin
+  Multiplatform package's Gradle on the JDK that `JAVA_HOME_21` names:
 
   ```sh
   export JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
+  export JAVA_HOME_21="$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home"
   export ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
   export PATH="$(brew --prefix node@24)/bin:$(brew --prefix llvm)/bin:$PATH"
   ```
@@ -74,10 +77,12 @@ Gradle build, whose JVM `JAVA_HOME` names; the gates stop before the first
 step when either variable is not set. They build the Java package with
 the same JDK, and the TypeScript package on Node 24: the library for
 `wasm32-unknown-unknown`, then its TypeScript, which
-uniffi-bindgen-react-native generates into the package. A run from an
-empty target directory takes about 5 minutes on an Apple M4 Pro, most of
-it building the library for every Apple target and every Android ABI; a
-warm one takes about 80 seconds in all.
+uniffi-bindgen-react-native generates into the package. Last, they build
+the Kotlin Multiplatform package on the JDK 21 that `JAVA_HOME_21` names,
+where gobley's plugins build the library for each target and generate its
+bindings. A run from an empty target directory takes about 5 minutes on an
+Apple M4 Pro, most of it building the library for every Apple target and
+every Android ABI; a warm one takes about 90 seconds in all.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -124,6 +129,18 @@ npm run build                                                                   
 npm run format                                                                     # Prettier, applied
 ```
 
+In `bindings/kmp`, where gobley's plugins build the library and generate
+the bindings themselves, on the JDK 21. The package compiles the Kotlin
+package's layer from its sources, so a recipe's step for the Kotlin layer
+covers both packages:
+
+```sh
+export JAVA_HOME="$JAVA_HOME_21"                 # Gradle 9.0 runs on JDK 24 at the latest
+./gradlew :eranos:jvmTest                        # the Kotlin tests on the JVM, against gobley's bindings
+./gradlew :eranos:assembleDebug                  # the layer's Android library
+./gradlew :eranos:compileKotlinIosSimulatorArm64 # the layer for one Apple target
+```
+
 Every internal crate's tests link the facade, which its doc examples use,
 so testing one crate builds the whole workspace, and each crate's doctests
 are a binary of their own. The split also makes a change
@@ -133,11 +150,11 @@ one crate and as thirteen:
 
 | Rebuild after touching                    | One crate | Thirteen crates |
 | ----------------------------------------- | --------: | --------------: |
-| `cargo build -p eranos`, the group        | 0.65 s    | 0.67 s          |
-| `cargo build -p eranos`, money            | 0.64 s    | 1.70 s          |
-| the touched crate's unit tests, the group | 1.1 s     | 1.2 s           |
-| the touched crate's unit tests, money     | 1.1 s     | 2.1 s           |
-| every test target (`--no-run`), money     | 1.9 s     | 6.4 s           |
+| `cargo build -p eranos`, the group        |    0.65 s |          0.67 s |
+| `cargo build -p eranos`, money            |    0.64 s |          1.70 s |
+| the touched crate's unit tests, the group |     1.1 s |           1.2 s |
+| the touched crate's unit tests, money     |     1.1 s |           2.1 s |
+| every test target (`--no-run`), money     |     1.9 s |           6.4 s |
 
 The split buys layers the compiler enforces, crates whose APIs stand on
 their own, and smaller units, at those seconds.
@@ -441,9 +458,11 @@ with `--baseline`.
 cargo llvm-cov clean --workspace      # drop earlier runs
 # Sequential IDs and serde, then clock-based IDs, without the glue crates:
 cargo llvm-cov --no-report --workspace --all-features \
-    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web \
+    --exclude eranos-kmp
 cargo llvm-cov --no-report --workspace --no-default-features \
-    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web \
+    --exclude eranos-kmp
 cargo llvm-cov report --html --open   # HTML report
 cargo llvm-cov report --summary-only  # totals only
 cargo mutants --file crates/eranos-money/src/allocation.rs
@@ -454,9 +473,9 @@ out: the serde code, and one of the two identifier generators. A single
 `--all-features` run reports the clock-based generator as absent rather
 than missed, so its total would still read 100 %. The runs leave out the
 UniFFI glue and its generators, which have no Rust tests: the glue forwards
-every call to the binding core, which the Rust tests cover, and
+every call to the binding core, which the Rust tests cover;
 `eranos-web` compiles the glue's sources for WebAssembly, which stable Rust
-cannot measure.
+cannot measure, and `eranos-kmp` compiles them again, for gobley.
 
 Coverage does not count doctests on the stable toolchain, so a function
 covered only by its example shows as missed. Mutation testing takes seconds
@@ -514,8 +533,9 @@ so a failing run blocks nothing: it is a report.
 - **`UnsatisfiedLinkError: Unable to load library 'eranos_uniffi'`**: the
   Kotlin tests found no host library; `cargo build --package
   eranos-uniffi` writes it into `target/debug`.
-- **`ANDROID_HOME is not set`** from the gates, or `SDK location not
-  found` from Gradle: export the variables of [§ 1](#1-prerequisites).
+- **`ANDROID_HOME is not set`** or **`JAVA_HOME_21 is not set`** from the
+  gates, or `SDK location not found` from Gradle: export the variables of
+  [§ 1](#1-prerequisites).
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

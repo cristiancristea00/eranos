@@ -26,9 +26,10 @@ Signed-off-by: <committer name> <<committer email>>
   `settlement`, `transfer`, and `group`; `bindings` for the binding core,
   `uniffi` for the UniFFI glue and its generators, `swift` for the Swift
   package, `kotlin` for the Kotlin package, `java` for the Java package,
-  and `web` for the WebAssembly glue and the TypeScript package; and
-  besides them `serde`, `docs`, `examples`, `build`, and `xtask`. A change
-  to the facade alone, or to several crates, takes no scope.
+  `web` for the WebAssembly glue and the TypeScript package, and `kmp` for
+  the Kotlin Multiplatform glue and package; and besides them `serde`,
+  `docs`, `examples`, `build`, and `xtask`. A change to the facade alone,
+  or to several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -99,6 +100,13 @@ It runs these, in this order, and stops at the first that fails:
     lines, branches, functions, and statements, TypeDoc with warnings as
     errors, and the bundle with its declarations, all in
     `bindings/typescript`
+15. `sh gradlew --warning-mode=fail :eranos:jvmTest`, with `ANDROID_HOME`
+    set and `JAVA_HOME_21` naming the JDK 21 that the Kotlin Multiplatform
+    package's Gradle 9.0 runs on, then the rest of that package: the two
+    Android libraries and, on macOS, the layer compiled for its eight Apple
+    targets, every Gradle run with `--warning-mode=fail`, and ktlint on the
+    build scripts, all in `bindings/kmp`; the first runs the Kotlin
+    package's tests on the JVM against gobley's bindings
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
@@ -302,13 +310,15 @@ of the domain, from `eranos-core` (identifiers) up to `eranos-group`
 one error, and a group handle with a synchronous and an asynchronous form
 of every call. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
 through UniFFI, whose generators are the binaries of
-`eranos-uniffi-bindgen`; `eranos-web` compiles the same sources on the
-UniFFI release that uniffi-bindgen-react-native reads, for WebAssembly;
-the other glue crates are planned as their siblings. Each language's
-package in `bindings/` puts a hand-written layer over the generated code:
-`bindings/swift` for Apple platforms, `bindings/kotlin` for Android and
-the JVM, `bindings/java` for Java, and `bindings/typescript` for browsers
-and Node ([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
+`eranos-uniffi-bindgen`; `eranos-web` and `eranos-kmp` compile the same
+sources on the UniFFI releases that uniffi-bindgen-react-native and gobley
+read, for WebAssembly and for Kotlin Multiplatform; the C glue is planned
+as their sibling. Each language's package in `bindings/` puts a
+hand-written layer over the generated code: `bindings/swift` for Apple
+platforms, `bindings/kotlin` for Android and the JVM, `bindings/java` for
+Java, `bindings/typescript` for browsers and Node, and `bindings/kmp`,
+which compiles the Kotlin layer for Kotlin Multiplatform
+([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
 members, categories, expenses, and transfers in ID-keyed maps. Each entry
 is resolved into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the

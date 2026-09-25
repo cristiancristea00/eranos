@@ -178,6 +178,7 @@ eranos/
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
 ├── bindings/
 │   ├── java/                  the Java package, over the UniFFI glue
+│   ├── kmp/                   the Kotlin Multiplatform package, over the glue gobley generates
 │   ├── kotlin/                the Kotlin package for Android and the JVM, over the UniFFI glue
 │   ├── swift/                 the Swift package for Apple platforms, over the UniFFI glue
 │   └── typescript/            the npm package for browsers and Node, over the WebAssembly glue
@@ -200,6 +201,7 @@ eranos/
 │   ├── eranos-transfer/       transfers
 │   ├── eranos-group/          groups and their saved form
 │   ├── eranos-bindings/       what every binding exposes, in plain Rust
+│   ├── eranos-kmp/            the bindings for Kotlin Multiplatform, through UniFFI and gobley
 │   ├── eranos-uniffi/         the bindings for Swift, Kotlin, and Java, through UniFFI
 │   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages
 │   ├── eranos-web/            the bindings for browsers and Node, through UniFFI and WebAssembly

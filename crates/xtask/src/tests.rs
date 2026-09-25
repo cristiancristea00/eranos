@@ -51,13 +51,13 @@ pub(crate) struct Recorder {
 impl Recorder {
     /// A recorder that answers with [`METADATA`], a tree without features,
     /// and Node 24, builds for Apple platforms, has set every variable the
-    /// Kotlin gates need, and fails at no step.
+    /// Kotlin and Kotlin Multiplatform gates need, and fails at no step.
     pub(crate) fn new() -> Self {
         Self {
             apple: true,
             metadata: METADATA.to_owned(),
             node: "v24.21.0\n".to_owned(),
-            variables: kotlin::VARIABLES.to_vec(),
+            variables: [kotlin::VARIABLES.as_slice(), kmp::VARIABLES.as_slice()].concat(),
             ..Self::default()
         }
     }
@@ -124,8 +124,9 @@ fn words(line: &[&str]) -> Vec<String> {
 /// examples, runs each one, builds the host library, generates every
 /// language's sources into a cleared directory, runs the Swift package's
 /// gates where the machine builds for Apple platforms, and the Kotlin,
-/// Java, and TypeScript packages'; if it ran less, `cargo xtask gates`
-/// would pass commits the documented gates refuse.
+/// Java, TypeScript, and Kotlin Multiplatform packages', the last with its
+/// Apple libraries only where the machine builds them; if it ran less,
+/// `cargo xtask gates` would pass commits the documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -149,13 +150,16 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     packages.push(web::generator());
     packages.extend(web::checks());
     packages.extend(web::package());
+    let mut elsewhere_packages = packages.clone();
+    packages.extend(kmp::checks("/JAVA_HOME_21", true));
+    elsewhere_packages.extend(kmp::checks("/JAVA_HOME_21", false));
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();
     elsewhere.apple = false;
     run(&words(&["gates"]), &mut elsewhere).unwrap();
     assert_eq!(
         elsewhere.steps,
-        [expected.clone(), packages.clone()].concat()
+        [expected.clone(), elsewhere_packages].concat()
     );
     assert_eq!(
         elsewhere.cleared,

@@ -1,5 +1,7 @@
 package eranos
 
+import kotlin.jvm.JvmInline
+
 /**
  * The identifier of a group: a hyphenated UUID the library gave it.
  *

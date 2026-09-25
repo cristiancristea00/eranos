@@ -34,7 +34,9 @@ modules, and the internal layout of `Group`. So does `eranos-bindings`, the
 core the bindings forward to: a binding's contract is the API of its
 language's package. The Kotlin package records its API in
 `bindings/kotlin/eranos/api/eranos.api`, which the gates check the layer
-against, so a change to the API shows in the commit that makes it.
+against, so a change to the API shows in the commit that makes it; the
+Kotlin Multiplatform package compiles the same layer, so the dump records
+its API too.
 
 ## 2. What moves the number
 

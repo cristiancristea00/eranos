@@ -6,6 +6,7 @@
 
 mod gates;
 mod java;
+mod kmp;
 mod kotlin;
 mod process;
 mod swift;

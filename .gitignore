@@ -49,3 +49,12 @@
 /bindings/typescript/dist/
 /bindings/typescript/node_modules/
 /bindings/typescript/src/internal/
+
+# The Kotlin Multiplatform project's caches and build products, where
+# gobley's plugins write the generated Kotlin and the native libraries they
+# build from the Rust sources, and the SDK path Android Studio writes for
+# its machine; none is committed.
+/bindings/kmp/.gradle/
+/bindings/kmp/.kotlin/
+/bindings/kmp/**/build/
+/bindings/kmp/local.properties

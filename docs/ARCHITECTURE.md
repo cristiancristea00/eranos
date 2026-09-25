@@ -72,14 +72,16 @@ facade's edges only the one to the group. Above the facade,
 traits, on the twelve internal crates, whose edges the graph leaves out.
 `eranos-uniffi` mirrors it for UniFFI, and `eranos-uniffi-bindgen`, a
 package of binaries with no edge in the workspace, holds the generators
-that read the UniFFI library. `eranos-web` compiles the source files of
-`eranos-uniffi`, which it includes by path, on another UniFFI release, for
-WebAssembly, so it has no edge to `eranos-uniffi`.
+that read the UniFFI library. `eranos-web` and `eranos-kmp` compile the
+source files of `eranos-uniffi`, which they include by path, on other UniFFI
+releases, for WebAssembly and for gobley, so neither has an edge to
+`eranos-uniffi`.
 
 ```mermaid
 flowchart TD
     UNIFFI["eranos-uniffi<br/>UniFFI mirrors; Group, GroupReader,<br/>Cancellation; value functions"]
     WEB["eranos-web<br/>the sources of eranos-uniffi,<br/>built for WebAssembly"]
+    KMP["eranos-kmp<br/>the sources of eranos-uniffi,<br/>built for gobley"]
     BINDINGS["eranos-bindings<br/>records, EranosError, GroupHandle,<br/>GroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
     GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup,<br/>SharedGroup"]
@@ -96,6 +98,7 @@ flowchart TD
     CORE["eranos-core<br/>identifiers, cooperative futures<br/>(+ text rules, pacer)"]
     UNIFFI --> BINDINGS
     WEB --> BINDINGS
+    KMP --> BINDINGS
     BINDINGS --> FACADE
     FACADE --> GROUP
     GROUP --> EXPENSE
@@ -132,6 +135,8 @@ flowchart TD
  │                    GroupReader, Cancellation; the value functions        │
  │ eranos-web         the sources of eranos-uniffi on UniFFI 0.31, built    │
  │                    for WebAssembly                                       │
+ │ eranos-kmp         the sources of eranos-uniffi on UniFFI 0.29, built    │
+ │                    for gobley                                            │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-bindings    what every binding exposes: records, EranosError,     │
  │                    GroupHandle, GroupReader, value helpers               │
@@ -169,6 +174,7 @@ flowchart TD
 | `eranos-uniffi-bindgen` | the generators `uniffi-bindgen`, for Swift and Kotlin, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                           | uniffi, uniffi-bindgen-java                                                                        |
 | `eranos-uniffi`         | the `uniffi` mirrors of the core's records, enums, and error; the `Group`, `GroupReader`, and `Cancellation` objects; the value helpers as functions                | eranos-bindings; uniffi                                                                            |
 | `eranos-web`            | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                     | eranos-bindings; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
+| `eranos-kmp`            | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                             | eranos-bindings; uniffi                                                                            |
 | `eranos-bindings`       | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers               | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json      |
 | `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                            |
 | `eranos-group`          | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core  |
@@ -526,8 +532,8 @@ which holds keys the library never sees.
 glue crates beside it mirror its types and forward every call to it,
 converting nothing and deciding nothing, so every rule a binding applies is
 tested in Rust: `eranos-uniffi` for Swift, Kotlin, and Java, `eranos-web`
-for browsers and Node, and, planned, `eranos-kmp` for Kotlin Multiplatform
-and `eranos-capi` for C and C++.
+for browsers and Node, `eranos-kmp` for Kotlin Multiplatform, and, planned,
+`eranos-capi` for C and C++.
 
 - **Records of text and integers.** Values and entries cross as records and
   enums with data: identifiers as hyphenated UUIDs, currencies as ISO 4217
@@ -603,9 +609,9 @@ build. It wraps the group handle, the read handle, and the cancellation in
 the objects `Group`, `GroupReader`, and `Cancellation`, whose methods
 forward to the core, and exports the value helpers as functions and the
 asynchronous load as `load_group_async`. Its four source files are
-compiled by `eranos-web` as well, against UniFFI 0.31.2, and are written
-for the planned KMP crate, which compiles them against 0.29.4: they keep to
-what 0.29 accepts, and every release compiles them.
+compiled by `eranos-web` as well, against UniFFI 0.31.2, and by
+`eranos-kmp`, against 0.29.4: they keep to what 0.29 accepts, and every
+release compiles them.
 `uniffi.toml` names the generated Swift module `EranosGenerated` and the
 generated Kotlin and Java package `eranos.internal`: the generated code sits
 beneath each package's hand-written layer.
@@ -620,6 +626,12 @@ support the generator embeds to write the glue beside the module. On
 `wasm32-unknown-unknown`, UniFFI's core compiles only with its
 `wasm-unstable-single-threaded` feature, which drops the `Send` and `Sync`
 bounds a target without threads has no use for.
+
+`eranos-kmp` builds the same glue for Kotlin Multiplatform, the same way:
+it includes the four source files and compiles them against UniFFI 0.29.4,
+the release whose metadata gobley 0.3.7's generator reads, as a shared
+library for the JVM and Android, whose metadata the generator reads too,
+and as a static library that each Apple target links.
 
 `bindings/swift` is the Swift package for iOS, iPadOS, macOS, Mac Catalyst,
 tvOS, watchOS, and visionOS. Its binary target, `EranosFFI`, is an
@@ -738,6 +750,27 @@ build. The layer follows the Google TypeScript Style Guide:
   wait for it. `Group` and `GroupReader` are `Disposable`, so `using` frees
   them at the end of a block.
 
+`bindings/kmp` is the Kotlin Multiplatform package: a Gradle build of two
+modules on gobley's plugins. `generated` holds the Kotlin that gobley's
+generator writes from `eranos-kmp`, in `eranos.internal`, beside the library
+that gobley's Cargo plugin builds for each target: the host's for the JVM,
+the four ABIs' for Android, and a static library for each of the eight Apple
+targets that Kotlin/Native, gobley, and rustup's standard libraries all
+have, but for macOS on x86_64, which Kotlin deprecates (iOS, its simulator
+on arm64 and x86_64, macOS on arm64, tvOS and watchOS, and their arm64
+simulators). `eranos` compiles the Kotlin package's layer from its sources,
+unchanged, as common code, over `generated` as an implementation detail, so
+one layer serves both packages. `generated` ships its own shrinker rules for
+JNA, which keep JNA's classes and the generated package, and turns gobley's
+off, since they never reach an app. gobley 0.3.7 supports the Android plugin
+8, not 9, and the Android plugin 8 calls an internal API that Gradle 9.6
+drops and a notation that Gradle 9.1 deprecates, so this build alone runs
+Gradle 9.0, on JDK 21, since Gradle 9.0 runs on JDK 24 at the latest; its
+Kotlin is the Kotlin package's 2.4.20. gobley's plugin installs its
+generator, `gobley-uniffi-bindgen` 0.3.7, into the build directory with a
+`cargo install` that passes no `--locked`, so the generator's dependencies
+resolve when it installs.
+
 The generators, `uniffi-bindgen` for Swift and Kotlin and
 `uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
 built on the UniFFI release that builds the library, so the code they write
@@ -757,7 +790,10 @@ documents it, and builds its JAR. Last, it builds the library for
 `wasm32-unknown-unknown`, generates the TypeScript and the module into
 the TypeScript package with uniffi-bindgen-react-native, and checks the
 package's format, lints it, type-checks it, tests it, documents it, and
-builds its bundle, on Node 24, the oldest the package supports.
+builds its bundle, on Node 24, the oldest the package supports. Then it
+runs the Kotlin package's tests on the Kotlin Multiplatform package's JVM
+target, against gobley's bindings, builds that package's Android
+libraries, and, on macOS, compiles its layer for every Apple target.
 
 ## 12. Async and concurrency
 

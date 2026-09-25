@@ -262,16 +262,17 @@ jobs:
       # doctests. Each feature set compiles an identifier generator the
       # other leaves out, so the report merges both runs. The UniFFI glue and
       # its generators have no Rust tests: the foreign tests measure the glue,
-      # and eranos-web compiles the sources of eranos-uniffi for WebAssembly,
-      # which stable Rust cannot measure.
+      # eranos-web compiles the sources of eranos-uniffi for WebAssembly,
+      # which stable Rust cannot measure, and eranos-kmp compiles them again
+      # for gobley.
       - run: >-
           cargo llvm-cov --no-report --workspace --all-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
-          --exclude eranos-web
+          --exclude eranos-web --exclude eranos-kmp
       - run: >-
           cargo llvm-cov --no-report --workspace --no-default-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
-          --exclude eranos-web
+          --exclude eranos-web --exclude eranos-kmp
       - name: Export the reports
         run: |
           cargo llvm-cov report --cobertura --output-path target/coverage.xml
