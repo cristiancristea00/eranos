@@ -386,7 +386,7 @@ fn starts_in_lowercase_or_with_a_code(message: &str) -> bool {
 /// message of `error`.
 fn assert_not_echoed(input: &str, error: &impl Display) {
     let message = error.to_string();
-    for word in input.split_whitespace().filter(|word| word.len() >= 3) {
+    for word in input.split_whitespace().filter(|word| 3 <= word.len()) {
         assert!(!message.contains(word), "{message:?} repeats {word:?}");
     }
 }

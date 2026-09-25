@@ -389,16 +389,16 @@ export interface Expense {
  */
 export function convertedExpense(expense: internal.Expense): Expense {
     return {
-        ...(expense.id === undefined ? {} : { id: expenseId(expense.id) }),
+        ...(undefined === expense.id ? {} : { id: expenseId(expense.id) }),
         cost: convertedCost(expense.cost),
         date: CalendarDate.converted(expense.date),
         name: expense.name,
         payers: convertedSplit(expense.payers),
         split: convertedExpenseSplit(expense.split),
-        ...(expense.category === undefined ? {} : { category: categoryId(expense.category) }),
-        ...(expense.description === undefined ? {} : { description: expense.description }),
-        ...(expense.time === undefined ? {} : { time: TimeOfDay.converted(expense.time) }),
-        ...(expense.tip === undefined ? {} : { tip: convertedTip(expense.tip) }),
+        ...(undefined === expense.category ? {} : { category: categoryId(expense.category) }),
+        ...(undefined === expense.description ? {} : { description: expense.description }),
+        ...(undefined === expense.time ? {} : { time: TimeOfDay.converted(expense.time) }),
+        ...(undefined === expense.tip ? {} : { tip: convertedTip(expense.tip) }),
     };
 }
 
@@ -409,16 +409,16 @@ export function convertedExpense(expense: internal.Expense): Expense {
  */
 export function generatedExpense(expense: Expense): internal.Expense {
     return internal.Expense.create({
-        ...(expense.id === undefined ? {} : { id: expense.id }),
+        ...(undefined === expense.id ? {} : { id: expense.id }),
         cost: generatedCost(expense.cost),
         date: expense.date.generated(),
         name: expense.name,
         payers: generatedSplit(expense.payers),
         split: generatedExpenseSplit(expense.split),
-        ...(expense.category === undefined ? {} : { category: expense.category }),
-        ...(expense.description === undefined ? {} : { description: expense.description }),
-        ...(expense.time === undefined ? {} : { time: expense.time.generated() }),
-        ...(expense.tip === undefined ? {} : { tip: generatedTip(expense.tip) }),
+        ...(undefined === expense.category ? {} : { category: expense.category }),
+        ...(undefined === expense.description ? {} : { description: expense.description }),
+        ...(undefined === expense.time ? {} : { time: expense.time.generated() }),
+        ...(undefined === expense.tip ? {} : { tip: generatedTip(expense.tip) }),
     });
 }
 
@@ -527,12 +527,12 @@ export interface Member {
  */
 export function convertedMember(member: internal.Member): Member {
     return {
-        ...(member.id === undefined ? {} : { id: memberId(member.id) }),
+        ...(undefined === member.id ? {} : { id: memberId(member.id) }),
         firstName: member.firstName,
         accounts: member.accounts.map((account) => ({ details: convertedAccountDetails(account.details), name: account.name })),
-        ...(member.email === undefined ? {} : { email: Email.known(member.email) }),
-        ...(member.lastName === undefined ? {} : { lastName: member.lastName }),
-        ...(member.phone === undefined ? {} : { phone: PhoneNumber.known(member.phone) }),
+        ...(undefined === member.email ? {} : { email: Email.known(member.email) }),
+        ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
+        ...(undefined === member.phone ? {} : { phone: PhoneNumber.known(member.phone) }),
     };
 }
 
@@ -543,14 +543,14 @@ export function convertedMember(member: internal.Member): Member {
  */
 export function generatedMember(member: Member): internal.Member {
     return internal.Member.create({
-        ...(member.id === undefined ? {} : { id: member.id }),
+        ...(undefined === member.id ? {} : { id: member.id }),
         firstName: member.firstName,
         accounts: (member.accounts ?? []).map((account) =>
             internal.Account.create({ details: generatedAccountDetails(account.details), name: account.name }),
         ),
-        ...(member.email === undefined ? {} : { email: member.email.toString() }),
-        ...(member.lastName === undefined ? {} : { lastName: member.lastName }),
-        ...(member.phone === undefined ? {} : { phone: member.phone.e164 }),
+        ...(undefined === member.email ? {} : { email: member.email.toString() }),
+        ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
+        ...(undefined === member.phone ? {} : { phone: member.phone.e164 }),
     });
 }
 
@@ -573,7 +573,7 @@ export interface Category {
  * @internal
  */
 export function convertedCategory(category: internal.Category): Category {
-    return { ...(category.id === undefined ? {} : { id: categoryId(category.id) }), name: category.name };
+    return { ...(undefined === category.id ? {} : { id: categoryId(category.id) }), name: category.name };
 }
 
 /**
@@ -582,7 +582,7 @@ export function convertedCategory(category: internal.Category): Category {
  * @internal
  */
 export function generatedCategory(category: Category): internal.Category {
-    return internal.Category.create({ ...(category.id === undefined ? {} : { id: category.id }), name: category.name });
+    return internal.Category.create({ ...(undefined === category.id ? {} : { id: category.id }), name: category.name });
 }
 
 /**
@@ -614,13 +614,13 @@ export interface Transfer {
  */
 export function convertedTransfer(transfer: internal.Transfer): Transfer {
     return {
-        ...(transfer.id === undefined ? {} : { id: transferId(transfer.id) }),
+        ...(undefined === transfer.id ? {} : { id: transferId(transfer.id) }),
         cost: convertedCost(transfer.cost),
         date: CalendarDate.converted(transfer.date),
         from: memberId(transfer.from),
         to: memberId(transfer.to),
-        ...(transfer.note === undefined ? {} : { note: transfer.note }),
-        ...(transfer.time === undefined ? {} : { time: TimeOfDay.converted(transfer.time) }),
+        ...(undefined === transfer.note ? {} : { note: transfer.note }),
+        ...(undefined === transfer.time ? {} : { time: TimeOfDay.converted(transfer.time) }),
     };
 }
 
@@ -631,12 +631,12 @@ export function convertedTransfer(transfer: internal.Transfer): Transfer {
  */
 export function generatedTransfer(transfer: Transfer): internal.Transfer {
     return internal.Transfer.create({
-        ...(transfer.id === undefined ? {} : { id: transfer.id }),
+        ...(undefined === transfer.id ? {} : { id: transfer.id }),
         cost: generatedCost(transfer.cost),
         date: transfer.date.generated(),
         from: transfer.from,
         to: transfer.to,
-        ...(transfer.note === undefined ? {} : { note: transfer.note }),
-        ...(transfer.time === undefined ? {} : { time: transfer.time.generated() }),
+        ...(undefined === transfer.note ? {} : { note: transfer.note }),
+        ...(undefined === transfer.time ? {} : { time: transfer.time.generated() }),
     });
 }

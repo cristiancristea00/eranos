@@ -111,7 +111,7 @@ impl Split {
     /// Whether the split lists no member.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
-        self.len() == 0
+        0 == self.len()
     }
 
     /// Checks that the split can divide `total`: at least one member, no
@@ -155,7 +155,7 @@ impl Split {
             Self::Percentages(shares) => {
                 if let Some(share) = shares
                     .iter()
-                    .find(|share| share.percentage.basis_points() == 0)
+                    .find(|share| 0 == share.percentage.basis_points())
                 {
                     return Err(ExpenseError::NonPositiveShare {
                         member: share.member,

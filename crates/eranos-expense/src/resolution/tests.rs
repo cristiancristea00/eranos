@@ -92,7 +92,7 @@ fn a_single_payer_is_owed_every_other_share() {
     // 10.00 among three is 3.34 + 3.33 + 3.33.
     let consumed: Vec<i64> = rows(&resolved).iter().map(|&(_, _, share)| share).collect();
     assert_eq!(consumed.iter().sum::<i64>(), 1000);
-    assert_eq!(consumed.iter().filter(|&&share| share == 334).count(), 1);
+    assert_eq!(consumed.iter().filter(|&&share| 334 == share).count(), 1);
     // Ana paid everything and is owed the other two shares.
     assert_eq!(rows(&resolved)[0].1, 1000);
     assert_eq!(resolved.debts.len(), 2);
@@ -232,7 +232,7 @@ fn a_foreign_expense_converts_its_total_once() {
     );
     let consumed: Vec<i64> = rows(&resolved).iter().map(|&(_, _, share)| share).collect();
     assert_eq!(consumed.iter().sum::<i64>(), 4977);
-    assert!(consumed.iter().all(|&share| share == 2488 || share == 2489));
+    assert!(consumed.iter().all(|&share| 2488 == share || 2489 == share));
     assert_eq!(rows(&resolved)[0].1, 4977);
 }
 
@@ -341,7 +341,7 @@ fn the_leftover_cent_rotates_with_the_expense_id() {
         let resolved = resolve_expense(&identified(&expense, id), Currency::EUR).unwrap();
         rows(&resolved)
             .iter()
-            .find(|&&(_, _, share)| share == 34)
+            .find(|&&(_, _, share)| 34 == share)
             .map(|&(member, _, _)| member)
             .unwrap()
     };
@@ -435,7 +435,7 @@ proptest! {
         for (member, paid, share) in rows(&resolved) {
             prop_assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
         }
-        prop_assert!(resolved.debts.iter().all(|debt| debt.amount > 0 && debt.members.from != debt.members.to));
+        prop_assert!(resolved.debts.iter().all(|debt| 0 < debt.amount && debt.members.from != debt.members.to));
     }
 }
 

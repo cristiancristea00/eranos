@@ -145,6 +145,16 @@ failure); `#[allow]` is itself a lint error.
   api, io, os, cpu, ui; `max` and `min` count as dictionary words. The rule
   covers locals, parameters, closure bindings, test helpers, and every
   serialised field name.
+- **The constant comes first in a comparison.** When one side of a
+  comparison is a literal, a null value, or a named constant and the
+  other is not, the constant is written first, and an ordering comparison
+  mirrors its operator: `0 == count`, `NULL != value`, `0 < amount`,
+  `MAX_SCALE < scale`, `CategoryId::UNCATEGORISED != id`. Two constants,
+  or two sides that are not constants, keep their order. The rule covers
+  every language, tests, examples, and benchmarks included. ESLint's
+  `yoda` rule checks it in TypeScript; no other language's linter has a
+  rule for it, and the rules of Error Prone and SwiftLint that ask for the
+  opposite are off.
 - **Money is never a float.** Amounts are `i64` minor units; every division
   goes through `eranos_money::allocation::allocate`, every conversion through
   `ExchangeRate::convert`, and every percentage through

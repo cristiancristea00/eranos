@@ -65,7 +65,7 @@ fn every_code_is_three_uppercase_ascii_letters() {
 fn every_currency_has_at_most_4_decimal_places() {
     // Decimal places of every currency.
     for &currency in Currency::all() {
-        assert!(currency.decimal_places() <= 4, "{currency}");
+        assert!(4 >= currency.decimal_places(), "{currency}");
     }
 }
 
@@ -199,7 +199,7 @@ fn the_constant_all_is_the_albanian_lek() {
     // `all()` lists the lek once, among the other currencies.
     let leks = Currency::all()
         .iter()
-        .filter(|&&currency| currency == Currency::ALL)
+        .filter(|&&currency| Currency::ALL == currency)
         .count();
     assert_eq!(leks, 1);
 }

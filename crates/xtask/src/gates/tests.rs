@@ -64,7 +64,7 @@ fn a_feature_of_async_lock_stops_the_gates() {
     .join("\n");
     let failure = run(&mut recorder).unwrap_err();
     assert!(
-        matches!(&failure, Failure::LockFeatures(features) if features == "\"default\", \"std\""),
+        matches!(&failure, Failure::LockFeatures(features) if "\"default\", \"std\"" == features),
         "{failure:?}"
     );
     assert_eq!(recorder.steps.last(), Some(&lock_features()));

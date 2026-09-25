@@ -109,7 +109,7 @@ impl Serialize for Group {
             categories: self
                 .categories
                 .values()
-                .filter(|category| category.id() != CategoryId::UNCATEGORISED)
+                .filter(|category| CategoryId::UNCATEGORISED != category.id())
                 .collect(),
             currency: self.currency,
             expenses: self
@@ -200,7 +200,7 @@ impl SavedGroup {
 
     /// The computation of [`into_group_async`](Self::into_group_async).
     async fn into_group_paced(self) -> Result<Group, GroupError> {
-        if self.format != FORMAT {
+        if FORMAT != self.format {
             return Err(GroupError::UnsupportedFormat {
                 format: self.format,
             });

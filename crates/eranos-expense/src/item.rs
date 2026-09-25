@@ -171,7 +171,7 @@ impl ItemBuilder {
         if !self.unit_price.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);
         }
-        if self.quantity == 0 {
+        if 0 == self.quantity {
             return Err(ExpenseError::ZeroQuantity);
         }
         let line_total = self

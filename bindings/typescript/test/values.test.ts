@@ -39,10 +39,10 @@ await initialised;
 function assertRefused(call: () => unknown, type: new (...parameters: never[]) => Error, failure?: unknown, message?: string): void {
     assert.throws(call, (error: unknown) => {
         assert.ok(error instanceof type);
-        if (failure !== undefined) {
+        if (undefined !== failure) {
             assert.deepEqual((error as unknown as { failure: unknown }).failure, failure);
         }
-        if (message !== undefined) {
+        if (undefined !== message) {
             assert.equal(error.message, message);
         }
         return true;

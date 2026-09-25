@@ -134,7 +134,7 @@ final class Converting {
         var _ =
                 generated.whenComplete(
                         (value, failure) -> {
-                            if (failure != null) {
+                            if (null != failure) {
                                 future.completeExceptionally(convertedCause(failure));
                                 return;
                             }
@@ -156,7 +156,7 @@ final class Converting {
      */
     static Throwable convertedCause(Throwable failure) {
         Throwable cause =
-                failure instanceof CompletionException && failure.getCause() != null
+                failure instanceof CompletionException && null != failure.getCause()
                         ? failure.getCause()
                         : failure;
         return cause instanceof eranos.internal.EranosException exception

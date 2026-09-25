@@ -294,5 +294,5 @@ export class GroupReader implements Disposable {
 
 /** `value` converted by `conversion`, or `undefined` for a value the group does not hold. */
 function known<T, U>(value: T | undefined, conversion: (value: T) => U): U | undefined {
-    return value === undefined ? undefined : conversion(value);
+    return undefined === value ? undefined : conversion(value);
 }

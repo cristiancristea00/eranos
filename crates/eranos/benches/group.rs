@@ -40,7 +40,7 @@ fn group(size: usize) -> Group {
     let rate = ExchangeRate::parse("0.2").unwrap_or_else(|error| panic!("{error}"));
     for (index, &payer) in (0_i64..).zip(members.iter().cycle()).take(size) {
         let minor_units = 100 + (index % 9_973) * 7;
-        let cost = if index % 10 == 0 {
+        let cost = if 0 == index % 10 {
             Money::from_minor_units(Currency::RON, minor_units).at(rate)
         } else {
             Money::from_minor_units(Currency::EUR, minor_units).into()
@@ -51,7 +51,7 @@ fn group(size: usize) -> Group {
         group
             .add_expense(expense)
             .unwrap_or_else(|error| panic!("{error}"));
-        if index % 10 == 5 {
+        if 5 == index % 10 {
             let recipient = members
                 .get(usize::try_from(index).unwrap_or_default() % 5)
                 .copied()

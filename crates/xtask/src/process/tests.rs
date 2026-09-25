@@ -41,7 +41,7 @@ fn a_succeeding_step_passes() {
 fn a_failing_step_fails_under_its_name() {
     let failure = System.run(&failing()).unwrap_err();
     assert!(
-        matches!(&failure, Failure::Step { step, .. } if step == "a failing program"),
+        matches!(&failure, Failure::Step { step, .. } if "a failing program" == step),
         "{failure:?}"
     );
     assert!(
@@ -60,7 +60,7 @@ fn a_program_that_cannot_start_fails_under_the_step_name() {
         System.output(&missing_program()).unwrap_err(),
     ] {
         assert!(
-            matches!(&failure, Failure::Start { step, .. } if step == "a missing program"),
+            matches!(&failure, Failure::Start { step, .. } if "a missing program" == step),
             "{failure:?}"
         );
         assert!(

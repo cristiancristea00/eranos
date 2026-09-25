@@ -384,7 +384,7 @@ impl Expense {
             name: expense.name().to_owned(),
             payers: Split::from_split(expense.payers()),
             split: ExpenseSplit::from_expense_split(expense.split()),
-            category: (category != CategoryId::UNCATEGORISED).then(|| category.to_string()),
+            category: (CategoryId::UNCATEGORISED != category).then(|| category.to_string()),
             description: expense.description().map(str::to_owned),
             time: expense.time().map(TimeOfDay::from_library),
             tip: (tip != library::Tip::default()).then(|| Tip::from_library(tip)),

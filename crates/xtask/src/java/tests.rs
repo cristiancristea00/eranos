@@ -56,7 +56,7 @@ fn the_package_is_formatted_tested_documented_and_packed_in_order() {
 #[test]
 fn a_missing_jdk_stops_the_java_gates_before_any_step() {
     let mut recorder = Recorder::new();
-    recorder.variables.retain(|name| *name != "JAVA_HOME");
+    recorder.variables.retain(|name| "JAVA_HOME" != *name);
     assert!(matches!(
         run(&mut recorder, &metadata()),
         Err(Failure::Variable("JAVA_HOME"))

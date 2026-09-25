@@ -35,7 +35,7 @@ public final class Category {
      */
     static Category converted(eranos.internal.Category category) {
         return new Category(
-                category.id() == null ? null : new CategoryId(category.id()), category.name());
+                null == category.id() ? null : new CategoryId(category.id()), category.name());
     }
 
     /**
@@ -44,7 +44,7 @@ public final class Category {
      * @return the generated category
      */
     eranos.internal.Category generated() {
-        return new eranos.internal.Category(id == null ? null : id.value(), name);
+        return new eranos.internal.Category(null == id ? null : id.value(), name);
     }
 
     /**

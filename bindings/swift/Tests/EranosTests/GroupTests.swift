@@ -28,16 +28,16 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     #expect(members.map(\.firstName) == ["Ana", "Bob"])
     #expect(try group.member(withID: flat.ana) == members.first)
     #expect(try !group.isArchived(flat.ana))
-    #expect(try group.name() == "Flat")
-    #expect(try group.description() == "Rent")
-    #expect(try group.language()?.description == "pt-PT")
+    #expect(try "Flat" == group.name())
+    #expect(try "Rent" == group.description())
+    #expect(try "pt-PT" == group.language()?.description)
     for strategy in SettlementStrategy.allCases {
         let settlement = try group.settlement(by: strategy)
         #expect(settlement.strategy == strategy)
         #expect(settlement.payments.map(\.amount) == [flat.euros(500)])
     }
     let transfers = try group.transfers()
-    #expect(transfers.count == 1)
+    #expect(1 == transfers.count)
     #expect(try group.transfer(withID: flat.repayment) == transfers.first)
     #expect(try group.amount(of: flat.repayment) == flat.euros(1_000))
     let json = try group.save()
@@ -65,9 +65,9 @@ func everyAsynchronousReadAnswersAsItsSynchronousTwin() async throws {
     #expect(try await group.members() == synchronous.members)
     #expect(try await group.member(withID: flat.ana) == synchronous.members.first)
     #expect(try await !group.isArchived(flat.ana))
-    #expect(try await group.name() == "Flat")
-    #expect(try await group.description() == "Rent")
-    #expect(try await group.language()?.description == "pt-PT")
+    #expect(try await "Flat" == group.name())
+    #expect(try await "Rent" == group.description())
+    #expect(try await "pt-PT" == group.language()?.description)
     #expect(try await group.settlement(by: .greedy) == synchronous.settlement)
     #expect(try await group.transfers() == synchronous.transfers)
     #expect(try await group.transfer(withID: flat.repayment) == synchronous.transfers.first)
@@ -111,18 +111,18 @@ func synchronousChangesToCategoriesAndMembersTakeEffect() throws {
     let travel = try group.add(Category(name: "Travel"))
     var trips = try #require(try group.category(withID: travel))
     trips.name = "Trips"
-    #expect(try group.replace(trips).name == "Travel")
-    #expect(try group.remove(travel).name == "Trips")
+    #expect(try "Travel" == group.replace(trips).name)
+    #expect(try "Trips" == group.remove(travel).name)
 
     let carol = try group.add(Member(firstName: "Carol"))
     var popa = try #require(try group.member(withID: carol))
     popa.lastName = "Popa"
-    #expect(try group.replace(popa).lastName == nil)
+    #expect(try nil == group.replace(popa).lastName)
     try group.archive(carol)
     #expect(try group.isArchived(carol))
     try group.unarchive(carol)
     #expect(try !group.isArchived(carol))
-    #expect(try group.remove(carol).lastName == "Popa")
+    #expect(try "Popa" == group.remove(carol).lastName)
     #expect(throws: EranosError.self) {
         try group.remove(flat.ana)
     }
@@ -137,8 +137,8 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     let lunch = try group.add(flat.expense("Lunch", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob]))
     var lateLunch = try #require(try group.expense(withID: lunch))
     lateLunch.name = "Late lunch"
-    #expect(try group.replace(lateLunch).name == "Lunch")
-    #expect(try group.remove(lunch).name == "Late lunch")
+    #expect(try "Lunch" == group.replace(lateLunch).name)
+    #expect(try "Late lunch" == group.remove(lunch).name)
 
     let payment = try group.add(Transfer(cost: .local(flat.euros(500)), date: flat.day, from: flat.ana, to: flat.bob))
     var larger = try #require(try group.transfer(withID: payment))
@@ -147,13 +147,13 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     #expect(try group.remove(payment).cost == .local(flat.euros(700)))
 
     try group.rename(to: "Home")
-    #expect(try group.name() == "Home")
+    #expect(try "Home" == group.name())
     try group.changeDescription(to: nil)
-    #expect(try group.description() == nil)
+    #expect(try nil == group.description())
     try group.changeLanguage(to: Language("ro"))
     #expect(try group.language() == Language("ro"))
     try group.changeLanguage(to: nil)
-    #expect(try group.language() == nil)
+    #expect(try nil == group.language())
     let lei = try Currency(code: "RON")
     try group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try group.summary().totalSpent == Money(currency: lei, minorUnits: 15_000))
@@ -168,23 +168,23 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     let travel = try await group.add(Category(name: "Travel"))
     var trips = try #require(try await group.category(withID: travel))
     trips.name = "Trips"
-    #expect(try await group.replace(trips).name == "Travel")
-    #expect(try await group.remove(travel).name == "Trips")
+    #expect(try await "Travel" == group.replace(trips).name)
+    #expect(try await "Trips" == group.remove(travel).name)
 
     let carol = try await group.add(Member(firstName: "Carol"))
     var popa = try #require(try await group.member(withID: carol))
     popa.lastName = "Popa"
-    #expect(try await group.replace(popa).lastName == nil)
+    #expect(try await nil == group.replace(popa).lastName)
     try await group.archive(carol)
     #expect(try await group.isArchived(carol))
     try await group.unarchive(carol)
-    #expect(try await group.remove(carol).lastName == "Popa")
+    #expect(try await "Popa" == group.remove(carol).lastName)
 
     let lunch = try await group.add(flat.expense("Lunch", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob]))
     var lateLunch = try #require(try await group.expense(withID: lunch))
     lateLunch.name = "Late lunch"
-    #expect(try await group.replace(lateLunch).name == "Lunch")
-    #expect(try await group.remove(lunch).name == "Late lunch")
+    #expect(try await "Lunch" == group.replace(lateLunch).name)
+    #expect(try await "Late lunch" == group.remove(lunch).name)
 
     let payment = try await group.add(Transfer(cost: .local(flat.euros(500)), date: flat.day, from: flat.ana, to: flat.bob))
     var larger = try #require(try await group.transfer(withID: payment))
@@ -197,7 +197,7 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     try await group.changeLanguage(to: Language("ro"))
     #expect(try await [group.name(), group.description(), group.language()?.description] == ["Home", "Bills", "ro"])
     try await group.changeDescription(to: nil)
-    #expect(try await group.description() == nil)
+    #expect(try await nil == group.description())
     let lei = try Currency(code: "RON")
     try await group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try await group.currency() == lei)
@@ -209,8 +209,8 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
 func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
     let euro = try Currency(code: "EUR")
     let plain = try Group(currency: euro, name: "Trip")
-    #expect(try await plain.description() == nil)
-    #expect(try await plain.language() == nil)
+    #expect(try await nil == plain.description())
+    #expect(try await nil == plain.language())
     #expect(throws: EranosError.group(.emptyName, detail: "the group name must not be empty")) {
         try Group(currency: euro, name: " ")
     }
@@ -241,9 +241,9 @@ func aReadHandleReadsAsTheGroupDoesUntilItIsReleased() throws {
     #expect(try reader.members() == snapshot.members)
     #expect(try reader.member(withID: flat.ana) == snapshot.members.first)
     #expect(try !reader.isArchived(flat.ana))
-    #expect(try reader.name() == "Flat")
-    #expect(try reader.description() == "Rent")
-    #expect(try reader.language()?.description == "pt-PT")
+    #expect(try "Flat" == reader.name())
+    #expect(try "Rent" == reader.description())
+    #expect(try "pt-PT" == reader.language()?.description)
     #expect(try reader.settlement(by: .greedy) == snapshot.settlement)
     #expect(try reader.transfers() == snapshot.transfers)
     #expect(try reader.transfer(withID: flat.repayment) == snapshot.transfers.first)
@@ -255,7 +255,7 @@ func aReadHandleReadsAsTheGroupDoesUntilItIsReleased() throws {
         try reader.name()
     }
     try group.rename(to: "Home")
-    #expect(try group.withRead { reader throws(EranosError) in try reader.name() } == "Home")
+    #expect(try "Home" == group.withRead { reader throws(EranosError) in try reader.name() })
 }
 
 /// An asynchronous read handle that answered another way than the synchronous one, or held the
@@ -265,12 +265,12 @@ func anAsynchronousReadHandleReleasesTheLockWhenItsClosureReturns() async throws
     let flat = try Flat()
     let group = flat.group
     let reader = try await group.read()
-    #expect(try reader.name() == "Flat")
+    #expect(try "Flat" == reader.name())
     reader.release()
     let name = try await group.withRead { reader async throws(EranosError) in try reader.name() }
-    #expect(name == "Flat")
+    #expect("Flat" == name)
     try await group.rename(to: "Home")
-    #expect(try await group.name() == "Home")
+    #expect(try await "Home" == group.name())
 }
 
 /// A cancelled task whose call still ran would change the group after the app gave the change
@@ -291,7 +291,7 @@ func cancellingATaskCancelsItsCallAndLeavesTheGroupAsItWas() async throws {
     #expect(throws: EranosError.cancelled(detail: "the call was cancelled")) {
         try result.get()
     }
-    #expect(try await group.members().count == 2)
+    #expect(try await 2 == group.members().count)
 }
 
 /// A failure the library does not describe, such as a defect in the bindings, that escaped the

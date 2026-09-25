@@ -308,7 +308,7 @@ fn items_must_add_up_to_the_amount() {
         .items([item("Pizza", 5_000), item("Wine", 4_000)])
         .build()
         .unwrap();
-    assert!(matches!(expense.split(), ExpenseSplit::Itemised(items) if items.len() == 2));
+    assert!(matches!(expense.split(), ExpenseSplit::Itemised(items) if 2 == items.len()));
     // Lines of 50.00 and 30.00.
     assert_eq!(
         dinner()

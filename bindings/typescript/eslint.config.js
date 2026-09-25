@@ -45,6 +45,8 @@ export default defineConfig(
             curly: ['error', 'all'],
             eqeqeq: ['error', 'always'],
             'tsdoc/syntax': 'error',
+            // The constant comes first in a comparison, as in every language of the repository (AGENTS.md).
+            yoda: ['error', 'always'],
         },
     },
     { files: ['build.js', 'eslint.config.js'], extends: [tseslint.configs.disableTypeChecked] },

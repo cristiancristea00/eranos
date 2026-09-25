@@ -94,9 +94,9 @@ void describe('the expenses, members, categories, and transfers', () => {
     void it('converts and stores every kind of expense whole', () => {
         const flat = new Flat();
         const [taxi, dinner] = expenses(flat);
-        assert.ok(taxi.split.kind === 'itemised');
+        assert.ok('itemised' === taxi.split.kind);
         const [fare, toll] = taxi.split.items;
-        assert.ok(fare !== undefined && toll !== undefined);
+        assert.ok(undefined !== fare && undefined !== toll);
         assert.deepEqual(convertedExpense(generatedExpense(taxi)), { ...taxi, split: { kind: 'itemised', items: [fare, { ...toll, quantity: 1 }] } });
         assert.deepEqual(convertedExpense(generatedExpense(dinner)), {
             ...dinner,
@@ -105,7 +105,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         for (const expense of [taxi, dinner]) {
             const id = flat.group.addExpenseSync(expense);
             const stored = flat.group.expenseSync(id);
-            assert.ok(stored !== undefined);
+            assert.ok(undefined !== stored);
             assert.equal(stored.id, id);
             assert.deepEqual([stored.cost, stored.date, stored.name, stored.payers], [expense.cost, expense.date, expense.name, expense.payers]);
             assert.deepEqual([stored.category, stored.description, stored.time], [expense.category, expense.description, expense.time]);
@@ -180,11 +180,11 @@ void describe('the expenses, members, categories, and transfers', () => {
 
         assert.throws(
             () => flat.group.addMemberSync({ ...carol, id }),
-            (error: unknown) => error instanceof TypeError && error.message === 'an entry to add must not carry an identifier',
+            (error: unknown) => error instanceof TypeError && 'an entry to add must not carry an identifier' === error.message,
         );
         assert.throws(
             () => flat.group.replaceMemberSync(carol),
-            (error: unknown) => error instanceof TypeError && error.message === 'an entry to replace must carry its identifier',
+            (error: unknown) => error instanceof TypeError && 'an entry to replace must carry its identifier' === error.message,
         );
         assert.deepEqual(CalendarDate.of(1, 1, 2026).toString(), '2026-01-01');
     });

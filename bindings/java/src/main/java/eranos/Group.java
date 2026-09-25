@@ -1390,7 +1390,7 @@ public final class Group implements AutoCloseable {
                             currency.code(),
                             name,
                             description,
-                            language == null ? null : language.toString());
+                            null == language ? null : language.toString());
             return new Group(Converting.call(() -> new eranos.internal.Group(group)));
         }
     }

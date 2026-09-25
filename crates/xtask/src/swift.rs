@@ -137,7 +137,7 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
     ];
     for library in APPLE_LIBRARIES
         .iter()
-        .filter(|library| library.targets.len() > 1)
+        .filter(|library| 1 < library.targets.len())
     {
         let directory = format!("{}/{}", apple(metadata), library.name);
         let mut lipo = vec!["-create".to_owned()];

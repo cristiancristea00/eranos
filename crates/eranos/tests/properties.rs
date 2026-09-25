@@ -55,7 +55,7 @@ fn positive_parts(total: i64, weights: &[u32]) -> Option<Vec<i64>> {
     for part in parts.iter_mut().take(usize::try_from(leftover).ok()?) {
         *part += 1;
     }
-    parts.iter().all(|&part| part > 0).then_some(parts)
+    parts.iter().all(|&part| 0 < part).then_some(parts)
 }
 
 impl SplitRecipe {

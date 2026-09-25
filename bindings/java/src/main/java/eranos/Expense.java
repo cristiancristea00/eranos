@@ -76,16 +76,16 @@ public final class Expense {
      */
     static Expense converted(eranos.internal.Expense expense) {
         return new Builder(
-                        expense.id() == null ? null : new ExpenseId(expense.id()),
+                        null == expense.id() ? null : new ExpenseId(expense.id()),
                         Conversions.converted(expense.cost()),
                         CalendarDate.converted(expense.date()),
                         expense.name(),
                         Conversions.converted(expense.payers()),
                         Conversions.converted(expense.split()))
-                .category(expense.category() == null ? null : new CategoryId(expense.category()))
+                .category(null == expense.category() ? null : new CategoryId(expense.category()))
                 .description(expense.description())
-                .time(expense.time() == null ? null : TimeOfDay.converted(expense.time()))
-                .tip(expense.tip() == null ? null : Tip.converted(expense.tip()))
+                .time(null == expense.time() ? null : TimeOfDay.converted(expense.time()))
+                .tip(null == expense.tip() ? null : Tip.converted(expense.tip()))
                 .build();
     }
 
@@ -96,16 +96,16 @@ public final class Expense {
      */
     eranos.internal.Expense generated() {
         return new eranos.internal.Expense(
-                id == null ? null : id.value(),
+                null == id ? null : id.value(),
                 Conversions.generated(cost),
                 date.generated(),
                 name,
                 Conversions.generated(payers),
                 Conversions.generated(split),
-                category == null ? null : category.value(),
+                null == category ? null : category.value(),
                 description,
-                time == null ? null : time.generated(),
-                tip == null ? null : tip.generated());
+                null == time ? null : time.generated(),
+                null == tip ? null : tip.generated());
     }
 
     /**

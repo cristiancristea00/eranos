@@ -36,7 +36,7 @@ export function calling<T>(call: () => T): T {
 export async function awaiting<T>(call: (options: { signal: AbortSignal } | undefined) => Promise<T>, options: CallOptions | undefined): Promise<T> {
     const signal = options?.signal;
     try {
-        return await call(signal === undefined ? undefined : { signal });
+        return await call(undefined === signal ? undefined : { signal });
     } catch (error: unknown) {
         signal?.throwIfAborted();
         throw convertedError(error);

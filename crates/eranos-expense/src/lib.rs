@@ -582,7 +582,7 @@ fn is_default_tip(tip: &Tip) -> bool {
 /// out.
 #[cfg(feature = "serde")]
 fn is_uncategorised(category: &CategoryId) -> bool {
-    *category == CategoryId::UNCATEGORISED
+    CategoryId::UNCATEGORISED == *category
 }
 
 /// The serialised form of an [`Expense`], validated on the way in.

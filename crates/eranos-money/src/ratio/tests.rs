@@ -118,7 +118,7 @@ fn percentage_constants_are_zero_and_one_hundred() {
     assert_eq!(Percentage::default(), Percentage::ZERO);
     // Ordering follows the value.
     assert!(Percentage::ZERO < percentage("0.01"));
-    assert!(percentage("99.99") < Percentage::HUNDRED);
+    assert!(Percentage::HUNDRED > percentage("99.99"));
 }
 
 /// Parts typed in a split form would be refused or misread.
@@ -213,7 +213,7 @@ fn parts_convert_to_and_from_hundredths() {
     // Into hundredths.
     assert_eq!(u32::from(parts("1.5")), 150);
     // Ordering follows the value.
-    assert!(parts("0.5") < Parts::ONE);
+    assert!(Parts::ONE > parts("0.5"));
 }
 
 /// Saved ratios would fail to load, or zero parts would load.

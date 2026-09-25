@@ -127,19 +127,19 @@ impl Money {
     /// Whether the amount is zero.
     #[must_use]
     pub const fn is_zero(self) -> bool {
-        self.minor_units == 0
+        0 == self.minor_units
     }
 
     /// Whether the amount is greater than zero.
     #[must_use]
     pub const fn is_positive(self) -> bool {
-        self.minor_units > 0
+        0 < self.minor_units
     }
 
     /// Whether the amount is less than zero.
     #[must_use]
     pub const fn is_negative(self) -> bool {
-        self.minor_units < 0
+        0 > self.minor_units
     }
 
     /// This amount, in another currency than its group's, at `rate` into
@@ -209,10 +209,10 @@ impl Money {
 
 impl fmt::Display for Money {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let sign = if self.minor_units < 0 { "-" } else { "" };
+        let sign = if 0 > self.minor_units { "-" } else { "" };
         let magnitude = self.minor_units.unsigned_abs();
         let decimal_places = usize::from(self.currency.decimal_places());
-        if decimal_places == 0 {
+        if 0 == decimal_places {
             return write!(formatter, "{sign}{magnitude} {}", self.currency);
         }
         let per_major = self.currency.minor_units_per_major().unsigned_abs();

@@ -86,7 +86,7 @@ impl Iban {
         }
         // ISO 13616 issues check digits 02 to 98; 00, 01, and 99 pass mod 97
         // whenever 97, 98, and 02 do, so they can only be typos.
-        if matches!(bytes.get(2..4), Some(b"00" | b"01" | b"99")) || mod_97(bytes) != 1 {
+        if matches!(bytes.get(2..4), Some(b"00" | b"01" | b"99")) || 1 != mod_97(bytes) {
             return Err(IbanError::InvalidChecksum);
         }
         Ok(Self(normalised))

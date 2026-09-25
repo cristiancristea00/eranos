@@ -115,7 +115,7 @@ impl Parts {
     ///
     /// [`MoneyError::InvalidParts`] when `hundredths` is zero.
     pub const fn from_hundredths(hundredths: u32) -> Result<Self, MoneyError> {
-        if hundredths == 0 {
+        if 0 == hundredths {
             return Err(MoneyError::InvalidParts);
         }
         Ok(Self(hundredths))
@@ -189,10 +189,10 @@ fn parse_hundredths(text: &str) -> Option<u32> {
         None => (text, "00"),
     };
     let is_digits = |part: &str| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit());
-    if !is_digits(whole) || !is_digits(fraction) || fraction.len() > 2 {
+    if !is_digits(whole) || !is_digits(fraction) || 2 < fraction.len() {
         return None;
     }
-    let padding = if fraction.len() == 1 { "0" } else { "" };
+    let padding = if 1 == fraction.len() { "0" } else { "" };
     whole
         .bytes()
         .chain(fraction.bytes())
@@ -212,7 +212,7 @@ fn write_hundredths(
     let (whole, fraction) = (hundredths / 100, hundredths % 100);
     match fraction {
         0 => write!(formatter, "{whole}{unit}"),
-        _ if fraction % 10 == 0 => write!(formatter, "{whole}.{}{unit}", fraction / 10),
+        _ if 0 == fraction % 10 => write!(formatter, "{whole}.{}{unit}", fraction / 10),
         _ => write!(formatter, "{whole}.{fraction:02}{unit}"),
     }
 }

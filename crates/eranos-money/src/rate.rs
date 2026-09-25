@@ -53,11 +53,11 @@ impl ExchangeRate {
     /// [`MoneyError::InvalidExchangeRate`] when `mantissa` is zero or `scale`
     /// is above 18.
     pub const fn from_decimal(mantissa: u64, scale: u8) -> Result<Self, MoneyError> {
-        if mantissa == 0 || scale > MAX_SCALE {
+        if 0 == mantissa || MAX_SCALE < scale {
             return Err(MoneyError::InvalidExchangeRate);
         }
         let (mut mantissa, mut scale) = (mantissa, scale);
-        while scale > 0 && mantissa % 10 == 0 {
+        while 0 < scale && 0 == mantissa % 10 {
             mantissa /= 10;
             scale -= 1;
         }
@@ -135,7 +135,7 @@ impl ExchangeRate {
 impl fmt::Display for ExchangeRate {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let scale = usize::from(self.scale);
-        if scale == 0 {
+        if 0 == scale {
             return write!(formatter, "{}", self.mantissa);
         }
         let divisor = 10_u64.pow(u32::from(self.scale));

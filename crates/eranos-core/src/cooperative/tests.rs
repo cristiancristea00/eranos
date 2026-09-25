@@ -142,7 +142,7 @@ fn block_on_sleeps_until_its_future_is_woken() {
     other.join().unwrap();
     // One poll to wait and one to finish, with room for a spurious wake-up; a
     // driver that spun would have polled thousands of times in 50 ms.
-    assert!(polls.get() <= 3, "{} polls", polls.get());
+    assert!(3 >= polls.get(), "{} polls", polls.get());
     // A yield wakes the thread before it sleeps, so it polls again at once.
     assert_eq!(
         block_on(async {

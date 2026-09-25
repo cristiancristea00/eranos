@@ -60,11 +60,11 @@ public final class Member {
      */
     static Member converted(eranos.internal.Member member) {
         return new Builder(
-                        member.id() == null ? null : new MemberId(member.id()), member.firstName())
+                        null == member.id() ? null : new MemberId(member.id()), member.firstName())
                 .accounts(member.accounts().stream().map(Account::converted).toList())
-                .email(member.email() == null ? null : Email.known(member.email()))
+                .email(null == member.email() ? null : Email.known(member.email()))
                 .lastName(member.lastName())
-                .phone(member.phone() == null ? null : PhoneNumber.known(member.phone()))
+                .phone(null == member.phone() ? null : PhoneNumber.known(member.phone()))
                 .build();
     }
 
@@ -75,12 +75,12 @@ public final class Member {
      */
     eranos.internal.Member generated() {
         return new eranos.internal.Member(
-                id == null ? null : id.value(),
+                null == id ? null : id.value(),
                 firstName,
                 accounts.stream().map(Account::generated).toList(),
-                email == null ? null : email.toString(),
+                null == email ? null : email.toString(),
                 lastName,
-                phone == null ? null : phone.e164());
+                null == phone ? null : phone.e164());
     }
 
     /**

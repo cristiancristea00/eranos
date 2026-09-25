@@ -50,7 +50,7 @@ pub(super) async fn settle(balances: &[(MemberId, i64)]) -> Result<Vec<Flow>, Se
 fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i64)>) {
     let mut creditors: BTreeMap<i64, Vec<MemberId>> = BTreeMap::new();
     for &(member, net) in balances.iter().rev() {
-        if net > 0 {
+        if 0 < net {
             // Reversed, so popping from the end yields the lowest ID first.
             creditors.entry(net).or_default().push(member);
         }
@@ -58,7 +58,7 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
     let mut paired = Vec::new();
     let mut flows = Vec::new();
     for &(member, net) in balances {
-        if net < 0 {
+        if 0 > net {
             // The ledger keeps every value above i64::MIN, so negating fits.
             if let Some(creditor) = creditors.get_mut(&-net).and_then(Vec::pop) {
                 flows.push(Flow {
@@ -77,7 +77,7 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
     let rest = balances
         .iter()
         .copied()
-        .filter(|&(member, net)| net != 0 && paired.binary_search(&member).is_err())
+        .filter(|&(member, net)| 0 != net && paired.binary_search(&member).is_err())
         .collect();
     (flows, rest)
 }
@@ -94,7 +94,7 @@ async fn zero_sum_groups(
     balances: &[(MemberId, i64)],
 ) -> Result<Vec<Vec<(MemberId, i64)>>, SettlementError> {
     let count = balances.len();
-    if count == 0 {
+    if 0 == count {
         return Ok(Vec::new());
     }
     let out_of_memory = SettlementError::OutOfMemory { balances: count };
@@ -132,7 +132,7 @@ async fn zero_sum_groups(
     let net_of = |position: usize| nets.get(position).copied().unwrap_or(0);
     let groups_in = |counts: &[u8], subset: usize| counts.get(subset).copied().unwrap_or(0);
     let removable = |subset: usize| {
-        let closes_group = u8::from(members_of(subset).map(net_of).sum::<i128>() == 0);
+        let closes_group = u8::from(0 == members_of(subset).map(net_of).sum::<i128>());
         let target = groups_in(&table, subset);
         members_of(subset)
             .find(|&position| groups_in(&table, subset & !(1 << position)) + closes_group == target)
@@ -154,7 +154,7 @@ async fn zero_sum_groups(
     {
         group.push(balance);
         prefix += i128::from(balance.1);
-        if prefix == 0 {
+        if 0 == prefix {
             groups.push(std::mem::take(&mut group));
         }
     }
@@ -176,14 +176,14 @@ fn fill_subsets(table: &mut Vec<u8>, subsets: Range<usize>, nets: &[i128]) {
         }
         // At most count / 2 ≤ 32 groups on 64-bit targets, so no u8
         // overflows.
-        table.push(best + u8::from(total == 0));
+        table.push(best + u8::from(0 == total));
     }
 }
 
 /// The positions of the set bits of `subset`, lowest first.
 fn members_of(mut subset: usize) -> impl Iterator<Item = usize> {
     std::iter::from_fn(move || {
-        if subset == 0 {
+        if 0 == subset {
             return None;
         }
         // A bit position is below usize::BITS, so it always fits in usize.
@@ -203,11 +203,11 @@ fn members_of(mut subset: usize) -> impl Iterator<Item = usize> {
 fn settle_group(group: &[(MemberId, i64)]) -> Vec<Flow> {
     let mut debtors: Vec<(MemberId, i64)> = group
         .iter()
-        .filter(|&&(_, net)| net < 0)
+        .filter(|&&(_, net)| 0 > net)
         .map(|&(member, net)| (member, -net))
         .collect();
     let mut creditors: Vec<(MemberId, i64)> =
-        group.iter().copied().filter(|&(_, net)| net > 0).collect();
+        group.iter().copied().filter(|&(_, net)| 0 < net).collect();
     debtors.sort_unstable();
     creditors.sort_unstable();
     let mut flows = Vec::with_capacity(group.len().saturating_sub(1));
@@ -226,10 +226,10 @@ fn settle_group(group: &[(MemberId, i64)]) -> Vec<Flow> {
         });
         *debt -= amount;
         *credit -= amount;
-        if *debt == 0 {
+        if 0 == *debt {
             debtor = debtors.next();
         }
-        if *credit == 0 {
+        if 0 == *credit {
             creditor = creditors.next();
         }
     }

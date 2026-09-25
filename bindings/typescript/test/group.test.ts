@@ -10,7 +10,7 @@ import { Flat } from './flat.js';
 
 /** Whether `error` is the refusal of a call that found the group's lock held. */
 function busy(error: unknown): boolean {
-    return error instanceof GroupError && error.failure.kind === 'busy';
+    return error instanceof GroupError && 'busy' === error.failure.kind;
 }
 
 void describe('every call of the group, synchronous and asynchronous, and every read of its read handle', () => {
@@ -18,7 +18,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     void it('answers every synchronous read with what the group holds', () => {
         const flat = new Flat();
         const group = flat.group;
-        assert.ok(group.idSync().length > 0);
+        assert.ok(0 < group.idSync().length);
         const categories = group.categoriesSync();
         assert.deepEqual(
             categories.map((category) => category.name),
@@ -52,7 +52,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(Group.loadSync(json).saveSync(), json);
         assert.throws(
             () => group.memberSync(memberId('nobody')),
-            (error: unknown) => error instanceof IdError && error.message === 'invalid identifier: expected a UUID',
+            (error: unknown) => error instanceof IdError && 'invalid identifier: expected a UUID' === error.message,
         );
     });
 
@@ -141,7 +141,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         const group = flat.group;
         const carol = group.addMemberSync({ firstName: 'Carol' });
         const stored = group.memberSync(carol);
-        assert.ok(stored !== undefined);
+        assert.ok(undefined !== stored);
         assert.deepEqual(group.replaceMemberSync({ ...stored, lastName: 'Popa' }), stored);
         assert.equal(group.memberSync(carol)?.lastName, 'Popa');
         group.archiveMemberSync(carol);
@@ -153,7 +153,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
             () => group.removeMemberSync(flat.ana),
             (error: unknown) =>
                 error instanceof GroupError &&
-                error.failure.kind === 'memberInUse' &&
+                'memberInUse' === error.failure.kind &&
                 error.failure.member === flat.ana &&
                 error.failure.expenses[0] === flat.dinner &&
                 error.failure.transfers[0] === flat.repayment,
@@ -169,7 +169,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
 
         const cash = group.addTransferSync({ cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day, from: flat.ana, to: flat.bob });
         const storedCash = group.transferSync(cash);
-        assert.ok(storedCash !== undefined);
+        assert.ok(undefined !== storedCash);
         assert.equal(group.replaceTransferSync({ ...storedCash, note: 'Cash' }).note, undefined);
         assert.equal(group.removeTransferSync(cash).note, 'Cash');
 
@@ -195,7 +195,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         const group = flat.group;
         const carol = await group.addMember({ firstName: 'Carol' });
         const stored = group.memberSync(carol);
-        assert.ok(stored !== undefined);
+        assert.ok(undefined !== stored);
         assert.deepEqual(await group.replaceMember({ ...stored, lastName: 'Popa' }), stored);
         await group.archiveMember(carol);
         assert.equal(group.isArchivedSync(carol), true);
@@ -249,15 +249,15 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.throws(
             () => Group.create(euro, ' '),
             (error: unknown) =>
-                error instanceof GroupError && error.failure.kind === 'emptyName' && error.message === 'the group name must not be empty',
+                error instanceof GroupError && 'emptyName' === error.failure.kind && 'the group name must not be empty' === error.message,
         );
         assert.throws(
             () => Group.loadSync('{'),
             (error: unknown) =>
                 error instanceof InvalidJsonError &&
-                error.line === 1 &&
-                error.column === 1 &&
-                error.message === 'the saved group ends early, at line 1, column 1',
+                1 === error.line &&
+                1 === error.column &&
+                'the saved group ends early, at line 1, column 1' === error.message,
         );
         await assert.rejects(Group.load('{'), InvalidJsonError);
     });
@@ -291,7 +291,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         reader.release();
         assert.throws(
             () => reader.name(),
-            (error: unknown) => error instanceof TypeError && error.message === 'the read handle was released',
+            (error: unknown) => error instanceof TypeError && 'the read handle was released' === error.message,
         );
         {
             using held = await group.read();

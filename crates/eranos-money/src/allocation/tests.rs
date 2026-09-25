@@ -36,7 +36,7 @@ proptest! {
         weights in proptest::collection::vec(0_u64..1_000_000, 1..12),
         rotation in any::<u64>(),
     ) {
-        prop_assume!(weights.iter().any(|&weight| weight > 0));
+        prop_assume!(weights.iter().any(|&weight| 0 < weight));
         let parts = allocate(total, &weights, rotation);
         for (index, &part) in parts.iter().enumerate() {
             let (numerator, denominator) = exact_share(total, &weights, index);

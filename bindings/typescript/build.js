@@ -19,6 +19,6 @@ const result = await build({
     target: 'es2024',
 });
 copyFileSync('src/internal/eranos_web.wasm', 'dist/eranos_web.wasm');
-if (result.warnings.length > 0) {
+if (0 < result.warnings.length) {
     process.exitCode = 1;
 }

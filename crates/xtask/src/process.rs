@@ -203,7 +203,7 @@ impl Runner for System {
     fn clear(&mut self, directory: &Path) -> Result<(), Failure> {
         println!("\n==> clearing {}", directory.display());
         match fs::remove_dir_all(directory) {
-            Err(error) if error.kind() != ErrorKind::NotFound => Err(Failure::Clear {
+            Err(error) if ErrorKind::NotFound != error.kind() => Err(Failure::Clear {
                 directory: directory.display().to_string(),
                 source: error,
             }),

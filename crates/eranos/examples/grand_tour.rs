@@ -947,7 +947,7 @@ fn another_currency(
          cash. An entry in another currency carries the rate into the group currency, how\n\
          many EUR one RON is worth, and is converted once, when it is entered:"
     );
-    print_entries(group, |currency| currency != Currency::EUR);
+    print_entries(group, |currency| Currency::EUR != currency);
     let transfer = group.transfer(cash).ok_or("the cash was recorded")?;
     let converted = ExchangeRate::parse("0.2011")?.convert(ron("250.00")?, Currency::EUR)?;
     println!(

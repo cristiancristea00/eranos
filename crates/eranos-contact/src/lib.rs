@@ -107,7 +107,7 @@ const ALLOWED_IN_LABEL: GeneralCategoryGroup = GeneralCategoryGroup::Letter
 /// nor `"`, so the last `@` is the separator, and an `@` inside a quoted
 /// local part stays with it.
 fn is_address(text: &str) -> bool {
-    text.len() <= MAX_ADDRESS_OCTETS
+    MAX_ADDRESS_OCTETS >= text.len()
         && !text.chars().any(char::is_whitespace)
         && text
             .rsplit_once('@')
@@ -117,7 +117,7 @@ fn is_address(text: &str) -> bool {
 /// Whether `local_part` has at most 64 octets and is a quoted string or a
 /// dot-atom.
 fn is_local_part(local_part: &str) -> bool {
-    local_part.len() <= MAX_LOCAL_PART_OCTETS
+    MAX_LOCAL_PART_OCTETS >= local_part.len()
         && local_part
             .strip_prefix('"')
             .and_then(|quoted| quoted.strip_suffix('"'))
@@ -171,7 +171,7 @@ fn is_quoted_content(content: &str) -> bool {
     while let Some(character) = characters.next() {
         // A backslash quotes the next character, which must be printable
         // ASCII.
-        let valid = if character == '\\' {
+        let valid = if '\\' == character {
             characters
                 .next()
                 .is_some_and(|quoted| quoted.is_ascii_graphic())
@@ -229,7 +229,7 @@ fn is_label(label: &str) -> bool {
 
 /// Whether `character` may stand in a domain label.
 fn is_label_character(character: char) -> bool {
-    character == '-' || ALLOWED_IN_LABEL.contains(general_category(character))
+    '-' == character || ALLOWED_IN_LABEL.contains(general_category(character))
 }
 
 /// The Unicode general category of `character`, from the tables compiled into

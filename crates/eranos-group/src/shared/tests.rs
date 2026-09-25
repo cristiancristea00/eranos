@@ -469,7 +469,7 @@ fn every_call_is_send_static_and_small() {
         size_of_call(&shared.write()),
     ];
     let largest = sizes.iter().max().copied().unwrap();
-    assert!(largest <= 4096, "a call's future takes {largest} bytes");
+    assert!(4096 >= largest, "a call's future takes {largest} bytes");
 }
 
 /// A guard that released the lock early would let another call in between
@@ -552,7 +552,7 @@ fn a_blocked_call_sleeps_until_the_lock_is_released() {
     assert_eq!(name, "Society");
     // One poll to wait and one to read, with room for a spurious wake-up;
     // a driver that spun would have polled thousands of times in 50 ms.
-    assert!(polls.get() <= 3, "{} polls", polls.get());
+    assert!(3 >= polls.get(), "{} polls", polls.get());
 }
 
 /// A group taken back while another handle still shared it would change

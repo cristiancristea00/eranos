@@ -209,7 +209,7 @@ fn the_json_shape_is_pinned() {
     // category when it is the built-in one.
     let food = group
         .categories()
-        .find(|category| category.name() == "Food")
+        .find(|category| "Food" == category.name())
         .unwrap()
         .id();
     assert_eq!(

@@ -228,7 +228,7 @@ pub trait FromGroupError: Sized {
 
 /// "1 expense", "2 expenses": a count with its noun in the right number.
 fn count(number: usize, singular: &str, plural: &str) -> String {
-    format!("{number} {}", if number == 1 { singular } else { plural })
+    format!("{number} {}", if 1 == number { singular } else { plural })
 }
 
 /// What still references a member: "2 expenses and 1 transfer",

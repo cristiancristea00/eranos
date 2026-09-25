@@ -130,7 +130,7 @@ export interface Settlement {
 export function formatBalance(balance: Balance): string {
     const generated = generatedBalance(balance);
     // Only an amount can hold a currency the library cannot format, and a settled balance holds none.
-    if (balance.kind === 'settled') {
+    if ('settled' === balance.kind) {
         return internal.balanceFormat(generated);
     }
     try {

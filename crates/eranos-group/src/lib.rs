@@ -191,7 +191,7 @@ impl Group {
     ///   new name.
     pub fn replace_category(&mut self, category: Category) -> Result<Category, GroupError> {
         let id = category.id();
-        if id == CategoryId::UNCATEGORISED {
+        if CategoryId::UNCATEGORISED == id {
             return Err(GroupError::BuiltInCategory);
         }
         if !self.categories.contains_key(&id) {
@@ -215,7 +215,7 @@ impl Group {
     ///   category.
     /// - [`GroupError::UnknownCategory`] when there is no such category.
     pub fn remove_category(&mut self, id: CategoryId) -> Result<Category, GroupError> {
-        if id == CategoryId::UNCATEGORISED {
+        if CategoryId::UNCATEGORISED == id {
             return Err(GroupError::BuiltInCategory);
         }
         let category = self

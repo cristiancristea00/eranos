@@ -72,7 +72,7 @@ public final class Currency {
      */
     static Currency known(String code) {
         Currency listed = Listed.BY_CODE.get(code);
-        return listed == null ? new Currency(code, 0, code, 0) : listed;
+        return null == listed ? new Currency(code, 0, code, 0) : listed;
     }
 
     /**

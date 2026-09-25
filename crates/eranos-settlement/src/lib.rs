@@ -329,7 +329,7 @@ fn balances(ledger: &Ledger) -> Vec<(MemberId, i64)> {
         .summary()
         .members()
         .map(|member| (member.member(), member.net().minor_units()))
-        .filter(|&(_, net)| net != 0)
+        .filter(|&(_, net)| 0 != net)
         .collect()
 }
 

@@ -85,12 +85,12 @@ fn brute_force_minimum(nets: &[i64]) -> usize {
         for mask in 0_u32..(1 << others.len()) {
             let sum: i64 = first
                 + (0..others.len())
-                    .filter(|&index| mask >> index & 1 == 1)
+                    .filter(|&index| 1 == mask >> index & 1)
                     .map(|index| others[index])
                     .sum::<i64>();
-            if sum == 0 {
+            if 0 == sum {
                 let remaining: Vec<i64> = (0..others.len())
-                    .filter(|&index| mask >> index & 1 == 0)
+                    .filter(|&index| 0 == mask >> index & 1)
                     .map(|index| others[index])
                     .collect();
                 best = best.max(1 + most_groups(&remaining));
@@ -98,7 +98,7 @@ fn brute_force_minimum(nets: &[i64]) -> usize {
         }
         best
     }
-    let open: Vec<i64> = nets.iter().copied().filter(|&net| net != 0).collect();
+    let open: Vec<i64> = nets.iter().copied().filter(|&net| 0 != net).collect();
     open.len() - most_groups(&open)
 }
 
@@ -124,7 +124,7 @@ fn it_finds_zero_sum_groups_greedy_misses() {
     let flows = completed(settle(&open)).unwrap();
     assert_eq!(flows.len(), 4);
     assert_eq!(greedy::settle(&open).len(), 5);
-    assert!(after(&open, &flows).iter().all(|&net| net == 0));
+    assert!(after(&open, &flows).iter().all(|&net| 0 == net));
 }
 
 /// Exact opposites settle with one payment each, lowest IDs first, before
@@ -146,7 +146,7 @@ fn a_group_settles_with_one_payment_fewer_than_its_size() {
     let group = balances(&[700, 200, -300, -600]);
     let flows = settle_group(&group);
     assert_eq!(flows.len(), 3);
-    assert!(after(&group, &flows).iter().all(|&net| net == 0));
+    assert!(after(&group, &flows).iter().all(|&net| 0 == net));
     // Debtors and creditors are taken in member order.
     assert_eq!(flows[0], flow(300, 3, 1));
 }
@@ -212,7 +212,7 @@ fn the_groups_partition_the_balances() {
     assert!(
         groups
             .iter()
-            .all(|group| group.iter().map(|&(_, net)| net).sum::<i64>() == 0)
+            .all(|group| 0 == group.iter().map(|&(_, net)| net).sum::<i64>())
     );
     let mut members: Vec<MemberId> = groups.iter().flatten().map(|&(member, _)| member).collect();
     members.sort_unstable();
@@ -238,12 +238,12 @@ proptest! {
     fn every_plan_clears_the_balances_without_overpaying(nets in random_nets(12)) {
         let open = balances(&nets);
         let flows = completed(settle(&open)).unwrap();
-        prop_assert!(after(&open, &flows).iter().all(|&net| net == 0));
+        prop_assert!(after(&open, &flows).iter().all(|&net| 0 == net));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
         for &Flow { amount, members: MemberPair { from, to } } in &flows {
             let net = |member: MemberId| open.iter().find(|entry| entry.0 == member).map_or(0, |entry| entry.1);
-            prop_assert!(amount > 0);
-            prop_assert!(net(from) < 0 && net(to) > 0);
+            prop_assert!(0 < amount);
+            prop_assert!(0 > net(from) && 0 < net(to));
             prop_assert!(amount <= -net(from) && amount <= net(to));
         }
     }

@@ -100,8 +100,8 @@ export class Group implements Disposable {
         const group = internal.NewGroup.create({
             currency: currency.code,
             name,
-            ...(options?.description === undefined ? {} : { description: options.description }),
-            ...(options?.language === undefined ? {} : { language: options.language.toString() }),
+            ...(undefined === options?.description ? {} : { description: options.description }),
+            ...(undefined === options?.language ? {} : { language: options.language.toString() }),
         });
         return new Group(calling(() => new internal.Group(group)));
     }
@@ -1380,5 +1380,5 @@ function generatedRates(rates: readonly CurrencyRate[]): internal.CurrencyRate[]
 
 /** `value` converted by `conversion`, or `undefined` for a value the group does not hold. */
 function known<T, U>(value: T | undefined, conversion: (value: T) => U): U | undefined {
-    return value === undefined ? undefined : conversion(value);
+    return undefined === value ? undefined : conversion(value);
 }

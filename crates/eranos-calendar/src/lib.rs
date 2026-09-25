@@ -116,7 +116,7 @@ impl CalendarDate {
 
     /// Keeps a jiff date from year 1 on.
     fn from_civil(inner: civil::Date) -> Option<Self> {
-        (inner.year() >= 1).then_some(Self { inner })
+        (1 <= inner.year()).then_some(Self { inner })
     }
 
     /// The day of the month, starting at 1.
@@ -253,7 +253,7 @@ impl TimeOfDay {
         text.trim()
             .parse::<civil::Time>()
             .ok()
-            .filter(|inner| inner.second() == 0 && inner.subsec_nanosecond() == 0)
+            .filter(|inner| 0 == inner.second() && 0 == inner.subsec_nanosecond())
             .map(|inner| Self { inner })
             .ok_or(CalendarError::InvalidTime)
     }

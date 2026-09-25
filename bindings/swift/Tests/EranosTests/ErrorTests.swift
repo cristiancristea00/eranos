@@ -305,11 +305,11 @@ private let conversions: [Conversion] = [
 /// the message would show an app another failure than the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
-    #expect(conversions.count == 66)
+    #expect(66 == conversions.count)
     for conversion in conversions {
         let error = Eranos.EranosError(conversion.generated)
         #expect(error == conversion.expected)
-        #expect(error.detail == "detail")
-        #expect(error.errorDescription == "detail")
+        #expect("detail" == error.detail)
+        #expect("detail" == error.errorDescription)
     }
 }

@@ -60,13 +60,13 @@ public final class Transfer {
      */
     static Transfer converted(eranos.internal.Transfer transfer) {
         return new Builder(
-                        transfer.id() == null ? null : new TransferId(transfer.id()),
+                        null == transfer.id() ? null : new TransferId(transfer.id()),
                         Conversions.converted(transfer.cost()),
                         CalendarDate.converted(transfer.date()),
                         new MemberId(transfer.from()),
                         new MemberId(transfer.to()))
                 .note(transfer.note())
-                .time(transfer.time() == null ? null : TimeOfDay.converted(transfer.time()))
+                .time(null == transfer.time() ? null : TimeOfDay.converted(transfer.time()))
                 .build();
     }
 
@@ -77,13 +77,13 @@ public final class Transfer {
      */
     eranos.internal.Transfer generated() {
         return new eranos.internal.Transfer(
-                id == null ? null : id.value(),
+                null == id ? null : id.value(),
                 Conversions.generated(cost),
                 date.generated(),
                 from.value(),
                 to.value(),
                 note,
-                time == null ? null : time.generated());
+                null == time ? null : time.generated());
     }
 
     /**

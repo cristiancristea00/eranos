@@ -65,7 +65,7 @@ pub fn resolve_expense(
     };
 
     let mut shares = base.clone();
-    if tip > 0 {
+    if 0 < tip {
         let weights: Vec<u64> = match expense.tip().distribution() {
             TipDistribution::Equal => vec![1; base.len()],
             TipDistribution::Proportional => base
@@ -158,7 +158,7 @@ fn debts(
     let mut remaining: Vec<i64> = shares.iter().map(|&(_, share)| share).collect();
     let mut debts = Vec::new();
     for (position, &(creditor, amount)) in (0_u64..).zip(paid) {
-        if amount == 0 {
+        if 0 == amount {
             continue;
         }
         let weights: Vec<u64> = remaining.iter().map(|share| share.unsigned_abs()).collect();
@@ -166,7 +166,7 @@ fn debts(
         for ((&(debtor, _), left), portion) in shares.iter().zip(&mut remaining).zip(portions) {
             // A portion never exceeds what is left, so `left` stays ≥ 0.
             *left -= portion;
-            if debtor != creditor && portion > 0 {
+            if debtor != creditor && 0 < portion {
                 debts.push(Debt {
                     amount: portion,
                     members: MemberPair {

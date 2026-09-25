@@ -625,16 +625,16 @@ impl Ledger {
         }
         for (category, total) in categories {
             store(&mut self.summary.categories, category, total, |total| {
-                total == 0
+                0 == total
             });
         }
         for (key, total) in member_categories {
             store(&mut self.summary.member_categories, key, total, |total| {
-                total == 0
+                0 == total
             });
         }
         for (key, amount) in pairs {
-            store(&mut self.pairs, key, amount, |amount| amount == 0);
+            store(&mut self.pairs, key, amount, |amount| 0 == amount);
         }
         Ok(())
     }
@@ -678,7 +678,7 @@ fn store<K: Ord, V: Copy>(map: &mut BTreeMap<K, V>, key: K, value: V, is_zero: i
 fn fit(value: i128) -> Result<i64, MoneyError> {
     i64::try_from(value)
         .ok()
-        .filter(|&value| value != i64::MIN)
+        .filter(|&value| i64::MIN != value)
         .ok_or(MoneyError::Overflow)
 }
 

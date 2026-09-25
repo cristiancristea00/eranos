@@ -19,7 +19,7 @@ pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
         return Vec::new();
     }
     // All-zero weights say nothing about the split, so they count as equal.
-    let equal = weights.iter().all(|&weight| weight == 0);
+    let equal = weights.iter().all(|&weight| 0 == weight);
     let weight_of = |weight: u64| if equal { 1 } else { i128::from(weight) };
     let weight_sum: i128 = weights.iter().map(|&weight| weight_of(weight)).sum();
     let total = i128::from(total);
@@ -34,7 +34,7 @@ pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
         .unzip();
     // Σ remainders = weight_sum × leftover, so leftover < weights.len().
     let leftover = (total - parts.iter().sum::<i128>()).unsigned_abs();
-    if leftover > 0 {
+    if 0 < leftover {
         // A usize is at most 64 bits wide on every target Rust supports.
         let len = u64::try_from(weights.len()).unwrap_or(u64::MAX);
         let start = rotation % len;

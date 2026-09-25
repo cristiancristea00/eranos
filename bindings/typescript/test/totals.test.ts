@@ -18,7 +18,7 @@ void describe('the summary, the balances, the shares of an expense, and the sett
             [[flat.food, '30.00 EUR']],
         );
         const [ana, bob] = summary.members;
-        assert.ok(ana !== undefined && bob !== undefined);
+        assert.ok(undefined !== ana && undefined !== bob);
         assert.deepEqual([ana.member, bob.member], [flat.ana, flat.bob]);
         assert.deepEqual([ana.paid, ana.share, ana.sent, ana.received, ana.net].map(String), [
             '30.00 EUR',
@@ -55,7 +55,7 @@ void describe('the summary, the balances, the shares of an expense, and the sett
     void it("holds an expense's shares and the settlements' payments", () => {
         const flat = new Flat();
         const shares = flat.group.expenseSharesSync(flat.dinner);
-        assert.ok(shares !== undefined);
+        assert.ok(undefined !== shares);
         assert.deepEqual([shares.total.toString(), shares.tip.toString()], ['30.00 EUR', '0.00 EUR']);
         assert.deepEqual(
             shares.members.map((share) => [share.member, share.paid.toString(), share.share.toString()]),
