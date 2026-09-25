@@ -668,8 +668,10 @@ built for API level 26, the libraries' `minSdk`). `eranos`, the layer apps
 depend on, is written by hand, and `eranos-android` compiles the same
 sources into an Android library; each depends on its generated module as
 an implementation detail, so the generated classes, in `eranos.internal`,
-stay off an app's compile classpath. The layer follows the Kotlin library
-guidelines:
+stay off an app's compile classpath. `generated-android` carries shrinker
+rules to every app that depends on it: JNA's classes and the generated
+package, which JNA reads by name, stay as they are when the app shrinks
+its code. The layer follows the Kotlin library guidelines:
 
 - Explicit API mode, and no data class: every value and entry writes its
   equality, hash, and text out, so a field added later changes no

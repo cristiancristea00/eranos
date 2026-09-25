@@ -1,6 +1,8 @@
 // The generated Kotlin for Android, beside the library of every Android ABI,
 // which `cargo xtask gates` builds into src/main/jniLibs. JNA comes as its
-// Android archive, which holds its native library for every ABI.
+// Android archive, which holds its native library for every ABI, and
+// consumer-rules.pro, which the library carries to every app, keeps what JNA
+// reads by name when the app shrinks its code.
 plugins {
     alias(libs.plugins.android.library)
 }
@@ -12,6 +14,7 @@ android {
     ndkVersion = "30.0.16248370"
     defaultConfig {
         minSdk = 26
+        consumerProguardFiles("consumer-rules.pro")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
