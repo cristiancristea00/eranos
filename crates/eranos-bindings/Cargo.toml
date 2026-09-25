@@ -1,0 +1,38 @@
+# eranos-bindings: what every binding of eranos exposes, in plain Rust: the
+# records, the error, the group handle with a synchronous and an
+# asynchronous form of every group call, the read handle, cancellation, the
+# value helpers, and the saved form. The glue crates mirror its types and
+# forward every call to it, so everything that can be wrong is here, where
+# Rust tests reach it.
+[package]
+name = "eranos-bindings"
+description = "The shared core of the eranos bindings"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# Identifiers count up from one instead of reading the clock, so the ports
+# of the examples print the same reports as the Rust ones.
+sequential-ids = ["eranos/sequential-ids"]
+
+[dependencies]
+eranos = { workspace = true, features = ["serde"] }
+# The conversion traits, which the facade does not re-export.
+eranos-account = { workspace = true }
+eranos-calendar = { workspace = true }
+eranos-category = { workspace = true }
+eranos-contact = { workspace = true }
+eranos-core = { workspace = true }
+eranos-expense = { workspace = true }
+eranos-group = { workspace = true }
+eranos-ledger = { workspace = true }
+eranos-member = { workspace = true }
+eranos-money = { workspace = true }
+eranos-settlement = { workspace = true }
+eranos-transfer = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

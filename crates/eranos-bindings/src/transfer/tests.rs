@@ -1,0 +1,191 @@
+//! Transfers cross the bindings as records. A record converted back and
+//! forth would change who paid whom or when, a field the library refuses
+//! would reach it, and a transfer to add or to replace would take its
+//! identifier from outside the group.
+
+use eranos::MemberId;
+
+use super::*;
+use crate::money::Money;
+
+/// A record the library refuses, beside a check of how it refuses it.
+struct Refusal {
+    record: Transfer,
+    is_expected: fn(&EranosError) -> bool,
+}
+
+fn ana() -> String {
+    MemberId::from_bytes([1; 16]).to_string()
+}
+
+fn bob() -> String {
+    MemberId::from_bytes([2; 16]).to_string()
+}
+
+fn date() -> CalendarDate {
+    CalendarDate {
+        day: 25,
+        month: 9,
+        year: 2026,
+    }
+}
+
+/// Bob paying Ana back in lei, with a note and a time.
+fn repayment() -> Transfer {
+    Transfer {
+        id: None,
+        cost: Cost::Converted {
+            amount: Money {
+                currency: "RON".to_owned(),
+                minor_units: 10_000,
+            },
+            rate: "0.2".to_owned(),
+        },
+        date: date(),
+        from: bob(),
+        to: ana(),
+        note: Some("Cash".to_owned()),
+        time: Some(TimeOfDay { hour: 9, minute: 5 }),
+    }
+}
+
+/// Ana paying Bob in euros, with no optional field.
+fn payment() -> Transfer {
+    Transfer {
+        id: None,
+        cost: Cost::Local {
+            amount: Money {
+                currency: "EUR".to_owned(),
+                minor_units: 1_500,
+            },
+        },
+        date: date(),
+        from: ana(),
+        to: bob(),
+        note: None,
+        time: None,
+    }
+}
+
+fn invalid_id(error: &EranosError) -> bool {
+    matches!(error, EranosError::InvalidId { .. })
+}
+
+/// Transfers with one field the library refuses.
+fn refused_transfers() -> [Refusal; 6] {
+    [
+        Refusal {
+            record: Transfer {
+                cost: Cost::Local {
+                    amount: Money {
+                        currency: "XYZ".to_owned(),
+                        minor_units: 1,
+                    },
+                },
+                ..payment()
+            },
+            is_expected: |error| matches!(error, EranosError::UnknownCurrency { .. }),
+        },
+        Refusal {
+            record: Transfer {
+                date: CalendarDate { day: 0, ..date() },
+                ..payment()
+            },
+            is_expected: |error| matches!(error, EranosError::InvalidDate { .. }),
+        },
+        Refusal {
+            record: Transfer {
+                from: "nobody".to_owned(),
+                ..payment()
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Transfer {
+                to: "nobody".to_owned(),
+                ..payment()
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Transfer {
+                time: Some(TimeOfDay {
+                    hour: 9,
+                    minute: 60,
+                }),
+                ..payment()
+            },
+            is_expected: |error| matches!(error, EranosError::InvalidTime { .. }),
+        },
+        Refusal {
+            record: Transfer {
+                to: bob(),
+                ..repayment()
+            },
+            is_expected: |error| matches!(error, EranosError::SameMember { .. }),
+        },
+    ]
+}
+
+/// A transfer added through the bindings would reach the library with a
+/// field changed or dropped, or come back without its identifier.
+#[test]
+fn a_transfer_to_add_converts_both_ways() {
+    for record in [repayment(), payment()] {
+        let transfer = record.to_new().unwrap();
+        assert_eq!(
+            Transfer::from_library(&transfer),
+            Transfer {
+                id: Some(transfer.id().to_string()),
+                ..record
+            }
+        );
+    }
+}
+
+/// A transfer with a field the library refuses would reach the group, as an
+/// entry to add or as a replacement.
+#[test]
+fn a_transfer_refuses_every_field_that_does_not_convert() {
+    let stored = repayment().to_new().unwrap();
+    for refusal in refused_transfers() {
+        let errors = [
+            refusal.record.to_new().unwrap_err(),
+            refusal.record.replacing(&stored).unwrap_err(),
+        ];
+        for error in errors {
+            assert!((refusal.is_expected)(&error), "{error:?}");
+        }
+    }
+}
+
+/// An entry to add that carried an identifier would take it from outside
+/// the group, and a replacement would lose the stored identifier, keep a
+/// field that the record changes or clears, or name no transfer.
+#[test]
+fn a_replacement_keeps_the_identifier_and_takes_every_field() {
+    let stored = repayment().to_new().unwrap();
+    let id = Some(stored.id().to_string());
+    for record in [payment(), repayment()] {
+        let replacement = record.replacing(&stored).unwrap();
+        assert_eq!(
+            Transfer::from_library(&replacement),
+            Transfer {
+                id: id.clone(),
+                ..record
+            }
+        );
+    }
+    let named = Transfer { id, ..payment() };
+    assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
+    assert_eq!(named.id_to_replace(), Ok(stored.id()));
+    assert_eq!(
+        payment().id_to_replace(),
+        Err(EranosError::identifier_missing())
+    );
+    let unreadable = Transfer {
+        id: Some("nobody".to_owned()),
+        ..payment()
+    };
+    assert!(invalid_id(&unreadable.id_to_replace().unwrap_err()));
+}

@@ -30,7 +30,9 @@ nothing the contract covers. What the facade does not re-export moves
 freely: the machinery the crates above use (such as `eranos_core::text`,
 `eranos_money::allocation`, `eranos_ledger::Ledger`, and
 `eranos_expense::resolve_expense`), the internal crates' own paths, private
-modules, and the internal layout of `Group`.
+modules, and the internal layout of `Group`. So does `eranos-bindings`, the
+core the bindings forward to: a binding's contract is the API of its
+language's package.
 
 ## 2. What moves the number
 

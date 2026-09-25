@@ -66,7 +66,7 @@ commit; `cargo xtask help` lists the commands. The alias lives in
 
 Every internal crate's tests link the facade, which its doc examples use,
 so testing one crate builds the whole workspace, and each crate's doctests
-are a binary of their own, thirteen in all. The split also makes a change
+are a binary of their own. The split also makes a change
 low in the graph rebuild every crate above it. Rebuilds in the dev
 profile on an Apple M4 Pro, after touching one file, with the library as
 one crate and as thirteen:
@@ -189,6 +189,11 @@ breaking.
    field, and the field with `#[serde(default)]` to the type's `*Record`
    struct, so data written before the field existed still loads.
 4. Pin the serialised shape in `tests/persistence.rs`.
+5. Add the field to the entity's record in the binding core
+   (`crates/eranos-bindings/src/`), in the same place of the field order,
+   read in the record's `from_library` and written in its conversion to the
+   library, where an absent optional field clears the stored one; the
+   record's round trip in its module's `tests.rs` then covers it.
 
 ### 3.6 A new error variant
 
@@ -201,7 +206,11 @@ return it. Give the enum's conversion trait (`FromGroupError` and the like,
 beside the enum) a method for it, in variant order, taking what the
 variant holds and the message, and its arm in the provided `from_…`; add
 its row to the conversion test in the crate's `error/tests.rs`. The binding
-core then fails to build until it reports the new failure.
+core then fails to build until its `EranosError`
+(`crates/eranos-bindings/src/error.rs`) has a case for the variant, in
+alphabetical order and prefixed with the crate where another crate's error
+has a variant of the same name, with its row in that crate's
+`error/tests.rs`.
 
 ### 3.7 A lint exception
 
@@ -273,6 +282,15 @@ When code in one crate needs something another crate holds:
    (`every_read_returns_what_the_group_returns` or
    `every_change_does_what_the_group_does`), and add its future to
    `every_call_is_send_static_and_small`.
+5. Forward it in the binding core: a function over the group in
+   `crates/eranos-bindings/src/operations.rs`, which converts the records
+   and the answer, then both forms on `GroupHandle` in `group.rs` (the
+   synchronous one through `reading` or `writing`, the asynchronous one
+   through `reading_async` or `writing_async`) and, for a read, the method
+   on `GroupReader` in `reader.rs`. Test the conversion in
+   `operations/tests.rs` and the two forms in `group/tests.rs`
+   (`every_read_answers_alike_in_both_forms` or the change's
+   `*_change_alike_in_both_forms`).
 
 ## 4. Examples and benchmarks
 

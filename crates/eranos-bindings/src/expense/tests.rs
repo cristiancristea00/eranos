@@ -1,0 +1,535 @@
+//! Expenses cross the bindings as records. A record converted back and forth
+//! would change how its cost divides; a split, an item, a tip, or an expense
+//! with a value the library refuses, or a number too large for its field,
+//! would reach the library; and an entry to add or to replace would take its
+//! identifier from outside the group.
+
+use super::*;
+
+/// A record the library refuses, beside a check of how it refuses it.
+struct Refusal<Record> {
+    record: Record,
+    is_expected: fn(&EranosError) -> bool,
+}
+
+fn ana() -> MemberId {
+    MemberId::from_bytes([1; 16])
+}
+
+fn bob() -> MemberId {
+    MemberId::from_bytes([2; 16])
+}
+
+fn euros(minor_units: i64) -> Money {
+    Money {
+        currency: "EUR".to_owned(),
+        minor_units,
+    }
+}
+
+fn lei(minor_units: i64) -> Money {
+    Money {
+        currency: "RON".to_owned(),
+        minor_units,
+    }
+}
+
+fn unknown_money() -> Money {
+    Money {
+        currency: "XYZ".to_owned(),
+        minor_units: 3_000,
+    }
+}
+
+fn equal(members: &[MemberId]) -> Split {
+    Split::Equal {
+        members: members.iter().map(ToString::to_string).collect(),
+    }
+}
+
+/// A split naming a member by text that is not an identifier.
+fn unreadable_split() -> Split {
+    Split::Equal {
+        members: vec!["nobody".to_owned()],
+    }
+}
+
+fn invalid_id(error: &EranosError) -> bool {
+    matches!(error, EranosError::InvalidId { .. })
+}
+
+fn invalid_parts(error: &EranosError) -> bool {
+    matches!(error, EranosError::InvalidParts { .. })
+}
+
+fn invalid_percentage(error: &EranosError) -> bool {
+    matches!(error, EranosError::InvalidPercentage { .. })
+}
+
+fn unknown_currency(error: &EranosError) -> bool {
+    matches!(error, EranosError::UnknownCurrency { .. })
+}
+
+fn zero_quantity(error: &EranosError) -> bool {
+    matches!(error, EranosError::ZeroQuantity { .. })
+}
+
+/// One split of every kind, each between Ana and Bob.
+fn splits() -> [Split; 4] {
+    [
+        Split::Amounts {
+            shares: vec![
+                MemberAmount {
+                    amount: euros(1_000),
+                    member: ana().to_string(),
+                },
+                MemberAmount {
+                    amount: euros(2_000),
+                    member: bob().to_string(),
+                },
+            ],
+        },
+        equal(&[ana(), bob()]),
+        Split::Parts {
+            shares: vec![
+                MemberParts {
+                    hundredths: 100,
+                    member: ana().to_string(),
+                },
+                MemberParts {
+                    hundredths: 50,
+                    member: bob().to_string(),
+                },
+            ],
+        },
+        Split::Percentages {
+            shares: vec![
+                MemberPercentage {
+                    basis_points: 6_000,
+                    member: ana().to_string(),
+                },
+                MemberPercentage {
+                    basis_points: 4_000,
+                    member: bob().to_string(),
+                },
+            ],
+        },
+    ]
+}
+
+/// The one line of the taxi's bill.
+fn fare() -> Item {
+    Item {
+        name: "Fare".to_owned(),
+        split: equal(&[ana(), bob()]),
+        unit_price: lei(2_500),
+        quantity: 2,
+    }
+}
+
+/// A dinner that Ana paid, tip included, which Ana and Bob share: every
+/// optional field set.
+fn dinner() -> Expense {
+    Expense {
+        id: None,
+        cost: Cost::Local {
+            amount: euros(3_000),
+        },
+        date: CalendarDate {
+            day: 23,
+            month: 9,
+            year: 2026,
+        },
+        name: "Dinner".to_owned(),
+        payers: Split::Amounts {
+            shares: vec![MemberAmount {
+                amount: euros(3_300),
+                member: ana().to_string(),
+            }],
+        },
+        split: ExpenseSplit::Whole {
+            split: equal(&[ana(), bob()]),
+        },
+        category: Some(CategoryId::from_bytes([3; 16]).to_string()),
+        description: Some("A birthday".to_owned()),
+        time: Some(TimeOfDay {
+            hour: 20,
+            minute: 15,
+        }),
+        tip: Some(Tip {
+            value: TipValue::Percentage {
+                basis_points: 1_000,
+            },
+            distribution: TipDistribution::Proportional,
+        }),
+    }
+}
+
+/// A taxi fare in lei that Bob paid, itemised: no optional field set.
+fn taxi() -> Expense {
+    Expense {
+        id: None,
+        cost: Cost::Converted {
+            amount: lei(5_000),
+            rate: "0.2".to_owned(),
+        },
+        date: CalendarDate {
+            day: 24,
+            month: 9,
+            year: 2026,
+        },
+        name: "Taxi".to_owned(),
+        payers: equal(&[bob()]),
+        split: ExpenseSplit::Itemised {
+            items: vec![fare()],
+        },
+        category: None,
+        description: None,
+        time: None,
+        tip: None,
+    }
+}
+
+/// Expenses with one field the library refuses.
+fn refused_expenses() -> Vec<Refusal<Expense>> {
+    vec![
+        Refusal {
+            record: Expense {
+                cost: Cost::Local {
+                    amount: unknown_money(),
+                },
+                ..dinner()
+            },
+            is_expected: unknown_currency,
+        },
+        Refusal {
+            record: Expense {
+                date: CalendarDate {
+                    day: 31,
+                    month: 9,
+                    year: 2026,
+                },
+                ..dinner()
+            },
+            is_expected: |error| matches!(error, EranosError::InvalidDate { .. }),
+        },
+        Refusal {
+            record: Expense {
+                payers: unreadable_split(),
+                ..dinner()
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Expense {
+                split: ExpenseSplit::Whole {
+                    split: unreadable_split(),
+                },
+                ..dinner()
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Expense {
+                split: ExpenseSplit::Itemised {
+                    items: vec![Item {
+                        quantity: -1,
+                        ..fare()
+                    }],
+                },
+                ..taxi()
+            },
+            is_expected: zero_quantity,
+        },
+        Refusal {
+            record: Expense {
+                category: Some("nobody".to_owned()),
+                ..dinner()
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Expense {
+                time: Some(TimeOfDay {
+                    hour: 24,
+                    minute: 0,
+                }),
+                ..dinner()
+            },
+            is_expected: |error| matches!(error, EranosError::InvalidTime { .. }),
+        },
+        Refusal {
+            record: Expense {
+                tip: Some(Tip {
+                    value: TipValue::Percentage { basis_points: -1 },
+                    distribution: TipDistribution::Equal,
+                }),
+                ..dinner()
+            },
+            is_expected: invalid_percentage,
+        },
+        Refusal {
+            record: Expense {
+                name: " ".to_owned(),
+                ..dinner()
+            },
+            is_expected: |error| matches!(error, EranosError::ExpenseEmptyName { .. }),
+        },
+    ]
+}
+
+/// A split converted back and forth would change who pays or how much, and
+/// its members would come back in another order than it lists them.
+#[test]
+fn every_split_converts_both_ways() {
+    for split in splits() {
+        let converted = split.to_library().unwrap();
+        assert_eq!(
+            Split::members_of(&converted),
+            [ana(), bob()].map(|member| member.to_string())
+        );
+        assert_eq!(Split::from_split(&converted), split);
+    }
+    let listed = equal(&[bob(), ana()]).to_library().unwrap();
+    assert_eq!(
+        Split::members_of(&listed),
+        [bob(), ana()].map(|member| member.to_string())
+    );
+}
+
+/// A split with a value the library refuses, or a number too large for its
+/// field, would reach the library, or wrap into another split.
+#[test]
+fn a_split_refuses_what_does_not_convert() {
+    let refusals = [
+        Refusal {
+            record: Split::Amounts {
+                shares: vec![MemberAmount {
+                    amount: unknown_money(),
+                    member: ana().to_string(),
+                }],
+            },
+            is_expected: unknown_currency,
+        },
+        Refusal {
+            record: Split::Amounts {
+                shares: vec![MemberAmount {
+                    amount: euros(1),
+                    member: "nobody".to_owned(),
+                }],
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: unreadable_split(),
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Split::Parts {
+                shares: vec![MemberParts {
+                    hundredths: -1,
+                    member: ana().to_string(),
+                }],
+            },
+            is_expected: invalid_parts,
+        },
+        Refusal {
+            record: Split::Parts {
+                shares: vec![MemberParts {
+                    hundredths: 0,
+                    member: ana().to_string(),
+                }],
+            },
+            is_expected: invalid_parts,
+        },
+        Refusal {
+            record: Split::Parts {
+                shares: vec![MemberParts {
+                    hundredths: 100,
+                    member: "nobody".to_owned(),
+                }],
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Split::Percentages {
+                shares: vec![MemberPercentage {
+                    basis_points: -1,
+                    member: ana().to_string(),
+                }],
+            },
+            is_expected: invalid_percentage,
+        },
+        Refusal {
+            record: Split::Percentages {
+                shares: vec![MemberPercentage {
+                    basis_points: 100,
+                    member: "nobody".to_owned(),
+                }],
+            },
+            is_expected: invalid_id,
+        },
+    ];
+    for refusal in refusals {
+        let error = refusal.record.to_library().unwrap_err();
+        assert!((refusal.is_expected)(&error), "{error:?}");
+    }
+}
+
+/// An item converted back and forth would change its line, and one the
+/// library refuses would reach it.
+#[test]
+fn an_item_converts_both_ways_and_refuses_bad_lines() {
+    let item = fare();
+    assert_eq!(
+        item.to_library()
+            .map(|converted| Item::from_library(&converted)),
+        Ok(fare())
+    );
+    let refusals = [
+        Refusal {
+            record: Item {
+                quantity: -1,
+                ..fare()
+            },
+            is_expected: zero_quantity,
+        },
+        Refusal {
+            record: Item {
+                quantity: 0,
+                ..fare()
+            },
+            is_expected: zero_quantity,
+        },
+        Refusal {
+            record: Item {
+                name: " ".to_owned(),
+                ..fare()
+            },
+            is_expected: |error| matches!(error, EranosError::EmptyItemName { .. }),
+        },
+        Refusal {
+            record: Item {
+                split: unreadable_split(),
+                ..fare()
+            },
+            is_expected: invalid_id,
+        },
+        Refusal {
+            record: Item {
+                unit_price: unknown_money(),
+                ..fare()
+            },
+            is_expected: unknown_currency,
+        },
+    ];
+    for refusal in refusals {
+        let error = refusal.record.to_library().unwrap_err();
+        assert!((refusal.is_expected)(&error), "{error:?}");
+    }
+}
+
+/// A tip converted back and forth would change its value or how it is
+/// shared, and a negative percentage would wrap into a large one.
+#[test]
+fn tips_convert_both_ways_and_refuse_what_does_not_convert() {
+    let tips = [
+        Tip {
+            value: TipValue::Fixed { amount: euros(500) },
+            distribution: TipDistribution::Equal,
+        },
+        Tip {
+            value: TipValue::Percentage {
+                basis_points: 1_250,
+            },
+            distribution: TipDistribution::Proportional,
+        },
+    ];
+    for tip in tips {
+        assert_eq!(tip.to_library().map(Tip::from_library), Ok(tip));
+    }
+    let negative = Tip {
+        value: TipValue::Percentage { basis_points: -1 },
+        distribution: TipDistribution::Equal,
+    };
+    assert!(invalid_percentage(&negative.to_library().unwrap_err()));
+    let unknown = Tip {
+        value: TipValue::Fixed {
+            amount: unknown_money(),
+        },
+        distribution: TipDistribution::Equal,
+    };
+    assert!(unknown_currency(&unknown.to_library().unwrap_err()));
+}
+
+/// An expense added through the bindings would reach the library with a
+/// field changed or dropped, come back without its identifier, or show the
+/// built-in category and the absent tip as values.
+#[test]
+fn an_expense_to_add_converts_both_ways() {
+    for record in [dinner(), taxi()] {
+        let expense = record.to_new().unwrap();
+        assert_eq!(
+            Expense::from_library(&expense),
+            Expense {
+                id: Some(expense.id().to_string()),
+                ..record
+            }
+        );
+    }
+}
+
+/// An entry to add that carried an identifier would take it from outside
+/// the group, and one to replace without one could not name its entry.
+#[test]
+fn an_expense_to_add_has_no_identifier_and_one_to_replace_has_one() {
+    let id = ExpenseId::from_bytes([4; 16]);
+    let named = Expense {
+        id: Some(id.to_string()),
+        ..dinner()
+    };
+    assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
+    assert_eq!(named.id_to_replace(), Ok(id));
+    assert_eq!(
+        dinner().id_to_replace(),
+        Err(EranosError::identifier_missing())
+    );
+    let unreadable = Expense {
+        id: Some("nobody".to_owned()),
+        ..dinner()
+    };
+    assert!(invalid_id(&unreadable.id_to_replace().unwrap_err()));
+}
+
+/// A replacement would lose the stored expense's identifier, or keep a
+/// field of the stored expense that the record changes or clears.
+#[test]
+fn a_replacement_keeps_the_identifier_and_takes_every_field() {
+    let stored = dinner().to_new().unwrap();
+    for record in [taxi(), dinner()] {
+        let replacement = record.replacing(&stored).unwrap();
+        assert_eq!(
+            Expense::from_library(&replacement),
+            Expense {
+                id: Some(stored.id().to_string()),
+                ..record
+            }
+        );
+    }
+}
+
+/// An expense with a field the library refuses would reach the group, as an
+/// entry to add or as a replacement.
+#[test]
+fn an_expense_refuses_every_field_that_does_not_convert() {
+    let stored = dinner().to_new().unwrap();
+    for refusal in refused_expenses() {
+        let errors = [
+            refusal.record.to_new().unwrap_err(),
+            refusal.record.replacing(&stored).unwrap_err(),
+        ];
+        for error in errors {
+            assert!((refusal.is_expected)(&error), "{error:?}");
+        }
+    }
+}

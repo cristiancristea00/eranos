@@ -194,6 +194,7 @@ eranos/
 │   ├── eranos-settlement/     settlement strategies
 │   ├── eranos-transfer/       transfers
 │   ├── eranos-group/          groups and their saved form
+│   ├── eranos-bindings/       what every binding exposes, in plain Rust
 │   └── xtask/                 the repository's automation: `cargo xtask gates`
 ├── docs/                      architecture, development, testing, versioning
 ├── deny.toml                  the rules of the CI dependency audit

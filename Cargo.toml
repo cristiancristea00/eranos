@@ -2,9 +2,9 @@
 #
 # The library, crates/eranos, re-exports the types callers use from the
 # twelve internal crates beside it, crates/eranos-core to crates/eranos-group,
-# which docs/ARCHITECTURE.md § 2 maps; the repository's automation is
-# crates/xtask, run as `cargo xtask`. The UniFFI and wasm binding crates join
-# as siblings when the apps need them. Every third-party version is pinned
+# which docs/ARCHITECTURE.md § 2 maps; crates/eranos-bindings holds what every
+# binding exposes, in plain Rust (§ 11), and the repository's automation is
+# crates/xtask, run as `cargo xtask`. Every third-party version is pinned
 # here; the members say `{ workspace = true }`.
 
 [workspace]
@@ -12,6 +12,7 @@ resolver = "3"
 members = [
     "crates/eranos",
     "crates/eranos-account",
+    "crates/eranos-bindings",
     "crates/eranos-calendar",
     "crates/eranos-category",
     "crates/eranos-contact",
@@ -40,6 +41,7 @@ publish = false
 # dev-dependency, so they read as callers write them.
 eranos = { path = "crates/eranos", default-features = false }
 eranos-account = { path = "crates/eranos-account" }
+eranos-bindings = { path = "crates/eranos-bindings" }
 eranos-calendar = { path = "crates/eranos-calendar" }
 eranos-category = { path = "crates/eranos-category" }
 eranos-contact = { path = "crates/eranos-contact" }
@@ -108,6 +110,12 @@ uuid = { version = "1.26", features = ["v7"] }
 # metadata`; only the derive macros are used.
 serde = { version = "1.0.229", features = ["derive"] }
 
+# --- Bindings ----------------------------------------------------------------
+# The saved form of a group, which the binding core writes and reads. The
+# serde round-trip tests, the persistence example, and xtask's reading of
+# `cargo metadata` use it too.
+serde_json = "1.0.151"
+
 # --- Development only --------------------------------------------------------
 # Property tests for the arithmetic invariants (exact sums, zero-sum balances,
 # settlements that clear every balance). The fork and timeout features spawn
@@ -116,9 +124,6 @@ proptest = { version = "1.11", default-features = false, features = ["std", "bit
 # Benchmarks for the settlement strategies and the ledger updates. Without the
 # default rayon and plotters features: reports are printed, not plotted.
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
-# The serde round-trip tests and the persistence example; xtask also reads
-# `cargo metadata` with it.
-serde_json = "1.0.151"
 # The tables the examples print. Without the default `assert` feature, which
 # only tabled's own tests use.
 tabled = { version = "0.22", default-features = false, features = ["std", "derive"] }

@@ -23,9 +23,9 @@ Signed-off-by: <committer name> <<committer email>>
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
-  `settlement`, `transfer`, and `group`, and besides them `serde`, `docs`,
-  `examples`, `build`, and `xtask`. A change to the facade alone, or to
-  several crates, takes no scope.
+  `settlement`, `transfer`, and `group`; `bindings` for the binding core;
+  and besides them `serde`, `docs`, `examples`, `build`, and `xtask`. A
+  change to the facade alone, or to several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -250,12 +250,16 @@ failure); `#[allow]` is itself a lint error.
 
 ## Architecture in one paragraph
 
-Thirteen crates in `crates/`: `eranos`, the facade callers depend on,
-which holds only re-exports and the integration tests, examples, and
-benchmarks, and twelve internal crates below it, one per part of the
-domain, from `eranos-core` (identifiers) up to `eranos-group`
-([map](docs/ARCHITECTURE.md#2-crate-map)); binding crates (`eranos-ffi` for
-UniFFI, `eranos-wasm`) are planned as siblings. A `Group` owns its members,
+The library is thirteen crates in `crates/`: `eranos`, the facade callers
+depend on, which holds only re-exports and the integration tests,
+examples, and benchmarks, and twelve internal crates below it, one per part
+of the domain, from `eranos-core` (identifiers) up to `eranos-group`
+([map](docs/ARCHITECTURE.md#2-crate-map)). Above the facade,
+`eranos-bindings` holds what every binding exposes, in plain Rust: records,
+one error, and a group handle with a synchronous and an asynchronous form
+of every call; the glue crates that generate each language's layer from it
+are planned as its siblings
+([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the

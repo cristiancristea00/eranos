@@ -16,7 +16,7 @@ How eranos is built and why. [README.md](../README.md) says what it does,
 8. [Validation and errors](#8-validation-and-errors)
 9. [The serialised form](#9-the-serialised-form)
 10. [Account details](#10-account-details)
-11. [Future bindings](#11-future-bindings)
+11. [Bindings](#11-bindings)
 12. [Async and concurrency](#12-async-and-concurrency)
 13. [Key numbers](#13-key-numbers)
 
@@ -66,10 +66,14 @@ internal crate owns one part of the domain, holds its own error type, and
 depends only on crates below it. Every crate depends on `eranos-core`, and
 the facade on all twelve; the graph draws an edge to `eranos-core` only
 from the crates with no other dependency in the workspace, and of the
-facade's edges only the one to the group.
+facade's edges only the one to the group. Above the facade,
+`eranos-bindings` holds what every binding exposes
+([§ 11](#11-bindings)); it depends on the facade and, for their conversion
+traits, on the twelve internal crates, whose edges the graph leaves out.
 
 ```mermaid
 flowchart TD
+    BINDINGS["eranos-bindings<br/>records, EranosError, GroupHandle,<br/>GroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
     GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup,<br/>SharedGroup"]
     EXPENSE["eranos-expense<br/>Expense, Split, Item, Tip<br/>(+ resolve_expense)"]
@@ -83,6 +87,7 @@ flowchart TD
     CALENDAR["eranos-calendar<br/>CalendarDate, TimeOfDay"]
     MONEY["eranos-money<br/>Money, Currency, Cost, rates, ratios<br/>(+ allocation)"]
     CORE["eranos-core<br/>identifiers, cooperative futures<br/>(+ text rules, pacer)"]
+    BINDINGS --> FACADE
     FACADE --> GROUP
     GROUP --> EXPENSE
     GROUP --> TRANSFER
@@ -114,6 +119,9 @@ flowchart TD
 
 ```text
  ┌──────────────────────────────────────────────────────────────────────────┐
+ │ eranos-bindings    what every binding exposes: records, EranosError,     │
+ │                    GroupHandle, GroupReader, value helpers               │
+ ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos             the facade: re-exports; tests, examples, benchmarks   │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-group       Group, GroupBuilder, Language, SavedGroup,            │
@@ -144,6 +152,7 @@ flowchart TD
 
 | Crate               | Holds                                                                                                                                                               | Depends on                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `eranos-bindings`   | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers               | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json     |
 | `eranos`            | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                           |
 | `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core |
 | `eranos-expense`    | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                                     |
@@ -158,13 +167,14 @@ flowchart TD
 | `eranos-money`      | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                              |
 | `eranos-core`       | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                              |
 
-The facade's modules (`eranos::money`, `eranos::member`, …) and its root
-re-export what the table lists before a semicolon, and nothing else: what
-follows one is machinery the crates above use, free to change. So is a
-conversion trait, which every crate holds beside each of its
-non-exhaustive enums that the bindings convert, named after the enum
-(`FromSplit`, `FromGroupError`, and the like): one method per variant, so
-that a crate above tells every variant apart without a wildcard arm
+For the internal crates, the facade's modules (`eranos::money`,
+`eranos::member`, …) and its root re-export what the table lists before a
+semicolon, and nothing else: what follows one is machinery the crates above
+use, free to change. So is a conversion trait, which every crate holds
+beside each of its non-exhaustive enums that the bindings convert, named
+after the enum (`FromSplit`, `FromGroupError`, and the like): one method
+per variant, so that a crate above tells every variant apart without a
+wildcard arm
 ([DEVELOPMENT.md § 3.9](DEVELOPMENT.md#39-a-crossing-between-crates)).
 Every internal crate but `eranos-ledger`, which has no error of its own,
 depends on `thiserror`, and every crate but `eranos-ledger` and
@@ -493,23 +503,74 @@ The serialised form contains the details in clear text. Encryption at rest
 belongs to each platform's secure storage (Keychain, Keystore, Web Crypto),
 which holds keys the library never sees.
 
-## 11. Future bindings
+## 11. Bindings
 
-The core is shaped for binding crates added as workspace siblings:
+`eranos-bindings` holds, in plain Rust, everything the bindings expose. The
+glue crates planned beside it (`eranos-uniffi` for Swift, Kotlin, and Java,
+`eranos-web` for the browser, `eranos-kmp` for Kotlin Multiplatform, and
+`eranos-capi` for C and C++) mirror its types and forward every call to it,
+converting nothing and deciding nothing, so every rule a binding applies is
+tested in Rust.
 
-- **`eranos-ffi` (UniFFI for Swift and Kotlin)**, following matrix-rust-sdk:
-  a `#[derive(uniffi::Object)]` wrapper holding a `SharedGroup` (UniFFI
-  objects cannot take `&mut self`), mirror records with `From`
-  conversions, one flat error enum, and identifiers as strings (UniFFI has no
-  128-bit integers). The release profile keeps `panic = "unwind"` so the
-  scaffolding can catch panics at the boundary.
-- **`eranos-wasm` (browser)**, through wasm-bindgen or
-  uniffi-bindgen-react-native. It must enable `uuid`'s `js` feature: UUID v7
+- **Records of text and integers.** Values and entries cross as records and
+  enums with data: identifiers as hyphenated UUIDs, currencies as ISO 4217
+  codes, exchange rates as decimals, amounts as 64-bit minor units,
+  percentages in basis points, and parts in hundredths. Days, months,
+  years, hours, minutes, quantities, basis points, and hundredths are
+  32-bit signed integers, which every target language has: Kotlin's
+  unsigned types are invisible from Java, and JavaScript has one number
+  type. A record is checked by the library's rules on its way in, so a bad
+  value, a number too large for its field included, is a typed error and
+  never wraps into another value.
+- **Identity stays with the group.** An entry to add carries no identifier
+  (`IdentifierGiven` otherwise), and the call returns the one the group
+  generated. An entry to replace names its entry (`IdentifierMissing`
+  otherwise), and the replacement starts from the stored entry's
+  `to_builder()` and takes every field of the record, so no identifier is
+  set from outside.
+- **One error.** `EranosError` has a case for each variant of every library
+  error, named after it, with the crate in front where two crates share a
+  name (`MoneyCurrencyMismatch`, `ExpenseCurrencyMismatch`), carrying the
+  variant's payload and, as `detail`, the library's message: a field named
+  `message` would clash with the property of every Kotlin exception. Its
+  own cases are
+  `Cancelled`, `IdentifierGiven`, `IdentifierMissing`, `InvalidJson`, which
+  names the line and column of a refused saved group but not its text,
+  since the text can hold an account number, and `Released`. The
+  conversion traits of [§ 2](#2-crate-map) keep the conversion exhaustive,
+  so a new variant fails the core's build.
+- **One group object.** `GroupHandle` holds a `SharedGroup` and has every
+  group call in two forms: a synchronous one, which waits for the lock
+  where a thread can sleep and, on wasm, whose one thread must not, fails
+  with `Busy` while another call holds it; and an asynchronous one, a
+  `Send + 'static` future that waits for the lock. Only the two functions
+  that take a synchronous call's lock depend on the target, and the trying
+  form wasm uses is tested on the host. `GroupHandle::read` returns a
+  `GroupReader`, which holds the shared lock until it is released or
+  dropped, so the reads of one report see no change in between; `release`
+  frees the lock at once, for languages whose collector frees objects late,
+  and is not named `close`, which the Kotlin and Java generators give every
+  object to free it.
+- **Cancellation.** Every asynchronous call takes an optional
+  `Cancellation`. Cancelling it stops the call at its next yield, or at once
+  while the call waits for the lock, and fails it with `Cancelled`; the
+  library's calls change nothing until they complete, so the group is left
+  as it was, and its lock is released.
+- **The value helpers.** Free functions parse and write every value as the
+  library does (amounts, rates, percentages, parts, dates, times, language
+  tags, balances, currencies, and contact and account details), so every
+  text a binding shows is the library's.
+- **Shapes every generator takes.** The types keep to what UniFFI 0.29, the
+  oldest version the glue crates use, can mirror: records, enums with
+  data, one error enum, and objects; no methods on records, and no optional
+  list, for which an empty one stands.
+- **The browser.** The web crate enables `uuid`'s `js` feature: UUID v7
   generation reads the clock and the random source, which
   `wasm32-unknown-unknown` provides only through JavaScript.
-- Public types have no lifetimes or generic parameters on their data, IDs
-  are `Copy`, and every public type is `Send + Sync`, which `tests/api.rs`
-  asserts.
+- The release profile keeps `panic = "unwind"` so the glue can catch a
+  panic at the boundary. Public types have no lifetimes or generic
+  parameters on their data, IDs are `Copy`, and every public type is
+  `Send + Sync`, which `tests/api.rs` asserts.
 
 ## 12. Async and concurrency
 

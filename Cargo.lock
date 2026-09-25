@@ -352,6 +352,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "eranos-bindings"
+version = "0.4.0"
+dependencies = [
+ "eranos",
+ "eranos-account",
+ "eranos-calendar",
+ "eranos-category",
+ "eranos-contact",
+ "eranos-core",
+ "eranos-expense",
+ "eranos-group",
+ "eranos-ledger",
+ "eranos-member",
+ "eranos-money",
+ "eranos-settlement",
+ "eranos-transfer",
+ "serde_json",
+]
+
+[[package]]
 name = "eranos-calendar"
 version = "0.4.0"
 dependencies = [

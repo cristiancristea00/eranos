@@ -30,7 +30,8 @@ every command.
   were.
 - **A dropped call changes nothing.** Each asynchronous call is dropped at
   its yields in a test that finds the group, its totals, its cache, and its
-  lock as they were.
+  lock as they were; the binding core's calls are cancelled the same way,
+  while they wait for the lock and at their yields.
 - **The public API is tested as a caller uses it.** Integration tests and
   examples use only `eranos::…`; unit tests reach private items.
 

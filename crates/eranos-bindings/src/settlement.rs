@@ -1,0 +1,83 @@
+//! Settlements and their payments, as the bindings carry them.
+
+use eranos::settlement as library;
+use eranos_settlement::FromSettlementStrategy;
+
+use crate::money::Money;
+
+/// How balances turn into payments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SettlementStrategy {
+    /// Everyone pays back the people who paid for them.
+    Direct,
+    /// The largest debtor pays the largest creditor, repeatedly.
+    Greedy,
+    /// The fewest payments possible.
+    MinimumTransfers,
+}
+
+impl SettlementStrategy {
+    /// The library's strategy.
+    pub(crate) const fn to_library(self) -> library::SettlementStrategy {
+        match self {
+            Self::Direct => library::SettlementStrategy::Direct,
+            Self::Greedy => library::SettlementStrategy::Greedy,
+            Self::MinimumTransfers => library::SettlementStrategy::MinimumTransfers,
+        }
+    }
+}
+
+impl FromSettlementStrategy for SettlementStrategy {
+    fn direct() -> Self {
+        Self::Direct
+    }
+
+    fn greedy() -> Self {
+        Self::Greedy
+    }
+
+    fn minimum_transfers() -> Self {
+        Self::MinimumTransfers
+    }
+}
+
+/// One payment of a settlement: `from` pays `amount` to `to`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Payment {
+    /// The amount, in the group currency.
+    pub amount: Money,
+    /// The member who pays, as their identifier.
+    pub from: String,
+    /// The member who is paid, as their identifier.
+    pub to: String,
+}
+
+/// The payments that settle every balance.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Settlement {
+    /// The payments, ordered by payer and then by recipient.
+    pub payments: Vec<Payment>,
+    /// The strategy that produced them.
+    pub strategy: SettlementStrategy,
+}
+
+impl Settlement {
+    /// The record of `settlement`.
+    pub(crate) fn from_library(settlement: &library::Settlement) -> Self {
+        Self {
+            payments: settlement
+                .payments()
+                .iter()
+                .map(|payment| Payment {
+                    amount: Money::from_library(payment.amount()),
+                    from: payment.from().to_string(),
+                    to: payment.to().to_string(),
+                })
+                .collect(),
+            strategy: SettlementStrategy::from_settlement_strategy(settlement.strategy()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;
