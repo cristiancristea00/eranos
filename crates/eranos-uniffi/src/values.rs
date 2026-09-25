@@ -2,7 +2,7 @@
 //! comes from the library through them.
 
 use eranos_bindings::{
-    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, Split, TimeOfDay,
+    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, TimeOfDay,
 };
 
 /// The amount written `text` in the currency `code`: "12.50".
@@ -292,15 +292,4 @@ pub(crate) fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
 #[uniffi::export]
 pub(crate) fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
     eranos_bindings::expense_members(expense)
-}
-
-/// Every member `split` divides among, as identifiers in the order it lists
-/// them.
-///
-/// # Errors
-///
-/// The errors of the split's conversion.
-#[uniffi::export]
-pub(crate) fn split_members(split: &Split) -> Result<Vec<String>, EranosError> {
-    eranos_bindings::split_members(split)
 }

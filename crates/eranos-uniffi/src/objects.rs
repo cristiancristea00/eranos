@@ -1291,12 +1291,6 @@ impl Cancellation {
     pub(crate) fn cancel(&self) {
         self.shared.cancel();
     }
-
-    /// Whether `cancel` was called.
-    #[must_use]
-    pub(crate) fn is_cancelled(&self) -> bool {
-        self.shared.is_cancelled()
-    }
 }
 
 /// The binding core's cancellation that `cancellation` holds.
