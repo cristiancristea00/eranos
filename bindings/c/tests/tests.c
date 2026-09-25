@@ -1319,6 +1319,119 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     flatDestroy(flat);
 }
 
+/// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses it
+/// and gives no object.
+static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
+    Flat const flat = flatOf();
+    char const *const nobody = "not an identifier";
+    EranosExpense *expense = NULL;
+    checkThat(check,
+              isFailure(eranosGroupExpense(flat.group, nobody, &expense), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && NULL == expense,
+              "an expense");
+    EranosExpenseShares *shares = NULL;
+    checkThat(check,
+              isFailure(eranosGroupExpenseShares(flat.group, nobody, &shares), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && NULL == shares,
+              "an expense's shares");
+    EranosMember *member = NULL;
+    checkThat(check, isFailure(eranosGroupMember(flat.group, nobody, &member), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && NULL == member,
+              "a member");
+    EranosTransfer *transfer = NULL;
+    checkThat(check,
+              isFailure(eranosGroupTransfer(flat.group, nobody, &transfer), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && NULL == transfer,
+              "a transfer");
+    EranosMoney *amount = NULL;
+    checkThat(check,
+              isFailure(eranosGroupTransferAmount(flat.group, nobody, &amount), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && NULL == amount,
+              "a transfer's amount");
+    flatDestroy(flat);
+}
+
+/// A split or an expense that named other participants than its members would show an app who shares a cost wrongly; a split
+/// lists its members in its own order, and an expense every member it names, each once, in the order of their identifiers.
+static void theParticipantsOfASplitAndOfAnExpenseAreTheirMembers(Check *const check) {
+    Flat const flat = flatOf();
+    char const *const ana = eranosTextData(flat.ana);
+    char const *const bob = eranosTextData(flat.bob);
+    EranosSplit *const split = equally(bob, ana);
+    EranosTextList *participants = NULL;
+    checkSucceeded(check, eranosSplitParticipants(split, &participants), "a split's participants");
+    checkThat(check, listsMembers(participants, bob, ana), "in the split's order");
+    EranosExpense *const expense = expenseOf("Taxi", bob, ana, bob);
+    checkSucceeded(check, eranosExpenseParticipants(expense, &participants), "an expense's participants");
+    checkThat(check, listsMembers(participants, ana, bob), "each once, in the order of their identifiers");
+    eranosExpenseDestroy(expense);
+    eranosSplitDestroy(split);
+    flatDestroy(flat);
+}
+
+/// A replacement or a removal of an entry the group does not hold would change another entry, or report a change it never
+/// made; each is refused, and gives no entry back.
+static void anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved(Check *const check) {
+    Flat const flat = flatOf();
+    char const *const unknown = "0199a000-0000-7000-8000-00000000ffff";
+    char const *const ana = eranosTextData(flat.ana);
+    char const *const bob = eranosTextData(flat.bob);
+    EranosCategory *category = NULL;
+    checkSucceeded(check, eranosCategoryCreate("Travel", &category), "a category");
+    checkSucceeded(check, eranosCategorySetId(category, unknown), "its identifier");
+    EranosCategory *previousCategory = NULL;
+    checkThat(check,
+              isFailure(eranosGroupReplaceCategory(flat.group, category, &previousCategory), ERANOS_ERROR_KIND_GROUP,
+                        ERANOS_FAILURE_GROUP_UNKNOWN_CATEGORY) &&
+                  NULL == previousCategory,
+              "a category is not replaced");
+    checkThat(check,
+              isFailure(eranosGroupRemoveCategory(flat.group, unknown, &previousCategory), ERANOS_ERROR_KIND_GROUP,
+                        ERANOS_FAILURE_GROUP_UNKNOWN_CATEGORY) &&
+                  NULL == previousCategory,
+              "nor removed");
+    EranosExpense *const expense = expenseOf("Taxi", ana, ana, bob);
+    checkSucceeded(check, eranosExpenseSetId(expense, unknown), "an expense's identifier");
+    EranosExpense *previousExpense = NULL;
+    checkThat(
+        check,
+        isFailure(eranosGroupReplaceExpense(flat.group, expense, &previousExpense), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_EXPENSE) &&
+            NULL == previousExpense,
+        "an expense is not replaced");
+    checkThat(
+        check,
+        isFailure(eranosGroupRemoveExpense(flat.group, unknown, &previousExpense), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_EXPENSE) &&
+            NULL == previousExpense,
+        "nor removed");
+    EranosMember *member = NULL;
+    checkSucceeded(check, eranosMemberCreate("Carol", &member), "a member");
+    checkSucceeded(check, eranosMemberSetId(member, unknown), "their identifier");
+    EranosMember *previousMember = NULL;
+    checkThat(
+        check,
+        isFailure(eranosGroupReplaceMember(flat.group, member, &previousMember), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_MEMBER) &&
+            NULL == previousMember,
+        "a member is not replaced");
+    checkThat(
+        check,
+        isFailure(eranosGroupRemoveMember(flat.group, unknown, &previousMember), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_MEMBER) &&
+            NULL == previousMember,
+        "nor removed");
+    EranosTransfer *const transfer = transferOf(500, ana, bob);
+    checkSucceeded(check, eranosTransferSetId(transfer, unknown), "a transfer's identifier");
+    EranosTransfer *previousTransfer = NULL;
+    checkThat(check,
+              isFailure(eranosGroupReplaceTransfer(flat.group, transfer, &previousTransfer), ERANOS_ERROR_KIND_GROUP,
+                        ERANOS_FAILURE_GROUP_UNKNOWN_TRANSFER) &&
+                  NULL == previousTransfer,
+              "a transfer is not replaced");
+    checkThat(check,
+              isFailure(eranosGroupRemoveTransfer(flat.group, unknown, &previousTransfer), ERANOS_ERROR_KIND_GROUP,
+                        ERANOS_FAILURE_GROUP_UNKNOWN_TRANSFER) &&
+                  NULL == previousTransfer,
+              "nor removed");
+    eranosTransferDestroy(transfer);
+    eranosMemberDestroy(member);
+    eranosExpenseDestroy(expense);
+    eranosCategoryDestroy(category);
+    flatDestroy(flat);
+}
+
 /// Totals that did not add up, or lost a member, would tell a member they owe what they do not.
 static void theSummaryAndTheSharesAddUp(Check *const check) {
     Flat const flat = flatOf();
@@ -1415,6 +1528,62 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
     }
     eranosTextDestroy(text);
     flatDestroy(flat);
+}
+
+/// How many neighbours share the street party, each with a balance of their own: two to that power does not fit a 64-bit size,
+/// so the exact solver refuses the plan before it asks for memory.
+enum { NEIGHBOURS = 64 };
+
+/// A plan whose exact solver's table did not fit in memory would end the program or stall it; the exact strategy refuses it,
+/// naming how many balances it holds, and the other strategies settle the same balances.
+static void anExactPlanTooLargeToComputeIsRefused(Check *const check) {
+    EranosNewGroup *details = NULL;
+    checkSucceeded(check, eranosNewGroupCreate("EUR", "Street party", &details), "the group's details");
+    EranosGroup *group = NULL;
+    checkSucceeded(check, eranosGroupCreate(details, &group), "the group");
+    EranosText *neighbours[NEIGHBOURS] = {NULL};
+    EranosTextList *const everyone = eranosTextListCreate();
+    for (size_t index = 0; NEIGHBOURS > index; ++index) {
+        char name[32] = {0};
+        (void)snprintf(name, sizeof name, "Neighbour %zu", index + 1);
+        neighbours[index] = memberIn(group, name);
+        checkSucceeded(check, eranosTextListPush(everyone, eranosTextData(neighbours[index])), "a neighbour");
+    }
+    EranosMoney *const amount = euros((int64_t)NEIGHBOURS * 100);
+    EranosCost *const cost = eranosCostCreateLocal(amount);
+    EranosSplit *const payers = equally(eranosTextData(neighbours[0]), NULL);
+    EranosSplit *const shares = eranosSplitCreateEqual(everyone);
+    EranosExpenseSplit *const split = eranosExpenseSplitCreateWhole(shares);
+    EranosExpense *expense = NULL;
+    checkSucceeded(check, eranosExpenseCreate(cost, DAY, "Food", payers, split, &expense), "the food, which the first neighbour paid");
+    EranosText *const id = eranosTextCreate();
+    checkSucceeded(check, eranosGroupAddExpense(group, expense, id), "shared by every neighbour");
+    EranosSettlement *settlement = NULL;
+    EranosError *const refused = eranosGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, &settlement);
+    int64_t balances = 0;
+    checkThat(check,
+              holdsFailure(refused, ERANOS_ERROR_KIND_SETTLEMENT, ERANOS_FAILURE_SETTLEMENT_OUT_OF_MEMORY) &&
+                  eranosErrorBalances(refused, &balances) && NEIGHBOURS == balances && NULL == settlement,
+              "the exact plan is refused, naming its balances");
+    eranosErrorDestroy(refused);
+    checkSucceeded(check, eranosGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &settlement), "a greedy plan");
+    EranosPaymentList *const payments = NULL == settlement ? NULL : eranosSettlementPayments(settlement);
+    checkThat(check, NULL != payments && NEIGHBOURS - 1 == eranosPaymentListLength(payments), "one payment from each neighbour who owes");
+    eranosPaymentListDestroy(payments);
+    eranosSettlementDestroy(settlement);
+    eranosTextDestroy(id);
+    eranosExpenseDestroy(expense);
+    eranosExpenseSplitDestroy(split);
+    eranosSplitDestroy(shares);
+    eranosSplitDestroy(payers);
+    eranosCostDestroy(cost);
+    eranosMoneyDestroy(amount);
+    eranosTextListDestroy(everyone);
+    for (size_t index = 0; NEIGHBOURS > index; ++index) {
+        eranosTextDestroy(neighbours[index]);
+    }
+    eranosGroupDestroy(group);
+    eranosNewGroupDestroy(details);
 }
 
 /// A change of currency that left an entry unconverted, or took a rate it was not given, would mix currencies in the totals.
@@ -1942,6 +2111,50 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     flatDestroy(flat);
 }
 
+/// A read handle whose reads went on after its release would read a group whose later changes it no longer waits for; every
+/// read that returns an object fails once the handle is released, and gives no object.
+static void everyReadOfAReleasedReaderFails(Check *const check) {
+    Flat const flat = flatOf();
+    EranosGroupReader *reader = NULL;
+    checkSucceeded(check, eranosGroupRead(flat.group, &reader), "a read handle");
+    eranosGroupReaderRelease(reader);
+    char const *const food = eranosTextData(flat.food);
+    char const *const dinner = eranosTextData(flat.dinner);
+    char const *const repayment = eranosTextData(flat.repayment);
+    EranosCategoryList *categories = NULL;
+    checkThat(check, isKind(eranosGroupReaderCategories(reader, &categories), ERANOS_ERROR_KIND_RELEASED) && NULL == categories, "the categories");
+    EranosCategory *category = NULL;
+    checkThat(check, isKind(eranosGroupReaderCategory(reader, food, &category), ERANOS_ERROR_KIND_RELEASED) && NULL == category, "a category");
+    EranosExpenseList *expenses = NULL;
+    checkThat(check, isKind(eranosGroupReaderExpenses(reader, &expenses), ERANOS_ERROR_KIND_RELEASED) && NULL == expenses, "the expenses");
+    EranosExpense *expense = NULL;
+    checkThat(check, isKind(eranosGroupReaderExpense(reader, dinner, &expense), ERANOS_ERROR_KIND_RELEASED) && NULL == expense, "an expense");
+    EranosExpenseShares *shares = NULL;
+    checkThat(check, isKind(eranosGroupReaderExpenseShares(reader, dinner, &shares), ERANOS_ERROR_KIND_RELEASED) && NULL == shares,
+              "an expense's shares");
+    EranosSummary *summary = NULL;
+    checkThat(check, isKind(eranosGroupReaderSummary(reader, &summary), ERANOS_ERROR_KIND_RELEASED) && NULL == summary, "the summary");
+    EranosMemberList *members = NULL;
+    checkThat(check, isKind(eranosGroupReaderMembers(reader, &members), ERANOS_ERROR_KIND_RELEASED) && NULL == members, "the members");
+    EranosMember *member = NULL;
+    checkThat(check, isKind(eranosGroupReaderMember(reader, eranosTextData(flat.ana), &member), ERANOS_ERROR_KIND_RELEASED) && NULL == member,
+              "a member");
+    EranosSettlement *settlement = NULL;
+    checkThat(check,
+              isKind(eranosGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), ERANOS_ERROR_KIND_RELEASED) &&
+                  NULL == settlement,
+              "a settlement");
+    EranosTransferList *transfers = NULL;
+    checkThat(check, isKind(eranosGroupReaderTransfers(reader, &transfers), ERANOS_ERROR_KIND_RELEASED) && NULL == transfers, "the transfers");
+    EranosTransfer *transfer = NULL;
+    checkThat(check, isKind(eranosGroupReaderTransfer(reader, repayment, &transfer), ERANOS_ERROR_KIND_RELEASED) && NULL == transfer, "a transfer");
+    EranosMoney *amount = NULL;
+    checkThat(check, isKind(eranosGroupReaderTransferAmount(reader, repayment, &amount), ERANOS_ERROR_KIND_RELEASED) && NULL == amount,
+              "a transfer's amount");
+    eranosGroupReaderDestroy(reader);
+    flatDestroy(flat);
+}
+
 /// A cancelled change that still ran would change the group after the app gave the change up; one that kept waiting would
 /// hold the worker thread for a lock it no longer needs.
 static void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check *const check) {
@@ -2006,13 +2219,18 @@ int main(void) {
         {"destroyingNullDoesNothing", destroyingNullDoesNothing},
         {"aGroupHoldsItsDetailsAndChangesThem", aGroupHoldsItsDetailsAndChangesThem},
         {"entriesComeAndGoThroughTheGroup", entriesComeAndGoThroughTheGroup},
+        {"anIdentifierThatIsNotOneIsRefusedByEveryLookup", anIdentifierThatIsNotOneIsRefusedByEveryLookup},
+        {"theParticipantsOfASplitAndOfAnExpenseAreTheirMembers", theParticipantsOfASplitAndOfAnExpenseAreTheirMembers},
+        {"anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved", anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved},
         {"theSummaryAndTheSharesAddUp", theSummaryAndTheSharesAddUp},
         {"eachStrategySettlesEveryBalance", eachStrategySettlesEveryBalance},
+        {"anExactPlanTooLargeToComputeIsRefused", anExactPlanTooLargeToComputeIsRefused},
         {"aChangeOfCurrencyConvertsEveryEntry", aChangeOfCurrencyConvertsEveryEntry},
         {"aSavedGroupLoadsAsItWasSaved", aSavedGroupLoadsAsItWasSaved},
         {"everyErrorHoldsWhatItsFailureHolds", everyErrorHoldsWhatItsFailureHolds},
         {"everyAsynchronousCallReportsWhatItsSynchronousFormReturns", everyAsynchronousCallReportsWhatItsSynchronousFormReturns},
         {"aReaderReadsTheGroupUntilItIsReleased", aReaderReadsTheGroupUntilItIsReleased},
+        {"everyReadOfAReleasedReaderFails", everyReadOfAReleasedReaderFails},
         {"aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas", aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas},
     };
     size_t const count = sizeof tests / sizeof tests[0];

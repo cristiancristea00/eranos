@@ -224,12 +224,14 @@ first finding ends the run, and the gates hold each layer to every line
 and every function of its headers; the headers Diplomat generates are not
 measured. The C++ layer is also held to every region by its tests, since a
 call's failure branches in one template that every call shares. The C
-layer's regions are not: each of its functions branches on its result,
-and a call that the library refuses only on wasm, where the C API does not
-run, never takes its failure branch. Both suites follow the rules of
-[§ 4](#4-writing-a-test-here) in their language: a test is a function
-named for its claim, in camelCase, whose comment says what an app loses
-if it regresses, and the program prints every claim that fails.
+layer's regions are not all run: each of its functions branches on its
+result, and the six calls that the library refuses only on wasm, where the
+C API does not run, never take their failure branch: the synchronous
+`categories`, `expenses`, `members`, `read`, `summary`, and `transfers`.
+Both suites follow the rules of [§ 4](#4-writing-a-test-here) in their
+language: a test is a function named for its claim, in camelCase, whose
+comment says what an app loses if it regresses, and the program prints
+every claim that fails.
 
 ## 6. Mutation testing
 

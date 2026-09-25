@@ -720,6 +720,28 @@ void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check
     check.that(isFailure(late, ErrorKind::CANCELLED, std::nullopt), "a call given a cancelled cancellation does not run");
 }
 
+/// A kind of call whose outcome lost its failure would leave the app's future waiting, or hand it a value the library never
+/// gave; a call given a cancelled cancellation reports the cancellation, whatever it returns.
+void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) {
+    Flat const flat;
+    Cancellation cancelled;
+    cancelled.cancel();
+    auto const reportsIt = [](std::optional<Error> const &error) { return isFailure(error, ErrorKind::CANCELLED, std::nullopt); };
+    check.that(reportsIt(thrown([&] { return flat.group.categoriesAsync(&cancelled).get(); })), "the categories");
+    check.that(reportsIt(thrown([&] { return flat.group.categoryAsync(flat.food, &cancelled).get(); })), "a category");
+    check.that(reportsIt(thrown([&] { return flat.group.expensesAsync(&cancelled).get(); })), "the expenses");
+    check.that(reportsIt(thrown([&] { return flat.group.expenseAsync(flat.dinner, &cancelled).get(); })), "an expense");
+    check.that(reportsIt(thrown([&] { return flat.group.expenseSharesAsync(flat.dinner, &cancelled).get(); })), "an expense's shares");
+    check.that(reportsIt(thrown([&] { return flat.group.isArchivedAsync(flat.ana, &cancelled).get(); })), "whether a member is archived");
+    check.that(reportsIt(thrown([&] { return flat.group.membersAsync(&cancelled).get(); })), "the members");
+    check.that(reportsIt(thrown([&] { return flat.group.readAsync(&cancelled).get(); })), "a read handle");
+    check.that(reportsIt(thrown([&] { return flat.group.settlementAsync(SettlementStrategy::DIRECT, &cancelled).get(); })), "a settlement");
+    check.that(reportsIt(thrown([&] { return flat.group.summaryAsync(&cancelled).get(); })), "the summary");
+    check.that(reportsIt(thrown([&] { return flat.group.transferAmountAsync(flat.repayment, &cancelled).get(); })), "a transfer's amount");
+    check.that(reportsIt(thrown([&] { return flat.group.transfersAsync(&cancelled).get(); })), "the transfers");
+    check.that(reportsIt(thrown([&] { return flat.group.transferAsync(flat.repayment, &cancelled).get(); })), "a transfer");
+}
+
 /// A test: its name, the claim it makes, and its body.
 struct Test final {
     std::string_view name;
@@ -756,6 +778,7 @@ constexpr std::array TESTS = {
     Test{"anAsynchronousCallReportsWhatItsSynchronousFormThrows", anAsynchronousCallReportsWhatItsSynchronousFormThrows},
     Test{"aReaderReadsTheGroupUntilItIsReleased", aReaderReadsTheGroupUntilItIsReleased},
     Test{"aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas", aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas},
+    Test{"everyKindOfAsynchronousCallReportsItsCancellation", everyKindOfAsynchronousCallReportsItsCancellation},
 };
 
 /// Runs every test and prints each claim that failed.
