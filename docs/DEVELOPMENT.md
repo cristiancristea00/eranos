@@ -70,7 +70,8 @@ thirteen Apple targets, which they add with `rustup target add`. On every
 machine they build the Kotlin package: the library of the four Android
 ABIs through `cargo ndk`, which finds the NDK under `ANDROID_HOME`, then the
 Gradle build, whose JVM `JAVA_HOME` names; the gates stop before the first
-step when either variable is not set. A run from an empty target
+step when either variable is not set. They build the Java package with
+the same JDK. A run from an empty target
 directory takes about 5 minutes on an Apple M4 Pro, most of it building
 the library for every Apple target and every Android ABI; a warm one
 takes about 80 seconds in all.
@@ -91,6 +92,17 @@ unless `-Peranos.library=<directory>` names another:
 ./gradlew :eranos:apiDump                     # the API dump, after a change to the layer's API
 ./gradlew :eranos:dokkaGenerate               # the documentation, in eranos/build/dokka/html
 ktlint --format --relative '**/*.kt' '**/*.kts' '!generated/**' '!**/build/**'  # the formatter
+```
+
+In `bindings/java`, once the gates built the host library and copied the
+generated Java; the tests load the library from `target/debug` unless
+`-Peranos.library=<directory>` names another:
+
+```sh
+./gradlew test                                 # the Java tests
+./gradlew jacocoTestReport                     # their coverage, in build/reports/jacoco/test/html
+./gradlew javadoc                              # the documentation, in build/docs/javadoc
+./gradlew format                               # google-java-format, applied
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
@@ -233,7 +245,10 @@ breaking.
    and the Kotlin entry class in
    `bindings/kotlin/eranos/src/main/kotlin/eranos/`, with its conversions,
    its `copy`, and its equality, hash, and text; `./gradlew :eranos:apiDump`
-   then records the new API.
+   then records the new API. The Java entry class in
+   `bindings/java/src/main/java/eranos/` gets the field, its accessor, its
+   builder's setter, and its place in its conversions, equality, hash, and
+   text.
 
 ### 3.6 A new error variant
 
@@ -258,7 +273,12 @@ its payload typed, the conversion from the generated one gets its arm, and
 `Tests/EranosTests/ErrorTests.swift` its row; so does the Kotlin layer's
 failure interface in `bindings/kotlin/eranos/src/main/kotlin/eranos/Failures.kt`,
 whose conversion fails to build without the case, and
-`src/test/kotlin/eranos/ErrorTest.kt`.
+`src/test/kotlin/eranos/ErrorTest.kt`; and the Java layer's failure
+interface in `bindings/java/src/main/java/eranos/`, whose conversion in
+`EranosException.java` fails to build without the case, and
+`src/test/java/eranos/ErrorTest.java`. A new error type is also a
+registration in the conversion table of `EranosException.java`, which the
+Java error test checks.
 
 ### 3.7 A lint exception
 
@@ -276,7 +296,10 @@ The Kotlin layer follows the same order. A detekt finding is fixed, or
 suppressed on the narrowest declaration with `@Suppress("RuleName")`
 and the reason in a comment on the same line; a rule that contradicts the
 code style everywhere, such as its line length, is set in
-`bindings/kotlin/eranos/detekt.yml`, with the reason beside it.
+`bindings/kotlin/eranos/detekt.yml`, with the reason beside it. In the
+Java layer, an Error Prone or lint finding is fixed, or suppressed on the
+narrowest declaration with `@SuppressWarnings("CheckName")` and the reason
+in a comment above it.
 
 ### 3.8 A libphonenumber metadata release
 
@@ -358,6 +381,10 @@ When code in one crate needs something another crate holds:
    one under the call's name and its twin with `Blocking` after it, and a
    read to its `GroupReader`; call them in `GroupTest.kt`, and record the
    API with `./gradlew :eranos:apiDump`.
+9. Add both forms to the Java layer's `Group` in
+   `bindings/java/src/main/java/eranos/Group.java`, the blocking one under
+   the call's name and its twin with `Async` after it, and a read to its
+   `GroupReader`; call them in `GroupTest.java`.
 
 ## 4. Examples and benchmarks
 

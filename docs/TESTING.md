@@ -50,6 +50,7 @@ every command.
 | Benchmarks  | `crates/eranos/benches/*.rs`               | public API                                            | `cargo bench -p eranos --features serde --bench '*'`     |
 | Swift       | `bindings/swift/Tests/EranosTests/*.swift` | the `Eranos` module, and the generated code's values  | `swift test --package-path bindings/swift`               |
 | Kotlin      | `bindings/kotlin/eranos/src/test/kotlin/`  | the `eranos` package, and the generated code's values | `./gradlew :eranos:test`, in `bindings/kotlin`           |
+| Java        | `bindings/java/src/test/java/eranos/`      | the `eranos` package, and the generated code's values | `./gradlew test`, in `bindings/java`                     |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -182,6 +183,13 @@ compare each class with an equal value and with one that differs, not
 with one per field. That comparison, `assertValue`, checks a class's
 equality, hash, and text together, and the error test converts every
 failure the generated code can report.
+
+The Java layer's tests hold it to every instruction, line, and method,
+which JaCoCo measures and `jacocoTestCoverageVerification` enforces, with
+the generated source set left out; branches are not held to 100 %, for
+the reason the Kotlin layer's are not. Records write their equality
+themselves, and JaCoCo leaves those methods out; the classes that write
+theirs out go through the same `assertValue`.
 
 ## 6. Mutation testing
 

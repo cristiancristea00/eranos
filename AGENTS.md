@@ -25,9 +25,10 @@ Signed-off-by: <committer name> <<committer email>>
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
   `settlement`, `transfer`, and `group`; `bindings` for the binding core,
   `uniffi` for the UniFFI glue and its generators, `swift` for the Swift
-  package, and `kotlin` for the Kotlin package; and besides them `serde`,
-  `docs`, `examples`, `build`, and `xtask`. A change to the facade alone,
-  or to several crates, takes no scope.
+  package, `kotlin` for the Kotlin package, and `java` for the Java
+  package; and besides them `serde`, `docs`, `examples`, `build`, and
+  `xtask`. A change to the facade alone, or to several crates, takes no
+  scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -81,6 +82,13 @@ It runs these, in this order, and stops at the first that fails:
     `eranos/api/eranos.api`, Dokka with warnings as errors, and both
     Android libraries, every Gradle run with `--warning-mode=fail`, all in
     `bindings/kotlin`
+13. `cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos`,
+    with `JAVA_HOME` set, then the Java package: google-java-format's
+    check, ktlint on its build scripts, the JUnit tests with JaCoCo at
+    100 % of instructions, lines, and methods, Javadoc with
+    `-Xdoclint:all -Werror`, and the JAR, every Gradle run with
+    `--warning-mode=fail` and every compilation of the layer with
+    `-Xlint:all -Werror` and Error Prone, all in `bindings/java`
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
@@ -286,8 +294,8 @@ of every call. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
 through UniFFI, whose generators are the binaries of
 `eranos-uniffi-bindgen`, and the other glue crates are planned as its
 siblings. Each language's package in `bindings/` puts a hand-written layer
-over the generated code: `bindings/swift` for Apple platforms and
-`bindings/kotlin` for Android and the JVM
+over the generated code: `bindings/swift` for Apple platforms,
+`bindings/kotlin` for Android and the JVM, and `bindings/java` for Java
 ([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
 members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved

@@ -664,6 +664,32 @@ guidelines:
 - The binary-compatibility validator checks the layer's API against the
   committed dump, `eranos/api/eranos.api`.
 
+`bindings/java` is the Java package, for JDK 25 and later: one Gradle
+project whose JAR is the JPMS module `eranos`. The generated Java, in
+`eranos.internal`, compiles as a source set of its own with its warnings
+allowed; the layer compiles with the generated classes patched into the
+module (`--patch-module`), whose `module-info` exports only `eranos`, so
+`-Xlint:exports` refuses a public signature that names a generated type.
+The layer follows Effective Java and Google Java Style:
+
+- Identifiers, amounts, the shares of a split, and the totals are
+  records; a value the library checks is a final class with a private
+  constructor and factories that check it (`Currency.of`, `Money.parse`,
+  `CalendarDate.of`); an entry is a final class built by a builder, as in
+  Rust, and edited through `toBuilder`, which keeps its identifier.
+- An absent value is an empty `Optional`, a variant a record of a sealed
+  interface, and a failure the library reports a checked
+  `EranosException`, a subclass per module holding the module's failure.
+  A call the library refuses only on a platform without threads declares
+  no checked exception.
+- Every group call blocks, and its twin, whose name ends in `Async`,
+  returns a `CompletableFuture` whose cancellation cancels the generated
+  future, which drops the library's call; a dependent future that
+  `thenApply` makes would cancel only itself.
+- The generated exception is not sealed, so the conversion from it is a
+  table by class, which the error test checks against every class the
+  generator writes.
+
 The generators, `uniffi-bindgen` for Swift and Kotlin and
 `uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
 built on the UniFFI release that builds the library, so the code they write
@@ -677,7 +703,9 @@ generated Swift into the package, and builds, tests, lints, and documents
 the package. On every machine it builds the library of the four Android
 ABIs with `cargo ndk`, copies the generated Kotlin into the Kotlin package,
 and tests, lints, and documents that package and builds its two Android
-libraries, whose native libraries the Android build strips.
+libraries, whose native libraries the Android build strips. It copies the
+generated Java into the Java package, and checks its format, tests it,
+documents it, and builds its JAR.
 
 ## 12. Async and concurrency
 

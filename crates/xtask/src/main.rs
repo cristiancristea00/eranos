@@ -5,6 +5,7 @@
 //! and stops at the first that fails; `cargo xtask help` lists the commands.
 
 mod gates;
+mod java;
 mod kotlin;
 mod process;
 mod swift;

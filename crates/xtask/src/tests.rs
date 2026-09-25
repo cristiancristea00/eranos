@@ -118,9 +118,9 @@ fn words(line: &[&str]) -> Vec<String> {
 /// `gates` runs every check, reads async-lock's features, lists the
 /// examples, runs each one, builds the host library, generates every
 /// language's sources into a cleared directory, runs the Swift package's
-/// gates where the machine builds for Apple platforms, and the Kotlin
-/// package's; if it ran less, `cargo xtask gates` would pass commits the
-/// documented gates refuse.
+/// gates where the machine builds for Apple platforms, and the Kotlin and
+/// Java packages'; if it ran less, `cargo xtask gates` would pass commits
+/// the documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -133,24 +133,33 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     expected.extend(gates::examples(&metadata));
     expected.push(gates::host_library());
     expected.extend(gates::generators(&metadata));
-    let mut kotlin = kotlin::libraries();
-    kotlin.extend(kotlin::sources(&metadata));
-    kotlin.extend(kotlin::checks(&metadata));
+    let mut packages = kotlin::libraries();
+    packages.extend(kotlin::sources(&metadata));
+    packages.extend(kotlin::checks(&metadata));
+    packages.extend(java::sources(&metadata));
+    packages.extend(java::checks(&metadata));
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();
     elsewhere.apple = false;
     run(&words(&["gates"]), &mut elsewhere).unwrap();
-    assert_eq!(elsewhere.steps, [expected.clone(), kotlin.clone()].concat());
+    assert_eq!(
+        elsewhere.steps,
+        [expected.clone(), packages.clone()].concat()
+    );
     assert_eq!(
         elsewhere.cleared,
-        [cleared.clone(), kotlin::generated_sources()]
+        [
+            cleared.clone(),
+            kotlin::generated_sources(),
+            java::generated_sources()
+        ]
     );
 
     expected.extend(swift::libraries(&metadata));
     expected.extend(swift::package(&metadata));
     expected.push(swift::build());
     expected.extend(swift::checks(&metadata));
-    expected.extend(kotlin);
+    expected.extend(packages);
     assert_eq!(recorder.steps, expected);
     assert_eq!(
         recorder.cleared,
@@ -158,6 +167,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
             cleared,
             Path::new(WORKSPACE).join("bindings/swift/EranosFFI.xcframework"),
             kotlin::generated_sources(),
+            java::generated_sources(),
         ]
     );
 }

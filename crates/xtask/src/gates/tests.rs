@@ -23,7 +23,7 @@ fn documented_gates() -> Vec<String> {
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
 /// its order, and the last documented gates are the examples, the host
-/// library, the generators, the Swift package, and the Kotlin package; a
+/// library, the generators, and the Swift, Kotlin, and Java packages; a
 /// check the code dropped, added, or reordered would pass a commit the
 /// documented gates refuse.
 #[test]
@@ -40,6 +40,7 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>",
             "rustup target add <every Apple target>",
             "rustup target add <every Android target>",
+            "cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos",
         ]
     );
 }
