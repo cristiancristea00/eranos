@@ -75,8 +75,29 @@ impl Tip {
         }
     }
 
-    /// The tip on `amount`, in the amount's currency.
-    pub(crate) fn amount_on(self, amount: Money) -> Result<Money, ExpenseError> {
+    /// The tip on `amount`, in the amount's currency: the fixed amount, or the
+    /// percentage of `amount` rounded to the nearest minor unit, halves away
+    /// from zero.
+    ///
+    /// # Errors
+    ///
+    /// - [`ExpenseError::CurrencyMismatch`] when a fixed tip is in another
+    ///   currency than `amount`.
+    /// - [`ExpenseError::NegativeTip`] when a fixed tip is negative.
+    /// - [`ExpenseError::Overflow`] when the percentage of `amount` leaves
+    ///   the range of an amount.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Currency, Money, Percentage, Tip};
+    ///
+    /// let bill = Money::parse("90.00", Currency::EUR)?;
+    /// let tip = Tip::percentage(Percentage::parse("10")?);
+    /// assert_eq!(tip.amount_on(bill)?, Money::parse("9.00", Currency::EUR)?);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn amount_on(self, amount: Money) -> Result<Money, ExpenseError> {
         match self.value {
             TipValue::Fixed(tip) => {
                 if tip.currency() != amount.currency() {
