@@ -160,10 +160,15 @@ flowchart TD
 
 The facade's modules (`eranos::money`, `eranos::member`, …) and its root
 re-export what the table lists before a semicolon, and nothing else: what
-follows one is machinery the crates above use, free to change. Every
-internal crate but `eranos-ledger`, which has no error of its own, depends
-on `thiserror`, and every crate but `eranos-ledger` and `eranos-settlement`
-has a `serde` feature, which the facade's enables.
+follows one is machinery the crates above use, free to change. So is a
+conversion trait, which every crate holds beside each of its
+non-exhaustive enums that the bindings convert, named after the enum
+(`FromSplit`, `FromGroupError`, and the like): one method per variant, so
+that a crate above tells every variant apart without a wildcard arm
+([DEVELOPMENT.md § 3.9](DEVELOPMENT.md#39-a-crossing-between-crates)).
+Every internal crate but `eranos-ledger`, which has no error of its own,
+depends on `thiserror`, and every crate but `eranos-ledger` and
+`eranos-settlement` has a `serde` feature, which the facade's enables.
 
 ## 3. Data model
 
