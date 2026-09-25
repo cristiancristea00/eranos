@@ -64,6 +64,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     if runner.builds_apple_platforms() {
         crate::swift::run(runner, &metadata)?;
     }
+    crate::kotlin::run(runner, &metadata)?;
     println!("\nevery gate passed");
     Ok(())
 }

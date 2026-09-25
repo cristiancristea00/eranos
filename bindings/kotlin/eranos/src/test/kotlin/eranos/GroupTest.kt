@@ -1,0 +1,324 @@
+// The group, in both forms of every call, and its read handle. A call that answered another way than the group holds, a change
+// that did not take effect, or a suspending form that differed from its blocking twin would show an app one group from a
+// coroutine and another from a plain thread.
+
+package eranos
+
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+
+/** Every call of the group, blocking and suspending, and every read of its read handle. */
+class GroupTest {
+    /**
+     * A read that answered another way than the group holds would show an app entries, totals, or plans the group does not
+     * have.
+     */
+    @Test
+    fun everyBlockingReadAnswersWhatTheGroupHolds() {
+        val flat = Flat()
+        val group = flat.group
+        assertTrue(group.idBlocking().value.isNotEmpty())
+        val categories = group.categoriesBlocking()
+        assertEquals(listOf("Uncategorised", "Food"), categories.map { it.name })
+        assertEquals(categories[1], group.categoryBlocking(flat.food))
+        assertEquals(flat.euro, group.currencyBlocking())
+        val expenses = group.expensesBlocking()
+        assertEquals(listOf("Dinner"), expenses.map { it.name })
+        assertEquals(expenses[0], group.expenseBlocking(flat.dinner))
+        assertEquals(flat.euros(3_000), present(group.expenseSharesBlocking(flat.dinner)).total)
+        assertEquals(flat.euros(3_000), group.summaryBlocking().totalSpent)
+        val members = group.membersBlocking()
+        assertEquals(listOf("Ana", "Bob"), members.map { it.firstName })
+        assertEquals(members[0], group.memberBlocking(flat.ana))
+        assertFalse(group.isArchivedBlocking(flat.ana))
+        assertEquals(listOf("Flat", "Rent", "pt-PT"), listOf(group.nameBlocking(), group.descriptionBlocking(), group.languageBlocking().toString()))
+        assertEquals(listOf(flat.euros(500)), group.settlementBlocking(SettlementStrategy.GREEDY).payments.map { it.amount })
+        val transfers = group.transfersBlocking()
+        assertEquals(1, transfers.size)
+        assertEquals(transfers[0], group.transferBlocking(flat.repayment))
+        assertEquals(flat.euros(1_000), group.transferAmountBlocking(flat.repayment))
+        val json = group.saveBlocking()
+        assertEquals(json, Group.loadBlocking(json).saveBlocking())
+        val invalid = assertThrows<EranosException.Id> { group.memberBlocking(MemberId("nobody")) }
+        assertEquals(IdFailure.InvalidId, invalid.failure)
+        assertEquals("invalid identifier: expected a UUID", invalid.message)
+    }
+
+    /**
+     * A suspending read that answered another way than its blocking twin would show an app one group from a coroutine and
+     * another from a thread.
+     */
+    @Test
+    fun everySuspendingReadAnswersAsItsBlockingTwin() =
+        runTest {
+            val flat = Flat()
+            val group = flat.group
+            assertEquals(group.idBlocking(), group.id())
+            assertEquals(group.categoriesBlocking(), group.categories())
+            assertEquals(group.categoryBlocking(flat.food), group.category(flat.food))
+            assertEquals(group.currencyBlocking(), group.currency())
+            assertEquals(group.expensesBlocking(), group.expenses())
+            assertEquals(group.expenseBlocking(flat.dinner), group.expense(flat.dinner))
+            assertEquals(group.expenseSharesBlocking(flat.dinner), group.expenseShares(flat.dinner))
+            assertEquals(group.summaryBlocking(), group.summary())
+            assertEquals(group.membersBlocking(), group.members())
+            assertEquals(group.memberBlocking(flat.bob), group.member(flat.bob))
+            assertEquals(group.isArchivedBlocking(flat.bob), group.isArchived(flat.bob))
+            assertEquals(group.nameBlocking(), group.name())
+            assertEquals(group.descriptionBlocking(), group.description())
+            assertEquals(group.languageBlocking(), group.language())
+            for (strategy in SettlementStrategy.entries) {
+                assertEquals(group.settlementBlocking(strategy), group.settlement(strategy))
+            }
+            assertEquals(group.transfersBlocking(), group.transfers())
+            assertEquals(group.transferBlocking(flat.repayment), group.transfer(flat.repayment))
+            assertEquals(group.transferAmountBlocking(flat.repayment), group.transferAmount(flat.repayment))
+            val json = group.save()
+            assertEquals(group.saveBlocking(), json)
+            assertEquals(json, Group.load(json).save())
+        }
+
+    /**
+     * A lookup of an identifier the group does not hold that found an entry would show an app an entry of another group.
+     */
+    @Test
+    fun aLookupOfAnIdentifierTheGroupDoesNotHoldFindsNothing() =
+        runTest {
+            val flat = Flat()
+            val stranger = Flat()
+            val group = flat.group
+            assertEquals(
+                listOf(null, null, null, null, null, null),
+                listOf(
+                    group.memberBlocking(stranger.ana),
+                    group.categoryBlocking(stranger.food),
+                    group.expenseBlocking(stranger.dinner),
+                    group.expenseSharesBlocking(stranger.dinner),
+                    group.transferBlocking(stranger.repayment),
+                    group.transferAmountBlocking(stranger.repayment),
+                ),
+            )
+            assertEquals(
+                listOf(null, null, null, null, null, null),
+                listOf(
+                    group.member(stranger.ana),
+                    group.category(stranger.food),
+                    group.expense(stranger.dinner),
+                    group.expenseShares(stranger.dinner),
+                    group.transfer(stranger.repayment),
+                    group.transferAmount(stranger.repayment),
+                ),
+            )
+            group.withReadBlocking { reader ->
+                assertEquals(
+                    listOf(null, null, null, null, null, null),
+                    listOf(
+                        reader.member(stranger.ana),
+                        reader.category(stranger.food),
+                        reader.expense(stranger.dinner),
+                        reader.expenseShares(stranger.dinner),
+                        reader.transfer(stranger.repayment),
+                        reader.transferAmount(stranger.repayment),
+                    ),
+                )
+            }
+            assertNull(Group(flat.euro, "Trip").withRead { it.language() })
+        }
+
+    /** A blocking change that did not take effect, or took another, would leave the group other than the app changed it. */
+    @Test
+    fun everyBlockingChangeTakesEffect() {
+        val flat = Flat()
+        val group = flat.group
+        val carol = group.addBlocking(Member("Carol"))
+        assertEquals(Member("Carol"), present(group.memberBlocking(carol)).let { Member(it.firstName) })
+        val renamed = present(group.memberBlocking(carol)).copy(lastName = "Popa")
+        assertEquals("Carol", group.replaceBlocking(renamed).firstName)
+        assertEquals("Popa", present(group.memberBlocking(carol)).lastName)
+        group.archiveBlocking(carol)
+        assertTrue(group.isArchivedBlocking(carol))
+        group.unarchiveBlocking(carol)
+        assertFalse(group.isArchivedBlocking(carol))
+        assertEquals(renamed, group.removeBlocking(carol))
+        val inUse = assertThrows<EranosException.Group> { group.removeBlocking(flat.ana) }
+        assertEquals(GroupFailure.MemberInUse(listOf(flat.dinner), flat.ana, listOf(flat.repayment)), inUse.failure)
+
+        val travel = group.addBlocking(Category("Travel"))
+        val stored = present(group.categoryBlocking(travel))
+        assertEquals("Travel", group.replaceBlocking(stored.copy(name = "Trips")).name)
+        assertEquals("Trips", group.removeBlocking(travel).name)
+
+        val lunch = group.addBlocking(flat.expense("Lunch", flat.bob, listOf(flat.ana, flat.bob)))
+        val stored2 = present(group.expenseBlocking(lunch))
+        assertEquals("Lunch", group.replaceBlocking(stored2.copy(name = "Brunch")).name)
+        assertEquals("Brunch", group.removeBlocking(lunch).name)
+
+        val cash = group.addBlocking(Transfer(Cost.Local(flat.euros(100)), flat.day, flat.ana, flat.bob))
+        val stored3 = present(group.transferBlocking(cash))
+        assertEquals(null, group.replaceBlocking(stored3.copy(note = "Cash")).note)
+        assertEquals("Cash", group.removeBlocking(cash).note)
+
+        group.renameBlocking("Home")
+        group.setDescriptionBlocking(null)
+        group.setLanguageBlocking(null)
+        assertEquals(listOf("Home", null, null), listOf(group.nameBlocking(), group.descriptionBlocking(), group.languageBlocking()))
+        val lei = Currency.of("RON")
+        group.changeCurrencyBlocking(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
+        assertEquals(lei, group.currencyBlocking())
+        assertEquals(Money(lei, 15_000), group.summaryBlocking().totalSpent)
+    }
+
+    /**
+     * A suspending change that took effect another way than its blocking twin would change the group differently from a
+     * coroutine.
+     */
+    @Test
+    fun everySuspendingChangeTakesEffectAsItsBlockingTwinDoes() =
+        runTest {
+            val flat = Flat()
+            val group = flat.group
+            val carol = group.add(Member("Carol"))
+            val stored = present(group.member(carol))
+            assertEquals(stored, group.replace(stored.copy(lastName = "Popa")))
+            group.archive(carol)
+            assertTrue(group.isArchived(carol))
+            group.unarchive(carol)
+            assertFalse(group.isArchived(carol))
+            assertEquals("Popa", group.remove(carol).lastName)
+
+            val travel = group.add(Category("Travel"))
+            assertEquals("Travel", group.replace(present(group.category(travel)).copy(name = "Trips")).name)
+            assertEquals("Trips", group.remove(travel).name)
+
+            val lunch = group.add(flat.expense("Lunch", flat.bob, listOf(flat.ana)))
+            assertEquals("Lunch", group.replace(present(group.expense(lunch)).copy(name = "Brunch")).name)
+            assertEquals("Brunch", group.remove(lunch).name)
+
+            val cash = group.add(Transfer(Cost.Local(flat.euros(100)), flat.day, flat.ana, flat.bob))
+            assertNull(group.replace(present(group.transfer(cash)).copy(note = "Cash")).note)
+            assertEquals("Cash", group.remove(cash).note)
+
+            group.rename("Home")
+            group.setDescription("Shared flat")
+            group.setLanguage(Language.parse("ro"))
+            assertEquals(listOf("Home", "Shared flat", "ro"), listOf(group.name(), group.description(), group.language().toString()))
+            val lei = Currency.of("RON")
+            group.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
+            assertEquals(lei, group.currency())
+        }
+
+    /**
+     * A new group that dropped what it starts with, or a saved one that loaded from text that is not the saved form, would
+     * start an app from another group.
+     */
+    @Test
+    fun aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() =
+        runTest {
+            val euro = Currency.of("EUR")
+            val plain = Group(euro, "Trip")
+            assertEquals(listOf(null, null), listOf(plain.description(), plain.language()))
+            val blank = assertThrows<EranosException.Group> { Group(euro, " ") }
+            assertEquals(GroupFailure.EmptyName, blank.failure)
+            assertEquals("the group name must not be empty", blank.message)
+            val json = assertThrows<EranosException.InvalidJson> { Group.loadBlocking("{") }
+            assertEquals(listOf(1L, 1L), listOf(json.line, json.column))
+            assertEquals("the saved group ends early, at line 1, column 1", json.message)
+            assertThrows<EranosException.InvalidJson> { Group.load("{") }
+        }
+
+    /**
+     * A read handle that answered another way than the group, kept reading after it was closed, or kept the lock would show
+     * a report of a group that has changed since.
+     */
+    @Test
+    fun aReadHandleReadsAsTheGroupDoesUntilItIsClosed() {
+        val flat = Flat()
+        val group = flat.group
+        val reader = group.readBlocking()
+        assertEquals(group.idBlocking(), reader.id())
+        assertEquals(group.categoriesBlocking(), reader.categories())
+        assertEquals(group.categoryBlocking(flat.food), reader.category(flat.food))
+        assertEquals(flat.euro, reader.currency())
+        assertEquals(group.expensesBlocking(), reader.expenses())
+        assertEquals(group.expenseBlocking(flat.dinner), reader.expense(flat.dinner))
+        assertEquals(group.expenseSharesBlocking(flat.dinner), reader.expenseShares(flat.dinner))
+        assertEquals(group.summaryBlocking(), reader.summary())
+        assertEquals(group.membersBlocking(), reader.members())
+        assertEquals(group.memberBlocking(flat.ana), reader.member(flat.ana))
+        assertFalse(reader.isArchived(flat.ana))
+        assertEquals(listOf("Flat", "Rent", "pt-PT"), listOf(reader.name(), reader.description(), reader.language().toString()))
+        assertEquals(group.settlementBlocking(SettlementStrategy.GREEDY), reader.settlement(SettlementStrategy.GREEDY))
+        assertEquals(group.transfersBlocking(), reader.transfers())
+        assertEquals(group.transferBlocking(flat.repayment), reader.transfer(flat.repayment))
+        assertEquals(flat.euros(1_000), reader.transferAmount(flat.repayment))
+        assertEquals(group.saveBlocking(), reader.save())
+        reader.close()
+        reader.close()
+        val released = assertThrows<IllegalStateException> { reader.name() }
+        assertEquals("the read handle was released", released.message)
+        group.renameBlocking("Home")
+        assertEquals("Home", group.withReadBlocking { it.name() })
+    }
+
+    /**
+     * A suspending read handle that answered another way than the blocking one, or held the lock after its block returned,
+     * would stop every later change.
+     */
+    @Test
+    fun aSuspendingReadHandleReleasesTheLockWhenItsBlockReturns() =
+        runTest {
+            val flat = Flat()
+            val group = flat.group
+            group.read().use { assertEquals("Flat", it.name()) }
+            assertEquals("Flat", group.withRead { it.name() })
+            group.rename("Home")
+            assertEquals("Home", group.name())
+        }
+
+    /**
+     * A cancelled coroutine whose call still ran would change the group after the app gave the change up; one whose call was
+     * never cancelled would keep waiting for a lock it no longer needs, and a waiting call that never resumed would hang.
+     */
+    @Test
+    fun cancellingACoroutineCancelsItsCallAndLeavesTheGroupAsItWas() =
+        runTest {
+            val flat = Flat()
+            val group = flat.group
+            val reader = group.readBlocking()
+            val adding = launch { group.add(Member("Carol")) }
+            yield()
+            assertTrue(adding.isActive)
+            adding.cancelAndJoin()
+            reader.close()
+            assertEquals(2, group.members().size)
+
+            val waiting = group.readBlocking()
+            val renaming = async { group.rename("Home") }
+            yield()
+            assertTrue(renaming.isActive)
+            waiting.close()
+            renaming.await()
+            assertEquals("Home", group.name())
+        }
+
+    /**
+     * A closed group that still answered would read memory the library freed; one that could not be closed would hold it
+     * until collected.
+     */
+    @Test
+    fun aClosedGroupAnswersNoMore() {
+        val group = Group(Currency.of("EUR"), "Trip")
+        group.close()
+        group.close()
+        assertThrows<IllegalStateException> { group.nameBlocking() }
+    }
+}

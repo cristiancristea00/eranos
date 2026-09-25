@@ -161,6 +161,10 @@ pub(crate) trait Runner {
     /// Whether the machine builds for Apple platforms, which only Xcode's
     /// tools on macOS do; the Swift package's gates run only where it does.
     fn builds_apple_platforms(&self) -> bool;
+
+    /// The value of the environment variable `name`; `None` when it is not
+    /// set or is empty.
+    fn variable(&self, name: &str) -> Option<String>;
 }
 
 /// Runs steps as processes.
@@ -208,6 +212,12 @@ impl Runner for System {
 
     fn builds_apple_platforms(&self) -> bool {
         cfg!(target_os = "macos")
+    }
+
+    fn variable(&self, name: &str) -> Option<String> {
+        std::env::var_os(name)
+            .filter(|value| !value.is_empty())
+            .map(|value| value.to_string_lossy().into_owned())
     }
 }
 

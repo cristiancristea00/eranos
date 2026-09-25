@@ -37,18 +37,19 @@ every command.
 
 ## 2. Layout
 
-| Suite       | Location                                   | Reaches                                              | Runs with                                                |
-| ----------- | ------------------------------------------ | ---------------------------------------------------- | -------------------------------------------------------- |
-| Unit tests  | `crates/<crate>/src/<module>/tests.rs`     | private items (`use super::*`)                       | `cargo test --workspace --lib`                           |
-| Scenarios   | `crates/eranos/tests/scenarios.rs`         | public API                                           | `cargo test -p eranos --test scenarios`                  |
-| Properties  | `crates/eranos/tests/properties.rs`        | public API                                           | `cargo test -p eranos --test properties`                 |
-| Persistence | `crates/eranos/tests/persistence.rs`       | public API, feature `serde`                          | `cargo test -p eranos --all-features --test persistence` |
-| Errors      | `crates/eranos/tests/errors.rs`            | public API: every error message                      | `cargo test -p eranos --test errors`                     |
-| API         | `crates/eranos/tests/api.rs`               | public API: every type `Send + Sync`                 | `cargo test -p eranos --test api`                        |
-| Doctests    | every `# Examples` block and the README    | public API                                           | `cargo test --workspace --doc`                           |
-| Examples    | `crates/eranos/examples/*.rs`              | public API; they assert their numbers                | `cargo run -p eranos --example <name>`                   |
-| Benchmarks  | `crates/eranos/benches/*.rs`               | public API                                           | `cargo bench -p eranos --features serde --bench '*'`     |
-| Swift       | `bindings/swift/Tests/EranosTests/*.swift` | the `Eranos` module, and the generated code's values | `swift test --package-path bindings/swift`               |
+| Suite       | Location                                   | Reaches                                               | Runs with                                                |
+| ----------- | ------------------------------------------ | ----------------------------------------------------- | -------------------------------------------------------- |
+| Unit tests  | `crates/<crate>/src/<module>/tests.rs`     | private items (`use super::*`)                        | `cargo test --workspace --lib`                           |
+| Scenarios   | `crates/eranos/tests/scenarios.rs`         | public API                                            | `cargo test -p eranos --test scenarios`                  |
+| Properties  | `crates/eranos/tests/properties.rs`        | public API                                            | `cargo test -p eranos --test properties`                 |
+| Persistence | `crates/eranos/tests/persistence.rs`       | public API, feature `serde`                           | `cargo test -p eranos --all-features --test persistence` |
+| Errors      | `crates/eranos/tests/errors.rs`            | public API: every error message                       | `cargo test -p eranos --test errors`                     |
+| API         | `crates/eranos/tests/api.rs`               | public API: every type `Send + Sync`                  | `cargo test -p eranos --test api`                        |
+| Doctests    | every `# Examples` block and the README    | public API                                            | `cargo test --workspace --doc`                           |
+| Examples    | `crates/eranos/examples/*.rs`              | public API; they assert their numbers                 | `cargo run -p eranos --example <name>`                   |
+| Benchmarks  | `crates/eranos/benches/*.rs`               | public API                                            | `cargo bench -p eranos --features serde --bench '*'`     |
+| Swift       | `bindings/swift/Tests/EranosTests/*.swift` | the `Eranos` module, and the generated code's values  | `swift test --package-path bindings/swift`               |
+| Kotlin      | `bindings/kotlin/eranos/src/test/kotlin/`  | the `eranos` package, and the generated code's values | `./gradlew :eranos:test`, in `bindings/kotlin`           |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -172,6 +173,15 @@ The Swift layer is held to the same rules by its own tests: `swift test
 library never sends, such as an amount in a currency it does not list,
 still prints, through a fallback its test reaches by building the value
 from the generated code's.
+
+The Kotlin layer's tests hold it to every line and every method, which
+Kover measures and `koverVerify` enforces; the generated module is not
+measured. Branches are not held to 100 %: every class writes its
+equality out as a chain of `&&`, a branch per field, and the tests
+compare each class with an equal value and with one that differs, not
+with one per field. That comparison, `assertValue`, checks a class's
+equality, hash, and text together, and the error test converts every
+failure the generated code can report.
 
 ## 6. Mutation testing
 

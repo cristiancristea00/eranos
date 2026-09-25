@@ -630,6 +630,40 @@ Design Guidelines:
   pool, and cancelling its task cancels the call. `Group.withRead` holds a
   read handle for a closure.
 
+`bindings/kotlin` is the Kotlin package for Android and the JVM: a Gradle
+build of four modules. `generated` compiles the generated Kotlin for the
+JVM, and `generated-android` compiles it for Android beside the library
+of every Android ABI (`arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`,
+built for API level 26, the libraries' `minSdk`). `eranos`, the layer apps
+depend on, is written by hand, and `eranos-android` compiles the same
+sources into an Android library; each depends on its generated module as
+an implementation detail, so the generated classes, in `eranos.internal`,
+stay off an app's compile classpath. The layer follows the Kotlin library
+guidelines:
+
+- Explicit API mode, and no data class: every value and entry writes its
+  equality, hash, and text out, so a field added later changes no
+  generated `componentN` or `copy`; an entry's own `copy` keeps its
+  identifier.
+- Every entry has an identifier type of its own, a value class
+  (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
+  checks has an internal constructor and factories that check it
+  (`Currency.of`, `Money.parse`, `CalendarDate.of`), and prints the
+  library's text.
+- A failure the library reports throws `EranosException`, a subclass per
+  module holding the module's failure (`GroupFailure.MemberInUse`) and the
+  library's message. A call the program should not make throws the
+  standard exception for it: `IllegalArgumentException` for an entry to
+  add that has an identifier or one to replace that has none, and
+  `IllegalStateException` for a read through a closed `GroupReader`.
+- Every group call is a `suspend` function that waits for the lock
+  without blocking its thread; cancelling its coroutine drops the
+  library's call, which leaves the group as it was. Its twin, whose name
+  ends in `Blocking`, blocks instead. `Group` and `GroupReader` are
+  `AutoCloseable`, and `Group.withRead` holds a read handle for a block.
+- The binary-compatibility validator checks the layer's API against the
+  committed dump, `eranos/api/eranos.api`.
+
 The generators, `uniffi-bindgen` for Swift and Kotlin and
 `uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
 built on the UniFFI release that builds the library, so the code they write
@@ -640,7 +674,10 @@ gates` writes every language's sources into `target/uniffi/<language>`;
 they are never committed. On macOS it also builds the Swift package's
 XCFramework in the dev profile, 1.3 GB of debug libraries, copies the
 generated Swift into the package, and builds, tests, lints, and documents
-the package.
+the package. On every machine it builds the library of the four Android
+ABIs with `cargo ndk`, copies the generated Kotlin into the Kotlin package,
+and tests, lints, and documents that package and builds its two Android
+libraries, whose native libraries the Android build strips.
 
 ## 12. Async and concurrency
 

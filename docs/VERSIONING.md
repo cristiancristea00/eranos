@@ -32,7 +32,9 @@ freely: the machinery the crates above use (such as `eranos_core::text`,
 `eranos_expense::resolve_expense`), the internal crates' own paths, private
 modules, and the internal layout of `Group`. So does `eranos-bindings`, the
 core the bindings forward to: a binding's contract is the API of its
-language's package.
+language's package. The Kotlin package records its API in
+`bindings/kotlin/eranos/api/eranos.api`, which the gates check the layer
+against, so a change to the API shows in the commit that makes it.
 
 ## 2. What moves the number
 

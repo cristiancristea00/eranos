@@ -66,14 +66,31 @@ commit; `cargo xtask help` lists the commands. The alias lives in
 write the Swift, Kotlin, and Java sources of the UniFFI glue into
 `target/uniffi/<language>`, from the host library in `target/debug`, and
 on macOS they build the Swift package's XCFramework from the library's
-thirteen Apple targets, which they add with `rustup target add`. A cold
-run of the gates builds the library for every Apple target first, about 3
-minutes on an Apple M4 Pro; a warm one takes about 2 minutes in all.
+thirteen Apple targets, which they add with `rustup target add`. On every
+machine they build the Kotlin package: the library of the four Android
+ABIs through `cargo ndk`, which finds the NDK under `ANDROID_HOME`, then the
+Gradle build, whose JVM `JAVA_HOME` names; the gates stop before the first
+step when either variable is not set. A run from an empty target
+directory takes about 5 minutes on an Apple M4 Pro, most of it building
+the library for every Apple target and every Android ABI; a warm one
+takes about 80 seconds in all.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
 swift test --package-path bindings/swift --enable-code-coverage # with coverage; the JSON is at `swift test --show-codecov-path`
 (cd bindings/swift && swiftlint lint --strict)                  # SwiftLint, with the package's .swiftlint.yml
+```
+
+In `bindings/kotlin`, once the gates built the host library and copied
+the generated Kotlin; the tests load the library from `target/debug`
+unless `-Peranos.library=<directory>` names another:
+
+```sh
+./gradlew :eranos:test                        # the Kotlin tests
+./gradlew :eranos:koverHtmlReport             # their coverage, in eranos/build/reports/kover/html
+./gradlew :eranos:apiDump                     # the API dump, after a change to the layer's API
+./gradlew :eranos:dokkaGenerate               # the documentation, in eranos/build/dokka/html
+ktlint --format --relative '**/*.kt' '**/*.kts' '!generated/**' '!**/build/**'  # the formatter
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
@@ -212,7 +229,11 @@ breaking.
    record's round trip in its module's `tests.rs` then covers it. Repeat
    the field in the record's mirror in `crates/eranos-uniffi/src/records.rs`,
    which fails to build until it does, and in the Swift entry type in
-   `bindings/swift/Sources/Eranos/Entries/`, with its conversions both ways.
+   `bindings/swift/Sources/Eranos/Entries/`, with its conversions both ways,
+   and the Kotlin entry class in
+   `bindings/kotlin/eranos/src/main/kotlin/eranos/`, with its conversions,
+   its `copy`, and its equality, hash, and text; `./gradlew :eranos:apiDump`
+   then records the new API.
 
 ### 3.6 A new error variant
 
@@ -234,7 +255,10 @@ the case. A new error type is a new case of `EranosError`, with a failure
 enum of its own. The Swift layer's failure enum in
 `bindings/swift/Sources/Eranos/Errors/Failures.swift` gets the case, with
 its payload typed, the conversion from the generated one gets its arm, and
-`Tests/EranosTests/ErrorTests.swift` its row.
+`Tests/EranosTests/ErrorTests.swift` its row; so does the Kotlin layer's
+failure interface in `bindings/kotlin/eranos/src/main/kotlin/eranos/Failures.kt`,
+whose conversion fails to build without the case, and
+`src/test/kotlin/eranos/ErrorTest.kt`.
 
 ### 3.7 A lint exception
 
@@ -247,6 +271,12 @@ contradicts a convention everywhere is removed from `[workspace.lints]` in
 remove, goes into `allowed-duplicate-crates` in `clippy.toml`, with the
 dependency, the cause, and the upstream issue; it comes out when that
 release lands.
+
+The Kotlin layer follows the same order. A detekt finding is fixed, or
+suppressed on the narrowest declaration with `@Suppress("RuleName")`
+and the reason in a comment on the same line; a rule that contradicts the
+code style everywhere, such as its line length, is set in
+`bindings/kotlin/eranos/detekt.yml`, with the reason beside it.
 
 ### 3.8 A libphonenumber metadata release
 
@@ -323,6 +353,11 @@ When code in one crate needs something another crate holds:
    `Group` in `bindings/swift/Sources/Eranos/Group/Group+<section>.swift`,
    named by the Swift API Design Guidelines, and a read to its
    `GroupReader`; call them in `Tests/EranosTests/GroupTests.swift`.
+8. Add both forms to the Kotlin layer's `Group` in
+   `bindings/kotlin/eranos/src/main/kotlin/eranos/Group.kt`, the `suspend`
+   one under the call's name and its twin with `Blocking` after it, and a
+   read to its `GroupReader`; call them in `GroupTest.kt`, and record the
+   API with `./gradlew :eranos:apiDump`.
 
 ## 4. Examples and benchmarks
 
@@ -417,6 +452,11 @@ so a failing run blocks nothing: it is a report.
   fires; delete it, because the reason it states is gone.
 - **`multiple versions for dependency`**: a new dependency brings a second
   version of a crate; see [§ 3.7](#37-a-lint-exception).
+- **`UnsatisfiedLinkError: Unable to load library 'eranos_uniffi'`**: the
+  Kotlin tests found no host library; `cargo build --package
+  eranos-uniffi` writes it into `target/debug`.
+- **`ANDROID_HOME is not set`** from the gates, or `SDK location not
+  found` from Gradle: export the variables of [§ 1](#1-prerequisites).
 - **Benchmarks take minutes to start**: the release profile's fat LTO;
   `-- --quick` shortens the measurements, not the build.
 - **`cargo test --no-default-features` fails where `--all-features`

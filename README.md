@@ -177,6 +177,7 @@ eranos/
 ├── .github/                   the CI workflow; Dependabot and zizmor configuration
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
 ├── bindings/
+│   ├── kotlin/                the Kotlin package for Android and the JVM, over the UniFFI glue
 │   └── swift/                 the Swift package for Apple platforms, over the UniFFI glue
 ├── crates/
 │   ├── eranos/                the facade callers depend on

@@ -1,0 +1,13 @@
+# Detekt runs every rule over its defaults (`--all-rules`); what this file
+# changes, each with its reason.
+
+complexity:
+  CyclomaticComplexMethod:
+    # A `when` that maps each case of a sealed type to its counterpart makes
+    # one decision per case, and the compiler checks that it misses none.
+    ignoreSimpleWhenEntries: true
+
+style:
+  MaxLineLength:
+    # The code style's limit, which ktlint reads from .editorconfig.
+    maxLineLength: 150

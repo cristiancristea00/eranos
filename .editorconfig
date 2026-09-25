@@ -1,0 +1,14 @@
+# The Kotlin style, which ktlint reads: its official code style, four spaces,
+# and lines of at most 150 columns. Scoped to Kotlin, so that no editor
+# reformats the Rust, Markdown, or TOML files, which their own tools format.
+root = true
+
+[*.{kt,kts}]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+ktlint_code_style = ktlint_official
+max_line_length = 150
+trim_trailing_whitespace = true

@@ -21,3 +21,14 @@
 /bindings/swift/.build/
 /bindings/swift/EranosFFI.xcframework/
 /bindings/swift/Sources/EranosGenerated/
+
+# The Kotlin project's caches and build products, what `cargo xtask` writes
+# into it (the generated Kotlin and the Android libraries, both built from
+# the Rust sources), and the SDK path Android Studio writes for its machine;
+# none is committed.
+/bindings/kotlin/.gradle/
+/bindings/kotlin/.kotlin/
+/bindings/kotlin/**/build/
+/bindings/kotlin/generated-android/src/main/jniLibs/
+/bindings/kotlin/generated/src/
+/bindings/kotlin/local.properties

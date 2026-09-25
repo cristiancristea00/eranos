@@ -29,9 +29,9 @@ pub(crate) const METADATA: &str = r#"{
 /// A runner that records every step instead of running it, answers the
 /// step that prints async-lock's features with `tree` and every other
 /// output with `metadata`, records every directory it clears and every file
-/// it writes, builds for Apple platforms when `apple`, and fails at the step
-/// `failing` or, when `clearing_fails` or `writing_fails`, at clearing or
-/// writing.
+/// it writes, builds for Apple platforms when `apple`, has set only the
+/// environment variables `variables`, and fails at the step `failing` or,
+/// when `clearing_fails` or `writing_fails`, at clearing or writing.
 #[derive(Debug, Default)]
 pub(crate) struct Recorder {
     pub(crate) apple: bool,
@@ -39,6 +39,7 @@ pub(crate) struct Recorder {
     pub(crate) metadata: String,
     pub(crate) steps: Vec<Step>,
     pub(crate) tree: String,
+    pub(crate) variables: Vec<&'static str>,
     pub(crate) written: Vec<PathBuf>,
     pub(crate) clearing_fails: bool,
     pub(crate) failing: Option<Step>,
@@ -47,11 +48,13 @@ pub(crate) struct Recorder {
 
 impl Recorder {
     /// A recorder that answers with [`METADATA`] and a tree without
-    /// features, builds for Apple platforms, and fails at no step.
+    /// features, builds for Apple platforms, has set every variable the
+    /// Kotlin gates need, and fails at no step.
     pub(crate) fn new() -> Self {
         Self {
             apple: true,
             metadata: METADATA.to_owned(),
+            variables: kotlin::VARIABLES.to_vec(),
             ..Self::default()
         }
     }
@@ -102,6 +105,10 @@ impl Runner for Recorder {
     fn builds_apple_platforms(&self) -> bool {
         self.apple
     }
+
+    fn variable(&self, name: &str) -> Option<String> {
+        self.variables.contains(&name).then(|| format!("/{name}"))
+    }
 }
 
 fn words(line: &[&str]) -> Vec<String> {
@@ -110,9 +117,10 @@ fn words(line: &[&str]) -> Vec<String> {
 
 /// `gates` runs every check, reads async-lock's features, lists the
 /// examples, runs each one, builds the host library, generates every
-/// language's sources into a cleared directory, and, where the machine
-/// builds for Apple platforms, the Swift package's gates; if it ran less,
-/// `cargo xtask gates` would pass commits the documented gates refuse.
+/// language's sources into a cleared directory, runs the Swift package's
+/// gates where the machine builds for Apple platforms, and the Kotlin
+/// package's; if it ran less, `cargo xtask gates` would pass commits the
+/// documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -125,23 +133,31 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     expected.extend(gates::examples(&metadata));
     expected.push(gates::host_library());
     expected.extend(gates::generators(&metadata));
+    let mut kotlin = kotlin::libraries();
+    kotlin.extend(kotlin::sources(&metadata));
+    kotlin.extend(kotlin::checks(&metadata));
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();
     elsewhere.apple = false;
     run(&words(&["gates"]), &mut elsewhere).unwrap();
-    assert_eq!(elsewhere.steps, expected);
-    assert_eq!(elsewhere.cleared, std::slice::from_ref(&cleared));
+    assert_eq!(elsewhere.steps, [expected.clone(), kotlin.clone()].concat());
+    assert_eq!(
+        elsewhere.cleared,
+        [cleared.clone(), kotlin::generated_sources()]
+    );
 
     expected.extend(swift::libraries(&metadata));
     expected.extend(swift::package(&metadata));
     expected.push(swift::build());
     expected.extend(swift::checks(&metadata));
+    expected.extend(kotlin);
     assert_eq!(recorder.steps, expected);
     assert_eq!(
         recorder.cleared,
         [
             cleared,
-            Path::new(WORKSPACE).join("bindings/swift/EranosFFI.xcframework")
+            Path::new(WORKSPACE).join("bindings/swift/EranosFFI.xcframework"),
+            kotlin::generated_sources(),
         ]
     );
 }
@@ -174,6 +190,16 @@ fn a_usage_error_lists_every_command() {
     for command in ["gates", "help"] {
         assert!(message.contains(&format!("\n  {command} ")), "{command}");
     }
+}
+
+/// A missing variable names itself and where the setup is described, so
+/// the fix is on screen.
+#[test]
+fn a_missing_variable_names_itself_and_the_setup() {
+    assert_eq!(
+        Failure::Variable("ANDROID_HOME").to_string(),
+        "ANDROID_HOME is not set; docs/DEVELOPMENT.md § 1 says where it points"
+    );
 }
 
 /// A metadata failure says where the JSON came from and why it was refused.

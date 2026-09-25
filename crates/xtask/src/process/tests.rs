@@ -205,3 +205,15 @@ fn writing_replaces_a_file_or_fails_under_its_path() {
 fn only_macos_builds_for_apple_platforms() {
     assert_eq!(System.builds_apple_platforms(), cfg!(target_os = "macos"));
 }
+
+/// A variable reads as set only when it holds a value, so a gate that needs
+/// one fails on an empty one as it does on a missing one.
+#[test]
+fn a_variable_is_set_only_when_it_holds_a_value() {
+    assert_eq!(
+        System.variable("CARGO_PKG_NAME"),
+        std::env::var("CARGO_PKG_NAME").ok()
+    );
+    assert!(System.variable("CARGO_PKG_NAME").is_some());
+    assert_eq!(System.variable("ERANOS_XTASK_UNSET_VARIABLE"), None);
+}

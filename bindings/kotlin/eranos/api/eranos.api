@@ -1,0 +1,1267 @@
+public final class eranos/Account {
+	public fun <init> (Leranos/AccountDetails;Ljava/lang/String;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDetails ()Leranos/AccountDetails;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/AccountDetails {
+}
+
+public final class eranos/AccountDetails$Iban : eranos/AccountDetails {
+	public fun <init> (Leranos/Iban;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIban ()Leranos/Iban;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/AccountDetails$Username : eranos/AccountDetails {
+	public fun <init> (Leranos/Username;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getUsername ()Leranos/Username;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/AccountFailure {
+}
+
+public final class eranos/AccountFailure$EmptyName : eranos/AccountFailure {
+	public static final field INSTANCE Leranos/AccountFailure$EmptyName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/AccountFailure$EmptyUsername : eranos/AccountFailure {
+	public static final field INSTANCE Leranos/AccountFailure$EmptyUsername;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/AccountFailure$InvalidIban : eranos/AccountFailure {
+	public fun <init> (Leranos/IbanReason;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Leranos/IbanReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/Balance {
+}
+
+public final class eranos/Balance$GetsBack : eranos/Balance {
+	public fun <init> (Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAmount ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Balance$Owes : eranos/Balance {
+	public fun <init> (Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAmount ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Balance$Settled : eranos/Balance {
+	public static final field INSTANCE Leranos/Balance$Settled;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/CalendarDate {
+	public static final field Companion Leranos/CalendarDate$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDay ()I
+	public final fun getMonth ()I
+	public final fun getYear ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/CalendarDate$Companion {
+	public final fun of (III)Leranos/CalendarDate;
+	public final fun parse (Ljava/lang/String;)Leranos/CalendarDate;
+}
+
+public abstract interface class eranos/CalendarFailure {
+}
+
+public final class eranos/CalendarFailure$InvalidDate : eranos/CalendarFailure {
+	public static final field INSTANCE Leranos/CalendarFailure$InvalidDate;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/CalendarFailure$InvalidTime : eranos/CalendarFailure {
+	public static final field INSTANCE Leranos/CalendarFailure$InvalidTime;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Category {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun copy (Ljava/lang/String;)Leranos/Category;
+	public static synthetic fun copy$default (Leranos/Category;Ljava/lang/String;ILjava/lang/Object;)Leranos/Category;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-EwbX1to ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/CategoryFailure {
+}
+
+public final class eranos/CategoryFailure$EmptyName : eranos/CategoryFailure {
+	public static final field INSTANCE Leranos/CategoryFailure$EmptyName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/CategoryId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/CategoryId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/CategoryTotal {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCategory-UO3Xi0Q ()Ljava/lang/String;
+	public final fun getTotal ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/ContactFailure {
+}
+
+public final class eranos/ContactFailure$InvalidEmail : eranos/ContactFailure {
+	public static final field INSTANCE Leranos/ContactFailure$InvalidEmail;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ContactFailure$InvalidPhoneNumber : eranos/ContactFailure {
+	public static final field INSTANCE Leranos/ContactFailure$InvalidPhoneNumber;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/Cost {
+	public abstract fun getAmount ()Leranos/Money;
+}
+
+public final class eranos/Cost$Converted : eranos/Cost {
+	public fun <init> (Leranos/Money;Leranos/ExchangeRate;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAmount ()Leranos/Money;
+	public final fun getRate ()Leranos/ExchangeRate;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Cost$Local : eranos/Cost {
+	public fun <init> (Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAmount ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Currency {
+	public static final field Companion Leranos/Currency$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getDecimalPlaces ()I
+	public final fun getName ()Ljava/lang/String;
+	public final fun getNumericCode ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Currency$Companion {
+	public final fun getAll ()Ljava/util/List;
+	public final fun of (Ljava/lang/String;)Leranos/Currency;
+}
+
+public final class eranos/Email {
+	public static final field Companion Leranos/Email$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Email$Companion {
+	public final fun parse (Ljava/lang/String;)Leranos/Email;
+}
+
+public abstract class eranos/EranosException : java/lang/Exception {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getMessage ()Ljava/lang/String;
+}
+
+public final class eranos/EranosException$Account : eranos/EranosException {
+	public fun <init> (Leranos/AccountFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/AccountFailure;
+}
+
+public final class eranos/EranosException$Calendar : eranos/EranosException {
+	public fun <init> (Leranos/CalendarFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/CalendarFailure;
+}
+
+public final class eranos/EranosException$Category : eranos/EranosException {
+	public fun <init> (Leranos/CategoryFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/CategoryFailure;
+}
+
+public final class eranos/EranosException$Contact : eranos/EranosException {
+	public fun <init> (Leranos/ContactFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/ContactFailure;
+}
+
+public final class eranos/EranosException$Expense : eranos/EranosException {
+	public fun <init> (Leranos/ExpenseFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/ExpenseFailure;
+}
+
+public final class eranos/EranosException$Group : eranos/EranosException {
+	public fun <init> (Leranos/GroupFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/GroupFailure;
+}
+
+public final class eranos/EranosException$Id : eranos/EranosException {
+	public fun <init> (Leranos/IdFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/IdFailure;
+}
+
+public final class eranos/EranosException$InvalidJson : eranos/EranosException {
+	public fun <init> (JJLjava/lang/String;)V
+	public final fun getColumn ()J
+	public final fun getLine ()J
+}
+
+public final class eranos/EranosException$Language : eranos/EranosException {
+	public fun <init> (Leranos/LanguageFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/LanguageFailure;
+}
+
+public final class eranos/EranosException$Member : eranos/EranosException {
+	public fun <init> (Leranos/MemberFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/MemberFailure;
+}
+
+public final class eranos/EranosException$Money : eranos/EranosException {
+	public fun <init> (Leranos/MoneyFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/MoneyFailure;
+}
+
+public final class eranos/EranosException$Settlement : eranos/EranosException {
+	public fun <init> (Leranos/SettlementFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/SettlementFailure;
+}
+
+public final class eranos/EranosException$Transfer : eranos/EranosException {
+	public fun <init> (Leranos/TransferFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/TransferFailure;
+}
+
+public final class eranos/ExchangeRate {
+	public static final field Companion Leranos/ExchangeRate$Companion;
+	public final fun convert (Leranos/Money;Leranos/Currency;)Leranos/Money;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExchangeRate$Companion {
+	public final fun parse (Ljava/lang/String;)Leranos/ExchangeRate;
+}
+
+public final class eranos/Expense {
+	public synthetic fun <init> (Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Leranos/Split;Leranos/ExpenseSplit;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;Leranos/Tip;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Leranos/Split;Leranos/ExpenseSplit;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;Leranos/Tip;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun copy-11gpFl8 (Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Leranos/Split;Leranos/ExpenseSplit;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;Leranos/Tip;)Leranos/Expense;
+	public static synthetic fun copy-11gpFl8$default (Leranos/Expense;Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Leranos/Split;Leranos/ExpenseSplit;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;Leranos/Tip;ILjava/lang/Object;)Leranos/Expense;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCategory-EwbX1to ()Ljava/lang/String;
+	public final fun getCost ()Leranos/Cost;
+	public final fun getDate ()Leranos/CalendarDate;
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getId-G_h5j58 ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getPayers ()Leranos/Split;
+	public final fun getSplit ()Leranos/ExpenseSplit;
+	public final fun getTime ()Leranos/TimeOfDay;
+	public final fun getTip ()Leranos/Tip;
+	public fun hashCode ()I
+	public final fun members ()Ljava/util/List;
+	public final fun tipAmount ()Leranos/Money;
+	public fun toString ()Ljava/lang/String;
+	public final fun total ()Leranos/Money;
+}
+
+public abstract interface class eranos/ExpenseFailure {
+}
+
+public final class eranos/ExpenseFailure$AmountsDoNotAddUp : eranos/ExpenseFailure {
+	public fun <init> (Leranos/Money;Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActual ()Leranos/Money;
+	public final fun getExpected ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$CurrencyMismatch : eranos/ExpenseFailure {
+	public fun <init> (Leranos/Currency;Leranos/Currency;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpected ()Leranos/Currency;
+	public final fun getFound ()Leranos/Currency;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$DuplicateMember : eranos/ExpenseFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$EmptyItemName : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$EmptyItemName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$EmptyName : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$EmptyName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$EmptySplit : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$EmptySplit;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$ItemsDoNotAddUp : eranos/ExpenseFailure {
+	public fun <init> (Leranos/Money;Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActual ()Leranos/Money;
+	public final fun getExpected ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$NegativeTip : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$NegativeTip;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$NoItems : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$NoItems;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$NonPositiveAmount : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$NonPositiveAmount;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$NonPositiveShare : eranos/ExpenseFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$Overflow : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$Overflow;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$PercentagesDoNotAddUp : eranos/ExpenseFailure {
+	public fun <init> (J)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTotalBasisPoints ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseFailure$ZeroQuantity : eranos/ExpenseFailure {
+	public static final field INSTANCE Leranos/ExpenseFailure$ZeroQuantity;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/ExpenseId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseShares {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getTip ()Leranos/Money;
+	public final fun getTotal ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/ExpenseSplit {
+}
+
+public final class eranos/ExpenseSplit$Itemised : eranos/ExpenseSplit {
+	public fun <init> (Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getItems ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseSplit$Whole : eranos/ExpenseSplit {
+	public fun <init> (Leranos/Split;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSplit ()Leranos/Split;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Group : java/lang/AutoCloseable {
+	public static final field Companion Leranos/Group$Companion;
+	public fun <init> (Leranos/Currency;Ljava/lang/String;Ljava/lang/String;Leranos/Language;)V
+	public synthetic fun <init> (Leranos/Currency;Ljava/lang/String;Ljava/lang/String;Leranos/Language;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Leranos/internal/Group;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun add-0hE0xxQ (Leranos/Member;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun add-7Es_YNE (Leranos/Expense;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun add-9ElBL2U (Leranos/Category;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun add-d1IJMgw (Leranos/Transfer;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun addBlocking-E54-VVg (Leranos/Expense;)Ljava/lang/String;
+	public final fun addBlocking-NfwCWDA (Leranos/Member;)Ljava/lang/String;
+	public final fun addBlocking-QR7iAcY (Leranos/Category;)Ljava/lang/String;
+	public final fun addBlocking-hoS3jnY (Leranos/Transfer;)Ljava/lang/String;
+	public final fun archive-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun archiveBlocking-Ew0_zjs (Ljava/lang/String;)V
+	public final fun categories (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun categoriesBlocking ()Ljava/util/List;
+	public final fun category-IDynil4 (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun categoryBlocking-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
+	public final fun changeCurrency (Leranos/Currency;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun changeCurrencyBlocking (Leranos/Currency;Ljava/util/Map;)V
+	public fun close ()V
+	public final fun currency (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun currencyBlocking ()Leranos/Currency;
+	public final fun description (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun descriptionBlocking ()Ljava/lang/String;
+	public final fun expense-eQtW8qI (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun expenseBlocking-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
+	public final fun expenseShares-eQtW8qI (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun expenseSharesBlocking-rZhyMcA (Ljava/lang/String;)Leranos/ExpenseShares;
+	public final fun expenses (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun expensesBlocking ()Ljava/util/List;
+	public final fun id-30ygzkY (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun idBlocking-RQgZ7aM ()Ljava/lang/String;
+	public final fun isArchived-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun isArchivedBlocking-Ew0_zjs (Ljava/lang/String;)Z
+	public final fun language (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun languageBlocking ()Leranos/Language;
+	public final fun member-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun memberBlocking-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
+	public final fun members (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun membersBlocking ()Ljava/util/List;
+	public final fun name (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun nameBlocking ()Ljava/lang/String;
+	public final fun read (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun readBlocking ()Leranos/GroupReader;
+	public final fun remove-2F7qjSk (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun remove-IDynil4 (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun remove-eQtW8qI (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun remove-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun removeBlocking-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
+	public final fun removeBlocking-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
+	public final fun removeBlocking-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
+	public final fun removeBlocking-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
+	public final fun rename (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun renameBlocking (Ljava/lang/String;)V
+	public final fun replace (Leranos/Category;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun replace (Leranos/Expense;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun replace (Leranos/Member;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun replace (Leranos/Transfer;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun replaceBlocking (Leranos/Category;)Leranos/Category;
+	public final fun replaceBlocking (Leranos/Expense;)Leranos/Expense;
+	public final fun replaceBlocking (Leranos/Member;)Leranos/Member;
+	public final fun replaceBlocking (Leranos/Transfer;)Leranos/Transfer;
+	public final fun save (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun saveBlocking ()Ljava/lang/String;
+	public final fun setDescription (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun setDescriptionBlocking (Ljava/lang/String;)V
+	public final fun setLanguage (Leranos/Language;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun setLanguageBlocking (Leranos/Language;)V
+	public final fun settlement (Leranos/SettlementStrategy;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun settlementBlocking (Leranos/SettlementStrategy;)Leranos/Settlement;
+	public final fun summary (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun summaryBlocking ()Leranos/Summary;
+	public final fun transfer-2F7qjSk (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun transferAmount-2F7qjSk (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun transferAmountBlocking-FnJQt9E (Ljava/lang/String;)Leranos/Money;
+	public final fun transferBlocking-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
+	public final fun transfers (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun transfersBlocking ()Ljava/util/List;
+	public final fun unarchive-m8VzULU (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun unarchiveBlocking-Ew0_zjs (Ljava/lang/String;)V
+	public final fun withRead (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun withReadBlocking (Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+}
+
+public final class eranos/Group$Companion {
+	public final fun load (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun loadBlocking (Ljava/lang/String;)Leranos/Group;
+}
+
+public abstract interface class eranos/GroupFailure {
+}
+
+public final class eranos/GroupFailure$ArchivedMember : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$BuiltInCategory : eranos/GroupFailure {
+	public static final field INSTANCE Leranos/GroupFailure$BuiltInCategory;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$Busy : eranos/GroupFailure {
+	public static final field INSTANCE Leranos/GroupFailure$Busy;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$DuplicateCategory : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCategory-UO3Xi0Q ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$DuplicateCategoryName : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExisting-UO3Xi0Q ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$DuplicateExchangeRate : eranos/GroupFailure {
+	public fun <init> (Leranos/Currency;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCurrency ()Leranos/Currency;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$DuplicateExpense : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpense-uqo_usE ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$DuplicateMember : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$DuplicateTransfer : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTransfer-3NAYOEo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$EmptyName : eranos/GroupFailure {
+	public static final field INSTANCE Leranos/GroupFailure$EmptyName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$MemberInUse : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpenses ()Ljava/util/List;
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public final fun getTransfers ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$MissingExchangeRate : eranos/GroupFailure {
+	public fun <init> (Leranos/Currency;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCurrency ()Leranos/Currency;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$Overflow : eranos/GroupFailure {
+	public static final field INSTANCE Leranos/GroupFailure$Overflow;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$UnexpectedExchangeRate : eranos/GroupFailure {
+	public static final field INSTANCE Leranos/GroupFailure$UnexpectedExchangeRate;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$UnknownCategory : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCategory-UO3Xi0Q ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$UnknownExpense : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpense-uqo_usE ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$UnknownMember : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$UnknownTransfer : eranos/GroupFailure {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTransfer-3NAYOEo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupFailure$UnsupportedFormat : eranos/GroupFailure {
+	public fun <init> (J)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFormat ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/GroupId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/GroupId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/GroupReader : java/lang/AutoCloseable {
+	public final fun categories ()Ljava/util/List;
+	public final fun category-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
+	public fun close ()V
+	public final fun currency ()Leranos/Currency;
+	public final fun description ()Ljava/lang/String;
+	public final fun expense-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
+	public final fun expenseShares-rZhyMcA (Ljava/lang/String;)Leranos/ExpenseShares;
+	public final fun expenses ()Ljava/util/List;
+	public final fun id-RQgZ7aM ()Ljava/lang/String;
+	public final fun isArchived-Ew0_zjs (Ljava/lang/String;)Z
+	public final fun language ()Leranos/Language;
+	public final fun member-Ew0_zjs (Ljava/lang/String;)Leranos/Member;
+	public final fun members ()Ljava/util/List;
+	public final fun name ()Ljava/lang/String;
+	public final fun save ()Ljava/lang/String;
+	public final fun settlement (Leranos/SettlementStrategy;)Leranos/Settlement;
+	public final fun summary ()Leranos/Summary;
+	public final fun transfer-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
+	public final fun transferAmount-FnJQt9E (Ljava/lang/String;)Leranos/Money;
+	public final fun transfers ()Ljava/util/List;
+}
+
+public final class eranos/Iban {
+	public static final field Companion Leranos/Iban$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCountryCode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Iban$Companion {
+	public final fun parse (Ljava/lang/String;)Leranos/Iban;
+}
+
+public abstract interface class eranos/IbanReason {
+}
+
+public final class eranos/IbanReason$InvalidCharacter : eranos/IbanReason {
+	public static final field INSTANCE Leranos/IbanReason$InvalidCharacter;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IbanReason$InvalidChecksum : eranos/IbanReason {
+	public static final field INSTANCE Leranos/IbanReason$InvalidChecksum;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IbanReason$InvalidFormat : eranos/IbanReason {
+	public static final field INSTANCE Leranos/IbanReason$InvalidFormat;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IbanReason$InvalidStructure : eranos/IbanReason {
+	public static final field INSTANCE Leranos/IbanReason$InvalidStructure;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IbanReason$UnknownCountry : eranos/IbanReason {
+	public static final field INSTANCE Leranos/IbanReason$UnknownCountry;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IbanReason$WrongLength : eranos/IbanReason {
+	public fun <init> (JJ)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpected ()J
+	public final fun getFound ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/IdFailure {
+}
+
+public final class eranos/IdFailure$InvalidId : eranos/IdFailure {
+	public static final field INSTANCE Leranos/IdFailure$InvalidId;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Item {
+	public fun <init> (Ljava/lang/String;Leranos/Split;Leranos/Money;I)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Split;Leranos/Money;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getQuantity ()I
+	public final fun getSplit ()Leranos/Split;
+	public final fun getUnitPrice ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Language {
+	public static final field Companion Leranos/Language$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Language$Companion {
+	public final fun parse (Ljava/lang/String;)Leranos/Language;
+}
+
+public abstract interface class eranos/LanguageFailure {
+}
+
+public final class eranos/LanguageFailure$InvalidLanguage : eranos/LanguageFailure {
+	public static final field INSTANCE Leranos/LanguageFailure$InvalidLanguage;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Member {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Leranos/Email;Ljava/lang/String;Leranos/PhoneNumber;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Leranos/Email;Ljava/lang/String;Leranos/PhoneNumber;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Leranos/Email;Ljava/lang/String;Leranos/PhoneNumber;)Leranos/Member;
+	public static synthetic fun copy$default (Leranos/Member;Ljava/lang/String;Ljava/util/List;Leranos/Email;Ljava/lang/String;Leranos/PhoneNumber;ILjava/lang/Object;)Leranos/Member;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAccounts ()Ljava/util/List;
+	public final fun getEmail ()Leranos/Email;
+	public final fun getFirstName ()Ljava/lang/String;
+	public final fun getId-DDORX8A ()Ljava/lang/String;
+	public final fun getLastName ()Ljava/lang/String;
+	public final fun getPhone ()Leranos/PhoneNumber;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MemberAmount {
+	public synthetic fun <init> (Leranos/Money;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAmount ()Leranos/Money;
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MemberCategoryTotals {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public final fun getTotals ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/MemberFailure {
+}
+
+public final class eranos/MemberFailure$EmptyFirstName : eranos/MemberFailure {
+	public static final field INSTANCE Leranos/MemberFailure$EmptyFirstName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MemberId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/MemberId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/MemberParts {
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Parts;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public final fun getParts ()Leranos/Parts;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MemberPercentage {
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Percentage;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public final fun getPercentage ()Leranos/Percentage;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MemberShare {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public final fun getPaid ()Leranos/Money;
+	public final fun getShare ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MemberSummary {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBalance ()Leranos/Balance;
+	public final fun getMember-FHfRuUo ()Ljava/lang/String;
+	public final fun getNet ()Leranos/Money;
+	public final fun getPaid ()Leranos/Money;
+	public final fun getReceived ()Leranos/Money;
+	public final fun getSent ()Leranos/Money;
+	public final fun getShare ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Money {
+	public static final field Companion Leranos/Money$Companion;
+	public fun <init> (Leranos/Currency;J)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCurrency ()Leranos/Currency;
+	public final fun getMinorUnits ()J
+	public fun hashCode ()I
+	public final fun minus (Leranos/Money;)Leranos/Money;
+	public final fun plus (Leranos/Money;)Leranos/Money;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Money$Companion {
+	public final fun parse (Ljava/lang/String;Leranos/Currency;)Leranos/Money;
+}
+
+public abstract interface class eranos/MoneyFailure {
+}
+
+public final class eranos/MoneyFailure$CurrencyMismatch : eranos/MoneyFailure {
+	public fun <init> (Leranos/Currency;Leranos/Currency;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLeft ()Leranos/Currency;
+	public final fun getRight ()Leranos/Currency;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$InvalidAmount : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$InvalidAmount;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$InvalidExchangeRate : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$InvalidExchangeRate;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$InvalidParts : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$InvalidParts;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$InvalidPercentage : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$InvalidPercentage;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$Overflow : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$Overflow;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$TooManyDecimals : eranos/MoneyFailure {
+	public fun <init> (JLeranos/Currency;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllowed ()J
+	public final fun getCurrency ()Leranos/Currency;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/MoneyFailure$UnknownCurrency : eranos/MoneyFailure {
+	public static final field INSTANCE Leranos/MoneyFailure$UnknownCurrency;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Parts {
+	public static final field Companion Leranos/Parts$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHundredths ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Parts$Companion {
+	public final fun ofHundredths (I)Leranos/Parts;
+	public final fun parse (Ljava/lang/String;)Leranos/Parts;
+}
+
+public final class eranos/Payment {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAmount ()Leranos/Money;
+	public final fun getFrom-FHfRuUo ()Ljava/lang/String;
+	public final fun getTo-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Percentage {
+	public static final field Companion Leranos/Percentage$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBasisPoints ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Percentage$Companion {
+	public final fun ofBasisPoints (I)Leranos/Percentage;
+	public final fun parse (Ljava/lang/String;)Leranos/Percentage;
+}
+
+public final class eranos/PhoneNumber {
+	public static final field Companion Leranos/PhoneNumber$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getE164 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/PhoneNumber$Companion {
+	public final fun parse (Ljava/lang/String;)Leranos/PhoneNumber;
+}
+
+public final class eranos/Settlement {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPayments ()Ljava/util/List;
+	public final fun getStrategy ()Leranos/SettlementStrategy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/SettlementFailure {
+}
+
+public final class eranos/SettlementFailure$OutOfMemory : eranos/SettlementFailure {
+	public fun <init> (J)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBalances ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/SettlementStrategy : java/lang/Enum {
+	public static final field DIRECT Leranos/SettlementStrategy;
+	public static final field GREEDY Leranos/SettlementStrategy;
+	public static final field MINIMUM_TRANSFERS Leranos/SettlementStrategy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Leranos/SettlementStrategy;
+	public static fun values ()[Leranos/SettlementStrategy;
+}
+
+public abstract interface class eranos/Split {
+	public abstract fun getMembers ()Ljava/util/List;
+}
+
+public final class eranos/Split$Amounts : eranos/Split {
+	public fun <init> (Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMembers ()Ljava/util/List;
+	public final fun getShares ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Split$Equal : eranos/Split {
+	public fun <init> (Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMembers ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Split$Parts : eranos/Split {
+	public fun <init> (Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMembers ()Ljava/util/List;
+	public final fun getShares ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Split$Percentages : eranos/Split {
+	public fun <init> (Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMembers ()Ljava/util/List;
+	public final fun getShares ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Summary {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCategoryTotals ()Ljava/util/List;
+	public final fun getMemberCategoryTotals ()Ljava/util/List;
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getTotalSpent ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/TimeOfDay {
+	public static final field Companion Leranos/TimeOfDay$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHour ()I
+	public final fun getMinute ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/TimeOfDay$Companion {
+	public final fun of (II)Leranos/TimeOfDay;
+	public final fun parse (Ljava/lang/String;)Leranos/TimeOfDay;
+}
+
+public final class eranos/Tip {
+	public fun <init> (Leranos/TipValue;Leranos/TipDistribution;)V
+	public synthetic fun <init> (Leranos/TipValue;Leranos/TipDistribution;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDistribution ()Leranos/TipDistribution;
+	public final fun getValue ()Leranos/TipValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/TipDistribution : java/lang/Enum {
+	public static final field EQUAL Leranos/TipDistribution;
+	public static final field PROPORTIONAL Leranos/TipDistribution;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Leranos/TipDistribution;
+	public static fun values ()[Leranos/TipDistribution;
+}
+
+public abstract interface class eranos/TipValue {
+}
+
+public final class eranos/TipValue$Fixed : eranos/TipValue {
+	public fun <init> (Leranos/Money;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAmount ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/TipValue$Percentage : eranos/TipValue {
+	public fun <init> (Leranos/Percentage;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPercentage ()Leranos/Percentage;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Transfer {
+	public synthetic fun <init> (Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun copy-MMk0ojg (Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;)Leranos/Transfer;
+	public static synthetic fun copy-MMk0ojg$default (Leranos/Transfer;Leranos/Cost;Leranos/CalendarDate;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/TimeOfDay;ILjava/lang/Object;)Leranos/Transfer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCost ()Leranos/Cost;
+	public final fun getDate ()Leranos/CalendarDate;
+	public final fun getFrom-FHfRuUo ()Ljava/lang/String;
+	public final fun getId-XfyqeKw ()Ljava/lang/String;
+	public final fun getNote ()Ljava/lang/String;
+	public final fun getTime ()Leranos/TimeOfDay;
+	public final fun getTo-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/TransferFailure {
+}
+
+public final class eranos/TransferFailure$NonPositiveAmount : eranos/TransferFailure {
+	public static final field INSTANCE Leranos/TransferFailure$NonPositiveAmount;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/TransferFailure$SameMember : eranos/TransferFailure {
+	public static final field INSTANCE Leranos/TransferFailure$SameMember;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/TransferId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/TransferId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/Username {
+	public static final field Companion Leranos/Username$Companion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/Username$Companion {
+	public final fun parse (Ljava/lang/String;)Leranos/Username;
+}
+

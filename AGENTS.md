@@ -24,10 +24,10 @@ Signed-off-by: <committer name> <<committer email>>
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
   `settlement`, `transfer`, and `group`; `bindings` for the binding core,
-  `uniffi` for the UniFFI glue and its generators, and `swift` for the
-  Swift package; and besides them `serde`, `docs`, `examples`, `build`, and
-  `xtask`. A change to the facade alone, or to several crates, takes no
-  scope.
+  `uniffi` for the UniFFI glue and its generators, `swift` for the Swift
+  package, and `kotlin` for the Kotlin package; and besides them `serde`,
+  `docs`, `examples`, `build`, and `xtask`. A change to the facade alone,
+  or to several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -73,6 +73,14 @@ It runs these, in this order, and stops at the first that fails:
     `swift test`, `swiftlint lint --strict`, `swiftlint analyze --strict` on
     the build's log, and `swift package generate-documentation
     --warnings-as-errors`, all in `bindings/swift`
+12. `rustup target add <every Android target>`, with `ANDROID_HOME` and
+    `JAVA_HOME` set, then the Kotlin package: `cargo ndk` for the four
+    Android ABIs into `generated-android/src/main/jniLibs`, the generated
+    Kotlin copied into `generated/src`, and the JUnit tests with Kover at
+    100 % of lines, ktlint, detekt, the API check against
+    `eranos/api/eranos.api`, Dokka with warnings as errors, and both
+    Android libraries, every Gradle run with `--warning-mode=fail`, all in
+    `bindings/kotlin`
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
@@ -277,7 +285,10 @@ one error, and a group handle with a synchronous and an asynchronous form
 of every call. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
 through UniFFI, whose generators are the binaries of
 `eranos-uniffi-bindgen`, and the other glue crates are planned as its
-siblings ([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
+siblings. Each language's package in `bindings/` puts a hand-written layer
+over the generated code: `bindings/swift` for Apple platforms and
+`bindings/kotlin` for Android and the JVM
+([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
 members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced

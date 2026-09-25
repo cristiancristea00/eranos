@@ -5,6 +5,7 @@
 //! and stops at the first that fails; `cargo xtask help` lists the commands.
 
 mod gates;
+mod kotlin;
 mod process;
 mod swift;
 
@@ -51,6 +52,10 @@ enum Failure {
     /// The command line names no command xtask knows.
     #[error("unknown command\n\n{USAGE}")]
     Usage,
+    /// An environment variable a gate needs, such as the Android SDK's
+    /// location, is not set.
+    #[error("{0} is not set; docs/DEVELOPMENT.md § 1 says where it points")]
+    Variable(&'static str),
     /// A file a gate writes, such as a build log a linter reads, could not be
     /// written.
     #[error("{path} could not be written: {source}")]
