@@ -251,9 +251,14 @@ jobs:
           tool: cargo-llvm-cov@0.9.1
       # Unit and integration tests; the stable toolchain does not measure
       # doctests. Each feature set compiles an identifier generator the
-      # other leaves out, so the report merges both runs.
-      - run: cargo llvm-cov --no-report --workspace --all-features --locked
-      - run: cargo llvm-cov --no-report --workspace --no-default-features --locked
+      # other leaves out, so the report merges both runs. The UniFFI glue and
+      # its generators have no Rust tests: the foreign tests measure the glue.
+      - run: >-
+          cargo llvm-cov --no-report --workspace --all-features --locked
+          --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+      - run: >-
+          cargo llvm-cov --no-report --workspace --no-default-features --locked
+          --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
       - name: Export the reports
         run: |
           cargo llvm-cov report --cobertura --output-path target/coverage.xml

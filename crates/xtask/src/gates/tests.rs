@@ -22,9 +22,9 @@ fn documented_gates() -> Vec<String> {
 }
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
-/// its order, and the last documented gate is the examples; a check the
-/// code dropped, added, or reordered would pass a commit the documented
-/// gates refuse.
+/// its order, and the last documented gates are the examples, the host
+/// library, and the generators; a check the code dropped, added, or
+/// reordered would pass a commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
@@ -33,7 +33,11 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     assert_eq!(documented[..checks.len()], checks);
     assert_eq!(
         documented[checks.len()..],
-        ["cargo run --quiet --package <package> --all-features --example <name>"]
+        [
+            "cargo run --quiet --package <package> --all-features --example <name>",
+            &host_library().command_line(),
+            "cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>",
+        ]
     );
 }
 
@@ -101,18 +105,56 @@ fn every_example_of_every_package_runs_with_every_feature() {
         )
     };
     assert_eq!(
-        examples(METADATA).unwrap(),
+        examples(&Metadata::parse(METADATA).unwrap()),
         [run("quickstart"), run("persistence")]
     );
+}
+
+/// Every language's sources come from the host library in cargo's target
+/// directory, into a directory of their own under `uniffi`, with the
+/// generator of the release that builds the library and without formatting,
+/// which the generated code never gets; Java's generator takes the library
+/// last and reads it without `--library`.
+#[test]
+fn every_language_is_generated_from_the_host_library() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    let library = format!("/eranos/target/debug/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}");
+    let lines: Vec<String> = generators(&metadata)
+        .iter()
+        .map(Step::command_line)
+        .collect();
+    let prefix = "cargo run --quiet --package eranos-uniffi-bindgen --bin";
+    assert_eq!(
+        lines,
+        [
+            format!(
+                "{prefix} uniffi-bindgen -- generate --library {library} --language swift --out-dir /eranos/target/uniffi/swift --no-format"
+            ),
+            format!(
+                "{prefix} uniffi-bindgen -- generate --library {library} --language kotlin --out-dir /eranos/target/uniffi/kotlin --no-format"
+            ),
+            format!(
+                "{prefix} uniffi-bindgen-java -- generate --out-dir /eranos/target/uniffi/java --no-format {library}"
+            ),
+        ]
+    );
+    assert_eq!(generated(&metadata), Path::new("/eranos/target/uniffi"));
 }
 
 /// JSON that is not cargo's metadata is refused rather than read as a
 /// workspace without examples, which would skip the examples silently.
 #[test]
 fn json_that_is_not_cargo_metadata_is_refused() {
-    for text in ["", "{", "{}", r#"{"packages": [{"name": "eranos"}]}"#] {
+    let without_target = r#"{"packages": []}"#;
+    for text in [
+        "",
+        "{",
+        "{}",
+        r#"{"packages": [{"name": "eranos"}]}"#,
+        without_target,
+    ] {
         assert!(
-            matches!(examples(text), Err(Failure::Metadata(_))),
+            matches!(Metadata::parse(text), Err(Failure::Metadata(_))),
             "{text}"
         );
     }
@@ -143,13 +185,38 @@ fn a_failing_example_list_runs_no_example() {
     assert_eq!(unreadable.steps.last(), Some(&metadata()));
 }
 
-/// A failing example stops the examples after it.
+/// A failing example stops the examples after it, and nothing is generated.
 #[test]
 fn a_failing_example_stops_the_examples_after_it() {
-    let examples = examples(METADATA).unwrap();
+    let examples = examples(&Metadata::parse(METADATA).unwrap());
     let mut recorder = Recorder::new();
     recorder.failing = examples.first().cloned();
     assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
     assert_eq!(recorder.steps.last(), examples.first());
     assert!(!recorder.steps.contains(&examples[1]));
+    assert!(recorder.cleared.is_empty());
+}
+
+/// When the host library does not build, or the directory of the generated
+/// sources cannot be cleared, no generator runs, so stale sources are never
+/// taken for fresh ones; a failing generator stops the ones after it.
+#[test]
+fn a_failure_to_build_clear_or_generate_stops_the_generators() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    let generators = generators(&metadata);
+    let mut unbuilt = Recorder::new();
+    unbuilt.failing = Some(host_library());
+    assert!(matches!(run(&mut unbuilt), Err(Failure::Usage)));
+    assert_eq!(unbuilt.steps.last(), Some(&host_library()));
+    assert!(unbuilt.cleared.is_empty());
+
+    let mut blocked = Recorder::new();
+    blocked.clearing_fails = true;
+    assert!(matches!(run(&mut blocked), Err(Failure::Usage)));
+    assert!(!blocked.steps.contains(&generators[0]));
+
+    let mut recorder = Recorder::new();
+    recorder.failing = generators.first().cloned();
+    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert_eq!(recorder.steps.last(), generators.first());
 }

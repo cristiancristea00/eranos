@@ -23,9 +23,10 @@ Signed-off-by: <committer name> <<committer email>>
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
-  `settlement`, `transfer`, and `group`; `bindings` for the binding core;
-  and besides them `serde`, `docs`, `examples`, `build`, and `xtask`. A
-  change to the facade alone, or to several crates, takes no scope.
+  `settlement`, `transfer`, and `group`; `bindings` for the binding core
+  and `uniffi` for the UniFFI glue and its generators; and besides them
+  `serde`, `docs`, `examples`, `build`, and `xtask`. A change to the facade
+  alone, or to several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -56,6 +57,13 @@ It runs these, in this order, and stops at the first that fails:
    would gain blocking methods that read the clock and a per-thread parker
 8. `cargo run --quiet --package <package> --all-features --example <name>`
    for every example of every package, as `cargo metadata` lists them
+9. `cargo build --package eranos-uniffi`, the host library the generators
+   read
+10. `cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>`
+    for Swift and Kotlin (`uniffi-bindgen`) and Java (`uniffi-bindgen-java`),
+    which writes each language's sources from the host library into
+    `target/uniffi/<language>`, cleared first: a type a generator cannot
+    read stops the gates, and the generated sources are never committed
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
@@ -257,9 +265,11 @@ of the domain, from `eranos-core` (identifiers) up to `eranos-group`
 ([map](docs/ARCHITECTURE.md#2-crate-map)). Above the facade,
 `eranos-bindings` holds what every binding exposes, in plain Rust: records,
 one error, and a group handle with a synchronous and an asynchronous form
-of every call; the glue crates that generate each language's layer from it
-are planned as its siblings
-([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its members,
+of every call. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
+through UniFFI, whose generators are the binaries of
+`eranos-uniffi-bindgen`, and the other glue crates are planned as its
+siblings ([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
+members,
 categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
 into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the

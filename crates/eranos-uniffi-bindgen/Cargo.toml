@@ -1,0 +1,29 @@
+# eranos-uniffi-bindgen: the generators that turn the library of
+# eranos-uniffi into Swift, Kotlin, and Java, built on the `uniffi` release
+# that builds the library, so the generated code reads its metadata as
+# written. A package of binaries only, so that no library build, and no lint
+# of the libraries for the mobile and wasm targets, compiles a generator.
+[package]
+name = "eranos-uniffi-bindgen"
+description = "The generators of the eranos bindings for Swift, Kotlin, and Java"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[[bin]]
+name = "uniffi-bindgen-java"
+path = "src/bin/uniffi-bindgen-java.rs"
+
+[dependencies]
+# The command line of the Swift and Kotlin generator, which reads `cargo
+# metadata` to find each crate's configuration.
+uniffi = { workspace = true, features = ["cli", "cargo-metadata"] }
+uniffi-bindgen-java = { workspace = true }
+
+[lints]
+workspace = true

@@ -139,11 +139,12 @@ features ([DEVELOPMENT.md § 5](DEVELOPMENT.md#5-coverage-and-mutation-testing)
 has the commands), because each compiles code the other leaves out: the
 serde code, and either the clock-based identifier generator or the
 `sequential-ids` counter. It measures lines and regions for the unit,
-integration, and property tests. It does not count
-doctests on the stable toolchain, so an item covered only by its example
-shows as missed. Coverage is a diagnostic, never a gate; a gap is a reading
-list: either a missing test or dead code. CI measures the same way on every
-push and publishes the result as a page:
+integration, and property tests of every crate but the UniFFI glue and its
+generators, which have no Rust tests: the glue forwards every call to the
+binding core. It does not count doctests on the stable toolchain, so an
+item covered only by its example shows as missed. Coverage is a diagnostic,
+never a gate; a gap is a reading list: either a missing test or dead code.
+CI measures the same way on every push and publishes the result as a page:
 [DEVELOPMENT.md § 6](DEVELOPMENT.md#6-continuous-integration).
 
 The suites cover every line, region, and function. Keeping it that way

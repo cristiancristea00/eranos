@@ -23,6 +23,13 @@ commands:
 /// Why a command of xtask failed.
 #[derive(Debug, thiserror::Error)]
 enum Failure {
+    /// A directory a gate writes into could not be emptied first.
+    #[error("{directory} could not be cleared: {source}")]
+    Clear {
+        directory: String,
+        #[source]
+        source: io::Error,
+    },
     /// A package turns on features of async-lock, which the library keeps
     /// without any.
     #[error("async-lock is built with {0}, which the library keeps off")]

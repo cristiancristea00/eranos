@@ -70,9 +70,13 @@ facade's edges only the one to the group. Above the facade,
 `eranos-bindings` holds what every binding exposes
 ([§ 11](#11-bindings)); it depends on the facade and, for their conversion
 traits, on the twelve internal crates, whose edges the graph leaves out.
+`eranos-uniffi` mirrors it for UniFFI, and `eranos-uniffi-bindgen`, a
+package of binaries with no edge in the workspace, holds the generators
+that read the UniFFI library.
 
 ```mermaid
 flowchart TD
+    UNIFFI["eranos-uniffi<br/>UniFFI mirrors; Group, GroupReader,<br/>Cancellation; value functions"]
     BINDINGS["eranos-bindings<br/>records, EranosError, GroupHandle,<br/>GroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
     GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup,<br/>SharedGroup"]
@@ -87,6 +91,7 @@ flowchart TD
     CALENDAR["eranos-calendar<br/>CalendarDate, TimeOfDay"]
     MONEY["eranos-money<br/>Money, Currency, Cost, rates, ratios<br/>(+ allocation)"]
     CORE["eranos-core<br/>identifiers, cooperative futures<br/>(+ text rules, pacer)"]
+    UNIFFI --> BINDINGS
     BINDINGS --> FACADE
     FACADE --> GROUP
     GROUP --> EXPENSE
@@ -119,6 +124,9 @@ flowchart TD
 
 ```text
  ┌──────────────────────────────────────────────────────────────────────────┐
+ │ eranos-uniffi      UniFFI mirrors of the core's types; Group,            │
+ │                    GroupReader, Cancellation; the value functions        │
+ ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-bindings    what every binding exposes: records, EranosError,     │
  │                    GroupHandle, GroupReader, value helpers               │
  ├──────────────────────────────────────────────────────────────────────────┤
@@ -150,22 +158,24 @@ flowchart TD
 
 </details>
 
-| Crate               | Holds                                                                                                                                                               | Depends on                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `eranos-bindings`   | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers               | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json     |
-| `eranos`            | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                           |
-| `eranos-group`      | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core |
-| `eranos-expense`    | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                                     |
-| `eranos-transfer`   | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                                 |
-| `eranos-member`     | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                            |
-| `eranos-category`   | `Category`, `CategoryError`                                                                                                                                         | core; icu_casemap, icu_normalizer                                                                 |
-| `eranos-settlement` | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                           | core, ledger, money                                                                               |
-| `eranos-account`    | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                         | core                                                                                              |
-| `eranos-contact`    | `Email`, `PhoneNumber`, `ContactError`                                                                                                                              | core; icu_properties, rlibphonenumber                                                             |
-| `eranos-ledger`     | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                                       |
-| `eranos-calendar`   | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                                        |
-| `eranos-money`      | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                              |
-| `eranos-core`       | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                              |
+| Crate                   | Holds                                                                                                                                                               | Depends on                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `eranos-uniffi-bindgen` | the generators `uniffi-bindgen`, for Swift and Kotlin, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                           | uniffi, uniffi-bindgen-java                                                                       |
+| `eranos-uniffi`         | the `uniffi` mirrors of the core's records, enums, and error; the `Group`, `GroupReader`, and `Cancellation` objects; the value helpers as functions                | eranos-bindings; uniffi                                                                           |
+| `eranos-bindings`       | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers               | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json     |
+| `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                         | the twelve crates below                                                                           |
+| `eranos-group`          | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core |
+| `eranos-expense`        | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense` | calendar, core, ledger, money                                                                     |
+| `eranos-transfer`       | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                  | calendar, core, money, settlement                                                                 |
+| `eranos-member`         | `Member`, `MemberBuilder`, `MemberError`                                                                                                                            | account, contact, core                                                                            |
+| `eranos-category`       | `Category`, `CategoryError`                                                                                                                                         | core; icu_casemap, icu_normalizer                                                                 |
+| `eranos-settlement`     | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                           | core, ledger, money                                                                               |
+| `eranos-account`        | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                         | core                                                                                              |
+| `eranos-contact`        | `Email`, `PhoneNumber`, `ContactError`                                                                                                                              | core; icu_properties, rlibphonenumber                                                             |
+| `eranos-ledger`         | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                  | core, money                                                                                       |
+| `eranos-calendar`       | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                        | core; jiff                                                                                        |
+| `eranos-money`          | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                      | core; iso4217-static                                                                              |
+| `eranos-core`           | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                              | uuid                                                                                              |
 
 For the internal crates, the facade's modules (`eranos::money`,
 `eranos::member`, …) and its root re-export what the table lists before a
@@ -506,11 +516,11 @@ which holds keys the library never sees.
 ## 11. Bindings
 
 `eranos-bindings` holds, in plain Rust, everything the bindings expose. The
-glue crates planned beside it (`eranos-uniffi` for Swift, Kotlin, and Java,
-`eranos-web` for the browser, `eranos-kmp` for Kotlin Multiplatform, and
-`eranos-capi` for C and C++) mirror its types and forward every call to it,
+glue crates beside it mirror its types and forward every call to it,
 converting nothing and deciding nothing, so every rule a binding applies is
-tested in Rust.
+tested in Rust: `eranos-uniffi` for Swift, Kotlin, and Java, and, planned,
+`eranos-web` for the browser, `eranos-kmp` for Kotlin Multiplatform, and
+`eranos-capi` for C and C++.
 
 - **Records of text and integers.** Values and entries cross as records and
   enums with data: identifiers as hyphenated UUIDs, currencies as ISO 4217
@@ -570,7 +580,31 @@ tested in Rust.
 - The release profile keeps `panic = "unwind"` so the glue can catch a
   panic at the boundary. Public types have no lifetimes or generic
   parameters on their data, IDs are `Copy`, and every public type is
-  `Send + Sync`, which `tests/api.rs` asserts.
+  `Send + Sync`, which `tests/api.rs` asserts for the library and the
+  core's own tests for the core.
+
+`eranos-uniffi` mirrors the core's records, enums, and error with
+`#[uniffi::remote]`, which repeats each definition field for field, so a
+change to a core type that the mirror does not repeat fails the glue's
+build. It wraps the group handle, the read handle, and the cancellation in
+the objects `Group`, `GroupReader`, and `Cancellation`, whose methods
+forward to the core, and exports the value helpers as functions and the
+asynchronous load as `load_group_async`. Its four source files are written
+for the planned web and KMP crates as well, which compile them against
+UniFFI 0.31.2 and 0.29.4: they keep to what 0.29 accepts, and both releases
+compile them.
+`uniffi.toml` names the generated Swift module `EranosGenerated` and the
+generated Kotlin and Java package `eranos.internal`: the generated code sits
+beneath each package's hand-written layer.
+
+The generators, `uniffi-bindgen` for Swift and Kotlin and
+`uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
+built on the UniFFI release that builds the library, so the code they write
+reads the library's metadata as written. They sit in a package of their
+own, of binaries only, so that no build or lint of the libraries, for the
+host or for the mobile and wasm targets, compiles a generator. `cargo xtask
+gates` writes every language's sources into `target/uniffi/<language>`;
+they are never committed.
 
 ## 12. Async and concurrency
 

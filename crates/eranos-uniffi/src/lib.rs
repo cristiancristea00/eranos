@@ -1,0 +1,22 @@
+//! The bindings of eranos for Swift, Kotlin, and Java, through `uniffi`.
+//!
+//! The crate mirrors the binding core's records, enums, and error for
+//! `uniffi`, wraps its group handle, read handle, and cancellation in
+//! objects, and exports its value helpers; every method and function
+//! forwards to the core, converting nothing and deciding nothing. The
+//! generators of `eranos-uniffi-bindgen` turn the library's metadata into
+//! each language's code: `uniffi-bindgen` for Swift and Kotlin, and
+//! `uniffi-bindgen-java` for Java.
+//!
+//! The web and KMP crates compile `error.rs`, `objects.rs`, `records.rs`,
+//! and `values.rs` from here against their own `uniffi` releases, so these
+//! keep to what `uniffi` 0.29 accepts: records, enums with data, one error,
+//! objects with synchronous and asynchronous methods, and no methods on
+//! records.
+
+uniffi::setup_scaffolding!("eranos");
+
+mod error;
+mod objects;
+mod records;
+mod values;

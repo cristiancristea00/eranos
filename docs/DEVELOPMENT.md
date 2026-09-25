@@ -62,7 +62,9 @@ cargo doc -p eranos --all-features --open        # the API documentation
 `cargo xtask gates` runs the full gate sequence, listed in
 [AGENTS.md § Gates](../AGENTS.md#gates-before-committing), before every
 commit; `cargo xtask help` lists the commands. The alias lives in
-`.cargo/config.toml`, and the automation in `crates/xtask`.
+`.cargo/config.toml`, and the automation in `crates/xtask`. The gates also
+write the Swift, Kotlin, and Java sources of the UniFFI glue into
+`target/uniffi/<language>`, from the host library in `target/debug`.
 
 Every internal crate's tests link the facade, which its doc examples use,
 so testing one crate builds the whole workspace, and each crate's doctests
@@ -96,7 +98,9 @@ their own, and smaller units, at those seconds.
    weights split equally, so `validate` must refuse both.
 3. Add its method to `FromSplit`, in variant order, and its arm to
    `from_split`; every implementation, such as the binding core's, then
-   fails to build until it handles the new variant.
+   fails to build until it handles the new variant, and the mirror of the
+   core's `Split` in `crates/eranos-uniffi/src/records.rs` until it
+   repeats it.
 4. Pin it with a hand-computed case in `eranos-expense/src/split/tests.rs`
    and in `tests/scenarios.rs`, and add it to the random recipes in
    `tests/properties.rs` so the invariants cover it.
@@ -170,7 +174,9 @@ breaking.
 4. Add it to `SettlementStrategy::all()`; the property tests then check that
    its plans clear every balance.
 5. Add its method to `FromSettlementStrategy`, in variant order, and its
-   arm to `from_settlement_strategy`.
+   arm to `from_settlement_strategy`; the binding core's
+   `SettlementStrategy` then fails to build until it has the variant, and
+   the mirror in `crates/eranos-uniffi/src/records.rs` until it repeats it.
 6. Benchmark it in `benches/settlement.rs` and record the timing in
    ARCHITECTURE § 13.
 
@@ -193,7 +199,9 @@ breaking.
    (`crates/eranos-bindings/src/`), in the same place of the field order,
    read in the record's `from_library` and written in its conversion to the
    library, where an absent optional field clears the stored one; the
-   record's round trip in its module's `tests.rs` then covers it.
+   record's round trip in its module's `tests.rs` then covers it. Repeat
+   the field in the record's mirror in `crates/eranos-uniffi/src/records.rs`,
+   which fails to build until it does.
 
 ### 3.6 A new error variant
 
@@ -210,7 +218,8 @@ core then fails to build until its `EranosError`
 (`crates/eranos-bindings/src/error.rs`) has a case for the variant, in
 alphabetical order and prefixed with the crate where another crate's error
 has a variant of the same name, with its row in that crate's
-`error/tests.rs`.
+`error/tests.rs`, and until the mirror in
+`crates/eranos-uniffi/src/error.rs` repeats the case.
 
 ### 3.7 A lint exception
 
@@ -291,6 +300,10 @@ When code in one crate needs something another crate holds:
    `operations/tests.rs` and the two forms in `group/tests.rs`
    (`every_read_answers_alike_in_both_forms` or the change's
    `*_change_alike_in_both_forms`).
+6. Forward both forms from `Group` in `crates/eranos-uniffi/src/objects.rs`,
+   and a read also from its `GroupReader`, with the core's documentation;
+   nothing fails to build while one is missing, so the methods of each
+   object follow the core's, section by section.
 
 ## 4. Examples and benchmarks
 
@@ -314,18 +327,23 @@ with `--baseline`.
 ## 5. Coverage and mutation testing
 
 ```sh
-cargo llvm-cov clean --workspace                              # drop earlier runs
-cargo llvm-cov --no-report --workspace --all-features         # sequential IDs, serde
-cargo llvm-cov --no-report --workspace --no-default-features  # clock-based IDs
-cargo llvm-cov report --html --open                           # HTML report
-cargo llvm-cov report --summary-only                          # totals only
+cargo llvm-cov clean --workspace      # drop earlier runs
+# Sequential IDs and serde, then clock-based IDs, without the UniFFI glue:
+cargo llvm-cov --no-report --workspace --all-features \
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+cargo llvm-cov --no-report --workspace --no-default-features \
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
+cargo llvm-cov report --html --open   # HTML report
+cargo llvm-cov report --summary-only  # totals only
 cargo mutants --file crates/eranos-money/src/allocation.rs
 ```
 
 Coverage merges the two runs because each compiles code the other leaves
 out: the serde code, and one of the two identifier generators. A single
 `--all-features` run reports the clock-based generator as absent rather
-than missed, so its total would still read 100 %.
+than missed, so its total would still read 100 %. The runs leave out the
+UniFFI glue and its generators, which have no Rust tests: the glue forwards
+every call to the binding core, which the Rust tests cover.
 
 Coverage does not count doctests on the stable toolchain, so a function
 covered only by its example shows as missed. Mutation testing takes seconds

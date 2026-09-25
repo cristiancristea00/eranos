@@ -1,0 +1,14 @@
+# How the generators name the code they write from this crate's library. The
+# generated code stays internal to each package; apps import the hand-written
+# layer above it.
+
+[bindings.swift]
+# The generated Swift compiles as a target of its own, which the
+# hand-written `Eranos` module imports.
+module_name = "EranosGenerated"
+
+[bindings.kotlin]
+package_name = "eranos.internal"
+
+[bindings.java]
+package_name = "eranos.internal"

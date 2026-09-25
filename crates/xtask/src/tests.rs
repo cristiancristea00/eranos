@@ -1,7 +1,10 @@
 //! The command line: each command runs what it names, and anything else is a
 //! usage error that lists the commands.
 
+use std::path::{Path, PathBuf};
+
 use super::*;
+use crate::gates::Metadata;
 use crate::process::Step;
 
 /// Two packages as `cargo metadata --no-deps --format-version 1` prints
@@ -19,17 +22,21 @@ pub(crate) const METADATA: &str = r#"{
         },
         {"name": "xtask", "targets": [{"kind": ["bin"], "name": "xtask"}]}
     ],
+    "target_directory": "/eranos/target",
     "version": 1
 }"#;
 
 /// A runner that records every step instead of running it, answers the
 /// step that prints async-lock's features with `tree` and every other
-/// output with `metadata`, and fails at the step `failing`.
+/// output with `metadata`, records every directory it clears, and fails at
+/// the step `failing` or, when `clearing_fails`, at clearing.
 #[derive(Debug, Default)]
 pub(crate) struct Recorder {
+    pub(crate) cleared: Vec<PathBuf>,
     pub(crate) metadata: String,
     pub(crate) steps: Vec<Step>,
     pub(crate) tree: String,
+    pub(crate) clearing_fails: bool,
     pub(crate) failing: Option<Step>,
 }
 
@@ -67,6 +74,15 @@ impl Runner for Recorder {
             Ok(self.metadata.clone())
         }
     }
+
+    fn clear(&mut self, directory: &Path) -> Result<(), Failure> {
+        self.cleared.push(directory.to_owned());
+        if self.clearing_fails {
+            Err(Failure::Usage)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 fn words(line: &[&str]) -> Vec<String> {
@@ -74,18 +90,23 @@ fn words(line: &[&str]) -> Vec<String> {
 }
 
 /// `gates` runs every check, reads async-lock's features, lists the
-/// examples, and runs each one; if it ran less, `cargo xtask gates` would
-/// pass commits the documented gates refuse.
+/// examples, runs each one, builds the host library, and generates every
+/// language's sources into a cleared directory; if it ran less, `cargo xtask
+/// gates` would pass commits the documented gates refuse.
 #[test]
-fn gates_runs_every_check_then_every_example() {
+fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
     run(&words(&["gates"]), &mut recorder).unwrap();
 
+    let metadata = Metadata::parse(METADATA).unwrap();
     let mut expected = gates::checks();
     expected.push(gates::lock_features());
     expected.push(gates::metadata());
-    expected.extend(gates::examples(METADATA).unwrap());
+    expected.extend(gates::examples(&metadata));
+    expected.push(gates::host_library());
+    expected.extend(gates::generators(&metadata));
     assert_eq!(recorder.steps, expected);
+    assert_eq!(recorder.cleared, [gates::generated(&metadata)]);
 }
 
 /// `help` succeeds and runs nothing.

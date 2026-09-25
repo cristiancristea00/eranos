@@ -1,5 +1,8 @@
 //! The commit gates, in the order AGENTS.md lists them.
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
+use std::path::{Path, PathBuf};
+
 use serde::Deserialize;
 
 use crate::Failure;
@@ -7,8 +10,21 @@ use crate::process::{Runner, Step};
 
 /// The part of `cargo metadata`'s JSON the gates read.
 #[derive(Debug, Deserialize)]
-struct Metadata {
+pub(crate) struct Metadata {
     packages: Vec<Package>,
+    target_directory: String,
+}
+
+impl Metadata {
+    /// The metadata in `json`, what `cargo metadata` printed.
+    ///
+    /// # Errors
+    ///
+    /// [`Failure::Metadata`] when `json` is not the JSON of `cargo
+    /// metadata`.
+    pub(crate) fn parse(json: &str) -> Result<Self, Failure> {
+        serde_json::from_str(json).map_err(Failure::Metadata)
+    }
 }
 
 /// A workspace package, with its targets.
@@ -36,8 +52,13 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
         runner.run(&step)?;
     }
     check_lock_features(&runner.output(&lock_features())?)?;
-    let metadata = runner.output(&metadata())?;
-    for step in examples(&metadata)? {
+    let metadata = Metadata::parse(&runner.output(&metadata())?)?;
+    for step in examples(&metadata) {
+        runner.run(&step)?;
+    }
+    runner.run(&host_library())?;
+    runner.clear(&generated(&metadata))?;
+    for step in generators(&metadata) {
         runner.run(&step)?;
     }
     println!("\nevery gate passed");
@@ -142,16 +163,12 @@ pub(crate) fn metadata() -> Step {
     )
 }
 
-/// One step per example of every workspace package, in the order `metadata`,
-/// the JSON `cargo metadata` prints, lists them. Every example asserts its
-/// key numbers, so running one is a check.
-///
-/// # Errors
-///
-/// [`Failure::Metadata`] when `metadata` is not the JSON of `cargo metadata`.
-pub(crate) fn examples(metadata: &str) -> Result<Vec<Step>, Failure> {
-    let metadata: Metadata = serde_json::from_str(metadata).map_err(Failure::Metadata)?;
-    Ok(metadata
+/// One step per example of every workspace package, in the order `cargo
+/// metadata` lists them. Every example asserts its key numbers, so running
+/// one is a check.
+#[must_use]
+pub(crate) fn examples(metadata: &Metadata) -> Vec<Step> {
+    metadata
         .packages
         .iter()
         .flat_map(|package| {
@@ -174,7 +191,91 @@ pub(crate) fn examples(metadata: &str) -> Result<Vec<Step>, Failure> {
                     )
                 })
         })
-        .collect())
+        .collect()
+}
+
+/// The step that builds eranos-uniffi's library for the host, which the
+/// generators read.
+#[must_use]
+pub(crate) fn host_library() -> Step {
+    Step::cargo(
+        &["build", "--package", "eranos-uniffi"],
+        "the host library of eranos-uniffi",
+    )
+}
+
+/// Where the generated sources go, one directory per language, under
+/// cargo's target directory; the gates clear it first, so a type the
+/// library no longer has leaves no file behind.
+#[must_use]
+pub(crate) fn generated(metadata: &Metadata) -> PathBuf {
+    Path::new(&metadata.target_directory).join("uniffi")
+}
+
+/// The steps that generate the Swift, Kotlin, and Java sources from the host
+/// library of eranos-uniffi, each with the generator of eranos-uniffi-bindgen
+/// that the library's `uniffi` release builds, so a type a generator cannot
+/// read stops the gates.
+#[must_use]
+pub(crate) fn generators(metadata: &Metadata) -> Vec<Step> {
+    let library = Path::new(&metadata.target_directory)
+        .join("debug")
+        .join(format!("{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}"));
+    let library = library.to_string_lossy();
+    let directory = |language: &str| {
+        generated(metadata)
+            .join(language)
+            .to_string_lossy()
+            .into_owned()
+    };
+    let generator = |bin: &str, arguments: &[&str], name: &str| {
+        let mut command = vec![
+            "run",
+            "--quiet",
+            "--package",
+            "eranos-uniffi-bindgen",
+            "--bin",
+            bin,
+            "--",
+            "generate",
+        ];
+        command.extend(arguments);
+        Step::cargo(&command, name)
+    };
+    let (swift, kotlin, java) = (directory("swift"), directory("kotlin"), directory("java"));
+    vec![
+        generator(
+            "uniffi-bindgen",
+            &[
+                "--library",
+                &library,
+                "--language",
+                "swift",
+                "--out-dir",
+                &swift,
+                "--no-format",
+            ],
+            "the Swift sources",
+        ),
+        generator(
+            "uniffi-bindgen",
+            &[
+                "--library",
+                &library,
+                "--language",
+                "kotlin",
+                "--out-dir",
+                &kotlin,
+                "--no-format",
+            ],
+            "the Kotlin sources",
+        ),
+        generator(
+            "uniffi-bindgen-java",
+            &["--out-dir", &java, "--no-format", &library],
+            "the Java sources",
+        ),
+    ]
 }
 
 #[cfg(test)]

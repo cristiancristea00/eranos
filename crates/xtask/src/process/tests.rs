@@ -125,3 +125,36 @@ fn the_command_line_puts_the_variables_first() {
     );
     assert_eq!(version().command_line(), "cargo --version");
 }
+
+/// Clearing removes a directory and what it holds, and a missing directory
+/// is already clear; without either, a gate would generate over stale files
+/// or fail on its first run.
+#[test]
+fn clearing_removes_a_directory_and_accepts_a_missing_one() {
+    let directory = std::env::temp_dir().join(format!("xtask-clear-{}", std::process::id()));
+    fs::create_dir_all(directory.join("nested")).unwrap();
+    fs::write(directory.join("nested/stale.txt"), "stale").unwrap();
+    System.clear(&directory).unwrap();
+    assert!(!directory.exists());
+    System.clear(&directory).unwrap();
+}
+
+/// A path that cannot be removed as a directory, such as a file, fails as a
+/// clearing of that path, so the gates stop instead of generating over it.
+#[test]
+fn a_path_that_is_not_a_directory_cannot_be_cleared() {
+    let file = std::env::temp_dir().join(format!("xtask-clear-file-{}", std::process::id()));
+    fs::write(&file, "not a directory").unwrap();
+    let failure = System.clear(&file).unwrap_err();
+    fs::remove_file(&file).unwrap();
+    assert!(
+        matches!(&failure, Failure::Clear { directory, .. } if *directory == file.display().to_string()),
+        "{failure:?}"
+    );
+    assert!(
+        failure
+            .to_string()
+            .starts_with(&format!("{} could not be cleared: ", file.display())),
+        "{failure}"
+    );
+}

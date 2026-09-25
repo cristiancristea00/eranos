@@ -195,6 +195,8 @@ eranos/
 │   ├── eranos-transfer/       transfers
 │   ├── eranos-group/          groups and their saved form
 │   ├── eranos-bindings/       what every binding exposes, in plain Rust
+│   ├── eranos-uniffi/         the bindings for Swift, Kotlin, and Java, through UniFFI
+│   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages
 │   └── xtask/                 the repository's automation: `cargo xtask gates`
 ├── docs/                      architecture, development, testing, versioning
 ├── deny.toml                  the rules of the CI dependency audit

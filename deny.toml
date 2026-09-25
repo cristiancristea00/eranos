@@ -9,6 +9,13 @@ all-features = true
 # Vulnerabilities and unmaintained crates are errors by default; a yanked
 # version in Cargo.lock is one too.
 yanked = "deny"
+# Each entry names the crate that brings the advisory and why it stays.
+ignore = [
+    # paste is unmaintained. Only uniffi-bindgen-java 0.5.1, the Java
+    # generator of eranos-uniffi-bindgen, uses it, as a macro at build time;
+    # no library links it.
+    { id = "RUSTSEC-2024-0436", reason = "a build-time macro of the Java generator only" },
+]
 
 [sources]
 # crates.io only: any other registry, or a git dependency, is an error.

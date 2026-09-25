@@ -1,0 +1,31 @@
+# eranos-uniffi: the UniFFI bindings of eranos for Swift, Kotlin, and Java.
+# It mirrors the binding core's records, enums, and error, wraps its group
+# handle, read handle, and cancellation in objects, and exports its value
+# helpers, each forwarding to the core. The web and KMP crates compile the
+# same sources against their own UniFFI releases, so the sources keep to
+# what UniFFI 0.29 accepts (docs/ARCHITECTURE.md § 11).
+[package]
+name = "eranos-uniffi"
+description = "The UniFFI bindings of eranos for Swift, Kotlin, and Java"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+# A static library for the Apple frameworks, a shared one for Android, the
+# JVM, and the generators of eranos-uniffi-bindgen, which read the library's
+# metadata from it.
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[features]
+# Identifiers count up from one, so the ports print the Rust examples'
+# reports.
+sequential-ids = ["eranos-bindings/sequential-ids"]
+
+[dependencies]
+eranos-bindings = { workspace = true }
+uniffi = { workspace = true }
+
+[lints]
+workspace = true

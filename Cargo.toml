@@ -3,9 +3,10 @@
 # The library, crates/eranos, re-exports the types callers use from the
 # twelve internal crates beside it, crates/eranos-core to crates/eranos-group,
 # which docs/ARCHITECTURE.md § 2 maps; crates/eranos-bindings holds what every
-# binding exposes, in plain Rust (§ 11), and the repository's automation is
-# crates/xtask, run as `cargo xtask`. Every third-party version is pinned
-# here; the members say `{ workspace = true }`.
+# binding exposes, in plain Rust, crates/eranos-uniffi mirrors it for UniFFI,
+# and crates/eranos-uniffi-bindgen holds UniFFI's generators (§ 11). The
+# repository's automation is crates/xtask, run as `cargo xtask`. Every
+# third-party version is pinned here; the members say `{ workspace = true }`.
 
 [workspace]
 resolver = "3"
@@ -24,6 +25,8 @@ members = [
     "crates/eranos-money",
     "crates/eranos-settlement",
     "crates/eranos-transfer",
+    "crates/eranos-uniffi",
+    "crates/eranos-uniffi-bindgen",
     "crates/xtask",
 ]
 
@@ -53,6 +56,7 @@ eranos-member = { path = "crates/eranos-member" }
 eranos-money = { path = "crates/eranos-money" }
 eranos-settlement = { path = "crates/eranos-settlement" }
 eranos-transfer = { path = "crates/eranos-transfer" }
+eranos-uniffi = { path = "crates/eranos-uniffi" }
 
 # --- Library -----------------------------------------------------------------
 # The read-write lock behind `SharedGroup`, whose guards can be held across
@@ -115,6 +119,14 @@ serde = { version = "1.0.229", features = ["derive"] }
 # serde round-trip tests, the persistence example, and xtask's reading of
 # `cargo metadata` use it too.
 serde_json = "1.0.151"
+# The scaffolding of eranos-uniffi and the generators of
+# eranos-uniffi-bindgen, pinned exactly: the generated code and the library
+# must come from one release. Without the default `cargo-metadata` feature,
+# which only the generators read.
+uniffi = { version = "=0.32.2", default-features = false }
+# The Java generator, whose `uniffi_bindgen ^0.32.1` resolves to the release
+# above.
+uniffi-bindgen-java = "=0.5.1"
 
 # --- Development only --------------------------------------------------------
 # Property tests for the arithmetic invariants (exact sums, zero-sum balances,
@@ -129,8 +141,9 @@ criterion = { version = "0.8", default-features = false, features = ["cargo_benc
 tabled = { version = "0.22", default-features = false, features = ["std", "derive"] }
 
 [workspace.lints.rust]
-# No unsafe in the library; the binding crates carry their own lint table,
-# because UniFFI's generated scaffolding uses `#[no_mangle]`.
+# No unsafe in any crate. The lint does not report code that another crate's
+# macro expands, such as the `#[unsafe(no_mangle)]` exports of UniFFI's
+# scaffolding.
 unsafe_code = "forbid"
 # Every public item is documented, and nothing is `pub` that callers cannot
 # reach.

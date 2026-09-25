@@ -1,5 +1,8 @@
 //! Running the programs the gates call.
 
+use std::fs;
+use std::io::ErrorKind;
+use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
 use crate::Failure;
@@ -123,6 +126,14 @@ pub(crate) trait Runner {
     /// [`Failure::Start`] when its program cannot be started and
     /// [`Failure::Step`] when it does not succeed.
     fn output(&mut self, step: &Step) -> Result<String, Failure>;
+
+    /// Removes `directory` and everything in it; a missing directory is
+    /// already clear.
+    ///
+    /// # Errors
+    ///
+    /// [`Failure::Clear`] when the directory is there and cannot be removed.
+    fn clear(&mut self, directory: &Path) -> Result<(), Failure>;
 }
 
 /// Runs steps as processes.
@@ -148,6 +159,17 @@ impl Runner for System {
         step.check(output.status)?;
         // Cargo's JSON is UTF-8; anything else fails as the JSON it is not.
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+
+    fn clear(&mut self, directory: &Path) -> Result<(), Failure> {
+        println!("\n==> clearing {}", directory.display());
+        match fs::remove_dir_all(directory) {
+            Err(error) if error.kind() != ErrorKind::NotFound => Err(Failure::Clear {
+                directory: directory.display().to_string(),
+                source: error,
+            }),
+            _ => Ok(()),
+        }
     }
 }
 
