@@ -3,7 +3,7 @@
 # handle, read handle, and cancellation in objects, and exports its value
 # helpers, each forwarding to the core. The web and KMP crates compile the
 # same sources against their own UniFFI releases, so the sources keep to
-# what UniFFI 0.29 accepts (docs/ARCHITECTURE.md § 11).
+# what UniFFI 0.29 accepts (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-uniffi"
 description = "The UniFFI bindings of eranos for Swift, Kotlin, and Java"

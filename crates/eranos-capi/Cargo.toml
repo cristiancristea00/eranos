@@ -1,6 +1,6 @@
 # eranos-capi: the bindings of eranos for C and C++, through Diplomat. One
 # bridge generates the C API, `eranos.h`, and the C++ headers beneath the
-# hand-written C++ layer (docs/ARCHITECTURE.md § 11).
+# hand-written C++ layer (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-capi"
 description = "The bindings of eranos for C and C++, through Diplomat"

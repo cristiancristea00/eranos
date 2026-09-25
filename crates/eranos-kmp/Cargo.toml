@@ -1,7 +1,7 @@
 # eranos-kmp: the bindings of eranos for Kotlin Multiplatform, through UniFFI
 # and gobley. It compiles the sources of eranos-uniffi against UniFFI 0.29.4,
 # the release whose metadata gobley 0.3.7's generator reads
-# (docs/ARCHITECTURE.md § 11).
+# (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-kmp"
 description = "The bindings of eranos for Kotlin Multiplatform, through UniFFI"

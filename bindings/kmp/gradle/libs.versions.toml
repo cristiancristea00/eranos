@@ -2,7 +2,7 @@
 # 0.3.7 supports the Android plugin 8 and not 9; Gradle 9.6 and later drop an
 # API the Android plugin 8 calls, and Gradle 9.1 and later deprecate a
 # notation it uses, so this project runs Gradle 9.0, on JDK 21, since Gradle
-# 9.0 runs on JDK 24 at the latest (docs/ARCHITECTURE.md § 11).
+# 9.0 runs on JDK 24 at the latest (docs/BINDINGS.md § 9).
 
 [versions]
 android = "8.13.2"

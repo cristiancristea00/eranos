@@ -10,9 +10,8 @@ payments with the strategy the app chooses: the fewest payments possible,
 a fast greedy plan, or the unsimplified debts between each pair of people.
 
 It is the shared core of the eranos apps for iOS, Android, and the web,
-which will reach it through binding crates (UniFFI for Swift and Kotlin,
-wasm for the browser); the library itself is plain Rust with no I/O and no
-async runtime.
+which reach it through its [bindings](#bindings) for seven languages; the
+library itself is plain Rust with no I/O and no async runtime.
 
 ## Concepts
 
@@ -151,6 +150,23 @@ cargo run -p eranos --all-features --example grand_tour   # the same identifiers
 | `serde`          | no      | `Serialize`/`Deserialize` for a group and every type it stores; a loaded group is re-validated entry by entry                                         |
 | `sequential-ids` | no      | Identifiers count up from one, so examples and tests print the same text on every run; never for apps, whose identifiers would collide across devices |
 
+## Bindings
+
+| Language             | Package               | Runs on                                                                   |
+| -------------------- | --------------------- | ------------------------------------------------------------------------- |
+| Swift                | `bindings/swift`      | iOS, iPadOS, macOS, Mac Catalyst, tvOS, watchOS, and visionOS             |
+| Kotlin               | `bindings/kotlin`     | Android and the JVM                                                       |
+| Java                 | `bindings/java`       | JDK 25 and later                                                          |
+| Kotlin Multiplatform | `bindings/kmp`        | the JVM, Android, and Apple platforms, from one Kotlin source set         |
+| TypeScript           | `bindings/typescript` | browsers, and Node 24 and later                                           |
+| C                    | `bindings/c`          | C11                                                                       |
+| C++                  | `bindings/cpp`        | C++17                                                                     |
+
+Each package puts a hand-written layer, in its language's own idiom, over
+code generated from the library, and every one prints the library's own
+text for every value; `cargo xtask gates` builds and tests them all. How
+they are built, and each layer's shape: [docs/BINDINGS.md](docs/BINDINGS.md).
+
 ## Development
 
 ```sh
@@ -209,7 +225,7 @@ eranos/
 │   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages
 │   ├── eranos-web/            the bindings for browsers and Node, through UniFFI and WebAssembly
 │   └── xtask/                 the repository's automation: `cargo xtask gates`
-├── docs/                      architecture, development, testing, versioning
+├── docs/                      architecture, bindings, development, testing, versioning
 ├── deny.toml                  the rules of the CI dependency audit
 └── AGENTS.md                  conventions and gates (CLAUDE.md and GEMINI.md link to it)
 ```

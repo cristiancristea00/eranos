@@ -1,10 +1,11 @@
 # eranos — contributor notes
 
 Working notes for contributors and coding agents. `README.md` says what the
-library does, `docs/ARCHITECTURE.md` how it is built, `docs/DEVELOPMENT.md`
-holds every command and change recipe, `docs/TESTING.md` the test suites, and
-`docs/VERSIONING.md` what the version number promises. This file holds the
-conventions and the gates. `CLAUDE.md` and `GEMINI.md` are symlinks to it.
+library does, `docs/ARCHITECTURE.md` how it is built, `docs/BINDINGS.md` how
+it reaches each language, `docs/DEVELOPMENT.md` holds every command and
+change recipe, `docs/TESTING.md` the test suites, and `docs/VERSIONING.md`
+what the version number promises. This file holds the conventions and the
+gates. `CLAUDE.md` and `GEMINI.md` are symlinks to it.
 
 ## Commit messages
 
@@ -343,7 +344,7 @@ over the generated code: `bindings/swift` for Apple platforms,
 `bindings/typescript` for browsers and Node, `bindings/kmp`, which
 compiles the Kotlin layer for Kotlin Multiplatform, and `bindings/c` and
 `bindings/cpp`, header-only layers for C11 and C++17
-([§ 11](docs/ARCHITECTURE.md#11-bindings)). A `Group` owns its
+([docs/BINDINGS.md](docs/BINDINGS.md)). A `Group` owns its
 members, categories, expenses, and transfers in ID-keyed maps. Each entry
 is resolved into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the

@@ -2,7 +2,7 @@
 # uniffi-bindgen-react-native's wasm2 flavour. It compiles the sources of
 # eranos-uniffi against UniFFI 0.31.2, the release that
 # uniffi-bindgen-react-native 0.31.0-5 generates TypeScript for
-# (docs/ARCHITECTURE.md § 11).
+# (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-web"
 description = "The bindings of eranos for the web, through UniFFI"
