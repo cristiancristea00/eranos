@@ -7,9 +7,9 @@ use std::process::{Command, ExitStatus, Stdio};
 
 use crate::Failure;
 
-/// The workspace root, where every step runs, whatever directory
-/// `cargo xtask` was started from.
-const WORKSPACE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+/// The workspace root, where every step runs unless it names a directory
+/// under it, whatever directory `cargo xtask` was started from.
+pub(crate) const WORKSPACE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 /// A program a gate runs, with its arguments and the environment it needs.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,6 +17,9 @@ pub(crate) struct Step {
     arguments: Vec<String>,
     name: String,
     program: String,
+    /// The directory the program runs in, under the workspace root; the root
+    /// itself when absent.
+    directory: Option<String>,
     environment: Vec<Variable>,
 }
 
@@ -42,8 +45,16 @@ impl Step {
                 .collect(),
             name: name.to_owned(),
             program: program.to_owned(),
+            directory: None,
             environment: Vec::new(),
         }
+    }
+
+    /// The same step, run in `directory`, under the workspace root.
+    #[must_use]
+    pub(crate) fn in_directory(mut self, directory: &str) -> Self {
+        self.directory = Some(directory.to_owned());
+        self
     }
 
     /// The same step, also setting the environment variable `name` to
@@ -60,13 +71,18 @@ impl Step {
     /// The command line as a shell would take it, for the heading a step
     /// prints before it runs.
     pub(crate) fn command_line(&self) -> String {
-        self.environment
+        let command = self
+            .environment
             .iter()
             .map(|variable| format!("{}='{}'", variable.name, variable.value))
             .chain([self.program.clone()])
             .chain(self.arguments.iter().cloned())
             .collect::<Vec<_>>()
-            .join(" ")
+            .join(" ");
+        match &self.directory {
+            Some(directory) => format!("cd {directory} && {command}"),
+            None => command,
+        }
     }
 
     /// The process that runs the step: from the workspace root, with
@@ -80,7 +96,7 @@ impl Step {
                     .iter()
                     .map(|variable| (&variable.name, &variable.value)),
             )
-            .current_dir(WORKSPACE)
+            .current_dir(Path::new(WORKSPACE).join(self.directory.as_deref().unwrap_or_default()))
             .stdin(Stdio::null());
         command
     }
@@ -134,6 +150,17 @@ pub(crate) trait Runner {
     ///
     /// [`Failure::Clear`] when the directory is there and cannot be removed.
     fn clear(&mut self, directory: &Path) -> Result<(), Failure>;
+
+    /// Writes `contents` to the file at `path`, replacing what it held.
+    ///
+    /// # Errors
+    ///
+    /// [`Failure::Write`] when the file cannot be written.
+    fn write(&mut self, path: &Path, contents: &str) -> Result<(), Failure>;
+
+    /// Whether the machine builds for Apple platforms, which only Xcode's
+    /// tools on macOS do; the Swift package's gates run only where it does.
+    fn builds_apple_platforms(&self) -> bool;
 }
 
 /// Runs steps as processes.
@@ -170,6 +197,17 @@ impl Runner for System {
             }),
             _ => Ok(()),
         }
+    }
+
+    fn write(&mut self, path: &Path, contents: &str) -> Result<(), Failure> {
+        fs::write(path, contents).map_err(|source| Failure::Write {
+            path: path.display().to_string(),
+            source,
+        })
+    }
+
+    fn builds_apple_platforms(&self) -> bool {
+        cfg!(target_os = "macos")
     }
 }
 

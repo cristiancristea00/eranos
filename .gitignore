@@ -14,3 +14,10 @@
 
 # macOS
 .DS_Store
+
+# The Swift package's build products and what `cargo xtask` writes into it:
+# the XCFramework of the library and the generated Swift, both built from
+# the Rust sources, never committed.
+/bindings/swift/.build/
+/bindings/swift/EranosFFI.xcframework/
+/bindings/swift/Sources/EranosGenerated/

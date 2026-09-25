@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::*;
 use crate::gates::Metadata;
-use crate::process::Step;
+use crate::process::{Step, WORKSPACE};
 
 /// Two packages as `cargo metadata --no-deps --format-version 1` prints
 /// them: one with a library, a test, and two examples, one with a binary.
@@ -28,23 +28,29 @@ pub(crate) const METADATA: &str = r#"{
 
 /// A runner that records every step instead of running it, answers the
 /// step that prints async-lock's features with `tree` and every other
-/// output with `metadata`, records every directory it clears, and fails at
-/// the step `failing` or, when `clearing_fails`, at clearing.
+/// output with `metadata`, records every directory it clears and every file
+/// it writes, builds for Apple platforms when `apple`, and fails at the step
+/// `failing` or, when `clearing_fails` or `writing_fails`, at clearing or
+/// writing.
 #[derive(Debug, Default)]
 pub(crate) struct Recorder {
+    pub(crate) apple: bool,
     pub(crate) cleared: Vec<PathBuf>,
     pub(crate) metadata: String,
     pub(crate) steps: Vec<Step>,
     pub(crate) tree: String,
+    pub(crate) written: Vec<PathBuf>,
     pub(crate) clearing_fails: bool,
     pub(crate) failing: Option<Step>,
+    pub(crate) writing_fails: bool,
 }
 
 impl Recorder {
     /// A recorder that answers with [`METADATA`] and a tree without
-    /// features, and fails at no step.
+    /// features, builds for Apple platforms, and fails at no step.
     pub(crate) fn new() -> Self {
         Self {
+            apple: true,
             metadata: METADATA.to_owned(),
             ..Self::default()
         }
@@ -83,6 +89,19 @@ impl Runner for Recorder {
             Ok(())
         }
     }
+
+    fn write(&mut self, path: &Path, _contents: &str) -> Result<(), Failure> {
+        self.written.push(path.to_owned());
+        if self.writing_fails {
+            Err(Failure::Usage)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn builds_apple_platforms(&self) -> bool {
+        self.apple
+    }
 }
 
 fn words(line: &[&str]) -> Vec<String> {
@@ -90,9 +109,10 @@ fn words(line: &[&str]) -> Vec<String> {
 }
 
 /// `gates` runs every check, reads async-lock's features, lists the
-/// examples, runs each one, builds the host library, and generates every
-/// language's sources into a cleared directory; if it ran less, `cargo xtask
-/// gates` would pass commits the documented gates refuse.
+/// examples, runs each one, builds the host library, generates every
+/// language's sources into a cleared directory, and, where the machine
+/// builds for Apple platforms, the Swift package's gates; if it ran less,
+/// `cargo xtask gates` would pass commits the documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -105,8 +125,25 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     expected.extend(gates::examples(&metadata));
     expected.push(gates::host_library());
     expected.extend(gates::generators(&metadata));
+    let cleared = gates::generated(&metadata);
+    let mut elsewhere = Recorder::new();
+    elsewhere.apple = false;
+    run(&words(&["gates"]), &mut elsewhere).unwrap();
+    assert_eq!(elsewhere.steps, expected);
+    assert_eq!(elsewhere.cleared, std::slice::from_ref(&cleared));
+
+    expected.extend(swift::libraries(&metadata));
+    expected.extend(swift::package(&metadata));
+    expected.push(swift::build());
+    expected.extend(swift::checks(&metadata));
     assert_eq!(recorder.steps, expected);
-    assert_eq!(recorder.cleared, [gates::generated(&metadata)]);
+    assert_eq!(
+        recorder.cleared,
+        [
+            cleared,
+            Path::new(WORKSPACE).join("bindings/swift/EranosFFI.xcframework")
+        ]
+    );
 }
 
 /// `help` succeeds and runs nothing.

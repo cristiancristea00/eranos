@@ -603,6 +603,33 @@ compile them.
 generated Kotlin and Java package `eranos.internal`: the generated code sits
 beneath each package's hand-written layer.
 
+`bindings/swift` is the Swift package for iOS, iPadOS, macOS, Mac Catalyst,
+tvOS, watchOS, and visionOS. Its binary target, `EranosFFI`, is an
+XCFramework of ten static libraries from the library's thirteen Apple
+targets, `lipo` joining the two architectures of the iOS simulator, macOS,
+and Mac Catalyst. The generated Swift compiles as the target
+`EranosGenerated` in Swift 5 mode, since UniFFI's Swift is not yet clean
+under Swift 6's concurrency checks, and the module apps import, `Eranos`, is
+written by hand in Swift 6 and imports the generated one with `internal
+import`, so no generated type reaches an app. It follows the Swift API
+Design Guidelines:
+
+- Every entry has an identifier type of its own (`Member.ID`, `Expense.ID`,
+  an `Identifier` of the entity), absent on a new entry.
+- A value the library checks is a type that is valid once made: `Currency`,
+  from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
+  `Parts`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`, `IBAN`,
+  `Username`, and `Language`, each printing the library's text.
+- Every call throws `EranosError` as a typed throw, with the core's case per
+  module and a failure enum per module whose payloads are typed
+  (`GroupFailure.memberInUse(expenses:member:transfers:)`); a failure the
+  generated code reports that is not the library's, such as a defect in the
+  bindings, is `unexpected`.
+- Every group call is one name overloaded by `async`: asynchronous code
+  picks the form that waits for the lock without blocking a thread of the
+  pool, and cancelling its task cancels the call. `Group.withRead` holds a
+  read handle for a closure.
+
 The generators, `uniffi-bindgen` for Swift and Kotlin and
 `uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
 built on the UniFFI release that builds the library, so the code they write
@@ -610,7 +637,10 @@ reads the library's metadata as written. They sit in a package of their
 own, of binaries only, so that no build or lint of the libraries, for the
 host or for the mobile and wasm targets, compiles a generator. `cargo xtask
 gates` writes every language's sources into `target/uniffi/<language>`;
-they are never committed.
+they are never committed. On macOS it also builds the Swift package's
+XCFramework in the dev profile, 1.3 GB of debug libraries, copies the
+generated Swift into the package, and builds, tests, lints, and documents
+the package.
 
 ## 12. Async and concurrency
 

@@ -37,17 +37,18 @@ every command.
 
 ## 2. Layout
 
-| Suite       | Location                                | Reaches                               | Runs with                                                |
-| ----------- | --------------------------------------- | ------------------------------------- | -------------------------------------------------------- |
-| Unit tests  | `crates/<crate>/src/<module>/tests.rs`  | private items (`use super::*`)        | `cargo test --workspace --lib`                           |
-| Scenarios   | `crates/eranos/tests/scenarios.rs`      | public API                            | `cargo test -p eranos --test scenarios`                  |
-| Properties  | `crates/eranos/tests/properties.rs`     | public API                            | `cargo test -p eranos --test properties`                 |
-| Persistence | `crates/eranos/tests/persistence.rs`    | public API, feature `serde`           | `cargo test -p eranos --all-features --test persistence` |
-| Errors      | `crates/eranos/tests/errors.rs`         | public API: every error message       | `cargo test -p eranos --test errors`                     |
-| API         | `crates/eranos/tests/api.rs`            | public API: every type `Send + Sync`  | `cargo test -p eranos --test api`                        |
-| Doctests    | every `# Examples` block and the README | public API                            | `cargo test --workspace --doc`                           |
-| Examples    | `crates/eranos/examples/*.rs`           | public API; they assert their numbers | `cargo run -p eranos --example <name>`                   |
-| Benchmarks  | `crates/eranos/benches/*.rs`            | public API                            | `cargo bench -p eranos --features serde --bench '*'`     |
+| Suite       | Location                                   | Reaches                                              | Runs with                                                |
+| ----------- | ------------------------------------------ | ---------------------------------------------------- | -------------------------------------------------------- |
+| Unit tests  | `crates/<crate>/src/<module>/tests.rs`     | private items (`use super::*`)                       | `cargo test --workspace --lib`                           |
+| Scenarios   | `crates/eranos/tests/scenarios.rs`         | public API                                           | `cargo test -p eranos --test scenarios`                  |
+| Properties  | `crates/eranos/tests/properties.rs`        | public API                                           | `cargo test -p eranos --test properties`                 |
+| Persistence | `crates/eranos/tests/persistence.rs`       | public API, feature `serde`                          | `cargo test -p eranos --all-features --test persistence` |
+| Errors      | `crates/eranos/tests/errors.rs`            | public API: every error message                      | `cargo test -p eranos --test errors`                     |
+| API         | `crates/eranos/tests/api.rs`               | public API: every type `Send + Sync`                 | `cargo test -p eranos --test api`                        |
+| Doctests    | every `# Examples` block and the README    | public API                                           | `cargo test --workspace --doc`                           |
+| Examples    | `crates/eranos/examples/*.rs`              | public API; they assert their numbers                | `cargo run -p eranos --example <name>`                   |
+| Benchmarks  | `crates/eranos/benches/*.rs`               | public API                                           | `cargo bench -p eranos --features serde --bench '*'`     |
+| Swift       | `bindings/swift/Tests/EranosTests/*.swift` | the `Eranos` module, and the generated code's values | `swift test --package-path bindings/swift`               |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -164,6 +165,13 @@ follows three rules:
   instantiation and the report keeps the best single one, so logic that
   every instantiation shares lives in a non-generic function (the replay
   behind `Deserialize for Group`).
+
+The Swift layer is held to the same rules by its own tests: `swift test
+--enable-code-coverage` reports every line, region, and function of the
+`Eranos` module, and the generated module is not measured. A value the
+library never sends, such as an amount in a currency it does not list,
+still prints, through a fallback its test reaches by building the value
+from the generated code's.
 
 ## 6. Mutation testing
 

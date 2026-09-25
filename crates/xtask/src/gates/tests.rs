@@ -23,8 +23,8 @@ fn documented_gates() -> Vec<String> {
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
 /// its order, and the last documented gates are the examples, the host
-/// library, and the generators; a check the code dropped, added, or
-/// reordered would pass a commit the documented gates refuse.
+/// library, the generators, and the Swift package; a check the code dropped,
+/// added, or reordered would pass a commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
@@ -37,6 +37,7 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "cargo run --quiet --package <package> --all-features --example <name>",
             &host_library().command_line(),
             "cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>",
+            "rustup target add <every Apple target>",
         ]
     );
 }
@@ -183,6 +184,16 @@ fn a_failing_example_list_runs_no_example() {
     unreadable.metadata = "{}".to_owned();
     assert!(matches!(run(&mut unreadable), Err(Failure::Metadata(_))));
     assert_eq!(unreadable.steps.last(), Some(&metadata()));
+}
+
+/// A failing step of the Swift package stops the gates there, so a package
+/// that does not build is never taken for one that passed.
+#[test]
+fn a_failing_swift_step_stops_the_gates() {
+    let mut recorder = Recorder::new();
+    recorder.failing = Some(crate::swift::build());
+    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert_eq!(recorder.steps.last(), Some(&crate::swift::build()));
 }
 
 /// A failing example stops the examples after it, and nothing is generated.

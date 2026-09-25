@@ -6,6 +6,7 @@
 
 mod gates;
 mod process;
+mod swift;
 
 use std::io;
 use std::process::{ExitCode, ExitStatus};
@@ -50,6 +51,14 @@ enum Failure {
     /// The command line names no command xtask knows.
     #[error("unknown command\n\n{USAGE}")]
     Usage,
+    /// A file a gate writes, such as a build log a linter reads, could not be
+    /// written.
+    #[error("{path} could not be written: {source}")]
+    Write {
+        path: String,
+        #[source]
+        source: io::Error,
+    },
 }
 
 fn main() -> ExitCode {

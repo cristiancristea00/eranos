@@ -12,7 +12,7 @@ use crate::process::{Runner, Step};
 #[derive(Debug, Deserialize)]
 pub(crate) struct Metadata {
     packages: Vec<Package>,
-    target_directory: String,
+    pub(crate) target_directory: String,
 }
 
 impl Metadata {
@@ -60,6 +60,9 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     runner.clear(&generated(&metadata))?;
     for step in generators(&metadata) {
         runner.run(&step)?;
+    }
+    if runner.builds_apple_platforms() {
+        crate::swift::run(runner, &metadata)?;
     }
     println!("\nevery gate passed");
     Ok(())

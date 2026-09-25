@@ -64,7 +64,17 @@ cargo doc -p eranos --all-features --open        # the API documentation
 commit; `cargo xtask help` lists the commands. The alias lives in
 `.cargo/config.toml`, and the automation in `crates/xtask`. The gates also
 write the Swift, Kotlin, and Java sources of the UniFFI glue into
-`target/uniffi/<language>`, from the host library in `target/debug`.
+`target/uniffi/<language>`, from the host library in `target/debug`, and
+on macOS they build the Swift package's XCFramework from the library's
+thirteen Apple targets, which they add with `rustup target add`. A cold
+run of the gates builds the library for every Apple target first, about 3
+minutes on an Apple M4 Pro; a warm one takes about 2 minutes in all.
+
+```sh
+swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
+swift test --package-path bindings/swift --enable-code-coverage # with coverage; the JSON is at `swift test --show-codecov-path`
+(cd bindings/swift && swiftlint lint --strict)                  # SwiftLint, with the package's .swiftlint.yml
+```
 
 Every internal crate's tests link the facade, which its doc examples use,
 so testing one crate builds the whole workspace, and each crate's doctests
@@ -201,7 +211,8 @@ breaking.
    library, where an absent optional field clears the stored one; the
    record's round trip in its module's `tests.rs` then covers it. Repeat
    the field in the record's mirror in `crates/eranos-uniffi/src/records.rs`,
-   which fails to build until it does.
+   which fails to build until it does, and in the Swift entry type in
+   `bindings/swift/Sources/Eranos/Entries/`, with its conversions both ways.
 
 ### 3.6 A new error variant
 
@@ -220,7 +231,10 @@ and the like) has a case for the variant, in alphabetical order, with what
 it holds, and its row in that crate's `error/tests.rs`; and the UniFFI glue
 until the failure's mirror in `crates/eranos-uniffi/src/error.rs` repeats
 the case. A new error type is a new case of `EranosError`, with a failure
-enum of its own.
+enum of its own. The Swift layer's failure enum in
+`bindings/swift/Sources/Eranos/Errors/Failures.swift` gets the case, with
+its payload typed, the conversion from the generated one gets its arm, and
+`Tests/EranosTests/ErrorTests.swift` its row.
 
 ### 3.7 A lint exception
 
@@ -305,6 +319,10 @@ When code in one crate needs something another crate holds:
    and a read also from its `GroupReader`, with the core's documentation;
    nothing fails to build while one is missing, so the methods of each
    object follow the core's, section by section.
+7. Add both forms, one name overloaded by `async`, to the Swift layer's
+   `Group` in `bindings/swift/Sources/Eranos/Group/Group+<section>.swift`,
+   named by the Swift API Design Guidelines, and a read to its
+   `GroupReader`; call them in `Tests/EranosTests/GroupTests.swift`.
 
 ## 4. Examples and benchmarks
 

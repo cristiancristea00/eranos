@@ -23,10 +23,11 @@ Signed-off-by: <committer name> <<committer email>>
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
-  `settlement`, `transfer`, and `group`; `bindings` for the binding core
-  and `uniffi` for the UniFFI glue and its generators; and besides them
-  `serde`, `docs`, `examples`, `build`, and `xtask`. A change to the facade
-  alone, or to several crates, takes no scope.
+  `settlement`, `transfer`, and `group`; `bindings` for the binding core,
+  `uniffi` for the UniFFI glue and its generators, and `swift` for the
+  Swift package; and besides them `serde`, `docs`, `examples`, `build`, and
+  `xtask`. A change to the facade alone, or to several crates, takes no
+  scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -64,6 +65,14 @@ It runs these, in this order, and stops at the first that fails:
     which writes each language's sources from the host library into
     `target/uniffi/<language>`, cleared first: a type a generator cannot
     read stops the gates, and the generated sources are never committed
+11. `rustup target add <every Apple target>`, on macOS, then the Swift
+    package: `cargo build --package eranos-uniffi --lib` for the 13 Apple
+    targets, `lipo` and `xcodebuild -create-xcframework` into
+    `bindings/swift/EranosFFI.xcframework`, the generated Swift copied into
+    `Sources/EranosGenerated`, and `swift build --build-tests --verbose`,
+    `swift test`, `swiftlint lint --strict`, `swiftlint analyze --strict` on
+    the build's log, and `swift package generate-documentation
+    --warnings-as-errors`, all in `bindings/swift`
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a

@@ -158,3 +158,50 @@ fn a_path_that_is_not_a_directory_cannot_be_cleared() {
         "{failure}"
     );
 }
+
+/// A step that names a directory runs its program there, under the workspace
+/// root, and prints the change of directory first, so a linter that reads
+/// its configuration from the directory finds it, and the printed line
+/// reruns the step as it ran.
+#[test]
+fn a_step_runs_in_the_directory_it_names() {
+    let step = Step::new(&["lint"], "SwiftLint", "swiftlint").in_directory("bindings/swift");
+    assert_eq!(
+        step.command().get_current_dir(),
+        Some(Path::new(WORKSPACE).join("bindings/swift").as_path())
+    );
+    assert_eq!(step.command_line(), "cd bindings/swift && swiftlint lint");
+}
+
+/// A file the gates write, such as the build log the analyzer reads, holds
+/// what was written, and a path that cannot be written fails as a writing
+/// of that path instead of leaving the old file to be read.
+#[test]
+fn writing_replaces_a_file_or_fails_under_its_path() {
+    let file = std::env::temp_dir().join(format!("xtask-write-{}", std::process::id()));
+    System.write(&file, "first").unwrap();
+    System.write(&file, "second").unwrap();
+    assert_eq!(fs::read_to_string(&file).unwrap(), "second");
+    fs::remove_file(&file).unwrap();
+
+    let missing = std::env::temp_dir()
+        .join(format!("xtask-missing-{}", std::process::id()))
+        .join("log");
+    let failure = System.write(&missing, "log").unwrap_err();
+    assert!(
+        matches!(&failure, Failure::Write { path, .. } if *path == missing.display().to_string()),
+        "{failure:?}"
+    );
+    assert!(
+        failure
+            .to_string()
+            .starts_with(&format!("{} could not be written: ", missing.display())),
+        "{failure}"
+    );
+}
+
+/// The Swift package's gates run exactly where Xcode's tools do: on macOS.
+#[test]
+fn only_macos_builds_for_apple_platforms() {
+    assert_eq!(System.builds_apple_platforms(), cfg!(target_os = "macos"));
+}

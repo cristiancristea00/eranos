@@ -176,6 +176,8 @@ format, and the rounding results are all part of the contract:
 eranos/
 ├── .github/                   the CI workflow; Dependabot and zizmor configuration
 ├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
+├── bindings/
+│   └── swift/                 the Swift package for Apple platforms, over the UniFFI glue
 ├── crates/
 │   ├── eranos/                the facade callers depend on
 │   │   ├── src/               re-exports of the types the internal crates hold
