@@ -214,12 +214,13 @@ return it. Give the enum's conversion trait (`FromGroupError` and the like,
 beside the enum) a method for it, in variant order, taking what the
 variant holds and the message, and its arm in the provided `from_…`; add
 its row to the conversion test in the crate's `error/tests.rs`. The binding
-core then fails to build until its `EranosError`
-(`crates/eranos-bindings/src/error.rs`) has a case for the variant, in
-alphabetical order and prefixed with the crate where another crate's error
-has a variant of the same name, with its row in that crate's
-`error/tests.rs`, and until the mirror in
-`crates/eranos-uniffi/src/error.rs` repeats the case.
+core then fails to build until the module's failure enum in
+`crates/eranos-bindings/src/error.rs` (`GroupFailure` for `GroupError`,
+and the like) has a case for the variant, in alphabetical order, with what
+it holds, and its row in that crate's `error/tests.rs`; and the UniFFI glue
+until the failure's mirror in `crates/eranos-uniffi/src/error.rs` repeats
+the case. A new error type is a new case of `EranosError`, with a failure
+enum of its own.
 
 ### 3.7 A lint exception
 

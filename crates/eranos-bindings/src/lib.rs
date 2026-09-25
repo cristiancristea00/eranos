@@ -39,7 +39,11 @@ use eranos::error::IdError;
 
 pub use calendar::{CalendarDate, TimeOfDay};
 pub use cancellation::Cancellation;
-pub use error::{EranosError, IbanReason};
+pub use error::{
+    AccountFailure, CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
+    GroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MoneyFailure,
+    SettlementFailure, TransferFailure,
+};
 pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,
@@ -67,7 +71,8 @@ pub use values::{
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidId`] for text that is not a UUID.
+/// [`IdFailure::InvalidId`] for text that is not a
+/// UUID.
 fn identifier<Id: FromStr<Err = IdError>>(text: &str) -> Result<Id, EranosError> {
     Ok(text.parse()?)
 }

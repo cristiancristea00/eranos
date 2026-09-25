@@ -11,6 +11,7 @@ use eranos::{Currency, MemberId};
 
 use super::*;
 use crate::group::GroupHandle;
+use crate::{GroupFailure, IdFailure};
 
 /// The group handle and the identifiers of an entry of every kind.
 struct Flat {
@@ -92,7 +93,10 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
     assert_eq!(reader.save(), handle.save());
     assert!(matches!(
         reader.member("nobody"),
-        Err(EranosError::InvalidId { .. })
+        Err(EranosError::Id {
+            failure: IdFailure::InvalidId,
+            ..
+        })
     ));
     drop(reader);
 }
@@ -105,7 +109,10 @@ fn a_released_handle_reads_nothing_and_holds_no_lock() {
     let reader = flat.handle.read().unwrap();
     assert!(matches!(
         flat.handle.try_write_lock(),
-        Err(EranosError::Busy { .. })
+        Err(EranosError::Group {
+            failure: GroupFailure::Busy,
+            ..
+        })
     ));
     reader.release();
     assert!(flat.handle.try_write_lock().is_ok());
@@ -167,7 +174,10 @@ fn a_change_waits_for_every_open_handle() {
     drop(dropped);
     assert!(matches!(
         archiving.as_mut().poll(&mut context),
-        Poll::Ready(Err(EranosError::UnknownMember { .. }))
+        Poll::Ready(Err(EranosError::Group {
+            failure: GroupFailure::UnknownMember { .. },
+            ..
+        }))
     ));
     assert_eq!(handle.name(), Ok("Home".to_owned()));
 }

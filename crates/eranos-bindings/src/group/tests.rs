@@ -18,6 +18,7 @@ use super::*;
 use crate::calendar::CalendarDate;
 use crate::expense::{ExpenseSplit, Split};
 use crate::money::Cost;
+use crate::{GroupFailure, LanguageFailure, MoneyFailure, SettlementFailure};
 
 /// A task that counts how often it is woken.
 #[derive(Default)]
@@ -246,9 +247,18 @@ fn a_new_group_takes_what_it_starts_with() {
         matches!(
             refusals,
             [
-                EranosError::UnknownCurrency { .. },
-                EranosError::GroupEmptyName { .. },
-                EranosError::InvalidLanguage { .. },
+                EranosError::Money {
+                    failure: MoneyFailure::UnknownCurrency,
+                    ..
+                },
+                EranosError::Group {
+                    failure: GroupFailure::EmptyName,
+                    ..
+                },
+                EranosError::Language {
+                    failure: LanguageFailure::InvalidLanguage,
+                    ..
+                },
             ]
         ),
         "{refusals:?}"
@@ -504,8 +514,14 @@ fn the_currency_changes_alike_in_both_forms() {
         matches!(
             refusals,
             [
-                EranosError::UnknownCurrency { .. },
-                EranosError::MissingExchangeRate { .. },
+                EranosError::Money {
+                    failure: MoneyFailure::UnknownCurrency,
+                    ..
+                },
+                EranosError::Group {
+                    failure: GroupFailure::MissingExchangeRate { .. },
+                    ..
+                },
             ]
         ),
         "{refusals:?}"
@@ -524,7 +540,13 @@ fn a_settlement_too_large_to_compute_is_refused_in_both_forms() {
         block_on(hub.settlement_async(strategy, None)),
     ] {
         assert!(
-            matches!(refusal, Err(EranosError::OutOfMemory { .. })),
+            matches!(
+                refusal,
+                Err(EranosError::Settlement {
+                    failure: SettlementFailure::OutOfMemory { .. },
+                    ..
+                })
+            ),
             "{refusal:?}"
         );
     }
@@ -565,8 +587,14 @@ fn a_saved_group_loads_alike_in_both_forms() {
             [
                 EranosError::InvalidJson { .. },
                 EranosError::InvalidJson { .. },
-                EranosError::UnknownMember { .. },
-                EranosError::UnknownMember { .. },
+                EranosError::Group {
+                    failure: GroupFailure::UnknownMember { .. },
+                    ..
+                },
+                EranosError::Group {
+                    failure: GroupFailure::UnknownMember { .. },
+                    ..
+                },
                 EranosError::Cancelled { .. },
             ]
         ),
@@ -601,7 +629,10 @@ fn trying_the_lock_is_busy_while_an_async_call_holds_it() {
     assert!(hub.try_read_lock().is_ok());
     assert!(matches!(
         hub.try_write_lock(),
-        Err(EranosError::Busy { .. })
+        Err(EranosError::Group {
+            failure: GroupFailure::Busy,
+            ..
+        })
     ));
     let Poll::Ready(settlement) = settling.as_mut().poll(&mut context) else {
         panic!("the settlement did not complete after its one yield");
@@ -619,11 +650,17 @@ fn trying_the_lock_is_busy_while_an_async_call_holds_it() {
     // The change holds the exclusive lock at its yield.
     assert!(matches!(
         busy.try_read_lock(),
-        Err(EranosError::Busy { .. })
+        Err(EranosError::Group {
+            failure: GroupFailure::Busy,
+            ..
+        })
     ));
     assert!(matches!(
         busy.try_write_lock(),
-        Err(EranosError::Busy { .. })
+        Err(EranosError::Group {
+            failure: GroupFailure::Busy,
+            ..
+        })
     ));
     assert_eq!(changing.as_mut().poll(&mut context), Poll::Ready(Ok(())));
     assert_eq!(busy.currency(), Ok("RON".to_owned()));

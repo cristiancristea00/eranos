@@ -1,5 +1,5 @@
-//! The one error every binding reports: a case per failure of the library,
-//! holding what the failure holds and the library's message, and the
+//! The one error every binding reports: a case per module of the library,
+//! holding that module's failure and the library's message, and the
 //! binding's own cases.
 
 use std::fmt;
@@ -25,42 +25,27 @@ use crate::Money;
 
 /// Why a call failed.
 ///
-/// A case per failure of the library, named after it, with its crate's name in
-/// front where two crates share a name, holding what the failure holds and the
-/// library's message; and the binding's own cases. `Busy` is a synchronous
-/// call on wasm that found the group locked by another call.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A case per module of the library whose rules refuse a call, holding the
+/// module's failure, with a case per variant of the module's error and what
+/// it holds, and the library's message; and the binding's own cases. A
+/// synchronous call on wasm that finds the group locked by another call
+/// fails with [`GroupFailure::Busy`].
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EranosError {
-    /// [`AccountError::EmptyName`].
-    AccountEmptyName {
+    /// An [`AccountError`], about a payment account: its IBAN, username, or
+    /// label.
+    Account {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: AccountFailure,
     },
-    /// [`ExpenseError::AmountsDoNotAddUp`].
-    AmountsDoNotAddUp {
-        /// What the parts add up to.
-        actual: Money,
+    /// A [`CalendarError`], about a date or a time of day.
+    Calendar {
         /// The library's message.
         detail: String,
-        /// What the parts must add up to.
-        expected: Money,
-    },
-    /// [`GroupError::ArchivedMember`].
-    ArchivedMember {
-        /// The library's message.
-        detail: String,
-        /// The member, as their identifier.
-        member: String,
-    },
-    /// [`GroupError::BuiltInCategory`].
-    BuiltInCategory {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`GroupError::Busy`].
-    Busy {
-        /// The library's message.
-        detail: String,
+        /// Which failure, with what it holds.
+        failure: CalendarFailure,
     },
     /// The call was cancelled through its
     /// [`Cancellation`](crate::Cancellation), before it changed anything.
@@ -68,113 +53,41 @@ pub enum EranosError {
         /// What went wrong.
         detail: String,
     },
-    /// [`CategoryError::EmptyName`].
-    CategoryEmptyName {
+    /// A [`CategoryError`], about a category.
+    Category {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: CategoryFailure,
     },
-    /// [`GroupError::DuplicateCategory`].
-    DuplicateCategory {
-        /// The category, as its identifier.
-        category: String,
+    /// A [`ContactError`], about an email address or a phone number.
+    Contact {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: ContactFailure,
     },
-    /// [`GroupError::DuplicateCategoryName`].
-    DuplicateCategoryName {
+    /// An [`ExpenseError`], about an expense: its amount, split, items, or tip.
+    Expense {
         /// The library's message.
         detail: String,
-        /// The category that has the name, as its identifier.
-        existing: String,
+        /// Which failure, with what it holds.
+        failure: ExpenseFailure,
     },
-    /// [`GroupError::DuplicateExchangeRate`].
-    DuplicateExchangeRate {
-        /// The currency, as its ISO 4217 code.
-        currency: String,
+    /// A [`GroupError`], about how an entry fits the group, or the group's
+    /// lock.
+    Group {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: GroupFailure,
     },
-    /// [`GroupError::DuplicateExpense`].
-    DuplicateExpense {
+    /// An [`IdError`], about an identifier.
+    Id {
         /// The library's message.
         detail: String,
-        /// The expense, as its identifier.
-        expense: String,
-    },
-    /// [`GroupError::DuplicateTransfer`].
-    DuplicateTransfer {
-        /// The library's message.
-        detail: String,
-        /// The transfer, as its identifier.
-        transfer: String,
-    },
-    /// [`MemberError::EmptyFirstName`].
-    EmptyFirstName {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::EmptyItemName`].
-    EmptyItemName {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::EmptySplit`].
-    EmptySplit {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`AccountError::EmptyUsername`].
-    EmptyUsername {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::CurrencyMismatch`].
-    ExpenseCurrencyMismatch {
-        /// The library's message.
-        detail: String,
-        /// The currency the entry must be in, as its ISO 4217 code.
-        expected: String,
-        /// The currency the part is in, as its ISO 4217 code.
-        found: String,
-    },
-    /// [`ExpenseError::DuplicateMember`].
-    ExpenseDuplicateMember {
-        /// The library's message.
-        detail: String,
-        /// The member, as their identifier.
-        member: String,
-    },
-    /// [`ExpenseError::EmptyName`].
-    ExpenseEmptyName {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::NonPositiveAmount`].
-    ExpenseNonPositiveAmount {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::Overflow`].
-    ExpenseOverflow {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`GroupError::DuplicateMember`].
-    GroupDuplicateMember {
-        /// The library's message.
-        detail: String,
-        /// The member, as their identifier.
-        member: String,
-    },
-    /// [`GroupError::EmptyName`].
-    GroupEmptyName {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`GroupError::Overflow`].
-    GroupOverflow {
-        /// The library's message.
-        detail: String,
+        /// Which failure, with what it holds.
+        failure: IdFailure,
     },
     /// An entry to add carried an identifier; the group gives a new entry its
     /// own.
@@ -187,38 +100,6 @@ pub enum EranosError {
         /// What went wrong.
         detail: String,
     },
-    /// [`MoneyError::InvalidAmount`].
-    InvalidAmount {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`CalendarError::InvalidDate`].
-    InvalidDate {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ContactError::InvalidEmail`].
-    InvalidEmail {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`MoneyError::InvalidExchangeRate`].
-    InvalidExchangeRate {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`AccountError::InvalidIban`].
-    InvalidIban {
-        /// The library's message.
-        detail: String,
-        /// Why the IBAN was refused.
-        reason: IbanReason,
-    },
-    /// [`IdError::InvalidId`].
-    InvalidId {
-        /// The library's message.
-        detail: String,
-    },
     /// A saved group that is not JSON of the saved form, at `line` and
     /// `column`.
     InvalidJson {
@@ -229,176 +110,45 @@ pub enum EranosError {
         /// The line of the first character the reader refused, from 1.
         line: i64,
     },
-    /// [`LanguageError::InvalidLanguage`].
-    InvalidLanguage {
+    /// A [`LanguageError`], about a language tag.
+    Language {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: LanguageFailure,
     },
-    /// [`MoneyError::InvalidParts`].
-    InvalidParts {
+    /// A [`MemberError`], about a member.
+    Member {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: MemberFailure,
     },
-    /// [`MoneyError::InvalidPercentage`].
-    InvalidPercentage {
+    /// A [`MoneyError`], about an amount, a currency, a rate, or a ratio.
+    Money {
         /// The library's message.
         detail: String,
-    },
-    /// [`ContactError::InvalidPhoneNumber`].
-    InvalidPhoneNumber {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`CalendarError::InvalidTime`].
-    InvalidTime {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::ItemsDoNotAddUp`].
-    ItemsDoNotAddUp {
-        /// What the parts add up to.
-        actual: Money,
-        /// The library's message.
-        detail: String,
-        /// What the parts must add up to.
-        expected: Money,
-    },
-    /// [`GroupError::MemberInUse`].
-    MemberInUse {
-        /// The library's message.
-        detail: String,
-        /// The expenses that reference the member, as identifiers.
-        expenses: Vec<String>,
-        /// The member, as their identifier.
-        member: String,
-        /// The transfers that reference the member, as identifiers.
-        transfers: Vec<String>,
-    },
-    /// [`GroupError::MissingExchangeRate`].
-    MissingExchangeRate {
-        /// The currency, as its ISO 4217 code.
-        currency: String,
-        /// The library's message.
-        detail: String,
-    },
-    /// [`MoneyError::CurrencyMismatch`].
-    MoneyCurrencyMismatch {
-        /// The library's message.
-        detail: String,
-        /// The currency of the first amount, as its ISO 4217 code.
-        left: String,
-        /// The currency of the second amount, as its ISO 4217 code.
-        right: String,
-    },
-    /// [`MoneyError::Overflow`].
-    MoneyOverflow {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::NegativeTip`].
-    NegativeTip {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::NoItems`].
-    NoItems {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::NonPositiveShare`].
-    NonPositiveShare {
-        /// The library's message.
-        detail: String,
-        /// The member, as their identifier.
-        member: String,
-    },
-    /// [`SettlementError::OutOfMemory`].
-    OutOfMemory {
-        /// How many balances the exact solver was asked to settle.
-        balances: i64,
-        /// The library's message.
-        detail: String,
-    },
-    /// [`ExpenseError::PercentagesDoNotAddUp`].
-    PercentagesDoNotAddUp {
-        /// The library's message.
-        detail: String,
-        /// What the percentages add up to, in basis points.
-        total_basis_points: i64,
+        /// Which failure, with what it holds.
+        failure: MoneyFailure,
     },
     /// The read handle was released, so it reads the group no more.
     Released {
         /// What went wrong.
         detail: String,
     },
-    /// [`TransferError::SameMember`].
-    SameMember {
+    /// A [`SettlementError`], about a settlement.
+    Settlement {
         /// The library's message.
         detail: String,
+        /// Which failure, with what it holds.
+        failure: SettlementFailure,
     },
-    /// [`MoneyError::TooManyDecimals`].
-    TooManyDecimals {
-        /// How many decimal places the currency allows.
-        allowed: i64,
-        /// The currency, as its ISO 4217 code.
-        currency: String,
+    /// A [`TransferError`], about a transfer.
+    Transfer {
         /// The library's message.
         detail: String,
-    },
-    /// [`TransferError::NonPositiveAmount`].
-    TransferNonPositiveAmount {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`GroupError::UnexpectedExchangeRate`].
-    UnexpectedExchangeRate {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`GroupError::UnknownCategory`].
-    UnknownCategory {
-        /// The category, as its identifier.
-        category: String,
-        /// The library's message.
-        detail: String,
-    },
-    /// [`MoneyError::UnknownCurrency`].
-    UnknownCurrency {
-        /// The library's message.
-        detail: String,
-    },
-    /// [`GroupError::UnknownExpense`].
-    UnknownExpense {
-        /// The library's message.
-        detail: String,
-        /// The expense, as its identifier.
-        expense: String,
-    },
-    /// [`GroupError::UnknownMember`].
-    UnknownMember {
-        /// The library's message.
-        detail: String,
-        /// The member, as their identifier.
-        member: String,
-    },
-    /// [`GroupError::UnknownTransfer`].
-    UnknownTransfer {
-        /// The library's message.
-        detail: String,
-        /// The transfer, as its identifier.
-        transfer: String,
-    },
-    /// [`GroupError::UnsupportedFormat`].
-    UnsupportedFormat {
-        /// The library's message.
-        detail: String,
-        /// The format the saved group names.
-        format: i64,
-    },
-    /// [`ExpenseError::ZeroQuantity`].
-    ZeroQuantity {
-        /// The library's message.
-        detail: String,
+        /// Which failure, with what it holds.
+        failure: TransferFailure,
     },
 }
 
@@ -454,66 +204,23 @@ impl EranosError {
     #[must_use]
     pub fn detail(&self) -> &str {
         match self {
-            Self::AccountEmptyName { detail, .. }
-            | Self::AmountsDoNotAddUp { detail, .. }
-            | Self::ArchivedMember { detail, .. }
-            | Self::BuiltInCategory { detail, .. }
-            | Self::Busy { detail, .. }
+            Self::Account { detail, .. }
+            | Self::Calendar { detail, .. }
             | Self::Cancelled { detail, .. }
-            | Self::CategoryEmptyName { detail, .. }
-            | Self::DuplicateCategory { detail, .. }
-            | Self::DuplicateCategoryName { detail, .. }
-            | Self::DuplicateExchangeRate { detail, .. }
-            | Self::DuplicateExpense { detail, .. }
-            | Self::DuplicateTransfer { detail, .. }
-            | Self::EmptyFirstName { detail, .. }
-            | Self::EmptyItemName { detail, .. }
-            | Self::EmptySplit { detail, .. }
-            | Self::EmptyUsername { detail, .. }
-            | Self::ExpenseCurrencyMismatch { detail, .. }
-            | Self::ExpenseDuplicateMember { detail, .. }
-            | Self::ExpenseEmptyName { detail, .. }
-            | Self::ExpenseNonPositiveAmount { detail, .. }
-            | Self::ExpenseOverflow { detail, .. }
-            | Self::GroupDuplicateMember { detail, .. }
-            | Self::GroupEmptyName { detail, .. }
-            | Self::GroupOverflow { detail, .. }
+            | Self::Category { detail, .. }
+            | Self::Contact { detail, .. }
+            | Self::Expense { detail, .. }
+            | Self::Group { detail, .. }
+            | Self::Id { detail, .. }
             | Self::IdentifierGiven { detail, .. }
             | Self::IdentifierMissing { detail, .. }
-            | Self::InvalidAmount { detail, .. }
-            | Self::InvalidDate { detail, .. }
-            | Self::InvalidEmail { detail, .. }
-            | Self::InvalidExchangeRate { detail, .. }
-            | Self::InvalidIban { detail, .. }
-            | Self::InvalidId { detail, .. }
             | Self::InvalidJson { detail, .. }
-            | Self::InvalidLanguage { detail, .. }
-            | Self::InvalidParts { detail, .. }
-            | Self::InvalidPercentage { detail, .. }
-            | Self::InvalidPhoneNumber { detail, .. }
-            | Self::InvalidTime { detail, .. }
-            | Self::ItemsDoNotAddUp { detail, .. }
-            | Self::MemberInUse { detail, .. }
-            | Self::MissingExchangeRate { detail, .. }
-            | Self::MoneyCurrencyMismatch { detail, .. }
-            | Self::MoneyOverflow { detail, .. }
-            | Self::NegativeTip { detail, .. }
-            | Self::NoItems { detail, .. }
-            | Self::NonPositiveShare { detail, .. }
-            | Self::OutOfMemory { detail, .. }
-            | Self::PercentagesDoNotAddUp { detail, .. }
+            | Self::Language { detail, .. }
+            | Self::Member { detail, .. }
+            | Self::Money { detail, .. }
             | Self::Released { detail, .. }
-            | Self::SameMember { detail, .. }
-            | Self::TooManyDecimals { detail, .. }
-            | Self::TransferNonPositiveAmount { detail, .. }
-            | Self::UnexpectedExchangeRate { detail, .. }
-            | Self::UnknownCategory { detail, .. }
-            | Self::UnknownCurrency { detail, .. }
-            | Self::UnknownExpense { detail, .. }
-            | Self::UnknownMember { detail, .. }
-            | Self::UnknownTransfer { detail, .. }
-            | Self::UnsupportedFormat { detail, .. }
-            | Self::ZeroQuantity { detail, .. } => detail,
+            | Self::Settlement { detail, .. }
+            | Self::Transfer { detail, .. } => detail,
         }
     }
 }
@@ -526,8 +233,276 @@ impl fmt::Display for EranosError {
 
 impl std::error::Error for EranosError {}
 
+/// What an [`AccountError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AccountFailure {
+    /// [`AccountError::EmptyName`].
+    EmptyName,
+    /// [`AccountError::EmptyUsername`].
+    EmptyUsername,
+    /// [`AccountError::InvalidIban`].
+    InvalidIban {
+        /// Why the IBAN was refused.
+        reason: IbanReason,
+    },
+}
+
+/// What a [`CalendarError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CalendarFailure {
+    /// [`CalendarError::InvalidDate`].
+    InvalidDate,
+    /// [`CalendarError::InvalidTime`].
+    InvalidTime,
+}
+
+/// What a [`CategoryError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CategoryFailure {
+    /// [`CategoryError::EmptyName`].
+    EmptyName,
+}
+
+/// What a [`ContactError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ContactFailure {
+    /// [`ContactError::InvalidEmail`].
+    InvalidEmail,
+    /// [`ContactError::InvalidPhoneNumber`].
+    InvalidPhoneNumber,
+}
+
+/// What an [`ExpenseError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ExpenseFailure {
+    /// [`ExpenseError::AmountsDoNotAddUp`].
+    AmountsDoNotAddUp {
+        /// What the parts add up to.
+        actual: Money,
+        /// What the parts must add up to.
+        expected: Money,
+    },
+    /// [`ExpenseError::CurrencyMismatch`].
+    CurrencyMismatch {
+        /// The currency the entry must be in, as its ISO 4217 code.
+        expected: String,
+        /// The currency the part is in, as its ISO 4217 code.
+        found: String,
+    },
+    /// [`ExpenseError::DuplicateMember`].
+    DuplicateMember {
+        /// The member, as their identifier.
+        member: String,
+    },
+    /// [`ExpenseError::EmptyItemName`].
+    EmptyItemName,
+    /// [`ExpenseError::EmptyName`].
+    EmptyName,
+    /// [`ExpenseError::EmptySplit`].
+    EmptySplit,
+    /// [`ExpenseError::ItemsDoNotAddUp`].
+    ItemsDoNotAddUp {
+        /// What the parts add up to.
+        actual: Money,
+        /// What the parts must add up to.
+        expected: Money,
+    },
+    /// [`ExpenseError::NegativeTip`].
+    NegativeTip,
+    /// [`ExpenseError::NoItems`].
+    NoItems,
+    /// [`ExpenseError::NonPositiveAmount`].
+    NonPositiveAmount,
+    /// [`ExpenseError::NonPositiveShare`].
+    NonPositiveShare {
+        /// The member, as their identifier.
+        member: String,
+    },
+    /// [`ExpenseError::Overflow`].
+    Overflow,
+    /// [`ExpenseError::PercentagesDoNotAddUp`].
+    PercentagesDoNotAddUp {
+        /// What the percentages add up to, in basis points.
+        total_basis_points: i64,
+    },
+    /// [`ExpenseError::ZeroQuantity`].
+    ZeroQuantity,
+}
+
+/// What a [`GroupError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum GroupFailure {
+    /// [`GroupError::ArchivedMember`].
+    ArchivedMember {
+        /// The member, as their identifier.
+        member: String,
+    },
+    /// [`GroupError::BuiltInCategory`].
+    BuiltInCategory,
+    /// [`GroupError::Busy`].
+    Busy,
+    /// [`GroupError::DuplicateCategory`].
+    DuplicateCategory {
+        /// The category, as its identifier.
+        category: String,
+    },
+    /// [`GroupError::DuplicateCategoryName`].
+    DuplicateCategoryName {
+        /// The category that has the name, as its identifier.
+        existing: String,
+    },
+    /// [`GroupError::DuplicateExchangeRate`].
+    DuplicateExchangeRate {
+        /// The currency, as its ISO 4217 code.
+        currency: String,
+    },
+    /// [`GroupError::DuplicateExpense`].
+    DuplicateExpense {
+        /// The expense, as its identifier.
+        expense: String,
+    },
+    /// [`GroupError::DuplicateMember`].
+    DuplicateMember {
+        /// The member, as their identifier.
+        member: String,
+    },
+    /// [`GroupError::DuplicateTransfer`].
+    DuplicateTransfer {
+        /// The transfer, as its identifier.
+        transfer: String,
+    },
+    /// [`GroupError::EmptyName`].
+    EmptyName,
+    /// [`GroupError::MemberInUse`].
+    MemberInUse {
+        /// The expenses that reference the member, as identifiers.
+        expenses: Vec<String>,
+        /// The member, as their identifier.
+        member: String,
+        /// The transfers that reference the member, as identifiers.
+        transfers: Vec<String>,
+    },
+    /// [`GroupError::MissingExchangeRate`].
+    MissingExchangeRate {
+        /// The currency, as its ISO 4217 code.
+        currency: String,
+    },
+    /// [`GroupError::Overflow`].
+    Overflow,
+    /// [`GroupError::UnexpectedExchangeRate`].
+    UnexpectedExchangeRate,
+    /// [`GroupError::UnknownCategory`].
+    UnknownCategory {
+        /// The category, as its identifier.
+        category: String,
+    },
+    /// [`GroupError::UnknownExpense`].
+    UnknownExpense {
+        /// The expense, as its identifier.
+        expense: String,
+    },
+    /// [`GroupError::UnknownMember`].
+    UnknownMember {
+        /// The member, as their identifier.
+        member: String,
+    },
+    /// [`GroupError::UnknownTransfer`].
+    UnknownTransfer {
+        /// The transfer, as its identifier.
+        transfer: String,
+    },
+    /// [`GroupError::UnsupportedFormat`].
+    UnsupportedFormat {
+        /// The format the saved group names.
+        format: i64,
+    },
+}
+
+/// What an [`IdError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IdFailure {
+    /// [`IdError::InvalidId`].
+    InvalidId,
+}
+
+/// What a [`LanguageError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LanguageFailure {
+    /// [`LanguageError::InvalidLanguage`].
+    InvalidLanguage,
+}
+
+/// What a [`MemberError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MemberFailure {
+    /// [`MemberError::EmptyFirstName`].
+    EmptyFirstName,
+}
+
+/// What a [`MoneyError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum MoneyFailure {
+    /// [`MoneyError::CurrencyMismatch`].
+    CurrencyMismatch {
+        /// The currency of the first amount, as its ISO 4217 code.
+        left: String,
+        /// The currency of the second amount, as its ISO 4217 code.
+        right: String,
+    },
+    /// [`MoneyError::InvalidAmount`].
+    InvalidAmount,
+    /// [`MoneyError::InvalidExchangeRate`].
+    InvalidExchangeRate,
+    /// [`MoneyError::InvalidParts`].
+    InvalidParts,
+    /// [`MoneyError::InvalidPercentage`].
+    InvalidPercentage,
+    /// [`MoneyError::Overflow`].
+    Overflow,
+    /// [`MoneyError::TooManyDecimals`].
+    TooManyDecimals {
+        /// How many decimal places the currency allows.
+        allowed: i64,
+        /// The currency, as its ISO 4217 code.
+        currency: String,
+    },
+    /// [`MoneyError::UnknownCurrency`].
+    UnknownCurrency,
+}
+
+/// What a [`SettlementError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SettlementFailure {
+    /// [`SettlementError::OutOfMemory`].
+    OutOfMemory {
+        /// How many balances the exact solver was asked to settle.
+        balances: i64,
+    },
+}
+
+/// What a [`TransferError`] reports: a case per variant, with
+/// what the variant holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TransferFailure {
+    /// [`TransferError::NonPositiveAmount`].
+    NonPositiveAmount,
+    /// [`TransferError::SameMember`].
+    SameMember,
+}
+
 /// Why an IBAN was refused: the [`IbanError`] inside
-/// [`EranosError::InvalidIban`].
+/// [`AccountFailure::InvalidIban`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IbanReason {
     /// [`IbanError::InvalidCharacter`].
@@ -580,7 +555,10 @@ impl FromIbanError for IbanReason {
 
 impl FromIdError for EranosError {
     fn invalid_id(message: String) -> Self {
-        Self::InvalidId { detail: message }
+        Self::Id {
+            detail: message,
+            failure: IdFailure::InvalidId,
+        }
     }
 }
 
@@ -592,11 +570,17 @@ impl From<IdError> for EranosError {
 
 impl FromCalendarError for EranosError {
     fn invalid_date(message: String) -> Self {
-        Self::InvalidDate { detail: message }
+        Self::Calendar {
+            detail: message,
+            failure: CalendarFailure::InvalidDate,
+        }
     }
 
     fn invalid_time(message: String) -> Self {
-        Self::InvalidTime { detail: message }
+        Self::Calendar {
+            detail: message,
+            failure: CalendarFailure::InvalidTime,
+        }
     }
 }
 
@@ -608,43 +592,65 @@ impl From<CalendarError> for EranosError {
 
 impl FromMoneyError for EranosError {
     fn currency_mismatch(left: Currency, message: String, right: Currency) -> Self {
-        Self::MoneyCurrencyMismatch {
+        Self::Money {
             detail: message,
-            left: left.code().to_owned(),
-            right: right.code().to_owned(),
+            failure: MoneyFailure::CurrencyMismatch {
+                left: left.code().to_owned(),
+                right: right.code().to_owned(),
+            },
         }
     }
 
     fn invalid_amount(message: String) -> Self {
-        Self::InvalidAmount { detail: message }
+        Self::Money {
+            detail: message,
+            failure: MoneyFailure::InvalidAmount,
+        }
     }
 
     fn invalid_exchange_rate(message: String) -> Self {
-        Self::InvalidExchangeRate { detail: message }
+        Self::Money {
+            detail: message,
+            failure: MoneyFailure::InvalidExchangeRate,
+        }
     }
 
     fn invalid_parts(message: String) -> Self {
-        Self::InvalidParts { detail: message }
+        Self::Money {
+            detail: message,
+            failure: MoneyFailure::InvalidParts,
+        }
     }
 
     fn invalid_percentage(message: String) -> Self {
-        Self::InvalidPercentage { detail: message }
+        Self::Money {
+            detail: message,
+            failure: MoneyFailure::InvalidPercentage,
+        }
     }
 
     fn overflow(message: String) -> Self {
-        Self::MoneyOverflow { detail: message }
+        Self::Money {
+            detail: message,
+            failure: MoneyFailure::Overflow,
+        }
     }
 
     fn too_many_decimals(allowed: u8, currency: Currency, message: String) -> Self {
-        Self::TooManyDecimals {
-            allowed: i64::from(allowed),
-            currency: currency.code().to_owned(),
+        Self::Money {
             detail: message,
+            failure: MoneyFailure::TooManyDecimals {
+                allowed: i64::from(allowed),
+                currency: currency.code().to_owned(),
+            },
         }
     }
 
     fn unknown_currency(message: String) -> Self {
-        Self::UnknownCurrency { detail: message }
+        Self::Money {
+            detail: message,
+            failure: MoneyFailure::UnknownCurrency,
+        }
     }
 }
 
@@ -656,17 +662,25 @@ impl From<MoneyError> for EranosError {
 
 impl FromAccountError for EranosError {
     fn empty_name(message: String) -> Self {
-        Self::AccountEmptyName { detail: message }
+        Self::Account {
+            detail: message,
+            failure: AccountFailure::EmptyName,
+        }
     }
 
     fn empty_username(message: String) -> Self {
-        Self::EmptyUsername { detail: message }
+        Self::Account {
+            detail: message,
+            failure: AccountFailure::EmptyUsername,
+        }
     }
 
     fn invalid_iban(message: String, reason: IbanError) -> Self {
-        Self::InvalidIban {
+        Self::Account {
             detail: message,
-            reason: IbanReason::from_iban_error(&reason),
+            failure: AccountFailure::InvalidIban {
+                reason: IbanReason::from_iban_error(&reason),
+            },
         }
     }
 }
@@ -679,11 +693,17 @@ impl From<AccountError> for EranosError {
 
 impl FromContactError for EranosError {
     fn invalid_email(message: String) -> Self {
-        Self::InvalidEmail { detail: message }
+        Self::Contact {
+            detail: message,
+            failure: ContactFailure::InvalidEmail,
+        }
     }
 
     fn invalid_phone_number(message: String) -> Self {
-        Self::InvalidPhoneNumber { detail: message }
+        Self::Contact {
+            detail: message,
+            failure: ContactFailure::InvalidPhoneNumber,
+        }
     }
 }
 
@@ -695,7 +715,10 @@ impl From<ContactError> for EranosError {
 
 impl FromMemberError for EranosError {
     fn empty_first_name(message: String) -> Self {
-        Self::EmptyFirstName { detail: message }
+        Self::Member {
+            detail: message,
+            failure: MemberFailure::EmptyFirstName,
+        }
     }
 }
 
@@ -707,7 +730,10 @@ impl From<MemberError> for EranosError {
 
 impl FromCategoryError for EranosError {
     fn empty_name(message: String) -> Self {
-        Self::CategoryEmptyName { detail: message }
+        Self::Category {
+            detail: message,
+            failure: CategoryFailure::EmptyName,
+        }
     }
 }
 
@@ -723,38 +749,53 @@ impl FromExpenseError for EranosError {
         expected: eranos::Money,
         message: String,
     ) -> Self {
-        Self::AmountsDoNotAddUp {
-            actual: Money::from_library(actual),
+        Self::Expense {
             detail: message,
-            expected: Money::from_library(expected),
+            failure: ExpenseFailure::AmountsDoNotAddUp {
+                actual: Money::from_library(actual),
+                expected: Money::from_library(expected),
+            },
         }
     }
 
     fn currency_mismatch(expected: Currency, found: Currency, message: String) -> Self {
-        Self::ExpenseCurrencyMismatch {
+        Self::Expense {
             detail: message,
-            expected: expected.code().to_owned(),
-            found: found.code().to_owned(),
+            failure: ExpenseFailure::CurrencyMismatch {
+                expected: expected.code().to_owned(),
+                found: found.code().to_owned(),
+            },
         }
     }
 
     fn duplicate_member(member: MemberId, message: String) -> Self {
-        Self::ExpenseDuplicateMember {
+        Self::Expense {
             detail: message,
-            member: member.to_string(),
+            failure: ExpenseFailure::DuplicateMember {
+                member: member.to_string(),
+            },
         }
     }
 
     fn empty_item_name(message: String) -> Self {
-        Self::EmptyItemName { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::EmptyItemName,
+        }
     }
 
     fn empty_name(message: String) -> Self {
-        Self::ExpenseEmptyName { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::EmptyName,
+        }
     }
 
     fn empty_split(message: String) -> Self {
-        Self::EmptySplit { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::EmptySplit,
+        }
     }
 
     fn items_do_not_add_up(
@@ -762,45 +803,66 @@ impl FromExpenseError for EranosError {
         expected: eranos::Money,
         message: String,
     ) -> Self {
-        Self::ItemsDoNotAddUp {
-            actual: Money::from_library(actual),
+        Self::Expense {
             detail: message,
-            expected: Money::from_library(expected),
+            failure: ExpenseFailure::ItemsDoNotAddUp {
+                actual: Money::from_library(actual),
+                expected: Money::from_library(expected),
+            },
         }
     }
 
     fn negative_tip(message: String) -> Self {
-        Self::NegativeTip { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::NegativeTip,
+        }
     }
 
     fn no_items(message: String) -> Self {
-        Self::NoItems { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::NoItems,
+        }
     }
 
     fn non_positive_amount(message: String) -> Self {
-        Self::ExpenseNonPositiveAmount { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::NonPositiveAmount,
+        }
     }
 
     fn non_positive_share(member: MemberId, message: String) -> Self {
-        Self::NonPositiveShare {
+        Self::Expense {
             detail: message,
-            member: member.to_string(),
+            failure: ExpenseFailure::NonPositiveShare {
+                member: member.to_string(),
+            },
         }
     }
 
     fn overflow(message: String) -> Self {
-        Self::ExpenseOverflow { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::Overflow,
+        }
     }
 
     fn percentages_do_not_add_up(message: String, total_basis_points: u64) -> Self {
-        Self::PercentagesDoNotAddUp {
+        Self::Expense {
             detail: message,
-            total_basis_points: count(total_basis_points),
+            failure: ExpenseFailure::PercentagesDoNotAddUp {
+                total_basis_points: count(total_basis_points),
+            },
         }
     }
 
     fn zero_quantity(message: String) -> Self {
-        Self::ZeroQuantity { detail: message }
+        Self::Expense {
+            detail: message,
+            failure: ExpenseFailure::ZeroQuantity,
+        }
     }
 }
 
@@ -812,9 +874,11 @@ impl From<ExpenseError> for EranosError {
 
 impl FromSettlementError for EranosError {
     fn out_of_memory(balances: usize, message: String) -> Self {
-        Self::OutOfMemory {
-            balances: count(balances),
+        Self::Settlement {
             detail: message,
+            failure: SettlementFailure::OutOfMemory {
+                balances: count(balances),
+            },
         }
     }
 }
@@ -827,11 +891,17 @@ impl From<SettlementError> for EranosError {
 
 impl FromTransferError for EranosError {
     fn non_positive_amount(message: String) -> Self {
-        Self::TransferNonPositiveAmount { detail: message }
+        Self::Transfer {
+            detail: message,
+            failure: TransferFailure::NonPositiveAmount,
+        }
     }
 
     fn same_member(message: String) -> Self {
-        Self::SameMember { detail: message }
+        Self::Transfer {
+            detail: message,
+            failure: TransferFailure::SameMember,
+        }
     }
 }
 
@@ -843,7 +913,10 @@ impl From<TransferError> for EranosError {
 
 impl FromLanguageError for EranosError {
     fn invalid_language(message: String) -> Self {
-        Self::InvalidLanguage { detail: message }
+        Self::Language {
+            detail: message,
+            failure: LanguageFailure::InvalidLanguage,
+        }
     }
 }
 
@@ -855,64 +928,87 @@ impl From<LanguageError> for EranosError {
 
 impl FromGroupError for EranosError {
     fn archived_member(member: MemberId, message: String) -> Self {
-        Self::ArchivedMember {
+        Self::Group {
             detail: message,
-            member: member.to_string(),
+            failure: GroupFailure::ArchivedMember {
+                member: member.to_string(),
+            },
         }
     }
 
     fn built_in_category(message: String) -> Self {
-        Self::BuiltInCategory { detail: message }
+        Self::Group {
+            detail: message,
+            failure: GroupFailure::BuiltInCategory,
+        }
     }
 
     fn busy(message: String) -> Self {
-        Self::Busy { detail: message }
+        Self::Group {
+            detail: message,
+            failure: GroupFailure::Busy,
+        }
     }
 
     fn duplicate_category(category: CategoryId, message: String) -> Self {
-        Self::DuplicateCategory {
-            category: category.to_string(),
+        Self::Group {
             detail: message,
+            failure: GroupFailure::DuplicateCategory {
+                category: category.to_string(),
+            },
         }
     }
 
     fn duplicate_category_name(existing: CategoryId, message: String) -> Self {
-        Self::DuplicateCategoryName {
+        Self::Group {
             detail: message,
-            existing: existing.to_string(),
+            failure: GroupFailure::DuplicateCategoryName {
+                existing: existing.to_string(),
+            },
         }
     }
 
     fn duplicate_exchange_rate(currency: Currency, message: String) -> Self {
-        Self::DuplicateExchangeRate {
-            currency: currency.code().to_owned(),
+        Self::Group {
             detail: message,
+            failure: GroupFailure::DuplicateExchangeRate {
+                currency: currency.code().to_owned(),
+            },
         }
     }
 
     fn duplicate_expense(expense: ExpenseId, message: String) -> Self {
-        Self::DuplicateExpense {
+        Self::Group {
             detail: message,
-            expense: expense.to_string(),
+            failure: GroupFailure::DuplicateExpense {
+                expense: expense.to_string(),
+            },
         }
     }
 
     fn duplicate_member(member: MemberId, message: String) -> Self {
-        Self::GroupDuplicateMember {
+        Self::Group {
             detail: message,
-            member: member.to_string(),
+            failure: GroupFailure::DuplicateMember {
+                member: member.to_string(),
+            },
         }
     }
 
     fn duplicate_transfer(message: String, transfer: TransferId) -> Self {
-        Self::DuplicateTransfer {
+        Self::Group {
             detail: message,
-            transfer: transfer.to_string(),
+            failure: GroupFailure::DuplicateTransfer {
+                transfer: transfer.to_string(),
+            },
         }
     }
 
     fn empty_name(message: String) -> Self {
-        Self::GroupEmptyName { detail: message }
+        Self::Group {
+            detail: message,
+            failure: GroupFailure::EmptyName,
+        }
     }
 
     fn member_in_use(
@@ -921,61 +1017,81 @@ impl FromGroupError for EranosError {
         message: String,
         transfers: &[TransferId],
     ) -> Self {
-        Self::MemberInUse {
+        Self::Group {
             detail: message,
-            expenses: identifiers(expenses),
-            member: member.to_string(),
-            transfers: identifiers(transfers),
+            failure: GroupFailure::MemberInUse {
+                expenses: identifiers(expenses),
+                member: member.to_string(),
+                transfers: identifiers(transfers),
+            },
         }
     }
 
     fn missing_exchange_rate(currency: Currency, message: String) -> Self {
-        Self::MissingExchangeRate {
-            currency: currency.code().to_owned(),
+        Self::Group {
             detail: message,
+            failure: GroupFailure::MissingExchangeRate {
+                currency: currency.code().to_owned(),
+            },
         }
     }
 
     fn overflow(message: String) -> Self {
-        Self::GroupOverflow { detail: message }
+        Self::Group {
+            detail: message,
+            failure: GroupFailure::Overflow,
+        }
     }
 
     fn unexpected_exchange_rate(message: String) -> Self {
-        Self::UnexpectedExchangeRate { detail: message }
+        Self::Group {
+            detail: message,
+            failure: GroupFailure::UnexpectedExchangeRate,
+        }
     }
 
     fn unknown_category(category: CategoryId, message: String) -> Self {
-        Self::UnknownCategory {
-            category: category.to_string(),
+        Self::Group {
             detail: message,
+            failure: GroupFailure::UnknownCategory {
+                category: category.to_string(),
+            },
         }
     }
 
     fn unknown_expense(expense: ExpenseId, message: String) -> Self {
-        Self::UnknownExpense {
+        Self::Group {
             detail: message,
-            expense: expense.to_string(),
+            failure: GroupFailure::UnknownExpense {
+                expense: expense.to_string(),
+            },
         }
     }
 
     fn unknown_member(member: MemberId, message: String) -> Self {
-        Self::UnknownMember {
+        Self::Group {
             detail: message,
-            member: member.to_string(),
+            failure: GroupFailure::UnknownMember {
+                member: member.to_string(),
+            },
         }
     }
 
     fn unknown_transfer(message: String, transfer: TransferId) -> Self {
-        Self::UnknownTransfer {
+        Self::Group {
             detail: message,
-            transfer: transfer.to_string(),
+            failure: GroupFailure::UnknownTransfer {
+                transfer: transfer.to_string(),
+            },
         }
     }
 
     fn unsupported_format(format: u32, message: String) -> Self {
-        Self::UnsupportedFormat {
+        Self::Group {
             detail: message,
-            format: i64::from(format),
+            failure: GroupFailure::UnsupportedFormat {
+                format: i64::from(format),
+            },
         }
     }
 }

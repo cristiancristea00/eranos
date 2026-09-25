@@ -28,8 +28,10 @@ impl AccountDetails {
     ///
     /// # Errors
     ///
-    /// [`EranosError::InvalidIban`] for an IBAN the library refuses, and
-    /// [`EranosError::EmptyUsername`] for a blank username.
+    /// [`AccountFailure::InvalidIban`](crate::AccountFailure::InvalidIban) for
+    /// an IBAN the library refuses, and
+    /// [`AccountFailure::EmptyUsername`](crate::AccountFailure::EmptyUsername)
+    /// for a blank username.
     pub(crate) fn to_library(&self) -> Result<library::AccountDetails, EranosError> {
         Ok(match self {
             Self::Iban { iban } => library::Iban::parse(iban)?.into(),
@@ -76,7 +78,8 @@ impl Account {
     /// # Errors
     ///
     /// The errors of [`AccountDetails::to_library`], and
-    /// [`EranosError::AccountEmptyName`] for a blank label.
+    /// [`AccountFailure::EmptyName`](crate::AccountFailure::EmptyName) for a
+    /// blank label.
     fn to_library(&self) -> Result<library::Account, EranosError> {
         Ok(library::Account::new(
             self.details.to_library()?,
@@ -126,9 +129,10 @@ impl Member {
     ///
     /// # Errors
     ///
-    /// [`EranosError::IdentifierGiven`] when the record has an identifier,
-    /// the errors of the fields' conversions, and
-    /// [`EranosError::EmptyFirstName`] for a blank first name.
+    /// [`EranosError::IdentifierGiven`] when the record has an identifier, the
+    /// errors of the fields' conversions, and
+    /// [`MemberFailure::EmptyFirstName`](crate::MemberFailure::EmptyFirstName)
+    /// for a blank first name.
     pub(crate) fn to_new(&self) -> Result<library::Member, EranosError> {
         if self.id.is_some() {
             return Err(EranosError::identifier_given());
@@ -141,7 +145,8 @@ impl Member {
     /// # Errors
     ///
     /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`EranosError::InvalidId`] when it is not an identifier.
+    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
+    /// identifier.
     pub(crate) fn id_to_replace(&self) -> Result<MemberId, EranosError> {
         identifier(
             self.id
@@ -214,8 +219,9 @@ impl Category {
     ///
     /// # Errors
     ///
-    /// [`EranosError::IdentifierGiven`] when the record has an identifier,
-    /// and [`EranosError::CategoryEmptyName`] for a blank name.
+    /// [`EranosError::IdentifierGiven`] when the record has an identifier, and
+    /// [`CategoryFailure::EmptyName`](crate::CategoryFailure::EmptyName) for a
+    /// blank name.
     pub(crate) fn to_new(&self) -> Result<categories::Category, EranosError> {
         if self.id.is_some() {
             return Err(EranosError::identifier_given());
@@ -228,7 +234,8 @@ impl Category {
     /// # Errors
     ///
     /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`EranosError::InvalidId`] when it is not an identifier.
+    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
+    /// identifier.
     pub(crate) fn id_to_replace(&self) -> Result<CategoryId, EranosError> {
         identifier(
             self.id
@@ -241,7 +248,8 @@ impl Category {
     ///
     /// # Errors
     ///
-    /// [`EranosError::CategoryEmptyName`] for a blank name.
+    /// [`CategoryFailure::EmptyName`](crate::CategoryFailure::EmptyName) for a
+    /// blank name.
     pub(crate) fn replacing(
         &self,
         existing: &categories::Category,

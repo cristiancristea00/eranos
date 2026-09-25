@@ -4,6 +4,7 @@
 //! take its identifier from outside the group.
 
 use super::*;
+use crate::{AccountFailure, CategoryFailure, ContactFailure, IdFailure, MemberFailure};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -72,7 +73,15 @@ fn refused_members() -> [Refusal; 6] {
                 },
                 "Main account",
             ),
-            is_expected: |error| matches!(error, EranosError::InvalidIban { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Account {
+                        failure: AccountFailure::InvalidIban { .. },
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: with_account(
@@ -81,32 +90,72 @@ fn refused_members() -> [Refusal; 6] {
                 },
                 "Payment app",
             ),
-            is_expected: |error| matches!(error, EranosError::EmptyUsername { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Account {
+                        failure: AccountFailure::EmptyUsername,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: with_account(iban_account().details, " "),
-            is_expected: |error| matches!(error, EranosError::AccountEmptyName { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Account {
+                        failure: AccountFailure::EmptyName,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: Member {
                 email: Some("ana at example.com".to_owned()),
                 ..ana()
             },
-            is_expected: |error| matches!(error, EranosError::InvalidEmail { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Contact {
+                        failure: ContactFailure::InvalidEmail,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: Member {
                 phone: Some("0712345678".to_owned()),
                 ..ana()
             },
-            is_expected: |error| matches!(error, EranosError::InvalidPhoneNumber { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Contact {
+                        failure: ContactFailure::InvalidPhoneNumber,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: Member {
                 first_name: " ".to_owned(),
                 ..ana()
             },
-            is_expected: |error| matches!(error, EranosError::EmptyFirstName { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Member {
+                        failure: MemberFailure::EmptyFirstName,
+                        ..
+                    }
+                )
+            },
         },
     ]
 }
@@ -180,7 +229,10 @@ fn a_member_to_add_has_no_identifier_and_one_to_replace_has_one() {
     };
     assert!(matches!(
         unreadable.id_to_replace(),
-        Err(EranosError::InvalidId { .. })
+        Err(EranosError::Id {
+            failure: IdFailure::InvalidId,
+            ..
+        })
     ));
 }
 
@@ -241,7 +293,10 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
     };
     assert!(matches!(
         unreadable.id_to_replace(),
-        Err(EranosError::InvalidId { .. })
+        Err(EranosError::Id {
+            failure: IdFailure::InvalidId,
+            ..
+        })
     ));
     let blank = Category {
         id: None,
@@ -256,7 +311,13 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
         blank_rename.replacing(&stored).unwrap_err(),
     ] {
         assert!(
-            matches!(error, EranosError::CategoryEmptyName { .. }),
+            matches!(
+                error,
+                EranosError::Category {
+                    failure: CategoryFailure::EmptyName,
+                    ..
+                }
+            ),
             "{error:?}"
         );
     }

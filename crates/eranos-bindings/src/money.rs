@@ -28,8 +28,8 @@ impl Money {
     ///
     /// # Errors
     ///
-    /// [`EranosError::UnknownCurrency`] for a code that is not an ISO 4217
-    /// currency with minor units.
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// for a code that is not an ISO 4217 currency with minor units.
     pub(crate) fn to_library(&self) -> Result<library::Money, EranosError> {
         Ok(library::Money::from_minor_units(
             currency(&self.currency)?,
@@ -61,9 +61,10 @@ impl Cost {
     ///
     /// # Errors
     ///
-    /// [`EranosError::UnknownCurrency`] for an unknown currency and
-    /// [`EranosError::InvalidExchangeRate`] for a rate that is not a positive
-    /// decimal.
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// for an unknown currency and
+    /// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate)
+    /// for a rate that is not a positive decimal.
     pub(crate) fn to_library(&self) -> Result<library::Cost, EranosError> {
         match self {
             Self::Converted { amount, rate } => Ok(amount.to_library()?.at(exchange_rate(rate)?)),
@@ -102,8 +103,9 @@ impl CurrencyRate {
     ///
     /// # Errors
     ///
-    /// [`EranosError::UnknownCurrency`] and
-    /// [`EranosError::InvalidExchangeRate`].
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// and
+    /// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate).
     pub(crate) fn to_library(&self) -> Result<library::CurrencyRate, EranosError> {
         Ok(library::CurrencyRate::new(
             currency(&self.currency)?,
@@ -141,8 +143,8 @@ impl CurrencyDetails {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`] for a code that names no currency with
-/// minor units.
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency) for
+/// a code that names no currency with minor units.
 pub(crate) fn currency(code: &str) -> Result<library::Currency, EranosError> {
     Ok(library::Currency::from_code(code)?)
 }
@@ -151,8 +153,8 @@ pub(crate) fn currency(code: &str) -> Result<library::Currency, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidExchangeRate`] for text that is not a positive
-/// decimal with at most 18 decimal places.
+/// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate)
+/// for text that is not a positive decimal with at most 18 decimal places.
 pub(crate) fn exchange_rate(text: &str) -> Result<library::ExchangeRate, EranosError> {
     Ok(library::ExchangeRate::parse(text)?)
 }

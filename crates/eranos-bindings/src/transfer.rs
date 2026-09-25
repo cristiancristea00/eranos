@@ -68,7 +68,8 @@ impl Transfer {
     /// # Errors
     ///
     /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`EranosError::InvalidId`] when it is not an identifier.
+    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
+    /// identifier.
     pub(crate) fn id_to_replace(&self) -> Result<TransferId, EranosError> {
         identifier(
             self.id

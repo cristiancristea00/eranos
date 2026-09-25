@@ -4,6 +4,7 @@
 //! reach the library.
 
 use super::*;
+use crate::MoneyFailure;
 
 fn euros(minor_units: i64) -> Money {
     Money {
@@ -29,7 +30,10 @@ fn amounts_convert_both_ways_and_refuse_unknown_currencies() {
     );
     assert!(matches!(
         unknown().to_library(),
-        Err(EranosError::UnknownCurrency { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        })
     ));
 }
 
@@ -54,7 +58,10 @@ fn costs_convert_both_ways_and_refuse_bad_parts() {
     };
     assert!(matches!(
         bad_rate.to_library(),
-        Err(EranosError::InvalidExchangeRate { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidExchangeRate,
+            ..
+        })
     ));
     let foreign_in_unknown = Cost::Converted {
         amount: unknown(),
@@ -62,12 +69,18 @@ fn costs_convert_both_ways_and_refuse_bad_parts() {
     };
     assert!(matches!(
         foreign_in_unknown.to_library(),
-        Err(EranosError::UnknownCurrency { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        })
     ));
     let local_in_unknown = Cost::Local { amount: unknown() };
     assert!(matches!(
         local_in_unknown.to_library(),
-        Err(EranosError::UnknownCurrency { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        })
     ));
 }
 
@@ -90,7 +103,10 @@ fn rates_and_currency_details_convert() {
     };
     assert!(matches!(
         unknown_currency.to_library(),
-        Err(EranosError::UnknownCurrency { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        })
     ));
     let bad_rate = CurrencyRate {
         currency: "EUR".to_owned(),
@@ -98,7 +114,10 @@ fn rates_and_currency_details_convert() {
     };
     assert!(matches!(
         bad_rate.to_library(),
-        Err(EranosError::InvalidExchangeRate { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidExchangeRate,
+            ..
+        })
     ));
     assert_eq!(
         CurrencyDetails::from_library(library::Currency::EUR),

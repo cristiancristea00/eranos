@@ -33,14 +33,14 @@ pub struct NewGroup {
 
 /// A group, shared between the tasks and threads of a binding.
 ///
-/// Every group call comes in two forms. The synchronous one locks the group
-/// for the call: it waits for the lock where a thread can sleep, and on wasm,
-/// whose one thread must not, it fails with [`EranosError::Busy`] instead
-/// when another call holds the lock. The asynchronous one, named with
-/// `_async`, returns a `Send + 'static` future that waits for the lock, runs
-/// the call, and stops with [`EranosError::Cancelled`] when its
-/// [`Cancellation`] is cancelled first. Reads share the lock and changes take
-/// it alone, as [`SharedGroup`] says.
+/// Every group call comes in two forms. The synchronous one locks the group for
+/// the call: it waits for the lock where a thread can sleep, and on wasm, whose
+/// one thread must not, it fails with
+/// [`GroupFailure::Busy`](crate::GroupFailure::Busy) instead when another call
+/// holds the lock. The asynchronous one, named with `_async`, returns a `Send +
+/// 'static` future that waits for the lock, runs the call, and stops with
+/// [`EranosError::Cancelled`] when its [`Cancellation`] is cancelled first.
+/// Reads share the lock and changes take it alone, as [`SharedGroup`] says.
 #[derive(Debug, Clone)]
 pub struct GroupHandle {
     shared: SharedGroup,
@@ -51,8 +51,9 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::UnknownCurrency`], [`EranosError::GroupEmptyName`], and
-    /// [`EranosError::InvalidLanguage`].
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency),
+    /// [`GroupFailure::EmptyName`](crate::GroupFailure::EmptyName), and
+    /// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
     pub fn new(group: &NewGroup) -> Result<Self, EranosError> {
         let language = group.language.as_deref().map(Language::parse).transpose()?;
         let group = Group::builder(currency(&group.currency)?, group.name.clone())
@@ -94,7 +95,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn id(&self) -> Result<String, EranosError> {
         self.reading(|group| Ok(operations::id(group)))
     }
@@ -117,7 +119,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn categories(&self) -> Result<Vec<Category>, EranosError> {
         self.reading(|group| Ok(operations::categories(group)))
     }
@@ -139,7 +142,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn category(&self, id: &str) -> Result<Option<Category>, EranosError> {
         self.reading(|group| operations::category(group, id))
@@ -164,7 +168,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn add_category(&self, category: &Category) -> Result<String, EranosError> {
         self.writing(|group| operations::add_category(group, category))
@@ -191,7 +196,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn replace_category(&self, category: &Category) -> Result<Category, EranosError> {
         self.writing(|group| operations::replace_category(group, category))
@@ -218,7 +224,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn remove_category(&self, id: &str) -> Result<Category, EranosError> {
         self.writing(|group| operations::remove_category(group, id))
@@ -246,7 +253,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn currency(&self) -> Result<String, EranosError> {
         self.reading(|group| Ok(operations::currency_code(group)))
     }
@@ -269,7 +277,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn change_currency(
         &self,
@@ -308,7 +317,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn expenses(&self) -> Result<Vec<Expense>, EranosError> {
         self.reading(|group| Ok(operations::expenses(group)))
     }
@@ -330,7 +340,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn expense(&self, id: &str) -> Result<Option<Expense>, EranosError> {
         self.reading(|group| operations::expense(group, id))
@@ -354,7 +365,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn expense_shares(&self, id: &str) -> Result<Option<ExpenseShares>, EranosError> {
         self.reading(|group| operations::expense_shares(group, id))
@@ -381,7 +393,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn add_expense(&self, expense: &Expense) -> Result<String, EranosError> {
         self.writing(|group| operations::add_expense(group, expense))
@@ -408,7 +421,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn replace_expense(&self, expense: &Expense) -> Result<Expense, EranosError> {
         self.writing(|group| operations::replace_expense(group, expense))
@@ -434,7 +448,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn remove_expense(&self, id: &str) -> Result<Expense, EranosError> {
         self.writing(|group| operations::remove_expense(group, id))
@@ -462,7 +477,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn summary(&self) -> Result<Summary, EranosError> {
         self.reading(|group| Ok(operations::summary(group)))
     }
@@ -485,7 +501,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn members(&self) -> Result<Vec<Member>, EranosError> {
         self.reading(|group| Ok(operations::members(group)))
     }
@@ -507,7 +524,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn member(&self, id: &str) -> Result<Option<Member>, EranosError> {
         self.reading(|group| operations::member(group, id))
@@ -532,7 +550,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn is_archived(&self, id: &str) -> Result<bool, EranosError> {
         self.reading(|group| operations::is_archived(group, id))
@@ -558,7 +577,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn add_member(&self, member: &Member) -> Result<String, EranosError> {
         self.writing(|group| operations::add_member(group, member))
@@ -585,7 +605,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn replace_member(&self, member: &Member) -> Result<Member, EranosError> {
         self.writing(|group| operations::replace_member(group, member))
@@ -611,7 +632,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn archive_member(&self, id: &str) -> Result<(), EranosError> {
         self.writing(|group| operations::archive_member(group, id))
@@ -637,7 +659,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn unarchive_member(&self, id: &str) -> Result<(), EranosError> {
         self.writing(|group| operations::unarchive_member(group, id))
@@ -664,7 +687,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn remove_member(&self, id: &str) -> Result<Member, EranosError> {
         self.writing(|group| operations::remove_member(group, id))
@@ -692,7 +716,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn name(&self) -> Result<String, EranosError> {
         self.reading(|group| Ok(operations::name(group)))
     }
@@ -713,7 +738,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn set_name(&self, name: &str) -> Result<(), EranosError> {
         self.writing(|group| operations::set_name(group, name))
@@ -740,7 +766,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn settlement(&self, strategy: SettlementStrategy) -> Result<Settlement, EranosError> {
         self.reading(|group| operations::settlement(group, strategy))
@@ -774,7 +801,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn transfers(&self) -> Result<Vec<Transfer>, EranosError> {
         self.reading(|group| Ok(operations::transfers(group)))
     }
@@ -796,7 +824,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn transfer(&self, id: &str) -> Result<Option<Transfer>, EranosError> {
         self.reading(|group| operations::transfer(group, id))
@@ -821,7 +850,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn transfer_amount(&self, id: &str) -> Result<Option<Money>, EranosError> {
         self.reading(|group| operations::transfer_amount(group, id))
@@ -848,7 +878,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn add_transfer(&self, transfer: &Transfer) -> Result<String, EranosError> {
         self.writing(|group| operations::add_transfer(group, transfer))
@@ -875,7 +906,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn replace_transfer(&self, transfer: &Transfer) -> Result<Transfer, EranosError> {
         self.writing(|group| operations::replace_transfer(group, transfer))
@@ -901,7 +933,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn remove_transfer(&self, id: &str) -> Result<Transfer, EranosError> {
         self.writing(|group| operations::remove_transfer(group, id))
@@ -929,7 +962,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn description(&self) -> Result<Option<String>, EranosError> {
         self.reading(|group| Ok(operations::description(group)))
     }
@@ -950,7 +984,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn set_description(&self, description: &str) -> Result<(), EranosError> {
         self.writing(|group| {
             operations::set_description(group, description);
@@ -981,7 +1016,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while another call holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
+    /// call holds the lock.
     pub fn language(&self) -> Result<Option<String>, EranosError> {
         self.reading(|group| Ok(operations::language(group)))
     }
@@ -1003,7 +1039,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// The library's refusal, and [`EranosError::Busy`] on wasm while another
+    /// The library's refusal, and
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another
     /// call holds the lock.
     pub fn set_language(&self, language: Option<&str>) -> Result<(), EranosError> {
         self.writing(|group| operations::set_language(group, language))
@@ -1031,7 +1068,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while a change holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while a change
+    /// holds the lock.
     pub fn save(&self) -> Result<String, EranosError> {
         self.reading(|group| Ok(operations::save(group)))
     }
@@ -1059,7 +1097,8 @@ impl GroupHandle {
     ///
     /// # Errors
     ///
-    /// [`EranosError::Busy`] on wasm while a change holds the lock.
+    /// [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while a change
+    /// holds the lock.
     pub fn read(&self) -> Result<GroupReader, EranosError> {
         self.read_lock().map(GroupReader::new)
     }

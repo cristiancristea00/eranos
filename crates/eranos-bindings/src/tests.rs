@@ -19,9 +19,21 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<Cancellation>();
         assert_send_and_sync::<GroupHandle>();
         assert_send_and_sync::<GroupReader>();
-        // The error.
+        // The error, and the failure of every module.
+        assert_send_and_sync::<AccountFailure>();
+        assert_send_and_sync::<CalendarFailure>();
+        assert_send_and_sync::<CategoryFailure>();
+        assert_send_and_sync::<ContactFailure>();
         assert_send_and_sync::<EranosError>();
+        assert_send_and_sync::<ExpenseFailure>();
+        assert_send_and_sync::<GroupFailure>();
         assert_send_and_sync::<IbanReason>();
+        assert_send_and_sync::<IdFailure>();
+        assert_send_and_sync::<LanguageFailure>();
+        assert_send_and_sync::<MemberFailure>();
+        assert_send_and_sync::<MoneyFailure>();
+        assert_send_and_sync::<SettlementFailure>();
+        assert_send_and_sync::<TransferFailure>();
         // Values.
         assert_send_and_sync::<CalendarDate>();
         assert_send_and_sync::<Cost>();

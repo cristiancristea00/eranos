@@ -21,8 +21,9 @@ use crate::money::{CurrencyDetails, Money, currency, exchange_rate};
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`], [`EranosError::InvalidAmount`], and
-/// [`EranosError::TooManyDecimals`].
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency),
+/// [`MoneyFailure::InvalidAmount`](crate::MoneyFailure::InvalidAmount), and
+/// [`MoneyFailure::TooManyDecimals`](crate::MoneyFailure::TooManyDecimals).
 pub fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> {
     Ok(Money::from_library(library::Money::parse(
         text,
@@ -34,7 +35,7 @@ pub fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`].
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
 pub fn money_format(money: &Money) -> Result<String, EranosError> {
     Ok(money.to_library()?.to_string())
 }
@@ -43,8 +44,9 @@ pub fn money_format(money: &Money) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`], [`EranosError::MoneyCurrencyMismatch`],
-/// and [`EranosError::MoneyOverflow`].
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency),
+/// [`MoneyFailure::CurrencyMismatch`](crate::MoneyFailure::CurrencyMismatch),
+/// and [`MoneyFailure::Overflow`](crate::MoneyFailure::Overflow).
 pub fn money_add(left: &Money, right: &Money) -> Result<Money, EranosError> {
     Ok(Money::from_library(
         left.to_library()?.checked_add(right.to_library()?)?,
@@ -68,7 +70,7 @@ pub fn money_subtract(left: &Money, right: &Money) -> Result<Money, EranosError>
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidExchangeRate`].
+/// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate).
 pub fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
     Ok(exchange_rate(text)?.to_string())
 }
@@ -78,8 +80,9 @@ pub fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidExchangeRate`], [`EranosError::UnknownCurrency`],
-/// and [`EranosError::MoneyOverflow`].
+/// [`MoneyFailure::InvalidExchangeRate`](crate::MoneyFailure::InvalidExchangeRate),
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency), and
+/// [`MoneyFailure::Overflow`](crate::MoneyFailure::Overflow).
 pub fn exchange_rate_convert(rate: &str, amount: &Money, code: &str) -> Result<Money, EranosError> {
     Ok(Money::from_library(
         exchange_rate(rate)?.convert(amount.to_library()?, currency(code)?)?,
@@ -92,7 +95,7 @@ pub fn exchange_rate_convert(rate: &str, amount: &Money, code: &str) -> Result<M
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPercentage`].
+/// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage).
 pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
     let basis_points = library::Percentage::parse(text)?.basis_points();
     Ok(i32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?)
@@ -102,7 +105,8 @@ pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPercentage`] for a negative number.
+/// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+/// for a negative number.
 pub fn percentage_format(basis_points: i32) -> Result<String, EranosError> {
     let basis_points = u32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?;
     Ok(library::Percentage::from_basis_points(basis_points).to_string())
@@ -112,7 +116,7 @@ pub fn percentage_format(basis_points: i32) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidParts`].
+/// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts).
 pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
     let hundredths = library::Parts::parse(text)?.hundredths();
     Ok(i32::try_from(hundredths).map_err(|_| MoneyError::InvalidParts)?)
@@ -122,7 +126,8 @@ pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidParts`] for a number that is not positive.
+/// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for a
+/// number that is not positive.
 pub fn parts_format(hundredths: i32) -> Result<String, EranosError> {
     let hundredths = u32::try_from(hundredths).map_err(|_| MoneyError::InvalidParts)?;
     Ok(library::Parts::from_hundredths(hundredths)?.to_string())
@@ -134,7 +139,7 @@ pub fn parts_format(hundredths: i32) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidDate`].
+/// [`CalendarFailure::InvalidDate`](crate::CalendarFailure::InvalidDate).
 pub fn calendar_date_parse(text: &str) -> Result<CalendarDate, EranosError> {
     Ok(CalendarDate::from_library(calendar::CalendarDate::parse(
         text,
@@ -145,7 +150,7 @@ pub fn calendar_date_parse(text: &str) -> Result<CalendarDate, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidDate`].
+/// [`CalendarFailure::InvalidDate`](crate::CalendarFailure::InvalidDate).
 pub fn calendar_date_format(date: CalendarDate) -> Result<String, EranosError> {
     Ok(date.to_library()?.to_string())
 }
@@ -154,7 +159,7 @@ pub fn calendar_date_format(date: CalendarDate) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidTime`].
+/// [`CalendarFailure::InvalidTime`](crate::CalendarFailure::InvalidTime).
 pub fn time_of_day_parse(text: &str) -> Result<TimeOfDay, EranosError> {
     Ok(TimeOfDay::from_library(calendar::TimeOfDay::parse(text)?))
 }
@@ -163,7 +168,7 @@ pub fn time_of_day_parse(text: &str) -> Result<TimeOfDay, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidTime`].
+/// [`CalendarFailure::InvalidTime`](crate::CalendarFailure::InvalidTime).
 pub fn time_of_day_format(time: TimeOfDay) -> Result<String, EranosError> {
     Ok(time.to_library()?.to_string())
 }
@@ -175,7 +180,7 @@ pub fn time_of_day_format(time: TimeOfDay) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidLanguage`].
+/// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
 pub fn language_parse(text: &str) -> Result<String, EranosError> {
     Ok(Language::parse(text)?.as_str().to_owned())
 }
@@ -186,7 +191,7 @@ pub fn language_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`].
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
 pub fn balance_format(balance: &Balance) -> Result<String, EranosError> {
     let balance = match balance {
         Balance::GetsBack { amount } => ledger::Balance::GetsBack(amount.to_library()?),
@@ -202,7 +207,7 @@ pub fn balance_format(balance: &Balance) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`].
+/// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency).
 pub fn currency_details(code: &str) -> Result<CurrencyDetails, EranosError> {
     Ok(CurrencyDetails::from_library(currency(code)?))
 }
@@ -222,7 +227,7 @@ pub fn currencies() -> Vec<CurrencyDetails> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidEmail`].
+/// [`ContactFailure::InvalidEmail`](crate::ContactFailure::InvalidEmail).
 pub fn email_parse(text: &str) -> Result<String, EranosError> {
     Ok(Email::parse(text)?.as_str().to_owned())
 }
@@ -231,7 +236,7 @@ pub fn email_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPhoneNumber`].
+/// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber).
 pub fn phone_number_parse(text: &str) -> Result<String, EranosError> {
     Ok(PhoneNumber::parse(text)?.as_str().to_owned())
 }
@@ -241,7 +246,7 @@ pub fn phone_number_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPhoneNumber`].
+/// [`ContactFailure::InvalidPhoneNumber`](crate::ContactFailure::InvalidPhoneNumber).
 pub fn phone_number_international(text: &str) -> Result<String, EranosError> {
     Ok(PhoneNumber::parse(text)?.international())
 }
@@ -252,7 +257,8 @@ pub fn phone_number_international(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidIban`], with the reason.
+/// [`AccountFailure::InvalidIban`](crate::AccountFailure::InvalidIban), with
+/// the reason.
 pub fn iban_parse(text: &str) -> Result<String, EranosError> {
     Ok(Iban::parse(text)?.as_str().to_owned())
 }
@@ -261,7 +267,8 @@ pub fn iban_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidIban`], with the reason.
+/// [`AccountFailure::InvalidIban`](crate::AccountFailure::InvalidIban), with
+/// the reason.
 pub fn iban_country_code(text: &str) -> Result<String, EranosError> {
     Ok(Iban::parse(text)?.country_code().to_owned())
 }
@@ -271,7 +278,7 @@ pub fn iban_country_code(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::EmptyUsername`].
+/// [`AccountFailure::EmptyUsername`](crate::AccountFailure::EmptyUsername).
 pub fn username_parse(text: &str) -> Result<String, EranosError> {
     Ok(Username::new(text)?.as_str().to_owned())
 }
@@ -293,7 +300,8 @@ pub fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError> {
 ///
 /// # Errors
 ///
-/// As for [`expense_tip_amount`], and [`EranosError::MoneyOverflow`].
+/// As for [`expense_tip_amount`], and
+/// [`MoneyFailure::Overflow`](crate::MoneyFailure::Overflow).
 pub fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
     let amount = expense.cost.to_library()?.amount();
     Ok(Money::from_library(

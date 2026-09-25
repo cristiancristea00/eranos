@@ -12,7 +12,9 @@
 //! and `values.rs` from here against their own `uniffi` releases, so these
 //! keep to what `uniffi` 0.29 accepts: records, enums with data, one error,
 //! objects with synchronous and asynchronous methods, and no methods on
-//! records.
+//! records. The documentation of the objects and functions reaches the
+//! generated code of those languages, where a Rust link would read as raw
+//! markdown, so it names types in plain code spans.
 
 uniffi::setup_scaffolding!("eranos");
 

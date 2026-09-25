@@ -7,6 +7,7 @@ use eranos::MemberId;
 
 use super::*;
 use crate::money::Money;
+use crate::{CalendarFailure, IdFailure, MoneyFailure, TransferFailure};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -68,7 +69,13 @@ fn payment() -> Transfer {
 }
 
 fn invalid_id(error: &EranosError) -> bool {
-    matches!(error, EranosError::InvalidId { .. })
+    matches!(
+        error,
+        EranosError::Id {
+            failure: IdFailure::InvalidId,
+            ..
+        }
+    )
 }
 
 /// Transfers with one field the library refuses.
@@ -84,14 +91,30 @@ fn refused_transfers() -> [Refusal; 6] {
                 },
                 ..payment()
             },
-            is_expected: |error| matches!(error, EranosError::UnknownCurrency { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Money {
+                        failure: MoneyFailure::UnknownCurrency,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: Transfer {
                 date: CalendarDate { day: 0, ..date() },
                 ..payment()
             },
-            is_expected: |error| matches!(error, EranosError::InvalidDate { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Calendar {
+                        failure: CalendarFailure::InvalidDate,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: Transfer {
@@ -115,14 +138,30 @@ fn refused_transfers() -> [Refusal; 6] {
                 }),
                 ..payment()
             },
-            is_expected: |error| matches!(error, EranosError::InvalidTime { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Calendar {
+                        failure: CalendarFailure::InvalidTime,
+                        ..
+                    }
+                )
+            },
         },
         Refusal {
             record: Transfer {
                 to: bob(),
                 ..repayment()
             },
-            is_expected: |error| matches!(error, EranosError::SameMember { .. }),
+            is_expected: |error| {
+                matches!(
+                    error,
+                    EranosError::Transfer {
+                        failure: TransferFailure::SameMember,
+                        ..
+                    }
+                )
+            },
         },
     ]
 }

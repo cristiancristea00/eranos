@@ -5,6 +5,7 @@
 //! identifier from outside the group.
 
 use super::*;
+use crate::{CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal<Record> {
@@ -55,23 +56,93 @@ fn unreadable_split() -> Split {
 }
 
 fn invalid_id(error: &EranosError) -> bool {
-    matches!(error, EranosError::InvalidId { .. })
+    matches!(
+        error,
+        EranosError::Id {
+            failure: IdFailure::InvalidId,
+            ..
+        }
+    )
 }
 
 fn invalid_parts(error: &EranosError) -> bool {
-    matches!(error, EranosError::InvalidParts { .. })
+    matches!(
+        error,
+        EranosError::Money {
+            failure: MoneyFailure::InvalidParts,
+            ..
+        }
+    )
 }
 
 fn invalid_percentage(error: &EranosError) -> bool {
-    matches!(error, EranosError::InvalidPercentage { .. })
+    matches!(
+        error,
+        EranosError::Money {
+            failure: MoneyFailure::InvalidPercentage,
+            ..
+        }
+    )
 }
 
 fn unknown_currency(error: &EranosError) -> bool {
-    matches!(error, EranosError::UnknownCurrency { .. })
+    matches!(
+        error,
+        EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        }
+    )
+}
+
+fn empty_item_name(error: &EranosError) -> bool {
+    matches!(
+        error,
+        EranosError::Expense {
+            failure: ExpenseFailure::EmptyItemName,
+            ..
+        }
+    )
+}
+
+fn empty_name(error: &EranosError) -> bool {
+    matches!(
+        error,
+        EranosError::Expense {
+            failure: ExpenseFailure::EmptyName,
+            ..
+        }
+    )
+}
+
+fn invalid_date(error: &EranosError) -> bool {
+    matches!(
+        error,
+        EranosError::Calendar {
+            failure: CalendarFailure::InvalidDate,
+            ..
+        }
+    )
+}
+
+fn invalid_time(error: &EranosError) -> bool {
+    matches!(
+        error,
+        EranosError::Calendar {
+            failure: CalendarFailure::InvalidTime,
+            ..
+        }
+    )
 }
 
 fn zero_quantity(error: &EranosError) -> bool {
-    matches!(error, EranosError::ZeroQuantity { .. })
+    matches!(
+        error,
+        EranosError::Expense {
+            failure: ExpenseFailure::ZeroQuantity,
+            ..
+        }
+    )
 }
 
 /// One split of every kind, each between Ana and Bob.
@@ -211,7 +282,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
                 },
                 ..dinner()
             },
-            is_expected: |error| matches!(error, EranosError::InvalidDate { .. }),
+            is_expected: invalid_date,
         },
         Refusal {
             record: Expense {
@@ -256,7 +327,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
                 }),
                 ..dinner()
             },
-            is_expected: |error| matches!(error, EranosError::InvalidTime { .. }),
+            is_expected: invalid_time,
         },
         Refusal {
             record: Expense {
@@ -273,7 +344,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
                 name: " ".to_owned(),
                 ..dinner()
             },
-            is_expected: |error| matches!(error, EranosError::ExpenseEmptyName { .. }),
+            is_expected: empty_name,
         },
     ]
 }
@@ -406,7 +477,7 @@ fn an_item_converts_both_ways_and_refuses_bad_lines() {
                 name: " ".to_owned(),
                 ..fare()
             },
-            is_expected: |error| matches!(error, EranosError::EmptyItemName { .. }),
+            is_expected: empty_item_name,
         },
         Refusal {
             record: Item {

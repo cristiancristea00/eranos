@@ -9,6 +9,10 @@ use eranos::MemberId;
 use super::*;
 use crate::expense::{Item, MemberAmount, Tip, TipDistribution, TipValue};
 use crate::money::Cost;
+use crate::{
+    AccountFailure, CalendarFailure, ContactFailure, ExpenseFailure, IdFailure, LanguageFailure,
+    MoneyFailure,
+};
 
 fn euros(minor_units: i64) -> Money {
     Money {
@@ -77,7 +81,13 @@ fn dinner() -> Expense {
 }
 
 fn is_unknown_currency<T>(result: &Result<T, EranosError>) -> bool {
-    matches!(result, Err(EranosError::UnknownCurrency { .. }))
+    matches!(
+        result,
+        Err(EranosError::Money {
+            failure: MoneyFailure::UnknownCurrency,
+            ..
+        })
+    )
 }
 
 /// Amounts would be read or written another way than the library's, or a
@@ -89,11 +99,17 @@ fn amounts_parse_format_and_add_as_the_library_does() {
     assert!(is_unknown_currency(&money_parse("1", "XYZ")));
     assert!(matches!(
         money_parse("twelve", "EUR"),
-        Err(EranosError::InvalidAmount { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidAmount,
+            ..
+        })
     ));
     assert!(matches!(
         money_parse("1.234", "EUR"),
-        Err(EranosError::TooManyDecimals { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::TooManyDecimals { .. },
+            ..
+        })
     ));
     assert_eq!(money_format(&euros(1_250)).as_deref(), Ok("12.50 EUR"));
     assert!(is_unknown_currency(&money_format(&unknown_money())));
@@ -103,18 +119,27 @@ fn amounts_parse_format_and_add_as_the_library_does() {
     for helper in [money_add, money_subtract] {
         assert!(matches!(
             helper(&euros(1), &lei(1)),
-            Err(EranosError::MoneyCurrencyMismatch { .. })
+            Err(EranosError::Money {
+                failure: MoneyFailure::CurrencyMismatch { .. },
+                ..
+            })
         ));
         assert!(is_unknown_currency(&helper(&unknown_money(), &euros(1))));
         assert!(is_unknown_currency(&helper(&euros(1), &unknown_money())));
     }
     assert!(matches!(
         money_add(&euros(i64::MAX), &euros(1)),
-        Err(EranosError::MoneyOverflow { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::Overflow,
+            ..
+        })
     ));
     assert!(matches!(
         money_subtract(&euros(i64::MIN), &euros(1)),
-        Err(EranosError::MoneyOverflow { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::Overflow,
+            ..
+        })
     ));
 }
 
@@ -126,7 +151,10 @@ fn rates_parse_and_convert_as_the_library_does() {
     assert_eq!(exchange_rate_parse("4.970").as_deref(), Ok("4.97"));
     assert!(matches!(
         exchange_rate_parse("0"),
-        Err(EranosError::InvalidExchangeRate { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidExchangeRate,
+            ..
+        })
     ));
     // 0.05 lei at 0.2 is one euro cent: 0.01 exactly.
     assert_eq!(exchange_rate_convert("0.2", &lei(5), "EUR"), Ok(euros(1)));
@@ -134,7 +162,10 @@ fn rates_parse_and_convert_as_the_library_does() {
     assert_eq!(exchange_rate_convert("0.25", &lei(2), "EUR"), Ok(euros(1)));
     assert!(matches!(
         exchange_rate_convert("rate", &lei(1), "EUR"),
-        Err(EranosError::InvalidExchangeRate { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidExchangeRate,
+            ..
+        })
     ));
     assert!(is_unknown_currency(&exchange_rate_convert(
         "1",
@@ -148,7 +179,10 @@ fn rates_parse_and_convert_as_the_library_does() {
     )));
     assert!(matches!(
         exchange_rate_convert("2", &lei(i64::MAX), "EUR"),
-        Err(EranosError::MoneyOverflow { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::Overflow,
+            ..
+        })
     ));
 }
 
@@ -161,26 +195,47 @@ fn percentages_and_parts_parse_and_format_as_the_library_does() {
     // Above 21 474 836.47 %, the basis points no longer fit an i32.
     for refused in [percentage_parse("half"), percentage_parse("30000000")] {
         assert!(
-            matches!(refused, Err(EranosError::InvalidPercentage { .. })),
+            matches!(
+                refused,
+                Err(EranosError::Money {
+                    failure: MoneyFailure::InvalidPercentage,
+                    ..
+                })
+            ),
             "{refused:?}"
         );
     }
     assert!(matches!(
         percentage_format(-1),
-        Err(EranosError::InvalidPercentage { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::InvalidPercentage,
+            ..
+        })
     ));
 
     assert_eq!(parts_parse("0.5"), Ok(50));
     assert_eq!(parts_format(50).as_deref(), Ok("0.5"));
     for refused in [parts_parse("half"), parts_parse("30000000")] {
         assert!(
-            matches!(refused, Err(EranosError::InvalidParts { .. })),
+            matches!(
+                refused,
+                Err(EranosError::Money {
+                    failure: MoneyFailure::InvalidParts,
+                    ..
+                })
+            ),
             "{refused:?}"
         );
     }
     for refused in [parts_format(-1), parts_format(0)] {
         assert!(
-            matches!(refused, Err(EranosError::InvalidParts { .. })),
+            matches!(
+                refused,
+                Err(EranosError::Money {
+                    failure: MoneyFailure::InvalidParts,
+                    ..
+                })
+            ),
             "{refused:?}"
         );
     }
@@ -200,7 +255,10 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
     assert_eq!(calendar_date_format(date).as_deref(), Ok("2026-09-23"));
     assert!(matches!(
         calendar_date_parse("2026-02-30"),
-        Err(EranosError::InvalidDate { .. })
+        Err(EranosError::Calendar {
+            failure: CalendarFailure::InvalidDate,
+            ..
+        })
     ));
     assert!(matches!(
         calendar_date_format(CalendarDate {
@@ -208,7 +266,10 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
             month: 2,
             ..date
         }),
-        Err(EranosError::InvalidDate { .. })
+        Err(EranosError::Calendar {
+            failure: CalendarFailure::InvalidDate,
+            ..
+        })
     ));
 
     let time = TimeOfDay {
@@ -219,17 +280,26 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
     assert_eq!(time_of_day_format(time).as_deref(), Ok("18:30"));
     assert!(matches!(
         time_of_day_parse("25:00"),
-        Err(EranosError::InvalidTime { .. })
+        Err(EranosError::Calendar {
+            failure: CalendarFailure::InvalidTime,
+            ..
+        })
     ));
     assert!(matches!(
         time_of_day_format(TimeOfDay { hour: 25, ..time }),
-        Err(EranosError::InvalidTime { .. })
+        Err(EranosError::Calendar {
+            failure: CalendarFailure::InvalidTime,
+            ..
+        })
     ));
 
     assert_eq!(language_parse("pt-pt").as_deref(), Ok("pt-PT"));
     assert!(matches!(
         language_parse("not a tag"),
-        Err(EranosError::InvalidLanguage { .. })
+        Err(EranosError::Language {
+            failure: LanguageFailure::InvalidLanguage,
+            ..
+        })
     ));
 }
 
@@ -280,7 +350,10 @@ fn contact_and_account_details_parse_as_the_library_does() {
     );
     assert!(matches!(
         email_parse("ana"),
-        Err(EranosError::InvalidEmail { .. })
+        Err(EranosError::Contact {
+            failure: ContactFailure::InvalidEmail,
+            ..
+        })
     ));
     assert_eq!(
         phone_number_parse("+40 712 345 678").as_deref(),
@@ -295,7 +368,13 @@ fn contact_and_account_details_parse_as_the_library_does() {
         phone_number_international("0712345678"),
     ] {
         assert!(
-            matches!(refused, Err(EranosError::InvalidPhoneNumber { .. })),
+            matches!(
+                refused,
+                Err(EranosError::Contact {
+                    failure: ContactFailure::InvalidPhoneNumber,
+                    ..
+                })
+            ),
             "{refused:?}"
         );
     }
@@ -312,14 +391,23 @@ fn contact_and_account_details_parse_as_the_library_does() {
         iban_country_code("RO49"),
     ] {
         assert!(
-            matches!(refused, Err(EranosError::InvalidIban { .. })),
+            matches!(
+                refused,
+                Err(EranosError::Account {
+                    failure: AccountFailure::InvalidIban { .. },
+                    ..
+                })
+            ),
             "{refused:?}"
         );
     }
     assert_eq!(username_parse(" ana.pays ").as_deref(), Ok("ana.pays"));
     assert!(matches!(
         username_parse(" "),
-        Err(EranosError::EmptyUsername { .. })
+        Err(EranosError::Account {
+            failure: AccountFailure::EmptyUsername,
+            ..
+        })
     ));
 }
 
@@ -353,7 +441,13 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     };
     for refused in [expense_tip_amount(&negative), expense_total(&negative)] {
         assert!(
-            matches!(refused, Err(EranosError::InvalidPercentage { .. })),
+            matches!(
+                refused,
+                Err(EranosError::Money {
+                    failure: MoneyFailure::InvalidPercentage,
+                    ..
+                })
+            ),
             "{refused:?}"
         );
     }
@@ -366,7 +460,10 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     };
     assert!(matches!(
         expense_tip_amount(&fixed_in_lei),
-        Err(EranosError::ExpenseCurrencyMismatch { .. })
+        Err(EranosError::Expense {
+            failure: ExpenseFailure::CurrencyMismatch { .. },
+            ..
+        })
     ));
     let past_the_range = Expense {
         cost: Cost::Local {
@@ -380,7 +477,10 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     };
     assert!(matches!(
         expense_total(&past_the_range),
-        Err(EranosError::MoneyOverflow { .. })
+        Err(EranosError::Money {
+            failure: MoneyFailure::Overflow,
+            ..
+        })
     ));
 }
 
@@ -421,7 +521,13 @@ fn an_expense_and_a_split_list_their_members() {
     ];
     for result in refused {
         assert!(
-            matches!(result, Err(EranosError::InvalidId { .. })),
+            matches!(
+                result,
+                Err(EranosError::Id {
+                    failure: IdFailure::InvalidId,
+                    ..
+                })
+            ),
             "{result:?}"
         );
     }
@@ -438,6 +544,9 @@ fn an_expense_and_a_split_list_their_members() {
     };
     assert!(matches!(
         expense_members(&bad_item),
-        Err(EranosError::ZeroQuantity { .. })
+        Err(EranosError::Expense {
+            failure: ExpenseFailure::ZeroQuantity,
+            ..
+        })
     ));
 }

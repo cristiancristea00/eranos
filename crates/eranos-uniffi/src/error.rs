@@ -1,93 +1,45 @@
-//! The binding core's error, mirrored for `uniffi` as its one error type,
-//! with the reason of a refused IBAN that one of its cases holds.
+//! The binding core's error, mirrored for `uniffi` as its one error type:
+//! a case per module of the library, each holding that module's failure,
+//! and the reason of a refused IBAN that an account's failure holds.
 
-use eranos_bindings::{EranosError, IbanReason, Money};
+use eranos_bindings::{
+    AccountFailure, CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
+    GroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, Money, MoneyFailure,
+    SettlementFailure, TransferFailure,
+};
 
 #[uniffi::remote(Error)]
 pub enum EranosError {
-    AccountEmptyName {
+    Account {
         detail: String,
+        failure: AccountFailure,
     },
-    AmountsDoNotAddUp {
-        actual: Money,
+    Calendar {
         detail: String,
-        expected: Money,
-    },
-    ArchivedMember {
-        detail: String,
-        member: String,
-    },
-    BuiltInCategory {
-        detail: String,
-    },
-    Busy {
-        detail: String,
+        failure: CalendarFailure,
     },
     Cancelled {
         detail: String,
     },
-    CategoryEmptyName {
+    Category {
         detail: String,
+        failure: CategoryFailure,
     },
-    DuplicateCategory {
-        category: String,
+    Contact {
         detail: String,
+        failure: ContactFailure,
     },
-    DuplicateCategoryName {
+    Expense {
         detail: String,
-        existing: String,
+        failure: ExpenseFailure,
     },
-    DuplicateExchangeRate {
-        currency: String,
+    Group {
         detail: String,
+        failure: GroupFailure,
     },
-    DuplicateExpense {
+    Id {
         detail: String,
-        expense: String,
-    },
-    DuplicateTransfer {
-        detail: String,
-        transfer: String,
-    },
-    EmptyFirstName {
-        detail: String,
-    },
-    EmptyItemName {
-        detail: String,
-    },
-    EmptySplit {
-        detail: String,
-    },
-    EmptyUsername {
-        detail: String,
-    },
-    ExpenseCurrencyMismatch {
-        detail: String,
-        expected: String,
-        found: String,
-    },
-    ExpenseDuplicateMember {
-        detail: String,
-        member: String,
-    },
-    ExpenseEmptyName {
-        detail: String,
-    },
-    ExpenseNonPositiveAmount {
-        detail: String,
-    },
-    ExpenseOverflow {
-        detail: String,
-    },
-    GroupDuplicateMember {
-        detail: String,
-        member: String,
-    },
-    GroupEmptyName {
-        detail: String,
-    },
-    GroupOverflow {
-        detail: String,
+        failure: IdFailure,
     },
     IdentifierGiven {
         detail: String,
@@ -95,129 +47,167 @@ pub enum EranosError {
     IdentifierMissing {
         detail: String,
     },
-    InvalidAmount {
-        detail: String,
-    },
-    InvalidDate {
-        detail: String,
-    },
-    InvalidEmail {
-        detail: String,
-    },
-    InvalidExchangeRate {
-        detail: String,
-    },
-    InvalidIban {
-        detail: String,
-        reason: IbanReason,
-    },
-    InvalidId {
-        detail: String,
-    },
     InvalidJson {
         column: i64,
         detail: String,
         line: i64,
     },
-    InvalidLanguage {
+    Language {
+        detail: String,
+        failure: LanguageFailure,
+    },
+    Member {
+        detail: String,
+        failure: MemberFailure,
+    },
+    Money {
+        detail: String,
+        failure: MoneyFailure,
+    },
+    Released {
         detail: String,
     },
-    InvalidParts {
+    Settlement {
         detail: String,
+        failure: SettlementFailure,
     },
-    InvalidPercentage {
+    Transfer {
         detail: String,
+        failure: TransferFailure,
     },
-    InvalidPhoneNumber {
-        detail: String,
+}
+
+#[uniffi::remote(Enum)]
+pub enum AccountFailure {
+    EmptyName,
+    EmptyUsername,
+    InvalidIban { reason: IbanReason },
+}
+
+#[uniffi::remote(Enum)]
+pub enum CalendarFailure {
+    InvalidDate,
+    InvalidTime,
+}
+
+#[uniffi::remote(Enum)]
+pub enum CategoryFailure {
+    EmptyName,
+}
+
+#[uniffi::remote(Enum)]
+pub enum ContactFailure {
+    InvalidEmail,
+    InvalidPhoneNumber,
+}
+
+#[uniffi::remote(Enum)]
+pub enum ExpenseFailure {
+    AmountsDoNotAddUp { actual: Money, expected: Money },
+    CurrencyMismatch { expected: String, found: String },
+    DuplicateMember { member: String },
+    EmptyItemName,
+    EmptyName,
+    EmptySplit,
+    ItemsDoNotAddUp { actual: Money, expected: Money },
+    NegativeTip,
+    NoItems,
+    NonPositiveAmount,
+    NonPositiveShare { member: String },
+    Overflow,
+    PercentagesDoNotAddUp { total_basis_points: i64 },
+    ZeroQuantity,
+}
+
+#[uniffi::remote(Enum)]
+pub enum GroupFailure {
+    ArchivedMember {
+        member: String,
     },
-    InvalidTime {
-        detail: String,
+    BuiltInCategory,
+    Busy,
+    DuplicateCategory {
+        category: String,
     },
-    ItemsDoNotAddUp {
-        actual: Money,
-        detail: String,
-        expected: Money,
+    DuplicateCategoryName {
+        existing: String,
     },
+    DuplicateExchangeRate {
+        currency: String,
+    },
+    DuplicateExpense {
+        expense: String,
+    },
+    DuplicateMember {
+        member: String,
+    },
+    DuplicateTransfer {
+        transfer: String,
+    },
+    EmptyName,
     MemberInUse {
-        detail: String,
         expenses: Vec<String>,
         member: String,
         transfers: Vec<String>,
     },
     MissingExchangeRate {
         currency: String,
-        detail: String,
     },
-    MoneyCurrencyMismatch {
-        detail: String,
-        left: String,
-        right: String,
-    },
-    MoneyOverflow {
-        detail: String,
-    },
-    NegativeTip {
-        detail: String,
-    },
-    NoItems {
-        detail: String,
-    },
-    NonPositiveShare {
-        detail: String,
-        member: String,
-    },
-    OutOfMemory {
-        balances: i64,
-        detail: String,
-    },
-    PercentagesDoNotAddUp {
-        detail: String,
-        total_basis_points: i64,
-    },
-    Released {
-        detail: String,
-    },
-    SameMember {
-        detail: String,
-    },
-    TooManyDecimals {
-        allowed: i64,
-        currency: String,
-        detail: String,
-    },
-    TransferNonPositiveAmount {
-        detail: String,
-    },
-    UnexpectedExchangeRate {
-        detail: String,
-    },
+    Overflow,
+    UnexpectedExchangeRate,
     UnknownCategory {
         category: String,
-        detail: String,
-    },
-    UnknownCurrency {
-        detail: String,
     },
     UnknownExpense {
-        detail: String,
         expense: String,
     },
     UnknownMember {
-        detail: String,
         member: String,
     },
     UnknownTransfer {
-        detail: String,
         transfer: String,
     },
     UnsupportedFormat {
-        detail: String,
         format: i64,
     },
-    ZeroQuantity {
-        detail: String,
-    },
+}
+
+#[uniffi::remote(Enum)]
+pub enum IdFailure {
+    InvalidId,
+}
+
+#[uniffi::remote(Enum)]
+pub enum LanguageFailure {
+    InvalidLanguage,
+}
+
+#[uniffi::remote(Enum)]
+pub enum MemberFailure {
+    EmptyFirstName,
+}
+
+#[uniffi::remote(Enum)]
+pub enum MoneyFailure {
+    CurrencyMismatch { left: String, right: String },
+    InvalidAmount,
+    InvalidExchangeRate,
+    InvalidParts,
+    InvalidPercentage,
+    Overflow,
+    TooManyDecimals { allowed: i64, currency: String },
+    UnknownCurrency,
+}
+
+#[uniffi::remote(Enum)]
+pub enum SettlementFailure {
+    OutOfMemory { balances: i64 },
+}
+
+#[uniffi::remote(Enum)]
+pub enum TransferFailure {
+    NonPositiveAmount,
+    SameMember,
 }
 
 #[uniffi::remote(Enum)]

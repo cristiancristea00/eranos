@@ -30,8 +30,9 @@ impl CalendarDate {
     ///
     /// # Errors
     ///
-    /// [`EranosError::InvalidDate`] for a day that does not exist, a number
-    /// too large for its field included.
+    /// [`CalendarFailure::InvalidDate`](crate::CalendarFailure::InvalidDate)
+    /// for a day that does not exist, a number too large for its field
+    /// included.
     pub(crate) fn to_library(self) -> Result<library::CalendarDate, EranosError> {
         let invalid = |_| CalendarError::InvalidDate;
         Ok(library::CalendarDate::new(
@@ -64,7 +65,8 @@ impl TimeOfDay {
     ///
     /// # Errors
     ///
-    /// [`EranosError::InvalidTime`] for an hour or a minute out of range.
+    /// [`CalendarFailure::InvalidTime`](crate::CalendarFailure::InvalidTime)
+    /// for an hour or a minute out of range.
     pub(crate) fn to_library(self) -> Result<library::TimeOfDay, EranosError> {
         let invalid = |_| CalendarError::InvalidTime;
         Ok(library::TimeOfDay::new(

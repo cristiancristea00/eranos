@@ -538,24 +538,30 @@ tested in Rust: `eranos-uniffi` for Swift, Kotlin, and Java, and, planned,
   otherwise), and the replacement starts from the stored entry's
   `to_builder()` and takes every field of the record, so no identifier is
   set from outside.
-- **One error.** `EranosError` has a case for each variant of every library
-  error, named after it, with the crate in front where two crates share a
-  name (`MoneyCurrencyMismatch`, `ExpenseCurrencyMismatch`), carrying the
-  variant's payload and, as `detail`, the library's message: a field named
-  `message` would clash with the property of every Kotlin exception. Its
-  own cases are
-  `Cancelled`, `IdentifierGiven`, `IdentifierMissing`, `InvalidJson`, which
-  names the line and column of a refused saved group but not its text,
-  since the text can hold an account number, and `Released`. The
-  conversion traits of [§ 2](#2-crate-map) keep the conversion exhaustive,
-  so a new variant fails the core's build.
+- **One error, grouped by module.** A binding call can fail in several
+  modules at once, since its records are converted before the library
+  runs it, and a generated function throws one error type, so every call
+  reports `EranosError`. It has a case per module of the library, as the
+  library has an error per module: `Account`, `Calendar`, `Category`,
+  `Contact`, `Expense`, `Group`, `Id`, `Language`, `Member`, `Money`,
+  `Settlement`, and `Transfer`. Each holds the module's failure, an enum
+  with a case per variant of the module's error and what the variant holds
+  (`GroupFailure::MemberInUse { expenses, member, transfers }`), and, as
+  `detail`, the library's message; a field named `message` would clash with
+  the property of every Kotlin exception. A caller catches a whole module
+  or one failure, and no failure needs its crate's name in front. The
+  core's own cases stand beside the modules: `Cancelled`, `IdentifierGiven`,
+  `IdentifierMissing`, `InvalidJson`, which names the line and column of a
+  refused saved group but not its text, since the text can hold an account
+  number, and `Released`. The conversion traits of [§ 2](#2-crate-map) keep
+  the conversion exhaustive, so a new variant fails the core's build.
 - **One group object.** `GroupHandle` holds a `SharedGroup` and has every
   group call in two forms: a synchronous one, which waits for the lock
   where a thread can sleep and, on wasm, whose one thread must not, fails
-  with `Busy` while another call holds it; and an asynchronous one, a
-  `Send + 'static` future that waits for the lock. Only the two functions
-  that take a synchronous call's lock depend on the target, and the trying
-  form wasm uses is tested on the host. `GroupHandle::read` returns a
+  with `GroupFailure::Busy` while another call holds it; and an
+  asynchronous one, a `Send + 'static` future that waits for the lock. Only
+  the two functions that take a synchronous call's lock depend on the
+  target, and the trying form wasm uses is tested on the host. `GroupHandle::read` returns a
   `GroupReader`, which holds the shared lock until it is released or
   dropped, so the reads of one report see no change in between; `release`
   frees the lock at once, for languages whose collector frees objects late,

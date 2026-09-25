@@ -9,8 +9,9 @@ use eranos_bindings::{
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`], [`EranosError::InvalidAmount`], and
-/// [`EranosError::TooManyDecimals`].
+/// `MoneyFailure::UnknownCurrency`,
+/// `MoneyFailure::InvalidAmount`, and
+/// `MoneyFailure::TooManyDecimals`.
 #[uniffi::export]
 pub(crate) fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> {
     eranos_bindings::money_parse(text, code)
@@ -20,7 +21,7 @@ pub(crate) fn money_parse(text: &str, code: &str) -> Result<Money, EranosError> 
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`].
+/// `MoneyFailure::UnknownCurrency`.
 #[uniffi::export]
 pub(crate) fn money_format(money: &Money) -> Result<String, EranosError> {
     eranos_bindings::money_format(money)
@@ -30,8 +31,9 @@ pub(crate) fn money_format(money: &Money) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`], [`EranosError::MoneyCurrencyMismatch`],
-/// and [`EranosError::MoneyOverflow`].
+/// `MoneyFailure::UnknownCurrency`,
+/// `MoneyFailure::CurrencyMismatch`,
+/// and `MoneyFailure::Overflow`.
 #[uniffi::export]
 pub(crate) fn money_add(left: &Money, right: &Money) -> Result<Money, EranosError> {
     eranos_bindings::money_add(left, right)
@@ -41,7 +43,7 @@ pub(crate) fn money_add(left: &Money, right: &Money) -> Result<Money, EranosErro
 ///
 /// # Errors
 ///
-/// As for [`money_add`].
+/// As for `money_add`.
 #[uniffi::export]
 pub(crate) fn money_subtract(left: &Money, right: &Money) -> Result<Money, EranosError> {
     eranos_bindings::money_subtract(left, right)
@@ -51,7 +53,7 @@ pub(crate) fn money_subtract(left: &Money, right: &Money) -> Result<Money, Erano
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidExchangeRate`].
+/// `MoneyFailure::InvalidExchangeRate`.
 #[uniffi::export]
 pub(crate) fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::exchange_rate_parse(text)
@@ -62,8 +64,9 @@ pub(crate) fn exchange_rate_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidExchangeRate`], [`EranosError::UnknownCurrency`],
-/// and [`EranosError::MoneyOverflow`].
+/// `MoneyFailure::InvalidExchangeRate`,
+/// `MoneyFailure::UnknownCurrency`, and
+/// `MoneyFailure::Overflow`.
 #[uniffi::export]
 pub(crate) fn exchange_rate_convert(
     rate: &str,
@@ -77,7 +80,7 @@ pub(crate) fn exchange_rate_convert(
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPercentage`].
+/// `MoneyFailure::InvalidPercentage`.
 #[uniffi::export]
 pub(crate) fn percentage_parse(text: &str) -> Result<i32, EranosError> {
     eranos_bindings::percentage_parse(text)
@@ -87,7 +90,8 @@ pub(crate) fn percentage_parse(text: &str) -> Result<i32, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPercentage`] for a negative number.
+/// `MoneyFailure::InvalidPercentage`
+/// for a negative number.
 #[uniffi::export]
 pub(crate) fn percentage_format(basis_points: i32) -> Result<String, EranosError> {
     eranos_bindings::percentage_format(basis_points)
@@ -97,7 +101,7 @@ pub(crate) fn percentage_format(basis_points: i32) -> Result<String, EranosError
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidParts`].
+/// `MoneyFailure::InvalidParts`.
 #[uniffi::export]
 pub(crate) fn parts_parse(text: &str) -> Result<i32, EranosError> {
     eranos_bindings::parts_parse(text)
@@ -107,7 +111,8 @@ pub(crate) fn parts_parse(text: &str) -> Result<i32, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidParts`] for a number that is not positive.
+/// `MoneyFailure::InvalidParts` for a
+/// number that is not positive.
 #[uniffi::export]
 pub(crate) fn parts_format(hundredths: i32) -> Result<String, EranosError> {
     eranos_bindings::parts_format(hundredths)
@@ -117,7 +122,7 @@ pub(crate) fn parts_format(hundredths: i32) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidDate`].
+/// `CalendarFailure::InvalidDate`.
 #[uniffi::export]
 pub(crate) fn calendar_date_parse(text: &str) -> Result<CalendarDate, EranosError> {
     eranos_bindings::calendar_date_parse(text)
@@ -127,7 +132,7 @@ pub(crate) fn calendar_date_parse(text: &str) -> Result<CalendarDate, EranosErro
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidDate`].
+/// `CalendarFailure::InvalidDate`.
 #[uniffi::export]
 pub(crate) fn calendar_date_format(date: CalendarDate) -> Result<String, EranosError> {
     eranos_bindings::calendar_date_format(date)
@@ -137,7 +142,7 @@ pub(crate) fn calendar_date_format(date: CalendarDate) -> Result<String, EranosE
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidTime`].
+/// `CalendarFailure::InvalidTime`.
 #[uniffi::export]
 pub(crate) fn time_of_day_parse(text: &str) -> Result<TimeOfDay, EranosError> {
     eranos_bindings::time_of_day_parse(text)
@@ -147,7 +152,7 @@ pub(crate) fn time_of_day_parse(text: &str) -> Result<TimeOfDay, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidTime`].
+/// `CalendarFailure::InvalidTime`.
 #[uniffi::export]
 pub(crate) fn time_of_day_format(time: TimeOfDay) -> Result<String, EranosError> {
     eranos_bindings::time_of_day_format(time)
@@ -158,7 +163,7 @@ pub(crate) fn time_of_day_format(time: TimeOfDay) -> Result<String, EranosError>
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidLanguage`].
+/// `LanguageFailure::InvalidLanguage`.
 #[uniffi::export]
 pub(crate) fn language_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::language_parse(text)
@@ -168,7 +173,7 @@ pub(crate) fn language_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`].
+/// `MoneyFailure::UnknownCurrency`.
 #[uniffi::export]
 pub(crate) fn balance_format(balance: &Balance) -> Result<String, EranosError> {
     eranos_bindings::balance_format(balance)
@@ -178,7 +183,7 @@ pub(crate) fn balance_format(balance: &Balance) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::UnknownCurrency`].
+/// `MoneyFailure::UnknownCurrency`.
 #[uniffi::export]
 pub(crate) fn currency_details(code: &str) -> Result<CurrencyDetails, EranosError> {
     eranos_bindings::currency_details(code)
@@ -195,7 +200,7 @@ pub(crate) fn currencies() -> Vec<CurrencyDetails> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidEmail`].
+/// `ContactFailure::InvalidEmail`.
 #[uniffi::export]
 pub(crate) fn email_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::email_parse(text)
@@ -205,7 +210,7 @@ pub(crate) fn email_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPhoneNumber`].
+/// `ContactFailure::InvalidPhoneNumber`.
 #[uniffi::export]
 pub(crate) fn phone_number_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::phone_number_parse(text)
@@ -216,7 +221,7 @@ pub(crate) fn phone_number_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidPhoneNumber`].
+/// `ContactFailure::InvalidPhoneNumber`.
 #[uniffi::export]
 pub(crate) fn phone_number_international(text: &str) -> Result<String, EranosError> {
     eranos_bindings::phone_number_international(text)
@@ -226,7 +231,8 @@ pub(crate) fn phone_number_international(text: &str) -> Result<String, EranosErr
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidIban`], with the reason.
+/// `AccountFailure::InvalidIban`, with
+/// the reason.
 #[uniffi::export]
 pub(crate) fn iban_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::iban_parse(text)
@@ -236,7 +242,8 @@ pub(crate) fn iban_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::InvalidIban`], with the reason.
+/// `AccountFailure::InvalidIban`, with
+/// the reason.
 #[uniffi::export]
 pub(crate) fn iban_country_code(text: &str) -> Result<String, EranosError> {
     eranos_bindings::iban_country_code(text)
@@ -247,7 +254,7 @@ pub(crate) fn iban_country_code(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::EmptyUsername`].
+/// `AccountFailure::EmptyUsername`.
 #[uniffi::export]
 pub(crate) fn username_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::username_parse(text)
@@ -269,7 +276,8 @@ pub(crate) fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError
 ///
 /// # Errors
 ///
-/// As for [`expense_tip_amount`], and [`EranosError::MoneyOverflow`].
+/// As for `expense_tip_amount`, and
+/// `MoneyFailure::Overflow`.
 #[uniffi::export]
 pub(crate) fn expense_total(expense: &Expense) -> Result<Money, EranosError> {
     eranos_bindings::expense_total(expense)

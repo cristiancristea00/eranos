@@ -3,6 +3,7 @@
 //! a date or time that exists instead of being refused.
 
 use super::*;
+use crate::CalendarFailure;
 
 /// A date or time would come back changed from the library, or a number
 /// too large for its field would wrap into one that exists.
@@ -48,7 +49,10 @@ fn dates_and_times_convert_both_ways_and_refuse_what_does_not_exist() {
         assert!(
             matches!(
                 impossible.to_library(),
-                Err(EranosError::InvalidDate { .. })
+                Err(EranosError::Calendar {
+                    failure: CalendarFailure::InvalidDate,
+                    ..
+                })
             ),
             "{impossible:?}"
         );
@@ -71,7 +75,10 @@ fn dates_and_times_convert_both_ways_and_refuse_what_does_not_exist() {
         assert!(
             matches!(
                 impossible.to_library(),
-                Err(EranosError::InvalidTime { .. })
+                Err(EranosError::Calendar {
+                    failure: CalendarFailure::InvalidTime,
+                    ..
+                })
             ),
             "{impossible:?}"
         );

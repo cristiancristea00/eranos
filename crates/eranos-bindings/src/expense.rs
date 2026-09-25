@@ -69,10 +69,14 @@ impl Split {
     ///
     /// # Errors
     ///
-    /// [`EranosError::InvalidId`] for a member that is not an identifier,
-    /// [`EranosError::UnknownCurrency`] for an amount in an unknown currency,
-    /// [`EranosError::InvalidParts`] for parts that are not positive, and
-    /// [`EranosError::InvalidPercentage`] for a negative percentage.
+    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) for a member that
+    /// is not an identifier,
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// for an amount in an unknown currency,
+    /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for
+    /// parts that are not positive, and
+    /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+    /// for a negative percentage.
     pub(crate) fn to_library(&self) -> Result<library::Split, EranosError> {
         Ok(match self {
             Self::Amounts { shares } => library::Split::amounts(
@@ -199,8 +203,11 @@ impl Item {
     ///
     /// # Errors
     ///
-    /// The errors of [`Split::to_library`], [`EranosError::EmptyItemName`] for
-    /// a blank name, and [`EranosError::ZeroQuantity`] for a quantity below 1.
+    /// The errors of [`Split::to_library`],
+    /// [`ExpenseFailure::EmptyItemName`](crate::ExpenseFailure::EmptyItemName)
+    /// for a blank name, and
+    /// [`ExpenseFailure::ZeroQuantity`](crate::ExpenseFailure::ZeroQuantity)
+    /// for a quantity below 1.
     pub(crate) fn to_library(&self) -> Result<library::Item, EranosError> {
         let quantity = u32::try_from(self.quantity).map_err(|_| ExpenseError::ZeroQuantity)?;
         Ok(library::Item::builder_with_split(
@@ -322,9 +329,10 @@ impl Tip {
     ///
     /// # Errors
     ///
-    /// [`EranosError::UnknownCurrency`] for a fixed tip in an unknown
-    /// currency, and [`EranosError::InvalidPercentage`] for a negative
-    /// percentage.
+    /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
+    /// for a fixed tip in an unknown currency, and
+    /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+    /// for a negative percentage.
     pub(crate) fn to_library(&self) -> Result<library::Tip, EranosError> {
         let tip = match &self.value {
             TipValue::Fixed { amount } => library::Tip::fixed(amount.to_library()?),
@@ -423,7 +431,8 @@ impl Expense {
     /// # Errors
     ///
     /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`EranosError::InvalidId`] when it is not an identifier.
+    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
+    /// identifier.
     pub(crate) fn id_to_replace(&self) -> Result<ExpenseId, EranosError> {
         identifier(
             self.id
