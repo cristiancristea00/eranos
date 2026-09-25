@@ -181,7 +181,7 @@ flowchart TD
 | `eranos-web`            | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                                                                        | eranos-bindings; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
 | `eranos-kmp`            | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                                                                                | eranos-bindings; uniffi                                                                            |
 | `eranos-capi`           | the Diplomat bridge for C and C++: an opaque object per record, list, and enum with data, the C-like enums, `EranosError`, `EranosGroup`, `EranosGroupReader`, `EranosCancellation`, and the outcomes of the callbacks | eranos-bindings; diplomat, diplomat-runtime                                                        |
-| `eranos-bindings`       | the records and enums every binding exposes, `EranosError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers                                                                  | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json      |
+| `eranos-bindings`       | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers                                              | `eranos` with `serde`, and the twelve internal crates for their conversion traits; serde_json      |
 | `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                            | the twelve crates below                                                                            |
 | `eranos-group`          | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                                                                   | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core  |
 | `eranos-expense`        | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                    | calendar, core, ledger, money                                                                      |
@@ -818,15 +818,20 @@ list has `len` and `get`, and `create` and `push` when a caller builds
 one; an enum with data has `kind`, a constructor per variant, and a getter
 per field. A date and a time of day are plain structs. Text crosses as
 bytes, which the bridge checks are UTF-8, reporting `InvalidText`
-otherwise, and text a call returns is written into a `DiplomatWrite`.
-Every group call has a synchronous form, which blocks while another call
-holds the lock, and an asynchronous one, which runs on the group's worker
-thread, started by the first such call, in the order of the calls, and
-reports its outcome to a callback there, a load on a thread of its own.
-Diplomat refuses a callback that must be `Send`, so the bridge moves each
-one in a wrapper that asserts it: the C and C++ APIs document that a
-callback runs on another thread. Only one Diplomat library links into a
-program, since the runtime exports fixed symbol names.
+otherwise, and text a call returns is written into a `DiplomatWrite`. An
+error crosses as the binding core's `FlatError`: a kind, a failure, the
+message, and a field per value a failure holds, since Diplomat's enums
+hold no data; the bridge's C-like enums convert from the core's through
+Diplomat's `enum_convert`, so the flattening, and every failure's arm,
+stays where the Rust tests reach it. Every group call has a synchronous
+form, which blocks while another call holds the lock, and an asynchronous
+one, which runs on the group's worker thread, started by the first such
+call, in the order of the calls, and reports its outcome to a callback
+there, a load on a thread of its own. Diplomat refuses a callback that
+must be `Send`, so the bridge moves each one in a wrapper that asserts it:
+the C and C++ APIs document that a callback runs on another thread. Only
+one Diplomat library links into a program, since the runtime exports fixed
+symbol names.
 
 `bindings/c` is the C package: `eranos.h`, which includes a part per
 kind of value under `eranos/`, each of `static inline` functions over

@@ -11,6 +11,7 @@ pub mod ffi {
 
     /// The module of the library that refused a call, or the core's own case.
     #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::ErrorKind)]
     pub enum EranosErrorKind {
         /// An `AccountError`, about a payment account: its IBAN, username, or label.
         Account,
@@ -52,6 +53,7 @@ pub mod ffi {
 
     /// The failure within its module, named after the module and the failure.
     #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::FailureKind)]
     pub enum EranosFailure {
         /// An account whose name is blank.
         AccountEmptyName,
@@ -174,6 +176,7 @@ pub mod ffi {
 
     /// Why an IBAN was refused.
     #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::IbanReasonKind)]
     pub enum EranosIbanReason {
         /// A character other than an ASCII letter, a digit, or whitespace (which is dropped).
         InvalidCharacter,
@@ -195,19 +198,19 @@ pub mod ffi {
     /// and what the failure holds, each getter present for the failures that hold its field.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosError(pub(crate) super::Flat);
+    pub struct EranosError(pub(crate) eranos_bindings::FlatError);
 
     impl EranosError {
         /// The module that refused the call, or the core's own case.
         #[must_use]
-        pub const fn kind(&self) -> EranosErrorKind {
-            self.0.kind
+        pub fn kind(&self) -> EranosErrorKind {
+            self.0.kind.into()
         }
 
         /// The failure within its module, absent for the core's own cases.
         #[must_use]
-        pub const fn failure(&self) -> Option<EranosFailure> {
-            self.0.failure
+        pub fn failure(&self) -> Option<EranosFailure> {
+            self.0.failure.map(Into::into)
         }
 
         /// Writes the library's message: lowercase, without a full stop, and never the text it
@@ -342,8 +345,8 @@ pub mod ffi {
 
         /// The check the IBAN failed. Present for the failure `InvalidIban`.
         #[must_use]
-        pub const fn reason(&self) -> Option<EranosIbanReason> {
-            self.0.payload.reason
+        pub fn reason(&self) -> Option<EranosIbanReason> {
+            self.0.payload.reason.map(Into::into)
         }
 
         /// The currency of the second amount. Present for the failure `CurrencyMismatch`. Writes
@@ -377,525 +380,11 @@ pub mod ffi {
     }
 }
 
-/// What an error holds, read once when it is made: every getter reads a field.
-#[derive(Debug, Clone, Default)]
-pub(crate) struct Payload {
-    actual: Option<eranos_bindings::Money>,
-    allowed: Option<i64>,
-    balances: Option<i64>,
-    category: Option<String>,
-    column: Option<i64>,
-    currency: Option<String>,
-    existing: Option<String>,
-    expected_amount: Option<eranos_bindings::Money>,
-    expected_currency: Option<String>,
-    expected_length: Option<i64>,
-    expense: Option<String>,
-    expenses: Option<Vec<String>>,
-    format: Option<i64>,
-    found_currency: Option<String>,
-    found_length: Option<i64>,
-    left: Option<String>,
-    line: Option<i64>,
-    member: Option<String>,
-    reason: Option<ffi::EranosIbanReason>,
-    right: Option<String>,
-    total_basis_points: Option<i64>,
-    transfer: Option<String>,
-    transfers: Option<Vec<String>>,
-}
-
-/// An error's kind, failure, message, and payload.
-#[derive(Debug, Clone)]
-pub(crate) struct Flat {
-    kind: ffi::EranosErrorKind,
-    failure: Option<ffi::EranosFailure>,
-    message: String,
-    payload: Payload,
-}
-
 impl From<crate::Failure> for ffi::EranosError {
     fn from(failure: crate::Failure) -> Self {
-        Self(flatten(&failure))
-    }
-}
-
-/// Reads `failure` into what the getters read.
-fn flatten(failure: &crate::Failure) -> Flat {
-    match failure {
-        crate::Failure::InvalidText => Flat {
-            kind: ffi::EranosErrorKind::InvalidText,
-            failure: None,
-            message: "the text is not UTF-8".to_owned(),
-            payload: Payload::default(),
-        },
-        crate::Failure::Library(error) => library(error),
-    }
-}
-
-/// Reads the library's `error`.
-fn library(error: &eranos_bindings::EranosError) -> Flat {
-    let message = error.to_string();
-    let (kind, failure, payload) = match error {
-        eranos_bindings::EranosError::Account { failure, .. } => {
-            let (failure, payload) = account(*failure);
-            (ffi::EranosErrorKind::Account, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Calendar { failure, .. } => {
-            let (failure, payload) = calendar(*failure);
-            (ffi::EranosErrorKind::Calendar, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Cancelled { .. } => {
-            (ffi::EranosErrorKind::Cancelled, None, Payload::default())
-        }
-        eranos_bindings::EranosError::Category { failure, .. } => {
-            let (failure, payload) = category(*failure);
-            (ffi::EranosErrorKind::Category, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Contact { failure, .. } => {
-            let (failure, payload) = contact(*failure);
-            (ffi::EranosErrorKind::Contact, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Expense { failure, .. } => {
-            let (failure, payload) = expense(failure);
-            (ffi::EranosErrorKind::Expense, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Group { failure, .. } => {
-            let (failure, payload) = group(failure);
-            (ffi::EranosErrorKind::Group, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Id { failure, .. } => {
-            let (failure, payload) = id(*failure);
-            (ffi::EranosErrorKind::Id, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::IdentifierGiven { .. } => (
-            ffi::EranosErrorKind::IdentifierGiven,
-            None,
-            Payload::default(),
-        ),
-        eranos_bindings::EranosError::IdentifierMissing { .. } => (
-            ffi::EranosErrorKind::IdentifierMissing,
-            None,
-            Payload::default(),
-        ),
-        eranos_bindings::EranosError::InvalidJson { column, line, .. } => (
-            ffi::EranosErrorKind::InvalidJson,
-            None,
-            Payload {
-                column: Some(*column),
-                line: Some(*line),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::EranosError::Language { failure, .. } => {
-            let (failure, payload) = language(*failure);
-            (ffi::EranosErrorKind::Language, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Member { failure, .. } => {
-            let (failure, payload) = member(*failure);
-            (ffi::EranosErrorKind::Member, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Money { failure, .. } => {
-            let (failure, payload) = money(failure);
-            (ffi::EranosErrorKind::Money, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Released { .. } => {
-            (ffi::EranosErrorKind::Released, None, Payload::default())
-        }
-        eranos_bindings::EranosError::Settlement { failure, .. } => {
-            let (failure, payload) = settlement(*failure);
-            (ffi::EranosErrorKind::Settlement, Some(failure), payload)
-        }
-        eranos_bindings::EranosError::Transfer { failure, .. } => {
-            let (failure, payload) = transfer(*failure);
-            (ffi::EranosErrorKind::Transfer, Some(failure), payload)
-        }
-    };
-    Flat {
-        kind,
-        failure,
-        message,
-        payload,
-    }
-}
-
-/// Reads the account module's `failure`.
-fn account(failure: eranos_bindings::AccountFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::AccountFailure::EmptyName => {
-            (ffi::EranosFailure::AccountEmptyName, Payload::default())
-        }
-        eranos_bindings::AccountFailure::EmptyUsername => {
-            (ffi::EranosFailure::AccountEmptyUsername, Payload::default())
-        }
-        eranos_bindings::AccountFailure::InvalidIban { reason } => {
-            (ffi::EranosFailure::AccountInvalidIban, iban(&reason))
-        }
-    }
-}
-
-/// Reads the calendar module's `failure`.
-fn calendar(failure: eranos_bindings::CalendarFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::CalendarFailure::InvalidDate => {
-            (ffi::EranosFailure::CalendarInvalidDate, Payload::default())
-        }
-        eranos_bindings::CalendarFailure::InvalidTime => {
-            (ffi::EranosFailure::CalendarInvalidTime, Payload::default())
-        }
-    }
-}
-
-/// Reads the category module's `failure`.
-fn category(failure: eranos_bindings::CategoryFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::CategoryFailure::EmptyName => {
-            (ffi::EranosFailure::CategoryEmptyName, Payload::default())
-        }
-    }
-}
-
-/// Reads the contact module's `failure`.
-fn contact(failure: eranos_bindings::ContactFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::ContactFailure::InvalidEmail => {
-            (ffi::EranosFailure::ContactInvalidEmail, Payload::default())
-        }
-        eranos_bindings::ContactFailure::InvalidPhoneNumber => (
-            ffi::EranosFailure::ContactInvalidPhoneNumber,
-            Payload::default(),
-        ),
-    }
-}
-
-/// Reads the expense module's `failure`.
-fn expense(failure: &eranos_bindings::ExpenseFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::ExpenseFailure::AmountsDoNotAddUp { actual, expected } => (
-            ffi::EranosFailure::ExpenseAmountsDoNotAddUp,
-            Payload {
-                actual: Some(actual.clone()),
-                expected_amount: Some(expected.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::ExpenseFailure::CurrencyMismatch { expected, found } => (
-            ffi::EranosFailure::ExpenseCurrencyMismatch,
-            Payload {
-                expected_currency: Some(expected.clone()),
-                found_currency: Some(found.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::ExpenseFailure::DuplicateMember { member } => (
-            ffi::EranosFailure::ExpenseDuplicateMember,
-            Payload {
-                member: Some(member.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::ExpenseFailure::EmptyItemName => {
-            (ffi::EranosFailure::ExpenseEmptyItemName, Payload::default())
-        }
-        eranos_bindings::ExpenseFailure::EmptyName => {
-            (ffi::EranosFailure::ExpenseEmptyName, Payload::default())
-        }
-        eranos_bindings::ExpenseFailure::EmptySplit => {
-            (ffi::EranosFailure::ExpenseEmptySplit, Payload::default())
-        }
-        eranos_bindings::ExpenseFailure::ItemsDoNotAddUp { actual, expected } => (
-            ffi::EranosFailure::ExpenseItemsDoNotAddUp,
-            Payload {
-                actual: Some(actual.clone()),
-                expected_amount: Some(expected.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::ExpenseFailure::NegativeTip => {
-            (ffi::EranosFailure::ExpenseNegativeTip, Payload::default())
-        }
-        eranos_bindings::ExpenseFailure::NoItems => {
-            (ffi::EranosFailure::ExpenseNoItems, Payload::default())
-        }
-        eranos_bindings::ExpenseFailure::NonPositiveAmount => (
-            ffi::EranosFailure::ExpenseNonPositiveAmount,
-            Payload::default(),
-        ),
-        eranos_bindings::ExpenseFailure::NonPositiveShare { member } => (
-            ffi::EranosFailure::ExpenseNonPositiveShare,
-            Payload {
-                member: Some(member.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::ExpenseFailure::Overflow => {
-            (ffi::EranosFailure::ExpenseOverflow, Payload::default())
-        }
-        eranos_bindings::ExpenseFailure::PercentagesDoNotAddUp { total_basis_points } => (
-            ffi::EranosFailure::ExpensePercentagesDoNotAddUp,
-            Payload {
-                total_basis_points: Some(*total_basis_points),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::ExpenseFailure::ZeroQuantity => {
-            (ffi::EranosFailure::ExpenseZeroQuantity, Payload::default())
-        }
-    }
-}
-
-/// Reads the group module's `failure`.
-#[expect(
-    clippy::too_many_lines,
-    reason = "one arm per failure of the group module, of which there are 19"
-)]
-fn group(failure: &eranos_bindings::GroupFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::GroupFailure::ArchivedMember { member } => (
-            ffi::EranosFailure::GroupArchivedMember,
-            Payload {
-                member: Some(member.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::BuiltInCategory => {
-            (ffi::EranosFailure::GroupBuiltInCategory, Payload::default())
-        }
-        eranos_bindings::GroupFailure::Busy => (ffi::EranosFailure::GroupBusy, Payload::default()),
-        eranos_bindings::GroupFailure::DuplicateCategory { category } => (
-            ffi::EranosFailure::GroupDuplicateCategory,
-            Payload {
-                category: Some(category.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::DuplicateCategoryName { existing } => (
-            ffi::EranosFailure::GroupDuplicateCategoryName,
-            Payload {
-                existing: Some(existing.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::DuplicateExchangeRate { currency } => (
-            ffi::EranosFailure::GroupDuplicateExchangeRate,
-            Payload {
-                currency: Some(currency.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::DuplicateExpense { expense } => (
-            ffi::EranosFailure::GroupDuplicateExpense,
-            Payload {
-                expense: Some(expense.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::DuplicateMember { member } => (
-            ffi::EranosFailure::GroupDuplicateMember,
-            Payload {
-                member: Some(member.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::DuplicateTransfer { transfer } => (
-            ffi::EranosFailure::GroupDuplicateTransfer,
-            Payload {
-                transfer: Some(transfer.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::EmptyName => {
-            (ffi::EranosFailure::GroupEmptyName, Payload::default())
-        }
-        eranos_bindings::GroupFailure::MemberInUse {
-            expenses,
-            member,
-            transfers,
-        } => (
-            ffi::EranosFailure::GroupMemberInUse,
-            Payload {
-                expenses: Some(expenses.clone()),
-                member: Some(member.clone()),
-                transfers: Some(transfers.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::MissingExchangeRate { currency } => (
-            ffi::EranosFailure::GroupMissingExchangeRate,
-            Payload {
-                currency: Some(currency.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::Overflow => {
-            (ffi::EranosFailure::GroupOverflow, Payload::default())
-        }
-        eranos_bindings::GroupFailure::UnexpectedExchangeRate => (
-            ffi::EranosFailure::GroupUnexpectedExchangeRate,
-            Payload::default(),
-        ),
-        eranos_bindings::GroupFailure::UnknownCategory { category } => (
-            ffi::EranosFailure::GroupUnknownCategory,
-            Payload {
-                category: Some(category.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::UnknownExpense { expense } => (
-            ffi::EranosFailure::GroupUnknownExpense,
-            Payload {
-                expense: Some(expense.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::UnknownMember { member } => (
-            ffi::EranosFailure::GroupUnknownMember,
-            Payload {
-                member: Some(member.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::UnknownTransfer { transfer } => (
-            ffi::EranosFailure::GroupUnknownTransfer,
-            Payload {
-                transfer: Some(transfer.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::GroupFailure::UnsupportedFormat { format } => (
-            ffi::EranosFailure::GroupUnsupportedFormat,
-            Payload {
-                format: Some(*format),
-                ..Payload::default()
-            },
-        ),
-    }
-}
-
-/// Reads the id module's `failure`.
-fn id(failure: eranos_bindings::IdFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::IdFailure::InvalidId => {
-            (ffi::EranosFailure::IdInvalidId, Payload::default())
-        }
-    }
-}
-
-/// Reads the language module's `failure`.
-fn language(failure: eranos_bindings::LanguageFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::LanguageFailure::InvalidLanguage => (
-            ffi::EranosFailure::LanguageInvalidLanguage,
-            Payload::default(),
-        ),
-    }
-}
-
-/// Reads the member module's `failure`.
-fn member(failure: eranos_bindings::MemberFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::MemberFailure::EmptyFirstName => {
-            (ffi::EranosFailure::MemberEmptyFirstName, Payload::default())
-        }
-    }
-}
-
-/// Reads the money module's `failure`.
-fn money(failure: &eranos_bindings::MoneyFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::MoneyFailure::CurrencyMismatch { left, right } => (
-            ffi::EranosFailure::MoneyCurrencyMismatch,
-            Payload {
-                left: Some(left.clone()),
-                right: Some(right.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::MoneyFailure::InvalidAmount => {
-            (ffi::EranosFailure::MoneyInvalidAmount, Payload::default())
-        }
-        eranos_bindings::MoneyFailure::InvalidExchangeRate => (
-            ffi::EranosFailure::MoneyInvalidExchangeRate,
-            Payload::default(),
-        ),
-        eranos_bindings::MoneyFailure::InvalidParts => {
-            (ffi::EranosFailure::MoneyInvalidParts, Payload::default())
-        }
-        eranos_bindings::MoneyFailure::InvalidPercentage => (
-            ffi::EranosFailure::MoneyInvalidPercentage,
-            Payload::default(),
-        ),
-        eranos_bindings::MoneyFailure::Overflow => {
-            (ffi::EranosFailure::MoneyOverflow, Payload::default())
-        }
-        eranos_bindings::MoneyFailure::TooManyDecimals { allowed, currency } => (
-            ffi::EranosFailure::MoneyTooManyDecimals,
-            Payload {
-                allowed: Some(*allowed),
-                currency: Some(currency.clone()),
-                ..Payload::default()
-            },
-        ),
-        eranos_bindings::MoneyFailure::UnknownCurrency => {
-            (ffi::EranosFailure::MoneyUnknownCurrency, Payload::default())
-        }
-    }
-}
-
-/// Reads the settlement module's `failure`.
-fn settlement(failure: eranos_bindings::SettlementFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::SettlementFailure::OutOfMemory { balances } => (
-            ffi::EranosFailure::SettlementOutOfMemory,
-            Payload {
-                balances: Some(balances),
-                ..Payload::default()
-            },
-        ),
-    }
-}
-
-/// Reads the transfer module's `failure`.
-fn transfer(failure: eranos_bindings::TransferFailure) -> (ffi::EranosFailure, Payload) {
-    match failure {
-        eranos_bindings::TransferFailure::NonPositiveAmount => (
-            ffi::EranosFailure::TransferNonPositiveAmount,
-            Payload::default(),
-        ),
-        eranos_bindings::TransferFailure::SameMember => {
-            (ffi::EranosFailure::TransferSameMember, Payload::default())
-        }
-    }
-}
-
-/// Reads the reason of a refused IBAN.
-fn iban(reason: &eranos_bindings::IbanReason) -> Payload {
-    match reason {
-        eranos_bindings::IbanReason::InvalidCharacter => Payload {
-            reason: Some(ffi::EranosIbanReason::InvalidCharacter),
-            ..Payload::default()
-        },
-        eranos_bindings::IbanReason::InvalidChecksum => Payload {
-            reason: Some(ffi::EranosIbanReason::InvalidChecksum),
-            ..Payload::default()
-        },
-        eranos_bindings::IbanReason::InvalidFormat => Payload {
-            reason: Some(ffi::EranosIbanReason::InvalidFormat),
-            ..Payload::default()
-        },
-        eranos_bindings::IbanReason::InvalidStructure => Payload {
-            reason: Some(ffi::EranosIbanReason::InvalidStructure),
-            ..Payload::default()
-        },
-        eranos_bindings::IbanReason::UnknownCountry => Payload {
-            reason: Some(ffi::EranosIbanReason::UnknownCountry),
-            ..Payload::default()
-        },
-        eranos_bindings::IbanReason::WrongLength { expected, found } => Payload {
-            reason: Some(ffi::EranosIbanReason::WrongLength),
-            expected_length: Some(*expected),
-            found_length: Some(*found),
-            ..Payload::default()
-        },
+        Self(match failure {
+            crate::Failure::InvalidText => eranos_bindings::FlatError::invalid_text(),
+            crate::Failure::Library(error) => eranos_bindings::FlatError::from(&error),
+        })
     }
 }

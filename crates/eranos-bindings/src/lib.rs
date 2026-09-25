@@ -1,7 +1,8 @@
 //! What every binding of eranos exposes, in plain Rust: the records and
-//! enums of values and entries, one error, the group handle with a
-//! synchronous and an asynchronous form of every group call, the read
-//! handle, cancellation, the value helpers, and the saved form.
+//! enums of values and entries, one error and its flat form for a binding
+//! without enums that hold data, the group handle with a synchronous and an
+//! asynchronous form of every group call, the read handle, cancellation, the
+//! value helpers, and the saved form.
 //!
 //! The glue crates (built with `uniffi` for Swift, Kotlin, Java, KMP, and the
 //! web, and with `diplomat` for C and C++) mirror these types and forward
@@ -23,6 +24,7 @@ mod calendar;
 mod cancellation;
 mod error;
 mod expense;
+mod flat;
 mod group;
 mod ledger;
 mod member;
@@ -48,6 +50,7 @@ pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,
 };
+pub use flat::{ErrorKind, FailureKind, FlatError, IbanReasonKind, Payload};
 pub use group::{GroupHandle, NewGroup};
 pub use ledger::{
     Balance, CategoryTotal, ExpenseShares, MemberCategoryTotals, MemberShare, MemberSummary,
