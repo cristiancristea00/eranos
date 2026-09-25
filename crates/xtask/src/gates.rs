@@ -219,19 +219,15 @@ pub(crate) fn generated(metadata: &Metadata) -> PathBuf {
 /// The steps that generate the Swift, Kotlin, and Java sources from the host
 /// library of eranos-uniffi, each with the generator of eranos-uniffi-bindgen
 /// that the library's `uniffi` release builds, so a type a generator cannot
-/// read stops the gates.
+/// read stops the gates. Their paths are written with `/`, which the programs
+/// of every host accept, so a step reads alike on every host.
 #[must_use]
 pub(crate) fn generators(metadata: &Metadata) -> Vec<Step> {
-    let library = Path::new(&metadata.target_directory)
-        .join("debug")
-        .join(format!("{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}"));
-    let library = library.to_string_lossy();
-    let directory = |language: &str| {
-        generated(metadata)
-            .join(language)
-            .to_string_lossy()
-            .into_owned()
-    };
+    let library = format!(
+        "{}/debug/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
+        metadata.target_directory
+    );
+    let directory = |language: &str| format!("{}/uniffi/{language}", metadata.target_directory);
     let generator = |bin: &str, arguments: &[&str], name: &str| {
         let mut command = vec![
             "run",

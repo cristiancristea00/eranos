@@ -95,18 +95,16 @@ pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), F
 }
 
 /// Where the gates keep the Apple libraries, their headers, and the build
-/// log, under cargo's target directory.
-fn apple(metadata: &Metadata) -> PathBuf {
-    Path::new(&metadata.target_directory).join("apple")
+/// log, under cargo's target directory. The steps' paths are written with
+/// `/`, which the programs of every host accept, so a step reads alike on
+/// every host.
+fn apple(metadata: &Metadata) -> String {
+    format!("{}/apple", metadata.target_directory)
 }
 
 /// The static library cargo builds for `target`.
 fn target_library(metadata: &Metadata, target: &str) -> String {
-    let path = Path::new(&metadata.target_directory)
-        .join(target)
-        .join("debug")
-        .join(LIBRARY);
-    path.to_string_lossy().into_owned()
+    format!("{}/{target}/debug/{LIBRARY}", metadata.target_directory)
 }
 
 /// The library of the `XCFramework` for `library`: the one target's own, or
@@ -114,11 +112,7 @@ fn target_library(metadata: &Metadata, target: &str) -> String {
 fn joined_library(metadata: &Metadata, library: &AppleLibrary) -> String {
     match library.targets {
         [target] => target_library(metadata, target),
-        _ => apple(metadata)
-            .join(library.name)
-            .join(LIBRARY)
-            .to_string_lossy()
-            .into_owned(),
+        _ => format!("{}/{}/{LIBRARY}", apple(metadata), library.name),
     }
 }
 
@@ -145,7 +139,7 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
         .iter()
         .filter(|library| library.targets.len() > 1)
     {
-        let directory = apple(metadata).join(library.name);
+        let directory = format!("{}/{}", apple(metadata), library.name);
         let mut lipo = vec!["-create".to_owned()];
         lipo.extend(
             library
@@ -156,7 +150,7 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
         lipo.extend(["-output".to_owned(), joined_library(metadata, library)]);
         let lipo: Vec<&str> = lipo.iter().map(String::as_str).collect();
         steps.push(Step::new(
-            &["-p", &directory.to_string_lossy()],
+            &["-p", &directory],
             &format!("the {} directory", library.name),
             "mkdir",
         ));
@@ -166,22 +160,17 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
             "lipo",
         ));
     }
-    let generated = Path::new(&metadata.target_directory)
-        .join("uniffi")
-        .join("swift");
-    let headers = apple(metadata).join("headers");
+    let generated = format!("{}/uniffi/swift", metadata.target_directory);
+    let headers = format!("{}/headers", apple(metadata));
     let copy = |from: &str, to: &str, name: &str| {
         Step::new(
-            &[
-                &generated.join(from).to_string_lossy(),
-                &headers.join(to).to_string_lossy(),
-            ],
+            &[&format!("{generated}/{from}"), &format!("{headers}/{to}")],
             name,
             "cp",
         )
     };
     steps.push(Step::new(
-        &["-p", &headers.to_string_lossy()],
+        &["-p", &headers],
         "the headers directory",
         "mkdir",
     ));
@@ -203,10 +192,7 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
 /// the analyzer's log names every file.
 #[must_use]
 pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
-    let headers = apple(metadata)
-        .join("headers")
-        .to_string_lossy()
-        .into_owned();
+    let headers = format!("{}/headers", apple(metadata));
     let libraries: Vec<String> = APPLE_LIBRARIES
         .iter()
         .map(|library| joined_library(metadata, library))
@@ -218,10 +204,10 @@ pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
     let output = format!("{PACKAGE}/EranosFFI.xcframework");
     framework.extend(["-output", &output]);
     let sources = format!("{PACKAGE}/Sources/EranosGenerated");
-    let generated = Path::new(&metadata.target_directory)
-        .join("uniffi")
-        .join("swift")
-        .join("EranosGenerated.swift");
+    let generated = format!(
+        "{}/uniffi/swift/EranosGenerated.swift",
+        metadata.target_directory
+    );
     vec![
         Step::new(&framework, "the XCFramework", "xcodebuild"),
         Step::new(
@@ -229,11 +215,7 @@ pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
             "the generated module's directory",
             "mkdir",
         ),
-        Step::new(
-            &[&generated.to_string_lossy(), &sources],
-            "the generated Swift",
-            "cp",
-        ),
+        Step::new(&[&generated, &sources], "the generated Swift", "cp"),
         Step::new(
             &["package", "--package-path", PACKAGE, "clean"],
             "the Swift package's earlier build",
@@ -262,7 +244,7 @@ pub(crate) fn build() -> Step {
 /// Where the build's compiler calls go, for the analyzer.
 #[must_use]
 pub(crate) fn build_log(metadata: &Metadata) -> PathBuf {
-    apple(metadata).join("swift-build.log")
+    PathBuf::from(format!("{}/swift-build.log", apple(metadata)))
 }
 
 /// The steps that test the package, lint it, analyze it, and build its
