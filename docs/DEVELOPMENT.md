@@ -93,13 +93,21 @@ package, and on every machine the Kotlin ones, on the JVM, over the Kotlin
 package's bindings and over the Kotlin Multiplatform package's, the Java
 ones, the TypeScript ones, on Node, in a copy of the TypeScript package
 over eranos-web built with `sequential-ids` for WebAssembly, and the C and
-C++ ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)). A run
-from an empty target directory takes about 7 minutes on an Apple M4 Pro,
-most of it building the library for every Apple target and every Android
-ABI; a warm one takes about 7 minutes in all, 2 minutes 20 seconds of it
-clang-tidy's pass over the C and C++ tests and ports, a minute the C and
-C++ ports' builds and runs, and 20 seconds the Swift examples' two builds
-and their ports.
+C++ ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)).
+A run from an empty target directory first builds the library for every
+Apple target and every Android ABI. A warm run, whose builds are all up to
+date, takes about 7 minutes on an Apple M4 Pro, a third of it clang-tidy's
+pass over the C and C++ translation units, each of which parses the
+layer's header again:
+
+| Gates                                                                  |  Warm | Most of it                                                          |
+| ---------------------------------------------------------------------- | ----: | ------------------------------------------------------------------- |
+| 1–8, the Rust checks and the examples                                  |  55 s | the two test runs, 27 s and 22 s                                    |
+| 9–10, the host library and its sources                                 |   6 s |                                                                     |
+| 11, the Swift package                                                  |  72 s | the analyzer, 33 s, and the examples' clean build, 23 s             |
+| 12–15, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  38 s | the Kotlin Multiplatform libraries, 11 s                            |
+| 16, the C and C++ packages                                             | 169 s | clang-tidy, 28 s on the C tests and ports and 129 s on the C++ ones |
+| 17, the ports                                                          |  91 s | the C++ ports' builds, 45 s                                         |
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
