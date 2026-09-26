@@ -70,8 +70,12 @@ fn the_tests_build_with_warnings_as_errors_the_sanitizers_and_coverage() {
             SYSTEM_LIBRARIES.join(" ")
         )
     );
-    assert!(lines[1].starts_with("cd bindings/cpp && LLVM_PROFILE_FILE='build/tests.profraw' /"));
-    assert!(lines[1].ends_with("/bindings/cpp/build/tests"));
+    assert_eq!(
+        lines[1],
+        format!(
+            "cd bindings/cpp && LLVM_PROFILE_FILE='build/tests.profraw' {WORKSPACE}/bindings/cpp/build/tests"
+        )
+    );
     assert_eq!(
         lines[2],
         "cd bindings/cpp && /LLVM_HOME/bin/llvm-profdata merge -sparse build/tests.profraw -o build/tests.profdata"

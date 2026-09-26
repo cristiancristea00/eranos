@@ -168,7 +168,7 @@ fn npm(script: &str, name: &str) -> Step {
 /// written for, and one that reads no clock imports less.
 #[must_use]
 pub(crate) fn copied_package(sequential: &Metadata) -> PathBuf {
-    Path::new(&sequential.target_directory).join("typescript")
+    PathBuf::from(format!("{}/typescript", sequential.target_directory))
 }
 
 /// What is cleared before the package is copied: the copy's layer and its
@@ -206,7 +206,7 @@ pub(crate) fn sequential_library(sequential: &Metadata) -> Step {
 #[must_use]
 pub(crate) fn copy(sequential: &Metadata) -> Vec<Step> {
     let package = copied_package(sequential).to_string_lossy().into_owned();
-    let dependencies = Path::new(WORKSPACE).join(PROJECT).join("node_modules");
+    let dependencies = format!("{WORKSPACE}/{PROJECT}/node_modules");
     vec![
         Step::new(&["-p", &package], "the TypeScript package's copy", "mkdir"),
         Step::new(
@@ -222,11 +222,7 @@ pub(crate) fn copy(sequential: &Metadata) -> Vec<Step> {
             "cp",
         ),
         Step::new(
-            &[
-                "-sfn",
-                &dependencies.to_string_lossy(),
-                &format!("{package}/node_modules"),
-            ],
+            &["-sfn", &dependencies, &format!("{package}/node_modules")],
             "the TypeScript dependencies of the copy",
             "ln",
         ),

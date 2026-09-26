@@ -260,7 +260,7 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
     ]);
     arguments.extend(SYSTEM_LIBRARIES);
     arguments.extend(["-o", "build/tests"]);
-    let program = directory(package, "build").join("tests");
+    let program = format!("{WORKSPACE}/{}/build/tests", package.directory);
     vec![
         Step::new(
             &arguments,
@@ -268,13 +268,9 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
             &format!("{llvm}/bin/{}", package.compiler),
         )
         .in_directory(package.directory),
-        Step::new(
-            &[],
-            &format!("the {} tests", package.name),
-            &program.to_string_lossy(),
-        )
-        .in_directory(package.directory)
-        .with_variable("LLVM_PROFILE_FILE", "build/tests.profraw"),
+        Step::new(&[], &format!("the {} tests", package.name), &program)
+            .in_directory(package.directory)
+            .with_variable("LLVM_PROFILE_FILE", "build/tests.profraw"),
         Step::new(
             &[
                 "merge",
@@ -294,7 +290,10 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
 /// own in `metadata`'s target directory, beside the library they load.
 #[must_use]
 pub(crate) fn measured_directory(package: Package, metadata: &Metadata) -> PathBuf {
-    Path::new(&metadata.target_directory).join(package.language)
+    PathBuf::from(format!(
+        "{}/{}",
+        metadata.target_directory, package.language
+    ))
 }
 
 /// The steps that build `package`'s tests with LLVM's compiler at `llvm`,
@@ -308,10 +307,7 @@ pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) 
     let libraries = format!("{}/debug", metadata.target_directory);
     let library = format!("{libraries}/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}");
     let search = format!("-Wl,-rpath,{libraries}");
-    let program = measured_directory(package, metadata)
-        .join("tests")
-        .to_string_lossy()
-        .into_owned();
+    let program = format!("{}/tests", measured_directory(package, metadata).display());
     vec![
         Step::new(
             &[
@@ -343,7 +339,10 @@ pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) 
 /// `sequential`'s target directory, beside the library they link.
 #[must_use]
 pub(crate) fn ports_directory(package: Package, sequential: &Metadata) -> PathBuf {
-    Path::new(&sequential.target_directory).join(package.language)
+    PathBuf::from(format!(
+        "{}/{}",
+        sequential.target_directory, package.language
+    ))
 }
 
 /// The step that builds the port of `example` in `package`'s language, its
@@ -361,10 +360,10 @@ pub(crate) fn port_build(
     let library = format!("{}/debug/liberanos_capi.a", sequential.target_directory);
     let report = format!("examples/report.{}", package.language);
     let program = format!("examples/{example}.{}", package.language);
-    let output = ports_directory(package, sequential)
-        .join(example)
-        .to_string_lossy()
-        .into_owned();
+    let output = format!(
+        "{}/{example}",
+        ports_directory(package, sequential).display()
+    );
     let mut arguments = sanitised(package).to_vec();
     arguments.extend([
         "-pthread",

@@ -12,6 +12,10 @@ use crate::Failure;
 pub(crate) const WORKSPACE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 /// A program a gate runs, with its arguments and the environment it needs.
+///
+/// A path a step names is written with `/`, which the programs of every host
+/// accept, so a step, and a test that pins its command line, reads alike on
+/// every host; `Path::join` would write `\` on Windows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Step {
     arguments: Vec<String>,

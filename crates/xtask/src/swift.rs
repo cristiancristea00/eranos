@@ -311,7 +311,7 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
 /// the `XCFramework` the gates built.
 #[must_use]
 pub(crate) fn copied_package(metadata: &Metadata) -> PathBuf {
-    Path::new(&metadata.target_directory).join("swift")
+    PathBuf::from(format!("{}/swift", metadata.target_directory))
 }
 
 /// What is cleared before the package is copied: the copy's sources, tests,
@@ -422,10 +422,7 @@ pub(crate) fn copy_tests(metadata: &Metadata) -> Step {
 
 /// Where the examples' package sits in the copy, whose `..` it depends on.
 fn copied_examples(metadata: &Metadata) -> String {
-    copied_package(metadata)
-        .join("examples")
-        .to_string_lossy()
-        .into_owned()
+    format!("{}/examples", copied_package(metadata).display())
 }
 
 /// The steps that copy the examples' package into the copy of the package
