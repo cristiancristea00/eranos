@@ -276,12 +276,11 @@ fn crate_roots() -> Vec<PathBuf> {
                 continue;
             };
             for entry in entries {
+                // A target is a file, or a directory with a `main.rs`; the
+                // filter below keeps whichever of the two is a file.
                 let path = entry.unwrap().path();
-                roots.push(if path.is_dir() {
-                    path.join("main.rs")
-                } else {
-                    path
-                });
+                roots.push(path.join("main.rs"));
+                roots.push(path);
             }
         }
     }
@@ -306,18 +305,19 @@ fn every_crate_root_but_the_c_glue_s_forbids_unsafe_code() {
         crates.join("eranos-capi/src/lib.rs"),
         crates.join("xtask/src/main.rs"),
     ] {
-        assert!(roots.contains(&root), "{}", root.display());
+        let shown = root.display();
+        assert!(roots.contains(&root), "{shown}");
     }
     for root in roots {
         let forbids = fs::read_to_string(&root)
             .unwrap()
             .lines()
             .any(|line| "#![forbid(unsafe_code)]" == line);
+        let shown = root.display();
         assert_eq!(
             !root.starts_with(crates.join("eranos-capi")),
             forbids,
-            "{}",
-            root.display()
+            "{shown}"
         );
     }
 }
@@ -519,6 +519,23 @@ fn a_failure_to_build_clear_or_generate_stops_the_generators() {
     recorder.failing = generators.first().cloned();
     assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
     assert_eq!(recorder.steps.last(), generators.first());
+}
+
+/// A variable a package needs that is not set stops the gates before the
+/// examples run, so minutes of gates that pass never end in a missing
+/// variable, whichever package needs it.
+#[test]
+fn a_missing_variable_stops_the_gates_before_the_examples() {
+    for missing in ["ANDROID_HOME", "JAVA_HOME", "JAVA_HOME_21", "LLVM_HOME"] {
+        let mut recorder = Recorder::new();
+        recorder.variables.retain(|name| missing != *name);
+        let failure = run(&mut recorder).unwrap_err();
+        assert!(
+            matches!(failure, Failure::Variable(name) if missing == name),
+            "{missing}: {failure}"
+        );
+        assert_eq!(recorder.steps.last(), Some(&metadata()), "{missing}");
+    }
 }
 
 /// A package whose gates fail stops the gates at its failing step, so the

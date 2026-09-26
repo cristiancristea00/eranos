@@ -66,6 +66,17 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     }
     check_lock_features(&runner.output(&lock_features())?)?;
     let metadata = Metadata::parse(&runner.output(&metadata())?)?;
+    // Every package's variables are checked here, before the examples run,
+    // so a missing one stops the gates before minutes of gates that pass.
+    let packages = [
+        crate::kotlin::actions(runner, &metadata),
+        crate::java::actions(runner, &metadata),
+        Ok(crate::web::actions()),
+        crate::kmp::actions(runner),
+        crate::capi::actions(runner, &metadata),
+    ]
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?;
     let mut references = Vec::new();
     for example in examples(&metadata) {
         let report = runner.output(&example.step)?;
@@ -84,15 +95,9 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     if runner.builds_apple_platforms() {
         plan::execute(runner, crate::swift::actions(&metadata), |_| true)?;
     }
-    let kotlin = crate::kotlin::actions(runner, &metadata)?;
-    plan::execute(runner, kotlin, |_| true)?;
-    let java = crate::java::actions(runner, &metadata)?;
-    plan::execute(runner, java, |_| true)?;
-    plan::execute(runner, crate::web::actions(), |_| true)?;
-    let multiplatform = crate::kmp::actions(runner)?;
-    plan::execute(runner, multiplatform, |_| true)?;
-    let native = crate::capi::actions(runner, &metadata)?;
-    plan::execute(runner, native, |_| true)?;
+    for actions in packages {
+        plan::execute(runner, actions, |_| true)?;
+    }
     crate::ports::run(runner, &metadata, &references)?;
     println!("\nevery gate passed");
     Ok(())

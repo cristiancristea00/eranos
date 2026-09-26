@@ -83,8 +83,8 @@ on macOS they build the Swift package's XCFramework from the library's
 thirteen Apple targets, which they add with `rustup target add`. On every
 machine they build the Kotlin package: the library of the four Android
 ABIs through `cargo ndk`, which finds the NDK under `ANDROID_HOME`, then the
-Gradle build, whose JVM `JAVA_HOME` names; the gates stop before the first
-step when either variable is not set. They build the Java package with
+Gradle build, whose JVM `JAVA_HOME` names; the gates check every variable a
+package needs before the examples run, and stop there when one is not set. They build the Java package with
 the same JDK, and the TypeScript package on Node 24: the library for
 `wasm32-unknown-unknown`, then its TypeScript, which
 uniffi-bindgen-react-native generates into the package. Last, they build

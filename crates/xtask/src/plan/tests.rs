@@ -55,9 +55,7 @@ fn only_the_selected_phases_run() {
                 Action::run(Phase::Test, step("test")),
             ])
         }),
-        Action::read(Phase::Docs, step("docs"), |_| {
-            Ok(Action::runs(Phase::Test, vec![step("never")]))
-        }),
+        Action::read(Phase::Docs, step("docs"), unselected),
     ];
     execute(&mut recorder, actions, |phase| {
         matches!(phase, Phase::Prepare | Phase::Test)
@@ -67,6 +65,14 @@ fn only_the_selected_phases_run() {
         recorder.steps,
         [step("prepare"), step("read"), step("test")]
     );
+    assert!(unselected(String::new()).is_err());
+}
+
+/// The continuation of a read in a phase that `only_the_selected_phases_run`
+/// does not select: it refuses what it reads, so a run that called it would
+/// fail.
+fn unselected(_output: String) -> Result<Vec<Action>, Failure> {
+    Err(Failure::Usage)
 }
 
 /// A failing action, or a continuation that refuses what it read, stops

@@ -36,10 +36,10 @@ fn the_committed_bridge_is_what_the_generator_writes() {
     assert_eq!(committed, files.iter().map(destination).collect::<Vec<_>>());
     for file in &files {
         let text = fs::read_to_string(destination(file)).unwrap();
+        let path = file.path();
         assert!(
             file.is_written_in(&text).unwrap(),
-            "{} holds other code than `cargo xtask generate` writes; run it",
-            file.path()
+            "{path} holds other code than `cargo xtask generate` writes; run it"
         );
     }
 }
