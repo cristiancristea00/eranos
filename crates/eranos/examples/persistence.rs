@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, Group, Member, Money, Percentage, SettlementStrategy,
-    Split, Tip,
+    Balance, CalendarDate, Currency, Expense, Group, Member, Money, Percentage, SavedGroup,
+    SettlementStrategy, Split, Tip,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -105,11 +105,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     section("3. A corrupted file is refused");
     println!(
-        "Here the fuel's amount was edited to a negative number. Loading rejects the file\n\
-         instead of producing balances that do not add up:"
+        "Here the fuel's payer was edited to an identifier no member has. Reading the file\n\
+         as a SavedGroup and loading it with into_group replays every entry through the\n\
+         same checks as adding it, and refuses the file instead of producing balances that\n\
+         do not add up:"
     );
-    let corrupted = saved.replace("\"minor_units\": 7000", "\"minor_units\": -7000");
-    let refused = serde_json::from_str::<Group>(&corrupted);
+    // The fuel is the first entry that names Ana: the expenses come before
+    // the members in the saved form.
+    let corrupted = saved.replacen(&ana.to_string(), "0199a000-0000-7000-8000-00000000ffff", 1);
+    let refused = serde_json::from_str::<SavedGroup>(&corrupted)?.into_group();
     println!(
         "  error: {}",
         refused.err().ok_or("the file must be refused")?

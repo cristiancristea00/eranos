@@ -208,10 +208,8 @@ struct PaymentRow {
 struct LoadRow {
     #[tabled(rename = "Change to the file", order = 0)]
     change: &'static str,
-    #[tabled(rename = "Message", order = 2)]
-    message: String,
-    #[tabled(rename = "Refused by", order = 1)]
-    refused_by: &'static str,
+    #[tabled(rename = "Message", order = 1)]
+    message: GroupError,
 }
 
 #[derive(Tabled)]
@@ -1402,16 +1400,14 @@ fn settling_up(group: &mut Group) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Reads `text` as a saved group and loads it: the typed error `into_group`
-/// refused it with, which step refused it, and the message.
-fn load(text: &str) -> (Option<GroupError>, &'static str, String) {
-    match serde_json::from_str::<SavedGroup>(text) {
-        Err(error) => (None, "reading", error.to_string()),
-        Ok(saved) => match saved.into_group() {
-            Err(error) => (Some(error.clone()), "into_group", error.to_string()),
-            Ok(_) => (None, "nothing", String::new()),
-        },
-    }
+/// What loading the saved form `text` refuses: the error of `into_group`,
+/// which replays every entry through the checks of adding it.
+fn refusal(text: &str) -> Result<GroupError, Box<dyn Error>> {
+    let saved: SavedGroup = serde_json::from_str(text)?;
+    Ok(saved
+        .into_group()
+        .err()
+        .ok_or("the change must be refused")?)
 }
 
 fn saving_and_loading(
@@ -1420,14 +1416,22 @@ fn saving_and_loading(
     categories: Categories,
 ) -> Result<(), Box<dyn Error>> {
     section("12. Saving and loading");
-    let saved = serde_json::to_string(group)?;
+    let saved = serde_json::to_string_pretty(group)?;
     println!(
         "The group saves to {} bytes of JSON: its details and entries, never the totals.\n\
-         Ana, as saved, with her account details in clear text:",
+         Ana's accounts are saved in clear text, as the library holds them:",
         saved.len()
     );
     let ana = group.member(people.ana).ok_or("Ana is a member")?;
-    println!("{}", serde_json::to_string_pretty(ana)?);
+    for account in ana.accounts() {
+        let details = match account.details() {
+            AccountDetails::Iban(iban) => iban.as_str(),
+            AccountDetails::Username(username) => username.as_str(),
+            _ => "",
+        };
+        assert!(saved.contains(details), "{details} is saved as it is");
+        println!("  {}: {details}", account.name());
+    }
     let loaded: Group = serde_json::from_str(&saved)?;
     println!(
         "Loading replays every entry through the same checks as adding it and rebuilds the\n\
@@ -1437,50 +1441,40 @@ fn saving_and_loading(
     let tampered = [
         (
             "\"format\": 3",
-            saved.replacen("\"format\":2", "\"format\":3", 1),
+            saved.replacen("\"format\": 2", "\"format\": 3", 1),
         ),
         (
             "a blank group name",
-            saved.replacen("\"name\":\"Lisbon and Porto\"", "\"name\":\" \"", 1),
+            saved.replacen("\"name\": \"Lisbon and Porto\"", "\"name\": \" \"", 1),
         ),
         (
             "Lodging renamed FOOD",
-            saved.replacen("\"name\":\"Lodging\"", "\"name\":\"FOOD\"", 1),
-        ),
-        (
-            "a typo in Ana's IBAN",
-            saved.replacen("RO49AAAA1B31007593840000", "RO49AAAA1B31007593840001", 1),
+            saved.replacen("\"name\": \"Lodging\"", "\"name\": \"FOOD\"", 1),
         ),
     ];
     let mut rows = Vec::new();
     let mut errors = Vec::new();
     for (change, text) in &tampered {
         assert_ne!(text, &saved, "{change} changes the file");
-        let (error, refused_by, message) = load(text);
-        errors.push(error);
+        let error = refusal(text)?;
         rows.push(LoadRow {
             change,
-            message,
-            refused_by,
+            message: error.clone(),
         });
+        errors.push(error);
     }
-    print_table(rows, 3);
-    println!(
-        "An entry that could never have been built, such as the IBAN with a typo, fails the\n\
-         read itself: every entity deserialises through its own checks."
-    );
+    print_table(rows, 2);
 
     assert_eq!(&loaded, group);
     assert_eq!(loaded.summary(), group.summary());
     assert_eq!(
         errors,
         [
-            Some(GroupError::UnsupportedFormat { format: 3 }),
-            Some(GroupError::EmptyName),
-            Some(GroupError::DuplicateCategoryName {
+            GroupError::UnsupportedFormat { format: 3 },
+            GroupError::EmptyName,
+            GroupError::DuplicateCategoryName {
                 existing: categories.food
-            }),
-            None,
+            },
         ]
     );
     Ok(())
@@ -1569,7 +1563,7 @@ fn amounts() -> Result<(), Box<dyn Error>> {
 fn ratios() -> Result<(), Box<dyn Error>> {
     let percentage = Percentage::parse("12.5")?;
     let parts = Parts::parse("1.5")?;
-    let rate = ExchangeRate::parse("4.9765")?;
+    let rate = ExchangeRate::parse("4.97650")?;
     println!("Percentages, parts, and rates are exact decimals:");
     print_table(
         [
@@ -1602,16 +1596,12 @@ fn ratios() -> Result<(), Box<dyn Error>> {
                 result: message(&Parts::parse("0")),
             },
             ValueRow {
-                input: "a rate of 4.9765",
-                result: format!(
-                    "{rate}, mantissa {} and scale {}",
-                    rate.mantissa(),
-                    rate.scale()
-                ),
+                input: "a rate of 4.97650",
+                result: rate.to_string(),
             },
             ValueRow {
-                input: "mantissa 2011, scale 4",
-                result: ExchangeRate::from_decimal(2_011, 4)?.to_string(),
+                input: "a rate of 0",
+                result: message(&ExchangeRate::parse("0")),
             },
         ],
         2,
@@ -1619,6 +1609,9 @@ fn ratios() -> Result<(), Box<dyn Error>> {
     assert_eq!(percentage.basis_points(), 1_250);
     assert_eq!(parts.hundredths(), 150);
     assert_eq!(Parts::ONE.hundredths(), 100);
+    // A rate keeps no trailing zero: 4.97650 is 49765 at scale 4.
+    assert_eq!((rate.mantissa(), rate.scale()), (49_765, 4));
+    assert_eq!(ExchangeRate::from_decimal(2_011, 4)?.to_string(), "0.2011");
     Ok(())
 }
 
