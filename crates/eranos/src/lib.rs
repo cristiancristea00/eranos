@@ -120,6 +120,7 @@
 //! `members_and_accounts`, and, with `--features serde`, `persistence` and
 //! `grand_tour`, which uses every feature. Run one with
 //! `cargo run -p eranos --example settling_up`.
+#![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
 pub mod calendar {

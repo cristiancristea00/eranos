@@ -9,6 +9,7 @@
 //! [`FromMoneyError`], through which a crate that tells every variant apart
 //! converts a cost or a failure without the wildcard arm a `match` outside
 //! this crate would need.
+#![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
 pub mod allocation;

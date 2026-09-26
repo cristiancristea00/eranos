@@ -1,5 +1,6 @@
 //! The xtask binary as `cargo xtask` runs it: what it prints and the status
 //! it exits with, for `help` and for a command it does not know.
+#![forbid(unsafe_code)]
 #![expect(
     clippy::unwrap_used,
     reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"

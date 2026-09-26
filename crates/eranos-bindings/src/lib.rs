@@ -18,6 +18,7 @@
 //! The types stay within what `uniffi` 0.29 can mirror: records, enums with
 //! data, one error enum, and objects; no methods on records, and no
 //! optional list, which is an empty one instead.
+#![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
 mod calendar;

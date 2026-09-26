@@ -8,6 +8,7 @@
 //! [`FromTipDistribution`], and [`FromTipValue`]), through which a crate that
 //! tells every variant of an enum apart converts it without the wildcard arm
 //! a `match` outside this crate would need.
+#![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
 mod error;

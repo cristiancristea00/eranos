@@ -3,6 +3,7 @@
 //! and recomputes every total.
 //!
 //! Run with `cargo run -p eranos --features serde --example persistence`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

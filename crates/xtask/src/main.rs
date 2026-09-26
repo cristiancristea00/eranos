@@ -5,6 +5,7 @@
 //! and stops at the first that fails; `cargo xtask coverage` measures the
 //! Rust tests and the binding glue, which the foreign tests run, in one
 //! report; `cargo xtask help` lists the commands.
+#![forbid(unsafe_code)]
 
 mod capi;
 mod coverage;

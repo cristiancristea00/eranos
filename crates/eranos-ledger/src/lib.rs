@@ -10,6 +10,7 @@
 //! them; nor does it re-export [`FromBalance`], through which a crate that
 //! tells every standing apart converts a balance without the wildcard arm a
 //! `match` outside this crate would need.
+#![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
 use std::cmp::Ordering;

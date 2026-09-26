@@ -3,6 +3,7 @@
 //! group (feature `serde`), which replays every entry through the group's
 //! checks. Run on an idle machine with
 //! `cargo bench -p eranos --all-features --bench group`.
+#![forbid(unsafe_code)]
 #![expect(
     clippy::panic,
     reason = "a benchmark whose fixture cannot be built has nothing to measure"

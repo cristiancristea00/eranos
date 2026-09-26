@@ -3,6 +3,7 @@
 //! shape is pinned (renaming a field breaks every stored group), and a
 //! tampered or corrupted file must be refused rather than loaded into an
 //! inconsistent group.
+#![forbid(unsafe_code)]
 #![cfg(feature = "serde")]
 #![expect(
     clippy::unwrap_used,

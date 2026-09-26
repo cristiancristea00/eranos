@@ -3,6 +3,7 @@
 //! and the group later moves its books to RON.
 //!
 //! Run with `cargo run -p eranos --example multi_currency`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

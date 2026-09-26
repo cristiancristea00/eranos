@@ -1,5 +1,6 @@
 //! The Java generator, built on the `uniffi` release that builds the
 //! library.
+#![forbid(unsafe_code)]
 
 use std::process::ExitCode;
 

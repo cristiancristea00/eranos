@@ -3,6 +3,7 @@
 //! than removed.
 //!
 //! Run with `cargo run -p eranos --example members_and_accounts`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

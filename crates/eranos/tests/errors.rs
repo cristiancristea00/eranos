@@ -3,6 +3,7 @@
 //! unpunctuated style that lets the apps embed them in longer sentences, and
 //! check that no message repeats the rejected input, which may be an account
 //! number or a contact detail.
+#![forbid(unsafe_code)]
 
 use std::fmt::Display;
 

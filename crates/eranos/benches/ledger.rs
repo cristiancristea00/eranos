@@ -2,6 +2,7 @@
 //! expense in a group that already has 10 000, which the documentation
 //! states takes time proportional to the expense's size, not the group's.
 //! Run with `cargo bench -p eranos --bench ledger`.
+#![forbid(unsafe_code)]
 #![expect(
     clippy::panic,
     reason = "a benchmark whose fixture cannot be built has nothing to measure"

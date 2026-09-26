@@ -8,6 +8,7 @@
 //! Run with `cargo run -p eranos --features serde --example grand_tour`;
 //! add the `sequential-ids` feature to print the same identifiers, and so
 //! the same text, on every run.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 use std::fmt::Display;

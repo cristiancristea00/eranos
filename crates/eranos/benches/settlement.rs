@@ -1,6 +1,7 @@
 //! Benchmarks of the three settlement strategies against groups of growing
 //! size. The timings documented on `SettlementStrategy` come from here; run
 //! on an idle machine with `cargo bench -p eranos --bench settlement`.
+#![forbid(unsafe_code)]
 #![expect(
     clippy::panic,
     reason = "a benchmark whose fixture cannot be built has nothing to measure"

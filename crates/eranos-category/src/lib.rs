@@ -4,6 +4,7 @@
 //! types callers use. The facade does not re-export [`FromCategoryError`],
 //! through which a crate that tells every failure apart converts one without
 //! the wildcard arm a `match` outside this crate would need.
+#![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
 mod error;

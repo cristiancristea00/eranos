@@ -3,6 +3,7 @@
 //! in proportion to what each person ordered or equally.
 //!
 //! Run with `cargo run -p eranos --example restaurant_bill`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

@@ -3,6 +3,7 @@
 //! multi-currency trip, and a household where a member moves out. The
 //! amounts divide evenly, so every expected number is exact; the numbers in
 //! the comments are the hand calculation the assertions pin.
+#![forbid(unsafe_code)]
 #![expect(
     clippy::unwrap_used,
     reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"

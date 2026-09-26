@@ -158,10 +158,14 @@ criterion = { version = "0.8", default-features = false, features = ["cargo_benc
 tabled = { version = "0.22", default-features = false, features = ["std", "derive"] }
 
 [workspace.lints.rust]
-# No unsafe in any crate. The lint does not report code that another crate's
-# macro expands, such as the `#[unsafe(no_mangle)]` exports of UniFFI's
-# scaffolding.
-unsafe_code = "forbid"
+# No unsafe code: denied here and forbidden by `#![forbid(unsafe_code)]` in
+# every crate root but eranos-capi's, so no `#[expect]` can lift it there.
+# eranos-capi's bridge moves each completion callback to the group's worker
+# thread through one `unsafe impl Send`, which an `#[expect]` names. The lint
+# does not report code that another crate's macro expands, such as the
+# `#[unsafe(no_mangle)]` exports of UniFFI's scaffolding and Diplomat's
+# bridge.
+unsafe_code = "deny"
 # Every public item is documented, and nothing is `pub` that callers cannot
 # reach.
 missing_docs = "warn"

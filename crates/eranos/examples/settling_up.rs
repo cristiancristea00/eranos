@@ -2,6 +2,7 @@
 //! recording the chosen plan as transfers until everyone is settled.
 //!
 //! Run with `cargo run -p eranos --example settling_up`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

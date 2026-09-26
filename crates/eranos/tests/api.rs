@@ -3,6 +3,7 @@
 //! library from whichever thread their language runs on. These tests keep
 //! every public type `Send` and `Sync`, so a field that is neither (an `Rc`,
 //! a `Cell`, a raw pointer) fails the build here instead of in an app.
+#![forbid(unsafe_code)]
 
 /// Compiles only when `T` can move to another thread and be shared between
 /// threads.

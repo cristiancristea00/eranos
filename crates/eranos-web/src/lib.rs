@@ -6,6 +6,7 @@
 //! 0.31.0-5 reads, so the mirrors, objects, and value helpers are those of
 //! the other bindings. On wasm32 it links `uniffi-runtime-wasm`, which gives
 //! the generated code's player the allocator and the panic hook it calls.
+#![forbid(unsafe_code)]
 
 uniffi::setup_scaffolding!("eranos");
 

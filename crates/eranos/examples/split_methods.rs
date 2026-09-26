@@ -3,6 +3,7 @@
 //! payers.
 //!
 //! Run with `cargo run -p eranos --example split_methods`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

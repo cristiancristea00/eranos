@@ -175,7 +175,10 @@ expecting, panicking, and indexing inside test functions), and, in
 versions, each with the upstream issue that removes it. Any other exception
 is an `#[expect(lint, reason = "...")]` at the narrowest scope (a whole file
 only for test helpers and benchmark fixtures, which panic to report
-failure); `#[allow]` is itself a lint error.
+failure); `#[allow]` is itself a lint error. Unsafe code is denied in the
+same table and forbidden by `#![forbid(unsafe_code)]` in every crate root
+but eranos-capi's, whose one `unsafe impl Send` an `#[expect]` names; a
+test in `crates/xtask` checks every root.
 
 ## Conventions
 

@@ -15,6 +15,7 @@
 //! records. The documentation of the objects and functions reaches the
 //! generated code of those languages, where a Rust link would read as raw
 //! markdown, so it names types in plain code spans.
+#![forbid(unsafe_code)]
 
 uniffi::setup_scaffolding!("eranos");
 

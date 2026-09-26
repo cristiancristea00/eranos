@@ -1,7 +1,10 @@
 //! The gates: the checks in AGENTS.md's order, the examples cargo lists, and
 //! stopping at the first gate that fails.
 
+use std::fs;
+
 use super::*;
+use crate::process::WORKSPACE;
 use crate::tests::{FileOperation, METADATA, Recorder};
 
 /// AGENTS.md, which lists the gates.
@@ -240,6 +243,67 @@ fn the_target_lints_are_the_steps_of_ci_s_mobile_job() {
         .collect();
     let steps: Vec<String> = target_lints().iter().map(Step::command_line).collect();
     assert_eq!(commands, steps);
+}
+
+/// Every crate root of the workspace, where Cargo finds the targets of each
+/// crate: its library, binary, and build script, and each file or directory
+/// with a `main.rs` of its binaries, tests, examples, and benches.
+fn crate_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    for package in fs::read_dir(Path::new(WORKSPACE).join("crates")).unwrap() {
+        let package = package.unwrap().path();
+        for file in ["src/lib.rs", "src/main.rs", "build.rs"] {
+            roots.push(package.join(file));
+        }
+        for directory in ["src/bin", "tests", "examples", "benches"] {
+            let Ok(entries) = fs::read_dir(package.join(directory)) else {
+                continue;
+            };
+            for entry in entries {
+                let path = entry.unwrap().path();
+                roots.push(if path.is_dir() {
+                    path.join("main.rs")
+                } else {
+                    path
+                });
+            }
+        }
+    }
+    roots.retain(|root| {
+        root.is_file() && root.extension().is_some_and(|extension| "rs" == extension)
+    });
+    roots.sort();
+    roots
+}
+
+/// Every crate root forbids unsafe code but eranos-capi's, where the
+/// workspace's table only denies it, so that the bridge's one `unsafe impl
+/// Send` can carry its `#[expect]`; a root without the attribute would let
+/// an `#[expect(unsafe_code)]` through unnoticed.
+#[test]
+fn every_crate_root_but_the_c_glue_s_forbids_unsafe_code() {
+    let crates = Path::new(WORKSPACE).join("crates");
+    let roots = crate_roots();
+    for root in [
+        crates.join("eranos/src/lib.rs"),
+        crates.join("eranos/tests/api.rs"),
+        crates.join("eranos-capi/src/lib.rs"),
+        crates.join("xtask/src/main.rs"),
+    ] {
+        assert!(roots.contains(&root), "{}", root.display());
+    }
+    for root in roots {
+        let forbids = fs::read_to_string(&root)
+            .unwrap()
+            .lines()
+            .any(|line| "#![forbid(unsafe_code)]" == line);
+        assert_eq!(
+            !root.starts_with(crates.join("eranos-capi")),
+            forbids,
+            "{}",
+            root.display()
+        );
+    }
 }
 
 /// A package that turned on async-lock's `std` would bring the clock into

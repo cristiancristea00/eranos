@@ -2,6 +2,7 @@
 //! totals, and who pays whom.
 //!
 //! Run with `cargo run -p eranos --example quickstart`.
+#![forbid(unsafe_code)]
 
 use std::error::Error;
 

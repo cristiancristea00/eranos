@@ -7,6 +7,7 @@
 //! one computed on the caller's thread, and a group must not depend on the
 //! order its entries arrived in (two devices syncing the same entries must
 //! agree).
+#![forbid(unsafe_code)]
 #![expect(
     clippy::unwrap_used,
     clippy::indexing_slicing,
