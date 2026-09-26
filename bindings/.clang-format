@@ -3,7 +3,7 @@
 # references beside their name, `const` after what it qualifies, include
 # blocks as written, and LF with a final newline.
 BasedOnStyle: LLVM
-Standard: c++17
+Standard: c++23
 IndentWidth: 4
 ColumnLimit: 150
 BreakBeforeBraces: Attach

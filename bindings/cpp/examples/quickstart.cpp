@@ -5,6 +5,7 @@
 #include "report.hpp"
 
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -20,14 +21,15 @@ namespace {
 void run() {
     auto group = Group::create(Currency::of("EUR"), "Weekend in Sinaia");
     title(group.name());
-    printLine("Three friends rent a cabin and buy groceries. The group keeps its books in " + group.currency().code() + ", so\n" +
-              "every total, balance, and payment below is in " + group.currency().code() + ".");
+    std::println("Three friends rent a cabin and buy groceries. The group keeps its books in {}, so\n"
+                 "every total, balance, and payment below is in {}.",
+                 group.currency().code(), group.currency().code());
 
     section("1. Members");
     auto const ana = group.addMember(Member("Ana"));
     auto const bob = group.addMember(Member("Bob"));
     auto const carol = group.addMember(Member("Carol"));
-    printLine(std::to_string(group.members().size()) + " people joined the group: " + names(group, {ana, bob, carol}) + ".");
+    std::println("{} people joined the group: {}.", group.members().size(), names(group, {ana, bob, carol}));
 
     section("2. Expenses");
     printLine("Each expense records who paid and who shares it. Here everyone shares everything\n"
@@ -45,8 +47,9 @@ void run() {
 
     section("3. Who paid and who consumed");
     auto const summary = group.summary();
-    printLine("The group spent " + summary.totalSpent.toString() + " in total. A member's share of an expense is what they consumed,\n" +
-              "and their balance is what they paid minus what they consumed.");
+    std::println("The group spent {} in total. A member's share of an expense is what they consumed,\n"
+                 "and their balance is what they paid minus what they consumed.",
+                 summary.totalSpent.toString());
     Rows members;
     for (auto const &member : group.members()) {
         auto const found = member.id.has_value() ? totalsOf(summary, *member.id) : std::nullopt;
@@ -56,12 +59,11 @@ void run() {
     }
     printTable({"Member", "Paid", "Consumed", "Balance"}, members, 1);
     auto const anaTotals = totalsOf(summary, ana).value();
-    printLine("Ana paid " + anaTotals.paid.toString() + " but consumed only " + anaTotals.share.toString() +
-              ", so the others owe her the difference.");
+    std::println("Ana paid {} but consumed only {}, so the others owe her the difference.", anaTotals.paid.toString(), anaTotals.share.toString());
 
     section("4. Settling up");
     auto const settlement = group.settlement(SettlementStrategy::MINIMUM_TRANSFERS);
-    printLine("The fewest payments that bring every balance to zero (" + std::to_string(settlement.payments.size()) + " in total):");
+    std::println("The fewest payments that bring every balance to zero ({} in total):", settlement.payments.size());
     Rows payments;
     for (auto const &payment : settlement.payments) {
         payments.push_back({firstName(group, payment.from), firstName(group, payment.to), payment.amount.toString()});

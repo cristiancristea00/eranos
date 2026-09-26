@@ -32,6 +32,7 @@
 #include <future>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <variant>
@@ -120,7 +121,8 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 
 /// The currency of @p details.
 [[nodiscard]] inline Currency currencyOf(EranosCurrencyDetails const &details) {
-    return Currency({details.code(), details.decimal_places(), details.name(), details.numeric_code()});
+    return Currency(
+        {.code = details.code(), .decimalPlaces = details.decimal_places(), .name = details.name(), .numericCode = details.numeric_code()});
 }
 
 /// The amount of @p value, which the library made, so that its currency is one the library lists. The currency is read without
@@ -140,19 +142,21 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 
 /// The date of @p date, which the library checked.
 [[nodiscard]] constexpr CalendarDate calendarDateOf(EranosCalendarDate const date) noexcept {
-    return CalendarDate({date.day, date.month, date.year});
+    return CalendarDate({.day = date.day, .month = date.month, .year = date.year});
 }
 
 /// The generated date of @p date.
 [[nodiscard]] constexpr EranosCalendarDate toDetail(CalendarDate const date) noexcept {
-    return EranosCalendarDate{date.day(), date.month(), date.year()};
+    return EranosCalendarDate{.day = date.day(), .month = date.month(), .year = date.year()};
 }
 
 /// The time of @p time, which the library checked.
-[[nodiscard]] constexpr TimeOfDay timeOfDayOf(EranosTimeOfDay const time) noexcept { return TimeOfDay({time.hour, time.minute}); }
+[[nodiscard]] constexpr TimeOfDay timeOfDayOf(EranosTimeOfDay const time) noexcept { return TimeOfDay({.hour = time.hour, .minute = time.minute}); }
 
 /// The generated time of @p time.
-[[nodiscard]] constexpr EranosTimeOfDay toDetail(TimeOfDay const time) noexcept { return EranosTimeOfDay{time.hour(), time.minute()}; }
+[[nodiscard]] constexpr EranosTimeOfDay toDetail(TimeOfDay const time) noexcept {
+    return EranosTimeOfDay{.hour = time.hour(), .minute = time.minute()};
+}
 
 /// The time of @p time, if present.
 [[nodiscard]] constexpr std::optional<TimeOfDay> optionalTime(std::optional<EranosTimeOfDay> const time) noexcept {
@@ -180,28 +184,25 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 /// The error kind of @p value. The two enumerations list their 18 values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
-[[nodiscard]] inline ErrorKind fromDetail(EranosErrorKind const value) noexcept {
-    return static_cast<ErrorKind>(static_cast<std::uint8_t>(value.AsFFI()));
-}
+[[nodiscard]] inline ErrorKind fromDetail(EranosErrorKind const value) noexcept { return static_cast<ErrorKind>(std::to_underlying(value.AsFFI())); }
 
 /// The failure of @p value. The two enumerations list their 55 values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
-[[nodiscard]] inline Failure fromDetail(EranosFailure const value) noexcept { return static_cast<Failure>(static_cast<std::uint8_t>(value.AsFFI())); }
+[[nodiscard]] inline Failure fromDetail(EranosFailure const value) noexcept { return static_cast<Failure>(std::to_underlying(value.AsFFI())); }
 
 /// The iban reason of @p value. The two enumerations list their 6 values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
 [[nodiscard]] inline IbanReason fromDetail(EranosIbanReason const value) noexcept {
-    return static_cast<IbanReason>(static_cast<std::uint8_t>(value.AsFFI()));
+    return static_cast<IbanReason>(std::to_underlying(value.AsFFI()));
 }
 
 /// The error of @p detail, with everything the failure holds.
 [[nodiscard]] inline Error errorOf(EranosError const &detail) {
     Error::Fields fields{};
     fields.kind = fromDetail(detail.kind());
-    auto const failure = detail.failure();
-    fields.failure = failure ? std::optional<Failure>(fromDetail(*failure)) : std::nullopt;
+    fields.failure = detail.failure().transform([](EranosFailure const value) noexcept { return fromDetail(value); });
     fields.actual = optionalRecord<Money>(detail.actual());
     fields.allowed = detail.allowed();
     fields.balances = detail.balances();
@@ -221,8 +222,7 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     fields.left = detail.left();
     fields.line = detail.line();
     fields.member = optionalId<MemberId>(detail.member());
-    auto const reason = detail.reason();
-    fields.reason = reason ? std::optional<IbanReason>(fromDetail(*reason)) : std::nullopt;
+    fields.reason = detail.reason().transform([](EranosIbanReason const value) noexcept { return fromDetail(value); });
     fields.right = detail.right();
     fields.totalBasisPoints = detail.total_basis_points();
     fields.transfer = optionalId<TransferId>(detail.transfer());
@@ -419,7 +419,7 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     switch (value.kind()) {
     case EranosCostKind::Converted:
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
-        return ConvertedCost{detail::fromDetail(*value.amount()), detail::exchangeRateOf(value.rate().value())};
+        return ConvertedCost{.amount = detail::fromDetail(*value.amount()), .rate = detail::exchangeRateOf(value.rate().value())};
     case EranosCostKind::Local:
         break;
     }
@@ -869,7 +869,7 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::vector<CurrencyRate> const &records) {
+[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::span<CurrencyRate const> const records) {
     auto result = EranosCurrencyRateList::create();
     for (auto const &record : records) {
         result->push(*toDetail(record));

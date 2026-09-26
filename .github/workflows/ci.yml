@@ -415,12 +415,16 @@ jobs:
       - run: cargo xtask gates
         env:
           JAVA_HOME_21: ${{ steps.jdk-21.outputs.path }}
-      # The gates build the C package with clang alone; GCC 14, which the
-      # image carries, compiles its tests too, so the headers keep to the
-      # C23 that GCC reads, over the Diplomat headers the gates generated.
+      # The gates build the C and C++ packages with clang and libc++ alone;
+      # GCC 14, which the image carries, compiles their tests too, so the
+      # headers keep to the C23 and the C++23 that GCC and libstdc++ read,
+      # over the Diplomat headers the gates generated.
       - name: Compile the C tests with GCC
         working-directory: bindings/c
         run: gcc-14 -std=c23 -Wall -Wextra -Wpedantic -Werror -fsyntax-only -Iinclude -isystem generated tests/tests.c
+      - name: Compile the C++ tests with GCC
+        working-directory: bindings/cpp
+        run: g++-14 -std=c++23 -Wall -Wextra -Wpedantic -Werror -fsyntax-only -Iinclude -isystem generated tests/tests.cpp
 
   bindings-macos:
     name: Bindings on macOS

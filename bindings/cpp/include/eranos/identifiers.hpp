@@ -8,6 +8,7 @@
 
 // IWYU pragma: private, include "eranos.hpp"
 
+#include <compare>
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -29,26 +30,12 @@ class GroupId final {
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers are equal.
+    /// How two identifiers order, by text: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(GroupId const &left, GroupId const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two identifiers differ.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(GroupId const &left, GroupId const &right) noexcept { return !(left == right); }
-
-    /// Whether @p left orders before @p right, by text.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether @p left comes first
-    [[nodiscard]] friend bool operator<(GroupId const &left, GroupId const &right) noexcept { return left.text < right.text; }
+    /// @return Their order
+    [[nodiscard]] friend std::strong_ordering operator<=>(GroupId const &left, GroupId const &right) noexcept = default;
 
   private:
     std::string text;
@@ -68,26 +55,12 @@ class MemberId final {
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers are equal.
+    /// How two identifiers order, by text: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberId const &left, MemberId const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two identifiers differ.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberId const &left, MemberId const &right) noexcept { return !(left == right); }
-
-    /// Whether @p left orders before @p right, by text.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether @p left comes first
-    [[nodiscard]] friend bool operator<(MemberId const &left, MemberId const &right) noexcept { return left.text < right.text; }
+    /// @return Their order
+    [[nodiscard]] friend std::strong_ordering operator<=>(MemberId const &left, MemberId const &right) noexcept = default;
 
   private:
     std::string text;
@@ -107,26 +80,12 @@ class CategoryId final {
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers are equal.
+    /// How two identifiers order, by text: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(CategoryId const &left, CategoryId const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two identifiers differ.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(CategoryId const &left, CategoryId const &right) noexcept { return !(left == right); }
-
-    /// Whether @p left orders before @p right, by text.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether @p left comes first
-    [[nodiscard]] friend bool operator<(CategoryId const &left, CategoryId const &right) noexcept { return left.text < right.text; }
+    /// @return Their order
+    [[nodiscard]] friend std::strong_ordering operator<=>(CategoryId const &left, CategoryId const &right) noexcept = default;
 
   private:
     std::string text;
@@ -146,26 +105,12 @@ class ExpenseId final {
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers are equal.
+    /// How two identifiers order, by text: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExpenseId const &left, ExpenseId const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two identifiers differ.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(ExpenseId const &left, ExpenseId const &right) noexcept { return !(left == right); }
-
-    /// Whether @p left orders before @p right, by text.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether @p left comes first
-    [[nodiscard]] friend bool operator<(ExpenseId const &left, ExpenseId const &right) noexcept { return left.text < right.text; }
+    /// @return Their order
+    [[nodiscard]] friend std::strong_ordering operator<=>(ExpenseId const &left, ExpenseId const &right) noexcept = default;
 
   private:
     std::string text;
@@ -185,26 +130,12 @@ class TransferId final {
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers are equal.
+    /// How two identifiers order, by text: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
-    /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(TransferId const &left, TransferId const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two identifiers differ.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(TransferId const &left, TransferId const &right) noexcept { return !(left == right); }
-
-    /// Whether @p left orders before @p right, by text.
-    ///
-    /// @param left An identifier
-    /// @param right Another identifier
-    /// @return Whether @p left comes first
-    [[nodiscard]] friend bool operator<(TransferId const &left, TransferId const &right) noexcept { return left.text < right.text; }
+    /// @return Their order
+    [[nodiscard]] friend std::strong_ordering operator<=>(TransferId const &left, TransferId const &right) noexcept = default;
 
   private:
     std::string text;

@@ -103,7 +103,7 @@ pub(crate) const CPP_PACKAGE: Package = Package {
     directory: "bindings/cpp",
     language: "cpp",
     compiler: "clang++",
-    standard: "-std=c++17",
+    standard: "-std=c++23",
     tests: "tests/tests.cpp",
     headers: &[
         "include/eranos.hpp",

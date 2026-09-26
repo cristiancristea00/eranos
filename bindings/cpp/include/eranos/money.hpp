@@ -65,16 +65,7 @@ struct Money final {
     /// @param left An amount
     /// @param right Another amount
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Money const &left, Money const &right) noexcept {
-        return left.currency == right.currency && left.minorUnits == right.minorUnits;
-    }
-
-    /// Whether two amounts differ in currency or in minor units.
-    ///
-    /// @param left An amount
-    /// @param right Another amount
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Money const &left, Money const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Money const &left, Money const &right) noexcept = default;
 };
 
 namespace detail {

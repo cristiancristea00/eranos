@@ -46,14 +46,7 @@ class Email final {
     /// @param left A value
     /// @param right Another value
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Email const &left, Email const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two values are written differently.
-    ///
-    /// @param left A value
-    /// @param right Another value
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Email const &left, Email const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Email const &left, Email const &right) noexcept = default;
 
   private:
     friend Email detail::emailOf(std::string text) noexcept;
@@ -88,14 +81,7 @@ class PhoneNumber final {
     /// @param left A value
     /// @param right Another value
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(PhoneNumber const &left, PhoneNumber const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two values are written differently.
-    ///
-    /// @param left A value
-    /// @param right Another value
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(PhoneNumber const &left, PhoneNumber const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(PhoneNumber const &left, PhoneNumber const &right) noexcept = default;
 
   private:
     friend PhoneNumber detail::phoneNumberOf(std::string text) noexcept;
@@ -130,14 +116,7 @@ class Iban final {
     /// @param left A value
     /// @param right Another value
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Iban const &left, Iban const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two values are written differently.
-    ///
-    /// @param left A value
-    /// @param right Another value
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Iban const &left, Iban const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Iban const &left, Iban const &right) noexcept = default;
 
   private:
     friend Iban detail::ibanOf(std::string text) noexcept;
@@ -167,14 +146,7 @@ class Username final {
     /// @param left A value
     /// @param right Another value
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Username const &left, Username const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two values are written differently.
-    ///
-    /// @param left A value
-    /// @param right Another value
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Username const &left, Username const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Username const &left, Username const &right) noexcept = default;
 
   private:
     friend Username detail::usernameOf(std::string text) noexcept;
@@ -204,14 +176,7 @@ class Language final {
     /// @param left A value
     /// @param right Another value
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Language const &left, Language const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two values are written differently.
-    ///
-    /// @param left A value
-    /// @param right Another value
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Language const &left, Language const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Language const &left, Language const &right) noexcept = default;
 
   private:
     friend Language detail::languageOf(std::string text) noexcept;

@@ -69,16 +69,7 @@ class CalendarDate final {
     /// @param left A date
     /// @param right Another date
     /// @return Whether they are equal
-    [[nodiscard]] friend constexpr bool operator==(CalendarDate const left, CalendarDate const right) noexcept {
-        return left.fields.day == right.fields.day && left.fields.month == right.fields.month && left.fields.year == right.fields.year;
-    }
-
-    /// Whether two dates are different days.
-    ///
-    /// @param left A date
-    /// @param right Another date
-    /// @return Whether they differ
-    [[nodiscard]] friend constexpr bool operator!=(CalendarDate const left, CalendarDate const right) noexcept { return !(left == right); }
+    [[nodiscard]] friend constexpr bool operator==(CalendarDate const &left, CalendarDate const &right) noexcept = default;
 
   private:
     friend constexpr CalendarDate detail::calendarDateOf(detail::EranosCalendarDate const date) noexcept;
@@ -88,6 +79,8 @@ class CalendarDate final {
         std::int32_t day;
         std::int32_t month;
         std::int32_t year;
+
+        [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
     };
 
     constexpr explicit CalendarDate(Fields const fields) noexcept : fields(fields) {}
@@ -134,16 +127,7 @@ class TimeOfDay final {
     /// @param left A time
     /// @param right Another time
     /// @return Whether they are equal
-    [[nodiscard]] friend constexpr bool operator==(TimeOfDay const left, TimeOfDay const right) noexcept {
-        return left.fields.hour == right.fields.hour && left.fields.minute == right.fields.minute;
-    }
-
-    /// Whether two times are different minutes.
-    ///
-    /// @param left A time
-    /// @param right Another time
-    /// @return Whether they differ
-    [[nodiscard]] friend constexpr bool operator!=(TimeOfDay const left, TimeOfDay const right) noexcept { return !(left == right); }
+    [[nodiscard]] friend constexpr bool operator==(TimeOfDay const &left, TimeOfDay const &right) noexcept = default;
 
   private:
     friend constexpr TimeOfDay detail::timeOfDayOf(detail::EranosTimeOfDay const time) noexcept;
@@ -152,6 +136,8 @@ class TimeOfDay final {
     struct Fields final {
         std::int32_t hour;
         std::int32_t minute;
+
+        [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
     };
 
     constexpr explicit TimeOfDay(Fields const fields) noexcept : fields(fields) {}
@@ -168,8 +154,8 @@ namespace detail {
 } // namespace detail
 
 inline CalendarDate CalendarDate::of(std::int32_t const day, std::int32_t const month, std::int32_t const year) {
-    static_cast<void>(detail::unwrap(detail::EranosCalendarDate{day, month, year}.format()));
-    return CalendarDate({day, month, year});
+    static_cast<void>(detail::unwrap(detail::EranosCalendarDate{.day = day, .month = month, .year = year}.format()));
+    return CalendarDate({.day = day, .month = month, .year = year});
 }
 
 inline CalendarDate CalendarDate::parse(std::string_view const text) {
@@ -179,8 +165,8 @@ inline CalendarDate CalendarDate::parse(std::string_view const text) {
 inline std::string CalendarDate::toString() const { return detail::unwrap(detail::toDetail(*this).format()); }
 
 inline TimeOfDay TimeOfDay::of(std::int32_t const hour, std::int32_t const minute) {
-    static_cast<void>(detail::unwrap(detail::EranosTimeOfDay{hour, minute}.format()));
-    return TimeOfDay({hour, minute});
+    static_cast<void>(detail::unwrap(detail::EranosTimeOfDay{.hour = hour, .minute = minute}.format()));
+    return TimeOfDay({.hour = hour, .minute = minute});
 }
 
 inline TimeOfDay TimeOfDay::parse(std::string_view const text) { return detail::timeOfDayOf(detail::unwrap(detail::EranosTimeOfDay::parse(text))); }

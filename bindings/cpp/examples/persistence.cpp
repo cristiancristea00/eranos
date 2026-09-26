@@ -4,6 +4,7 @@
 #include "eranos.hpp"
 #include "report.hpp"
 
+#include <print>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -67,7 +68,7 @@ void run() {
     }
     printTable({"Member", "Balance before saving", "Balance after loading"}, rows, 1);
     auto const plan = loaded.settlement(SettlementStrategy::GREEDY);
-    printLine("Payments needed to settle the loaded group: " + std::to_string(plan.payments.size()) + ".");
+    std::println("Payments needed to settle the loaded group: {}.", plan.payments.size());
 
     section("3. A corrupted file is refused");
     printLine("Here the fuel's payer was edited to an identifier no member has. Reading the file\n"
@@ -78,7 +79,7 @@ void run() {
     auto const corrupted = replaceFirst(saved, ana.value(), "0199a000-0000-7000-8000-00000000ffff");
     auto const refused = refusal([&] { return Group::load(corrupted); });
     check(refused.has_value(), "the file is refused");
-    printLine("  error: " + message(refused));
+    std::println("  error: {}", message(refused));
 
     check(saved == loaded.save(), "the loaded group saves as the group did");
     check(before == after, "the loaded group has the group's totals");

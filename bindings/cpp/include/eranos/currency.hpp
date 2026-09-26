@@ -10,6 +10,7 @@
 
 #include "eranos/detail/declarations.hpp"
 
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -69,19 +70,14 @@ class Currency final {
     /// @return Whether they are the same currency
     [[nodiscard]] friend bool operator==(Currency const &left, Currency const &right) noexcept { return left.fields.code == right.fields.code; }
 
-    /// Whether two currencies have two codes.
+    /// How two currencies order, by code.
     ///
     /// @param left A currency
     /// @param right Another currency
-    /// @return Whether they are different currencies
-    [[nodiscard]] friend bool operator!=(Currency const &left, Currency const &right) noexcept { return !(left == right); }
-
-    /// Whether @p left orders before @p right, by code.
-    ///
-    /// @param left A currency
-    /// @param right Another currency
-    /// @return Whether @p left comes first
-    [[nodiscard]] friend bool operator<(Currency const &left, Currency const &right) noexcept { return left.fields.code < right.fields.code; }
+    /// @return Their order
+    [[nodiscard]] friend std::strong_ordering operator<=>(Currency const &left, Currency const &right) noexcept {
+        return left.fields.code <=> right.fields.code;
+    }
 
   private:
     friend Currency detail::currencyOf(detail::EranosCurrencyDetails const &details);

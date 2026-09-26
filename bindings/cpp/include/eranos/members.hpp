@@ -31,14 +31,7 @@ struct IbanAccountDetails final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(IbanAccountDetails const &left, IbanAccountDetails const &right) noexcept { return left.iban == right.iban; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(IbanAccountDetails const &left, IbanAccountDetails const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(IbanAccountDetails const &left, IbanAccountDetails const &right) noexcept = default;
 };
 
 /// A username in a payment app.
@@ -51,18 +44,7 @@ struct UsernameAccountDetails final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(UsernameAccountDetails const &left, UsernameAccountDetails const &right) noexcept {
-        return left.username == right.username;
-    }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(UsernameAccountDetails const &left, UsernameAccountDetails const &right) noexcept {
-        return !(left == right);
-    }
+    [[nodiscard]] friend bool operator==(UsernameAccountDetails const &left, UsernameAccountDetails const &right) noexcept = default;
 };
 
 /// Where an account is: a bank account or a username in a payment app. One of its alternatives: IbanAccountDetails, UsernameAccountDetails.
@@ -87,16 +69,7 @@ struct Account final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Account const &left, Account const &right) noexcept {
-        return left.details == right.details && left.name == right.name;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Account const &left, Account const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Account const &left, Account const &right) noexcept = default;
 };
 
 /// A member of the group.
@@ -129,17 +102,7 @@ struct Member final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Member const &left, Member const &right) noexcept {
-        return left.id == right.id && left.firstName == right.firstName && left.accounts == right.accounts && left.email == right.email &&
-               left.lastName == right.lastName && left.phone == right.phone;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Member const &left, Member const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Member const &left, Member const &right) noexcept = default;
 };
 
 namespace detail {

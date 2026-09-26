@@ -41,14 +41,7 @@ struct GetsBackBalance final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(GetsBackBalance const &left, GetsBackBalance const &right) noexcept { return left.amount == right.amount; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(GetsBackBalance const &left, GetsBackBalance const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(GetsBackBalance const &left, GetsBackBalance const &right) noexcept = default;
 };
 
 /// The member owes the others `amount`.
@@ -61,14 +54,7 @@ struct OwesBalance final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(OwesBalance const &left, OwesBalance const &right) noexcept { return left.amount == right.amount; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(OwesBalance const &left, OwesBalance const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(OwesBalance const &left, OwesBalance const &right) noexcept = default;
 };
 
 /// The member owes nothing and is owed nothing.
@@ -76,12 +62,7 @@ struct SettledBalance final {
     /// Whether every field of two alternatives is equal.
     ///
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(SettledBalance const & /* left */, SettledBalance const & /* right */) noexcept { return true; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(SettledBalance const & /* left */, SettledBalance const & /* right */) noexcept { return false; }
+    [[nodiscard]] friend bool operator==(SettledBalance const & /* left */, SettledBalance const & /* right */) noexcept = default;
 };
 
 /// Where a member stands. One of its alternatives: GetsBackBalance, OwesBalance, SettledBalance.
@@ -128,17 +109,7 @@ struct MemberSummary final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberSummary const &left, MemberSummary const &right) noexcept {
-        return left.balance == right.balance && left.member == right.member && left.net == right.net && left.paid == right.paid &&
-               left.received == right.received && left.sent == right.sent && left.share == right.share;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberSummary const &left, MemberSummary const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(MemberSummary const &left, MemberSummary const &right) noexcept = default;
 };
 
 /// What the expenses of one category add up to.
@@ -160,16 +131,7 @@ struct CategoryTotal final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(CategoryTotal const &left, CategoryTotal const &right) noexcept {
-        return left.category == right.category && left.total == right.total;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(CategoryTotal const &left, CategoryTotal const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(CategoryTotal const &left, CategoryTotal const &right) noexcept = default;
 };
 
 /// A member's share of each category.
@@ -191,16 +153,7 @@ struct MemberCategoryTotals final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberCategoryTotals const &left, MemberCategoryTotals const &right) noexcept {
-        return left.member == right.member && left.totals == right.totals;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberCategoryTotals const &left, MemberCategoryTotals const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(MemberCategoryTotals const &left, MemberCategoryTotals const &right) noexcept = default;
 };
 
 /// The group's totals.
@@ -233,17 +186,7 @@ struct Summary final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Summary const &left, Summary const &right) noexcept {
-        return left.categoryTotals == right.categoryTotals && left.memberCategoryTotals == right.memberCategoryTotals &&
-               left.members == right.members && left.totalSpent == right.totalSpent;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Summary const &left, Summary const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Summary const &left, Summary const &right) noexcept = default;
 };
 
 /// A member's part of an expense.
@@ -269,16 +212,7 @@ struct MemberShare final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberShare const &left, MemberShare const &right) noexcept {
-        return left.member == right.member && left.paid == right.paid && left.share == right.share;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberShare const &left, MemberShare const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(MemberShare const &left, MemberShare const &right) noexcept = default;
 };
 
 /// An expense's shares, in the group currency.
@@ -305,16 +239,7 @@ struct ExpenseShares final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExpenseShares const &left, ExpenseShares const &right) noexcept {
-        return left.members == right.members && left.tip == right.tip && left.total == right.total;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(ExpenseShares const &left, ExpenseShares const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(ExpenseShares const &left, ExpenseShares const &right) noexcept = default;
 };
 
 /// A payment of a settlement.
@@ -340,16 +265,7 @@ struct Payment final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Payment const &left, Payment const &right) noexcept {
-        return left.amount == right.amount && left.from == right.from && left.to == right.to;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Payment const &left, Payment const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Payment const &left, Payment const &right) noexcept = default;
 };
 
 /// A plan of payments that settles every balance.
@@ -371,16 +287,7 @@ struct Settlement final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Settlement const &left, Settlement const &right) noexcept {
-        return left.payments == right.payments && left.strategy == right.strategy;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Settlement const &left, Settlement const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Settlement const &left, Settlement const &right) noexcept = default;
 };
 
 /// The balance as the library writes it: "gets back 12.00 EUR", "owes 12.00 EUR", or "settled".

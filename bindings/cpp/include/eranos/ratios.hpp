@@ -53,14 +53,7 @@ class ExchangeRate final {
     /// @param left A rate
     /// @param right Another rate
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExchangeRate const &left, ExchangeRate const &right) noexcept { return left.text == right.text; }
-
-    /// Whether two rates are written differently.
-    ///
-    /// @param left A rate
-    /// @param right Another rate
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(ExchangeRate const &left, ExchangeRate const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(ExchangeRate const &left, ExchangeRate const &right) noexcept = default;
 
   private:
     friend ExchangeRate detail::exchangeRateOf(std::string text) noexcept;
@@ -93,16 +86,7 @@ struct Percentage final {
     /// @param left A percentage
     /// @param right Another percentage
     /// @return Whether they are equal
-    [[nodiscard]] friend constexpr bool operator==(Percentage const left, Percentage const right) noexcept {
-        return left.basisPoints == right.basisPoints;
-    }
-
-    /// Whether two percentages differ.
-    ///
-    /// @param left A percentage
-    /// @param right Another percentage
-    /// @return Whether they differ
-    [[nodiscard]] friend constexpr bool operator!=(Percentage const left, Percentage const right) noexcept { return !(left == right); }
+    [[nodiscard]] friend constexpr bool operator==(Percentage const &left, Percentage const &right) noexcept = default;
 };
 
 /// A number of parts, in hundredths of a part: 50 for half a share. The library checks them when a call carries them.
@@ -128,14 +112,7 @@ struct Parts final {
     /// @param left Parts
     /// @param right Other parts
     /// @return Whether they are equal
-    [[nodiscard]] friend constexpr bool operator==(Parts const left, Parts const right) noexcept { return left.hundredths == right.hundredths; }
-
-    /// Whether two numbers of parts differ.
-    ///
-    /// @param left Parts
-    /// @param right Other parts
-    /// @return Whether they differ
-    [[nodiscard]] friend constexpr bool operator!=(Parts const left, Parts const right) noexcept { return !(left == right); }
+    [[nodiscard]] friend constexpr bool operator==(Parts const &left, Parts const &right) noexcept = default;
 };
 
 inline ExchangeRate ExchangeRate::parse(std::string_view const text) { return ExchangeRate(detail::unwrap(detail::EranosExchangeRate::parse(text))); }

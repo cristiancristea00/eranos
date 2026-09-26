@@ -4,6 +4,8 @@
 #include "eranos.hpp"
 #include "report.hpp"
 
+#include <format>
+#include <print>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -26,7 +28,8 @@ struct Flatmates final {
 /// An account with its label and its details.
 [[nodiscard]] std::string describe(Account const &account) {
     auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
-    return account.name + ": " + (nullptr == iban ? std::get<UsernameAccountDetails>(account.details).username.toString() : iban->iban.toString());
+    return std::format("{}: {}", account.name,
+                       (nullptr == iban ? std::get<UsernameAccountDetails>(account.details).username.toString() : iban->iban.toString()));
 }
 
 /// "valid: " and what @p shown writes of the value @p parse makes of @p input, or "refused: " and the library's message.
@@ -34,10 +37,10 @@ template <typename Parse, typename Shown>
 [[nodiscard]] std::vector<std::string> validated(std::string const &input, std::string const &kind, Parse const &parse, Shown const &shown) {
     std::string result;
     auto const refused = refusal([&] {
-        result = "valid: " + shown(parse(input));
+        result = std::format("valid: {}", shown(parse(input)));
         return 0;
     });
-    return {input, kind, refused.has_value() ? "refused: " + message(refused) : result};
+    return {input, kind, refused.has_value() ? std::format("refused: {}", message(refused)) : result};
 }
 
 /// Prints every member of @p group with their contact and account details.
@@ -50,7 +53,7 @@ void printMembers(Group const &group) {
             accounts.push_back(describe(account));
         }
         rows.push_back({
-            member.lastName.has_value() ? member.firstName + " " + *member.lastName : member.firstName,
+            member.lastName.has_value() ? std::format("{} {}", member.firstName, *member.lastName) : member.firstName,
             member.email.has_value() ? member.email->toString() : "",
             member.phone.has_value() ? member.phone->international() : "",
             cell(accounts),
@@ -88,7 +91,7 @@ void printBalances(Group const &group) {
     printLine("The phone number was stored in E.164 form, +40712345678, and the table shows it\n"
               "grouped for reading; the IBAN was stored in its electronic form, uppercase and\n"
               "without spaces, the way banking apps accept it.");
-    return {ana, bob};
+    return {.ana = ana, .bob = bob};
 }
 
 /// Prints what validation makes of valid and mistyped IBANs, emails, and phone numbers.
@@ -143,10 +146,10 @@ void movingOut(Group &group, Flatmates const &flatmates) {
         return group.addExpense(Expense(LocalCost{euros("60.00")}, CalendarDate::of(1, 10, 2026), "Utilities", EqualSplit{{flatmates.ana}}, both));
     });
     check(refused.has_value(), "the archived member is refused");
-    printLine("October's utilities cannot include him:\n  error: " + message(refused));
+    std::println("October's utilities cannot include him:\n  error: {}", message(refused));
     auto const removal = refusal([&] { return group.removeMember(flatmates.bob); });
     check(removal.has_value(), "the referenced member stays");
-    printLine("Nor can he be removed while the rent references him:\n  error: " + message(removal));
+    std::println("Nor can he be removed while the rent references him:\n  error: {}", message(removal));
 
     check(Failure::GROUP_ARCHIVED_MEMBER == refused->failure() && flatmates.bob == refused->member(), "the refusal names Bob");
     check(Failure::GROUP_MEMBER_IN_USE == removal->failure(), "Bob is in use");

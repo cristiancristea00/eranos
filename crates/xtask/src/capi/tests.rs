@@ -73,7 +73,7 @@ fn the_tests_build_with_warnings_as_errors_the_sanitizers_and_coverage() {
     assert_eq!(
         lines[0],
         format!(
-            "cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++17 {flags} tests/tests.cpp /eranos/target/debug/liberanos_capi.a {} -o build/tests",
+            "cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++23 {flags} tests/tests.cpp /eranos/target/debug/liberanos_capi.a {} -o build/tests",
             SYSTEM_LIBRARIES.join(" ")
         )
     );
@@ -121,7 +121,7 @@ fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
     );
     let cpp = port_build(CPP_PACKAGE, "/LLVM_HOME", &sequential, "quickstart").command_line();
     assert!(
-        cpp.starts_with(&format!("cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++17 {flags} examples/report.cpp examples/quickstart.cpp ")),
+        cpp.starts_with(&format!("cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++23 {flags} examples/report.cpp examples/quickstart.cpp ")),
         "{cpp}"
     );
     assert!(

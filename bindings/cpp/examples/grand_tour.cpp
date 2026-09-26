@@ -11,8 +11,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -62,10 +64,10 @@ struct Categories final {
 template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make const &make, Shown const &shown) {
     std::string result;
     auto const refused = refusal([&] {
-        result = "valid: " + shown(make());
+        result = std::format("valid: {}", shown(make()));
         return 0;
     });
-    return refused.has_value() ? "refused: " + message(refused) : result;
+    return refused.has_value() ? std::format("refused: {}", message(refused)) : result;
 }
 
 /// The amount of @p cost, as entered.
@@ -149,7 +151,7 @@ void printEntries(Group const &group, std::function<bool(Currency const &)> cons
         if (shown(amountOf(transfer.cost).currency)) {
             auto const converted = group.transferAmount(transfer.id.value());
             rows.push_back({
-                "Transfer to " + firstName(group, transfer.to),
+                std::format("Transfer to {}", firstName(group, transfer.to)),
                 firstName(group, transfer.from),
                 amountOf(transfer.cost).toString(),
                 rateOf(transfer.cost).toString(),
@@ -165,7 +167,8 @@ void printEntries(Group const &group, std::function<bool(Currency const &)> cons
 /// Creates the group, renames it, and prints its details.
 [[nodiscard]] Group theGroup() {
     section("1. The group");
-    auto group = Group::create(Currency::of("EUR"), "Lisbon", GroupOptions{"A week by the Atlantic", Language::parse("pt-pt")});
+    auto group =
+        Group::create(Currency::of("EUR"), "Lisbon", GroupOptions{.description = "A week by the Atlantic", .language = Language::parse("pt-pt")});
     auto const blank = refusal([&] {
         group.setName("   ");
         return 0;
@@ -181,12 +184,12 @@ void printEntries(Group const &group, std::function<bool(Currency const &)> cons
                    {"Description", group.description().value_or("")},
                },
                2);
-    printLine("The group started as Lisbon and was renamed when a day in Porto joined the plan.\n"
-              "Every total is kept in its currency, " +
-              group.currency().code() +
-              ". The language is a BCP 47 tag the apps\n"
-              "show the group in, stored in canonical form: pt-pt became " +
-              language + ". A blank name is\nrefused:\n  error: " + message(blank));
+    std::println("The group started as Lisbon and was renamed when a day in Porto joined the plan.\n"
+                 "Every total is kept in its currency, {}. The language is a BCP 47 tag the apps\n"
+                 "show the group in, stored in canonical form: pt-pt became {}. A blank name is\n"
+                 "refused:\n"
+                 "  error: {}",
+                 group.currency().code(), language, message(blank));
 
     check(blank.has_value() && Failure::GROUP_EMPTY_NAME == blank->failure(), "a blank name is refused");
     check("Lisbon and Porto" == group.name(), "the group is renamed");
@@ -199,8 +202,8 @@ void printEntries(Group const &group, std::function<bool(Currency const &)> cons
 /// An account with its label, its kind, and its details.
 [[nodiscard]] std::string describe(Account const &account) {
     auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
-    return nullptr == iban ? account.name + ", username " + std::get<UsernameAccountDetails>(account.details).username.toString()
-                           : account.name + ", IBAN " + iban->iban.toString();
+    return nullptr == iban ? std::format("{}, username {}", account.name, std::get<UsernameAccountDetails>(account.details).username.toString())
+                           : std::format("{}, IBAN {}", account.name, iban->iban.toString());
 }
 
 /// Prints every member of @p group with their contact and account details.
@@ -213,7 +216,7 @@ void printMembers(Group const &group) {
             accounts.push_back(describe(account));
         }
         rows.push_back({
-            member.lastName.has_value() ? member.firstName + " " + *member.lastName : member.firstName,
+            member.lastName.has_value() ? std::format("{} {}", member.firstName, *member.lastName) : member.firstName,
             member.email.has_value() ? member.email->toString() : "",
             member.phone.has_value() ? member.phone->international() : "",
             cell(accounts),
@@ -229,17 +232,18 @@ void validation(Group &group) {
               "numbering plan. Required text must not be blank:");
     auto const iban = [](std::string const &input) {
         return std::vector<std::string>{
-            "\"" + input + "\"",
+            std::format("\"{}\"", input),
             "IBAN",
-            outcome([&] { return Iban::parse(input); }, [](Iban const &parsed) { return parsed.toString() + ", country " + parsed.countryCode(); }),
+            outcome([&] { return Iban::parse(input); },
+                    [](Iban const &parsed) { return std::format("{}, country {}", parsed.toString(), parsed.countryCode()); }),
         };
     };
     auto const phone = [](std::string const &input) {
         return std::vector<std::string>{
-            "\"" + input + "\"",
+            std::format("\"{}\"", input),
             "phone",
             outcome([&] { return PhoneNumber::parse(input); },
-                    [](PhoneNumber const &parsed) { return parsed.international() + ", stored as " + parsed.toString(); }),
+                    [](PhoneNumber const &parsed) { return std::format("{}, stored as {}", parsed.international(), parsed.toString()); }),
         };
     };
     auto const text = [](auto const &parsed) { return parsed.toString(); };
@@ -279,15 +283,17 @@ void validation(Group &group) {
     stored.lastName = "Ionescu";
     auto const before = group.replaceMember(stored);
     printMembers(group);
-    printLine("Only a first name is required. Ana gave every detail; Bob added his last name and\n"
-              "email later, through an edit that kept his identifier:\n  " +
-              bob.value() + "\nEva is Carol's daughter, and Filip was added by mistake.");
+    std::println("Only a first name is required. Ana gave every detail; Bob added his last name and\n"
+                 "email later, through an edit that kept his identifier:\n"
+                 "  {}\n"
+                 "Eva is Carol's daughter, and Filip was added by mistake.",
+                 bob.value());
     validation(group);
 
     check(!before.lastName.has_value(), "Bob had no last name");
     check(std::optional<std::string>("Ionescu") == group.member(bob).value().lastName, "Bob has his last name");
     check(2 == group.member(ana).value().accounts.size(), "Ana has two accounts");
-    return {ana, bob, carol, dan, eva, filip};
+    return {.ana = ana, .bob = bob, .carol = carol, .dan = dan, .eva = eva, .filip = filip};
 }
 
 // 3. Categories.
@@ -313,9 +319,11 @@ void validation(Group &group) {
     for (std::size_t index = 0; names.size() > index; ++index) {
         joined += (0 == index ? "" : ", ") + names.at(index);
     }
-    printLine("Every group has the built-in Uncategorised; this one adds Food, Lodging, and\n"
-              "Transport, then renames Transport, which keeps its identifier. In identifier order:\n  " +
-              joined + "\nNames are compared caselessly, and the built-in category keeps its name:");
+    std::println("Every group has the built-in Uncategorised; this one adds Food, Lodging, and\n"
+                 "Transport, then renames Transport, which keeps its identifier. In identifier order:\n"
+                 "  {}\n"
+                 "Names are compared caselessly, and the built-in category keeps its name:",
+                 joined);
     printTable({"Change", "Refused with"},
                {
                    {"Add a category named FOOD", message(homonym)},
@@ -327,7 +335,7 @@ void validation(Group &group) {
           "a caseless homonym is refused");
     check(builtIn.has_value() && Failure::GROUP_BUILT_IN_CATEGORY == builtIn->failure(), "the built-in category keeps its name");
     check("Getting around" == group.category(transport).value().name, "Transport is renamed");
-    return {food, lodging, transport};
+    return {.food = food, .lodging = lodging, .transport = transport};
 }
 
 // 4. Expenses, one for every way of dividing.
@@ -354,13 +362,14 @@ void validation(Group &group) {
 [[nodiscard]] std::string how(Expense const &expense) {
     auto const *const itemised = std::get_if<ItemisedExpenseSplit>(&expense.split);
     auto const split =
-        nullptr == itemised ? divided(std::get<WholeExpenseSplit>(expense.split).split) : std::to_string(itemised->items.size()) + " items";
+        nullptr == itemised ? divided(std::get<WholeExpenseSplit>(expense.split).split) : std::format("{} items", itemised->items.size());
     auto const count = participants(expense.payers).size();
-    auto const payers = 1 == count ? std::string() : ", " + std::to_string(count) + " payers";
+    auto const payers = 1 == count ? std::string() : std::format(", {} payers", count);
     std::string tip;
     if (0 != tipAmount(expense).minorUnits && expense.tip.has_value()) {
         auto const *const fixed = std::get_if<FixedTipValue>(&expense.tip->value);
-        tip = ", " + (nullptr == fixed ? std::get<PercentageTipValue>(expense.tip->value).percentage.toString() : fixed->amount.toString()) + " tip";
+        tip = std::format(", {} tip",
+                          (nullptr == fixed ? std::get<PercentageTipValue>(expense.tip->value).percentage.toString() : fixed->amount.toString()));
     }
     return split + payers + tip;
 }
@@ -483,7 +492,7 @@ void printItems(Group const &group, ExpenseId const &id) {
 /// The share of @p member in the expense @p id of @p group.
 [[nodiscard]] MemberShare shareOf(Group const &group, ExpenseId const &id, MemberId const &member) {
     auto const shares = group.expenseShares(id).value();
-    auto const found = std::find_if(shares.members.begin(), shares.members.end(), [&](MemberShare const &share) { return member == share.member; });
+    auto const found = std::ranges::find_if(shares.members, [&](MemberShare const &share) { return member == share.member; });
     check(shares.members.end() != found, "the member shares the expense");
     return *found;
 }
@@ -494,11 +503,11 @@ void printFado(Group const &group, Expense const &fado) {
     auto const *const fixed = std::get_if<FixedTipValue>(&tip.value);
     auto const rule = nullptr == fixed ? std::get<PercentageTipValue>(tip.value).percentage.toString() : fixed->amount.toString();
     auto const *const shared = TipDistribution::EQUAL == tip.distribution ? "equally" : "in proportion to what each member ordered";
-    printLine("The groceries' 10.00 EUR did not divide into thirds, so one member consumed the\n"
-              "leftover cent; the expense's identifier picks which, so it moves from expense to\n"
-              "expense. The fado night, at " +
-              fado.time.value().toString() + " on " + fado.date.toString() + " at " + fado.description.value_or("") + ", was itemised; its\n" + rule +
-              " tip of " + tipAmount(fado).toString() + " was shared " + shared + ":");
+    std::println("The groceries' 10.00 EUR did not divide into thirds, so one member consumed the\n"
+                 "leftover cent; the expense's identifier picks which, so it moves from expense to\n"
+                 "expense. The fado night, at {} on {} at {}, was itemised; its\n"
+                 "{} tip of {} was shared {}:",
+                 fado.time.value().toString(), fado.date.toString(), fado.description.value_or(""), rule, tipAmount(fado).toString(), shared);
     printItems(group, fado.id.value());
     printLine("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
 }
@@ -529,7 +538,7 @@ void printFado(Group const &group, Expense const &fado) {
         shareOf(group, groceries, people.bob).share.minorUnits,
         shareOf(group, groceries, people.carol).share.minorUnits,
     };
-    std::sort(thirds.begin(), thirds.end());
+    std::ranges::sort(thirds);
     check((std::array<std::int64_t, 3>{333, 333, 334}) == thirds, "the groceries divide into 3.33, 3.33, and 3.34");
     check(eur("280.00") == shareOf(group, apartment, people.carol).share, "Carol's 35 % of the apartment is 280.00 EUR");
     check(eur("10.00") == shareOf(group, seafood, people.eva).share, "Eva's half part of the dinner is 10.00 EUR");
@@ -552,10 +561,10 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     section("5. Another currency");
     auto const euro = Currency::of("EUR");
     auto const rate = ExchangeRate::parse("0.2");
-    auto const parking = group.addExpense(inCategory(Expense(ConvertedCost{ron("250.00"), rate}, october(6), "Airport parking",
+    auto const parking = group.addExpense(inCategory(Expense(ConvertedCost{.amount = ron("250.00"), .rate = rate}, october(6), "Airport parking",
                                                              EqualSplit{{people.ana}}, WholeExpenseSplit{EqualSplit{{people.ana, people.bob}}}),
                                                      categories.transport));
-    Transfer repayment(ConvertedCost{ron("100.00"), rate}, october(6), people.bob, people.ana);
+    Transfer repayment(ConvertedCost{.amount = ron("100.00"), .rate = rate}, october(6), people.bob, people.ana);
     repayment.note = "Cash for the parking";
     repayment.time = TimeOfDay::of(7, 40);
     auto const cash = group.addTransfer(repayment);
@@ -565,9 +574,11 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     printEntries(group, [&](Currency const &currency) { return euro.code() != currency.code(); });
     auto const transfer = group.transfer(cash).value();
     auto const converted = ExchangeRate::parse("0.2011").convert(ron("250.00"), euro);
-    printLine("Bob's transfer, at " + transfer.time.value().toString() + " (\"" + transfer.note.value_or("") + "\"), counts as " +
-              group.transferAmount(cash).value_or(Money(euro, 0)).toString() +
-              ".\nA conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,\nwhich becomes " + converted.toString() + ".");
+    std::println("Bob's transfer, at {} (\"{}\"), counts as {}.\n"
+                 "A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,\n"
+                 "which becomes {}.",
+                 transfer.time.value().toString(), transfer.note.value_or(""), group.transferAmount(cash).value_or(Money(euro, 0)).toString(),
+                 converted.toString());
 
     check(eur("50.28") == converted, "the conversion rounds to 50.28 EUR");
     check(eur("50.00") == group.expenseShares(parking).value().total, "the parking counts as 50.00 EUR");
@@ -610,16 +621,18 @@ void anotherCurrency(Group &group, People const &people, Categories const &categ
     return {
         {
             previous.name,
-            amountOf(previous.cost).toString() + " became " + amountOf(corrected.cost).toString() + ", at " + corrected.description.value_or(""),
+            std::format("{} became {}, at {}", amountOf(previous.cost).toString(), amountOf(corrected.cost).toString(),
+                        corrected.description.value_or("")),
         },
-        {removed.name, "entered twice; the copy of " + amountOf(removed.cost).toString() + " was removed"},
+        {removed.name, std::format("entered twice; the copy of {} was removed", amountOf(removed.cost).toString())},
         {
-            firstName(group, people.dan) + " to " + firstName(group, people.ana),
-            amountOf(replaced.cost).toString() + " became " + amountOf(apartment.cost).toString() + ", noted " + apartment.note.value_or(""),
+            std::format("{} to {}", firstName(group, people.dan), firstName(group, people.ana)),
+            std::format("{} became {}, noted {}", amountOf(replaced.cost).toString(), amountOf(apartment.cost).toString(),
+                        apartment.note.value_or("")),
         },
         {
-            firstName(group, people.carol) + " to " + firstName(group, people.bob),
-            amountOf(undone.cost).toString() + " sent to the wrong member; removed",
+            std::format("{} to {}", firstName(group, people.carol), firstName(group, people.bob)),
+            std::format("{} sent to the wrong member; removed", amountOf(undone.cost).toString()),
         },
     };
 }
@@ -681,9 +694,10 @@ void comingsAndGoings(Group &group, People const &people) {
                                         WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan}}}));
     });
     auto const inUse = refusal([&] { return group.removeMember(people.dan); });
-    printLine(removed.firstName + " was never part of an entry, so removing him leaves no trace. Dan flew home\n"
-                                  "early and was archived: his history and his balance stay, but a new expense\n"
-                                  "cannot include him, and he cannot be removed while entries reference him.");
+    std::println("{} was never part of an entry, so removing him leaves no trace. Dan flew home\n"
+                 "early and was archived: his history and his balance stay, but a new expense\n"
+                 "cannot include him, and he cannot be removed while entries reference him.",
+                 removed.firstName);
     auto const summary = group.summary();
     Rows rows;
     for (auto const &member : group.members()) {
@@ -714,14 +728,13 @@ void comingsAndGoings(Group &group, People const &people) {
 
 /// The totals per category of @p member in @p summary.
 [[nodiscard]] std::vector<CategoryTotal> byCategory(Summary const &summary, MemberId const &member) {
-    auto const found = std::find_if(summary.memberCategoryTotals.begin(), summary.memberCategoryTotals.end(),
-                                    [&](MemberCategoryTotals const &entry) { return member == entry.member; });
+    auto const found = std::ranges::find_if(summary.memberCategoryTotals, [&](MemberCategoryTotals const &entry) { return member == entry.member; });
     return summary.memberCategoryTotals.end() == found ? std::vector<CategoryTotal>() : found->totals;
 }
 
 /// The total of @p category among @p totals, absent when they list none.
 [[nodiscard]] std::optional<Money> totalOf(std::vector<CategoryTotal> const &totals, CategoryId const &category) {
-    auto const found = std::find_if(totals.begin(), totals.end(), [&](CategoryTotal const &entry) { return category == entry.category; });
+    auto const found = std::ranges::find_if(totals, [&](CategoryTotal const &entry) { return category == entry.category; });
     return totals.end() == found ? std::nullopt : std::optional<Money>(found->total);
 }
 
@@ -729,8 +742,9 @@ void comingsAndGoings(Group &group, People const &people) {
 void summary(Group const &group, People const &people, Categories const &categories) {
     section("8. The summary");
     auto const totals = group.summary();
-    printLine("The group spent " + totals.totalSpent.toString() + " in all. For each member, what they paid, what they\n" +
-              "consumed, the transfers they sent and received, and what is left:");
+    std::println("The group spent {} in all. For each member, what they paid, what they\n"
+                 "consumed, the transfers they sent and received, and what is left:",
+                 totals.totalSpent.toString());
     printBalances(group);
     printLine("The spending per category:");
     printCategories(group);
@@ -780,17 +794,17 @@ void removingACategory(Group &group, Categories const &categories) {
     auto const removed = group.removeCategory(categories.transport);
     auto const uncategorised = builtInCategory(group);
     auto const builtIn = refusal([&] { return group.removeCategory(uncategorised); });
-    printLine("Removing " + removed.name +
-              " moves its expenses to Uncategorised and the category\n"
-              "totals with them; no balance changes. The built-in category cannot be removed:\n  error: " +
-              message(builtIn));
+    std::println("Removing {} moves its expenses to Uncategorised and the category\n"
+                 "totals with them; no balance changes. The built-in category cannot be removed:\n"
+                 "  error: {}",
+                 removed.name, message(builtIn));
     printCategories(group);
 
     check(builtIn.has_value() && Failure::GROUP_BUILT_IN_CATEGORY == builtIn->failure(), "the built-in category cannot be removed");
     check(!group.category(categories.transport).has_value(), "Getting around is gone");
     check(std::optional<Money>(eur("248.50")) == totalOf(group.summary().categoryTotals, uncategorised), "Uncategorised comes to 248.50 EUR");
     auto const expenses = group.expenses();
-    check(std::none_of(expenses.begin(), expenses.end(), [&](Expense const &expense) { return categories.transport == expense.category; }),
+    check(std::ranges::none_of(expenses, [&](Expense const &expense) { return categories.transport == expense.category; }),
           "no expense is in Getting around");
 }
 
@@ -805,14 +819,17 @@ void newCurrency(Group &group, People const &people) {
         group.changeCurrency(leu, {});
         return 0;
     });
-    group.changeCurrency(leu, {CurrencyRate(euro, ExchangeRate::parse("5"))});
-    printLine("Home again, the group moves its books to RON. The change needs a rate into RON\n"
-              "for every other currency in use, here only EUR, or it is refused:\n  error: " +
-              message(missing) + "\nEntries in EUR take the new rate, and the RON parking and cash become local:");
+    group.changeCurrency(leu, std::array{CurrencyRate(euro, ExchangeRate::parse("5"))});
+    std::println("Home again, the group moves its books to RON. The change needs a rate into RON\n"
+                 "for every other currency in use, here only EUR, or it is refused:\n"
+                 "  error: {}\n"
+                 "Entries in EUR take the new rate, and the RON parking and cash become local:",
+                 message(missing));
     printEntries(group, [](Currency const &) { return true; });
-    printLine("Each entry keeps its currency and converts at the new rate. At 5 every share\n"
-              "converts exactly, so each balance is five times what it was. The trip cost\n" +
-              group.summary().totalSpent.toString() + ":");
+    std::println("Each entry keeps its currency and converts at the new rate. At 5 every share\n"
+                 "converts exactly, so each balance is five times what it was. The trip cost\n"
+                 "{}:",
+                 group.summary().totalSpent.toString());
     printBalances(group);
 
     auto const summary = group.summary();
@@ -837,7 +854,7 @@ void newCurrency(Group &group, People const &people) {
     case SettlementStrategy::MINIMUM_TRANSFERS:
         return "MinimumTransfers";
     }
-    return "?";
+    std::unreachable();
 }
 
 /// Prints how many payments each strategy plans, then records the minimum plan as transfers.
@@ -869,8 +886,7 @@ void settlingUp(Group &group) {
     check(group.settlement(SettlementStrategy::GREEDY).payments.empty(), "nothing is left to pay");
     check(4 == plan.payments.size(), "the minimum plan takes four payments");
     auto const summary = group.summary();
-    check(std::all_of(summary.members.begin(), summary.members.end(),
-                      [](MemberSummary const &found) { return std::holds_alternative<SettledBalance>(found.balance); }),
+    check(std::ranges::all_of(summary.members, [](MemberSummary const &found) { return std::holds_alternative<SettledBalance>(found.balance); }),
           "every balance is settled");
 }
 
@@ -888,15 +904,15 @@ void settlingUp(Group &group) {
 void savingAndLoading(Group const &group, People const &people, Categories const &categories) {
     section("12. Saving and loading");
     auto const saved = group.save();
-    printLine("The group saves to " + std::to_string(saved.size()) +
-              " bytes of JSON: its details and entries, never the totals.\n"
-              "Ana's accounts are saved in clear text, as the library holds them:");
+    std::println("The group saves to {} bytes of JSON: its details and entries, never the totals.\n"
+                 "Ana's accounts are saved in clear text, as the library holds them:",
+                 saved.size());
     auto const ana = group.member(people.ana).value();
     for (auto const &account : ana.accounts) {
         auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
         auto const details = nullptr == iban ? std::get<UsernameAccountDetails>(account.details).username.toString() : iban->iban.toString();
-        check(std::string::npos != saved.find(details), "the details are saved as they are");
-        printLine("  " + account.name + ": " + details);
+        check(saved.contains(details), "the details are saved as they are");
+        std::println("  {}: {}", account.name, details);
     }
     auto const loaded = Group::load(saved);
     printLine("Loading replays every entry through the same checks as adding it and rebuilds the\n"
@@ -937,8 +953,9 @@ void currencies() {
         rows.push_back({currency.code(), currency.name(), std::to_string(currency.numericCode()), std::to_string(currency.decimalPlaces())});
     }
     auto const unknown = refusal([] { return Currency::of("XYZ"); });
-    printLine("Currencies are the " + std::to_string(Currency::all().size()) +
-              " active ISO 4217 codes with a minor unit; an unknown code is\nrefused (" + message(unknown) + "):");
+    std::println("Currencies are the {} active ISO 4217 codes with a minor unit; an unknown code is\n"
+                 "refused ({}):",
+                 Currency::all().size(), message(unknown));
     printTable({"Code", "Name", "Numeric code", "Decimal places"}, rows, 2);
     check(3 == Currency::of("BHD").decimalPlaces(), "the dinar has three decimal places");
 }
@@ -951,21 +968,21 @@ void amounts() {
     auto const yen = Money::parse("1500", Currency::of("JPY"));
     Money const dinars(Currency::of("BHD"), 1'234);
     Money const nothing(Currency::of("RON"), 0);
-    ConvertedCost const cost{eur("10.00"), ExchangeRate::parse("4.9765")};
-    ConvertedCost const doubled{eur("20.00"), cost.rate};
+    ConvertedCost const cost{.amount = eur("10.00"), .rate = ExchangeRate::parse("4.9765")};
+    ConvertedCost const doubled{.amount = eur("20.00"), .rate = cost.rate};
     printLine("Amounts are exact minor units in their currency:");
     printTable({"Input", "Result"},
                {
                    {"12.34 EUR + 0.66 EUR", sumOf.toString()},
-                   {"5.00 EUR − 7.50 EUR", change.toString() + ", negative: " + (0 > change.minorUnits ? "true" : "false")},
+                   {"5.00 EUR − 7.50 EUR", std::format("{}, negative: {}", change.toString(), (0 > change.minorUnits ? "true" : "false"))},
                    {"1.00 EUR + 1.00 RON", message(mixed)},
                    {"1.005 EUR", message(refusal([] { return eur("1.005"); }))},
-                   {"1500 JPY", yen.toString() + ", " + std::to_string(yen.minorUnits) + " minor units"},
+                   {"1500 JPY", std::format("{}, {} minor units", yen.toString(), yen.minorUnits)},
                    {"1234 minor units of BHD", dinars.toString()},
-                   {"zero RON", nothing.toString() + ", zero: " + (0 == nothing.minorUnits ? "true" : "false")},
+                   {"zero RON", std::format("{}, zero: {}", nothing.toString(), (0 == nothing.minorUnits ? "true" : "false"))},
                    {
                        "10.00 EUR at 4.9765",
-                       cost.amount.toString() + " at " + cost.rate.toString() + ", then " + doubled.amount.toString() + " at the same rate",
+                       std::format("{} at {}, then {} at the same rate", cost.amount.toString(), cost.rate.toString(), doubled.amount.toString()),
                    },
                },
                2);
@@ -983,10 +1000,10 @@ void ratios() {
     printLine("Percentages, parts, and rates are exact decimals:");
     printTable({"Input", "Result"},
                {
-                   {"12.5%", percentage.toString() + ", " + std::to_string(percentage.basisPoints) + " basis points"},
+                   {"12.5%", std::format("{}, {} basis points", percentage.toString(), percentage.basisPoints)},
                    {"333 basis points", Percentage{333}.toString()},
                    {"33.333%", message(refusal([] { return Percentage::parse("33.333"); }))},
-                   {"1.5 parts", parts.toString() + ", " + std::to_string(parts.hundredths) + " hundredths"},
+                   {"1.5 parts", std::format("{}, {} hundredths", parts.toString(), parts.hundredths)},
                    {"3 whole parts", Parts{300}.toString()},
                    {"25 hundredths of a part", Parts{25}.toString()},
                    {"0 parts", message(refusal([] { return Parts::parse("0"); }))},
@@ -1009,15 +1026,15 @@ void datesAndIdentifiers(Group const &group, People const &people) {
                {
                    {
                        "2026-10-01",
-                       date.toString() + ": day " + std::to_string(date.day()) + ", month " + std::to_string(date.month()) + ", year " +
-                           std::to_string(date.year()),
+                       std::format("{}: day {}, month {}, year {}", date.toString(), date.day(), date.month(), date.year()),
                    },
                    {"29 February 2027", message(refusal([] { return CalendarDate::of(29, 2, 2027); }))},
-                   {"22:15", time.toString() + ": hour " + std::to_string(time.hour()) + ", minute " + std::to_string(time.minute())},
+                   {"22:15", std::format("{}: hour {}, minute {}", time.toString(), time.hour(), time.minute())},
                    {"24:00", message(refusal([] { return TimeOfDay::of(24, 0); }))},
                    {
                        "Ana's identifier",
-                       people.ana.value() + ", the same after a round trip: " + (std::optional<MemberId>(people.ana) == found ? "true" : "false"),
+                       std::format("{}, the same after a round trip: {}", people.ana.value(),
+                                   (std::optional<MemberId>(people.ana) == found ? "true" : "false")),
                    },
                    {"not-a-uuid", message(refusal([&] { return group.member(MemberId("not-a-uuid")); }))},
                    {"pt-pt", language.toString()},
@@ -1086,15 +1103,14 @@ void sharing(Group &group, People const &people) {
     });
     auto const after = group.summaryAsync().get();
     auto const currency = group.currencyAsync().get();
-    printLine("While a report reads the group, a change of its currency to EUR waits for the\n"
-              "report. The app drops the waiting change, which cancels it: the group still\n"
-              "keeps its books in " +
-              currency.code() + ", and the trip cost " + after.totalSpent.toString() + ", as the report read.");
-    printLine("With the other handle gone, the app takes the group back: " + std::to_string(group.expensesAsync().get().size()) + " expenses.");
+    std::println("While a report reads the group, a change of its currency to EUR waits for the\n"
+                 "report. The app drops the waiting change, which cancels it: the group still\n"
+                 "keeps its books in {}, and the trip cost {}, as the report read.",
+                 currency.code(), after.totalSpent.toString());
+    std::println("With the other handle gone, the app takes the group back: {} expenses.", group.expensesAsync().get().size());
 
     check(4 == plan.payments.size(), "four payments settle the coffee");
-    check(std::all_of(plan.payments.begin(), plan.payments.end(),
-                      [&](Payment const &payment) { return people.bob == payment.to && ron("15.00") == payment.amount; }),
+    check(std::ranges::all_of(plan.payments, [&](Payment const &payment) { return people.bob == payment.to && ron("15.00") == payment.amount; }),
           "everyone pays Bob 15.00 RON");
     check(cancelled.has_value() && ErrorKind::CANCELLED == cancelled->kind(), "the change is cancelled");
     check(before == after, "the cancelled change leaves the group as it was");

@@ -7,10 +7,12 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <exception>
-#include <iostream>
+#include <format>
 #include <optional>
+#include <print>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -89,7 +91,7 @@ struct Border final {
         for (std::size_t column = 0; row.size() > column; ++column) {
             std::string const text = row.at(column).size() > index ? row.at(column).at(index) : "";
             std::string const padding(widths.at(column) - widthOf(text), ' ');
-            line += " " + (numbersFrom <= column ? padding + text : text + padding) + " │";
+            line += std::format(" {} │", (numbersFrom <= column ? padding + text : text + padding));
         }
         output.push_back(line);
     }
@@ -102,8 +104,8 @@ int runPort(void (*const port)()) {
     try {
         port();
     } catch (std::exception const &error) {
-        std::cout.flush();
-        std::cerr << "the port stopped: " << error.what() << '\n';
+        static_cast<void>(std::fflush(stdout));
+        std::println(stderr, "the port stopped: {}", error.what());
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
@@ -111,15 +113,15 @@ int runPort(void (*const port)()) {
 
 void check(bool const holds, std::string_view const claim) {
     if (!holds) {
-        throw std::logic_error("the report is not the example's: " + std::string(claim));
+        throw std::logic_error(std::format("the report is not the example's: {}", claim));
     }
 }
 
-void printLine(std::string_view const text) { std::cout << text << '\n'; }
+void printLine(std::string_view const text) { std::println("{}", text); }
 
-void title(std::string_view const text) { printLine(std::string(text) + "\n" + repeated("═", widthOf(text))); }
+void title(std::string_view const text) { std::println("{}\n{}", text, repeated("═", widthOf(text))); }
 
-void section(std::string_view const text) { printLine("\n" + std::string(text) + "\n" + repeated("─", widthOf(text))); }
+void section(std::string_view const text) { std::println("\n{}\n{}", text, repeated("─", widthOf(text))); }
 
 void printTable(std::vector<std::string> const &headers, Rows const &rows, std::size_t const numbersFrom) {
     auto const cellsOf = [](std::vector<std::string> const &row) {
@@ -143,16 +145,16 @@ void printTable(std::vector<std::string> const &headers, Rows const &rows, std::
             }
         }
     }
-    std::vector<std::string> output{borderOf(widths, {"╭", "┬", "╮"})};
+    std::vector<std::string> output{borderOf(widths, {.left = "╭", .middle = "┬", .right = "╮"})};
     for (std::size_t row = 0; table.size() > row; ++row) {
         for (auto &line : rowLines(table.at(row), widths, numbersFrom)) {
             output.push_back(std::move(line));
         }
         if (0 == row) {
-            output.push_back(borderOf(widths, {"├", "┼", "┤"}));
+            output.push_back(borderOf(widths, {.left = "├", .middle = "┼", .right = "┤"}));
         }
     }
-    output.push_back(borderOf(widths, {"╰", "┴", "╯"}));
+    output.push_back(borderOf(widths, {.left = "╰", .middle = "┴", .right = "╯"}));
     printLine(cell(output));
 }
 
@@ -193,14 +195,13 @@ std::vector<MemberId> sharedBy(ExpenseSplit const &split) {
             }
         },
         split);
-    std::sort(members.begin(), members.end());
-    members.erase(std::unique(members.begin(), members.end()), members.end());
+    std::ranges::sort(members);
+    members.erase(std::ranges::unique(members).begin(), members.end());
     return members;
 }
 
 std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &member) {
-    auto const found =
-        std::find_if(summary.members.begin(), summary.members.end(), [&member](MemberSummary const &totals) { return member == totals.member; });
+    auto const found = std::ranges::find_if(summary.members, [&member](MemberSummary const &totals) { return member == totals.member; });
     return summary.members.end() == found ? std::nullopt : std::optional<MemberSummary>(*found);
 }
 

@@ -189,7 +189,7 @@ native-static-libs` lists in place of `-liconv`:
 
 ```sh
 diplomat-tool cpp generated --entry ../../crates/eranos-capi/src/lib.rs     # Diplomat's headers, beneath the layer
-"$LLVM_HOME/bin/clang++" -std=c++17 -g -fsanitize=address,undefined -Iinclude -isystem generated \
+"$LLVM_HOME/bin/clang++" -std=c++23 -g -fsanitize=address,undefined -Iinclude -isystem generated \
     tests/tests.cpp ../../target/debug/liberanos_capi.a -liconv -o build/tests  # the tests, under the sanitizers
 build/tests                                                                 # run them
 "$LLVM_HOME/bin/clang-format" -i include/eranos.hpp include/eranos/*.hpp include/eranos/detail/*.hpp tests/tests.cpp  # the formatter, applied
@@ -197,7 +197,7 @@ doxygen Doxyfile                                                            # th
 ```
 
 A port builds the same way, from its program and the report module, in
-`bindings/c` as below and in `bindings/cpp` with `clang++`, `-std=c++17`,
+`bindings/c` as below and in `bindings/cpp` with `clang++`, `-std=c++23`,
 and `.cpp`; on macOS, `ASAN_OPTIONS=detect_leaks=1` turns on the leak check
 that Linux runs by default:
 
@@ -611,7 +611,7 @@ commit was tested, and those checks show on the pull request.
 | Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                                                                                                                                                  |
 | Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                                                                                                                                                    |
 | Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                                                                                                                                                      |
-| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, then the C tests compiled by GCC 14 as C23, which backs the package's GCC floor, on a dispatch that asks for the bindings only                                                                                                                                        |
+| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, then the C and C++ tests compiled by GCC 14 as C23 and C++23, which backs the packages' GCC floors, on a dispatch that asks for the bindings only                                                                                                                     |
 | Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                                                                                                                                                |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a

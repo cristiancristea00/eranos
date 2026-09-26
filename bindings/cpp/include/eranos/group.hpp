@@ -24,6 +24,7 @@
 #include <future>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -56,16 +57,7 @@ struct CurrencyRate final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(CurrencyRate const &left, CurrencyRate const &right) noexcept {
-        return left.currency == right.currency && left.rate == right.rate;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(CurrencyRate const &left, CurrencyRate const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(CurrencyRate const &left, CurrencyRate const &right) noexcept = default;
 };
 
 /// The details a new group can start with besides its currency and name.
@@ -236,7 +228,7 @@ class Group final {
     /// @param currency The currency
     /// @param rates The rates
     /// @throws Error When the library refuses the call; its kind names the module that refused it
-    void changeCurrency(Currency const &currency, std::vector<CurrencyRate> const &rates);
+    void changeCurrency(Currency const &currency, std::span<CurrencyRate const> const rates);
 
     /// The asynchronous form of changeCurrency(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
     /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, and its future then throws Error
@@ -246,7 +238,7 @@ class Group final {
     /// @param rates The rates
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the end of the call, whose get() throws what the synchronous form throws
-    [[nodiscard]] std::future<void> changeCurrencyAsync(Currency const &currency, std::vector<CurrencyRate> const &rates,
+    [[nodiscard]] std::future<void> changeCurrencyAsync(Currency const &currency, std::span<CurrencyRate const> const rates,
                                                         Cancellation const *const cancellation = nullptr);
 
     /// Every expense, in the order they were created. Blocks the calling thread while another call holds the group's lock.
@@ -727,7 +719,7 @@ class Group final {
 namespace detail {
 
 [[nodiscard]] inline std::unique_ptr<EranosCurrencyRate> toDetail(CurrencyRate const &value);
-[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::vector<CurrencyRate> const &records);
+[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::span<CurrencyRate const> const records);
 
 } // namespace detail
 
@@ -864,11 +856,11 @@ inline std::future<Currency> Group::currencyAsync(Cancellation const *const canc
     return future;
 }
 
-inline void Group::changeCurrency(Currency const &currency, std::vector<CurrencyRate> const &rates) {
+inline void Group::changeCurrency(Currency const &currency, std::span<CurrencyRate const> const rates) {
     detail::check(handle->change_currency(currency.code(), *detail::toDetail(rates)));
 }
 
-inline std::future<void> Group::changeCurrencyAsync(Currency const &currency, std::vector<CurrencyRate> const &rates,
+inline std::future<void> Group::changeCurrencyAsync(Currency const &currency, std::span<CurrencyRate const> const rates,
                                                     Cancellation const *const cancellation) {
     auto const promise = std::make_shared<std::promise<void>>();
     auto future = promise->get_future();

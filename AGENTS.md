@@ -388,7 +388,7 @@ over the generated code: `bindings/swift` for Apple platforms,
 `bindings/kotlin` for Android and the JVM, `bindings/java` for Java,
 `bindings/typescript` for browsers and Node, `bindings/kmp`, which
 compiles the Kotlin layer for Kotlin Multiplatform, and `bindings/c` and
-`bindings/cpp`, header-only layers for C23 and C++17
+`bindings/cpp`, header-only layers for C23 and C++23
 ([docs/BINDINGS.md](docs/BINDINGS.md)). A `Group` owns its
 members, categories, expenses, and transfers in ID-keyed maps. Each entry
 is resolved into group-currency shares when it is added or replaced

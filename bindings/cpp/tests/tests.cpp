@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <format>
 #include <functional>
 #include <future>
 #include <iostream>
@@ -85,9 +86,9 @@ class Flat final {
   public:
     Flat()
         : euro(Currency::of("EUR")), day(CalendarDate::of(23, 9, 2026)),
-          group(Group::create(euro, "Flat", GroupOptions{"Rent", Language::parse("pt-pt")})), ana(group.addMember(Member("Ana"))),
-          bob(group.addMember(Member("Bob"))), food(group.addCategory(Category("Food"))), dinner(group.addExpense(dinnerExpense())),
-          repayment(group.addTransfer(Transfer(LocalCost{euros(1'000)}, day, bob, ana))) {}
+          group(Group::create(euro, "Flat", GroupOptions{.description = "Rent", .language = Language::parse("pt-pt")})),
+          ana(group.addMember(Member("Ana"))), bob(group.addMember(Member("Bob"))), food(group.addCategory(Category("Food"))),
+          dinner(group.addExpense(dinnerExpense())), repayment(group.addTransfer(Transfer(LocalCost{euros(1'000)}, day, bob, ana))) {}
 
     /// @p minorUnits cents.
     [[nodiscard]] Money euros(std::int64_t const minorUnits) const { return {euro, minorUnits}; }
@@ -130,8 +131,8 @@ void aCurrencyHoldsWhatTheLibraryKnowsOfIt(Check &check) {
 /// A list that missed a currency or came out of order would hide one from the currency pickers of an app.
 void everyCurrencyTheLibraryListsIsListedByCode(Check &check) {
     auto const all = Currency::all();
-    check.that(std::is_sorted(all.begin(), all.end()), "the currencies are in the order of their codes");
-    check.that(std::find(all.begin(), all.end(), Currency::of("EUR")) != all.end(), "the euro is listed");
+    check.that(std::ranges::is_sorted(all), "the currencies are in the order of their codes");
+    check.that(std::ranges::contains(all, Currency::of("EUR")), "the euro is listed");
 }
 
 /// A code the library does not list, taken, would make an amount no call can format.
@@ -295,7 +296,8 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     Tip const tip(TipDistribution::EQUAL, FixedTipValue{one});
     checkValue(check, tip, Tip(TipDistribution::EQUAL, FixedTipValue{one}), Tip(TipDistribution::PROPORTIONAL, FixedTipValue{one}), "tips");
     auto const rate = ExchangeRate::parse("0.2");
-    checkValue(check, ConvertedCost{one, rate}, ConvertedCost{one, rate}, ConvertedCost{one, ExchangeRate::parse("0.3")}, "converted costs");
+    checkValue(check, ConvertedCost{.amount = one, .rate = rate}, ConvertedCost{.amount = one, .rate = rate},
+               ConvertedCost{.amount = one, .rate = ExchangeRate::parse("0.3")}, "converted costs");
     checkValue(check, LocalCost{one}, LocalCost{one}, LocalCost{two}, "local costs");
     checkValue(check, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{twoPizzas}}, "itemised splits");
     checkValue(check, WholeExpenseSplit{EqualSplit{{ana}}}, WholeExpenseSplit{EqualSplit{{ana}}}, WholeExpenseSplit{EqualSplit{{bob}}},
@@ -348,7 +350,7 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
 void anExpenseReadsBackAsItWasAdded(Check &check) {
     Flat flat;
     auto const lei = Currency::of("RON");
-    Expense lunch(ConvertedCost{Money(lei, 5'000), ExchangeRate::parse("0.2")}, flat.day, "Lunch",
+    Expense lunch(ConvertedCost{.amount = Money(lei, 5'000), .rate = ExchangeRate::parse("0.2")}, flat.day, "Lunch",
                   PercentagesSplit{{MemberPercentage(flat.ana, Percentage{5'000}), MemberPercentage(flat.bob, Percentage{5'000})}},
                   WholeExpenseSplit{PartsSplit{{MemberParts(flat.ana, Parts{100}), MemberParts(flat.bob, Parts{50})}}});
     lunch.category = flat.food;
@@ -373,7 +375,7 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
 /// A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save.
 void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
     Flat flat;
-    Transfer cash(ConvertedCost{Money(Currency::of("RON"), 1'000), ExchangeRate::parse("0.2")}, flat.day, flat.ana, flat.bob);
+    Transfer cash(ConvertedCost{.amount = Money(Currency::of("RON"), 1'000), .rate = ExchangeRate::parse("0.2")}, flat.day, flat.ana, flat.bob);
     cash.note = "Cash";
     cash.time = TimeOfDay::of(9, 5);
     cash.id = flat.group.addTransfer(cash);
@@ -504,8 +506,7 @@ void theSummaryAndTheSharesAddUp(Check &check) {
     auto const summary = flat.group.summary();
     check.that(summary.totalSpent == flat.euros(3'000), "the dinner is all that was spent");
     check.that(summary.categoryTotals == std::vector<CategoryTotal>{CategoryTotal(flat.food, flat.euros(3'000))}, "all of it on food");
-    auto const ana =
-        std::find_if(summary.members.begin(), summary.members.end(), [&](MemberSummary const &member) { return member.member == flat.ana; });
+    auto const ana = std::ranges::find_if(summary.members, [&](MemberSummary const &member) { return member.member == flat.ana; });
     check.that(ana != summary.members.end() && ana->paid == flat.euros(3'000) && ana->share == flat.euros(1'500) &&
                    ana->received == flat.euros(1'000) && ana->sent == flat.euros(0) && ana->net == flat.euros(500) &&
                    ana->balance == Balance{GetsBackBalance{flat.euros(500)}},
@@ -527,7 +528,7 @@ void eachStrategySettlesEveryBalance(Check &check) {
     }
     static_cast<void>(flat.group.addTransfer(Transfer(LocalCost{flat.euros(500)}, flat.day, flat.bob, flat.ana)));
     auto const members = flat.group.summary().members;
-    check.that(std::all_of(members.begin(), members.end(), [](MemberSummary const &member) { return member.balance == Balance{SettledBalance{}}; }),
+    check.that(std::ranges::all_of(members, [](MemberSummary const &member) { return member.balance == Balance{SettledBalance{}}; }),
                "once Bob pays, every balance is settled");
 }
 
@@ -539,11 +540,11 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
     check.that(isFailure(missing, ErrorKind::GROUP, Failure::GROUP_MISSING_EXCHANGE_RATE) && "EUR" == missing.value().currency(),
                "the euro needs a rate");
     auto const rate = CurrencyRate(flat.euro, ExchangeRate::parse("5"));
-    auto const twice = thrown([&] { flat.group.changeCurrency(lei, {rate, rate}); });
+    auto const twice = thrown([&] { flat.group.changeCurrency(lei, std::array{rate, rate}); });
     check.that(isFailure(twice, ErrorKind::GROUP, Failure::GROUP_DUPLICATE_EXCHANGE_RATE) && "EUR" == twice.value().currency(),
                "one rate per currency");
     auto converted = flat.expense("Taxi", flat.ana, {flat.ana});
-    converted.cost = ConvertedCost{flat.euros(1'000), ExchangeRate::parse("1")};
+    converted.cost = ConvertedCost{.amount = flat.euros(1'000), .rate = ExchangeRate::parse("1")};
     auto const unexpected = thrown([&] { return flat.group.addExpense(converted); });
     check.that(isFailure(unexpected, ErrorKind::GROUP, Failure::GROUP_UNEXPECTED_EXCHANGE_RATE), "an amount in the group currency has no rate");
     auto local = converted;
@@ -551,7 +552,7 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
     auto const unconverted = thrown([&] { return flat.group.addExpense(local); });
     check.that(isFailure(unconverted, ErrorKind::GROUP, Failure::GROUP_MISSING_EXCHANGE_RATE) && "RON" == unconverted.value().currency(),
                "an amount in another currency needs a rate");
-    flat.group.changeCurrency(lei, {rate});
+    flat.group.changeCurrency(lei, std::array{rate});
     check.that(flat.group.currency() == lei && flat.group.summary().totalSpent == Money(lei, 15'000), "30.00 EUR at 5 is 150.00 RON");
 }
 
@@ -662,7 +663,7 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) {
     group.clearDescriptionAsync().get();
     group.clearLanguageAsync().get();
     check.that(!group.description().has_value() && !group.language().has_value(), "the details cleared");
-    group.changeCurrencyAsync(Currency::of("RON"), {CurrencyRate(flat.euro, ExchangeRate::parse("5"))}).get();
+    group.changeCurrencyAsync(Currency::of("RON"), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5"))}).get();
     check.that(group.currency() == Currency::of("RON"), "the currency changed");
     auto const loaded = Group::loadAsync(group.save()).get();
     check.that(loaded.save() == group.save(), "a group loaded on a thread of its own");
@@ -709,7 +710,7 @@ void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check
     Flat flat;
     auto reader = flat.group.read();
     Cancellation cancellation;
-    auto changing = flat.group.changeCurrencyAsync(Currency::of("RON"), {CurrencyRate(flat.euro, ExchangeRate::parse("5"))}, &cancellation);
+    auto changing = flat.group.changeCurrencyAsync(Currency::of("RON"), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5"))}, &cancellation);
     check.that(!cancellation.isCancelled(), "a cancellation starts uncancelled");
     cancellation.cancel();
     check.that(cancellation.isCancelled(), "and is cancelled once cancelled");
@@ -749,36 +750,39 @@ struct Test final {
 };
 
 constexpr std::array TESTS = {
-    Test{"aCurrencyHoldsWhatTheLibraryKnowsOfIt", aCurrencyHoldsWhatTheLibraryKnowsOfIt},
-    Test{"everyCurrencyTheLibraryListsIsListedByCode", everyCurrencyTheLibraryListsIsListedByCode},
-    Test{"aCodeTheLibraryDoesNotListIsRefused", aCodeTheLibraryDoesNotListIsRefused},
-    Test{"textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt", textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt},
-    Test{"anAmountParsesAndFormatsAsTheLibraryWritesIt", anAmountParsesAndFormatsAsTheLibraryWritesIt},
-    Test{"amountsInOneCurrencyAddAndSubtract", amountsInOneCurrencyAddAndSubtract},
-    Test{"aRateParsesAndConvertsAsTheLibraryDoes", aRateParsesAndConvertsAsTheLibraryDoes},
-    Test{"percentagesAndPartsParseAndFormatAsTheLibraryDoes", percentagesAndPartsParseAndFormatAsTheLibraryDoes},
-    Test{"datesAndTimesAreCheckedWhenMade", datesAndTimesAreCheckedWhenMade},
-    Test{"contactsAndAccountsAreCheckedAndMadeCanonical", contactsAndAccountsAreCheckedAndMadeCanonical},
-    Test{"everyIdentifierComparesAndHashesByItsText", everyIdentifierComparesAndHashesByItsText},
-    Test{"everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother", everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother},
-    Test{"anExpenseReadsBackAsItWasAdded", anExpenseReadsBackAsItWasAdded},
-    Test{"aTransferAndAMemberReadBackAsTheyWereAdded", aTransferAndAMemberReadBackAsTheyWereAdded},
-    Test{"replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas", replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas},
-    Test{"removingAnEntryReturnsItAndForgetsIt", removingAnEntryReturnsItAndForgetsIt},
-    Test{"aMemberInUseIsNotRemoved", aMemberInUseIsNotRemoved},
-    Test{"anArchivedMemberJoinsNoNewExpense", anArchivedMemberJoinsNoNewExpense},
-    Test{"theHelpersReadAnEntryAsTheLibraryDoes", theHelpersReadAnEntryAsTheLibraryDoes},
-    Test{"aGroupHoldsItsDetailsAndChangesThem", aGroupHoldsItsDetailsAndChangesThem},
-    Test{"theSummaryAndTheSharesAddUp", theSummaryAndTheSharesAddUp},
-    Test{"eachStrategySettlesEveryBalance", eachStrategySettlesEveryBalance},
-    Test{"aChangeOfCurrencyConvertsEveryEntry", aChangeOfCurrencyConvertsEveryEntry},
-    Test{"aSavedGroupLoadsAsItWasSaved", aSavedGroupLoadsAsItWasSaved},
-    Test{"everyErrorHoldsWhatItsFailureHolds", everyErrorHoldsWhatItsFailureHolds},
-    Test{"everyAsynchronousCallReturnsWhatItsSynchronousFormReturns", everyAsynchronousCallReturnsWhatItsSynchronousFormReturns},
-    Test{"anAsynchronousCallReportsWhatItsSynchronousFormThrows", anAsynchronousCallReportsWhatItsSynchronousFormThrows},
-    Test{"aReaderReadsTheGroupUntilItIsReleased", aReaderReadsTheGroupUntilItIsReleased},
-    Test{"aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas", aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas},
-    Test{"everyKindOfAsynchronousCallReportsItsCancellation", everyKindOfAsynchronousCallReportsItsCancellation},
+    Test{.name = "aCurrencyHoldsWhatTheLibraryKnowsOfIt", .body = aCurrencyHoldsWhatTheLibraryKnowsOfIt},
+    Test{.name = "everyCurrencyTheLibraryListsIsListedByCode", .body = everyCurrencyTheLibraryListsIsListedByCode},
+    Test{.name = "aCodeTheLibraryDoesNotListIsRefused", .body = aCodeTheLibraryDoesNotListIsRefused},
+    Test{.name = "textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt", .body = textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt},
+    Test{.name = "anAmountParsesAndFormatsAsTheLibraryWritesIt", .body = anAmountParsesAndFormatsAsTheLibraryWritesIt},
+    Test{.name = "amountsInOneCurrencyAddAndSubtract", .body = amountsInOneCurrencyAddAndSubtract},
+    Test{.name = "aRateParsesAndConvertsAsTheLibraryDoes", .body = aRateParsesAndConvertsAsTheLibraryDoes},
+    Test{.name = "percentagesAndPartsParseAndFormatAsTheLibraryDoes", .body = percentagesAndPartsParseAndFormatAsTheLibraryDoes},
+    Test{.name = "datesAndTimesAreCheckedWhenMade", .body = datesAndTimesAreCheckedWhenMade},
+    Test{.name = "contactsAndAccountsAreCheckedAndMadeCanonical", .body = contactsAndAccountsAreCheckedAndMadeCanonical},
+    Test{.name = "everyIdentifierComparesAndHashesByItsText", .body = everyIdentifierComparesAndHashesByItsText},
+    Test{.name = "everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother", .body = everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother},
+    Test{.name = "anExpenseReadsBackAsItWasAdded", .body = anExpenseReadsBackAsItWasAdded},
+    Test{.name = "aTransferAndAMemberReadBackAsTheyWereAdded", .body = aTransferAndAMemberReadBackAsTheyWereAdded},
+    Test{.name = "replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas", .body = replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas},
+    Test{.name = "removingAnEntryReturnsItAndForgetsIt", .body = removingAnEntryReturnsItAndForgetsIt},
+    Test{.name = "aMemberInUseIsNotRemoved", .body = aMemberInUseIsNotRemoved},
+    Test{.name = "anArchivedMemberJoinsNoNewExpense", .body = anArchivedMemberJoinsNoNewExpense},
+    Test{.name = "theHelpersReadAnEntryAsTheLibraryDoes", .body = theHelpersReadAnEntryAsTheLibraryDoes},
+    Test{.name = "aGroupHoldsItsDetailsAndChangesThem", .body = aGroupHoldsItsDetailsAndChangesThem},
+    Test{.name = "theSummaryAndTheSharesAddUp", .body = theSummaryAndTheSharesAddUp},
+    Test{.name = "eachStrategySettlesEveryBalance", .body = eachStrategySettlesEveryBalance},
+    Test{.name = "aChangeOfCurrencyConvertsEveryEntry", .body = aChangeOfCurrencyConvertsEveryEntry},
+    Test{.name = "aSavedGroupLoadsAsItWasSaved", .body = aSavedGroupLoadsAsItWasSaved},
+    Test{.name = "everyErrorHoldsWhatItsFailureHolds", .body = everyErrorHoldsWhatItsFailureHolds},
+    Test{.name = "everyAsynchronousCallReturnsWhatItsSynchronousFormReturns", .body = everyAsynchronousCallReturnsWhatItsSynchronousFormReturns},
+    Test{.name = "anAsynchronousCallReportsWhatItsSynchronousFormThrows", .body = anAsynchronousCallReportsWhatItsSynchronousFormThrows},
+    Test{.name = "aReaderReadsTheGroupUntilItIsReleased", .body = aReaderReadsTheGroupUntilItIsReleased},
+    Test{
+        .name = "aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas",
+        .body = aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas,
+    },
+    Test{.name = "everyKindOfAsynchronousCallReportsItsCancellation", .body = everyKindOfAsynchronousCallReportsItsCancellation},
 };
 
 /// Runs every test and prints each claim that failed.
@@ -791,7 +795,7 @@ constexpr std::array TESTS = {
         try {
             test.body(check);
         } catch (std::exception const &error) {
-            check.that(false, std::string("an unexpected exception: ") + error.what());
+            check.that(false, std::format("an unexpected exception: {}", error.what()));
         }
         for (auto const &claim : check.failed()) {
             std::cerr << test.name << ": " << claim << '\n';

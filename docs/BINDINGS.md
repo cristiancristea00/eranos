@@ -16,7 +16,7 @@ layer is tested.
 | Kotlin Multiplatform | `bindings/kmp`                                                      | `eranos-kmp` on UniFFI 0.29.4, gobley 0.3.7                         | the JVM, Android, and eight Apple targets                                         |
 | TypeScript           | `bindings/typescript`, the npm package `eranos`                     | `eranos-web` on UniFFI 0.31.2, uniffi-bindgen-react-native 0.31.0-5 | browsers, and Node 24 and later                                                   |
 | C                    | `bindings/c`, `eranos.h`                                            | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C23                                                                               |
-| C++                  | `bindings/cpp`, `eranos.hpp`                                        | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C++17                                                                             |
+| C++                  | `bindings/cpp`, `eranos.hpp`                                        | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C++23                                                                             |
 
 ## Contents
 
@@ -563,7 +563,7 @@ amounts and dates of its report.
 
 ### C++
 
-`bindings/cpp` is the C++17 package: `eranos.hpp`, which includes a part
+`bindings/cpp` is the C++23 package: `eranos.hpp`, which includes a part
 per kind of value under `eranos/`, beside the declarations every part
 names and the conversions to and from Diplomat's classes, which need every
 type complete and so come last, in `eranos/detail/`; a part is a fragment
@@ -589,6 +589,16 @@ Core Guidelines with the naming rule above:
   on every parameter the function does not move from, and on every member
   function that changes nothing a later call sees; `noexcept`,
   `constexpr`, and `[[nodiscard]]` go wherever they apply.
+- Equality is defaulted wherever it compares every field, and an
+  identifier's order too, by `<=>`; `Currency` compares its code alone.
+  A call that reads a list takes a `std::span`, such as the rates of
+  `changeCurrency`.
+
+The package is C++23: its headers need C++23's `std::to_underlying` and
+`std::optional`'s monadic operations and C++20's defaulted comparisons,
+which libstdc++ 12 and libc++ 14 provide, or MSVC with `/std:c++23preview`;
+the tests and ports also use `std::print` (libstdc++ 14, libc++ 18) and
+`std::ranges::contains` (libstdc++ 13, libc++ 19).
 
 `examples` holds a program per example of eranos, over the layer, that
 prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and

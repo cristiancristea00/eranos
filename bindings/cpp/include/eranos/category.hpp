@@ -37,16 +37,7 @@ struct Category final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Category const &left, Category const &right) noexcept {
-        return left.id == right.id && left.name == right.name;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Category const &left, Category const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Category const &left, Category const &right) noexcept = default;
 };
 
 namespace detail {

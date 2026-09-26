@@ -167,7 +167,7 @@ Multiplatform package too ([docs/TESTING.md § 2](docs/TESTING.md#2-layout)).
 | Kotlin Multiplatform | `bindings/kmp`        | the JVM, Android, and Apple platforms, from one Kotlin source set         |
 | TypeScript           | `bindings/typescript` | browsers, and Node 24 and later                                           |
 | C                    | `bindings/c`          | C23                                                                       |
-| C++                  | `bindings/cpp`        | C++17                                                                     |
+| C++                  | `bindings/cpp`        | C++23                                                                     |
 
 Each package puts a hand-written layer, in its language's own idiom, over
 code generated from the library, and every one prints the library's own

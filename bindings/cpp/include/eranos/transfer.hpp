@@ -58,17 +58,7 @@ struct Transfer final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Transfer const &left, Transfer const &right) noexcept {
-        return left.id == right.id && left.cost == right.cost && left.date == right.date && left.from == right.from && left.to == right.to &&
-               left.note == right.note && left.time == right.time;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Transfer const &left, Transfer const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Transfer const &left, Transfer const &right) noexcept = default;
 };
 
 namespace detail {

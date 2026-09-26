@@ -39,16 +39,7 @@ struct MemberAmount final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberAmount const &left, MemberAmount const &right) noexcept {
-        return left.amount == right.amount && left.member == right.member;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberAmount const &left, MemberAmount const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(MemberAmount const &left, MemberAmount const &right) noexcept = default;
 };
 
 /// A member's parts in a split, in hundredths of a part.
@@ -70,16 +61,7 @@ struct MemberParts final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberParts const &left, MemberParts const &right) noexcept {
-        return left.member == right.member && left.parts == right.parts;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberParts const &left, MemberParts const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(MemberParts const &left, MemberParts const &right) noexcept = default;
 };
 
 /// A member's percentage in a split, in basis points.
@@ -101,16 +83,7 @@ struct MemberPercentage final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberPercentage const &left, MemberPercentage const &right) noexcept {
-        return left.member == right.member && left.percentage == right.percentage;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(MemberPercentage const &left, MemberPercentage const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(MemberPercentage const &left, MemberPercentage const &right) noexcept = default;
 };
 
 /// Every member pays an exact amount; the amounts add up to what they divide.
@@ -123,14 +96,7 @@ struct AmountsSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(AmountsSplit const &left, AmountsSplit const &right) noexcept { return left.shares == right.shares; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(AmountsSplit const &left, AmountsSplit const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(AmountsSplit const &left, AmountsSplit const &right) noexcept = default;
 };
 
 /// Every member pays the same.
@@ -143,14 +109,7 @@ struct EqualSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(EqualSplit const &left, EqualSplit const &right) noexcept { return left.members == right.members; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(EqualSplit const &left, EqualSplit const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(EqualSplit const &left, EqualSplit const &right) noexcept = default;
 };
 
 /// Every member pays in proportion to their parts.
@@ -163,14 +122,7 @@ struct PartsSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(PartsSplit const &left, PartsSplit const &right) noexcept { return left.shares == right.shares; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(PartsSplit const &left, PartsSplit const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(PartsSplit const &left, PartsSplit const &right) noexcept = default;
 };
 
 /// Every member pays a percentage; the percentages add up to 100 %.
@@ -183,14 +135,7 @@ struct PercentagesSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(PercentagesSplit const &left, PercentagesSplit const &right) noexcept { return left.shares == right.shares; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(PercentagesSplit const &left, PercentagesSplit const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(PercentagesSplit const &left, PercentagesSplit const &right) noexcept = default;
 };
 
 /// How an amount is divided among members. One of its alternatives: AmountsSplit, EqualSplit, PartsSplit, PercentagesSplit.

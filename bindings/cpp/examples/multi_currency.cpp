@@ -5,6 +5,9 @@
 #include "eranos.hpp"
 #include "report.hpp"
 
+#include <array>
+#include <format>
+#include <print>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -44,7 +47,7 @@ void printEntries(Group const &group) {
     for (auto const &transfer : group.transfers()) {
         auto const converted = group.transferAmount(transfer.id.value());
         rows.push_back({
-            "Transfer to " + firstName(group, transfer.to),
+            std::format("Transfer to {}", firstName(group, transfer.to)),
             firstName(group, transfer.from),
             amountOf(transfer.cost).toString(),
             rateOf(transfer.cost).toString(),
@@ -76,25 +79,26 @@ void printBalances(Group const &group) {
 void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
     section("1. Expenses in three currencies");
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
-    static_cast<void>(group.addExpense(Expense(ConvertedCost{amountOf("400.00", "RON"), ExchangeRate::parse("0.2")}, CalendarDate::of(1, 8, 2026),
-                                               "Fuel", EqualSplit{{ana}}, both)));
-    static_cast<void>(group.addExpense(Expense(ConvertedCost{amountOf("24000.00", "HUF"), ExchangeRate::parse("0.0025")},
+    static_cast<void>(group.addExpense(Expense(ConvertedCost{.amount = amountOf("400.00", "RON"), .rate = ExchangeRate::parse("0.2")},
+                                               CalendarDate::of(1, 8, 2026), "Fuel", EqualSplit{{ana}}, both)));
+    static_cast<void>(group.addExpense(Expense(ConvertedCost{.amount = amountOf("24000.00", "HUF"), .rate = ExchangeRate::parse("0.0025")},
                                                CalendarDate::of(2, 8, 2026), "Dinner", EqualSplit{{bob}}, both)));
     static_cast<void>(group.addExpense(Expense(LocalCost{amountOf("60.00", "EUR")}, CalendarDate::of(3, 8, 2026), "Ferry", EqualSplit{{bob}}, both)));
     printEntries(group);
-    printLine("The rate says how many " + group.currency().code() + " one unit of the entry's currency is worth: 400.00 RON at\n" +
-              "0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.");
+    std::println("The rate says how many {} one unit of the entry's currency is worth: 400.00 RON at\n"
+                 "0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.",
+                 group.currency().code());
 }
 
 /// Adds Ana's repayment to Bob, in cash and in RON.
 void repayment(Group &group, MemberId const &ana, MemberId const &bob) {
     section("3. A repayment in cash, in another currency");
-    Transfer transfer(ConvertedCost{amountOf("100.00", "RON"), ExchangeRate::parse("0.2")}, CalendarDate::of(4, 8, 2026), ana, bob);
+    Transfer transfer(ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = ExchangeRate::parse("0.2")}, CalendarDate::of(4, 8, 2026), ana, bob);
     transfer.note = "Cash at the border";
     static_cast<void>(group.addTransfer(transfer));
-    printLine("Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.\n"
-              "Transfers move balances but are not spending, so the total stays at " +
-              group.summary().totalSpent.toString() + ":");
+    std::println("Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.\n"
+                 "Transfers move balances but are not spending, so the total stays at {}:",
+                 group.summary().totalSpent.toString());
     printBalances(group);
 }
 
@@ -104,12 +108,12 @@ void newCurrency(Group &group) {
     printLine("Changing the group currency needs a rate into the new currency for every other\n"
               "currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n"
               "take the new rate; entries already in RON become local costs, at 1.");
-    group.changeCurrency(Currency::of("RON"), {
+    group.changeCurrency(Currency::of("RON"), std::array{
                                                   CurrencyRate(Currency::of("EUR"), ExchangeRate::parse("5")),
                                                   CurrencyRate(Currency::of("HUF"), ExchangeRate::parse("0.0125")),
                                               });
     printEntries(group);
-    printLine("In " + group.currency().code() + ", the trip cost " + group.summary().totalSpent.toString() + ", and everyone is still settled:");
+    std::println("In {}, the trip cost {}, and everyone is still settled:", group.currency().code(), group.summary().totalSpent.toString());
     printBalances(group);
 }
 
@@ -119,15 +123,19 @@ void run() {
     auto const ana = group.addMember(Member("Ana"));
     auto const bob = group.addMember(Member("Bob"));
 
-    printLine(group.name() + ": expenses in several currencies\n" + "════════════════════════════════════════════════");
-    printLine("Ana and Bob drive from Romania to Hungary. The group keeps its books in " + group.currency().code() + "; an\n" +
-              "expense in another currency carries the exchange rate used when it was entered,\n" +
-              "and is converted once, rounding half away from zero to the cent.");
+    std::println("{}: expenses in several currencies\n"
+                 "════════════════════════════════════════════════",
+                 group.name());
+    std::println("Ana and Bob drive from Romania to Hungary. The group keeps its books in {}; an\n"
+                 "expense in another currency carries the exchange rate used when it was entered,\n"
+                 "and is converted once, rounding half away from zero to the cent.",
+                 group.currency().code());
     expenses(group, ana, bob);
 
     section("2. Balances");
-    printLine("The group spent " + group.summary().totalSpent.toString() + ". Bob paid 120.00 of it but consumed half, so he gets back the\n" +
-              "difference:");
+    std::println("The group spent {}. Bob paid 120.00 of it but consumed half, so he gets back the\n"
+                 "difference:",
+                 group.summary().totalSpent.toString());
     printBalances(group);
     check(Balance(GetsBackBalance{amountOf("20.00", "EUR")}) == totalsOf(group.summary(), bob).value().balance, "Bob gets back 20.00 EUR");
 

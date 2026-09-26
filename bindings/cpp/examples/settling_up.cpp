@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstddef>
+#include <print>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -55,29 +56,31 @@ void printPayments(Group const &group, Settlement const &settlement) {
 [[nodiscard]] Counts strategies(Group const &group) {
     section("3. Minimum transfers");
     auto const minimum = group.settlement(SettlementStrategy::MINIMUM_TRANSFERS);
-    printLine("The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n"
-              "splitting the balances into as many groups that sum to zero as it can: here\n"
-              "{Ana, Dan, Eva} and {Bob, Carol, Filip}, each settled with one payment fewer than\n"
-              "its size. " +
-              std::to_string(minimum.payments.size()) + " payments:");
+    std::println("The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n"
+                 "splitting the balances into as many groups that sum to zero as it can: here\n"
+                 "{{Ana, Dan, Eva}} and {{Bob, Carol, Filip}}, each settled with one payment fewer than\n"
+                 "its size. {} payments:",
+                 minimum.payments.size());
     printPayments(group, minimum);
 
     section("4. Greedy");
     auto const greedy = group.settlement(SettlementStrategy::GREEDY);
-    printLine("The largest debtor pays the largest creditor, again and again: fast, at most one\n"
-              "payment fewer than the members with a balance, but not always the minimum. " +
-              std::to_string(greedy.payments.size()) + "\npayments here:");
+    std::println("The largest debtor pays the largest creditor, again and again: fast, at most one\n"
+                 "payment fewer than the members with a balance, but not always the minimum. {}\n"
+                 "payments here:",
+                 greedy.payments.size());
     printPayments(group, greedy);
 
     section("5. Direct");
     auto const direct = group.settlement(SettlementStrategy::DIRECT);
-    printLine("No simplification: everyone pays back the people who paid for them, with the debts\n"
-              "between each pair of members netted. The most payments (" +
-              std::to_string(direct.payments.size()) + "), but each one traces\nback to shared expenses:");
+    std::println("No simplification: everyone pays back the people who paid for them, with the debts\n"
+                 "between each pair of members netted. The most payments ({}), but each one traces\n"
+                 "back to shared expenses:",
+                 direct.payments.size());
     printPayments(group, direct);
 
     section("6. The strategies side by side");
-    Counts const counts{direct.payments.size(), greedy.payments.size(), minimum.payments.size()};
+    Counts const counts{.direct = direct.payments.size(), .greedy = greedy.payments.size(), .minimum = minimum.payments.size()};
     printTable({"Strategy", "Guarantee", "Cost", "Payments here"},
                {
                    {"MinimumTransfers", "the fewest payments", "O(2ⁿ·n) for n open balances", std::to_string(counts.minimum)},
@@ -129,7 +132,7 @@ void run() {
     printLine("Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n"
               "every balance is zero and a new settlement has nothing left to pay:");
     printBalances(group);
-    printLine("Payments still needed: " + std::to_string(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS).payments.size()) + ".");
+    std::println("Payments still needed: {}.", group.settlement(SettlementStrategy::MINIMUM_TRANSFERS).payments.size());
 
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
     // first and needs five; the unsimplified debts between pairs need seven.

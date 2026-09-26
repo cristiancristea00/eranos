@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <map>
+#include <print>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -56,7 +57,7 @@ void report(Group const &group, ExpenseId const &id, Rules const &rules) {
     if (!expense.has_value() || !shares.has_value()) {
         return;
     }
-    printLine(expense->name + ", " + shares->total.toString() + ":");
+    std::println("{}, {}:", expense->name, shares->total.toString());
     Rows rows;
     for (auto const &share : shares->members) {
         auto const rule = rules.find(share.member);
@@ -146,14 +147,14 @@ void mistakes(Group &group, Family const &family) {
             Expense(LocalCost{euros("10.00")}, family.day, "Invalid", EqualSplit{{family.ana}}, WholeExpenseSplit{PercentagesSplit{ninety}}));
     });
     check(refused.has_value(), "the split is refused");
-    printLine("  error: " + message(refused));
+    std::println("  error: {}", message(refused));
 }
 
 /// Prints what each member paid and consumed over the holiday, and their balance.
 void totals(Group const &group) {
     section("7. The holiday in total");
     auto const summary = group.summary();
-    printLine(summary.totalSpent.toString() + " spent over five expenses:");
+    std::println("{} spent over five expenses:", summary.totalSpent.toString());
     Rows rows;
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
@@ -185,8 +186,7 @@ void run() {
 
     // Parts: 125.00 over 2.5 parts is 50.00 per part.
     auto const shares = group.expenseShares(food).value();
-    auto const mias =
-        std::find_if(shares.members.begin(), shares.members.end(), [&](MemberShare const &share) { return family.mia == share.member; });
+    auto const mias = std::ranges::find_if(shares.members, [&](MemberShare const &share) { return family.mia == share.member; });
     check(shares.members.end() != mias && euros("25.00") == mias->share, "Mia consumed 25.00 EUR of the food");
 }
 

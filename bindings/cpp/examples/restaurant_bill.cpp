@@ -7,7 +7,9 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <format>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -46,8 +48,7 @@ namespace {
 
 /// What @p member consumed of the expense that @p shares divides.
 [[nodiscard]] Money consumed(ExpenseShares const &shares, MemberId const &member) {
-    auto const found =
-        std::find_if(shares.members.begin(), shares.members.end(), [&member](MemberShare const &share) { return member == share.member; });
+    auto const found = std::ranges::find_if(shares.members, [&member](MemberShare const &share) { return member == share.member; });
     check(shares.members.end() != found, "every member ordered");
     return found->share;
 }
@@ -60,7 +61,7 @@ void run() {
     auto const carol = group.addMember(Member("Carol"));
     auto const day = CalendarDate::of(23, 9, 2026);
 
-    title(group.name() + ": an itemised bill");
+    title(std::format("{}: an itemised bill", group.name()));
     printLine("Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,\n"
               "every line of the receipt is split among the people who had it.");
 
@@ -88,8 +89,9 @@ void run() {
     auto const proportional = group.addExpense(bill(TipDistribution::PROPORTIONAL));
     auto const byConsumption = group.expenseShares(proportional).value();
     auto const even = preview(group, bill(TipDistribution::EQUAL));
-    printLine("Ana paid the bill plus a 10 % tip (" + byConsumption.tip.toString() + "). A tip can be shared in proportion to what\n" +
-              "each person ordered, or equally; both are shown:");
+    std::println("Ana paid the bill plus a 10 % tip ({}). A tip can be shared in proportion to what\n"
+                 "each person ordered, or equally; both are shown:",
+                 byConsumption.tip.toString());
     Rows tips;
     for (auto const &member : {ana, bob, carol}) {
         auto const subtotal = consumed(ordered, member);
@@ -113,7 +115,9 @@ void run() {
         return group.addExpense(Expense(LocalCost{euros("55.00")}, day, "Dinner", EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)}));
     });
     check(mismatch.has_value(), "the mismatch is refused");
-    printLine("An amount of 55.00 EUR with these lines is refused when the expense is built:\n  error: " + message(mismatch));
+    std::println("An amount of 55.00 EUR with these lines is refused when the expense is built:\n"
+                 "  error: {}",
+                 message(mismatch));
 
     // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to each;
     // an equal one 1.80 to everyone.

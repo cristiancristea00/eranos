@@ -59,16 +59,7 @@ struct Item final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Item const &left, Item const &right) noexcept {
-        return left.name == right.name && left.split == right.split && left.unitPrice == right.unitPrice && left.quantity == right.quantity;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Item const &left, Item const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Item const &left, Item const &right) noexcept = default;
 };
 
 /// A fixed amount in the expense's currency.
@@ -81,14 +72,7 @@ struct FixedTipValue final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(FixedTipValue const &left, FixedTipValue const &right) noexcept { return left.amount == right.amount; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(FixedTipValue const &left, FixedTipValue const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(FixedTipValue const &left, FixedTipValue const &right) noexcept = default;
 };
 
 /// A percentage of the expense's amount.
@@ -101,16 +85,7 @@ struct PercentageTipValue final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(PercentageTipValue const &left, PercentageTipValue const &right) noexcept {
-        return left.percentage == right.percentage;
-    }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(PercentageTipValue const &left, PercentageTipValue const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(PercentageTipValue const &left, PercentageTipValue const &right) noexcept = default;
 };
 
 /// How a tip is expressed. One of its alternatives: FixedTipValue, PercentageTipValue.
@@ -135,16 +110,7 @@ struct Tip final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Tip const &left, Tip const &right) noexcept {
-        return left.distribution == right.distribution && left.value == right.value;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Tip const &left, Tip const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Tip const &left, Tip const &right) noexcept = default;
 };
 
 /// An amount in another currency than the group's, converted at `rate`.
@@ -159,16 +125,7 @@ struct ConvertedCost final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ConvertedCost const &left, ConvertedCost const &right) noexcept {
-        return left.amount == right.amount && left.rate == right.rate;
-    }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(ConvertedCost const &left, ConvertedCost const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(ConvertedCost const &left, ConvertedCost const &right) noexcept = default;
 };
 
 /// An amount in the group currency.
@@ -181,14 +138,7 @@ struct LocalCost final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(LocalCost const &left, LocalCost const &right) noexcept { return left.amount == right.amount; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(LocalCost const &left, LocalCost const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(LocalCost const &left, LocalCost const &right) noexcept = default;
 };
 
 /// What an entry cost: an amount in the group currency, or one in another, converted at a rate. One of its alternatives: ConvertedCost, LocalCost.
@@ -204,16 +154,7 @@ struct ItemisedExpenseSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ItemisedExpenseSplit const &left, ItemisedExpenseSplit const &right) noexcept {
-        return left.items == right.items;
-    }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(ItemisedExpenseSplit const &left, ItemisedExpenseSplit const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(ItemisedExpenseSplit const &left, ItemisedExpenseSplit const &right) noexcept = default;
 };
 
 /// The whole amount is divided by one split.
@@ -226,14 +167,7 @@ struct WholeExpenseSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(WholeExpenseSplit const &left, WholeExpenseSplit const &right) noexcept { return left.split == right.split; }
-
-    /// Whether a field of two alternatives differs.
-    ///
-    /// @param left An alternative
-    /// @param right Another alternative
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(WholeExpenseSplit const &left, WholeExpenseSplit const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(WholeExpenseSplit const &left, WholeExpenseSplit const &right) noexcept = default;
 };
 
 /// How an expense's amount is shared. One of its alternatives: ItemisedExpenseSplit, WholeExpenseSplit.
@@ -286,18 +220,7 @@ struct Expense final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Expense const &left, Expense const &right) noexcept {
-        return left.id == right.id && left.cost == right.cost && left.date == right.date && left.name == right.name && left.payers == right.payers &&
-               left.split == right.split && left.category == right.category && left.description == right.description && left.time == right.time &&
-               left.tip == right.tip;
-    }
-
-    /// Whether a field of two records differs.
-    ///
-    /// @param left A record
-    /// @param right Another record
-    /// @return Whether they differ
-    [[nodiscard]] friend bool operator!=(Expense const &left, Expense const &right) noexcept { return !(left == right); }
+    [[nodiscard]] friend bool operator==(Expense const &left, Expense const &right) noexcept = default;
 };
 
 /// Every member an expense names, payers and participants, each once and in the order of their identifiers.
