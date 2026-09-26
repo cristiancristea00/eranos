@@ -3,10 +3,10 @@
 //! on a build of the glue whose identifiers count up from one as the Rust
 //! example's do. The ports run where their language builds: the Swift ones
 //! where the machine builds for Apple platforms, and the Kotlin, Java,
-//! TypeScript, and C ones on every machine, the Kotlin ones over the Kotlin
-//! package's bindings and again over the Kotlin Multiplatform package's,
-//! the TypeScript ones on Node, over a WebAssembly build of the glue, and
-//! the C ones under the sanitizers.
+//! TypeScript, C, and C++ ones on every machine, the Kotlin ones over the
+//! Kotlin package's bindings and again over the Kotlin Multiplatform
+//! package's, the TypeScript ones on Node, over a WebAssembly build of the
+//! glue, and the C and C++ ones under the sanitizers.
 
 use std::path::PathBuf;
 
@@ -35,11 +35,12 @@ pub(crate) struct Reference {
 /// # Errors
 ///
 /// [`Failure::Variable`] for a variable the Kotlin, the Kotlin
-/// Multiplatform, or the C ports need that is not set, before any step runs;
-/// the failure of the first step that fails, of clearing an earlier copy or
-/// generated source, of writing the generator's settings for the TypeScript
-/// copy, and of creating the directory of the C ports, and
-/// [`Failure::Port`] for a port whose report is not its example's.
+/// Multiplatform, or the C and C++ ports need that is not set, before any
+/// step runs; the failure of the first step that fails, of clearing an
+/// earlier copy or generated source, of writing the generator's settings for
+/// the TypeScript copy, and of creating the directory of the C or the C++
+/// ports, and [`Failure::Port`] for a port whose report is not its
+/// example's.
 pub(crate) fn run(
     runner: &mut impl Runner,
     metadata: &Metadata,
@@ -98,17 +99,20 @@ pub(crate) fn run(
     runner.run(&web::copied_generator(&sequential))?;
     let typescript = |example: &str| web::port(example, &sequential);
     check(runner, "TypeScript", references, &typescript)?;
-    runner.create(&capi::ports_directory(capi::C_PACKAGE, &sequential))?;
-    for reference in references {
-        runner.run(&capi::port_build(
-            capi::C_PACKAGE,
-            &llvm,
-            &sequential,
-            &reference.example,
-        ))?;
+    for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
+        runner.create(&capi::ports_directory(package, &sequential))?;
+        for reference in references {
+            runner.run(&capi::port_build(
+                package,
+                &llvm,
+                &sequential,
+                &reference.example,
+            ))?;
+        }
+        let native = |example: &str| capi::port(package, example, &sequential);
+        check(runner, package.name, references, &native)?;
     }
-    let native = |example: &str| capi::port(capi::C_PACKAGE, example, &sequential);
-    check(runner, capi::C_PACKAGE.name, references, &native)
+    Ok(())
 }
 
 /// Runs the port in `language` of every example of `references`, the step
@@ -134,7 +138,7 @@ fn check(
 /// earlier run left behind is read: the sources generated from
 /// `sequential`'s library, where `apple` the Swift package's copy but its
 /// build, the TypeScript package's copy but its dependencies' link, and the
-/// C ports' programs.
+/// C and C++ ports' programs.
 #[must_use]
 pub(crate) fn cleared(sequential: &Metadata, apple: bool) -> Vec<PathBuf> {
     let mut directories = vec![gates::generated(sequential)];
@@ -142,7 +146,10 @@ pub(crate) fn cleared(sequential: &Metadata, apple: bool) -> Vec<PathBuf> {
         directories.extend(swift::copied_directories(sequential));
     }
     directories.extend(web::copied_directories(sequential));
-    directories.push(capi::ports_directory(capi::C_PACKAGE, sequential));
+    directories.extend(
+        [capi::C_PACKAGE, capi::CPP_PACKAGE]
+            .map(|package| capi::ports_directory(package, sequential)),
+    );
     directories
 }
 

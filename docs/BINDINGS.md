@@ -559,6 +559,14 @@ Core Guidelines with the naming rule above:
   function that changes nothing a later call sees; `noexcept`,
   `constexpr`, and `[[nodiscard]]` go wherever they apply.
 
+`examples` holds a program per example of eranos, over the layer, that
+prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
+`report.hpp` and `report.cpp`, the tables and headings the programs share;
+each builds and is checked as the C ports are, clang-tidy without its magic
+numbers and without its check of an optional read unchecked, since a port
+reads one it expects with `value()`, whose exception `runPort` reports as
+the port's failure.
+
 ## 10. How the gates build the packages
 
 `cargo xtask gates` writes every language's sources into
@@ -590,8 +598,9 @@ port: on macOS the Swift ports, on a copy of the Swift package over the
 first library, the Kotlin ports on the JVM, over the Kotlin package's
 bindings and over the Kotlin Multiplatform package's, the Java ports, the
 TypeScript ports, on Node, in a copy of the TypeScript package over
-eranos-web built the same way, and the C ports, built under the sanitizers
-on eranos-capi's library, each report compared with its example's.
+eranos-web built the same way, and the C and C++ ports, built under the
+sanitizers on eranos-capi's library, each report compared with its
+example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++

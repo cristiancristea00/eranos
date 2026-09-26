@@ -34,7 +34,8 @@ fn reference(example: &str, report: &str) -> Reference {
 /// the Java ones, on the JDK's `java`, which loads that library itself, the
 /// TypeScript ones, on Node, in a copy of the package over the WebAssembly
 /// build of the glue, whose generator's settings the ports write, and last
-/// the C ones, each built into a directory of their own, then each run.
+/// the C and the C++ ones, each language's built into a directory of its
+/// own, then run.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -74,22 +75,25 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(web::copied_generator(&sequential()));
         expected.push(web::port("quickstart", &sequential()));
         expected.push(web::port("persistence", &sequential()));
-        for example in ["quickstart", "persistence"] {
-            expected.push(capi::port_build(
-                capi::C_PACKAGE,
-                "/LLVM_HOME",
-                &sequential(),
-                example,
-            ));
+        for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
+            for example in ["quickstart", "persistence"] {
+                expected.push(capi::port_build(
+                    package,
+                    "/LLVM_HOME",
+                    &sequential(),
+                    example,
+                ));
+            }
+            expected.push(capi::port(package, "quickstart", &sequential()));
+            expected.push(capi::port(package, "persistence", &sequential()));
         }
-        expected.push(capi::port(capi::C_PACKAGE, "quickstart", &sequential()));
-        expected.push(capi::port(capi::C_PACKAGE, "persistence", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
         assert_eq!(recorder.written, [web::copied_configuration(&sequential())]);
         assert_eq!(
             recorder.created,
-            [capi::ports_directory(capi::C_PACKAGE, &sequential())]
+            [capi::C_PACKAGE, capi::CPP_PACKAGE]
+                .map(|package| capi::ports_directory(package, &sequential()))
         );
     }
     assert_eq!(
@@ -215,6 +219,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
         capi::sequential_library(&sequential()),
         capi::port_build(capi::C_PACKAGE, "/LLVM_HOME", &sequential(), "quickstart"),
         capi::port(capi::C_PACKAGE, "quickstart", &sequential()),
+        capi::port_build(capi::CPP_PACKAGE, "/LLVM_HOME", &sequential(), "quickstart"),
+        capi::port(capi::CPP_PACKAGE, "quickstart", &sequential()),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
@@ -281,8 +287,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
 /// examples' package has a program for every Rust example of eranos and for
 /// no other, and so do the Kotlin and the Java examples, a package each,
 /// named without underscores, whose `Main.kt` or `Main.java` holds its
-/// `main`, and the TypeScript and the C examples, a module or a source each
-/// beside the report's.
+/// `main`, and the TypeScript, the C, and the C++ examples, a module or a
+/// source each beside the report's.
 #[test]
 fn every_example_has_a_port_in_every_language() {
     let names = |directory: &str, keep: fn(&Path) -> Option<String>| {
@@ -338,12 +344,25 @@ fn every_example_has_a_port_in_every_language() {
             .filter(|name| "report" != name)
     });
     assert_eq!(typescript, examples);
-    let native = names("bindings/c/examples", |path| {
-        path.file_stem()
-            .filter(|_| path.extension().is_some_and(|extension| "c" == extension))
-            .map(|stem| stem.to_string_lossy().into_owned())
-            .filter(|name| "report" != name)
-    });
-    assert_eq!(native, examples);
+    for (directory, language) in [
+        ("bindings/c/examples", "c"),
+        ("bindings/cpp/examples", "cpp"),
+    ] {
+        let sources = fs::read_dir(Path::new(WORKSPACE).join(directory))
+            .unwrap()
+            .filter_map(|entry| {
+                let path = entry.unwrap().path();
+                path.file_stem()
+                    .filter(|_| {
+                        path.extension()
+                            .is_some_and(|extension| language == extension)
+                    })
+                    .map(|stem| stem.to_string_lossy().into_owned())
+                    .filter(|name| "report" != name)
+            });
+        let mut native: Vec<String> = sources.collect();
+        native.sort();
+        assert_eq!(native, examples, "{language}");
+    }
     assert_eq!(8, examples.len());
 }

@@ -1,0 +1,11 @@
+# The checks of the C++ ports: the package's, less three, and the ports' own
+# header beside the files they lint. A port's numbers are the amounts, dates,
+# and counts its report names, so they are not magic; and a port reads an
+# optional it expects present with value(), whose exception runPort reports
+# as the port's failure, rather than checking it first.
+InheritParentConfig: true
+Checks: >
+  -bugprone-unchecked-optional-access,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers
+HeaderFilterRegex: '(.*/)?examples/report\.hpp$'

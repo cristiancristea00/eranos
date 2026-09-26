@@ -125,7 +125,18 @@ pub(crate) const CPP_PACKAGE: Package = Package {
         "include/eranos/totals.hpp",
         "include/eranos/transfer.hpp",
     ],
-    examples: &[],
+    examples: &[
+        "examples/grand_tour.cpp",
+        "examples/members_and_accounts.cpp",
+        "examples/multi_currency.cpp",
+        "examples/persistence.cpp",
+        "examples/quickstart.cpp",
+        "examples/report.cpp",
+        "examples/report.hpp",
+        "examples/restaurant_bill.cpp",
+        "examples/settling_up.cpp",
+        "examples/split_methods.cpp",
+    ],
 };
 
 /// Runs the C and C++ packages' gates, stopping at the first that fails.

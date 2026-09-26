@@ -108,6 +108,15 @@ fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
         port(C_PACKAGE, "quickstart", &sequential).command_line(),
         "ASAN_OPTIONS='detect_leaks=1' /eranos/target/sequential/c/quickstart"
     );
+    let cpp = port_build(CPP_PACKAGE, "/LLVM_HOME", &sequential, "quickstart").command_line();
+    assert!(
+        cpp.starts_with(&format!("cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++17 {flags} examples/report.cpp examples/quickstart.cpp ")),
+        "{cpp}"
+    );
+    assert!(
+        cpp.ends_with(" -o /eranos/target/sequential/cpp/quickstart"),
+        "{cpp}"
+    );
     assert_eq!(
         sequential_library(&sequential).command_line(),
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-capi --features sequential-ids"

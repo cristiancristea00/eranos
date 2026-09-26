@@ -92,14 +92,14 @@ the ports of the examples: on macOS the Swift ones, on a copy of the Swift
 package, and on every machine the Kotlin ones, on the JVM, over the Kotlin
 package's bindings and over the Kotlin Multiplatform package's, the Java
 ones, the TypeScript ones, on Node, in a copy of the TypeScript package
-over eranos-web built with `sequential-ids` for WebAssembly, and the C
-ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)). A run
+over eranos-web built with `sequential-ids` for WebAssembly, and the C and
+C++ ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)). A run
 from an empty target directory takes about 7 minutes on an Apple M4 Pro,
 most of it building the library for every Apple target and every Android
-ABI; a warm one takes about 5 minutes in all, 50 seconds of it
-clang-tidy's pass over the C and C++ tests and the C ports, 20 seconds the
-Swift examples' two builds and their ports, and 15 seconds the C ports'
-builds and runs.
+ABI; a warm one takes about 7 minutes in all, 2 minutes 20 seconds of it
+clang-tidy's pass over the C and C++ tests and ports, a minute the C and
+C++ ports' builds and runs, and 20 seconds the Swift examples' two builds
+and their ports.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -180,9 +180,10 @@ build/tests                                                                 # ru
 doxygen Doxyfile                                                            # the documentation, in build/docs/html
 ```
 
-A C port builds the same way in `bindings/c`, from its program and the
-report module; on macOS, `ASAN_OPTIONS=detect_leaks=1` turns on the leak
-check that Linux runs by default:
+A port builds the same way, from its program and the report module, in
+`bindings/c` as below and in `bindings/cpp` with `clang++`, `-std=c++17`,
+and `.cpp`; on macOS, `ASAN_OPTIONS=detect_leaks=1` turns on the leak check
+that Linux runs by default:
 
 ```sh
 "$LLVM_HOME/bin/clang" -std=c11 -g -fsanitize=address,undefined -pthread -Iinclude -isystem generated \
@@ -624,10 +625,10 @@ so a failing run blocks nothing: it is a report.
   the Kotlin or the Java command of [§ 2](#2-building-and-testing) with
   `target/sequential/debug` as the library's path, the Kotlin one from
   `bindings/kotlin` or, with the JDK 21's `java`, from `bindings/kmp`, the
-  TypeScript command in `target/sequential/typescript`, or the C commands
-  with `target/sequential/debug/liberanos_capi.a` prints the port's whole
-  report on the library whose identifiers count up, to diff with
-  `cargo run -p eranos --all-features --example <example>`.
+  TypeScript command in `target/sequential/typescript`, or the C or C++
+  commands with `target/sequential/debug/liberanos_capi.a` prints the
+  port's whole report on the library whose identifiers count up, to diff
+  with `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

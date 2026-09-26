@@ -140,9 +140,10 @@ It runs these, in this order, and stops at the first that fails:
     `java` of `JAVA_HOME`, which loads the first library; the TypeScript
     package copied into `target/sequential/typescript`, its TypeScript
     generated there from the WebAssembly library, and every TypeScript port
-    run on Node through tsx; and the C ports built in `bindings/c` as its
-    tests are, under the sanitizers, on eranos-capi's library, into
-    `target/sequential/c`, each run with `LeakSanitizer`; every report is
+    run on Node through tsx; and the C and C++ ports built in `bindings/c`
+    and `bindings/cpp` as their tests are, under the sanitizers, on
+    eranos-capi's library, into `target/sequential/c` and
+    `target/sequential/cpp`, each run with `LeakSanitizer`; every report is
     compared byte for byte with its example's from gate 8, and the first
     line that differs stops the gates
 
