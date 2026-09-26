@@ -110,7 +110,10 @@ impl Action {
 
 /// Runs, with `runner`, every action of `actions` whose phase `selected`
 /// takes, in order, the actions a read gives right after it, stopping at the
-/// first that fails.
+/// first that fails. `selected` is a trait object, so every caller runs the
+/// same instantiation: a closure's type is its own, and the coverage report
+/// keeps the best single instantiation of a generic function, which would
+/// leave out a branch that only one caller's selection takes.
 ///
 /// # Errors
 ///
@@ -118,7 +121,7 @@ impl Action {
 pub(crate) fn execute(
     runner: &mut impl Runner,
     actions: Vec<Action>,
-    selected: impl Fn(Phase) -> bool,
+    selected: &dyn Fn(Phase) -> bool,
 ) -> Result<(), Failure> {
     let mut queue = VecDeque::from(actions);
     while let Some(action) = queue.pop_front() {

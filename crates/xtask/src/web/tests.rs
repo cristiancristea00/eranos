@@ -10,7 +10,7 @@ use crate::tests::{FileOperation, Recorder};
 
 /// Runs the package's gates with `runner`, as the gates run them.
 fn run(runner: &mut impl Runner) -> Result<(), Failure> {
-    plan::execute(runner, actions(), |_| true)
+    plan::execute(runner, actions(), &|_| true)
 }
 
 /// The package would check stale generated TypeScript, or pack a declaration

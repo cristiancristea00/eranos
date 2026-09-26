@@ -215,11 +215,21 @@ pub(crate) fn libraries(measured: &Metadata) -> Step {
     .with_variable("CARGO_TARGET_DIR", &measured.target_directory)
 }
 
+/// The files of the glue's proc macros, which the report skips: the runs
+/// build them instrumented, as a dependency of the crates they test, but the
+/// macros run inside the compiler only when a crate that invokes them
+/// compiles, so a report that kept them would read them as run or unrun as
+/// the build cache decides.
+pub(crate) const MACROS: &str = "eranos-glue-macros/";
+
 /// The step that prints the report of every run's coverage, a line per file
-/// with its regions, functions, and lines.
+/// with its regions, functions, and lines, the files of [`MACROS`] left out.
 #[must_use]
 pub(crate) fn report() -> Step {
-    Step::cargo(&["llvm-cov", "report"], "the report")
+    Step::cargo(
+        &["llvm-cov", "report", "--ignore-filename-regex", MACROS],
+        "the report",
+    )
 }
 
 #[cfg(test)]

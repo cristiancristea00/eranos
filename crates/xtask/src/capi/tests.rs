@@ -12,7 +12,7 @@ use crate::tests::{FileOperation, METADATA, Recorder};
 /// Runs the packages' gates with `runner`, as the gates run them.
 fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
     let actions = actions(runner, metadata)?;
-    plan::execute(runner, actions, |_| true)
+    plan::execute(runner, actions, &|_| true)
 }
 
 /// The steps the gates run for `package`, from the library on, with the LLVM

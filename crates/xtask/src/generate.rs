@@ -44,7 +44,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
 /// The failure of reading the sources, of writing the bridge from them, and
 /// of the first action that fails.
 fn write_bridge(runner: &mut impl Runner, directory: &Path) -> Result<(), Failure> {
-    plan::execute(runner, actions(&bridge(directory)?), |_| true)
+    plan::execute(runner, actions(&bridge(directory)?), &|_| true)
 }
 
 /// The bridge's files, from the core's sources in `directory`, read in the

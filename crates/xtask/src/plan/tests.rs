@@ -32,7 +32,7 @@ fn actions_run_in_order_and_a_read_s_continuation_runs_next() {
         }),
         Action::run(Phase::Lint, step("third")),
     ];
-    execute(&mut recorder, actions, |_| true).unwrap();
+    execute(&mut recorder, actions, &|_| true).unwrap();
     assert_eq!(
         recorder.steps,
         [step("first"), step("second"), step("third")]
@@ -57,7 +57,7 @@ fn only_the_selected_phases_run() {
         }),
         Action::read(Phase::Docs, step("docs"), unselected),
     ];
-    execute(&mut recorder, actions, |phase| {
+    execute(&mut recorder, actions, &|phase| {
         matches!(phase, Phase::Prepare | Phase::Test)
     })
     .unwrap();
@@ -86,7 +86,7 @@ fn a_failure_stops_the_actions_after_it() {
         Action::run(Phase::Prepare, step("after")),
     ];
     assert!(matches!(
-        execute(&mut recorder, actions, |_| true),
+        execute(&mut recorder, actions, &|_| true),
         Err(Failure::Usage)
     ));
     assert_eq!(recorder.steps, [step("failing")]);
@@ -97,7 +97,7 @@ fn a_failure_stops_the_actions_after_it() {
         Action::run(Phase::Test, step("after")),
     ];
     assert!(matches!(
-        execute(&mut refused, refusing, |_| true),
+        execute(&mut refused, refusing, &|_| true),
         Err(Failure::Usage)
     ));
     assert_eq!(refused.steps, [step("read")]);
@@ -116,7 +116,7 @@ fn a_failure_stops_the_actions_after_it() {
             Action::run(Phase::Prepare, step("after")),
         ];
         assert!(
-            execute(&mut blocked, operations, |_| true).is_err(),
+            execute(&mut blocked, operations, &|_| true).is_err(),
             "{operation:?}"
         );
         assert!(blocked.steps.is_empty(), "{operation:?}");

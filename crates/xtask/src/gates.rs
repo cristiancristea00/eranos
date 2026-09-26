@@ -94,10 +94,10 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
         runner.run(&step)?;
     }
     if runner.builds_apple_platforms() {
-        plan::execute(runner, crate::swift::actions(&metadata), |_| true)?;
+        plan::execute(runner, crate::swift::actions(&metadata), &|_| true)?;
     }
     for actions in packages {
-        plan::execute(runner, actions, |_| true)?;
+        plan::execute(runner, actions, &|_| true)?;
     }
     crate::ports::run(runner, &metadata, &references)?;
     println!("\nevery gate passed");

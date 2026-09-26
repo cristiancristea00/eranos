@@ -597,29 +597,32 @@ with `--baseline`.
 ## 5. Coverage and mutation testing
 
 ```sh
-cargo xtask coverage                  # the Rust tests and the binding glue, in one report
-cargo llvm-cov report --html --open   # the same report as HTML
-cargo llvm-cov report --summary-only  # totals only
+cargo xtask coverage                                                              # the Rust tests and the binding glue, in one report
+cargo llvm-cov report --ignore-filename-regex eranos-glue-macros/ --html --open   # the same report as HTML
+cargo llvm-cov report --ignore-filename-regex eranos-glue-macros/ --summary-only  # totals only
 cargo mutants --file crates/eranos-money/src/allocation.rs
 ```
 
 `cargo xtask coverage` needs what the gates need for the Kotlin, Java, C,
 C++, and Python packages, the variables of [§ 1](#1-prerequisites), and on
-macOS
-Xcode for the Swift one. It drops the earlier runs, runs the workspace's
-tests under cargo-llvm-cov with every feature and without the default
-ones, and then measures the binding glue through the foreign tests: it
-builds eranos-uniffi and eranos-capi with cargo-llvm-cov's instrumentation
-into its target directory, `target/llvm-cov-target`, so the gates' builds
-stay as they are, generates the Swift, Kotlin, Java, and Python sources
-from that library, and runs the Swift tests, on a copy of the package there
-whose `XCFramework` holds the instrumented shared library, the Kotlin,
-Java, C, and C++ tests on it, and the Python tests on a copy of the Python
-package there, whose generated module loads it, each writing the coverage
-of the glue it runs. The
-report comes last; `cargo llvm-cov report` reads the same runs again in
-another form. The first run on an Apple M4 Pro took about 9 minutes, and a
-run after it takes about 2.
+macOS Xcode for the Swift one. It drops the earlier runs, runs the
+workspace's tests under cargo-llvm-cov with every feature and without the
+default ones, and then measures the binding glue through the foreign tests:
+it builds eranos-uniffi and eranos-capi with cargo-llvm-cov's
+instrumentation into its target directory, `target/llvm-cov-target`, so the
+gates' builds stay as they are, generates the Swift, Kotlin, Java, and
+Python sources from that library, and runs the Swift tests, on a copy of
+the package there whose `XCFramework` holds the instrumented shared
+library, the Kotlin, Java, C, and C++ tests on it, and the Python tests on
+a copy of the Python package there, whose generated module loads it, each
+writing the coverage of the glue it runs. The report comes last, without
+the files of the glue's proc macros: the runs build them instrumented, as a
+dependency of what they test, but the macros run inside the compiler only
+when a crate that invokes them compiles, so the report would read them as
+run or unrun as the build cache decides. `cargo llvm-cov report` with the
+same `--ignore-filename-regex` reads the same runs again in another form.
+The first run on an Apple M4 Pro took about 9 minutes, and a run after it
+takes about 2.
 
 Coverage merges the two Rust runs because each compiles code the other
 leaves out: the serde code, and one of the two identifier generators. A
@@ -636,12 +639,12 @@ part alone, as these commands do:
 cargo llvm-cov clean --workspace      # drop earlier runs
 # Sequential IDs and serde, then clock-based IDs, without the glue crates:
 cargo llvm-cov --no-report --workspace --all-features \
-    --exclude eranos-capi --exclude eranos-kmp --exclude eranos-uniffi \
-    --exclude eranos-uniffi-bindgen --exclude eranos-web
+    --exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-kmp \
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
 cargo llvm-cov --no-report --workspace --no-default-features \
-    --exclude eranos-capi --exclude eranos-kmp --exclude eranos-uniffi \
-    --exclude eranos-uniffi-bindgen --exclude eranos-web
-cargo llvm-cov report --summary-only
+    --exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-kmp \
+    --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web
+cargo llvm-cov report --ignore-filename-regex eranos-glue-macros/ --summary-only
 ```
 
 Coverage does not count doctests on the stable toolchain, so a function

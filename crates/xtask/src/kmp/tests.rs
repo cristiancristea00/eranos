@@ -10,7 +10,7 @@ use crate::tests::Recorder;
 /// Runs the package's gates with `runner`, as the gates run them.
 fn run(runner: &mut Recorder) -> Result<(), Failure> {
     let actions = actions(runner)?;
-    plan::execute(runner, actions, |_| true)
+    plan::execute(runner, actions, &|_| true)
 }
 
 /// The package would pass without its Apple libraries, or run Gradle on a

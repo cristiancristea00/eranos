@@ -10,7 +10,7 @@ use crate::tests::{FileOperation, METADATA, Recorder};
 
 /// Runs the package's gates with `runner`, as the gates run them.
 fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
-    plan::execute(runner, actions(metadata), |_| true)
+    plan::execute(runner, actions(metadata), &|_| true)
 }
 
 fn metadata() -> Metadata {

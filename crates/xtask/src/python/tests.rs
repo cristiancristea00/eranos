@@ -16,7 +16,7 @@ use crate::tests::{METADATA, Recorder};
 fn the_package_is_prepared_checked_tested_and_documented_in_order() {
     let metadata = Metadata::parse(METADATA).unwrap();
     let mut recorder = Recorder::new();
-    plan::execute(&mut recorder, actions(&metadata), |_| true).unwrap();
+    plan::execute(&mut recorder, actions(&metadata), &|_| true).unwrap();
     let mut expected = vec![module(&metadata), library(&metadata), environment()];
     expected.extend(plan::steps(&checks()));
     assert_eq!(recorder.steps, expected);
