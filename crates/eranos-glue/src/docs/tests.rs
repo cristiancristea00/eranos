@@ -136,7 +136,7 @@ fn a_call_is_documented_and_its_summary_ends_with_a_full_stop() {
     for attributes in [quote!(#[doc = 1]), quote!(#[doc = concat!("The name.")])] {
         assert_eq!(
             refusal(attributes.clone()),
-            "a group call's documentation is text",
+            "documentation is text",
             "{attributes}"
         );
     }

@@ -200,7 +200,10 @@ instrumentation of the Rust runs, runs the Swift, Kotlin, Java, C, and C++
 tests on that build, and merges what they ran into the same report. The
 Swift, Kotlin, and Java tests run every line, region, and function of
 eranos-uniffi's hand-written sources, and the C and C++ tests every line
-and function of eranos-capi's bridge. The objects' methods and the copies
+and function of eranos-capi's bridge, whose generated modules are files
+like any other: eranos-glue's tests measure the generator that writes
+them, and a test of xtask holds the committed files to what it writes. The
+objects' methods and the copies
 of the core's items that the glue's macros stamp are not in the report,
 as the core's forms are not. Two kinds of the bridge's regions stay unrun: the
 check that a text parameter is UTF-8, which only a call given other bytes
@@ -320,4 +323,5 @@ both together.
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading    |
 | a libphonenumber metadata release | the gates, then `cargo test -p eranos-contact --lib` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
 | an example's report               | the gates, whose gate 18 compares every port with it: change each port with the example                                            |
+| a record or a call of the core    | `cargo xtask generate`, then the gates: until it runs, `the_committed_bridge_is_what_the_generator_writes` fails                   |
 | docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                     |

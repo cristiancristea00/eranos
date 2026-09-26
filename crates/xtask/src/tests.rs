@@ -365,6 +365,16 @@ fn coverage_measures_everything_and_ends_with_the_report() {
     assert_eq!(recorder.steps.last(), Some(&coverage::report()));
 }
 
+/// `generate` writes the C glue's bridge, a file per module, and lays it
+/// out.
+#[test]
+fn generate_writes_the_bridge_and_lays_it_out() {
+    let mut recorder = Recorder::new();
+    run(&words(&["generate"]), &mut recorder).unwrap();
+    assert_eq!(recorder.written.len(), 2);
+    assert_eq!(recorder.steps, [generate::format()]);
+}
+
 /// `help` succeeds and runs nothing.
 #[test]
 fn help_runs_nothing_and_succeeds() {
@@ -390,7 +400,7 @@ fn anything_but_one_known_command_is_a_usage_error() {
 fn a_usage_error_lists_every_command() {
     let message = Failure::Usage.to_string();
     assert!(message.starts_with("unknown command\n\nusage: cargo xtask <command>"));
-    for command in ["coverage", "gates", "help"] {
+    for command in ["coverage", "gates", "generate", "help"] {
         assert!(message.contains(&format!("\n  {command} ")), "{command}");
     }
 }

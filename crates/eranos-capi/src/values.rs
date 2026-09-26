@@ -1,5 +1,5 @@
-//! The values of the C and C++ APIs: amounts, currencies, dates, times, lists of text, and the helpers that
-//! parse and write values as the library does.
+//! The values of the C and C++ APIs: amounts, dates, times, lists of text, and the helpers that parse and
+//! write values as the library does.
 
 /// The types and functions of the C and C++ APIs; C names each type as it is here, and C++ puts it in the
 /// namespace `eranos::detail`.
@@ -202,80 +202,6 @@ pub mod ffi {
             eranos_bindings::money_subtract(&self.0, &other.0)
                 .map(|money| Box::new(Self(money)))
                 .map_err(crate::failed)
-        }
-    }
-
-    /// A currency of the ISO 4217 list, with what the library knows of it.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosCurrencyDetails(pub(crate) eranos_bindings::CurrencyDetails);
-
-    impl EranosCurrencyDetails {
-        /// The ISO 4217 code.
-        pub fn code(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.code);
-        }
-
-        /// How many decimal places its amounts have.
-        #[must_use]
-        pub const fn decimal_places(&self) -> i32 {
-            self.0.decimal_places
-        }
-
-        /// The English name.
-        pub fn name(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.name);
-        }
-
-        /// The ISO 4217 numeric code.
-        #[must_use]
-        pub const fn numeric_code(&self) -> i32 {
-            self.0.numeric_code
-        }
-
-        /// The currency of the ISO 4217 code `code`.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Money` for a code the library does not list, and of the kind `InvalidText`
-        /// for text that is not UTF-8.
-        pub fn of(code: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
-            eranos_bindings::currency_details(&crate::text(code)?)
-                .map(|details| Box::new(Self(details)))
-                .map_err(crate::failed)
-        }
-    }
-
-    /// A list of currency details records.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosCurrencyDetailsList(pub(crate) Vec<eranos_bindings::CurrencyDetails>);
-
-    impl EranosCurrencyDetailsList {
-        /// How many records the list holds.
-        #[must_use]
-        pub const fn len(&self) -> usize {
-            self.0.len()
-        }
-
-        /// Whether the list holds no record.
-        #[must_use]
-        pub const fn is_empty(&self) -> bool {
-            self.0.is_empty()
-        }
-
-        /// A copy of the record at `index`, absent past the end.
-        #[must_use]
-        pub fn get(&self, index: usize) -> Option<Box<EranosCurrencyDetails>> {
-            self.0
-                .get(index)
-                .map(|element| Box::new(EranosCurrencyDetails(element.clone())))
-        }
-
-        /// Every currency of the ISO 4217 list that the library knows, by code.
-        #[must_use]
-        pub fn all() -> Box<Self> {
-            Box::new(Self(eranos_bindings::currencies()))
         }
     }
 

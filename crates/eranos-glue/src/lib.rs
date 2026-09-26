@@ -11,9 +11,15 @@
 //! `#[uniffi::remote]` copies from the mirrors with [`uniffi_mirror`]. The
 //! proc macros of eranos-glue-macros call these functions inside the
 //! compiler, where no coverage run reaches; this crate's tests measure them.
+//!
+//! The C glue's bridge cannot come from a macro, since `diplomat-tool` reads
+//! its source files: [`capi_bridge`] writes it from the core's source files
+//! instead, as the files that `cargo xtask generate` formats and the
+//! repository holds.
 #![forbid(unsafe_code)]
 
 mod calls;
+mod capi;
 mod docs;
 mod handle;
 mod mirror;
@@ -23,6 +29,7 @@ use proc_macro2::TokenStream;
 use syn::ItemTrait;
 
 use crate::calls::Calls;
+pub use crate::capi::Generated;
 
 /// The code of the trait `item`, which lists the group calls.
 ///
@@ -81,6 +88,21 @@ pub fn uniffi_objects(input: TokenStream) -> syn::Result<TokenStream> {
 /// For input that is not `Record`, `Enum`, or `Error` followed by an item.
 pub fn uniffi_mirror(input: TokenStream) -> syn::Result<TokenStream> {
     uniffi::mirror(input)
+}
+
+/// The files of the C glue's bridge, from `sources`, the text of each of the
+/// binding core's source files.
+///
+/// The bridge holds every record, list, and enum the core's calls reach,
+/// and the group, its read handle, and the outcomes of its calls.
+///
+/// # Errors
+///
+/// For a source that is not Rust, a core without its trait of calls or with
+/// two, and a record, an enum, or a call whose types the bridge cannot
+/// carry.
+pub fn capi_bridge(sources: &[String]) -> syn::Result<Vec<Generated>> {
+    capi::bridge(sources)
 }
 
 /// `name`, written in `UpperCamelCase`, in `snake_case`: `GroupCalls` is

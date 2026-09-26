@@ -4,12 +4,14 @@
 //! `cargo xtask gates` runs the commit gates AGENTS.md lists, in its order,
 //! and stops at the first that fails; `cargo xtask coverage` measures the
 //! Rust tests and the binding glue, which the foreign tests run, in one
-//! report; `cargo xtask help` lists the commands.
+//! report; `cargo xtask generate` writes the C glue's bridge from the binding
+//! core's records and calls; `cargo xtask help` lists the commands.
 #![forbid(unsafe_code)]
 
 mod capi;
 mod coverage;
 mod gates;
+mod generate;
 mod java;
 mod jvm;
 mod kmp;
@@ -32,11 +34,15 @@ const USAGE: &str = "usage: cargo xtask <command>
 commands:
   coverage  measure the Rust tests and the binding glue, which the foreign tests run, in one report
   gates     run every commit gate AGENTS.md lists, stopping at the first failure
+  generate  write the C glue's bridge from the binding core's records and calls
   help      print this message";
 
 /// Why a command of xtask failed.
 #[derive(Debug, thiserror::Error)]
 enum Failure {
+    /// The binding core's records or calls give no C bridge.
+    #[error("the C bridge cannot be written from the binding core: {0}")]
+    Bridge(#[source] syn::Error),
     /// A directory a gate writes into could not be emptied first.
     #[error("{directory} could not be cleared: {source}")]
     Clear {
@@ -88,6 +94,14 @@ enum Failure {
         found: String,
         language: &'static str,
         line: usize,
+    },
+    /// A file or a directory a command reads, such as a source of the
+    /// binding core, could not be read.
+    #[error("{path} could not be read: {source}")]
+    Read {
+        path: String,
+        #[source]
+        source: io::Error,
     },
     /// A step's program could not be started.
     #[error("{step}: the program could not be started: {source}")]
@@ -141,6 +155,7 @@ fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
     match words.as_slice() {
         ["coverage"] => coverage::run(runner),
         ["gates"] => gates::run(runner),
+        ["generate"] => generate::run(runner),
         ["help"] => {
             println!("{USAGE}");
             Ok(())

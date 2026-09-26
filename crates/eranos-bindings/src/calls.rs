@@ -209,7 +209,7 @@ trait GroupCalls {
     #[infallible]
     fn language(&self) -> Result<Option<String>, EranosError>;
 
-    /// Sets the language from a BCP 47 tag, or clears it with `None`.
+    /// Sets the language from a BCP 47 tag, or clears it when there is none.
     #[write]
     fn set_language(&self, language: Option<&str>) -> Result<(), EranosError>;
 

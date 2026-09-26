@@ -58,6 +58,7 @@ and the test suites in [TESTING.md](TESTING.md).
 
 ```sh
 cargo xtask gates                                # every commit gate, in order
+cargo xtask generate                             # the C glue's bridge, from the binding core
 cargo build -p eranos                            # the library
 cargo build -p eranos --features serde           # with serialisation
 cargo test --workspace --all-features            # every suite, doctests included
@@ -69,7 +70,11 @@ cargo doc -p eranos --all-features --open        # the API documentation
 `cargo xtask gates` runs the full gate sequence, listed in
 [AGENTS.md § Gates](../AGENTS.md#gates-before-committing), before every
 commit; `cargo xtask help` lists the commands. The alias lives in
-`.cargo/config.toml`, and the automation in `crates/xtask`. The gates lint
+`.cargo/config.toml`, and the automation in `crates/xtask`. A change to a
+record or a call of the binding core needs `cargo xtask generate` too,
+which writes the C glue's bridge from them
+([BINDINGS.md § 8](BINDINGS.md#8-the-glue-crates)); until it runs, a test of
+xtask fails. The gates lint
 the libraries for the mobile and wasm targets as CI's job of that name
 does, after adding each target with `rustup target add`. They also write
 the Swift, Kotlin, and Java sources of the UniFFI glue into
@@ -337,7 +342,14 @@ breaking.
    library, where an absent optional field clears the stored one; the
    record's round trip in its module's `tests.rs` then covers it; the
    UniFFI glue's copy of the record is stamped from its `#[mirrored]`
-   definition, so it takes the field too. Repeat the field in the Swift
+   definition, so it takes the field too, and `cargo xtask generate`
+   writes the C glue's getter and setter of it, a `clear_` method for an
+   optional one, and its place in the constructor for a required one.
+   The C layer's functions in `bindings/c/include/eranos/<module>.h` call
+   them, and the C++ layer's type in
+   `bindings/cpp/include/eranos/<module>.hpp` holds the field, which its
+   conversions in `eranos/detail/conversions.hpp` carry both ways; each
+   package's `tests` read and write it. Repeat the field in the Swift
    entry type in
    `bindings/swift/Sources/Eranos/Entries/`, with its conversions both ways,
    and the Kotlin entry class in
@@ -502,6 +514,14 @@ When code in one crate needs something another crate holds:
     `bindings/typescript/src/group.ts`, the Promise under the call's name
     and its twin with `Sync` after it, and a read to its `GroupReader` in
     `group_reader.ts`; call them in `test/group.test.ts`.
+11. Run `cargo xtask generate`: the C glue's `EranosGroup` takes both
+    forms and `EranosGroupReader` the read's, from the same trait, with an
+    outcome for a new kind of answer; a call that takes optional text gets
+    a twin of each form that passes none, `clear_` for its `set_`. Add the
+    call to the C layer in `bindings/c/include/eranos/group.h` and a read
+    to `group_reader.h`, then to the C++ layer's `Group` in
+    `bindings/cpp/include/eranos/group.hpp` and a read to
+    `group_reader.hpp`; call them in each package's `tests`.
 
 ## 4. Examples and benchmarks
 

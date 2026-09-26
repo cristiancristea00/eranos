@@ -226,12 +226,14 @@ eranos/
 │   ├── eranos-transfer/       transfers
 │   ├── eranos-group/          groups and their saved form
 │   ├── eranos-bindings/       what every binding exposes, in plain Rust
+│   ├── eranos-glue/           the model of the group calls and records, and the glue written from it
+│   ├── eranos-glue-macros/    the proc macros the binding core and the UniFFI glue invoke
 │   ├── eranos-capi/           the bindings for C and C++, through Diplomat
 │   ├── eranos-kmp/            the bindings for Kotlin Multiplatform, through UniFFI and gobley
 │   ├── eranos-uniffi/         the bindings for Swift, Kotlin, and Java, through UniFFI
 │   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages
 │   ├── eranos-web/            the bindings for browsers and Node, through UniFFI and WebAssembly
-│   └── xtask/                 the repository's automation: `cargo xtask gates`
+│   └── xtask/                 the repository's automation: `cargo xtask gates`, and `generate` for the C bridge
 ├── docs/                      architecture, bindings, development, testing, versioning
 ├── deny.toml                  the rules of the CI dependency audit
 └── AGENTS.md                  conventions and gates (CLAUDE.md and GEMINI.md link to it)

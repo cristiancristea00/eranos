@@ -296,7 +296,23 @@ and as a static library that each Apple target links.
 
 `eranos-capi` is the glue for C and C++, a bridge that Diplomat's macro
 turns into C functions and that `diplomat-tool` reads to write a C header
-and C++ classes, which live in `eranos::detail`. Diplomat carries opaque
+and C++ classes, which live in `eranos::detail`. `diplomat-tool` reads the
+crate's source files, not what a macro expands them to, so most of the
+bridge is code the repository holds: `cargo xtask generate` writes
+`src/generated/records.rs`, an object for every record, list, and enum the
+calls reach, and `src/generated/group.rs`, the group with both forms of
+every call, the read handle with every read's, the cancellation, and an
+outcome per kind of answer, from the core's `#[mirrored]` items and its
+trait of calls, through eranos-glue's generator, and lays them out with
+rustfmt. The generator's templates hold what the core cannot say: the
+group's constructors and read handle, the cancellation, and the methods of
+a record that are not a field's, such as an expense's total. A test of
+xtask fails while a committed file holds other code than the generator
+writes; it compares tokens, so rustfmt's commas, a `match` arm's braces, and
+the wrapping of a doc comment cannot fail it, and the files' line endings
+cannot either. The worker thread, the checks of text, the error, the dates
+and times, amounts, lists of text, and the value helpers stay hand-written
+beside them. Diplomat carries opaque
 objects, plain structs, and C-like enums, so a record, a list, and an enum
 with data is an opaque object: a record has a constructor of its required
 fields, a getter of every field, and, for an entry, a setter of each; a

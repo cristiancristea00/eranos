@@ -2,14 +2,17 @@
 //! which `diplomat-tool` generates the C API and the C++ classes beneath the
 //! hand-written C++ layer.
 //!
-//! The bridge keeps to the shapes Diplomat can carry. A value that holds text
-//! or a list is an opaque object: a record has a constructor of its required
-//! fields, a getter of every field, and, for an entry, a setter of every
-//! field; a list has `len` and `get`; an enum with data has `kind`, which
-//! returns a C-like enum, a constructor per variant, and a getter of every
-//! field its variants hold. A date and a time of day are plain structs, and an
-//! enum without data is a C-like enum. Text crosses as bytes, checked to be
-//! UTF-8 here, and text a call returns is written into a `DiplomatWrite`.
+//! The bridge keeps to the shapes Diplomat can carry, and most of it is
+//! written from the binding core by `cargo xtask generate` into the module
+//! `generated`: the records, lists, and enums, and the group. A value that
+//! holds text or a list is an opaque object: a record has a constructor of
+//! its required fields, a getter of every field, and, for an entry, a setter
+//! of every field; a list has `len` and `get`; an enum with data has `kind`,
+//! which returns a C-like enum, a constructor per variant, and a getter of
+//! every field its variants hold. A date and a time of day are plain
+//! structs, and an enum without data is a C-like enum. Text crosses as
+//! bytes, checked to be UTF-8 here, and text a call returns is written into
+//! a `DiplomatWrite`.
 //!
 //! Every group call has a synchronous form, which blocks while another call
 //! holds the lock, and an asynchronous one, which runs on the group's worker
@@ -20,15 +23,15 @@
 //! An internal crate of eranos: depend on `eranos`, or on the C and C++
 //! packages this crate builds.
 
-use std::sync::{OnceLock, mpsc};
+use std::sync::{Arc, OnceLock, mpsc};
 use std::thread;
 
 use diplomat_runtime::{DiplomatStr, DiplomatWrite};
 
-pub mod entries;
+use crate::generated::group::ffi::{EranosCancellation, EranosGroup};
+
 pub mod error;
-pub mod group;
-pub mod totals;
+pub mod generated;
 pub mod values;
 
 /// A failure of a call: the library's, or text that is not UTF-8, which only
@@ -140,4 +143,20 @@ pub(crate) fn run<Value: 'static, Outcome: 'static>(
         let completion = completion;
         (completion.0)(Box::new(outcome(eranos::cooperative::block_on(future))));
     });
+}
+
+impl From<eranos_bindings::GroupHandle> for EranosGroup {
+    fn from(handle: eranos_bindings::GroupHandle) -> Self {
+        Self {
+            handle,
+            jobs: OnceLock::new(),
+        }
+    }
+}
+
+impl EranosCancellation {
+    /// The cancellation, for a call of the binding core.
+    pub(crate) fn shared(&self) -> Arc<eranos_bindings::Cancellation> {
+        Arc::clone(&self.0)
+    }
 }

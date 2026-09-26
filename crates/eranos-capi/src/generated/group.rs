@@ -1,10 +1,8 @@
-//! The group of the C and C++ APIs, its read handle, the cancellation of asynchronous calls, and the outcomes
-//! that their callbacks receive.
+// Written by `cargo xtask generate` from the binding core's records and calls: edit those,
+// or the generator in eranos-glue, and run the command again, never this file.
 
-use std::sync::{Arc, OnceLock};
-
-/// The types and functions of the C and C++ APIs; C names each type as it is here, and C++ puts it in the
-/// namespace `eranos::detail`.
+/// The types and functions of the C and C++ APIs; C names each type as it is here, and C++ puts it
+/// in the namespace `eranos::detail`.
 #[expect(
     clippy::unnecessary_box_returns,
     reason = "the functions Diplomat writes hand out an opaque type only in a box"
@@ -12,211 +10,21 @@ use std::sync::{Arc, OnceLock};
 #[diplomat::bridge]
 #[diplomat::attr(cpp, namespace = "eranos::detail")]
 pub mod ffi {
-    use std::sync::{Arc, OnceLock, mpsc};
-
-    use crate::entries::ffi::{
-        EranosCategory, EranosCategoryList, EranosExpense, EranosExpenseList, EranosMember,
-        EranosMemberList, EranosTransfer, EranosTransferList,
-    };
     use crate::error::ffi::EranosError;
-    use crate::totals::ffi::{
-        EranosExpenseShares, EranosSettlement, EranosSettlementStrategy, EranosSummary,
+    use crate::generated::records::ffi::{
+        EranosCategory, EranosCategoryList, EranosCurrencyRateList, EranosExpense,
+        EranosExpenseList, EranosExpenseShares, EranosMember, EranosMemberList, EranosNewGroup,
+        EranosSettlement, EranosSettlementStrategy, EranosSummary, EranosTransfer,
+        EranosTransferList,
     };
     use crate::values::ffi::EranosMoney;
     use diplomat_runtime::{DiplomatStr, DiplomatWrite};
-
-    /// What a new group starts with.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosNewGroup(pub(crate) eranos_bindings::NewGroup);
-
-    impl EranosNewGroup {
-        /// A new new group of its required fields; every other field starts absent, empty, or at
-        /// its default.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(
-            currency: &DiplomatStr,
-            name: &DiplomatStr,
-        ) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::NewGroup {
-                currency: crate::text(currency)?,
-                name: crate::text(name)?,
-                description: None,
-                language: None,
-            })))
-        }
-
-        /// The ISO 4217 code of the group currency, which every total is in.
-        pub fn currency(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.currency);
-        }
-
-        /// Sets the ISO 4217 code of the group currency, which every total is in.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_currency(&mut self, currency: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.currency = crate::text(currency)?;
-            Ok(())
-        }
-
-        /// The group's name.
-        pub fn name(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.name);
-        }
-
-        /// Sets the group's name.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.name = crate::text(name)?;
-            Ok(())
-        }
-
-        /// A longer description. Writes it, if present; absent otherwise.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.description.as_deref())
-        }
-
-        /// Sets a longer description.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_description(
-            &mut self,
-            description: &DiplomatStr,
-        ) -> Result<(), Box<EranosError>> {
-            self.0.description = Some(crate::text(description)?);
-            Ok(())
-        }
-        /// Clears a longer description.
-        pub fn clear_description(&mut self) {
-            self.0.description = None;
-        }
-
-        /// The language the apps show the group in, as a BCP 47 tag. Writes it, if present; absent
-        /// otherwise.
-        pub fn language(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.language.as_deref())
-        }
-
-        /// Sets the language the apps show the group in, as a BCP 47 tag.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_language(&mut self, language: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.language = Some(crate::text(language)?);
-            Ok(())
-        }
-        /// Clears the language the apps show the group in, as a BCP 47 tag.
-        pub fn clear_language(&mut self) {
-            self.0.language = None;
-        }
-    }
-
-    /// The rate into a new group currency of an amount in another.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosCurrencyRate(pub(crate) eranos_bindings::CurrencyRate);
-
-    impl EranosCurrencyRate {
-        /// A new currency rate of its required fields; every other field starts absent, empty, or
-        /// at its default.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(
-            currency: &DiplomatStr,
-            rate: &DiplomatStr,
-        ) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::CurrencyRate {
-                currency: crate::text(currency)?,
-                rate: crate::text(rate)?,
-            })))
-        }
-
-        /// The ISO 4217 code of the currency the rate converts from.
-        pub fn currency(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.currency);
-        }
-
-        /// Sets the ISO 4217 code of the currency the rate converts from.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_currency(&mut self, currency: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.currency = crate::text(currency)?;
-            Ok(())
-        }
-
-        /// The rate, as a decimal.
-        pub fn rate(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.rate);
-        }
-
-        /// Sets the rate, as a decimal.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_rate(&mut self, rate: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.rate = crate::text(rate)?;
-            Ok(())
-        }
-    }
-
-    /// A list of currency rate records.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosCurrencyRateList(pub(crate) Vec<eranos_bindings::CurrencyRate>);
-
-    impl EranosCurrencyRateList {
-        /// An empty list.
-        #[must_use]
-        pub fn create() -> Box<Self> {
-            Box::new(Self(Vec::new()))
-        }
-
-        /// Adds a copy of `element` at the end.
-        pub fn push(&mut self, element: &EranosCurrencyRate) {
-            self.0.push(element.0.clone());
-        }
-
-        /// How many records the list holds.
-        #[must_use]
-        pub const fn len(&self) -> usize {
-            self.0.len()
-        }
-
-        /// Whether the list holds no record.
-        #[must_use]
-        pub const fn is_empty(&self) -> bool {
-            self.0.is_empty()
-        }
-
-        /// A copy of the record at `index`, absent past the end.
-        #[must_use]
-        pub fn get(&self, index: usize) -> Option<Box<EranosCurrencyRate>> {
-            self.0
-                .get(index)
-                .map(|element| Box::new(EranosCurrencyRate(element.clone())))
-        }
-    }
+    use std::sync::{Arc, OnceLock, mpsc};
 
     /// A cancellation of asynchronous calls, which one cancellation can be given to several of.
     ///
-    /// Cancelling it stops the calls it was given at their next yield, or at once while they wait for the lock, and
-    /// they report the kind `Cancelled`, leaving the group as it was.
+    /// Cancelling it stops the calls it was given at their next yield, or at once while they wait
+    /// for the lock, and they report the kind `Cancelled`, leaving the group as it was.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosCancellation(pub(crate) Arc<eranos_bindings::Cancellation>);
@@ -237,1938 +45,6 @@ pub mod ffi {
         #[must_use]
         pub fn is_cancelled(&self) -> bool {
             self.0.is_cancelled()
-        }
-    }
-
-    /// A read handle: it holds the group's shared lock until it is released or destroyed, so the reads of one report
-    /// see no change in between; a change waits for it.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosGroupReader(pub(crate) eranos_bindings::GroupReader);
-
-    impl EranosGroupReader {
-        /// Releases the lock at once; later reads report the kind `Released`.
-        pub fn release(&self) {
-            self.0.release();
-        }
-
-        /// The group's identifier. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.id().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// Every category, the built-in one first.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn categories(&self) -> Result<Box<EranosCategoryList>, Box<EranosError>> {
-            self.0
-                .categories()
-                .map(|list| Box::new(EranosCategoryList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The category with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn category(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosCategory>>, Box<EranosError>> {
-            self.0
-                .category(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosCategory(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The ISO 4217 code of the group currency. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn currency(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.currency().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// Every expense, in the order they were created.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
-            self.0
-                .expenses()
-                .map(|list| Box::new(EranosExpenseList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The expense with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn expense(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosExpense>>, Box<EranosError>> {
-            self.0
-                .expense(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosExpense(value))))
-                .map_err(crate::failed)
-        }
-
-        /// How the expense with the identifier `id` divides, in the group currency.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn expense_shares(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosExpenseShares>>, Box<EranosError>> {
-            self.0
-                .expense_shares(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosExpenseShares(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The group's totals.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
-            self.0
-                .summary()
-                .map(|value| Box::new(EranosSummary(value)))
-                .map_err(crate::failed)
-        }
-
-        /// Every member, archived ones included, in the order they were created.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn members(&self) -> Result<Box<EranosMemberList>, Box<EranosError>> {
-            self.0
-                .members()
-                .map(|list| Box::new(EranosMemberList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The member with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn member(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosMember>>, Box<EranosError>> {
-            self.0
-                .member(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosMember(value))))
-                .map_err(crate::failed)
-        }
-
-        /// Whether the member with the identifier `id` is archived; `false` for an unknown member.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
-            self.0.is_archived(&crate::text(id)?).map_err(crate::failed)
-        }
-
-        /// The group's name. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.name().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The payments that settle every balance by `strategy`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`.
-        pub fn settlement(
-            &self,
-            strategy: EranosSettlementStrategy,
-        ) -> Result<Box<EranosSettlement>, Box<EranosError>> {
-            self.0
-                .settlement(strategy.into())
-                .map(|value| Box::new(EranosSettlement(value)))
-                .map_err(crate::failed)
-        }
-
-        /// Every transfer, in the order they were created.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn transfers(&self) -> Result<Box<EranosTransferList>, Box<EranosError>> {
-            self.0
-                .transfers()
-                .map(|list| Box::new(EranosTransferList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The transfer with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn transfer(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosTransfer>>, Box<EranosError>> {
-            self.0
-                .transfer(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosTransfer(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The amount in the group currency of the transfer with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Released` after `release`;
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn transfer_amount(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosMoney>>, Box<EranosError>> {
-            self.0
-                .transfer_amount(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosMoney(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The group's description. Writes it into `write`, if the group has one, and nothing
-        /// otherwise: the group holds no blank text there, since blank text clears it.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.description().map_err(crate::failed)?;
-            crate::write_optional(write, text.as_deref());
-            Ok(())
-        }
-
-        /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write`, if the
-        /// group has one, and nothing otherwise: the group holds no blank text there, since blank
-        /// text clears it.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn language(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.language().map_err(crate::failed)?;
-            crate::write_optional(write, text.as_deref());
-            Ok(())
-        }
-
-        /// The group in its saved form, as JSON. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Released` after `release`.
-        pub fn save(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.0.save().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-    }
-
-    /// A group: its details, members, categories, expenses, transfers, totals, and settlements.
-    ///
-    /// Every call has a synchronous form, which blocks the calling thread while another call holds the lock, and an
-    /// asynchronous one, which runs on the group's worker thread, started by the first, in the order of the calls, and
-    /// reports to its callback there, so a callback must be safe to call from another thread. Destroying the group
-    /// lets the queued calls finish and their callbacks run.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosGroup {
-        pub(crate) handle: eranos_bindings::GroupHandle,
-        pub(crate) jobs: OnceLock<mpsc::Sender<crate::Job>>,
-    }
-
-    impl EranosGroup {
-        /// A new group, with the details `details` holds.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Money` for a currency the library does not list, of the kind `Group` for a
-        /// blank name, and of the kind `Language` for a language that is not a tag.
-        pub fn create(details: &EranosNewGroup) -> Result<Box<Self>, Box<EranosError>> {
-            eranos_bindings::GroupHandle::new(&details.0)
-                .map(|handle| Box::new(Self::from(handle)))
-                .map_err(crate::failed)
-        }
-
-        /// The group saved as `json`, which `save` wrote.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidJson` for text that is not a saved group, of the kind `Group` for a
-        /// format this release cannot read, of the module whose rule an entry breaks, and of the kind `InvalidText`
-        /// for text that is not UTF-8.
-        pub fn load(json: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
-            eranos_bindings::GroupHandle::load(&crate::text(json)?)
-                .map(|handle| Box::new(Self::from(handle)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `load`: it runs on a thread of its own and reports its outcome to `callback`
-        /// there.
-        pub fn load_async(
-            json: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosGroupOutcome>) + 'static,
-        ) {
-            let json = crate::decoded(json);
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::run(
-                async move {
-                    eranos_bindings::GroupHandle::load_async(json?, cancellation)
-                        .await
-                        .map(Self::from)
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                |outcome| EranosGroupOutcome(outcome.map(Some)),
-            );
-        }
-
-        /// The group's identifier. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.id().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `id`: it runs on the group's worker thread, in the order of the
-        /// calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops the
-        /// call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
-        pub fn id_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .id_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Every category, the built-in one first.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn categories(&self) -> Result<Box<EranosCategoryList>, Box<EranosError>> {
-            self.handle
-                .categories()
-                .map(|list| Box::new(EranosCategoryList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `categories`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn categories_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosCategoryListOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .categories_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosCategoryListOutcome,
-            );
-        }
-
-        /// The category with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn category(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosCategory>>, Box<EranosError>> {
-            self.handle
-                .category(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosCategory(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `category`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn category_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .category_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosCategoryOutcome,
-            );
-        }
-
-        /// Adds `category`, which has no identifier yet, and returns the one it gets. Writes it
-        /// into `write`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn add_category(
-            &self,
-            category: &EranosCategory,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = self
-                .handle
-                .add_category(&category.0)
-                .map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `add_category`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn add_category_async(
-            &self,
-            category: &EranosCategory,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let category = Ok(category.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .add_category_async(category?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Renames the category that `category` names by its identifier, and returns it as it was.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn replace_category(
-            &self,
-            category: &EranosCategory,
-        ) -> Result<Box<EranosCategory>, Box<EranosError>> {
-            self.handle
-                .replace_category(&category.0)
-                .map(|value| Box::new(EranosCategory(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `replace_category`: it runs on the group's worker thread, in
-        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn replace_category_async(
-            &self,
-            category: &EranosCategory,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let category = Ok(category.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .replace_category_async(category?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosCategoryOutcome,
-            );
-        }
-
-        /// Removes the category with the identifier `id` and returns it; its expenses move to the
-        /// built-in one.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn remove_category(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Box<EranosCategory>, Box<EranosError>> {
-            self.handle
-                .remove_category(&crate::text(id)?)
-                .map(|value| Box::new(EranosCategory(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `remove_category`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn remove_category_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .remove_category_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosCategoryOutcome,
-            );
-        }
-
-        /// The ISO 4217 code of the group currency. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn currency(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.currency().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `currency`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn currency_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .currency_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Moves the group to `currency`, with a rate into it for every other currency its entries
-        /// use.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn change_currency(
-            &self,
-            currency: &DiplomatStr,
-            rates: &EranosCurrencyRateList,
-        ) -> Result<(), Box<EranosError>> {
-            self.handle
-                .change_currency(&crate::text(currency)?, &rates.0)
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `change_currency`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn change_currency_async(
-            &self,
-            currency: &DiplomatStr,
-            rates: &EranosCurrencyRateList,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let currency = crate::decoded(currency);
-            let rates = Ok(rates.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .change_currency_async(currency?, rates?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// Every expense, in the order they were created.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
-            self.handle
-                .expenses()
-                .map(|list| Box::new(EranosExpenseList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `expenses`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn expenses_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseListOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .expenses_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosExpenseListOutcome,
-            );
-        }
-
-        /// The expense with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn expense(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosExpense>>, Box<EranosError>> {
-            self.handle
-                .expense(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosExpense(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `expense`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn expense_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .expense_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosExpenseOutcome,
-            );
-        }
-
-        /// How the expense with the identifier `id` divides, in the group currency.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn expense_shares(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosExpenseShares>>, Box<EranosError>> {
-            self.handle
-                .expense_shares(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosExpenseShares(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `expense_shares`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn expense_shares_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseSharesOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .expense_shares_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosExpenseSharesOutcome,
-            );
-        }
-
-        /// Adds `expense`, which has no identifier yet, and returns the one it gets. Writes it into
-        /// `write`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn add_expense(
-            &self,
-            expense: &EranosExpense,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = self.handle.add_expense(&expense.0).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `add_expense`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn add_expense_async(
-            &self,
-            expense: &EranosExpense,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let expense = Ok(expense.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .add_expense_async(expense?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Replaces the expense that `expense` names by its identifier, and returns it as it was.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn replace_expense(
-            &self,
-            expense: &EranosExpense,
-        ) -> Result<Box<EranosExpense>, Box<EranosError>> {
-            self.handle
-                .replace_expense(&expense.0)
-                .map(|value| Box::new(EranosExpense(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `replace_expense`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn replace_expense_async(
-            &self,
-            expense: &EranosExpense,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let expense = Ok(expense.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .replace_expense_async(expense?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosExpenseOutcome,
-            );
-        }
-
-        /// Removes the expense with the identifier `id` and returns it.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn remove_expense(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Box<EranosExpense>, Box<EranosError>> {
-            self.handle
-                .remove_expense(&crate::text(id)?)
-                .map(|value| Box::new(EranosExpense(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `remove_expense`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn remove_expense_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .remove_expense_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosExpenseOutcome,
-            );
-        }
-
-        /// The group's totals.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
-            self.handle
-                .summary()
-                .map(|value| Box::new(EranosSummary(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `summary`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn summary_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosSummaryOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .summary_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosSummaryOutcome,
-            );
-        }
-
-        /// Every member, archived ones included, in the order they were created.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn members(&self) -> Result<Box<EranosMemberList>, Box<EranosError>> {
-            self.handle
-                .members()
-                .map(|list| Box::new(EranosMemberList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `members`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn members_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMemberListOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .members_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosMemberListOutcome,
-            );
-        }
-
-        /// The member with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn member(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosMember>>, Box<EranosError>> {
-            self.handle
-                .member(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosMember(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `member`: it runs on the group's worker thread, in the order of
-        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
-        pub fn member_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .member_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosMemberOutcome,
-            );
-        }
-
-        /// Whether the member with the identifier `id` is archived; `false` for an unknown member.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
-            self.handle
-                .is_archived(&crate::text(id)?)
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `is_archived`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn is_archived_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosFlagOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .is_archived_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosFlagOutcome,
-            );
-        }
-
-        /// Adds `member`, who has no identifier yet, and returns the one they get. Writes it into
-        /// `write`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn add_member(
-            &self,
-            member: &EranosMember,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = self.handle.add_member(&member.0).map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `add_member`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn add_member_async(
-            &self,
-            member: &EranosMember,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let member = Ok(member.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .add_member_async(member?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Replaces the member that `member` names by their identifier, and returns them as they
-        /// were.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn replace_member(
-            &self,
-            member: &EranosMember,
-        ) -> Result<Box<EranosMember>, Box<EranosError>> {
-            self.handle
-                .replace_member(&member.0)
-                .map(|value| Box::new(EranosMember(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `replace_member`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn replace_member_async(
-            &self,
-            member: &EranosMember,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let member = Ok(member.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .replace_member_async(member?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosMemberOutcome,
-            );
-        }
-
-        /// Archives the member with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn archive_member(&self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.handle
-                .archive_member(&crate::text(id)?)
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `archive_member`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn archive_member_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .archive_member_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// Unarchives the member with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn unarchive_member(&self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.handle
-                .unarchive_member(&crate::text(id)?)
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `unarchive_member`: it runs on the group's worker thread, in
-        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn unarchive_member_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .unarchive_member_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// Removes the member with the identifier `id`, whom no entry references, and returns them.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn remove_member(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Box<EranosMember>, Box<EranosError>> {
-            self.handle
-                .remove_member(&crate::text(id)?)
-                .map(|value| Box::new(EranosMember(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `remove_member`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn remove_member_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .remove_member_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosMemberOutcome,
-            );
-        }
-
-        /// The group's name. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.name().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `name`: it runs on the group's worker thread, in the order of
-        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
-        pub fn name_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .name_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Renames the group.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn set_name(&self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.handle
-                .set_name(&crate::text(name)?)
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `set_name`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn set_name_async(
-            &self,
-            name: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let name = crate::decoded(name);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .set_name_async(name?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// The payments that settle every balance by `strategy`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn settlement(
-            &self,
-            strategy: EranosSettlementStrategy,
-        ) -> Result<Box<EranosSettlement>, Box<EranosError>> {
-            self.handle
-                .settlement(strategy.into())
-                .map(|value| Box::new(EranosSettlement(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `settlement`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn settlement_async(
-            &self,
-            strategy: EranosSettlementStrategy,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosSettlementOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let strategy = Ok(strategy.into());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .settlement_async(strategy?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosSettlementOutcome,
-            );
-        }
-
-        /// Every transfer, in the order they were created.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn transfers(&self) -> Result<Box<EranosTransferList>, Box<EranosError>> {
-            self.handle
-                .transfers()
-                .map(|list| Box::new(EranosTransferList(list)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `transfers`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn transfers_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTransferListOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .transfers_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTransferListOutcome,
-            );
-        }
-
-        /// The transfer with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn transfer(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosTransfer>>, Box<EranosError>> {
-            self.handle
-                .transfer(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosTransfer(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `transfer`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn transfer_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .transfer_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTransferOutcome,
-            );
-        }
-
-        /// The amount in the group currency of the transfer with the identifier `id`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn transfer_amount(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Option<Box<EranosMoney>>, Box<EranosError>> {
-            self.handle
-                .transfer_amount(&crate::text(id)?)
-                .map(|value| value.map(|value| Box::new(EranosMoney(value))))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `transfer_amount`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn transfer_amount_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosMoneyOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .transfer_amount_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosMoneyOutcome,
-            );
-        }
-
-        /// Adds `transfer`, which has no identifier yet, and returns the one it gets. Writes it
-        /// into `write`.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn add_transfer(
-            &self,
-            transfer: &EranosTransfer,
-            write: &mut DiplomatWrite,
-        ) -> Result<(), Box<EranosError>> {
-            let text = self
-                .handle
-                .add_transfer(&transfer.0)
-                .map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `add_transfer`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn add_transfer_async(
-            &self,
-            transfer: &EranosTransfer,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let transfer = Ok(transfer.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .add_transfer_async(transfer?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock.
-        pub fn replace_transfer(
-            &self,
-            transfer: &EranosTransfer,
-        ) -> Result<Box<EranosTransfer>, Box<EranosError>> {
-            self.handle
-                .replace_transfer(&transfer.0)
-                .map(|value| Box::new(EranosTransfer(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `replace_transfer`: it runs on the group's worker thread, in
-        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn replace_transfer_async(
-            &self,
-            transfer: &EranosTransfer,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let transfer = Ok(transfer.0.clone());
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .replace_transfer_async(transfer?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosTransferOutcome,
-            );
-        }
-
-        /// Removes the transfer with the identifier `id` and returns it.
-        ///
-        /// # Errors
-        ///
-        /// The library's refusal, and `EranosError` of the kind `Group` with the failure
-        /// `GroupBusy` on wasm while another call holds the lock; [`EranosError`] of the kind
-        /// `InvalidText` for text that is not UTF-8.
-        pub fn remove_transfer(
-            &self,
-            id: &DiplomatStr,
-        ) -> Result<Box<EranosTransfer>, Box<EranosError>> {
-            self.handle
-                .remove_transfer(&crate::text(id)?)
-                .map(|value| Box::new(EranosTransfer(value)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `remove_transfer`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn remove_transfer_async(
-            &self,
-            id: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let id = crate::decoded(id);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .remove_transfer_async(id?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosTransferOutcome,
-            );
-        }
-
-        /// The group's description. Writes it into `write`, if the group has one, and nothing
-        /// otherwise: the group holds no blank text there, since blank text clears it.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.description().map_err(crate::failed)?;
-            crate::write_optional(write, text.as_deref());
-            Ok(())
-        }
-
-        /// The asynchronous form of `description`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn description_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosOptionalTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .description_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosOptionalTextOutcome,
-            );
-        }
-
-        /// Sets the description; blank text clears it.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock; [`EranosError`] of the kind `InvalidText` for text that is not
-        /// UTF-8.
-        pub fn set_description(&self, description: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.handle
-                .set_description(&crate::text(description)?)
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `set_description`: it runs on the group's worker thread, in the
-        /// order of the calls, and reports its outcome to `callback` there. Cancelling
-        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
-        /// and reports the kind `Cancelled`, leaving the group as it was.
-        pub fn set_description_async(
-            &self,
-            description: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let description = crate::decoded(description);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .set_description_async(description?, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write`, if the
-        /// group has one, and nothing otherwise: the group holds no blank text there, since blank
-        /// text clears it.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while another
-        /// call holds the lock.
-        pub fn language(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.language().map_err(crate::failed)?;
-            crate::write_optional(write, text.as_deref());
-            Ok(())
-        }
-
-        /// The asynchronous form of `language`: it runs on the group's worker thread, in the order
-        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
-        /// stops the call at its next yield, or at once while it waits for the lock, and reports
-        /// the kind `Cancelled`, leaving the group as it was.
-        pub fn language_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosOptionalTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .language_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosOptionalTextOutcome,
-            );
-        }
-
-        /// Sets the language the apps show the group in, a BCP 47 tag.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `Language` for text that is not a language tag, and of the
-        /// kind `InvalidText` for text that is not UTF-8.
-        pub fn set_language(&self, language: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.handle
-                .set_language(Some(&crate::text(language)?))
-                .map_err(crate::failed)
-        }
-
-        /// Clears the language the apps show the group in.
-        ///
-        /// # Errors
-        ///
-        /// None but the group's own, which the core reports.
-        pub fn clear_language(&self) -> Result<(), Box<EranosError>> {
-            self.handle.set_language(None).map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `set_language`, reported to `callback` on the group's worker
-        /// thread.
-        pub fn set_language_async(
-            &self,
-            language: &DiplomatStr,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            let language = crate::decoded(language);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .set_language_async(Some(language?), cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// The asynchronous form of `clear_language`, reported to `callback` on the group's worker
-        /// thread.
-        pub fn clear_language_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .set_language_async(None, cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosUnitOutcome,
-            );
-        }
-
-        /// The group in its saved form, as JSON. Writes it into `write`.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while a change
-        /// holds the lock.
-        pub fn save(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
-            let text = self.handle.save().map_err(crate::failed)?;
-            crate::write_text(write, &text);
-            Ok(())
-        }
-
-        /// The asynchronous form of `save`: it runs on the group's worker thread, in the order of
-        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
-        pub fn save_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .save_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                },
-                callback,
-                EranosTextOutcome,
-            );
-        }
-
-        /// A read handle, which holds the shared lock until it is released or dropped, so that its
-        /// reads see no change in between.
-        ///
-        /// # Errors
-        ///
-        /// `EranosError` of the kind `Group` with the failure `GroupBusy` on wasm while a change
-        /// holds the lock.
-        pub fn read(&self) -> Result<Box<EranosGroupReader>, Box<EranosError>> {
-            self.handle
-                .read()
-                .map(|reader| Box::new(EranosGroupReader(reader)))
-                .map_err(crate::failed)
-        }
-
-        /// The asynchronous form of `read`: it runs on the group's worker thread, in the order of
-        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
-        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
-        /// `Cancelled`, leaving the group as it was.
-        pub fn read_async(
-            &self,
-            cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosGroupReaderOutcome>) + 'static,
-        ) {
-            let handle = self.handle.clone();
-            let cancellation = cancellation.map(EranosCancellation::shared);
-            crate::spawn(
-                &self.jobs,
-                async move {
-                    handle
-                        .read_async(cancellation)
-                        .await
-                        .map_err(crate::Failure::Library)
-                        .map(Some)
-                },
-                callback,
-                EranosGroupReaderOutcome,
-            );
-        }
-    }
-
-    /// The outcome of the asynchronous load, which its callback receives and destroys.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosGroupOutcome(pub(crate) Result<Option<EranosGroup>, crate::Failure>);
-
-    impl EranosGroupOutcome {
-        /// Whether the load succeeded.
-        #[must_use]
-        pub const fn is_ok(&self) -> bool {
-            self.0.is_ok()
-        }
-
-        /// A copy of the load's failure, absent when it succeeded.
-        #[must_use]
-        pub fn error(&self) -> Option<Box<EranosError>> {
-            self.0
-                .as_ref()
-                .err()
-                .map(|failure| Box::new(EranosError::from(failure.clone())))
-        }
-
-        /// Takes the group, if the load succeeded and it was not taken before.
-        pub fn take(&mut self) -> Option<Box<EranosGroup>> {
-            self.0.as_mut().ok().and_then(Option::take).map(Box::new)
         }
     }
 
@@ -2275,7 +151,7 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a expense, which its callback receives and
+    /// The outcome of an asynchronous call that returns an expense, which its callback receives and
     /// destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
@@ -2310,7 +186,7 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a expense shares, which its callback
+    /// The outcome of an asynchronous call that returns an expense shares, which its callback
     /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
@@ -2371,6 +247,1944 @@ pub mod ffi {
         #[must_use]
         pub const fn value(&self) -> bool {
             matches!(self.0, Ok(true))
+        }
+    }
+
+    /// A group: its details, members, categories, expenses, transfers, totals, and settlements.
+    ///
+    /// Every call has a synchronous form, which blocks the calling thread while another call holds
+    /// the lock, and an asynchronous one, which runs on the group's worker thread, started by the
+    /// first, in the order of the calls, and reports to its callback there, so a callback must be
+    /// safe to call from another thread. Destroying the group lets the queued calls finish and
+    /// their callbacks run.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosGroup {
+        pub(crate) handle: eranos_bindings::GroupHandle,
+        pub(crate) jobs: OnceLock<mpsc::Sender<crate::Job>>,
+    }
+
+    impl EranosGroup {
+        /// A new group, with the details `details` holds.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Money` for a currency the library does not list, of the
+        /// kind `Group` for a blank name, and of the kind `Language` for a language that is not a
+        /// tag.
+        pub fn create(details: &EranosNewGroup) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::GroupHandle::new(&details.0)
+                .map(|handle| Box::new(Self::from(handle)))
+                .map_err(crate::failed)
+        }
+
+        /// The group saved as `json`, which `save` wrote.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidJson` for text that is not a saved group, of the
+        /// kind `Group` for a format this release cannot read, of the module whose rule an entry
+        /// breaks, and of the kind `InvalidText` for text that is not UTF-8.
+        pub fn load(json: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            eranos_bindings::GroupHandle::load(&crate::text(json)?)
+                .map(|handle| Box::new(Self::from(handle)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `load`: it runs on a thread of its own and reports its outcome
+        /// to `callback` there.
+        pub fn load_async(
+            json: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosGroupOutcome>) + 'static,
+        ) {
+            let json = crate::decoded(json);
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::run(
+                async move {
+                    eranos_bindings::GroupHandle::load_async(json?, cancellation)
+                        .await
+                        .map(Self::from)
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                |outcome| EranosGroupOutcome(outcome.map(Some)),
+            );
+        }
+
+        /// The group's identifier. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn id(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.handle.id().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `id`: it runs on the group's worker thread, in the order of the
+        /// calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops the
+        /// call at its next yield, or at once while it waits for the lock, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn id_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .id_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Every category, the built-in one first.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn categories(&self) -> Result<Box<EranosCategoryList>, Box<EranosError>> {
+            self.handle
+                .categories()
+                .map(|list| Box::new(EranosCategoryList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `categories`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn categories_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosCategoryListOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .categories_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosCategoryListOutcome,
+            );
+        }
+
+        /// The category with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn category(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosCategory>>, Box<EranosError>> {
+            self.handle
+                .category(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosCategory(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `category`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn category_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .category_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosCategoryOutcome,
+            );
+        }
+
+        /// Adds `category`, which has no identifier yet, and returns the one it gets. Writes it
+        /// into `write`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn add_category(
+            &self,
+            category: &EranosCategory,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self
+                .handle
+                .add_category(&category.0)
+                .map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `add_category`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn add_category_async(
+            &self,
+            category: &EranosCategory,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let category = Ok(category.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .add_category_async(category?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Renames the category that `category` names by its identifier, and returns it as it was.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn replace_category(
+            &self,
+            category: &EranosCategory,
+        ) -> Result<Box<EranosCategory>, Box<EranosError>> {
+            self.handle
+                .replace_category(&category.0)
+                .map(|value| Box::new(EranosCategory(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `replace_category`: it runs on the group's worker thread, in
+        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn replace_category_async(
+            &self,
+            category: &EranosCategory,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let category = Ok(category.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .replace_category_async(category?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosCategoryOutcome,
+            );
+        }
+
+        /// Removes the category with the identifier `id` and returns it; its expenses move to the
+        /// built-in one.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn remove_category(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosCategory>, Box<EranosError>> {
+            self.handle
+                .remove_category(&crate::text(id)?)
+                .map(|value| Box::new(EranosCategory(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `remove_category`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn remove_category_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosCategoryOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .remove_category_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosCategoryOutcome,
+            );
+        }
+
+        /// The ISO 4217 code of the group currency. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn currency(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.handle.currency().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `currency`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn currency_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .currency_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Moves the group to `currency`, with a rate into it for every other currency its entries
+        /// use.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn change_currency(
+            &self,
+            currency: &DiplomatStr,
+            rates: &EranosCurrencyRateList,
+        ) -> Result<(), Box<EranosError>> {
+            self.handle
+                .change_currency(&crate::text(currency)?, &rates.0)
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `change_currency`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn change_currency_async(
+            &self,
+            currency: &DiplomatStr,
+            rates: &EranosCurrencyRateList,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let currency = crate::decoded(currency);
+            let rates = Ok(rates.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .change_currency_async(currency?, rates?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// Every expense, in the order they were created.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
+            self.handle
+                .expenses()
+                .map(|list| Box::new(EranosExpenseList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `expenses`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn expenses_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosExpenseListOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .expenses_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosExpenseListOutcome,
+            );
+        }
+
+        /// The expense with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn expense(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosExpense>>, Box<EranosError>> {
+            self.handle
+                .expense(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosExpense(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `expense`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn expense_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .expense_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosExpenseOutcome,
+            );
+        }
+
+        /// How the expense with the identifier `id` divides, in the group currency.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn expense_shares(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosExpenseShares>>, Box<EranosError>> {
+            self.handle
+                .expense_shares(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosExpenseShares(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `expense_shares`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn expense_shares_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosExpenseSharesOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .expense_shares_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosExpenseSharesOutcome,
+            );
+        }
+
+        /// Adds `expense`, which has no identifier yet, and returns the one it gets. Writes it into
+        /// `write`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn add_expense(
+            &self,
+            expense: &EranosExpense,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self.handle.add_expense(&expense.0).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `add_expense`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn add_expense_async(
+            &self,
+            expense: &EranosExpense,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let expense = Ok(expense.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .add_expense_async(expense?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Replaces the expense that `expense` names by its identifier, and returns it as it was.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn replace_expense(
+            &self,
+            expense: &EranosExpense,
+        ) -> Result<Box<EranosExpense>, Box<EranosError>> {
+            self.handle
+                .replace_expense(&expense.0)
+                .map(|value| Box::new(EranosExpense(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `replace_expense`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn replace_expense_async(
+            &self,
+            expense: &EranosExpense,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let expense = Ok(expense.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .replace_expense_async(expense?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosExpenseOutcome,
+            );
+        }
+
+        /// Removes the expense with the identifier `id` and returns it.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn remove_expense(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosExpense>, Box<EranosError>> {
+            self.handle
+                .remove_expense(&crate::text(id)?)
+                .map(|value| Box::new(EranosExpense(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `remove_expense`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn remove_expense_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosExpenseOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .remove_expense_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosExpenseOutcome,
+            );
+        }
+
+        /// The group's totals.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
+            self.handle
+                .summary()
+                .map(|value| Box::new(EranosSummary(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `summary`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn summary_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosSummaryOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .summary_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosSummaryOutcome,
+            );
+        }
+
+        /// Every member, archived ones included, in the order they were created.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn members(&self) -> Result<Box<EranosMemberList>, Box<EranosError>> {
+            self.handle
+                .members()
+                .map(|list| Box::new(EranosMemberList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `members`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn members_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosMemberListOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .members_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosMemberListOutcome,
+            );
+        }
+
+        /// The member with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn member(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosMember>>, Box<EranosError>> {
+            self.handle
+                .member(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosMember(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `member`: it runs on the group's worker thread, in the order of
+        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
+        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn member_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .member_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosMemberOutcome,
+            );
+        }
+
+        /// Whether the member with the identifier `id` is archived; `false` for an unknown member.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
+            self.handle
+                .is_archived(&crate::text(id)?)
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `is_archived`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn is_archived_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosFlagOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .is_archived_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosFlagOutcome,
+            );
+        }
+
+        /// Adds `member`, who has no identifier yet, and returns the one they get. Writes it into
+        /// `write`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn add_member(
+            &self,
+            member: &EranosMember,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self.handle.add_member(&member.0).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `add_member`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn add_member_async(
+            &self,
+            member: &EranosMember,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let member = Ok(member.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .add_member_async(member?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Replaces the member that `member` names by their identifier, and returns them as they
+        /// were.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn replace_member(
+            &self,
+            member: &EranosMember,
+        ) -> Result<Box<EranosMember>, Box<EranosError>> {
+            self.handle
+                .replace_member(&member.0)
+                .map(|value| Box::new(EranosMember(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `replace_member`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn replace_member_async(
+            &self,
+            member: &EranosMember,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let member = Ok(member.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .replace_member_async(member?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosMemberOutcome,
+            );
+        }
+
+        /// Archives the member with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn archive_member(&self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.handle
+                .archive_member(&crate::text(id)?)
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `archive_member`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn archive_member_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .archive_member_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// Unarchives the member with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn unarchive_member(&self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.handle
+                .unarchive_member(&crate::text(id)?)
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `unarchive_member`: it runs on the group's worker thread, in
+        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn unarchive_member_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .unarchive_member_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// Removes the member with the identifier `id`, whom no entry references, and returns them.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn remove_member(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosMember>, Box<EranosError>> {
+            self.handle
+                .remove_member(&crate::text(id)?)
+                .map(|value| Box::new(EranosMember(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `remove_member`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn remove_member_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosMemberOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .remove_member_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosMemberOutcome,
+            );
+        }
+
+        /// The group's name. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.handle.name().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `name`: it runs on the group's worker thread, in the order of
+        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
+        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn name_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .name_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Renames the group.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn set_name(&self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.handle
+                .set_name(&crate::text(name)?)
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `set_name`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn set_name_async(
+            &self,
+            name: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let name = crate::decoded(name);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .set_name_async(name?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// The payments that settle every balance by `strategy`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it.
+        pub fn settlement(
+            &self,
+            strategy: EranosSettlementStrategy,
+        ) -> Result<Box<EranosSettlement>, Box<EranosError>> {
+            self.handle
+                .settlement(strategy.into())
+                .map(|value| Box::new(EranosSettlement(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `settlement`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn settlement_async(
+            &self,
+            strategy: EranosSettlementStrategy,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosSettlementOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let strategy = Ok(strategy.into());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .settlement_async(strategy?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosSettlementOutcome,
+            );
+        }
+
+        /// Every transfer, in the order they were created.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn transfers(&self) -> Result<Box<EranosTransferList>, Box<EranosError>> {
+            self.handle
+                .transfers()
+                .map(|list| Box::new(EranosTransferList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `transfers`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn transfers_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTransferListOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .transfers_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTransferListOutcome,
+            );
+        }
+
+        /// The transfer with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn transfer(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosTransfer>>, Box<EranosError>> {
+            self.handle
+                .transfer(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosTransfer(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `transfer`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn transfer_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .transfer_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTransferOutcome,
+            );
+        }
+
+        /// The amount in the group currency of the transfer with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while a change holds the lock or waits for it. [`EranosError`] of the kind
+        /// `InvalidText` for text that is not UTF-8.
+        pub fn transfer_amount(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosMoney>>, Box<EranosError>> {
+            self.handle
+                .transfer_amount(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosMoney(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `transfer_amount`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn transfer_amount_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosMoneyOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .transfer_amount_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosMoneyOutcome,
+            );
+        }
+
+        /// Adds `transfer`, which has no identifier yet, and returns the one it gets. Writes it
+        /// into `write`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn add_transfer(
+            &self,
+            transfer: &EranosTransfer,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text = self
+                .handle
+                .add_transfer(&transfer.0)
+                .map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `add_transfer`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn add_transfer_async(
+            &self,
+            transfer: &EranosTransfer,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let transfer = Ok(transfer.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .add_transfer_async(transfer?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn replace_transfer(
+            &self,
+            transfer: &EranosTransfer,
+        ) -> Result<Box<EranosTransfer>, Box<EranosError>> {
+            self.handle
+                .replace_transfer(&transfer.0)
+                .map(|value| Box::new(EranosTransfer(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `replace_transfer`: it runs on the group's worker thread, in
+        /// the order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn replace_transfer_async(
+            &self,
+            transfer: &EranosTransfer,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let transfer = Ok(transfer.0.clone());
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .replace_transfer_async(transfer?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosTransferOutcome,
+            );
+        }
+
+        /// Removes the transfer with the identifier `id` and returns it.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn remove_transfer(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Box<EranosTransfer>, Box<EranosError>> {
+            self.handle
+                .remove_transfer(&crate::text(id)?)
+                .map(|value| Box::new(EranosTransfer(value)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `remove_transfer`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn remove_transfer_async(
+            &self,
+            id: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTransferOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let id = crate::decoded(id);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .remove_transfer_async(id?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosTransferOutcome,
+            );
+        }
+
+        /// The group's description. Writes it into `write` when there is one, and nothing
+        /// otherwise.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.handle.description().map_err(crate::failed)?;
+            crate::write_optional(write, text.as_deref());
+            Ok(())
+        }
+
+        /// The asynchronous form of `description`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn description_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosOptionalTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .description_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosOptionalTextOutcome,
+            );
+        }
+
+        /// Sets the description; blank text clears it.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while another
+        /// call holds the lock. [`EranosError`] of the kind `InvalidText` for text that is not
+        /// UTF-8.
+        pub fn set_description(&self, description: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.handle
+                .set_description(&crate::text(description)?)
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `set_description`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn set_description_async(
+            &self,
+            description: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let description = crate::decoded(description);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .set_description_async(description?, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write` when
+        /// there is one, and nothing otherwise.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn language(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.handle.language().map_err(crate::failed)?;
+            crate::write_optional(write, text.as_deref());
+            Ok(())
+        }
+
+        /// The asynchronous form of `language`: it runs on the group's worker thread, in the order
+        /// of the calls, and reports its outcome to `callback` there. Cancelling `cancellation`
+        /// stops the call at its next yield, or at once while it waits for the lock, and reports
+        /// the kind `Cancelled`, leaving the group as it was.
+        pub fn language_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosOptionalTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .language_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosOptionalTextOutcome,
+            );
+        }
+
+        /// Sets the language from a BCP 47 tag, or clears it when there is none.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock. [`EranosError`] of the kind `InvalidText` for
+        /// text that is not UTF-8.
+        pub fn set_language(&self, language: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.handle
+                .set_language(Some(&crate::text(language)?))
+                .map_err(crate::failed)
+        }
+
+        /// The form of `set_language` that passes no `language`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Group` with the failure `GroupBusy`
+        /// on wasm while another call holds the lock.
+        pub fn clear_language(&self) -> Result<(), Box<EranosError>> {
+            self.handle.set_language(None).map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `set_language`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn set_language_async(
+            &self,
+            language: &DiplomatStr,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            let language = crate::decoded(language);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .set_language_async(Some(language?), cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// The asynchronous form of `clear_language`: it runs on the group's worker thread, in the
+        /// order of the calls, and reports its outcome to `callback` there. Cancelling
+        /// `cancellation` stops the call at its next yield, or at once while it waits for the lock,
+        /// and reports the kind `Cancelled`, leaving the group as it was.
+        pub fn clear_language_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .set_language_async(None, cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosUnitOutcome,
+            );
+        }
+
+        /// The JSON of the group's saved form. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn save(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.handle.save().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The asynchronous form of `save`: it runs on the group's worker thread, in the order of
+        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
+        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn save_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosTextOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .save_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                },
+                callback,
+                EranosTextOutcome,
+            );
+        }
+
+        /// A read handle, which holds the shared lock until it is released or dropped, so that its
+        /// reads see no change in between.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Group` with the failure `GroupBusy` on wasm while a change
+        /// holds the lock or waits for it.
+        pub fn read(&self) -> Result<Box<EranosGroupReader>, Box<EranosError>> {
+            self.handle
+                .read()
+                .map(|reader| Box::new(EranosGroupReader(reader)))
+                .map_err(crate::failed)
+        }
+
+        /// The asynchronous form of `read`: it runs on the group's worker thread, in the order of
+        /// the calls, and reports its outcome to `callback` there. Cancelling `cancellation` stops
+        /// the call at its next yield, or at once while it waits for the lock, and reports the kind
+        /// `Cancelled`, leaving the group as it was.
+        pub fn read_async(
+            &self,
+            cancellation: Option<&EranosCancellation>,
+            callback: impl Fn(Box<EranosGroupReaderOutcome>) + 'static,
+        ) {
+            let handle = self.handle.clone();
+            let cancellation = cancellation.map(EranosCancellation::shared);
+            crate::spawn(
+                &self.jobs,
+                async move {
+                    handle
+                        .read_async(cancellation)
+                        .await
+                        .map_err(crate::Failure::Library)
+                        .map(Some)
+                },
+                callback,
+                EranosGroupReaderOutcome,
+            );
+        }
+    }
+
+    /// The outcome of the asynchronous load, which its callback receives and destroys.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosGroupOutcome(pub(crate) Result<Option<EranosGroup>, crate::Failure>);
+
+    impl EranosGroupOutcome {
+        /// Whether the load succeeded.
+        #[must_use]
+        pub const fn is_ok(&self) -> bool {
+            self.0.is_ok()
+        }
+
+        /// A copy of the load's failure, absent when it succeeded.
+        #[must_use]
+        pub fn error(&self) -> Option<Box<EranosError>> {
+            self.0
+                .as_ref()
+                .err()
+                .map(|failure| Box::new(EranosError::from(failure.clone())))
+        }
+
+        /// Takes the group, if the load succeeded and it was not taken before.
+        pub fn take(&mut self) -> Option<Box<EranosGroup>> {
+            self.0.as_mut().ok().and_then(Option::take).map(Box::new)
+        }
+    }
+
+    /// A read handle: it holds the group's shared lock until it is released or destroyed, so the
+    /// reads of one report see no change in between; a change waits for it.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosGroupReader(pub(crate) eranos_bindings::GroupReader);
+
+    impl EranosGroupReader {
+        /// Releases the lock at once; later reads report the kind `Released`.
+        pub fn release(&self) {
+            self.0.release();
+        }
+
+        /// The group's identifier. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn id(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.id().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Every category, the built-in one first.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn categories(&self) -> Result<Box<EranosCategoryList>, Box<EranosError>> {
+            self.0
+                .categories()
+                .map(|list| Box::new(EranosCategoryList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The category with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn category(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosCategory>>, Box<EranosError>> {
+            self.0
+                .category(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosCategory(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The ISO 4217 code of the group currency. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn currency(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.currency().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// Every expense, in the order they were created.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn expenses(&self) -> Result<Box<EranosExpenseList>, Box<EranosError>> {
+            self.0
+                .expenses()
+                .map(|list| Box::new(EranosExpenseList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The expense with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn expense(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosExpense>>, Box<EranosError>> {
+            self.0
+                .expense(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosExpense(value))))
+                .map_err(crate::failed)
+        }
+
+        /// How the expense with the identifier `id` divides, in the group currency.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn expense_shares(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosExpenseShares>>, Box<EranosError>> {
+            self.0
+                .expense_shares(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosExpenseShares(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The group's totals.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn summary(&self) -> Result<Box<EranosSummary>, Box<EranosError>> {
+            self.0
+                .summary()
+                .map(|value| Box::new(EranosSummary(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Every member, archived ones included, in the order they were created.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn members(&self) -> Result<Box<EranosMemberList>, Box<EranosError>> {
+            self.0
+                .members()
+                .map(|list| Box::new(EranosMemberList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The member with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn member(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosMember>>, Box<EranosError>> {
+            self.0
+                .member(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosMember(value))))
+                .map_err(crate::failed)
+        }
+
+        /// Whether the member with the identifier `id` is archived; `false` for an unknown member.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
+            self.0.is_archived(&crate::text(id)?).map_err(crate::failed)
+        }
+
+        /// The group's name. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn name(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.name().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+
+        /// The payments that settle every balance by `strategy`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        pub fn settlement(
+            &self,
+            strategy: EranosSettlementStrategy,
+        ) -> Result<Box<EranosSettlement>, Box<EranosError>> {
+            self.0
+                .settlement(strategy.into())
+                .map(|value| Box::new(EranosSettlement(value)))
+                .map_err(crate::failed)
+        }
+
+        /// Every transfer, in the order they were created.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn transfers(&self) -> Result<Box<EranosTransferList>, Box<EranosError>> {
+            self.0
+                .transfers()
+                .map(|list| Box::new(EranosTransferList(list)))
+                .map_err(crate::failed)
+        }
+
+        /// The transfer with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn transfer(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosTransfer>>, Box<EranosError>> {
+            self.0
+                .transfer(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosTransfer(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The amount in the group currency of the transfer with the identifier `id`.
+        ///
+        /// # Errors
+        ///
+        /// The library's refusal. [`EranosError`] of the kind `Released` after `release`.
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn transfer_amount(
+            &self,
+            id: &DiplomatStr,
+        ) -> Result<Option<Box<EranosMoney>>, Box<EranosError>> {
+            self.0
+                .transfer_amount(&crate::text(id)?)
+                .map(|value| value.map(|value| Box::new(EranosMoney(value))))
+                .map_err(crate::failed)
+        }
+
+        /// The group's description. Writes it into `write` when there is one, and nothing
+        /// otherwise.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn description(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.description().map_err(crate::failed)?;
+            crate::write_optional(write, text.as_deref());
+            Ok(())
+        }
+
+        /// The language the apps show the group in, as a BCP 47 tag. Writes it into `write` when
+        /// there is one, and nothing otherwise.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn language(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.language().map_err(crate::failed)?;
+            crate::write_optional(write, text.as_deref());
+            Ok(())
+        }
+
+        /// The JSON of the group's saved form. Writes it into `write`.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Released` after `release`.
+        pub fn save(&self, write: &mut DiplomatWrite) -> Result<(), Box<EranosError>> {
+            let text = self.0.save().map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
         }
     }
 
@@ -2512,8 +2326,8 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns text the group may not have, which its
-    /// callback receives and destroys.
+    /// The outcome of an asynchronous call that returns text it may not have, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
     pub struct EranosOptionalTextOutcome(pub(crate) Result<Option<String>, crate::Failure>);
@@ -2728,21 +2542,5 @@ pub mod ffi {
                 .err()
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
-    }
-}
-
-impl From<eranos_bindings::GroupHandle> for ffi::EranosGroup {
-    fn from(handle: eranos_bindings::GroupHandle) -> Self {
-        Self {
-            handle,
-            jobs: OnceLock::new(),
-        }
-    }
-}
-
-impl ffi::EranosCancellation {
-    /// The cancellation, for a call of the binding core.
-    pub(crate) fn shared(&self) -> Arc<eranos_bindings::Cancellation> {
-        Arc::clone(&self.0)
     }
 }

@@ -1,8 +1,9 @@
 # eranos-glue: the model of the binding core's group calls and records, and
 # the code the glue writes from them: the core's handle forms and table, the
-# mirrors' macros, and the UniFFI crates' objects and remote copies. The proc
-# macros of eranos-glue-macros call it inside the compiler; its own tests
-# measure it (docs/BINDINGS.md § 8).
+# mirrors' macros, the UniFFI crates' objects and remote copies, and the C
+# glue's bridge. The proc macros of eranos-glue-macros call it inside the
+# compiler, and `cargo xtask generate` calls it for the C bridge; its own
+# tests measure it (docs/BINDINGS.md § 8).
 [package]
 name = "eranos-glue"
 description = "The model of eranos's group calls and records, and the glue code written from it"

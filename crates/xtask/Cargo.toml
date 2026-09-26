@@ -1,17 +1,20 @@
 # xtask: the repository's automation, run as `cargo xtask <command>` through
 # the alias in .cargo/config.toml. It runs the commit gates AGENTS.md lists, so
-# a contributor, the VS Code task, and a coding agent run one sequence.
+# a contributor, the VS Code task, and a coding agent run one sequence, and
+# writes the C glue's bridge with eranos-glue's generator.
 [package]
 name = "xtask"
-description = "The eranos repository's automation: the commit gates"
+description = "The eranos repository's automation: the commit gates and the C glue's bridge"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+eranos-glue = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+syn = { workspace = true }
 thiserror = { workspace = true }
 
 [lints]

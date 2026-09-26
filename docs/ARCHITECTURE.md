@@ -80,7 +80,8 @@ whose `diplomat-tool` generates a C API and C++ classes from its bridge.
 The binding core lists its group calls once, in a trait, from which the
 proc macros of `eranos-glue-macros` write the group handle's and the read
 handle's forms; `eranos-glue`, which those macros call, holds the model of
-the calls and the code written from it.
+the calls and records and the code written from it, the C bridge's too,
+which `cargo xtask generate` writes into eranos-capi's sources.
 
 ```mermaid
 flowchart TD
@@ -213,7 +214,7 @@ flowchart TD
 | `eranos-money`          | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                             | core; iso4217-static                                                                                                   |
 | `eranos-core`           | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                     | uuid                                                                                                                   |
 | `eranos-glue-macros`    | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                            | eranos-glue; syn                                                                                                       |
-| `eranos-glue`           | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, and the UniFFI objects' methods and copies            | proc-macro2, quote, syn                                                                                                |
+| `eranos-glue`           | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge  | proc-macro2, quote, syn                                                                                                |
 
 For the internal crates, the facade's modules (`eranos::money`,
 `eranos::member`, …) and its root re-export what the table lists before a

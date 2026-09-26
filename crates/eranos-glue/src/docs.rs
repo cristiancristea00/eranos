@@ -27,39 +27,7 @@ impl Docs {
     /// and a summary that does not end with a full stop, which the
     /// asynchronous form's summary replaces.
     pub(crate) fn parse(attributes: &[Attribute], name: &Ident) -> syn::Result<Self> {
-        let mut paragraphs: Vec<String> = Vec::new();
-        let mut open = false;
-        for attribute in attributes
-            .iter()
-            .filter(|attribute| attribute.path().is_ident("doc"))
-        {
-            let value = &attribute.meta.require_name_value()?.value;
-            let text = if let Expr::Lit(literal) = value
-                && let Lit::Str(text) = &literal.lit
-            {
-                text.value()
-            } else {
-                return Err(syn::Error::new_spanned(
-                    value,
-                    "a group call's documentation is text",
-                ));
-            };
-            if text.trim().is_empty() {
-                open = false;
-            }
-            for line in text.lines().map(str::trim) {
-                if line.is_empty() {
-                    open = false;
-                } else if open && let Some(paragraph) = paragraphs.last_mut() {
-                    paragraph.push(' ');
-                    paragraph.push_str(line);
-                } else {
-                    paragraphs.push(line.to_owned());
-                    open = true;
-                }
-            }
-        }
-        let mut paragraphs = paragraphs.into_iter();
+        let mut paragraphs = Self::lines(attributes)?.into_iter();
         match paragraphs.next() {
             Some(summary) if summary.ends_with('.') => Ok(Self {
                 summary,
@@ -70,6 +38,40 @@ impl Docs {
                 "a group call is documented, its summary ending with a full stop",
             )),
         }
+    }
+
+    /// The paragraphs of the `#[doc]` attributes among `attributes`, each on
+    /// one line.
+    ///
+    /// # Errors
+    ///
+    /// For a `#[doc]` that is not text.
+    pub(crate) fn lines(attributes: &[Attribute]) -> syn::Result<Vec<String>> {
+        let texts = attributes
+            .iter()
+            .filter(|attribute| attribute.path().is_ident("doc"))
+            .map(|attribute| {
+                let value = &attribute.meta.require_name_value()?.value;
+                if let Expr::Lit(literal) = value
+                    && let Lit::Str(text) = &literal.lit
+                {
+                    Ok(text.value())
+                } else {
+                    Err(syn::Error::new_spanned(value, "documentation is text"))
+                }
+            })
+            .collect::<syn::Result<Vec<_>>>()?;
+        Ok(paragraphs(&texts))
+    }
+
+    /// The summary, which ends with a full stop.
+    pub(crate) fn summary(&self) -> &str {
+        &self.summary
+    }
+
+    /// The paragraphs after the summary.
+    pub(crate) fn details(&self) -> &[String] {
+        &self.details
     }
 
     /// The documentation of the synchronous form, which fails as the call's
@@ -130,6 +132,31 @@ fn documented(summary: &str, details: &[String], infallible: bool, failure: &str
         .collect::<Vec<_>>()
         .join("\n\n");
     format!("{paragraphs}\n\n# Errors\n\n{refusal}{failure}")
+}
+
+/// The paragraphs of `texts`, the texts of a documentation's attributes in
+/// order, each on one line: a blank line or a blank attribute ends a
+/// paragraph, and the lines between run together.
+pub(crate) fn paragraphs(texts: &[String]) -> Vec<String> {
+    let mut paragraphs: Vec<String> = Vec::new();
+    let mut open = false;
+    for text in texts {
+        if text.trim().is_empty() {
+            open = false;
+        }
+        for line in text.lines().map(str::trim) {
+            if line.is_empty() {
+                open = false;
+            } else if open && let Some(paragraph) = paragraphs.last_mut() {
+                paragraph.push(' ');
+                paragraph.push_str(line);
+            } else {
+                paragraphs.push(line.to_owned());
+                open = true;
+            }
+        }
+    }
+    paragraphs
 }
 
 /// `text` as a foreign binding's generated code shows it, where a Rust link

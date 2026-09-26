@@ -25,7 +25,8 @@ Signed-off-by: <committer name> <<committer email>>
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
   `settlement`, `transfer`, and `group`; `bindings` for the binding core,
-  `glue` for the model of its calls and the proc macros over it, `uniffi`
+  `glue` for the model of its calls and records, the code written from
+  it, and the proc macros over it, `uniffi`
   for the UniFFI glue and its generators, `swift` for the Swift
   package, `kotlin` for the Kotlin package, `java` for the Java package,
   `web` for the WebAssembly glue and the TypeScript package, `kmp` for the
@@ -381,7 +382,8 @@ through UniFFI, whose generators are the binaries of
 sources on the UniFFI releases that uniffi-bindgen-react-native and gobley
 read, for WebAssembly and for Kotlin Multiplatform; `eranos-capi` exports
 it through Diplomat, which generates a C API and C++ classes from its
-bridge. Each language's package in `bindings/` puts a hand-written layer
+bridge, most of which `cargo xtask generate` writes from the core's records
+and calls. Each language's package in `bindings/` puts a hand-written layer
 over the generated code: `bindings/swift` for Apple platforms,
 `bindings/kotlin` for Android and the JVM, `bindings/java` for Java,
 `bindings/typescript` for browsers and Node, `bindings/kmp`, which
