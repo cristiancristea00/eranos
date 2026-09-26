@@ -9,8 +9,10 @@
 // IWYU pragma: private, include "eranos.hpp"
 
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 
 #include <cstdint>
+#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -32,17 +34,16 @@ class CalendarDate final {
     /// @param day The day of the month, from 1
     /// @param month The month, from 1 for January
     /// @param year The year
-    /// @return The date
-    /// @throws Error Of the kind ErrorKind::CALENDAR for a day the calendar does not have
+    /// @return The date, or an error of the kind ErrorKind::CALENDAR for a day the calendar does not have
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the order is the library's, day, month, and year.
-    [[nodiscard]] static CalendarDate of(std::int32_t const day, std::int32_t const month, std::int32_t const year);
+    [[nodiscard]] static std::expected<CalendarDate, Error> of(std::int32_t const day, std::int32_t const month, std::int32_t const year);
 
     /// The date written @p text: "2026-09-23".
     ///
     /// @param text The date's text
-    /// @return The date
-    /// @throws Error Of the kind ErrorKind::CALENDAR for text that is not a date
-    [[nodiscard]] static CalendarDate parse(std::string_view const text);
+    /// @return The date, or an error of the kind ErrorKind::CALENDAR for text that is not a date, and ErrorKind::INVALID_TEXT for text that is not
+    ///   UTF-8
+    [[nodiscard]] static std::expected<CalendarDate, Error> parse(std::string_view const text);
 
     /// The day of the month, from 1.
     ///
@@ -95,17 +96,16 @@ class TimeOfDay final {
     ///
     /// @param hour The hour, from 0 to 23
     /// @param minute The minute, from 0 to 59
-    /// @return The time
-    /// @throws Error Of the kind ErrorKind::CALENDAR for a time the day does not have
+    /// @return The time, or an error of the kind ErrorKind::CALENDAR for a time the day does not have
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the order is the library's, hour and minute.
-    [[nodiscard]] static TimeOfDay of(std::int32_t const hour, std::int32_t const minute);
+    [[nodiscard]] static std::expected<TimeOfDay, Error> of(std::int32_t const hour, std::int32_t const minute);
 
     /// The time written @p text: "18:30".
     ///
     /// @param text The time's text
-    /// @return The time
-    /// @throws Error Of the kind ErrorKind::CALENDAR for text that is not a time
-    [[nodiscard]] static TimeOfDay parse(std::string_view const text);
+    /// @return The time, or an error of the kind ErrorKind::CALENDAR for text that is not a time, and ErrorKind::INVALID_TEXT for text that is not
+    ///   UTF-8
+    [[nodiscard]] static std::expected<TimeOfDay, Error> parse(std::string_view const text);
 
     /// The hour, from 0 to 23.
     ///
@@ -153,25 +153,29 @@ namespace detail {
 
 } // namespace detail
 
-inline CalendarDate CalendarDate::of(std::int32_t const day, std::int32_t const month, std::int32_t const year) {
-    static_cast<void>(detail::unwrap(detail::EranosCalendarDate{.day = day, .month = month, .year = year}.format()));
-    return CalendarDate({.day = day, .month = month, .year = year});
+inline std::expected<CalendarDate, Error> CalendarDate::of(std::int32_t const day, std::int32_t const month, std::int32_t const year) {
+    detail::EranosCalendarDate const date{.day = day, .month = month, .year = year};
+    return detail::expectedOf(date.format()).transform([date](std::string const & /* text */) noexcept { return detail::calendarDateOf(date); });
 }
 
-inline CalendarDate CalendarDate::parse(std::string_view const text) {
-    return detail::calendarDateOf(detail::unwrap(detail::EranosCalendarDate::parse(text)));
+inline std::expected<CalendarDate, Error> CalendarDate::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosCalendarDate::parse(text)).transform(detail::calendarDateOf);
 }
 
-inline std::string CalendarDate::toString() const { return detail::unwrap(detail::toDetail(*this).format()); }
+// A date is checked when it is made.
+inline std::string CalendarDate::toString() const { return detail::known(detail::toDetail(*this).format()); }
 
-inline TimeOfDay TimeOfDay::of(std::int32_t const hour, std::int32_t const minute) {
-    static_cast<void>(detail::unwrap(detail::EranosTimeOfDay{.hour = hour, .minute = minute}.format()));
-    return TimeOfDay({.hour = hour, .minute = minute});
+inline std::expected<TimeOfDay, Error> TimeOfDay::of(std::int32_t const hour, std::int32_t const minute) {
+    detail::EranosTimeOfDay const time{.hour = hour, .minute = minute};
+    return detail::expectedOf(time.format()).transform([time](std::string const & /* text */) noexcept { return detail::timeOfDayOf(time); });
 }
 
-inline TimeOfDay TimeOfDay::parse(std::string_view const text) { return detail::timeOfDayOf(detail::unwrap(detail::EranosTimeOfDay::parse(text))); }
+inline std::expected<TimeOfDay, Error> TimeOfDay::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosTimeOfDay::parse(text)).transform(detail::timeOfDayOf);
+}
 
-inline std::string TimeOfDay::toString() const { return detail::unwrap(detail::toDetail(*this).format()); }
+// A time is checked when it is made.
+inline std::string TimeOfDay::toString() const { return detail::known(detail::toDetail(*this).format()); }
 
 } // namespace eranos
 

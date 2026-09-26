@@ -9,10 +9,12 @@
 // IWYU pragma: private, include "eranos.hpp"
 
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 #include "eranos/identifiers.hpp"
 #include "eranos/money.hpp"
 #include "eranos/ratios.hpp"
 
+#include <expected>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -144,36 +146,34 @@ using Split = std::variant<AmountsSplit, EqualSplit, PartsSplit, PercentagesSpli
 /// The members a split divides among, in the order it lists them.
 ///
 /// @param split The split
-/// @return The members
-/// @throws Error Of the kind ErrorKind::ID for an identifier that is not one
-[[nodiscard]] std::vector<MemberId> participants(Split const &split);
+/// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one
+[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Split const &split);
 
 namespace detail {
 
-[[nodiscard]] inline std::unique_ptr<EranosTextList> toDetail(std::vector<MemberId> const &members);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosTextList>, Error> toDetail(std::vector<MemberId> const &members);
 [[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value);
-[[nodiscard]] inline std::unique_ptr<EranosMemberAmount> toDetail(MemberAmount const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value);
 [[nodiscard]] inline MemberParts fromDetail(EranosMemberParts const &value);
-[[nodiscard]] inline std::unique_ptr<EranosMemberParts> toDetail(MemberParts const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberParts>, Error> toDetail(MemberParts const &value);
 [[nodiscard]] inline MemberPercentage fromDetail(EranosMemberPercentage const &value);
-[[nodiscard]] inline std::unique_ptr<EranosMemberPercentage> toDetail(MemberPercentage const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberPercentage>, Error> toDetail(MemberPercentage const &value);
 [[nodiscard]] inline Split fromDetail(EranosSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(AmountsSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(EqualSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(PartsSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(PercentagesSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(Split const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(EqualSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PartsSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PercentagesSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value);
 [[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list);
-[[nodiscard]] inline std::unique_ptr<EranosMemberAmountList> toDetail(std::vector<MemberAmount> const &records);
 [[nodiscard]] inline std::vector<MemberParts> fromDetail(EranosMemberPartsList const &list);
-[[nodiscard]] inline std::unique_ptr<EranosMemberPartsList> toDetail(std::vector<MemberParts> const &records);
 [[nodiscard]] inline std::vector<MemberPercentage> fromDetail(EranosMemberPercentageList const &list);
-[[nodiscard]] inline std::unique_ptr<EranosMemberPercentageList> toDetail(std::vector<MemberPercentage> const &records);
 
 } // namespace detail
 
-inline std::vector<MemberId> participants(Split const &split) {
-    return detail::identifiers<MemberId>(*detail::unwrap(detail::toDetail(split)->participants()));
+inline std::expected<std::vector<MemberId>, Error> participants(Split const &split) {
+    return detail::toDetail(split)
+        .and_then([](std::unique_ptr<detail::EranosSplit> const &converted) { return detail::expectedOf(converted->participants()); })
+        .transform([](std::unique_ptr<detail::EranosTextList> const &members) { return detail::identifiers<MemberId>(*members); });
 }
 
 } // namespace eranos

@@ -28,28 +28,155 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <exception>
+#include <expected>
 #include <future>
 #include <memory>
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
 
+namespace eranos {
+
+/// What an error holds: its kind, its message, the failure, and what the failure holds.
+struct Error::Fields final {
+    ErrorKind kind;
+    std::string message;
+    std::optional<Failure> failure;
+    std::optional<Money> actual;
+    std::optional<std::int64_t> allowed;
+    std::optional<std::int64_t> balances;
+    std::optional<CategoryId> category;
+    std::optional<std::int64_t> column;
+    std::optional<std::string> currency;
+    std::optional<CategoryId> existing;
+    std::optional<Money> expectedAmount;
+    std::optional<std::string> expectedCurrency;
+    std::optional<std::int64_t> expectedLength;
+    std::optional<ExpenseId> expense;
+    std::optional<std::vector<ExpenseId>> expenses;
+    std::optional<std::int64_t> format;
+    std::optional<std::string> foundCurrency;
+    std::optional<std::int64_t> foundLength;
+    std::optional<std::string> left;
+    std::optional<std::int64_t> line;
+    std::optional<MemberId> member;
+    std::optional<IbanReason> reason;
+    std::optional<std::string> right;
+    std::optional<std::int64_t> totalBasisPoints;
+    std::optional<TransferId> transfer;
+    std::optional<std::vector<TransferId>> transfers;
+};
+
+inline ErrorKind Error::kind() const noexcept { return fields->kind; }
+
+inline std::string const &Error::message() const noexcept { return fields->message; }
+
+inline std::optional<Failure> Error::failure() const noexcept { return fields->failure; }
+
+inline std::optional<Money> const &Error::actual() const noexcept { return fields->actual; }
+
+inline std::optional<std::int64_t> const &Error::allowed() const noexcept { return fields->allowed; }
+
+inline std::optional<std::int64_t> const &Error::balances() const noexcept { return fields->balances; }
+
+inline std::optional<CategoryId> const &Error::category() const noexcept { return fields->category; }
+
+inline std::optional<std::int64_t> const &Error::column() const noexcept { return fields->column; }
+
+inline std::optional<std::string> const &Error::currency() const noexcept { return fields->currency; }
+
+inline std::optional<CategoryId> const &Error::existing() const noexcept { return fields->existing; }
+
+inline std::optional<Money> const &Error::expectedAmount() const noexcept { return fields->expectedAmount; }
+
+inline std::optional<std::string> const &Error::expectedCurrency() const noexcept { return fields->expectedCurrency; }
+
+inline std::optional<std::int64_t> const &Error::expectedLength() const noexcept { return fields->expectedLength; }
+
+inline std::optional<ExpenseId> const &Error::expense() const noexcept { return fields->expense; }
+
+inline std::optional<std::vector<ExpenseId>> const &Error::expenses() const noexcept { return fields->expenses; }
+
+inline std::optional<std::int64_t> const &Error::format() const noexcept { return fields->format; }
+
+inline std::optional<std::string> const &Error::foundCurrency() const noexcept { return fields->foundCurrency; }
+
+inline std::optional<std::int64_t> const &Error::foundLength() const noexcept { return fields->foundLength; }
+
+inline std::optional<std::string> const &Error::left() const noexcept { return fields->left; }
+
+inline std::optional<std::int64_t> const &Error::line() const noexcept { return fields->line; }
+
+inline std::optional<MemberId> const &Error::member() const noexcept { return fields->member; }
+
+inline std::optional<IbanReason> const &Error::reason() const noexcept { return fields->reason; }
+
+inline std::optional<std::string> const &Error::right() const noexcept { return fields->right; }
+
+inline std::optional<std::int64_t> const &Error::totalBasisPoints() const noexcept { return fields->totalBasisPoints; }
+
+inline std::optional<TransferId> const &Error::transfer() const noexcept { return fields->transfer; }
+
+inline std::optional<std::vector<TransferId>> const &Error::transfers() const noexcept { return fields->transfers; }
+
+} // namespace eranos
+
 namespace eranos::detail {
 
-/// The value @p result holds, or the error it holds, thrown.
-template <typename Value> [[nodiscard]] inline Value unwrap(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
+/// The value @p result holds, or the error it holds.
+template <typename Value>
+[[nodiscard]] inline std::expected<Value, Error> expectedOf(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
     if (result.is_ok()) {
         return std::move(std::move(result).ok().value()); // NOLINT(bugprone-unchecked-optional-access): is_ok() says which side it holds.
     }
-    throw errorOf(*std::move(result).err().value()); // NOLINT(bugprone-unchecked-optional-access): is_ok() says which side it holds.
+    return std::unexpected(
+        errorOf(*std::move(result).err().value())); // NOLINT(bugprone-unchecked-optional-access): is_ok() says which side it holds.
 }
 
-/// Throws the error @p result holds, if it holds one.
-inline void check(diplomat::result<std::monostate, std::unique_ptr<EranosError>> &&result) { static_cast<void>(unwrap(std::move(result))); }
+/// Nothing when @p result, of a call that returns nothing, succeeded, or the error it holds.
+[[nodiscard]] inline std::expected<void, Error> expectedOf(diplomat::result<std::monostate, std::unique_ptr<EranosError>> &&result) {
+    return expectedOf<std::monostate>(std::move(result)).transform([](std::monostate const /* value */) noexcept {});
+}
+
+/// The value of @p result, which holds no error: the call fails only for a value that the layer's types rule out, and its caller says which.
+template <typename Value> [[nodiscard]] inline Value known(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
+    return std::move(std::move(result).ok().value()); // NOLINT(bugprone-unchecked-optional-access): the caller says why it holds a value.
+}
+
+/// The value of @p result, of a synchronous group call that takes nothing the library could refuse: the call waits for the group's lock, so it
+/// fails only where it cannot wait, on wasm32, for which the C API does not build.
+template <typename Value> [[nodiscard]] inline Value waited(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
+    return known(std::move(result));
+}
+
+/// @p record, once @p set has given it @p value when @p value is present, or the error that @p set reports.
+template <typename Record, typename Value, typename Set>
+[[nodiscard]] inline std::expected<std::unique_ptr<Record>, Error> setIfPresent(std::unique_ptr<Record> record, std::optional<Value> const &value,
+                                                                                Set const &set) {
+    if (!value) {
+        return record;
+    }
+    return expectedOf(set(*record, *value)).transform([&record] { return std::move(record); });
+}
+
+/// The generated list @p List of @p records, or the error that the conversion of the first record it refuses reports.
+template <typename List, typename Record>
+[[nodiscard]] inline std::expected<std::unique_ptr<List>, Error> listOf(std::vector<Record> const &records) {
+    std::expected<std::unique_ptr<List>, Error> result = List::create();
+    for (auto const &record : records) {
+        result = std::move(result).and_then([&record](std::unique_ptr<List> list) {
+            return toDetail(record).transform([&list](auto const &element) {
+                list->push(*element);
+                return std::move(list);
+            });
+        });
+    }
+    return result;
+}
 
 /// @p text, absent when empty: the group holds no blank description and no blank language.
 [[nodiscard]] inline std::optional<std::string> present(std::string text) noexcept {
@@ -94,30 +221,43 @@ template <typename Identifier> [[nodiscard]] inline std::vector<Identifier> iden
     return result;
 }
 
-// NOLINTBEGIN(bugprone-exception-escape): a completion runs on the library's thread, where an exception must not travel, so one ends the
-// program, as the library's own failure to allocate does; set_value throws only for a promise already satisfied, and the one callback of a
-// call never is, and a conversion throws only when memory runs out.
+/// The success of an asynchronous call that returns nothing, whose outcome @p outcome holds no error.
+[[nodiscard]] inline std::expected<void, Error> finished(EranosUnitOutcome const & /* outcome */) noexcept { return {}; }
 
-/// Completes @p promise with the value @p convert makes of @p outcome, or with the error it holds.
+/// Completes @p promise with the value that @p convert makes of @p outcome, or with the error it holds. A completion runs on the library's thread,
+/// in a callback of its C API, which no exception may leave, so a conversion that runs out of memory ends the program, as the library's own
+/// failure to allocate does.
 template <typename Value, typename Outcome, typename Convert>
-inline void complete(std::promise<Value> &promise, Outcome &outcome, Convert const &convert) noexcept {
+inline void complete(std::promise<std::expected<Value, Error>> &promise, Outcome &outcome, Convert const &convert) noexcept {
     if (outcome.is_ok()) {
         promise.set_value(convert(outcome));
     } else {
-        promise.set_exception(std::make_exception_ptr(errorOf(*outcome.error())));
+        promise.set_value(std::unexpected(errorOf(*outcome.error())));
     }
 }
 
-/// Completes @p promise when @p outcome succeeded, or with the error it holds.
-template <typename Outcome> inline void complete(std::promise<void> &promise, Outcome const &outcome) noexcept {
-    if (outcome.is_ok()) {
-        promise.set_value();
-    } else {
-        promise.set_exception(std::make_exception_ptr(errorOf(*outcome.error())));
-    }
+/// A future of the asynchronous call that @p start makes with the callback it is given, which completes the future with the value that
+/// @p convert makes of the call's outcome, or with the error the outcome holds.
+template <typename Value, typename Start, typename Convert>
+[[nodiscard]] inline std::future<std::expected<Value, Error>> launch(Start const &start, Convert convert) {
+    auto const promise = std::make_shared<std::promise<std::expected<Value, Error>>>();
+    auto future = promise->get_future();
+    start([promise, convert = std::move(convert)](auto const outcome) noexcept { complete(*promise, *outcome, convert); });
+    return future;
 }
 
-// NOLINTEND(bugprone-exception-escape)
+/// A future of the asynchronous call that @p start makes with the generated form of its argument, @p argument, and the callback it is given, as
+/// the other launch() does; when the argument's conversion failed, a future of its error, and no call.
+template <typename Value, typename Argument, typename Start, typename Convert>
+[[nodiscard]] inline std::future<std::expected<Value, Error>> launch(std::expected<Argument, Error> const &argument, Start const &start,
+                                                                     Convert convert) {
+    if (argument) {
+        return launch<Value>([&argument, &start](auto callback) { start(*argument, std::move(callback)); }, std::move(convert));
+    }
+    std::promise<std::expected<Value, Error>> promise;
+    promise.set_value(std::unexpected(argument.error()));
+    return promise.get_future();
+}
 
 /// The currency of @p details.
 [[nodiscard]] inline Currency currencyOf(EranosCurrencyDetails const &details) {
@@ -125,16 +265,20 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
         {.code = details.code(), .decimalPlaces = details.decimal_places(), .name = details.name(), .numericCode = details.numeric_code()});
 }
 
-/// The amount of @p value, which the library made, so that its currency is one the library lists. The currency is read without
-/// Currency::of, whose failure would convert an error, whose amounts this converts.
-[[nodiscard]] inline Money fromDetail(EranosMoney const &value) {
-    // NOLINTNEXTLINE(bugprone-unchecked-optional-access): an amount the library made is in a currency it lists.
-    return {currencyOf(*EranosCurrencyDetails::of(value.currency()).ok().value()), value.minor_units()};
+/// The currency of the ISO 4217 code @p code, which the library wrote.
+[[nodiscard]] inline Currency listedCurrency(std::string_view const code) {
+    // A code the library wrote is one it lists.
+    return currencyOf(*known(EranosCurrencyDetails::of(code)));
 }
+
+/// The amount of @p value, which the library made. It reads the currency with known(), which converts no error: an error's amounts convert
+/// through this function, so converting an error here would make the two call each other.
+[[nodiscard]] inline Money fromDetail(EranosMoney const &value) { return {listedCurrency(value.currency()), value.minor_units()}; }
 
 /// The generated amount of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) {
-    return unwrap(EranosMoney::create(value.currency.code(), value.minorUnits));
+    // A currency's code is text the library wrote.
+    return known(EranosMoney::create(value.currency.code(), value.minorUnits));
 }
 
 /// The rate written @p text, which the library wrote.
@@ -202,6 +346,7 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 [[nodiscard]] inline Error errorOf(EranosError const &detail) {
     Error::Fields fields{};
     fields.kind = fromDetail(detail.kind());
+    fields.message = detail.message();
     fields.failure = detail.failure().transform([](EranosFailure const value) noexcept { return fromDetail(value); });
     fields.actual = optionalRecord<Money>(detail.actual());
     fields.allowed = detail.allowed();
@@ -228,14 +373,16 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     fields.transfer = optionalId<TransferId>(detail.transfer());
     auto const transfers = detail.transfers();
     fields.transfers = transfers ? std::optional<std::vector<TransferId>>(identifiers<TransferId>(*transfers)) : std::nullopt;
-    return {detail.message(), std::make_shared<Error::Fields const>(std::move(fields))};
+    return Error(std::make_shared<Error::Fields const>(std::move(fields)));
 }
 
-/// The generated list of the identifiers @p members.
-[[nodiscard]] inline std::unique_ptr<EranosTextList> toDetail(std::vector<MemberId> const &members) {
-    auto result = EranosTextList::create();
+/// The generated list of the identifiers @p members, or the error of the first that is not text.
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosTextList>, Error> toDetail(std::vector<MemberId> const &members) {
+    std::expected<std::unique_ptr<EranosTextList>, Error> result = EranosTextList::create();
     for (auto const &member : members) {
-        check(result->push(member.value()));
+        result = std::move(result).and_then([&member](std::unique_ptr<EranosTextList> list) {
+            return expectedOf(list->push(member.value())).transform([&list] { return std::move(list); });
+        });
     }
     return result;
 }
@@ -246,16 +393,16 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosMemberAmount> toDetail(MemberAmount const &value) {
-    return unwrap(EranosMemberAmount::create(*detail::toDetail(value.amount), value.member.value()));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value) {
+    return expectedOf(EranosMemberAmount::create(*detail::toDetail(value.amount), value.member.value()));
 }
 
 /// The record of @p value.
 [[nodiscard]] inline MemberParts fromDetail(EranosMemberParts const &value) { return {MemberId(value.member()), Parts{value.hundredths()}}; }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosMemberParts> toDetail(MemberParts const &value) {
-    return unwrap(EranosMemberParts::create(value.parts.hundredths, value.member.value()));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberParts>, Error> toDetail(MemberParts const &value) {
+    return expectedOf(EranosMemberParts::create(value.parts.hundredths, value.member.value()));
 }
 
 /// The record of @p value.
@@ -264,8 +411,8 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosMemberPercentage> toDetail(MemberPercentage const &value) {
-    return unwrap(EranosMemberPercentage::create(value.percentage.basisPoints, value.member.value()));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberPercentage>, Error> toDetail(MemberPercentage const &value) {
+    return expectedOf(EranosMemberPercentage::create(value.percentage.basisPoints, value.member.value()));
 }
 
 /// The alternative of @p value.
@@ -284,27 +431,35 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(AmountsSplit const &value) {
-    return EranosSplit::create_amounts(*detail::toDetail(value.shares));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value) {
+    return listOf<EranosMemberAmountList>(value.shares).transform([](std::unique_ptr<EranosMemberAmountList> const &shares) {
+        return EranosSplit::create_amounts(*shares);
+    });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(EqualSplit const &value) {
-    return EranosSplit::create_equal(*detail::toDetail(value.members));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(EqualSplit const &value) {
+    return detail::toDetail(value.members).transform([](std::unique_ptr<EranosTextList> const &members) {
+        return EranosSplit::create_equal(*members);
+    });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(PartsSplit const &value) {
-    return EranosSplit::create_parts(*detail::toDetail(value.shares));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PartsSplit const &value) {
+    return listOf<EranosMemberPartsList>(value.shares).transform([](std::unique_ptr<EranosMemberPartsList> const &shares) {
+        return EranosSplit::create_parts(*shares);
+    });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(PercentagesSplit const &value) {
-    return EranosSplit::create_percentages(*detail::toDetail(value.shares));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PercentagesSplit const &value) {
+    return listOf<EranosMemberPercentageList>(value.shares).transform([](std::unique_ptr<EranosMemberPercentageList> const &shares) {
+        return EranosSplit::create_percentages(*shares);
+    });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosSplit> toDetail(Split const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value) {
     return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
@@ -314,15 +469,6 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
         result.push_back(fromDetail(*list.get(index)));
-    }
-    return result;
-}
-
-/// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosMemberAmountList> toDetail(std::vector<MemberAmount> const &records) {
-    auto result = EranosMemberAmountList::create();
-    for (auto const &record : records) {
-        result->push(*toDetail(record));
     }
     return result;
 }
@@ -337,30 +483,12 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     return result;
 }
 
-/// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosMemberPartsList> toDetail(std::vector<MemberParts> const &records) {
-    auto result = EranosMemberPartsList::create();
-    for (auto const &record : records) {
-        result->push(*toDetail(record));
-    }
-    return result;
-}
-
 /// The records of @p list.
 [[nodiscard]] inline std::vector<MemberPercentage> fromDetail(EranosMemberPercentageList const &list) {
     std::vector<MemberPercentage> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
         result.push_back(fromDetail(*list.get(index)));
-    }
-    return result;
-}
-
-/// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosMemberPercentageList> toDetail(std::vector<MemberPercentage> const &records) {
-    auto result = EranosMemberPercentageList::create();
-    for (auto const &record : records) {
-        result->push(*toDetail(record));
     }
     return result;
 }
@@ -373,10 +501,15 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosItem> toDetail(Item const &value) {
-    auto result = unwrap(EranosItem::create(value.name, *detail::toDetail(value.split), *detail::toDetail(value.unitPrice)));
-    result->set_quantity(value.quantity);
-    return result;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosItem>, Error> toDetail(Item const &value) {
+    return detail::toDetail(value.split)
+        .and_then([&value](std::unique_ptr<EranosSplit> const &split) {
+            return expectedOf(EranosItem::create(value.name, *split, *detail::toDetail(value.unitPrice)));
+        })
+        .transform([&value](std::unique_ptr<EranosItem> result) {
+            result->set_quantity(value.quantity);
+            return result;
+        });
 }
 
 /// The alternative of @p value.
@@ -428,7 +561,8 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 
 /// The generated cost of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value) {
-    return unwrap(EranosCost::create_converted(*detail::toDetail(value.amount), value.rate.toString()));
+    // A rate is text the library wrote.
+    return known(EranosCost::create_converted(*detail::toDetail(value.amount), value.rate.toString()));
 }
 
 /// The generated cost of @p value.
@@ -453,17 +587,21 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated expense split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosExpenseSplit> toDetail(ItemisedExpenseSplit const &value) {
-    return EranosExpenseSplit::create_itemised(*detail::toDetail(value.items));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) {
+    return listOf<EranosItemList>(value.items).transform([](std::unique_ptr<EranosItemList> const &items) {
+        return EranosExpenseSplit::create_itemised(*items);
+    });
 }
 
 /// The generated expense split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosExpenseSplit> toDetail(WholeExpenseSplit const &value) {
-    return EranosExpenseSplit::create_whole(*detail::toDetail(value.split));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(WholeExpenseSplit const &value) {
+    return detail::toDetail(value.split).transform([](std::unique_ptr<EranosSplit> const &split) {
+        return EranosExpenseSplit::create_whole(*split);
+    });
 }
 
 /// The generated expense split of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosExpenseSplit> toDetail(ExpenseSplit const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value) {
     return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
@@ -480,25 +618,30 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosExpense> toDetail(Expense const &value) {
-    auto result = unwrap(EranosExpense::create(*detail::toDetail(value.cost), detail::toDetail(value.date), value.name,
-                                               *detail::toDetail(value.payers), *detail::toDetail(value.split)));
-    if (value.id) {
-        check(result->set_id(value.id->value()));
-    }
-    if (value.category) {
-        check(result->set_category(value.category->value()));
-    }
-    if (value.description) {
-        check(result->set_description(*value.description));
-    }
-    if (value.time) {
-        result->set_time(detail::toDetail((*value.time)));
-    }
-    if (value.tip) {
-        result->set_tip(*detail::toDetail((*value.tip)));
-    }
-    return result;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value) {
+    return detail::toDetail(value.payers)
+        .and_then([&value](std::unique_ptr<EranosSplit> const &payers) {
+            return detail::toDetail(value.split).and_then([&value, &payers](std::unique_ptr<EranosExpenseSplit> const &split) {
+                return expectedOf(EranosExpense::create(*detail::toDetail(value.cost), detail::toDetail(value.date), value.name, *payers, *split));
+            });
+        })
+        .and_then([&value](std::unique_ptr<EranosExpense> result) {
+            if (value.time) {
+                result->set_time(detail::toDetail(*value.time));
+            }
+            if (value.tip) {
+                result->set_tip(*detail::toDetail(*value.tip));
+            }
+            return setIfPresent(std::move(result), value.id, [](EranosExpense &record, ExpenseId const &id) { return record.set_id(id.value()); });
+        })
+        .and_then([&value](std::unique_ptr<EranosExpense> result) {
+            return setIfPresent(std::move(result), value.category,
+                                [](EranosExpense &record, CategoryId const &id) { return record.set_category(id.value()); });
+        })
+        .and_then([&value](std::unique_ptr<EranosExpense> result) {
+            return setIfPresent(std::move(result), value.description,
+                                [](EranosExpense &record, std::string const &text) { return record.set_description(text); });
+        });
 }
 
 /// The records of @p list.
@@ -517,15 +660,6 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
         result.push_back(fromDetail(*list.get(index)));
-    }
-    return result;
-}
-
-/// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosItemList> toDetail(std::vector<Item> const &records) {
-    auto result = EranosItemList::create();
-    for (auto const &record : records) {
-        result->push(*toDetail(record));
     }
     return result;
 }
@@ -562,18 +696,17 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTransfer> toDetail(Transfer const &value) {
-    auto result = unwrap(EranosTransfer::create(*detail::toDetail(value.cost), detail::toDetail(value.date), value.from.value(), value.to.value()));
-    if (value.id) {
-        check(result->set_id(value.id->value()));
-    }
-    if (value.note) {
-        check(result->set_note(*value.note));
-    }
-    if (value.time) {
-        result->set_time(detail::toDetail((*value.time)));
-    }
-    return result;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value) {
+    return expectedOf(EranosTransfer::create(*detail::toDetail(value.cost), detail::toDetail(value.date), value.from.value(), value.to.value()))
+        .and_then([&value](std::unique_ptr<EranosTransfer> result) {
+            if (value.time) {
+                result->set_time(detail::toDetail(*value.time));
+            }
+            return setIfPresent(std::move(result), value.id, [](EranosTransfer &record, TransferId const &id) { return record.set_id(id.value()); });
+        })
+        .and_then([&value](std::unique_ptr<EranosTransfer> result) {
+            return setIfPresent(std::move(result), value.note, [](EranosTransfer &record, std::string const &text) { return record.set_note(text); });
+        });
 }
 
 /// The records of @p list.
@@ -601,12 +734,14 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 
 /// The generated account details of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(IbanAccountDetails const &value) {
-    return unwrap(EranosAccountDetails::create_iban(value.iban.toString()));
+    // An IBAN is text the library wrote.
+    return known(EranosAccountDetails::create_iban(value.iban.toString()));
 }
 
 /// The generated account details of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(UsernameAccountDetails const &value) {
-    return unwrap(EranosAccountDetails::create_username(value.username.toString()));
+    // A username is text the library wrote.
+    return known(EranosAccountDetails::create_username(value.username.toString()));
 }
 
 /// The generated account details of @p value.
@@ -618,8 +753,8 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 [[nodiscard]] inline Account fromDetail(EranosAccount const &value) { return {detail::fromDetail(*value.details()), value.name()}; }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosAccount> toDetail(Account const &value) {
-    return unwrap(EranosAccount::create(*detail::toDetail(value.details), value.name));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosAccount>, Error> toDetail(Account const &value) {
+    return expectedOf(EranosAccount::create(*detail::toDetail(value.details), value.name));
 }
 
 /// The record of @p value.
@@ -634,22 +769,29 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosMember> toDetail(Member const &value) {
-    auto result = unwrap(EranosMember::create(value.firstName));
-    if (value.id) {
-        check(result->set_id(value.id->value()));
-    }
-    result->set_accounts(*toDetail(value.accounts));
-    if (value.email) {
-        check(result->set_email(value.email->toString()));
-    }
-    if (value.lastName) {
-        check(result->set_last_name(*value.lastName));
-    }
-    if (value.phone) {
-        check(result->set_phone(value.phone->toString()));
-    }
-    return result;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value) {
+    return listOf<EranosAccountList>(value.accounts)
+        .and_then([&value](std::unique_ptr<EranosAccountList> const &accounts) {
+            return expectedOf(EranosMember::create(value.firstName)).transform([&accounts](std::unique_ptr<EranosMember> result) {
+                result->set_accounts(*accounts);
+                return result;
+            });
+        })
+        .and_then([&value](std::unique_ptr<EranosMember> result) {
+            return setIfPresent(std::move(result), value.id, [](EranosMember &record, MemberId const &id) { return record.set_id(id.value()); });
+        })
+        .and_then([&value](std::unique_ptr<EranosMember> result) {
+            return setIfPresent(std::move(result), value.email,
+                                [](EranosMember &record, Email const &email) { return record.set_email(email.toString()); });
+        })
+        .and_then([&value](std::unique_ptr<EranosMember> result) {
+            return setIfPresent(std::move(result), value.lastName,
+                                [](EranosMember &record, std::string const &text) { return record.set_last_name(text); });
+        })
+        .and_then([&value](std::unique_ptr<EranosMember> result) {
+            return setIfPresent(std::move(result), value.phone,
+                                [](EranosMember &record, PhoneNumber const &phone) { return record.set_phone(phone.toString()); });
+        });
 }
 
 /// The records of @p list.
@@ -658,15 +800,6 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
         result.push_back(fromDetail(*list.get(index)));
-    }
-    return result;
-}
-
-/// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosAccountList> toDetail(std::vector<Account> const &records) {
-    auto result = EranosAccountList::create();
-    for (auto const &record : records) {
-        result->push(*toDetail(record));
     }
     return result;
 }
@@ -689,12 +822,10 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosCategory> toDetail(Category const &value) {
-    auto result = unwrap(EranosCategory::create(value.name));
-    if (value.id) {
-        check(result->set_id(value.id->value()));
-    }
-    return result;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value) {
+    return expectedOf(EranosCategory::create(value.name)).and_then([&value](std::unique_ptr<EranosCategory> result) {
+        return setIfPresent(std::move(result), value.id, [](EranosCategory &record, CategoryId const &id) { return record.set_id(id.value()); });
+    });
 }
 
 /// The records of @p list.
@@ -865,7 +996,8 @@ template <typename Outcome> inline void complete(std::promise<void> &promise, Ou
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::unique_ptr<EranosCurrencyRate> toDetail(CurrencyRate const &value) {
-    return unwrap(EranosCurrencyRate::create(value.currency.code(), value.rate.toString()));
+    // A currency's code and a rate are text the library wrote.
+    return known(EranosCurrencyRate::create(value.currency.code(), value.rate.toString()));
 }
 
 /// The generated list of @p records.

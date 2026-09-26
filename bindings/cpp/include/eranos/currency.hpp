@@ -9,10 +9,13 @@
 // IWYU pragma: private, include "eranos.hpp"
 
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 
 #include <compare>
 #include <cstddef>
 #include <cstdint>
+#include <expected>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -23,6 +26,7 @@ namespace eranos {
 namespace detail {
 
 [[nodiscard]] inline Currency currencyOf(EranosCurrencyDetails const &details);
+[[nodiscard]] inline Currency listedCurrency(std::string_view const code);
 
 } // namespace detail
 
@@ -33,10 +37,9 @@ class Currency final {
     /// The currency of the ISO 4217 code @p code: "EUR".
     ///
     /// @param code The ISO 4217 code
-    /// @return The currency
-    /// @throws Error Of the kind ErrorKind::MONEY for a code the library does not list, and ErrorKind::INVALID_TEXT
-    ///   for text that is not UTF-8
-    [[nodiscard]] static Currency of(std::string_view const code);
+    /// @return The currency, or an error of the kind ErrorKind::MONEY for a code the library does not list, and ErrorKind::INVALID_TEXT for text that
+    ///   is not UTF-8
+    [[nodiscard]] static std::expected<Currency, Error> of(std::string_view const code);
 
     /// Every currency the library lists, by code.
     ///
@@ -95,7 +98,11 @@ class Currency final {
     Fields fields;
 };
 
-inline Currency Currency::of(std::string_view const code) { return detail::currencyOf(*detail::unwrap(detail::EranosCurrencyDetails::of(code))); }
+inline std::expected<Currency, Error> Currency::of(std::string_view const code) {
+    return detail::expectedOf(detail::EranosCurrencyDetails::of(code)).transform([](std::unique_ptr<detail::EranosCurrencyDetails> const &details) {
+        return detail::currencyOf(*details);
+    });
+}
 
 inline std::vector<Currency> Currency::all() {
     auto const list = detail::EranosCurrencyDetailsList::all();

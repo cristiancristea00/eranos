@@ -183,13 +183,14 @@ export JAVA_HOME="$JAVA_HOME_21"                 # Gradle 9.0 runs on JDK 24 at 
 
 In `bindings/cpp`, once `cargo build -p eranos-capi` wrote the static
 library into `target/debug`; `bindings/c` takes the same commands with
-`c`, `clang`, `-std=c23`, `tests/tests.c`, and `-pthread`, and on Linux the
-libraries that `cargo rustc -p eranos-capi --lib -- --print
-native-static-libs` lists in place of `-liconv`:
+`c`, `clang`, `-std=c23` in place of `-std=c++23 -fno-exceptions`,
+`tests/tests.c`, and `-pthread`, and on Linux the libraries that `cargo
+rustc -p eranos-capi --lib -- --print native-static-libs` lists in place
+of `-liconv`:
 
 ```sh
 diplomat-tool cpp generated --entry ../../crates/eranos-capi/src/lib.rs     # Diplomat's headers, beneath the layer
-"$LLVM_HOME/bin/clang++" -std=c++23 -g -fsanitize=address,undefined -Iinclude -isystem generated \
+"$LLVM_HOME/bin/clang++" -std=c++23 -fno-exceptions -g -fsanitize=address,undefined -Iinclude -isystem generated \
     tests/tests.cpp ../../target/debug/liberanos_capi.a -liconv -o build/tests  # the tests, under the sanitizers
 build/tests                                                                 # run them
 "$LLVM_HOME/bin/clang-format" -i include/eranos.hpp include/eranos/*.hpp include/eranos/detail/*.hpp tests/tests.cpp  # the formatter, applied
@@ -197,9 +198,9 @@ doxygen Doxyfile                                                            # th
 ```
 
 A port builds the same way, from its program and the report module, in
-`bindings/c` as below and in `bindings/cpp` with `clang++`, `-std=c++23`,
-and `.cpp`; on macOS, `ASAN_OPTIONS=detect_leaks=1` turns on the leak check
-that Linux runs by default:
+`bindings/c` as below and in `bindings/cpp` with `clang++`, `-std=c++23
+-fno-exceptions`, and `.cpp`; on macOS, `ASAN_OPTIONS=detect_leaks=1`
+turns on the leak check that Linux runs by default:
 
 ```sh
 "$LLVM_HOME/bin/clang" -std=c23 -g -fsanitize=address,undefined -pthread -Iinclude -isystem generated \
@@ -611,7 +612,7 @@ commit was tested, and those checks show on the pull request.
 | Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                                                                                                                                                  |
 | Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                                                                                                                                                    |
 | Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                                                                                                                                                      |
-| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, then the C and C++ tests compiled by GCC 14 as C23 and C++23, which backs the packages' GCC floors, on a dispatch that asks for the bindings only                                                                                                                     |
+| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, then the C and C++ tests compiled by GCC 14 as C23 and as C++23 without exceptions, which backs the packages' GCC floors, on a dispatch that asks for the bindings only                                                                                               |
 | Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                                                                                                                                                |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a

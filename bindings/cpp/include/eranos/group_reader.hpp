@@ -12,6 +12,7 @@
 #include "eranos/contact.hpp"
 #include "eranos/currency.hpp"
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 #include "eranos/expense.hpp"
 #include "eranos/identifiers.hpp"
 #include "eranos/members.hpp"
@@ -19,6 +20,7 @@
 #include "eranos/totals.hpp"
 #include "eranos/transfer.hpp"
 
+#include <expected>
 #include <memory>
 #include <optional>
 #include <string>
@@ -33,127 +35,116 @@ class GroupReader final {
   public:
     /// The group's identifier.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] GroupId id() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<GroupId, Error> id() const;
 
     /// Every category, the built-in one first.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::vector<Category> categories() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::vector<Category>, Error> categories() const;
 
     /// The category with the identifier id.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<Category> category(CategoryId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<std::optional<Category>, Error> category(CategoryId const &id) const;
 
     /// The ISO 4217 code of the group currency.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] Currency currency() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<Currency, Error> currency() const;
 
     /// Every expense, in the order they were created.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::vector<Expense> expenses() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::vector<Expense>, Error> expenses() const;
 
     /// The expense with the identifier id.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<Expense> expense(ExpenseId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<std::optional<Expense>, Error> expense(ExpenseId const &id) const;
 
     /// How the expense with the identifier id divides, in the group currency.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<ExpenseShares> expenseShares(ExpenseId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<std::optional<ExpenseShares>, Error> expenseShares(ExpenseId const &id) const;
 
     /// The group's totals.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] Summary summary() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<Summary, Error> summary() const;
 
     /// Every member, archived ones included, in the order they were created.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::vector<Member> members() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::vector<Member>, Error> members() const;
 
     /// The member with the identifier id.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<Member> member(MemberId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<std::optional<Member>, Error> member(MemberId const &id) const;
 
     /// Whether the member with the identifier id is archived; false for an unknown member.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] bool isArchived(MemberId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<bool, Error> isArchived(MemberId const &id) const;
 
     /// The group's name.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::string name() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::string, Error> name() const;
 
     /// The payments that settle every balance by strategy.
     ///
     /// @param strategy The strategy
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] Settlement settlement(SettlementStrategy const strategy) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<Settlement, Error> settlement(SettlementStrategy const strategy) const;
 
     /// Every transfer, in the order they were created.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::vector<Transfer> transfers() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::vector<Transfer>, Error> transfers() const;
 
     /// The transfer with the identifier id.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<Transfer> transfer(TransferId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<std::optional<Transfer>, Error> transfer(TransferId const &id) const;
 
     /// The amount in the group currency of the transfer with the identifier id.
     ///
     /// @param id The id
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<Money> transferAmount(TransferId const &id) const;
+    /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
+    ///   module that refused it
+    [[nodiscard]] std::expected<std::optional<Money>, Error> transferAmount(TransferId const &id) const;
 
     /// The group's description.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<std::string> description() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::optional<std::string>, Error> description() const;
 
     /// The language the apps show the group in, as a BCP 47 tag.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::optional<Language> language() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::optional<Language>, Error> language() const;
 
     /// The group in its saved form, as JSON.
     ///
-    /// @return The result
-    /// @throws Error Of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::string save() const;
+    /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
+    [[nodiscard]] std::expected<std::string, Error> save() const;
 
-    /// Releases the lock at once; later reads throw Error of the kind ErrorKind::RELEASED.
+    /// Releases the lock at once; later reads return an error of the kind ErrorKind::RELEASED.
     void release() noexcept { handle->release(); }
 
   private:
@@ -164,59 +155,79 @@ class GroupReader final {
     std::unique_ptr<detail::EranosGroupReader> handle;
 };
 
-inline GroupId GroupReader::id() const { return GroupId(detail::unwrap(handle->id())); }
-
-inline std::vector<Category> GroupReader::categories() const { return detail::fromDetail(*detail::unwrap(handle->categories())); }
-
-inline std::optional<Category> GroupReader::category(CategoryId const &id) const {
-    return detail::optionalRecord<Category>(detail::unwrap(handle->category(id.value())));
+inline std::expected<GroupId, Error> GroupReader::id() const {
+    return detail::expectedOf(handle->id()).transform([](std::string id) { return GroupId(std::move(id)); });
 }
 
-inline Currency GroupReader::currency() const { return Currency::of(detail::unwrap(handle->currency())); }
-
-inline std::vector<Expense> GroupReader::expenses() const { return detail::fromDetail(*detail::unwrap(handle->expenses())); }
-
-inline std::optional<Expense> GroupReader::expense(ExpenseId const &id) const {
-    return detail::optionalRecord<Expense>(detail::unwrap(handle->expense(id.value())));
+inline std::expected<std::vector<Category>, Error> GroupReader::categories() const {
+    return detail::expectedOf(handle->categories()).transform([](auto const &value) { return detail::fromDetail(*value); });
 }
 
-inline std::optional<ExpenseShares> GroupReader::expenseShares(ExpenseId const &id) const {
-    return detail::optionalRecord<ExpenseShares>(detail::unwrap(handle->expense_shares(id.value())));
+inline std::expected<std::optional<Category>, Error> GroupReader::category(CategoryId const &id) const {
+    return detail::expectedOf(handle->category(id.value())).transform([](auto const &value) { return detail::optionalRecord<Category>(value); });
 }
 
-inline Summary GroupReader::summary() const { return detail::fromDetail(*detail::unwrap(handle->summary())); }
-
-inline std::vector<Member> GroupReader::members() const { return detail::fromDetail(*detail::unwrap(handle->members())); }
-
-inline std::optional<Member> GroupReader::member(MemberId const &id) const {
-    return detail::optionalRecord<Member>(detail::unwrap(handle->member(id.value())));
+inline std::expected<Currency, Error> GroupReader::currency() const {
+    return detail::expectedOf(handle->currency()).transform([](std::string const &code) { return detail::listedCurrency(code); });
 }
 
-inline bool GroupReader::isArchived(MemberId const &id) const { return detail::unwrap(handle->is_archived(id.value())); }
-
-inline std::string GroupReader::name() const { return detail::unwrap(handle->name()); }
-
-inline Settlement GroupReader::settlement(SettlementStrategy const strategy) const {
-    return detail::fromDetail(*detail::unwrap(handle->settlement(detail::toDetail(strategy))));
+inline std::expected<std::vector<Expense>, Error> GroupReader::expenses() const {
+    return detail::expectedOf(handle->expenses()).transform([](auto const &value) { return detail::fromDetail(*value); });
 }
 
-inline std::vector<Transfer> GroupReader::transfers() const { return detail::fromDetail(*detail::unwrap(handle->transfers())); }
-
-inline std::optional<Transfer> GroupReader::transfer(TransferId const &id) const {
-    return detail::optionalRecord<Transfer>(detail::unwrap(handle->transfer(id.value())));
+inline std::expected<std::optional<Expense>, Error> GroupReader::expense(ExpenseId const &id) const {
+    return detail::expectedOf(handle->expense(id.value())).transform([](auto const &value) { return detail::optionalRecord<Expense>(value); });
 }
 
-inline std::optional<Money> GroupReader::transferAmount(TransferId const &id) const {
-    return detail::optionalRecord<Money>(detail::unwrap(handle->transfer_amount(id.value())));
+inline std::expected<std::optional<ExpenseShares>, Error> GroupReader::expenseShares(ExpenseId const &id) const {
+    return detail::expectedOf(handle->expense_shares(id.value())).transform([](auto const &value) {
+        return detail::optionalRecord<ExpenseShares>(value);
+    });
 }
 
-inline std::optional<std::string> GroupReader::description() const { return detail::present(detail::unwrap(handle->description())); }
-
-inline std::optional<Language> GroupReader::language() const {
-    return detail::optionalText<Language>(detail::present(detail::unwrap(handle->language())), detail::languageOf);
+inline std::expected<Summary, Error> GroupReader::summary() const {
+    return detail::expectedOf(handle->summary()).transform([](auto const &value) { return detail::fromDetail(*value); });
 }
 
-inline std::string GroupReader::save() const { return detail::unwrap(handle->save()); }
+inline std::expected<std::vector<Member>, Error> GroupReader::members() const {
+    return detail::expectedOf(handle->members()).transform([](auto const &value) { return detail::fromDetail(*value); });
+}
+
+inline std::expected<std::optional<Member>, Error> GroupReader::member(MemberId const &id) const {
+    return detail::expectedOf(handle->member(id.value())).transform([](auto const &value) { return detail::optionalRecord<Member>(value); });
+}
+
+inline std::expected<bool, Error> GroupReader::isArchived(MemberId const &id) const { return detail::expectedOf(handle->is_archived(id.value())); }
+
+inline std::expected<std::string, Error> GroupReader::name() const { return detail::expectedOf(handle->name()); }
+
+inline std::expected<Settlement, Error> GroupReader::settlement(SettlementStrategy const strategy) const {
+    return detail::expectedOf(handle->settlement(detail::toDetail(strategy))).transform([](auto const &value) { return detail::fromDetail(*value); });
+}
+
+inline std::expected<std::vector<Transfer>, Error> GroupReader::transfers() const {
+    return detail::expectedOf(handle->transfers()).transform([](auto const &value) { return detail::fromDetail(*value); });
+}
+
+inline std::expected<std::optional<Transfer>, Error> GroupReader::transfer(TransferId const &id) const {
+    return detail::expectedOf(handle->transfer(id.value())).transform([](auto const &value) { return detail::optionalRecord<Transfer>(value); });
+}
+
+inline std::expected<std::optional<Money>, Error> GroupReader::transferAmount(TransferId const &id) const {
+    return detail::expectedOf(handle->transfer_amount(id.value())).transform([](auto const &value) { return detail::optionalRecord<Money>(value); });
+}
+
+inline std::expected<std::optional<std::string>, Error> GroupReader::description() const {
+    return detail::expectedOf(handle->description()).transform(detail::present);
+}
+
+inline std::expected<std::optional<Language>, Error> GroupReader::language() const {
+    return detail::expectedOf(handle->language()).transform([](std::string text) {
+        return detail::optionalText<Language>(detail::present(std::move(text)), detail::languageOf);
+    });
+}
+
+inline std::expected<std::string, Error> GroupReader::save() const { return detail::expectedOf(handle->save()); }
 
 } // namespace eranos
 

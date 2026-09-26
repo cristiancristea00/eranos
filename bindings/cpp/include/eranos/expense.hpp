@@ -10,12 +10,14 @@
 
 #include "eranos/calendar.hpp"
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 #include "eranos/identifiers.hpp"
 #include "eranos/money.hpp"
 #include "eranos/ratios.hpp"
 #include "eranos/split.hpp"
 
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <optional>
 #include <string>
@@ -226,28 +228,25 @@ struct Expense final {
 /// Every member an expense names, payers and participants, each once and in the order of their identifiers.
 ///
 /// @param expense The expense
-/// @return The members
-/// @throws Error Of the kind ErrorKind::ID for an identifier that is not one
-[[nodiscard]] std::vector<MemberId> participants(Expense const &expense);
+/// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one
+[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Expense const &expense);
 
 /// The tip of an expense in its currency, zero without one.
 ///
 /// @param expense The expense
-/// @return The tip
-/// @throws Error Of the kind ErrorKind::EXPENSE for a tip the expense cannot have
-[[nodiscard]] Money tipAmount(Expense const &expense);
+/// @return The tip, or an error of the kind ErrorKind::EXPENSE for a tip the expense cannot have
+[[nodiscard]] std::expected<Money, Error> tipAmount(Expense const &expense);
 
 /// The amount of an expense with its tip, what its payers paid.
 ///
 /// @param expense The expense
-/// @return The total
-/// @throws Error Of the kind ErrorKind::EXPENSE for a tip the expense cannot have
-[[nodiscard]] Money total(Expense const &expense);
+/// @return The total, or an error of the kind ErrorKind::EXPENSE for a tip the expense cannot have
+[[nodiscard]] std::expected<Money, Error> total(Expense const &expense);
 
 namespace detail {
 
 [[nodiscard]] inline Item fromDetail(EranosItem const &value);
-[[nodiscard]] inline std::unique_ptr<EranosItem> toDetail(Item const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosItem>, Error> toDetail(Item const &value);
 [[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value);
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value);
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value);
@@ -259,26 +258,35 @@ namespace detail {
 [[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value);
 [[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(Cost const &value);
 [[nodiscard]] inline ExpenseSplit fromDetail(EranosExpenseSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosExpenseSplit> toDetail(ItemisedExpenseSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosExpenseSplit> toDetail(WholeExpenseSplit const &value);
-[[nodiscard]] inline std::unique_ptr<EranosExpenseSplit> toDetail(ExpenseSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(WholeExpenseSplit const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value);
 [[nodiscard]] inline Expense fromDetail(EranosExpense const &value);
-[[nodiscard]] inline std::unique_ptr<EranosExpense> toDetail(Expense const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value);
 [[nodiscard]] inline std::vector<Expense> fromDetail(EranosExpenseList const &list);
 [[nodiscard]] inline std::vector<Item> fromDetail(EranosItemList const &list);
-[[nodiscard]] inline std::unique_ptr<EranosItemList> toDetail(std::vector<Item> const &records);
 [[nodiscard]] constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept;
 [[nodiscard]] constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept;
 
 } // namespace detail
 
-inline std::vector<MemberId> participants(Expense const &expense) {
-    return detail::identifiers<MemberId>(*detail::unwrap(detail::toDetail(expense)->participants()));
+inline std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) {
+    return detail::toDetail(expense)
+        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) { return detail::expectedOf(converted->participants()); })
+        .transform([](std::unique_ptr<detail::EranosTextList> const &members) { return detail::identifiers<MemberId>(*members); });
 }
 
-inline Money tipAmount(Expense const &expense) { return detail::fromDetail(*detail::unwrap(detail::toDetail(expense)->tip_amount())); }
+inline std::expected<Money, Error> tipAmount(Expense const &expense) {
+    return detail::toDetail(expense)
+        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) { return detail::expectedOf(converted->tip_amount()); })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) { return detail::fromDetail(*amount); });
+}
 
-inline Money total(Expense const &expense) { return detail::fromDetail(*detail::unwrap(detail::toDetail(expense)->total())); }
+inline std::expected<Money, Error> total(Expense const &expense) {
+    return detail::toDetail(expense)
+        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) { return detail::expectedOf(converted->total()); })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) { return detail::fromDetail(*amount); });
+}
 
 } // namespace eranos
 

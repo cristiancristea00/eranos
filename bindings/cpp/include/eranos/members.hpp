@@ -112,11 +112,10 @@ namespace detail {
 [[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(UsernameAccountDetails const &value);
 [[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(AccountDetails const &value);
 [[nodiscard]] inline Account fromDetail(EranosAccount const &value);
-[[nodiscard]] inline std::unique_ptr<EranosAccount> toDetail(Account const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosAccount>, Error> toDetail(Account const &value);
 [[nodiscard]] inline Member fromDetail(EranosMember const &value);
-[[nodiscard]] inline std::unique_ptr<EranosMember> toDetail(Member const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value);
 [[nodiscard]] inline std::vector<Account> fromDetail(EranosAccountList const &list);
-[[nodiscard]] inline std::unique_ptr<EranosAccountList> toDetail(std::vector<Account> const &records);
 [[nodiscard]] inline std::vector<Member> fromDetail(EranosMemberList const &list);
 
 } // namespace detail

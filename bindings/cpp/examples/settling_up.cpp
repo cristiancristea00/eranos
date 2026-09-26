@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdlib>
 #include <print>
 #include <string>
 #include <string_view>
@@ -28,8 +29,9 @@ struct Counts final {
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the Rust example gives them.
 void spend(Group &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
-    static_cast<void>(group.addExpense(Expense(LocalCost{Money::parse(amount, Currency::of("EUR"))}, CalendarDate::of(20, 9, 2026), name,
-                                               EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}})));
+    static_cast<void>(
+        must(group.addExpense(Expense(LocalCost{must(Money::parse(amount, must(Currency::of("EUR"))))}, must(CalendarDate::of(20, 9, 2026)), name,
+                                      EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}}))));
 }
 
 /// Prints what each member of @p group paid and consumed, and their balance.
@@ -55,7 +57,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
 /// Prints each strategy's plan with what it promises.
 [[nodiscard]] Counts strategies(Group const &group) {
     section("3. Minimum transfers");
-    auto const minimum = group.settlement(SettlementStrategy::MINIMUM_TRANSFERS);
+    auto const minimum = must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS));
     std::println("The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n"
                  "splitting the balances into as many groups that sum to zero as it can: here\n"
                  "{{Ana, Dan, Eva}} and {{Bob, Carol, Filip}}, each settled with one payment fewer than\n"
@@ -64,7 +66,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
     printPayments(group, minimum);
 
     section("4. Greedy");
-    auto const greedy = group.settlement(SettlementStrategy::GREEDY);
+    auto const greedy = must(group.settlement(SettlementStrategy::GREEDY));
     std::println("The largest debtor pays the largest creditor, again and again: fast, at most one\n"
                  "payment fewer than the members with a balance, but not always the minimum. {}\n"
                  "payments here:",
@@ -72,7 +74,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
     printPayments(group, greedy);
 
     section("5. Direct");
-    auto const direct = group.settlement(SettlementStrategy::DIRECT);
+    auto const direct = must(group.settlement(SettlementStrategy::DIRECT));
     std::println("No simplification: everyone pays back the people who paid for them, with the debts\n"
                  "between each pair of members netted. The most payments ({}), but each one traces\n"
                  "back to shared expenses:",
@@ -93,13 +95,13 @@ void printPayments(Group const &group, Settlement const &settlement) {
 
 /// Runs the example.
 void run() {
-    auto group = Group::create(Currency::of("EUR"), "Ski week");
-    auto const ana = group.addMember(Member("Ana"));
-    auto const bob = group.addMember(Member("Bob"));
-    auto const carol = group.addMember(Member("Carol"));
-    auto const dan = group.addMember(Member("Dan"));
-    auto const eva = group.addMember(Member("Eva"));
-    auto const filip = group.addMember(Member("Filip"));
+    auto group = must(Group::create(must(Currency::of("EUR")), "Ski week"));
+    auto const ana = must(group.addMember(Member("Ana")));
+    auto const bob = must(group.addMember(Member("Bob")));
+    auto const carol = must(group.addMember(Member("Carol")));
+    auto const dan = must(group.addMember(Member("Dan")));
+    auto const eva = must(group.addMember(Member("Eva")));
+    auto const filip = must(group.addMember(Member("Filip")));
 
     printLine("Ski week: three ways to settle up\n"
               "═════════════════════════════════");
@@ -115,7 +117,7 @@ void run() {
     Rows expenses;
     for (auto const &expense : group.expenses()) {
         expenses.push_back(
-            {expense.name, names(group, participants(expense.payers)), names(group, sharedBy(expense.split)), total(expense).toString()});
+            {expense.name, names(group, must(participants(expense.payers))), names(group, sharedBy(expense.split)), must(total(expense)).toString()});
     }
     printTable({"Expense", "Paid by", "Shared by", "Amount"}, expenses, 3);
 
@@ -126,13 +128,14 @@ void run() {
     auto const counts = strategies(group);
 
     section("7. Settling up for real");
-    for (auto const &payment : group.settlement(SettlementStrategy::MINIMUM_TRANSFERS).payments) {
-        static_cast<void>(group.addTransfer(Transfer(LocalCost{payment.amount}, CalendarDate::of(27, 9, 2026), payment.from, payment.to)));
+    for (auto const &payment : must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments) {
+        static_cast<void>(
+            must(group.addTransfer(Transfer(LocalCost{payment.amount}, must(CalendarDate::of(27, 9, 2026)), payment.from, payment.to))));
     }
     printLine("Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n"
               "every balance is zero and a new settlement has nothing left to pay:");
     printBalances(group);
-    std::println("Payments still needed: {}.", group.settlement(SettlementStrategy::MINIMUM_TRANSFERS).payments.size());
+    std::println("Payments still needed: {}.", must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments.size());
 
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
     // first and needs five; the unsimplified debts between pairs need seven.
@@ -146,4 +149,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() { return eranos::examples::runPort(eranos::examples::run); }
+int main() {
+    eranos::examples::run();
+    return EXIT_SUCCESS;
+}

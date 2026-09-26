@@ -41,8 +41,10 @@ pub(crate) struct Package {
     language: &'static str,
     /// The compiler, in LLVM's `bin` directory.
     compiler: &'static str,
-    /// The standard the package's code keeps to.
-    standard: &'static str,
+    /// The flags of the language the package's code keeps to: its standard,
+    /// and for C++ no exceptions, so that a `throw` or a `try` in a header
+    /// fails the build.
+    dialect: &'static [&'static str],
     /// The tests' source, from the package's directory.
     tests: &'static str,
     /// The hand-written headers, from the package's directory: the layer
@@ -60,7 +62,7 @@ pub(crate) const C_PACKAGE: Package = Package {
     directory: "bindings/c",
     language: "c",
     compiler: "clang",
-    standard: "-std=c23",
+    dialect: &["-std=c23"],
     tests: "tests/tests.c",
     headers: &[
         "include/eranos.h",
@@ -103,7 +105,7 @@ pub(crate) const CPP_PACKAGE: Package = Package {
     directory: "bindings/cpp",
     language: "cpp",
     compiler: "clang++",
-    standard: "-std=c++23",
+    dialect: &["-std=c++23", "-fno-exceptions"],
     tests: "tests/tests.cpp",
     headers: &[
         "include/eranos.hpp",
@@ -224,12 +226,12 @@ pub(crate) fn headers(package: Package) -> Step {
 }
 
 /// The flags of every build of `package` under the sanitizers, the tests'
-/// and the ports': its standard, warnings as errors, debugging information,
+/// and the ports': its dialect, warnings as errors, debugging information,
 /// and `AddressSanitizer` and `UndefinedBehaviorSanitizer`, whose every
 /// finding ends the run.
-const fn sanitised(package: Package) -> [&'static str; 9] {
-    [
-        package.standard,
+fn sanitised(package: Package) -> Vec<&'static str> {
+    let mut flags = package.dialect.to_vec();
+    flags.extend([
         "-Wall",
         "-Wextra",
         "-Wpedantic",
@@ -238,7 +240,8 @@ const fn sanitised(package: Package) -> [&'static str; 9] {
         "-fsanitize=address,undefined",
         "-fno-sanitize-recover=all",
         "-fno-omit-frame-pointer",
-    ]
+    ]);
+    flags
 }
 
 /// The steps that build `package`'s tests with LLVM's compiler at `llvm`,
@@ -248,7 +251,7 @@ const fn sanitised(package: Package) -> [&'static str; 9] {
 #[must_use]
 pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<Step> {
     let library = format!("{}/debug/liberanos_capi.a", metadata.target_directory);
-    let mut arguments = sanitised(package).to_vec();
+    let mut arguments = sanitised(package);
     arguments.extend([
         "-fprofile-instr-generate",
         "-fcoverage-mapping",
@@ -309,21 +312,22 @@ pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) 
     let library = format!("{libraries}/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}");
     let search = format!("-Wl,-rpath,{libraries}");
     let program = format!("{}/tests", measured_directory(package, metadata).display());
+    let mut arguments = package.dialect.to_vec();
+    arguments.extend([
+        "-g",
+        "-pthread",
+        "-Iinclude",
+        "-isystem",
+        "generated",
+        package.tests,
+        &library,
+        &search,
+        "-o",
+        &program,
+    ]);
     vec![
         Step::new(
-            &[
-                package.standard,
-                "-g",
-                "-pthread",
-                "-Iinclude",
-                "-isystem",
-                "generated",
-                package.tests,
-                &library,
-                &search,
-                "-o",
-                &program,
-            ],
+            &arguments,
             &format!(
                 "the {} tests' build, on the instrumented library",
                 package.name
@@ -365,7 +369,7 @@ pub(crate) fn port_build(
         "{}/{example}",
         ports_directory(package, sequential).display()
     );
-    let mut arguments = sanitised(package).to_vec();
+    let mut arguments = sanitised(package);
     arguments.extend([
         "-pthread",
         "-Iinclude",
@@ -484,7 +488,9 @@ pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Action> {
             .iter()
             .filter(|example| example.ends_with(&extension)),
     );
-    programs.extend(["--", package.standard, "-Iinclude", "-isystem", "generated"]);
+    programs.push("--");
+    programs.extend(package.dialect);
+    programs.extend(["-Iinclude", "-isystem", "generated"]);
     vec![
         Action::run(
             Phase::Lint,

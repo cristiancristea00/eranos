@@ -4,6 +4,7 @@
 #include "eranos.hpp"
 #include "report.hpp"
 
+#include <cstdlib>
 #include <optional>
 #include <print>
 #include <string>
@@ -15,33 +16,34 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return Money::parse(text, Currency::of("EUR")); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
 /// Runs the example.
 void run() {
-    auto group = Group::create(Currency::of("EUR"), "Weekend in Sinaia");
+    auto group = must(Group::create(must(Currency::of("EUR")), "Weekend in Sinaia"));
     title(group.name());
     std::println("Three friends rent a cabin and buy groceries. The group keeps its books in {}, so\n"
                  "every total, balance, and payment below is in {}.",
                  group.currency().code(), group.currency().code());
 
     section("1. Members");
-    auto const ana = group.addMember(Member("Ana"));
-    auto const bob = group.addMember(Member("Bob"));
-    auto const carol = group.addMember(Member("Carol"));
+    auto const ana = must(group.addMember(Member("Ana")));
+    auto const bob = must(group.addMember(Member("Bob")));
+    auto const carol = must(group.addMember(Member("Carol")));
     std::println("{} people joined the group: {}.", group.members().size(), names(group, {ana, bob, carol}));
 
     section("2. Expenses");
     printLine("Each expense records who paid and who shares it. Here everyone shares everything\n"
               "equally.");
-    auto const friday = CalendarDate::of(25, 9, 2026);
+    auto const friday = must(CalendarDate::of(25, 9, 2026));
     EqualSplit const everyone{{ana, bob, carol}};
-    static_cast<void>(group.addExpense(Expense(LocalCost{euros("240.00")}, friday, "Cabin", EqualSplit{{ana}}, WholeExpenseSplit{everyone})));
-    static_cast<void>(group.addExpense(Expense(LocalCost{euros("60.00")}, friday, "Groceries", EqualSplit{{bob}}, WholeExpenseSplit{everyone})));
+    static_cast<void>(must(group.addExpense(Expense(LocalCost{euros("240.00")}, friday, "Cabin", EqualSplit{{ana}}, WholeExpenseSplit{everyone}))));
+    static_cast<void>(
+        must(group.addExpense(Expense(LocalCost{euros("60.00")}, friday, "Groceries", EqualSplit{{bob}}, WholeExpenseSplit{everyone}))));
     Rows expenses;
     for (auto const &expense : group.expenses()) {
         expenses.push_back(
-            {expense.name, names(group, participants(expense.payers)), names(group, sharedBy(expense.split)), total(expense).toString()});
+            {expense.name, names(group, must(participants(expense.payers))), names(group, sharedBy(expense.split)), must(total(expense)).toString()});
     }
     printTable({"Expense", "Paid by", "Shared by", "Amount"}, expenses, 3);
 
@@ -62,7 +64,7 @@ void run() {
     std::println("Ana paid {} but consumed only {}, so the others owe her the difference.", anaTotals.paid.toString(), anaTotals.share.toString());
 
     section("4. Settling up");
-    auto const settlement = group.settlement(SettlementStrategy::MINIMUM_TRANSFERS);
+    auto const settlement = must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS));
     std::println("The fewest payments that bring every balance to zero ({} in total):", settlement.payments.size());
     Rows payments;
     for (auto const &payment : settlement.payments) {
@@ -80,4 +82,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() { return eranos::examples::runPort(eranos::examples::run); }
+int main() {
+    eranos::examples::run();
+    return EXIT_SUCCESS;
+}

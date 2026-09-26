@@ -194,7 +194,7 @@ under the core's names, and every value prints the library's text.
 | a checked value | a struct: `Currency`, `Money` | a class: `Currency`, `Money`   | `Currency`, a final class; `Money`, a record | a class: `Currency`, `Money`  | an opaque object: `EranosMoney` | `Currency`, a class; `Money`, a struct |
 | an entry        | a struct: `Expense`           | a class: `Expense`             | a final class with a builder                 | an interface: `Expense`       | an opaque object with setters   | a struct: `Expense`                    |
 | a variant       | an enum: `Split`              | a sealed interface: `Split`    | a sealed interface of records                | a union by `kind`: `Split`    | an opaque object with `kind`    | a `std::variant`                       |
-| a failure       | `EranosError`, thrown typed   | `EranosException`, thrown      | `EranosException`, checked                   | `EranosError`, thrown         | `EranosError *`, returned       | `eranos::Error`, thrown                |
+| a failure       | `EranosError`, thrown typed   | `EranosException`, thrown      | `EranosException`, checked                   | `EranosError`, thrown         | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`  |
 
 ## 4. Calls, threads, and cancellation
 
@@ -577,13 +577,18 @@ Core Guidelines with the naming rule above:
   every identifier is a class of its own over its text, with `std::hash`.
   A record is a struct whose constructor takes its required fields, and a
   variant a `std::variant` of structs (`EqualSplit`, `LocalCost`).
-- A failure throws `eranos::Error`, a `std::runtime_error` with the kind,
-  the failure, and what the failure holds, which it shares, so copying it
-  cannot throw.
+- A call the library can refuse returns a `std::expected` of its value and
+  `eranos::Error`, a plain value with the kind, the message, the failure,
+  and what the failure holds, which it shares, so copying it cannot throw;
+  a call that no argument can make fail, such as a group's name or an
+  amount's text, returns its value. Nothing throws: the tests and the ports
+  build with `-fno-exceptions`, so a `throw` or a `try` in a header fails
+  the gates, and a program built without exceptions can use the package.
 - `Group` owns its handle, so it moves and never copies; an asynchronous
-  call returns a `std::future` whose `get()` throws what the synchronous
-  form throws, and takes an optional `Cancellation`. `GroupReader`
-  releases the lock when it is destroyed or released.
+  call returns a `std::future` of what the synchronous form returns, as a
+  `std::expected`, and takes an optional `Cancellation`, which leaves an
+  error of the kind `CANCELLED` in the future. `GroupReader` releases the
+  lock when it is destroyed or released.
 - Text goes in as `std::string_view` and comes back as `std::string`.
   Every class and struct is `final`, `const` sits after what it qualifies,
   on every parameter the function does not move from, and on every member
@@ -596,19 +601,22 @@ Core Guidelines with the naming rule above:
   A call that reads a list takes a `std::span`, such as the rates of
   `changeCurrency`.
 
-The package is C++23: its headers need C++23's `std::to_underlying` and
-`std::optional`'s monadic operations and C++20's defaulted comparisons,
-which libstdc++ 12 and libc++ 14 provide, or MSVC with `/std:c++23preview`;
-the tests and ports also use `std::print` (libstdc++ 14, libc++ 18) and
-`std::ranges::contains` (libstdc++ 13, libc++ 19).
+The package is C++23: its headers need C++23's `std::expected` with its
+monadic operations, `std::to_underlying`, and `std::optional`'s monadic
+operations, and C++20's defaulted comparisons, which libstdc++ 13 and
+libc++ 17 provide, or MSVC 19.36 with `/std:c++latest` (from 19.43, also
+`/std:c++23preview`); the tests and ports also use `std::print`
+(libstdc++ 14, libc++ 18) and `std::ranges::contains` (libstdc++ 13,
+libc++ 19).
 
 `examples` holds a program per example of eranos, over the layer, that
 prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
 `report.hpp` and `report.cpp`, the tables and headings the programs share;
 each builds and is checked as the C ports are, clang-tidy without its magic
 numbers and without its check of an optional read unchecked, since a port
-reads one it expects with `value()`, whose exception `runPort` reports as
-the port's failure.
+reads one it expects with `value()`, which ends the port when it is
+absent, as `must()` ends it, printing the library's message, when the
+library refuses a call the example makes.
 
 ## 10. How the gates build the packages
 

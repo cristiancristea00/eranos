@@ -10,9 +10,11 @@
 
 #include "eranos/currency.hpp"
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 #include "eranos/money.hpp"
 
 #include <cstdint>
+#include <expected>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -31,17 +33,16 @@ class ExchangeRate final {
     /// The rate written @p text: "4.97".
     ///
     /// @param text The rate's text
-    /// @return The rate
-    /// @throws Error Of the kind ErrorKind::MONEY for text that is not a positive decimal
-    [[nodiscard]] static ExchangeRate parse(std::string_view const text);
+    /// @return The rate, or an error of the kind ErrorKind::MONEY for text that is not a positive decimal, and ErrorKind::INVALID_TEXT for text that
+    ///   is not UTF-8
+    [[nodiscard]] static std::expected<ExchangeRate, Error> parse(std::string_view const text);
 
     /// @p amount converted at this rate into @p currency.
     ///
     /// @param amount The amount to convert
     /// @param currency The currency to convert it into
-    /// @return The converted amount, rounded half away from zero
-    /// @throws Error Of the kind ErrorKind::MONEY for an amount out of range
-    [[nodiscard]] Money convert(Money const &amount, Currency const &currency) const;
+    /// @return The converted amount, rounded half away from zero, or an error of the kind ErrorKind::MONEY for an amount out of range
+    [[nodiscard]] std::expected<Money, Error> convert(Money const &amount, Currency const &currency) const;
 
     /// The rate as the library writes it: "4.97".
     ///
@@ -68,18 +69,17 @@ struct Percentage final {
     /// The percentage written @p text: "12.5%".
     ///
     /// @param text The percentage's text
-    /// @return The percentage
-    /// @throws Error Of the kind ErrorKind::MONEY for text that is not a percentage
-    [[nodiscard]] static Percentage parse(std::string_view const text);
+    /// @return The percentage, or an error of the kind ErrorKind::MONEY for text that is not a percentage, and ErrorKind::INVALID_TEXT for text that
+    ///   is not UTF-8
+    [[nodiscard]] static std::expected<Percentage, Error> parse(std::string_view const text);
 
     /// The basis points: 10000 for 100 %.
     std::int32_t basisPoints{};
 
     /// The percentage as the library writes it: "12.5%".
     ///
-    /// @return The text
-    /// @throws Error Of the kind ErrorKind::MONEY for a percentage out of range
-    [[nodiscard]] std::string toString() const;
+    /// @return The text, or an error of the kind ErrorKind::MONEY for a percentage out of range
+    [[nodiscard]] std::expected<std::string, Error> toString() const;
 
     /// Whether two percentages have one number of basis points.
     ///
@@ -94,18 +94,17 @@ struct Parts final {
     /// The parts written @p text: "0.5".
     ///
     /// @param text The parts' text
-    /// @return The parts
-    /// @throws Error Of the kind ErrorKind::MONEY for text that is not a number of parts
-    [[nodiscard]] static Parts parse(std::string_view const text);
+    /// @return The parts, or an error of the kind ErrorKind::MONEY for text that is not a number of parts, and ErrorKind::INVALID_TEXT for text that
+    ///   is not UTF-8
+    [[nodiscard]] static std::expected<Parts, Error> parse(std::string_view const text);
 
     /// The hundredths: 100 for one part.
     std::int32_t hundredths{};
 
     /// The parts as the library writes them: "0.5".
     ///
-    /// @return The text
-    /// @throws Error Of the kind ErrorKind::MONEY for parts out of range
-    [[nodiscard]] std::string toString() const;
+    /// @return The text, or an error of the kind ErrorKind::MONEY for parts out of range
+    [[nodiscard]] std::expected<std::string, Error> toString() const;
 
     /// Whether two numbers of parts are equal.
     ///
@@ -115,19 +114,28 @@ struct Parts final {
     [[nodiscard]] friend constexpr bool operator==(Parts const &left, Parts const &right) noexcept = default;
 };
 
-inline ExchangeRate ExchangeRate::parse(std::string_view const text) { return ExchangeRate(detail::unwrap(detail::EranosExchangeRate::parse(text))); }
-
-inline Money ExchangeRate::convert(Money const &amount, Currency const &currency) const {
-    return detail::fromDetail(*detail::unwrap(detail::EranosExchangeRate::convert(text, *detail::toDetail(amount), currency.code())));
+inline std::expected<ExchangeRate, Error> ExchangeRate::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosExchangeRate::parse(text)).transform(detail::exchangeRateOf);
 }
 
-inline Percentage Percentage::parse(std::string_view const text) { return Percentage{detail::unwrap(detail::EranosPercentage::parse(text))}; }
+inline std::expected<Money, Error> ExchangeRate::convert(Money const &amount, Currency const &currency) const {
+    return detail::expectedOf(detail::EranosExchangeRate::convert(text, *detail::toDetail(amount), currency.code()))
+        .transform([](auto const &converted) { return detail::fromDetail(*converted); });
+}
 
-inline std::string Percentage::toString() const { return detail::unwrap(detail::EranosPercentage::format(basisPoints)); }
+inline std::expected<Percentage, Error> Percentage::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosPercentage::parse(text)).transform([](std::int32_t const basisPoints) noexcept {
+        return Percentage{basisPoints};
+    });
+}
 
-inline Parts Parts::parse(std::string_view const text) { return Parts{detail::unwrap(detail::EranosParts::parse(text))}; }
+inline std::expected<std::string, Error> Percentage::toString() const { return detail::expectedOf(detail::EranosPercentage::format(basisPoints)); }
 
-inline std::string Parts::toString() const { return detail::unwrap(detail::EranosParts::format(hundredths)); }
+inline std::expected<Parts, Error> Parts::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosParts::parse(text)).transform([](std::int32_t const hundredths) noexcept { return Parts{hundredths}; });
+}
+
+inline std::expected<std::string, Error> Parts::toString() const { return detail::expectedOf(detail::EranosParts::format(hundredths)); }
 
 } // namespace eranos
 

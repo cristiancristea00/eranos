@@ -4,6 +4,7 @@
 #include "eranos.hpp"
 #include "report.hpp"
 
+#include <cstdlib>
 #include <print>
 #include <string>
 #include <string_view>
@@ -13,7 +14,7 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return Money::parse(text, Currency::of("EUR")); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
 /// The balance of @p member in @p summary, as the library writes it, or ? for a member without totals.
 [[nodiscard]] std::string balanceOf(Summary const &summary, MemberId const &member) {
@@ -31,15 +32,15 @@ namespace {
 
 /// Runs the example.
 void run() {
-    auto const day = CalendarDate::of(23, 9, 2026);
-    auto group = Group::create(Currency::of("EUR"), "Road trip");
-    auto const ana = group.addMember(Member("Ana"));
-    auto const bob = group.addMember(Member("Bob"));
+    auto const day = must(CalendarDate::of(23, 9, 2026));
+    auto group = must(Group::create(must(Currency::of("EUR")), "Road trip"));
+    auto const ana = must(group.addMember(Member("Ana")));
+    auto const bob = must(group.addMember(Member("Bob")));
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
-    static_cast<void>(group.addExpense(Expense(LocalCost{euros("70.00")}, day, "Fuel", EqualSplit{{ana}}, both)));
+    static_cast<void>(must(group.addExpense(Expense(LocalCost{euros("70.00")}, day, "Fuel", EqualSplit{{ana}}, both))));
     Expense lunch(LocalCost{euros("30.00")}, day, "Lunch", EqualSplit{{bob}}, both);
-    lunch.tip = Tip(TipDistribution::PROPORTIONAL, PercentageTipValue{Percentage::parse("10")});
-    static_cast<void>(group.addExpense(lunch));
+    lunch.tip = Tip(TipDistribution::PROPORTIONAL, PercentageTipValue{must(Percentage::parse("10"))});
+    static_cast<void>(must(group.addExpense(lunch)));
 
     title("Road trip: saving and loading a group");
     printLine("With the `serde` feature a group serialises, and so does every type it stores.\n"
@@ -57,7 +58,7 @@ void run() {
               "dropping fields.");
 
     section("2. Loading it back");
-    auto const loaded = Group::load(saved);
+    auto const loaded = must(Group::load(saved));
     printLine("Loading replays every entry through the same checks as adding it, then rebuilds\n"
               "the totals. The loaded group equals the saved one, and so do its balances:");
     auto const before = group.summary();
@@ -67,7 +68,7 @@ void run() {
         rows.push_back({firstName(group, member), balanceOf(before, member), balanceOf(after, member)});
     }
     printTable({"Member", "Balance before saving", "Balance after loading"}, rows, 1);
-    auto const plan = loaded.settlement(SettlementStrategy::GREEDY);
+    auto const plan = must(loaded.settlement(SettlementStrategy::GREEDY));
     std::println("Payments needed to settle the loaded group: {}.", plan.payments.size());
 
     section("3. A corrupted file is refused");
@@ -77,7 +78,7 @@ void run() {
               "do not add up:");
     // The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
     auto const corrupted = replaceFirst(saved, ana.value(), "0199a000-0000-7000-8000-00000000ffff");
-    auto const refused = refusal([&] { return Group::load(corrupted); });
+    auto const refused = refusal(Group::load(corrupted));
     check(refused.has_value(), "the file is refused");
     std::println("  error: {}", message(refused));
 
@@ -89,4 +90,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() { return eranos::examples::runPort(eranos::examples::run); }
+int main() {
+    eranos::examples::run();
+    return EXIT_SUCCESS;
+}

@@ -10,8 +10,10 @@
 
 #include "eranos/currency.hpp"
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -31,9 +33,9 @@ struct Money final {
     ///
     /// @param text The amount's text
     /// @param currency The currency
-    /// @return The amount
-    /// @throws Error Of the kind ErrorKind::MONEY for text that is not an amount of the currency
-    [[nodiscard]] static Money parse(std::string_view const text, Currency const &currency);
+    /// @return The amount, or an error of the kind ErrorKind::MONEY for text that is not an amount of the currency, and ErrorKind::INVALID_TEXT for
+    ///   text that is not UTF-8
+    [[nodiscard]] static std::expected<Money, Error> parse(std::string_view const text, Currency const &currency);
 
     /// The currency.
     Currency currency;
@@ -44,16 +46,14 @@ struct Money final {
     /// This amount plus @p other.
     ///
     /// @param other Another amount in the same currency
-    /// @return The sum
-    /// @throws Error Of the kind ErrorKind::MONEY for amounts in two currencies, or a sum out of range
-    [[nodiscard]] Money plus(Money const &other) const;
+    /// @return The sum, or an error of the kind ErrorKind::MONEY for amounts in two currencies, or a sum out of range
+    [[nodiscard]] std::expected<Money, Error> plus(Money const &other) const;
 
     /// This amount minus @p other.
     ///
     /// @param other Another amount in the same currency
-    /// @return The difference
-    /// @throws Error Of the kind ErrorKind::MONEY for amounts in two currencies, or a difference out of range
-    [[nodiscard]] Money minus(Money const &other) const;
+    /// @return The difference, or an error of the kind ErrorKind::MONEY for amounts in two currencies, or a difference out of range
+    [[nodiscard]] std::expected<Money, Error> minus(Money const &other) const;
 
     /// The amount as the library writes it: "12.50 EUR".
     ///
@@ -75,19 +75,26 @@ namespace detail {
 
 } // namespace detail
 
-inline Money Money::parse(std::string_view const text, Currency const &currency) {
-    return detail::fromDetail(*detail::unwrap(detail::EranosMoney::parse(text, currency.code())));
+inline std::expected<Money, Error> Money::parse(std::string_view const text, Currency const &currency) {
+    return detail::expectedOf(detail::EranosMoney::parse(text, currency.code())).transform([](auto const &amount) {
+        return detail::fromDetail(*amount);
+    });
 }
 
-inline Money Money::plus(Money const &other) const {
-    return detail::fromDetail(*detail::unwrap(detail::toDetail(*this)->add(*detail::toDetail(other))));
+inline std::expected<Money, Error> Money::plus(Money const &other) const {
+    return detail::expectedOf(detail::toDetail(*this)->add(*detail::toDetail(other))).transform([](auto const &sum) {
+        return detail::fromDetail(*sum);
+    });
 }
 
-inline Money Money::minus(Money const &other) const {
-    return detail::fromDetail(*detail::unwrap(detail::toDetail(*this)->subtract(*detail::toDetail(other))));
+inline std::expected<Money, Error> Money::minus(Money const &other) const {
+    return detail::expectedOf(detail::toDetail(*this)->subtract(*detail::toDetail(other))).transform([](auto const &difference) {
+        return detail::fromDetail(*difference);
+    });
 }
 
-inline std::string Money::toString() const { return detail::unwrap(detail::toDetail(*this)->format()); }
+// An amount's currency is one the library lists.
+inline std::string Money::toString() const { return detail::known(detail::toDetail(*this)->format()); }
 
 } // namespace eranos
 

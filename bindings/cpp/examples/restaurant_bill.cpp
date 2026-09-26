@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <format>
 #include <optional>
 #include <print>
@@ -19,7 +20,7 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return Money::parse(text, Currency::of("EUR")); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
 [[nodiscard]] Item line(std::string name, Split split, std::string_view const unitPrice, std::int32_t const quantity) {
@@ -41,9 +42,9 @@ namespace {
 /// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so the
 /// group itself is unchanged.
 [[nodiscard]] ExpenseShares preview(Group const &group, Expense const &expense) {
-    auto copy = Group::load(group.save());
-    auto const id = copy.addExpense(expense);
-    return copy.expenseShares(id).value();
+    auto copy = must(Group::load(group.save()));
+    auto const id = must(copy.addExpense(expense));
+    return must(copy.expenseShares(id)).value();
 }
 
 /// What @p member consumed of the expense that @p shares divides.
@@ -55,11 +56,11 @@ namespace {
 
 /// Runs the example.
 void run() {
-    auto group = Group::create(Currency::of("EUR"), "Dinner at Caru' cu Bere");
-    auto const ana = group.addMember(Member("Ana"));
-    auto const bob = group.addMember(Member("Bob"));
-    auto const carol = group.addMember(Member("Carol"));
-    auto const day = CalendarDate::of(23, 9, 2026);
+    auto group = must(Group::create(must(Currency::of("EUR")), "Dinner at Caru' cu Bere"));
+    auto const ana = must(group.addMember(Member("Ana")));
+    auto const bob = must(group.addMember(Member("Bob")));
+    auto const carol = must(group.addMember(Member("Carol")));
+    auto const day = must(CalendarDate::of(23, 9, 2026));
 
     title(std::format("{}: an itemised bill", group.name()));
     printLine("Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,\n"
@@ -70,7 +71,7 @@ void run() {
     for (auto const &item : receipt(ana, bob, carol)) {
         Money const total(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity);
         lines.push_back(
-            {item.name, names(group, participants(item.split)), std::to_string(item.quantity), item.unitPrice.toString(), total.toString()});
+            {item.name, names(group, must(participants(item.split))), std::to_string(item.quantity), item.unitPrice.toString(), total.toString()});
     }
     printTable({"Item", "Shared by", "Quantity", "Unit price", "Line total"}, lines, 2);
     printLine("The papanași are split by parts: Carol ate two of the three. The line totals add up\n"
@@ -81,13 +82,13 @@ void run() {
     auto const bill = [&](std::optional<TipDistribution> const distribution) {
         Expense expense(LocalCost{euros("54.00")}, day, "Dinner", EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)});
         if (distribution.has_value()) {
-            expense.tip = Tip(*distribution, PercentageTipValue{Percentage::parse("10")});
+            expense.tip = Tip(*distribution, PercentageTipValue{must(Percentage::parse("10"))});
         }
         return expense;
     };
     auto const ordered = preview(group, bill(std::nullopt));
-    auto const proportional = group.addExpense(bill(TipDistribution::PROPORTIONAL));
-    auto const byConsumption = group.expenseShares(proportional).value();
+    auto const proportional = must(group.addExpense(bill(TipDistribution::PROPORTIONAL)));
+    auto const byConsumption = must(group.expenseShares(proportional)).value();
     auto const even = preview(group, bill(TipDistribution::EQUAL));
     std::println("Ana paid the bill plus a 10 % tip ({}). A tip can be shared in proportion to what\n"
                  "each person ordered, or equally; both are shown:",
@@ -100,9 +101,9 @@ void run() {
         tips.push_back({
             firstName(group, member),
             subtotal.toString(),
-            proportionalTotal.minus(subtotal).toString(),
+            must(proportionalTotal.minus(subtotal)).toString(),
             proportionalTotal.toString(),
-            equalTotal.minus(subtotal).toString(),
+            must(equalTotal.minus(subtotal)).toString(),
             equalTotal.toString(),
         });
     }
@@ -111,9 +112,8 @@ void run() {
               "shared equally, everyone adds the same 1.80.");
 
     section("3. A total that does not match is refused");
-    auto const mismatch = refusal([&] {
-        return group.addExpense(Expense(LocalCost{euros("55.00")}, day, "Dinner", EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)}));
-    });
+    auto const mismatch = refusal(
+        group.addExpense(Expense(LocalCost{euros("55.00")}, day, "Dinner", EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)})));
     check(mismatch.has_value(), "the mismatch is refused");
     std::println("An amount of 55.00 EUR with these lines is refused when the expense is built:\n"
                  "  error: {}",
@@ -131,4 +131,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() { return eranos::examples::runPort(eranos::examples::run); }
+int main() {
+    eranos::examples::run();
+    return EXIT_SUCCESS;
+}

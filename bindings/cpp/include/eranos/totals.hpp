@@ -321,7 +321,8 @@ namespace detail {
 
 } // namespace detail
 
-inline std::string toString(Balance const &balance) { return detail::unwrap(detail::toDetail(balance)->format()); }
+// A balance's amount is in a currency the library lists.
+inline std::string toString(Balance const &balance) { return detail::known(detail::toDetail(balance)->format()); }
 
 } // namespace eranos
 

@@ -43,7 +43,7 @@ struct Category final {
 namespace detail {
 
 [[nodiscard]] inline Category fromDetail(EranosCategory const &value);
-[[nodiscard]] inline std::unique_ptr<EranosCategory> toDetail(Category const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value);
 [[nodiscard]] inline std::vector<Category> fromDetail(EranosCategoryList const &list);
 
 } // namespace detail

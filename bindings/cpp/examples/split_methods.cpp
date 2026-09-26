@@ -5,6 +5,7 @@
 #include "report.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <map>
 #include <print>
 #include <string>
@@ -16,7 +17,7 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return Money::parse(text, Currency::of("EUR")); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
 /// The family and the day every expense happened.
 struct Family final {
@@ -52,8 +53,8 @@ using Rules = std::map<MemberId, std::string>;
 
 /// Prints how the expense @p id divides: every involved member's rule, what they paid, and what they consumed.
 void report(Group const &group, ExpenseId const &id, Rules const &rules) {
-    auto const expense = group.expense(id);
-    auto const shares = group.expenseShares(id);
+    auto const expense = must(group.expense(id));
+    auto const shares = must(group.expenseShares(id));
     if (!expense.has_value() || !shares.has_value()) {
         return;
     }
@@ -74,7 +75,7 @@ void equally(Group &group, Family const &family) {
               "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
               "nobody always pays it.");
     auto const taxi =
-        group.addExpense(Expense(LocalCost{euros("10.00")}, family.day, "Taxi", EqualSplit{{family.ana}}, WholeExpenseSplit{everyone(family)}));
+        must(group.addExpense(Expense(LocalCost{euros("10.00")}, family.day, "Taxi", EqualSplit{{family.ana}}, WholeExpenseSplit{everyone(family)})));
     report(group, taxi, thirds(family));
 }
 
@@ -84,12 +85,12 @@ void byPercentage(Group &group, Family const &family) {
     printLine("Everyone pays a percentage of the amount; the percentages must add up to exactly\n"
               "100 %. Mia's room is smaller, so she takes 20 %.");
     std::vector<MemberPercentage> const rooms{
-        MemberPercentage(family.ana, Percentage::parse("40")),
-        MemberPercentage(family.bob, Percentage::parse("40")),
-        MemberPercentage(family.mia, Percentage::parse("20")),
+        MemberPercentage(family.ana, must(Percentage::parse("40"))),
+        MemberPercentage(family.bob, must(Percentage::parse("40"))),
+        MemberPercentage(family.mia, must(Percentage::parse("20"))),
     };
-    auto const rent = group.addExpense(
-        Expense(LocalCost{euros("500.00")}, family.day, "Flat", EqualSplit{{family.bob}}, WholeExpenseSplit{PercentagesSplit{rooms}}));
+    auto const rent = must(group.addExpense(
+        Expense(LocalCost{euros("500.00")}, family.day, "Flat", EqualSplit{{family.bob}}, WholeExpenseSplit{PercentagesSplit{rooms}})));
     report(group, rent, {{family.ana, "40%"}, {family.bob, "40%"}, {family.mia, "20%"}});
 }
 
@@ -99,12 +100,12 @@ void byPercentage(Group &group, Family const &family) {
     printLine("Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n"
               "2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.");
     std::vector<MemberParts> const portions{
-        MemberParts(family.ana, Parts::parse("1")),
-        MemberParts(family.bob, Parts::parse("1")),
-        MemberParts(family.mia, Parts::parse("0.5")),
+        MemberParts(family.ana, must(Parts::parse("1"))),
+        MemberParts(family.bob, must(Parts::parse("1"))),
+        MemberParts(family.mia, must(Parts::parse("0.5"))),
     };
-    auto const food =
-        group.addExpense(Expense(LocalCost{euros("125.00")}, family.day, "Food", EqualSplit{{family.ana}}, WholeExpenseSplit{PartsSplit{portions}}));
+    auto const food = must(
+        group.addExpense(Expense(LocalCost{euros("125.00")}, family.day, "Food", EqualSplit{{family.ana}}, WholeExpenseSplit{PartsSplit{portions}})));
     report(group, food, {{family.ana, "1 part"}, {family.bob, "1 part"}, {family.mia, "0.5 parts"}});
     return food;
 }
@@ -119,8 +120,8 @@ void byAmounts(Group &group, Family const &family) {
         MemberAmount(euros("15.00"), family.bob),
         MemberAmount(euros("5.00"), family.mia),
     };
-    auto const tickets =
-        group.addExpense(Expense(LocalCost{euros("35.00")}, family.day, "Museum", EqualSplit{{family.bob}}, WholeExpenseSplit{AmountsSplit{prices}}));
+    auto const tickets = must(group.addExpense(
+        Expense(LocalCost{euros("35.00")}, family.day, "Museum", EqualSplit{{family.bob}}, WholeExpenseSplit{AmountsSplit{prices}})));
     report(group, tickets, {{family.ana, "15.00 EUR"}, {family.bob, "15.00 EUR"}, {family.mia, "5.00 EUR"}});
 }
 
@@ -130,7 +131,7 @@ void severalPayers(Group &group, Family const &family) {
     printLine("The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n"
               "divided with the same methods as the participants.");
     AmountsSplit const cards{{MemberAmount(euros("50.00"), family.ana), MemberAmount(euros("40.00"), family.bob)}};
-    auto const dinner = group.addExpense(Expense(LocalCost{euros("90.00")}, family.day, "Dinner", cards, WholeExpenseSplit{everyone(family)}));
+    auto const dinner = must(group.addExpense(Expense(LocalCost{euros("90.00")}, family.day, "Dinner", cards, WholeExpenseSplit{everyone(family)})));
     report(group, dinner, thirds(family));
 }
 
@@ -139,13 +140,11 @@ void mistakes(Group &group, Family const &family) {
     section("6. Mistakes are refused");
     printLine("A percentage split that adds up to 90 % is refused when the expense is built:");
     std::vector<MemberPercentage> const ninety{
-        MemberPercentage(family.ana, Percentage::parse("60")),
-        MemberPercentage(family.bob, Percentage::parse("30")),
+        MemberPercentage(family.ana, must(Percentage::parse("60"))),
+        MemberPercentage(family.bob, must(Percentage::parse("30"))),
     };
-    auto const refused = refusal([&] {
-        return group.addExpense(
-            Expense(LocalCost{euros("10.00")}, family.day, "Invalid", EqualSplit{{family.ana}}, WholeExpenseSplit{PercentagesSplit{ninety}}));
-    });
+    auto const refused = refusal(group.addExpense(
+        Expense(LocalCost{euros("10.00")}, family.day, "Invalid", EqualSplit{{family.ana}}, WholeExpenseSplit{PercentagesSplit{ninety}})));
     check(refused.has_value(), "the split is refused");
     std::println("  error: {}", message(refused));
 }
@@ -165,11 +164,11 @@ void totals(Group const &group) {
 
 /// Runs the example.
 void run() {
-    auto group = Group::create(Currency::of("EUR"), "Family holiday");
-    auto const ana = group.addMember(Member("Ana"));
-    auto const bob = group.addMember(Member("Bob"));
-    auto const mia = group.addMember(Member("Mia"));
-    Family const family(ana, bob, CalendarDate::of(14, 7, 2026), mia);
+    auto group = must(Group::create(must(Currency::of("EUR")), "Family holiday"));
+    auto const ana = must(group.addMember(Member("Ana")));
+    auto const bob = must(group.addMember(Member("Bob")));
+    auto const mia = must(group.addMember(Member("Mia")));
+    Family const family(ana, bob, must(CalendarDate::of(14, 7, 2026)), mia);
 
     printLine("Family holiday: every way to split an expense\n"
               "═════════════════════════════════════════════");
@@ -185,7 +184,7 @@ void run() {
     totals(group);
 
     // Parts: 125.00 over 2.5 parts is 50.00 per part.
-    auto const shares = group.expenseShares(food).value();
+    auto const shares = must(group.expenseShares(food)).value();
     auto const mias = std::ranges::find_if(shares.members, [&](MemberShare const &share) { return family.mia == share.member; });
     check(shares.members.end() != mias && euros("25.00") == mias->share, "Mia consumed 25.00 EUR of the food");
 }
@@ -193,4 +192,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() { return eranos::examples::runPort(eranos::examples::run); }
+int main() {
+    eranos::examples::run();
+    return EXIT_SUCCESS;
+}

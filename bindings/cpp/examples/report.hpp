@@ -7,24 +7,40 @@
 #include "eranos.hpp"
 
 #include <cstddef>
+#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace eranos::examples {
 
-/// Runs @p port, and prints what stopped it when it throws: a refusal the example does not expect, or a check that fails.
+/// Stops the port, printing @p error, which the library refused a call the example makes with.
 ///
-/// @param port The port's flow
-/// @return The program's status: EXIT_SUCCESS, or EXIT_FAILURE when the port threw
-[[nodiscard]] int runPort(void (*const port)());
+/// @param error The refusal
+[[noreturn]] void stopWith(Error const &error);
 
-/// Throws, naming @p claim, unless @p holds: a number of the report is not the example's.
+/// The value of @p result, of a call the example makes, which stops the port when the library refused the call.
+///
+/// @param result The call's result
+/// @return Its value
+template <typename Value> [[nodiscard]] Value must(std::expected<Value, Error> result) {
+    if (!result) {
+        stopWith(result.error());
+    }
+    return std::move(*result);
+}
+
+/// Stops the port when the library refused @p result, of a call the example makes that returns nothing.
+///
+/// @param result The call's result
+void must(std::expected<void, Error> const &result);
+
+/// Stops the port, naming @p claim, unless @p holds: a number of the report is not the example's.
 ///
 /// @param holds Whether the number is the example's
 /// @param claim What the number is
-/// @throws std::logic_error When the number is not the example's
 void check(bool const holds, std::string_view const claim);
 
 /// Prints @p text, then a line break.
@@ -86,17 +102,15 @@ void printTable(std::vector<std::string> const &headers, Rows const &rows, std::
 /// @return The totals
 [[nodiscard]] std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &member);
 
-/// What the library refuses @p change with, or none when it accepts it.
+/// What the library refused the call of @p result with, or none when it accepted it.
 ///
-/// @param change The change, a callable
+/// @param result The call's result
 /// @return The refusal
-template <typename Change> [[nodiscard]] std::optional<Error> refusal(Change const &change) {
-    try {
-        static_cast<void>(change());
-    } catch (Error const &error) {
-        return error;
+template <typename Value> [[nodiscard]] std::optional<Error> refusal(std::expected<Value, Error> const &result) {
+    if (result) {
+        return std::nullopt;
     }
-    return std::nullopt;
+    return result.error();
 }
 
 /// The message of @p refused, or "accepted".

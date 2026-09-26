@@ -99,6 +99,7 @@
 #include "eranos/detail/EranosUsername.hpp"
 
 #include <cstdint>
+#include <expected>
 #include <future>
 #include <memory>
 #include <optional>
@@ -174,17 +175,25 @@ enum class TipDistribution : std::uint8_t;
 
 namespace eranos::detail {
 
-template <typename Value> [[nodiscard]] inline Value unwrap(diplomat::result<Value, std::unique_ptr<EranosError>> &&result);
-inline void check(diplomat::result<std::monostate, std::unique_ptr<EranosError>> &&result);
+template <typename Value> [[nodiscard]] inline std::expected<Value, Error> expectedOf(diplomat::result<Value, std::unique_ptr<EranosError>> &&result);
+[[nodiscard]] inline std::expected<void, Error> expectedOf(diplomat::result<std::monostate, std::unique_ptr<EranosError>> &&result);
+template <typename Value> [[nodiscard]] inline Value known(diplomat::result<Value, std::unique_ptr<EranosError>> &&result);
+template <typename Value> [[nodiscard]] inline Value waited(diplomat::result<Value, std::unique_ptr<EranosError>> &&result);
+template <typename Record, typename Value, typename Set>
+[[nodiscard]] inline std::expected<std::unique_ptr<Record>, Error> setIfPresent(std::unique_ptr<Record> record, std::optional<Value> const &value,
+                                                                                Set const &set);
 [[nodiscard]] inline std::optional<std::string> present(std::string text) noexcept;
 template <typename Identifier> [[nodiscard]] inline std::optional<Identifier> optionalId(std::optional<std::string> text) noexcept;
 template <typename Value>
 [[nodiscard]] inline std::optional<Value> optionalText(std::optional<std::string> text, Value (*const make)(std::string) noexcept) noexcept;
 template <typename Value, typename Detail> [[nodiscard]] inline std::optional<Value> optionalRecord(std::unique_ptr<Detail> const &value);
 template <typename Identifier> [[nodiscard]] inline std::vector<Identifier> identifiers(EranosTextList const &list);
-template <typename Value, typename Outcome, typename Convert>
-inline void complete(std::promise<Value> &promise, Outcome &outcome, Convert const &convert) noexcept;
-template <typename Outcome> inline void complete(std::promise<void> &promise, Outcome const &outcome) noexcept;
+[[nodiscard]] inline std::expected<void, Error> finished(EranosUnitOutcome const &outcome) noexcept;
+template <typename Value, typename Start, typename Convert>
+[[nodiscard]] inline std::future<std::expected<Value, Error>> launch(Start const &start, Convert convert);
+template <typename Value, typename Argument, typename Start, typename Convert>
+[[nodiscard]] inline std::future<std::expected<Value, Error>> launch(std::expected<Argument, Error> const &argument, Start const &start,
+                                                                     Convert convert);
 
 } // namespace eranos::detail
 

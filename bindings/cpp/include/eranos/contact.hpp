@@ -9,7 +9,9 @@
 // IWYU pragma: private, include "eranos.hpp"
 
 #include "eranos/detail/declarations.hpp"
+#include "eranos/error.hpp"
 
+#include <expected>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -32,9 +34,9 @@ class Email final {
     /// The email address written @p text, checked and made canonical by the library.
     ///
     /// @param text The text
-    /// @return The email address
-    /// @throws Error Of the kind ErrorKind::CONTACT for text that is not one, and ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static Email parse(std::string_view const text);
+    /// @return The email address, or an error of the kind ErrorKind::CONTACT for text that is not one, and ErrorKind::INVALID_TEXT for text that is
+    ///   not UTF-8
+    [[nodiscard]] static std::expected<Email, Error> parse(std::string_view const text);
 
     /// The email address as the library writes it: "ana@example.com".
     ///
@@ -62,9 +64,9 @@ class PhoneNumber final {
     /// The phone number written @p text, checked and made canonical by the library.
     ///
     /// @param text The text
-    /// @return The phone number
-    /// @throws Error Of the kind ErrorKind::CONTACT for text that is not one, and ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static PhoneNumber parse(std::string_view const text);
+    /// @return The phone number, or an error of the kind ErrorKind::CONTACT for text that is not one, and ErrorKind::INVALID_TEXT for text that is
+    ///   not UTF-8
+    [[nodiscard]] static std::expected<PhoneNumber, Error> parse(std::string_view const text);
 
     /// The phone number as the library writes it: "+40712345678".
     ///
@@ -97,9 +99,8 @@ class Iban final {
     /// The IBAN written @p text, checked and made canonical by the library.
     ///
     /// @param text The text
-    /// @return The IBAN
-    /// @throws Error Of the kind ErrorKind::ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static Iban parse(std::string_view const text);
+    /// @return The IBAN, or an error of the kind ErrorKind::ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<Iban, Error> parse(std::string_view const text);
 
     /// The IBAN as the library writes it: "RO49AAAA1B31007593840000".
     ///
@@ -132,9 +133,9 @@ class Username final {
     /// The username written @p text, checked and made canonical by the library.
     ///
     /// @param text The text
-    /// @return The username
-    /// @throws Error Of the kind ErrorKind::ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static Username parse(std::string_view const text);
+    /// @return The username, or an error of the kind ErrorKind::ACCOUNT for text that is not one, and ErrorKind::INVALID_TEXT for text that is not
+    ///   UTF-8
+    [[nodiscard]] static std::expected<Username, Error> parse(std::string_view const text);
 
     /// The username as the library writes it: "ana.pays".
     ///
@@ -162,9 +163,9 @@ class Language final {
     /// The language written @p text, checked and made canonical by the library.
     ///
     /// @param text The text
-    /// @return The language
-    /// @throws Error Of the kind ErrorKind::LANGUAGE for text that is not one, and ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static Language parse(std::string_view const text);
+    /// @return The language, or an error of the kind ErrorKind::LANGUAGE for text that is not one, and ErrorKind::INVALID_TEXT for text that is not
+    ///   UTF-8
+    [[nodiscard]] static std::expected<Language, Error> parse(std::string_view const text);
 
     /// The language as the library writes it: "pt-PT".
     ///
@@ -186,19 +187,31 @@ class Language final {
     std::string text;
 };
 
-inline Email Email::parse(std::string_view const text) { return Email(detail::unwrap(detail::EranosEmail::parse(text))); }
+inline std::expected<Email, Error> Email::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosEmail::parse(text)).transform(detail::emailOf);
+}
 
-inline PhoneNumber PhoneNumber::parse(std::string_view const text) { return PhoneNumber(detail::unwrap(detail::EranosPhoneNumber::parse(text))); }
+inline std::expected<PhoneNumber, Error> PhoneNumber::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosPhoneNumber::parse(text)).transform(detail::phoneNumberOf);
+}
 
-inline std::string PhoneNumber::international() const { return detail::unwrap(detail::EranosPhoneNumber::international(text)); }
+// A phone number is one the library checked.
+inline std::string PhoneNumber::international() const { return detail::known(detail::EranosPhoneNumber::international(text)); }
 
-inline Iban Iban::parse(std::string_view const text) { return Iban(detail::unwrap(detail::EranosIban::parse(text))); }
+inline std::expected<Iban, Error> Iban::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosIban::parse(text)).transform(detail::ibanOf);
+}
 
-inline std::string Iban::countryCode() const { return detail::unwrap(detail::EranosIban::country_code(text)); }
+// An IBAN is one the library checked.
+inline std::string Iban::countryCode() const { return detail::known(detail::EranosIban::country_code(text)); }
 
-inline Username Username::parse(std::string_view const text) { return Username(detail::unwrap(detail::EranosUsername::parse(text))); }
+inline std::expected<Username, Error> Username::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosUsername::parse(text)).transform(detail::usernameOf);
+}
 
-inline Language Language::parse(std::string_view const text) { return Language(detail::unwrap(detail::EranosLanguage::parse(text))); }
+inline std::expected<Language, Error> Language::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosLanguage::parse(text)).transform(detail::languageOf);
+}
 
 } // namespace eranos
 

@@ -64,7 +64,7 @@ struct Transfer final {
 namespace detail {
 
 [[nodiscard]] inline Transfer fromDetail(EranosTransfer const &value);
-[[nodiscard]] inline std::unique_ptr<EranosTransfer> toDetail(Transfer const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value);
 [[nodiscard]] inline std::vector<Transfer> fromDetail(EranosTransferList const &list);
 
 } // namespace detail

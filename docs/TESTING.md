@@ -276,7 +276,12 @@ tests run under `AddressSanitizer` and `UndefinedBehaviorSanitizer`, whose
 first finding ends the run, and the gates hold each layer to every line
 and every function of its headers; the headers Diplomat generates are not
 measured. The C++ layer is also held to every region by its tests, since a
-call's failure branches in one template that every call shares. The C
+call's failure branches in three templates that every call shares:
+`expectedOf`, which reads a synchronous call's result, `launch`, which
+starts an asynchronous call or fails its future when an argument does not
+convert, and `complete`, which reads an asynchronous call's outcome;
+everything else chains through `std::expected`'s `and_then` and
+`transform`, whose own branches are the standard library's. The C
 layer's regions are not all run: each of its functions branches on its
 result, and the six calls that the library refuses only on wasm, where the
 C API does not run, never take their failure branch: the synchronous

@@ -73,7 +73,8 @@ fn the_tests_build_with_warnings_as_errors_the_sanitizers_and_coverage() {
     assert_eq!(
         lines[0],
         format!(
-            "cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++23 {flags} tests/tests.cpp /eranos/target/debug/liberanos_capi.a {} -o build/tests",
+            "cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++23 -fno-exceptions {flags} tests/tests.cpp /eranos/target/debug/liberanos_capi.a {} \
+             -o build/tests",
             SYSTEM_LIBRARIES.join(" ")
         )
     );
@@ -121,7 +122,9 @@ fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
     );
     let cpp = port_build(CPP_PACKAGE, "/LLVM_HOME", &sequential, "quickstart").command_line();
     assert!(
-        cpp.starts_with(&format!("cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++23 {flags} examples/report.cpp examples/quickstart.cpp ")),
+        cpp.starts_with(&format!(
+            "cd bindings/cpp && /LLVM_HOME/bin/clang++ -std=c++23 -fno-exceptions {flags} examples/report.cpp examples/quickstart.cpp "
+        )),
         "{cpp}"
     );
     assert!(
@@ -132,6 +135,21 @@ fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
         sequential_library(&sequential).command_line(),
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-capi --features sequential-ids"
     );
+}
+
+/// A lint that read the C++ package with exceptions on would hold its code
+/// to what only a build with them needs, such as that no exception escapes a
+/// `noexcept` function, and one on another standard would read another
+/// language; the linter reads each package in its builds' dialect.
+#[test]
+fn the_lint_reads_each_package_in_its_builds_dialect() {
+    for (package, dialect) in [
+        (C_PACKAGE, " -- -std=c23 -Iinclude "),
+        (CPP_PACKAGE, " -- -std=c++23 -fno-exceptions -Iinclude "),
+    ] {
+        let lint = plan::steps(&checks(package, "/LLVM_HOME"))[1].command_line();
+        assert!(lint.contains(dialect), "{lint}");
+    }
 }
 
 /// A port the formatter skipped could drift from the package's style, one

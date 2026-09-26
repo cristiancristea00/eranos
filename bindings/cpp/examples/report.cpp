@@ -9,11 +9,10 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <exception>
+#include <expected>
 #include <format>
 #include <optional>
 #include <print>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -58,6 +57,14 @@ constexpr unsigned CONTINUATION = 0x80U;
     return lines;
 }
 
+/// Ends the port with a failure, printing @p reason after the report it printed so far.
+[[noreturn]] void stop(std::string_view const reason) {
+    static_cast<void>(std::fflush(stdout));
+    std::println(stderr, "the port stopped: {}", reason);
+    // NOLINTNEXTLINE(concurrency-mt-unsafe): a port stops on its main thread, and no thread of its own calls exit().
+    std::exit(EXIT_FAILURE);
+}
+
 /// The corners and the joints of a table's border.
 struct Border final {
     /// Where it starts.
@@ -100,20 +107,17 @@ struct Border final {
 
 } // namespace
 
-int runPort(void (*const port)()) {
-    try {
-        port();
-    } catch (std::exception const &error) {
-        static_cast<void>(std::fflush(stdout));
-        std::println(stderr, "the port stopped: {}", error.what());
-        return EXIT_FAILURE;
+void stopWith(Error const &error) { stop(std::format("the library refused a call the example makes: {}", error.message())); }
+
+void must(std::expected<void, Error> const &result) {
+    if (!result) {
+        stopWith(result.error());
     }
-    return EXIT_SUCCESS;
 }
 
 void check(bool const holds, std::string_view const claim) {
     if (!holds) {
-        throw std::logic_error(std::format("the report is not the example's: {}", claim));
+        stop(std::format("the report is not the example's: {}", claim));
     }
 }
 
@@ -167,7 +171,7 @@ std::string cell(std::vector<std::string> const &lines) {
 }
 
 std::string firstName(Group const &group, MemberId const &member) {
-    auto const found = group.member(member);
+    auto const found = must(group.member(member));
     return found.has_value() ? found->firstName : "?";
 }
 
@@ -186,12 +190,12 @@ std::vector<MemberId> sharedBy(ExpenseSplit const &split) {
             if constexpr (std::is_same_v<Alternative, ItemisedExpenseSplit>) {
                 std::vector<MemberId> all;
                 for (auto const &item : alternative.items) {
-                    auto const own = participants(item.split);
+                    auto const own = must(participants(item.split));
                     all.insert(all.end(), own.begin(), own.end());
                 }
                 return all;
             } else {
-                return participants(alternative.split);
+                return must(participants(alternative.split));
             }
         },
         split);
@@ -205,6 +209,6 @@ std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &me
     return summary.members.end() == found ? std::nullopt : std::optional<MemberSummary>(*found);
 }
 
-std::string message(std::optional<Error> const &refused) { return refused.has_value() ? refused->what() : "accepted"; }
+std::string message(std::optional<Error> const &refused) { return refused.has_value() ? refused->message() : "accepted"; }
 
 } // namespace eranos::examples

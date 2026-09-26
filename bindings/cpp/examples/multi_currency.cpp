@@ -6,6 +6,7 @@
 #include "report.hpp"
 
 #include <array>
+#include <cstdlib>
 #include <format>
 #include <print>
 #include <string>
@@ -17,7 +18,7 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of @p code.
-[[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) { return Money::parse(text, Currency::of(code)); }
+[[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) { return must(Money::parse(text, must(Currency::of(code)))); }
 
 /// The amount of @p cost, as entered.
 [[nodiscard]] Money amountOf(Cost const &cost) {
@@ -27,7 +28,7 @@ namespace {
 /// The rate @p cost was entered at: 1 for a cost in the group currency.
 [[nodiscard]] ExchangeRate rateOf(Cost const &cost) {
     auto const *const converted = std::get_if<ConvertedCost>(&cost);
-    return nullptr == converted ? ExchangeRate::parse("1") : converted->rate;
+    return nullptr == converted ? must(ExchangeRate::parse("1")) : converted->rate;
 }
 
 /// Prints every expense and transfer, as entered and in the group currency.
@@ -35,17 +36,17 @@ void printEntries(Group const &group) {
     Money const zero(group.currency(), 0);
     Rows rows;
     for (auto const &expense : group.expenses()) {
-        auto const shares = group.expenseShares(expense.id.value());
+        auto const shares = must(group.expenseShares(expense.id.value()));
         rows.push_back({
             expense.name,
-            names(group, participants(expense.payers)),
-            total(expense).toString(),
+            names(group, must(participants(expense.payers))),
+            must(total(expense)).toString(),
             rateOf(expense.cost).toString(),
             shares.has_value() ? shares->total.toString() : zero.toString(),
         });
     }
     for (auto const &transfer : group.transfers()) {
-        auto const converted = group.transferAmount(transfer.id.value());
+        auto const converted = must(group.transferAmount(transfer.id.value()));
         rows.push_back({
             std::format("Transfer to {}", firstName(group, transfer.to)),
             firstName(group, transfer.from),
@@ -79,11 +80,12 @@ void printBalances(Group const &group) {
 void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
     section("1. Expenses in three currencies");
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
-    static_cast<void>(group.addExpense(Expense(ConvertedCost{.amount = amountOf("400.00", "RON"), .rate = ExchangeRate::parse("0.2")},
-                                               CalendarDate::of(1, 8, 2026), "Fuel", EqualSplit{{ana}}, both)));
-    static_cast<void>(group.addExpense(Expense(ConvertedCost{.amount = amountOf("24000.00", "HUF"), .rate = ExchangeRate::parse("0.0025")},
-                                               CalendarDate::of(2, 8, 2026), "Dinner", EqualSplit{{bob}}, both)));
-    static_cast<void>(group.addExpense(Expense(LocalCost{amountOf("60.00", "EUR")}, CalendarDate::of(3, 8, 2026), "Ferry", EqualSplit{{bob}}, both)));
+    static_cast<void>(must(group.addExpense(Expense(ConvertedCost{.amount = amountOf("400.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
+                                                    must(CalendarDate::of(1, 8, 2026)), "Fuel", EqualSplit{{ana}}, both))));
+    static_cast<void>(must(group.addExpense(Expense(ConvertedCost{.amount = amountOf("24000.00", "HUF"), .rate = must(ExchangeRate::parse("0.0025"))},
+                                                    must(CalendarDate::of(2, 8, 2026)), "Dinner", EqualSplit{{bob}}, both))));
+    static_cast<void>(
+        must(group.addExpense(Expense(LocalCost{amountOf("60.00", "EUR")}, must(CalendarDate::of(3, 8, 2026)), "Ferry", EqualSplit{{bob}}, both))));
     printEntries(group);
     std::println("The rate says how many {} one unit of the entry's currency is worth: 400.00 RON at\n"
                  "0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.",
@@ -93,9 +95,10 @@ void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
 /// Adds Ana's repayment to Bob, in cash and in RON.
 void repayment(Group &group, MemberId const &ana, MemberId const &bob) {
     section("3. A repayment in cash, in another currency");
-    Transfer transfer(ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = ExchangeRate::parse("0.2")}, CalendarDate::of(4, 8, 2026), ana, bob);
+    Transfer transfer(ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
+                      must(CalendarDate::of(4, 8, 2026)), ana, bob);
     transfer.note = "Cash at the border";
-    static_cast<void>(group.addTransfer(transfer));
+    static_cast<void>(must(group.addTransfer(transfer)));
     std::println("Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.\n"
                  "Transfers move balances but are not spending, so the total stays at {}:",
                  group.summary().totalSpent.toString());
@@ -108,10 +111,10 @@ void newCurrency(Group &group) {
     printLine("Changing the group currency needs a rate into the new currency for every other\n"
               "currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n"
               "take the new rate; entries already in RON become local costs, at 1.");
-    group.changeCurrency(Currency::of("RON"), std::array{
-                                                  CurrencyRate(Currency::of("EUR"), ExchangeRate::parse("5")),
-                                                  CurrencyRate(Currency::of("HUF"), ExchangeRate::parse("0.0125")),
-                                              });
+    must(group.changeCurrency(must(Currency::of("RON")), std::array{
+                                                             CurrencyRate(must(Currency::of("EUR")), must(ExchangeRate::parse("5"))),
+                                                             CurrencyRate(must(Currency::of("HUF")), must(ExchangeRate::parse("0.0125"))),
+                                                         }));
     printEntries(group);
     std::println("In {}, the trip cost {}, and everyone is still settled:", group.currency().code(), group.summary().totalSpent.toString());
     printBalances(group);
@@ -119,9 +122,9 @@ void newCurrency(Group &group) {
 
 /// Runs the example.
 void run() {
-    auto group = Group::create(Currency::of("EUR"), "Danube road trip");
-    auto const ana = group.addMember(Member("Ana"));
-    auto const bob = group.addMember(Member("Bob"));
+    auto group = must(Group::create(must(Currency::of("EUR")), "Danube road trip"));
+    auto const ana = must(group.addMember(Member("Ana")));
+    auto const bob = must(group.addMember(Member("Bob")));
 
     std::println("{}: expenses in several currencies\n"
                  "════════════════════════════════════════════════",
@@ -152,4 +155,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() { return eranos::examples::runPort(eranos::examples::run); }
+int main() {
+    eranos::examples::run();
+    return EXIT_SUCCESS;
+}
