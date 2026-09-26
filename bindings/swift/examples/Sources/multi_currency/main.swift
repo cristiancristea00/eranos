@@ -135,7 +135,7 @@ func main() throws(EranosError) {
     let bob = try group.add(Member(firstName: "Bob"))
 
     print("\(try group.name()): expenses in several currencies")
-    print("═════════════════════════════════════════════════")
+    print("════════════════════════════════════════════════")
     print("""
         Ana and Bob drive from Romania to Hungary. The group keeps its books in \(try group.currency()); an
         expense in another currency carries the exchange rate used when it was entered,

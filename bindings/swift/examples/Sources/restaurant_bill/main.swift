@@ -45,8 +45,7 @@ func main() throws(EranosError) {
     let carol = try group.add(Member(firstName: "Carol"))
     let day = try CalendarDate(day: 23, month: 9, year: 2026)
 
-    print("\(try group.name()): an itemised bill")
-    print(String(repeating: "═", count: try group.name().count + 19))
+    title("\(try group.name()): an itemised bill")
     print("""
         Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,
         every line of the receipt is split among the people who had it.

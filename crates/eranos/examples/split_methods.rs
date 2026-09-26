@@ -280,7 +280,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     println!("Family holiday: every way to split an expense");
-    println!("══════════════════════════════════════════════");
+    println!("═════════════════════════════════════════════");
     println!(
         "Ana, Bob, and their daughter Mia share a holiday. Each expense below uses a\n\
          different split method; whatever the method, the shares add up to exactly the\n\

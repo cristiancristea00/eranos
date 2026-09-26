@@ -199,7 +199,7 @@ func main() throws(EranosError) {
     )
 
     print("Family holiday: every way to split an expense")
-    print("══════════════════════════════════════════════")
+    print("═════════════════════════════════════════════")
     print("""
         Ana, Bob, and their daughter Mia share a holiday. Each expense below uses a
         different split method; whatever the method, the shares add up to exactly the

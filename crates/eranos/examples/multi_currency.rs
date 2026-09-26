@@ -204,7 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bob = group.add_member(Member::builder("Bob").build()?)?;
 
     println!("{}: expenses in several currencies", group.name());
-    println!("═════════════════════════════════════════════════");
+    println!("════════════════════════════════════════════════");
     println!(
         "Ana and Bob drive from Romania to Hungary. The group keeps its books in {}; an\n\
          expense in another currency carries the exchange rate used when it was entered,\n\

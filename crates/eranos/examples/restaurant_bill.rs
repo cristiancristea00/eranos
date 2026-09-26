@@ -118,8 +118,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let carol = group.add_member(Member::builder("Carol").build()?)?;
     let day = CalendarDate::new(23, 9, 2026)?;
 
-    println!("{}: an itemised bill", group.name());
-    println!("{}", "═".repeat(group.name().chars().count() + 19));
+    let title = format!("{}: an itemised bill", group.name());
+    println!("{title}\n{}", "═".repeat(title.chars().count()));
     println!(
         "Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,\n\
          every line of the receipt is split among the people who had it."
