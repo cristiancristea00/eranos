@@ -69,8 +69,10 @@ cargo doc -p eranos --all-features --open        # the API documentation
 `cargo xtask gates` runs the full gate sequence, listed in
 [AGENTS.md § Gates](../AGENTS.md#gates-before-committing), before every
 commit; `cargo xtask help` lists the commands. The alias lives in
-`.cargo/config.toml`, and the automation in `crates/xtask`. The gates also
-write the Swift, Kotlin, and Java sources of the UniFFI glue into
+`.cargo/config.toml`, and the automation in `crates/xtask`. The gates lint
+the libraries for the mobile and wasm targets as CI's job of that name
+does, after adding each target with `rustup target add`. They also write
+the Swift, Kotlin, and Java sources of the UniFFI glue into
 `target/uniffi/<language>`, from the host library in `target/debug`, and
 on macOS they build the Swift package's XCFramework from the library's
 thirteen Apple targets, which they add with `rustup target add`. On every
@@ -95,19 +97,20 @@ ones, the TypeScript ones, on Node, in a copy of the TypeScript package
 over eranos-web built with `sequential-ids` for WebAssembly, and the C and
 C++ ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)).
 A run from an empty target directory first builds the library for every
-Apple target and every Android ABI. A warm run, whose builds are all up to
-date, takes about 7 minutes on an Apple M4 Pro, a third of it clang-tidy's
-pass over the C and C++ translation units, each of which parses the
-layer's header again:
+Apple target and every Android ABI, and checks it for the mobile and wasm
+targets, which takes about 2.5 minutes of its own. A warm run, whose
+builds are all up to date, takes about 7 minutes on an Apple M4 Pro, a
+third of it clang-tidy's pass over the C and C++ translation units, each
+of which parses the layer's header again:
 
 | Gates                                                                  |  Warm | Most of it                                                          |
 | ---------------------------------------------------------------------- | ----: | ------------------------------------------------------------------- |
-| 1–8, the Rust checks and the examples                                  |  55 s | the two test runs, 27 s and 22 s                                    |
-| 9–10, the host library and its sources                                 |   6 s |                                                                     |
-| 11, the Swift package                                                  |  72 s | the analyzer, 33 s, and the examples' clean build, 23 s             |
-| 12–15, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  38 s | the Kotlin Multiplatform libraries, 11 s                            |
-| 16, the C and C++ packages                                             | 169 s | clang-tidy, 28 s on the C tests and ports and 129 s on the C++ ones |
-| 17, the ports                                                          |  91 s | the C++ ports' builds, 45 s                                         |
+| 1–9, the Rust checks, the target lints, and the examples               |  56 s | the two test runs, 27 s and 22 s                                    |
+| 10–11, the host library and its sources                                |   6 s |                                                                     |
+| 12, the Swift package                                                  |  72 s | the analyzer, 33 s, and the examples' clean build, 23 s             |
+| 13–16, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  38 s | the Kotlin Multiplatform libraries, 11 s                            |
+| 17, the C and C++ packages                                             | 169 s | clang-tidy, 28 s on the C tests and ports and 129 s on the C++ ones |
+| 18, the ports                                                          |  91 s | the C++ ports' builds, 45 s                                         |
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -569,18 +572,18 @@ forks, on the merge queue, and on a manual dispatch. A pull request from a
 branch of this repository starts no jobs of its own: the push of its head
 commit was tested, and those checks show on the pull request.
 
-| Job                     | What it runs                                                                                                                                                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lint                    | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied, and the check that no package turns on a feature of async-lock                                                                                        |
-| Test                    | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode                                                                                                                              |
-| MSRV                    | the tests with Rust 1.97, the `rust-version`                                                                                                                                                                                                |
-| Mobile and wasm targets | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, `x86_64-linux-android`, and `wasm32-wasip1`, which compiles the library's wasm code as the browser does, and for `eranos-web` on `wasm32-unknown-unknown` |
-| Dependency audit        | `cargo deny check advisories sources`, with the rules in `deny.toml`                                                                                                                                                                        |
-| Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                   |
-| Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                     |
-| Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                       |
-| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, on a dispatch that asks for the bindings only                                                                                          |
-| Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                 |
+| Job                     | What it runs                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint                    | `cargo fmt --check`, clippy for both feature sets, and rustdoc, with warnings denied, and the check that no package turns on a feature of async-lock                                                                                                                                                                                                                       |
+| Test                    | the library build, every test suite for both feature sets, every example, and each benchmark once in test mode                                                                                                                                                                                                                                                             |
+| MSRV                    | the tests with Rust 1.97, the `rust-version`                                                                                                                                                                                                                                                                                                                               |
+| Mobile and wasm targets | clippy for `aarch64-apple-ios`, `aarch64-apple-ios-sim`, `aarch64-linux-android`, and `x86_64-linux-android`; for `wasm32-wasip1`, which compiles the library's wasm code as the browser does, without eranos-capi, whose asynchronous calls need `block_on`, which wasm lacks; and for `eranos-web` on `wasm32-unknown-unknown`: the gates' target lints, with `--locked` |
+| Dependency audit        | `cargo deny check advisories sources`, with the rules in `deny.toml`                                                                                                                                                                                                                                                                                                       |
+| Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                                                                                                                                                  |
+| Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                                                                                                                                                    |
+| Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                                                                                                                                                      |
+| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, on a dispatch that asks for the bindings only                                                                                                                                                                                                                         |
+| Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                                                                                                                                                |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a
 month, with macOS minutes counting about ten times and Windows minutes about

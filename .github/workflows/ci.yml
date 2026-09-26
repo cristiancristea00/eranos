@@ -183,11 +183,14 @@ jobs:
       # rust-toolchain.toml selects. Clippy only type-checks, so no linker,
       # Android NDK, or Xcode SDK is needed; no dependency of the library
       # compiles C code for the target. wasm32-wasip1 compiles the library's
-      # `target_family = "wasm"` code as the browser does; the browser's
+      # `target_family = "wasm"` code as the browser does, for every crate
+      # but eranos-capi, whose worker thread drives each asynchronous C call
+      # with `block_on`, which is not compiled for wasm. The browser's
       # wasm32-unknown-unknown has no clock or random source without uuid's
       # `js` feature, which eranos-web, the crate that packages the library
-      # for the browser, turns on (BINDINGS.md § 2), so that target
-      # lints eranos-web alone.
+      # for the browser, turns on (BINDINGS.md § 2), so that target lints
+      # eranos-web alone. `cargo xtask gates` runs the same steps without
+      # `--locked`, and its tests keep the two alike.
       - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim aarch64-linux-android x86_64-linux-android wasm32-wasip1 wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2.9.2
         with:
@@ -196,12 +199,18 @@ jobs:
           cargo clippy --workspace --lib --all-features --locked
           --target aarch64-apple-ios --target aarch64-apple-ios-sim
           --target aarch64-linux-android --target x86_64-linux-android
-          --target wasm32-wasip1
           -- -D warnings
       - run: >-
           cargo clippy --workspace --lib --no-default-features --locked
           --target aarch64-apple-ios --target aarch64-apple-ios-sim
           --target aarch64-linux-android --target x86_64-linux-android
+          -- -D warnings
+      - run: >-
+          cargo clippy --workspace --exclude eranos-capi --lib --all-features --locked
+          --target wasm32-wasip1
+          -- -D warnings
+      - run: >-
+          cargo clippy --workspace --exclude eranos-capi --lib --no-default-features --locked
           --target wasm32-wasip1
           -- -D warnings
       - run: >-

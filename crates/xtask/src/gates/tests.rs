@@ -4,11 +4,47 @@
 use super::*;
 use crate::tests::{FileOperation, METADATA, Recorder};
 
+/// AGENTS.md, which lists the gates.
+const AGENTS: &str = include_str!("../../../../AGENTS.md");
+
+/// DEVELOPMENT.md, whose § 2 times the gates.
+const DEVELOPMENT: &str = include_str!("../../../../docs/DEVELOPMENT.md");
+
+/// Every document of the repository that could cite a gate by number, with
+/// its path.
+const DOCUMENTS: [(&str, &str); 7] = [
+    ("AGENTS.md", AGENTS),
+    ("README.md", include_str!("../../../../README.md")),
+    (
+        "docs/ARCHITECTURE.md",
+        include_str!("../../../../docs/ARCHITECTURE.md"),
+    ),
+    (
+        "docs/BINDINGS.md",
+        include_str!("../../../../docs/BINDINGS.md"),
+    ),
+    ("docs/DEVELOPMENT.md", DEVELOPMENT),
+    (
+        "docs/TESTING.md",
+        include_str!("../../../../docs/TESTING.md"),
+    ),
+    (
+        "docs/VERSIONING.md",
+        include_str!("../../../../docs/VERSIONING.md"),
+    ),
+];
+
+/// The command AGENTS.md lists for the gate that runs the examples.
+const EXAMPLES: &str = "cargo run --quiet --package <package> --all-features --example <name>";
+
+/// The command AGENTS.md lists for the gate that lints the mobile and wasm
+/// targets, which stands for the steps of [`target_lints`].
+const TARGETS: &str = "rustup target add <the mobile and wasm targets>";
+
 /// The commands AGENTS.md lists under its gates, in its order: the items of
 /// the numbered list in that section, each a command in backticks.
 fn documented_gates() -> Vec<String> {
-    let agents = include_str!("../../../../AGENTS.md");
-    let (_, after) = agents.split_once("## Gates before committing").unwrap();
+    let (_, after) = AGENTS.split_once("## Gates before committing").unwrap();
     let (section, _) = after.split_once("\n## ").unwrap();
     section
         .lines()
@@ -21,22 +57,74 @@ fn documented_gates() -> Vec<String> {
         .collect()
 }
 
-/// The checks, then async-lock's features, are the gates AGENTS.md lists, in
-/// its order, and the last documented gates are the examples, the host
-/// library, the generators, the Swift, Kotlin, Java, TypeScript, Kotlin
-/// Multiplatform, and C and C++ packages, and the ports; a check the code
-/// dropped, added, or reordered would pass a commit the documented gates
-/// refuse.
+/// The numbers `text` cites as a gate ("gate 17", "Gate 8"), in its order.
+fn cited_gates(text: &str) -> Vec<usize> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    words
+        .windows(2)
+        .filter_map(|pair| match pair {
+            [word, number]
+                if word
+                    .trim_start_matches(|character: char| !character.is_alphabetic())
+                    .eq_ignore_ascii_case("gate") =>
+            {
+                number
+                    .trim_end_matches(|character: char| !character.is_ascii_digit())
+                    .parse()
+                    .ok()
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// The first and last gate of each row of the timing table in
+/// `development`, DEVELOPMENT.md, read from the row's first cell, such as
+/// `1–8, the Rust checks` or `11, the Swift package`.
+fn timed_gates(development: &str) -> Vec<(usize, usize)> {
+    development
+        .lines()
+        .skip_while(|line| !line.starts_with("| Gates "))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .map(|line| {
+            let (numbers, _) = line.trim_start_matches("| ").split_once(',').unwrap();
+            let (first, last) = numbers.split_once('–').unwrap_or((numbers, numbers));
+            (first.parse().unwrap(), last.parse().unwrap())
+        })
+        .collect()
+}
+
+/// The host lints, the target lints, the tests and the documentation, then
+/// async-lock's features are the gates AGENTS.md lists, in its order, the
+/// target lints under the command that adds their targets, and the last
+/// documented gates are the examples, the host library, the generators, the
+/// Swift, Kotlin, Java, TypeScript, Kotlin Multiplatform, and C and C++
+/// packages, and the ports; a check the code dropped, added, or reordered
+/// would pass a commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
-    let mut checks: Vec<String> = checks().iter().map(Step::command_line).collect();
-    checks.push(lock_features().command_line());
-    assert_eq!(documented[..checks.len()], checks);
+    let mut before_examples: Vec<String> = host_lints().iter().map(Step::command_line).collect();
+    before_examples.push(TARGETS.to_owned());
+    before_examples.extend(tests_and_documentation().iter().map(Step::command_line));
+    before_examples.push(lock_features().command_line());
+    assert_eq!(documented[..before_examples.len()], before_examples);
+    let targets = target_lints();
+    assert!(targets[0].command_line().starts_with("rustup target add "));
+    assert!(
+        targets[1..]
+            .iter()
+            .all(|step| step.command_line().starts_with("cargo clippy "))
+    );
     assert_eq!(
-        documented[checks.len()..],
+        checks(),
+        [host_lints(), targets, tests_and_documentation()].concat()
+    );
+    assert_eq!(
+        documented[before_examples.len()..],
         [
-            "cargo run --quiet --package <package> --all-features --example <name>",
+            EXAMPLES,
             &host_library().command_line(),
             "cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>",
             "rustup target add <every Apple target>",
@@ -56,6 +144,102 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             .command_line()
             .ends_with(documented.last().unwrap())
     );
+}
+
+/// Every gate a document cites by number is the gate it means: the
+/// documents cite two gates by number, the examples', whose reports the
+/// ports compare with, and the ports', the last, so each citation is the
+/// number of one of them in AGENTS.md's list, and the rows of DEVELOPMENT.md
+/// § 2's timing table cover every gate once, in order; a gate inserted into
+/// the list would otherwise leave every later number in the documents
+/// naming the gate before the one it means.
+#[test]
+fn every_gate_the_documents_cite_by_number_is_the_one_they_mean() {
+    let documented = documented_gates();
+    let examples = 1 + documented
+        .iter()
+        .position(|command| EXAMPLES == command)
+        .unwrap();
+    let ports = documented.len();
+    for (path, text) in DOCUMENTS {
+        for number in cited_gates(text) {
+            assert!(
+                [examples, ports].contains(&number),
+                "{path} cites gate {number}; the examples' is {examples}, the ports' {ports}"
+            );
+        }
+    }
+    let mut next = 1;
+    for (first, last) in timed_gates(DEVELOPMENT) {
+        assert_eq!(next, first, "the timing table skips or repeats gate {next}");
+        next = last + 1;
+    }
+    assert_eq!(
+        ports + 1,
+        next,
+        "the timing table ends before the last gate"
+    );
+}
+
+/// Citations read as the gates they number, whatever punctuation surrounds
+/// them, and a word that only contains "gate" cites nothing; a reader that
+/// missed "(gate 9)" or took "gates 3" for a citation would pass stale
+/// numbers or refuse good ones.
+#[test]
+fn a_citation_is_the_word_gate_and_a_number() {
+    assert_eq!(
+        cited_gates("keeps the reports for gate 18, and (Gate 9) keeps them;\ngate\n4's steps"),
+        [18, 9, 4]
+    );
+    assert!(cited_gates("the gates 3 and 4, a gateway 5, a gate that").is_empty());
+    assert_eq!(
+        timed_gates(
+            "| Gates | Warm |\n| --- | ---: |\n| 1–3, the checks | 5 s |\n| 4, the lint | 2 s |\n\nafter"
+        ),
+        [(1, 3), (4, 4)]
+    );
+}
+
+/// The target lints are the steps of CI's Mobile and wasm targets job, which
+/// adds `--locked` to every cargo call as the workflow does; if they drifted
+/// apart, a commit that passes the gates could fail its push run, and a
+/// target CI lints could break with no gate to show it before the push.
+#[test]
+fn the_target_lints_are_the_steps_of_ci_s_mobile_job() {
+    let workflow = include_str!("../../../../.github/workflows/ci.yml");
+    let (_, job) = workflow.split_once("\n  mobile:\n").unwrap();
+    // Each `run` is a command on its line or, after `>-`, folded from the
+    // lines indented beneath it.
+    let mut commands: Vec<String> = Vec::new();
+    let mut folding = false;
+    for line in job
+        .lines()
+        .take_while(|line| line.is_empty() || line.starts_with("    "))
+    {
+        if let Some(command) = line.trim_start().strip_prefix("- run: ") {
+            folding = ">-" == command;
+            commands.push(if folding {
+                String::new()
+            } else {
+                command.to_owned()
+            });
+        } else if folding && line.starts_with("          ") {
+            let command = commands.last_mut().unwrap();
+            if !command.is_empty() {
+                command.push(' ');
+            }
+            command.push_str(line.trim());
+        } else {
+            folding = false;
+        }
+    }
+    let commands: Vec<String> = commands
+        .into_iter()
+        .filter(|command| !command.starts_with("rustup toolchain "))
+        .map(|command| command.replace(" --locked", ""))
+        .collect();
+    let steps: Vec<String> = target_lints().iter().map(Step::command_line).collect();
+    assert_eq!(commands, steps);
 }
 
 /// A package that turned on async-lock's `std` would bring the clock into

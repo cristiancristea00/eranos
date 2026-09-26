@@ -53,24 +53,32 @@ It runs these, in this order, and stops at the first that fails:
 1. `cargo fmt --all --check`
 2. `cargo clippy --workspace --all-targets --all-features -- -D warnings`
 3. `cargo clippy --workspace --all-targets --no-default-features -- -D warnings`
-4. `cargo test --workspace --all-features` (unit, integration, and doc
+4. `rustup target add <the mobile and wasm targets>`, then the `--lib`
+   clippy runs of CI's Mobile and wasm targets job, with every feature and
+   without the default ones: the workspace for `aarch64-apple-ios`,
+   `aarch64-apple-ios-sim`, `aarch64-linux-android`, and
+   `x86_64-linux-android`; the workspace but eranos-capi, whose worker
+   thread drives its asynchronous calls with `block_on`, which is not
+   compiled for wasm, for `wasm32-wasip1`; and eranos-web for
+   `wasm32-unknown-unknown`
+5. `cargo test --workspace --all-features` (unit, integration, and doc
    tests, the README's included)
-5. `cargo test --workspace --no-default-features`
-6. `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --all-features`
-7. `cargo tree --workspace --all-features --edges normal,features --invert async-lock --prefix none`,
+6. `cargo test --workspace --no-default-features`
+7. `RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --all-features`
+8. `cargo tree --workspace --all-features --edges normal,features --invert async-lock --prefix none`,
    which must show no line `async-lock feature "…"`: with `std`, the lock
    would gain blocking methods that read the clock and a per-thread parker
-8. `cargo run --quiet --package <package> --all-features --example <name>`
+9. `cargo run --quiet --package <package> --all-features --example <name>`
    for every example of every package, as `cargo metadata` lists them,
-   keeping the reports of eranos's examples for gate 17
-9. `cargo build --package eranos-uniffi`, the host library the generators
-   read
-10. `cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>`
+   keeping the reports of eranos's examples for gate 18
+10. `cargo build --package eranos-uniffi`, the host library the generators
+    read
+11. `cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>`
     for Swift and Kotlin (`uniffi-bindgen`) and Java (`uniffi-bindgen-java`),
     which writes each language's sources from the host library into
     `target/uniffi/<language>`, cleared first: a type a generator cannot
     read stops the gates, and the generated sources are never committed
-11. `rustup target add <every Apple target>`, on macOS, then the Swift
+12. `rustup target add <every Apple target>`, on macOS, then the Swift
     package: `cargo build --package eranos-uniffi --lib` for the 13 Apple
     targets, `lipo` and `xcodebuild -create-xcframework` into
     `bindings/swift/EranosFFI.xcframework`, the generated Swift copied into
@@ -81,7 +89,7 @@ It runs these, in this order, and stops at the first that fails:
     builds' log, which names the examples too, and
     `swift package generate-documentation --warnings-as-errors`, all in
     `bindings/swift`
-12. `rustup target add <every Android target>`, with `ANDROID_HOME` and
+13. `rustup target add <every Android target>`, with `ANDROID_HOME` and
     `JAVA_HOME` set, then the Kotlin package: `cargo ndk` for the four
     Android ABIs into `generated-android/src/main/jniLibs`, the generated
     Kotlin copied into `generated/src`, and the JUnit tests with Kover at
@@ -89,7 +97,7 @@ It runs these, in this order, and stops at the first that fails:
     check against `eranos/api/eranos.api`, Dokka with warnings as errors,
     and both Android libraries, every Gradle run with
     `--warning-mode=fail`, all in `bindings/kotlin`
-13. `cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos`,
+14. `cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos`,
     with `JAVA_HOME` set, then the Java package: google-java-format's
     check of the layer, its tests, and the examples, ktlint on its build
     scripts, the JUnit tests with JaCoCo at 100 % of instructions, lines,
@@ -97,7 +105,7 @@ It runs these, in this order, and stops at the first that fails:
     Gradle run with `--warning-mode=fail` and every compilation of the
     layer with `-Xlint:all -Werror` and Error Prone, all in
     `bindings/java`
-14. `rustup target add wasm32-unknown-unknown`, with Node 24 first on
+15. `rustup target add wasm32-unknown-unknown`, with Node 24 first on
     `PATH`, then the TypeScript package: `src/internal` and `dist`
     cleared, `cargo build --package eranos-web --target
     wasm32-unknown-unknown --lib`, `npm ci`,
@@ -107,14 +115,14 @@ It runs these, in this order, and stops at the first that fails:
     with c8 at 100 % of lines, branches, functions, and statements, TypeDoc
     with warnings as errors, and the bundle with its declarations, all in
     `bindings/typescript`
-15. `sh gradlew --warning-mode=fail :eranos:jvmTest`, with `ANDROID_HOME`
+16. `sh gradlew --warning-mode=fail :eranos:jvmTest`, with `ANDROID_HOME`
     set and `JAVA_HOME_21` naming the JDK 21 that the Kotlin Multiplatform
     package's Gradle 9.0 runs on, then the rest of that package: the two
     Android libraries and, on macOS, the layer compiled for its eight Apple
     targets, every Gradle run with `--warning-mode=fail`, and ktlint on the
     build scripts, all in `bindings/kmp`; the first runs the Kotlin
     package's tests on the JVM against gobley's bindings
-16. `cargo build --package eranos-capi`, with `LLVM_HOME` naming the LLVM
+17. `cargo build --package eranos-capi`, with `LLVM_HOME` naming the LLVM
     whose clang, llvm-profdata, llvm-cov, clang-format, and clang-tidy the C
     and C++ packages' gates run, then each package in turn, in `bindings/c`
     and `bindings/cpp`: Diplomat's headers generated by `diplomat-tool` into
@@ -124,7 +132,7 @@ It runs these, in this order, and stops at the first that fails:
     llvm-cov's summary shows; clang-format's check of the layer, the tests,
     and the ports; clang-tidy on the tests, the ports, and every header they
     include; and Doxygen with warnings as errors
-17. `cargo build --package eranos-uniffi --features sequential-ids`, into
+18. `cargo build --package eranos-uniffi --features sequential-ids`, into
     `target/sequential`, the host library whose identifiers count up as the
     examples' do, and beside it eranos-kmp's, eranos-web's for WebAssembly,
     and eranos-capi's static library, then the ports: the UniFFI sources
@@ -144,13 +152,15 @@ It runs these, in this order, and stops at the first that fails:
     and `bindings/cpp` as their tests are, under the sanitizers, on
     eranos-capi's library, into `target/sequential/c` and
     `target/sequential/cpp`, each run with `LeakSanitizer`; every report is
-    compared byte for byte with its example's from gate 8, and the first
+    compared byte for byte with its example's from gate 9, and the first
     line that differs stops the gates
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
 demonstration. A test in `crates/xtask` reads this list, so the command and
-the list cannot drift apart. The VS Code task `gates` runs
+the list cannot drift apart; others keep the target lints the steps of
+CI's job, and every gate number the documents cite the gate it means. The
+VS Code task `gates` runs
 `cargo xtask gates`, and CI runs the Rust steps as its jobs on every push,
 and every step, on Linux and on macOS, on a dispatch that asks for the
 bindings

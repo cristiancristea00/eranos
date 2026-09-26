@@ -16,7 +16,7 @@ const PROJECT: &str = "bindings/typescript";
 
 /// The WebAssembly target of browsers and Node, which has no operating
 /// system.
-const TARGET: &str = "wasm32-unknown-unknown";
+pub(crate) const TARGET: &str = "wasm32-unknown-unknown";
 
 /// How `node --version` starts for the Node the gates run on: the oldest
 /// release line the package supports, so a call that only a later Node has

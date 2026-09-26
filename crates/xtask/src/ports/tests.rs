@@ -35,7 +35,9 @@ fn reference(example: &str, report: &str) -> Reference {
 /// TypeScript ones, on Node, in a copy of the package over the WebAssembly
 /// build of the glue, whose generator's settings the ports write, and last
 /// the C and the C++ ones, each language's built into a directory of its
-/// own, then run.
+/// own, then run. The Kotlin and Java ports refuse native access the command
+/// line does not grant, as the Java tests do; JDK 21's launcher has no such
+/// option.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -111,9 +113,9 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     );
     assert_eq!(
         java::port("restaurant_bill", "/JAVA_HOME", &sequential()).command_line(),
-        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 \
-         -Djava.library.path=/eranos/target/sequential/debug -cp bindings/java/build/ports/* \
-         eranos.examples.restaurantbill.Main"
+        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED --illegal-native-access=deny \
+         -Dstdout.encoding=UTF-8 -Djava.library.path=/eranos/target/sequential/debug \
+         -cp bindings/java/build/ports/* eranos.examples.restaurantbill.Main"
     );
     assert_eq!(
         multiplatform_library(&sequential()).command_line(),
@@ -127,9 +129,9 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     );
     assert_eq!(
         kotlin::port("split_methods", "/JAVA_HOME", &sequential()).command_line(),
-        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 \
-         -Djna.library.path=/eranos/target/sequential/debug -cp bindings/kotlin/examples/build/ports/* \
-         eranos.examples.splitmethods.MainKt"
+        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED --illegal-native-access=deny \
+         -Dstdout.encoding=UTF-8 -Djna.library.path=/eranos/target/sequential/debug \
+         -cp bindings/kotlin/examples/build/ports/* eranos.examples.splitmethods.MainKt"
     );
 }
 

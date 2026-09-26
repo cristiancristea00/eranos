@@ -63,7 +63,7 @@ every command.
 | Kotlin Multiplatform | the Kotlin suite, `bindings/kotlin/eranos/src/test/kotlin/` | the `eranos` package over gobley's bindings, on the JVM    | `./gradlew :eranos:jvmTest`, in `bindings/kmp`           |
 | C                    | `bindings/c/tests/tests.c`                                  | the `eranos.h` layer, and Diplomat's C API beneath it      | `build/tests`, in `bindings/c`, once built               |
 | C++                  | `bindings/cpp/tests/tests.cpp`                              | the `eranos.hpp` layer, and Diplomat's classes beneath it  | `build/tests`, in `bindings/cpp`, once built             |
-| Ports                | `bindings/<language>/examples/`                             | every example's report, byte for byte, through the layer   | `cargo xtask gates`, gate 17                             |
+| Ports                | `bindings/<language>/examples/`                             | every example's report, byte for byte, through the layer   | `cargo xtask gates`, gate 18                             |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -78,7 +78,7 @@ language's hand-written layer alone, and prints its report byte for byte.
 Every text of a report is one the library writes
 ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)), so a port that
 prints another byte is a layer that shows a value otherwise, or a port that
-no longer follows its example. Gate 8 keeps each example's report; gate 17
+no longer follows its example. Gate 9 keeps each example's report; gate 18
 runs every port on a build of the glue with `sequential-ids` in
 `target/sequential`, whose identifiers count up as the example's do, and
 stops at the first line that differs, printing both versions of it. The
@@ -311,5 +311,5 @@ both together.
 | a currency change or loading      | the gates, then `cargo bench -p eranos --features serde --bench group`                                                             |
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading    |
 | a libphonenumber metadata release | the gates, then `cargo test -p eranos-contact --lib` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
-| an example's report               | the gates, whose gate 17 compares every port with it: change each port with the example                                            |
+| an example's report               | the gates, whose gate 18 compares every port with it: change each port with the example                                            |
 | docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                     |

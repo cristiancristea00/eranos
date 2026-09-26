@@ -93,10 +93,33 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     Ok(())
 }
 
-/// The gates before the examples: formatting, clippy and the tests with
-/// every feature and without the default ones, and the documentation.
+/// The mobile targets the libraries are linted for: an iOS device and
+/// simulator and two Android ABIs, whose standard libraries type-check the
+/// `target_os` code of the library and its dependencies without an SDK.
+const MOBILE_TARGETS: [&str; 4] = [
+    "aarch64-apple-ios",
+    "aarch64-apple-ios-sim",
+    "aarch64-linux-android",
+    "x86_64-linux-android",
+];
+
+/// The wasm target of the WebAssembly System Interface, which compiles the
+/// library's `target_family = "wasm"` code as the browser's target does,
+/// with the clock and the random source that the browser's has only through
+/// uuid's `js` feature.
+const WASI_TARGET: &str = "wasm32-wasip1";
+
+/// The gates before the examples: [`host_lints`], [`target_lints`], and
+/// [`tests_and_documentation`], in that order.
 #[must_use]
 pub(crate) fn checks() -> Vec<Step> {
+    [host_lints(), target_lints(), tests_and_documentation()].concat()
+}
+
+/// The gates that lint the workspace for the host: formatting, and clippy on
+/// every target with every feature and without the default ones.
+#[must_use]
+pub(crate) fn host_lints() -> Vec<Step> {
     vec![
         Step::cargo(&["fmt", "--all", "--check"], "formatting"),
         Step::cargo(
@@ -123,6 +146,63 @@ pub(crate) fn checks() -> Vec<Step> {
             ],
             "clippy without the default features",
         ),
+    ]
+}
+
+/// The gate that lints the libraries for the mobile and wasm targets, with
+/// every feature and without the default ones, as CI's job of that name
+/// does: clippy type-checks each target's code against its standard library
+/// alone, so no SDK, NDK, or linker is needed. eranos-capi is left out on
+/// WASI: its worker thread drives each asynchronous C call with `block_on`,
+/// which is not compiled for wasm, where the one thread would wait with no
+/// other to wake it. The browser's target lints eranos-web alone, which
+/// turns on uuid's `js` feature, without which that target has no clock or
+/// random source.
+#[must_use]
+pub(crate) fn target_lints() -> Vec<Step> {
+    let clippy = |scope: &[&str], targets: &[&str], name: &str| {
+        [
+            ("--all-features", "with every feature"),
+            ("--no-default-features", "without the default features"),
+        ]
+        .map(|(features, set)| {
+            let mut arguments = vec!["clippy"];
+            arguments.extend(scope);
+            arguments.extend(["--lib", features]);
+            for target in targets {
+                arguments.extend(["--target", target]);
+            }
+            arguments.extend(["--", "-D", "warnings"]);
+            Step::cargo(&arguments, &format!("clippy for {name} {set}"))
+        })
+    };
+    let mut add = vec!["target", "add"];
+    add.extend(MOBILE_TARGETS);
+    add.extend([WASI_TARGET, crate::web::TARGET]);
+    let mut steps = vec![Step::new(&add, "the mobile and wasm targets", "rustup")];
+    steps.extend(clippy(
+        &["--workspace"],
+        &MOBILE_TARGETS,
+        "the mobile targets",
+    ));
+    steps.extend(clippy(
+        &["--workspace", "--exclude", "eranos-capi"],
+        &[WASI_TARGET],
+        "WASI",
+    ));
+    steps.extend(clippy(
+        &["--package", "eranos-web"],
+        &[crate::web::TARGET],
+        "the browser",
+    ));
+    steps
+}
+
+/// The gates after the lints: the tests with every feature and without the
+/// default ones, and the documentation.
+#[must_use]
+pub(crate) fn tests_and_documentation() -> Vec<Step> {
+    vec![
         Step::cargo(
             &["test", "--workspace", "--all-features"],
             "tests with every feature",

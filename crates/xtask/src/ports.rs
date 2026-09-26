@@ -200,13 +200,19 @@ pub(crate) struct Jvm {
     /// The directory, from the workspace root, that holds the ports and
     /// every library they run with.
     pub(crate) ports: &'static str,
+    /// Whether the launcher refuses native access by any code the command
+    /// line does not grant it to, as the Java tests run: JDK 24 added
+    /// `--illegal-native-access` (JEP 472), and JDK 21's launcher refuses
+    /// the option.
+    pub(crate) strict_native_access: bool,
 }
 
 /// The step that runs the port of `example` in `jvm`'s language on the
 /// `java` of the JDK at `jdk`, the library loading from `sequential`'s
-/// target directory. The port writes its report in UTF-8, as the Rust
-/// example does, whatever the machine's locale, from which the JVM would
-/// otherwise take the encoding of its output.
+/// target directory. The port calls native code from the class path, which
+/// the launcher grants native access. It writes its report in UTF-8, as the
+/// Rust example does, whatever the machine's locale, from which the JVM
+/// would otherwise take the encoding of its output.
 #[must_use]
 pub(crate) fn jvm_port(jvm: &Jvm, example: &str, jdk: &str, sequential: &Metadata) -> Step {
     let library = format!(
@@ -215,15 +221,13 @@ pub(crate) fn jvm_port(jvm: &Jvm, example: &str, jdk: &str, sequential: &Metadat
     );
     let classes = format!("{}/*", jvm.ports);
     let class = format!("eranos.examples.{}.{}", example.replace('_', ""), jvm.class);
+    let mut arguments = vec!["--enable-native-access=ALL-UNNAMED"];
+    if jvm.strict_native_access {
+        arguments.push("--illegal-native-access=deny");
+    }
+    arguments.extend(["-Dstdout.encoding=UTF-8", &library, "-cp", &classes, &class]);
     Step::new(
-        &[
-            "--enable-native-access=ALL-UNNAMED",
-            "-Dstdout.encoding=UTF-8",
-            &library,
-            "-cp",
-            &classes,
-            &class,
-        ],
+        &arguments,
         &format!("the {} port of {example}", jvm.language),
         &format!("{jdk}/bin/java"),
     )

@@ -21,6 +21,7 @@ pub(crate) const JVM: Jvm = Jvm {
     language: "Kotlin Multiplatform",
     library_path: "jna.library.path",
     ports: "bindings/kmp/examples/build/ports",
+    strict_native_access: false,
 };
 
 /// The environment variable that names the JDK 21 that Gradle 9.0 runs on:

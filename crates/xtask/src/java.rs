@@ -23,6 +23,7 @@ pub(crate) const JVM: Jvm = Jvm {
     language: "Java",
     library_path: "java.library.path",
     ports: "bindings/java/build/ports",
+    strict_native_access: true,
 };
 
 /// Runs the Java package's gates, stopping at the first that fails.
