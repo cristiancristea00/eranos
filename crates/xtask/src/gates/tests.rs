@@ -203,20 +203,18 @@ fn a_citation_is_the_word_gate_and_a_number() {
     );
 }
 
-/// The target lints are the steps of CI's Mobile and wasm targets job, which
-/// adds `--locked` to every cargo call as the workflow does; if they drifted
-/// apart, a commit that passes the gates could fail its push run, and a
-/// target CI lints could break with no gate to show it before the push.
-#[test]
-fn the_target_lints_are_the_steps_of_ci_s_mobile_job() {
-    let workflow = include_str!("../../../../.github/workflows/ci.yml");
-    let (_, job) = workflow.split_once("\n  mobile:\n").unwrap();
-    // Each `run` is a command on its line or, after `>-`, folded from the
-    // lines indented beneath it.
+/// The commands of the job `name` of `workflow`, in its order: each `run`
+/// on its line, or folded after `>-` from the lines indented beneath it. The
+/// lines are read with `lines`, which drops the carriage return that a
+/// checkout with Windows line endings adds.
+fn job_commands(workflow: &str, name: &str) -> Vec<String> {
+    let heading = format!("  {name}:");
     let mut commands: Vec<String> = Vec::new();
     let mut folding = false;
-    for line in job
+    for line in workflow
         .lines()
+        .skip_while(|line| heading != *line)
+        .skip(1)
         .take_while(|line| line.is_empty() || line.starts_with("    "))
     {
         if let Some(command) = line.trim_start().strip_prefix("- run: ") {
@@ -236,6 +234,24 @@ fn the_target_lints_are_the_steps_of_ci_s_mobile_job() {
             folding = false;
         }
     }
+    commands
+}
+
+/// The target lints are the steps of CI's Mobile and wasm targets job, which
+/// adds `--locked` to every cargo call as the workflow does, and the job
+/// reads the same from a checkout with Windows line endings; if they drifted
+/// apart, a commit that passes the gates could fail its push run, and a
+/// target CI lints could break with no gate to show it before the push. On
+/// Windows, where a checkout ends each line with a carriage return and a
+/// line feed, a split at `"\n  mobile:\n"` found no job.
+#[test]
+fn the_target_lints_are_the_steps_of_ci_s_mobile_job() {
+    let workflow = include_str!("../../../../.github/workflows/ci.yml");
+    let commands = job_commands(workflow, "mobile");
+    assert_eq!(
+        job_commands(&workflow.replace('\n', "\r\n"), "mobile"),
+        commands
+    );
     let commands: Vec<String> = commands
         .into_iter()
         .filter(|command| !command.starts_with("rustup toolchain "))
