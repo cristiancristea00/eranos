@@ -367,7 +367,9 @@ char *replaceFirst(char const *const text, char const *const pattern, char const
     char *const copy = malloc(before + replacementLength + after + 1);
     check(NULL != copy, "the copy has room");
     memcpy(copy, text, before);
-    memcpy(copy + before, replacement, replacementLength);
+    // With its terminator, which the tail's copy overwrites: clang-tidy's bugprone-not-null-terminated-result refuses a
+    // copy of a string's length alone wherever memcpy is glibc's plain function.
+    memcpy(copy + before, replacement, replacementLength + 1);
     memcpy(copy + before + replacementLength, found + patternLength, after + 1);
     return copy;
 }
