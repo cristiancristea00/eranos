@@ -16,8 +16,10 @@ use eranos::{Currency, MemberId};
 
 use super::*;
 use crate::calendar::CalendarDate;
-use crate::expense::{ExpenseSplit, Split};
-use crate::money::Cost;
+use crate::expense::{Expense, ExpenseSplit, Split};
+use crate::member::{Category, Member};
+use crate::money::{Cost, Money};
+use crate::transfer::Transfer;
 use crate::{GroupFailure, LanguageFailure, MoneyFailure, SettlementFailure};
 
 /// A task that counts how often it is woken.

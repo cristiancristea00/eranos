@@ -1,0 +1,20 @@
+# eranos-glue-macros: the proc macros over eranos-glue, which the binding
+# core and the UniFFI crates invoke; each is a few lines, and eranos-glue
+# holds everything they call.
+[package]
+name = "eranos-glue-macros"
+description = "The proc macros that write eranos's glue code from the binding core's calls and records"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+eranos-glue = { workspace = true }
+syn = { workspace = true }
+
+[lints]
+workspace = true

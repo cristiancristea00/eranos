@@ -141,7 +141,7 @@ fn every_read_converts_what_the_group_holds() {
         operations::category(group, &flat.food),
         Ok(Some(categories[1].clone()))
     );
-    assert_eq!(operations::currency_code(group), "EUR");
+    assert_eq!(operations::currency(group), "EUR");
     let expenses = operations::expenses(group);
     assert_eq!(expenses.len(), 1);
     assert_eq!(expenses[0].id.as_ref(), Some(&flat.dinner));
@@ -739,7 +739,7 @@ fn the_currency_changes_at_the_given_rates() {
     assert_eq!(*group, before);
 
     operations::change_currency(group, "RON", &[rate("EUR", "5")]).unwrap();
-    assert_eq!(operations::currency_code(group), "RON");
+    assert_eq!(operations::currency(group), "RON");
     assert_eq!(
         operations::summary(group).total_spent,
         Money {

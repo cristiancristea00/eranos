@@ -51,13 +51,15 @@ fn the_rust_tests_run_then_every_foreign_suite_on_the_instrumented_glue_then_the
 }
 
 /// The Rust runs would measure the glue, which has no Rust tests, and report
-/// it unrun, and a run that kept an earlier run's coverage would count what
-/// that run ran; they drop the earlier coverage and leave every glue crate
-/// out.
+/// it unrun, or the glue's proc macros, whose runs depend on which crates a
+/// build compiles again, and a run that kept an earlier run's coverage would
+/// count what that run ran; they drop the earlier coverage and leave every
+/// glue crate out.
 #[test]
 fn the_rust_runs_start_clean_and_leave_the_glue_out() {
     let lines: Vec<String> = rust().iter().map(Step::command_line).collect();
-    let excluded = "--exclude eranos-capi --exclude eranos-kmp --exclude eranos-uniffi --exclude eranos-uniffi-bindgen --exclude eranos-web";
+    let excluded = "--exclude eranos-capi --exclude eranos-glue-macros --exclude eranos-kmp --exclude eranos-uniffi \
+                    --exclude eranos-uniffi-bindgen --exclude eranos-web";
     assert_eq!(
         lines,
         [

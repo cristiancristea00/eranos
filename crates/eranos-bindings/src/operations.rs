@@ -8,7 +8,7 @@ use eranos::{CategoryId, ExpenseId, Group, Language, MemberId, TransferId};
 use crate::expense::Expense;
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
-use crate::money::{CurrencyRate, Money, currency};
+use crate::money::{self, CurrencyRate, Money};
 use crate::settlement::{Settlement, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{EranosError, identifier, identifier_to_replace};
@@ -60,7 +60,7 @@ pub(crate) fn remove_category(group: &mut Group, id: &str) -> Result<Category, E
 // --- Currency ----------------------------------------------------------------
 
 /// The ISO 4217 code of the group currency.
-pub(crate) fn currency_code(group: &Group) -> String {
+pub(crate) fn currency(group: &Group) -> String {
     group.currency().code().to_owned()
 }
 
@@ -80,7 +80,7 @@ impl CurrencyChange {
             .map(CurrencyRate::to_library)
             .collect::<Result<Vec<_>, EranosError>>()?;
         Ok(Self {
-            currency: currency(code)?,
+            currency: money::currency(code)?,
             rates,
         })
     }

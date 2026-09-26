@@ -464,14 +464,19 @@ When code in one crate needs something another crate holds:
    `every_change_does_what_the_group_does`), and add its future to
    `every_call_is_send_static_and_small`.
 5. Forward it in the binding core: a function over the group in
-   `crates/eranos-bindings/src/operations.rs`, which converts the records
-   and the answer, then both forms on `GroupHandle` in `group.rs` (the
-   synchronous one through `reading` or `writing`, the asynchronous one
-   through `reading_async` or `writing_async`) and, for a read, the method
-   on `GroupReader` in `reader.rs`. Test the conversion in
-   `operations/tests.rs` and the two forms in `group/tests.rs`
-   (`every_read_answers_alike_in_both_forms` or the change's
-   `*_change_alike_in_both_forms`).
+   `crates/eranos-bindings/src/operations.rs`, named as the call, which
+   converts the records and the answer; then the call in the trait
+   `GroupCalls` of `calls.rs`, in its section, with the synchronous form's
+   signature, a summary that ends with a full stop, `#[read]` or
+   `#[write]`, and `#[infallible]` when the operation cannot fail. Both
+   forms on `GroupHandle` and, for a read, the form on `GroupReader` are
+   written from it, with their `# Errors`. A call whose asynchronous form
+   works before it takes the lock or while it holds it, as a currency
+   change checks its rates first and a settlement yields, names a
+   hand-written body in `group.rs` with `#[async_body = group::<name>]`.
+   Test the conversion in `operations/tests.rs` and the two forms in
+   `group/tests.rs` (`every_read_answers_alike_in_both_forms` or the
+   change's `*_change_alike_in_both_forms`).
 6. Forward both forms from `Group` in `crates/eranos-uniffi/src/objects.rs`,
    and a read also from its `GroupReader`, with the core's documentation;
    nothing fails to build while one is missing, so the methods of each

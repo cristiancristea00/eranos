@@ -17,9 +17,13 @@ use crate::process::{Runner, Step, Variable};
 use crate::{capi, java, kotlin, swift};
 
 /// The crates the Rust runs leave out: the glue and the generators, which
-/// have no Rust tests.
-pub(crate) const GLUE: [&str; 5] = [
+/// have no Rust tests, and the glue's proc macros, which run inside the
+/// compiler, only when a crate that invokes them compiles, so a cached
+/// build would leave them unrun; eranos-glue's tests measure what they
+/// call.
+pub(crate) const GLUE: [&str; 6] = [
     "eranos-capi",
+    "eranos-glue-macros",
     "eranos-kmp",
     "eranos-uniffi",
     "eranos-uniffi-bindgen",

@@ -25,7 +25,8 @@ Signed-off-by: <committer name> <<committer email>>
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
   `settlement`, `transfer`, and `group`; `bindings` for the binding core,
-  `uniffi` for the UniFFI glue and its generators, `swift` for the Swift
+  `glue` for the model of its calls and the proc macros over it, `uniffi`
+  for the UniFFI glue and its generators, `swift` for the Swift
   package, `kotlin` for the Kotlin package, `java` for the Java package,
   `web` for the WebAssembly glue and the TypeScript package, `kmp` for the
   Kotlin Multiplatform glue and package, and `capi` for the C glue and the
@@ -372,7 +373,9 @@ of the domain, from `eranos-core` (identifiers) up to `eranos-group`
 ([map](docs/ARCHITECTURE.md#2-crate-map)). Above the facade,
 `eranos-bindings` holds what every binding exposes, in plain Rust: records,
 one error, and a group handle with a synchronous and an asynchronous form
-of every call. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
+of every call, both written, with the read handle's reads, by the proc
+macros of `eranos-glue-macros` and `eranos-glue` from one trait that lists
+the calls. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
 through UniFFI, whose generators are the binaries of
 `eranos-uniffi-bindgen`; `eranos-web` and `eranos-kmp` compile the same
 sources on the UniFFI releases that uniffi-bindgen-react-native and gobley

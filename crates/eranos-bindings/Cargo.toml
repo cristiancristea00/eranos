@@ -26,6 +26,7 @@ eranos-category = { workspace = true }
 eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
 eranos-expense = { workspace = true }
+eranos-glue-macros = { workspace = true }
 eranos-group = { workspace = true }
 eranos-ledger = { workspace = true }
 eranos-member = { workspace = true }

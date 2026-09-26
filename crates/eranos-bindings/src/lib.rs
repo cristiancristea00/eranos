@@ -22,6 +22,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 mod calendar;
+mod calls;
 mod cancellation;
 mod error;
 mod expense;

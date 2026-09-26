@@ -280,15 +280,19 @@ jobs:
       # its generators have no Rust tests: the foreign tests measure the glue,
       # eranos-web compiles the sources of eranos-uniffi for WebAssembly,
       # which stable Rust cannot measure, eranos-kmp compiles them again for
-      # gobley, and the C and C++ tests measure eranos-capi.
+      # gobley, and the C and C++ tests measure eranos-capi. The glue's proc
+      # macros run inside the compiler, only when a crate that invokes them
+      # compiles; eranos-glue's tests measure what they call.
       - run: >-
           cargo llvm-cov --no-report --workspace --all-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
           --exclude eranos-web --exclude eranos-kmp --exclude eranos-capi
+          --exclude eranos-glue-macros
       - run: >-
           cargo llvm-cov --no-report --workspace --no-default-features --locked
           --exclude eranos-uniffi --exclude eranos-uniffi-bindgen
           --exclude eranos-web --exclude eranos-kmp --exclude eranos-capi
+          --exclude eranos-glue-macros
       - name: Export the reports
         run: |
           cargo llvm-cov report --cobertura --output-path target/coverage.xml

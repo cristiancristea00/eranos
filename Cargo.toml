@@ -3,7 +3,9 @@
 # The library, crates/eranos, re-exports the types callers use from the
 # twelve internal crates beside it, crates/eranos-core to crates/eranos-group,
 # which docs/ARCHITECTURE.md § 2 maps; crates/eranos-bindings holds what every
-# binding exposes, in plain Rust, crates/eranos-uniffi mirrors it for UniFFI,
+# binding exposes, in plain Rust, whose group calls crates/eranos-glue and
+# crates/eranos-glue-macros write from one list, crates/eranos-uniffi
+# mirrors it for UniFFI,
 # crates/eranos-uniffi-bindgen holds UniFFI's generators, and crates/eranos-web
 # and crates/eranos-kmp compile eranos-uniffi's sources for the web and for
 # Kotlin Multiplatform (docs/BINDINGS.md). The repository's automation is
@@ -23,6 +25,8 @@ members = [
     "crates/eranos-contact",
     "crates/eranos-core",
     "crates/eranos-expense",
+    "crates/eranos-glue",
+    "crates/eranos-glue-macros",
     "crates/eranos-group",
     "crates/eranos-kmp",
     "crates/eranos-ledger",
@@ -56,6 +60,8 @@ eranos-category = { path = "crates/eranos-category" }
 eranos-contact = { path = "crates/eranos-contact" }
 eranos-core = { path = "crates/eranos-core" }
 eranos-expense = { path = "crates/eranos-expense" }
+eranos-glue = { path = "crates/eranos-glue" }
+eranos-glue-macros = { path = "crates/eranos-glue-macros" }
 eranos-group = { path = "crates/eranos-group" }
 eranos-ledger = { path = "crates/eranos-ledger" }
 eranos-member = { path = "crates/eranos-member" }
@@ -144,6 +150,13 @@ wasm-bindgen = "=0.2.100"
 # links; diplomat-tool 0.16.1 reads the bridge of this release alone.
 diplomat = "=0.16.1"
 diplomat-runtime = "=0.16.0"
+# The glue's code generation: syn reads the binding core's calls and
+# records, and quote and proc-macro2 write the code. syn 3, the release that
+# Diplomat, serde_derive, and thiserror build with, so no release joins the
+# graph; `full` parses traits and items.
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = { version = "3.0.6", features = ["full"] }
 
 # --- Development only --------------------------------------------------------
 # Property tests for the arithmetic invariants (exact sums, zero-sum balances,

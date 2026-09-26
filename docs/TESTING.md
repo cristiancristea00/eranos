@@ -182,7 +182,13 @@ serde code, and either the clock-based identifier generator or the
 `sequential-ids` counter. It measures lines and regions for the unit,
 integration, and property tests of every crate but the glue crates and the
 generators, which have no Rust tests: the glue forwards every call to the
-binding core. It does not count doctests on the stable toolchain, so an
+binding core. eranos-glue's own tests compare the code it writes with the
+code expected and measure it, and eranos-glue-macros, whose macros run
+inside the compiler only when a crate that invokes them compiles, is left
+out. rustc maps no coverage for the code a proc macro writes, so the group
+handle's and the read handle's forms are not in the report either; the
+operations and the locks they call are, and the core's tests call every
+form. It does not count doctests on the stable toolchain, so an
 item covered only by its example shows as missed. Coverage is a diagnostic,
 never a gate; a gap is a reading list: either a missing test or dead code.
 CI measures the Rust tests the same way on every push and publishes the

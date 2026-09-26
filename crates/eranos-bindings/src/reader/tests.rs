@@ -11,6 +11,7 @@ use eranos::{Currency, MemberId};
 
 use super::*;
 use crate::group::GroupHandle;
+use crate::settlement::SettlementStrategy;
 use crate::{GroupFailure, IdFailure};
 
 /// The group handle and the identifiers of an entry of every kind.
