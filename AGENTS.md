@@ -125,14 +125,16 @@ It runs these, in this order, and stops at the first that fails:
     with warnings as errors
 17. `cargo build --package eranos-uniffi --features sequential-ids`, into
     `target/sequential`, the host library whose identifiers count up as the
-    examples' do, then the ports: the UniFFI sources generated from it
-    into `target/sequential/uniffi`; on macOS, the Swift package copied
-    into `target/sequential/swift` over an `XCFramework` of that library,
-    the examples built there, and every Swift port run; and the Kotlin
-    ports gathered by `:examples:ports` in `bindings/kotlin`, each run on
-    the `java` of `JAVA_HOME`, JNA loading that library; every report is
-    compared byte for byte with its example's from gate 8, and the first
-    line that differs stops the gates
+    examples' do, and eranos-kmp's beside it, then the ports: the UniFFI
+    sources generated from the first into `target/sequential/uniffi`; on
+    macOS, the Swift package copied into `target/sequential/swift` over an
+    `XCFramework` of that library, the examples built there, and every
+    Swift port run; the Kotlin ports gathered by `:examples:ports` in
+    `bindings/kotlin`, each run on the `java` of `JAVA_HOME`, JNA loading
+    that library; and the same ports gathered again in `bindings/kmp`,
+    over gobley's bindings, each run on the `java` of `JAVA_HOME_21`, JNA
+    loading eranos-kmp's; every report is compared byte for byte with its
+    example's from gate 8, and the first line that differs stops the gates
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a

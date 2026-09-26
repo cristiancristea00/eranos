@@ -85,8 +85,11 @@ stops at the first line that differs, printing both versions of it. The
 Swift ports run on macOS, on a copy of the Swift package over that library,
 since the identifiers of the package's own XCFramework are random; the
 Kotlin ports run on every machine, on the JVM, where JNA loads that library
-from `target/sequential/debug`. A test in `crates/xtask` holds every example
-to a port in every language the ports cover.
+from `target/sequential/debug`, and again on the Kotlin Multiplatform
+package's JVM target, over gobley's bindings, where JNA loads eranos-kmp's
+library, built beside it, before the one gobley embeds. A test in
+`crates/xtask` holds every example to a port in every language the ports
+cover.
 
 ## 3. The invariants
 

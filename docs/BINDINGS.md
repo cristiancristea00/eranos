@@ -479,7 +479,8 @@ Gradle 9.0, on JDK 21, since Gradle 9.0 runs on JDK 24 at the latest; its
 Kotlin is the Kotlin package's 2.4.20. gobley's plugin installs its
 generator, `gobley-uniffi-bindgen` 0.3.7, into the build directory with a
 `cargo install` that passes no `--locked`, so the generator's dependencies
-resolve when it installs.
+resolve when it installs. Its module `examples` compiles the Kotlin
+package's ports of the examples, from their sources, for the JVM target.
 
 ### C
 
@@ -566,9 +567,11 @@ package, builds its tests with the LLVM that `LLVM_HOME` names, runs them
 under the sanitizers, holds every line and function of its layer covered,
 and checks its format, lint, and documentation. Last, it builds
 eranos-uniffi's host library with `sequential-ids` into
-`target/sequential`, generates its sources, and runs every port on it: on
-macOS the Swift ports, on a copy of the Swift package over it, and the
-Kotlin ports on the JVM, each report compared with its example's.
+`target/sequential`, and eranos-kmp's beside it, generates the UniFFI
+sources, and runs every port: on macOS the Swift ports, on a copy of the
+Swift package over the first library, and the Kotlin ports on the JVM, over
+the Kotlin package's bindings and over the Kotlin Multiplatform package's,
+each report compared with its example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++

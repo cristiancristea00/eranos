@@ -25,11 +25,12 @@ fn reference(example: &str, report: &str) -> Reference {
 
 /// A port that ran on the gates' glue would print identifiers the Rust
 /// example does not, and one that ran before its library was built would
-/// print nothing; the glue whose identifiers count up is built first, its
-/// sources generated from it, the Swift ports run on a copy of the package
-/// over it only where the machine builds for Apple platforms, and the
-/// Kotlin ones on every machine, on the JDK's `java`, JNA loading that
-/// library.
+/// print nothing; the glue whose identifiers count up is built first, with
+/// eranos-kmp's library, its sources generated from it, the Swift ports run
+/// on a copy of the package over it only where the machine builds for Apple
+/// platforms, and the Kotlin ones on every machine, on the JDK's `java`,
+/// JNA loading that library, then again over gobley's bindings, on the JDK
+/// 21's, JNA loading eranos-kmp's.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -42,7 +43,7 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         recorder.apple = apple;
         recorder.metadata = "report".to_owned();
         run(&mut recorder, &metadata, &references).unwrap();
-        let mut expected = vec![library(&sequential())];
+        let mut expected = vec![library(&sequential()), multiplatform_library(&sequential())];
         expected.extend(gates::generators(&sequential()));
         if apple {
             expected.extend(swift::copy(&sequential()));
@@ -54,12 +55,24 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(kotlin::ports(&metadata));
         expected.push(kotlin::port("quickstart", "/JAVA_HOME", &sequential()));
         expected.push(kotlin::port("persistence", "/JAVA_HOME", &sequential()));
+        expected.push(kmp::ports("/JAVA_HOME_21"));
+        expected.push(kmp::port("quickstart", "/JAVA_HOME_21", &sequential()));
+        expected.push(kmp::port("persistence", "/JAVA_HOME_21", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
     }
     assert_eq!(
         library(&sequential()).command_line(),
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-uniffi --features sequential-ids"
+    );
+    assert_eq!(
+        multiplatform_library(&sequential()).command_line(),
+        "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-kmp --features sequential-ids"
+    );
+    assert_eq!(
+        kmp::port("grand_tour", "/JAVA_HOME_21", &sequential()).command_line(),
+        "/JAVA_HOME_21/bin/java --enable-native-access=ALL-UNNAMED -Djna.library.path=/eranos/target/sequential/debug \
+         -cp bindings/kmp/examples/build/ports/* eranos.examples.grandtour.MainKt"
     );
     assert_eq!(
         kotlin::port("split_methods", "/JAVA_HOME", &sequential()).command_line(),
@@ -124,9 +137,9 @@ fn a_report_passes_only_byte_for_byte() {
 /// not built or on sources that were not generated, and no report is
 /// compared with another example's: the library, a generator, the copy or
 /// the build of the Swift examples, the programs' directory that could not
-/// be printed, the build of the Kotlin ports, a port that fails, a
-/// directory that could not be cleared, or a JDK that no variable names,
-/// which stops them before any step.
+/// be printed, the build of the Kotlin or the Kotlin Multiplatform ports, a
+/// port that fails, a directory that could not be cleared, or a variable
+/// the JVM's ports need that is not set, which stops them before any step.
 #[test]
 fn a_failure_stops_the_ports_where_it_happens() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -134,6 +147,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
     let references = [reference("quickstart", METADATA)];
     for failing in [
         library(&sequential()),
+        multiplatform_library(&sequential()),
         gates::generators(&sequential())[0].clone(),
         swift::copy(&sequential())[0].clone(),
         swift::examples(&sequential())[2].clone(),
@@ -141,6 +155,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
         port("Swift", "quickstart", "/programs"),
         kotlin::ports(&metadata),
         kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
+        kmp::ports("/JAVA_HOME_21"),
+        kmp::port("quickstart", "/JAVA_HOME_21", &sequential()),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
@@ -156,14 +172,24 @@ fn a_failure_stops_the_ports_where_it_happens() {
         run(&mut blocked, &metadata, &[]),
         Err(Failure::Usage)
     ));
-    assert_eq!(blocked.steps, [library(&sequential())]);
-    let mut unnamed = Recorder::new();
-    unnamed.variables.clear();
-    assert!(matches!(
-        run(&mut unnamed, &metadata, &references),
-        Err(Failure::Variable("JAVA_HOME"))
-    ));
-    assert!(unnamed.steps.is_empty());
+    assert_eq!(
+        blocked.steps,
+        [library(&sequential()), multiplatform_library(&sequential())]
+    );
+    for (variables, missing) in [
+        (&[][..], "JAVA_HOME"),
+        (&["JAVA_HOME"][..], "ANDROID_HOME"),
+        (&["JAVA_HOME", "ANDROID_HOME"][..], "JAVA_HOME_21"),
+    ] {
+        let mut unnamed = Recorder::new();
+        unnamed.variables = variables.to_vec();
+        let failure = run(&mut unnamed, &metadata, &references);
+        assert!(
+            matches!(failure, Err(Failure::Variable(name)) if missing == name),
+            "{failure:?}"
+        );
+        assert!(unnamed.steps.is_empty());
+    }
 }
 
 /// An example without a port would print its report unchecked in that

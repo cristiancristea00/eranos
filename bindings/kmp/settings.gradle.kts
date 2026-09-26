@@ -1,8 +1,9 @@
 // The Kotlin Multiplatform package of eranos: the code gobley generates from
 // eranos-kmp, and the hand-written layer of the Kotlin package, compiled from
-// its sources for the JVM, Android, and the Apple platforms. The layer
-// depends on the generated code as an implementation detail, so the
-// generated classes stay off the compile classpath of an app.
+// its sources for the JVM, Android, and the Apple platforms, with the Kotlin
+// package's ports of the examples for the JVM. The layer depends on the
+// generated code as an implementation detail, so the generated classes stay
+// off the compile classpath of an app.
 
 pluginManagement {
     repositories {
@@ -21,4 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "eranos-kmp"
 
-include(":generated", ":eranos")
+include(":generated", ":eranos", ":examples")

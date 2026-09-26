@@ -177,12 +177,27 @@ pub(crate) fn ports(metadata: &Metadata) -> Step {
 
 /// The step that runs the Kotlin port of `example` on the `java` of the JDK
 /// at `jdk`, JNA loading the host library from `sequential`'s target
+/// directory.
+#[must_use]
+pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
+    jvm_port("Kotlin", PORTS, example, jdk, sequential)
+}
+
+/// The step that runs the port of `example` in `language`, gathered with
+/// every library it runs with into `ports`, on the `java` of the JDK at
+/// `jdk`, JNA loading its native library from `sequential`'s target
 /// directory: a port is the package `eranos.examples.<example>`, named
 /// without underscores, whose `Main.kt` holds its `main`.
 #[must_use]
-pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
+pub(crate) fn jvm_port(
+    language: &str,
+    ports: &str,
+    example: &str,
+    jdk: &str,
+    sequential: &Metadata,
+) -> Step {
     let library = format!("-Djna.library.path={}/debug", sequential.target_directory);
-    let classes = format!("{PORTS}/*");
+    let classes = format!("{ports}/*");
     let class = format!("eranos.examples.{}.MainKt", example.replace('_', ""));
     Step::new(
         &[
@@ -192,7 +207,7 @@ pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
             &classes,
             &class,
         ],
-        &format!("the Kotlin port of {example}"),
+        &format!("the {language} port of {example}"),
         &format!("{jdk}/bin/java"),
     )
 }

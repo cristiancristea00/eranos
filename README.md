@@ -145,7 +145,8 @@ cargo run -p eranos --all-features --example grand_tour   # the same identifiers
 
 Every example also has a Swift and a Kotlin port, in
 `bindings/swift/examples` and `bindings/kotlin/examples`, each printing the
-same report byte for byte, which the gates check
+same report byte for byte, which the gates check, the Kotlin ones on the
+Kotlin Multiplatform package too
 ([docs/TESTING.md § 2](docs/TESTING.md#2-layout)).
 
 ## Features

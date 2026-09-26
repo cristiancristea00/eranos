@@ -1,19 +1,30 @@
 //! The gates of the Kotlin Multiplatform package: the shared layer's tests on
 //! the JVM against gobley's bindings, the libraries of every target, and the
-//! package's build scripts. The Kotlin package's gates lint, document, and
-//! measure the layer's sources, which this package compiles unchanged.
+//! package's build scripts; and the steps that build and run the Kotlin
+//! package's ports of the examples on the package's JVM target. The Kotlin
+//! package's gates lint, document, and measure the layer's sources and the
+//! ports', which this package compiles unchanged.
 
 use crate::Failure;
+use crate::gates::Metadata;
+use crate::kotlin;
 use crate::process::{Runner, Step};
 
 /// The Kotlin Multiplatform project, from the workspace root.
 const PROJECT: &str = "bindings/kmp";
 
+/// The directory, from the workspace root, into which the examples' `ports`
+/// task gathers the ports and every library they run with.
+const PORTS: &str = "bindings/kmp/examples/build/ports";
+
+/// The environment variable that names the JDK 21 that Gradle 9.0 runs on:
+/// the last Gradle on which the project's Android plugin builds without a
+/// deprecation warning, and which runs on JDK 24 at the latest.
+pub(crate) const JDK: &str = "JAVA_HOME_21";
+
 /// The environment variables the gates need: the Android SDK, which holds
-/// the NDK and the platform, and a JDK 21 for Gradle 9.0, the last Gradle on
-/// which the project's Android plugin builds without a deprecation warning,
-/// and which runs on JDK 24 at the latest.
-pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", "JAVA_HOME_21"];
+/// the NDK and the platform, and the JDK that [`JDK`] names.
+pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", JDK];
 
 /// The Apple targets of the package, as Kotlin names them: those that
 /// Kotlin/Native, gobley, and rustup's standard libraries all have, but for
@@ -55,13 +66,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
 /// for each target, adding its Rust target first, and generate the bindings.
 #[must_use]
 pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Step> {
-    let gradle = |tasks: &[String], name: &str| {
-        let mut arguments = vec!["gradlew", "--warning-mode=fail"];
-        arguments.extend(tasks.iter().map(String::as_str));
-        Step::new(&arguments, name, "sh")
-            .in_directory(PROJECT)
-            .with_variable("JAVA_HOME", jdk)
-    };
+    let gradle = |tasks: &[String], name: &str| gradle(jdk, tasks, name);
     let mut libraries = vec![
         ":generated:assembleDebug".to_owned(),
         ":eranos:assembleDebug".to_owned(),
@@ -86,6 +91,36 @@ pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Step> {
         )
         .in_directory(PROJECT),
     ]
+}
+
+/// The step that runs Gradle's `tasks` in the project, reported as `name`,
+/// on the JDK at `jdk` and with deprecations as errors.
+fn gradle(jdk: &str, tasks: &[String], name: &str) -> Step {
+    let mut arguments = vec!["gradlew", "--warning-mode=fail"];
+    arguments.extend(tasks.iter().map(String::as_str));
+    Step::new(&arguments, name, "sh")
+        .in_directory(PROJECT)
+        .with_variable("JAVA_HOME", jdk)
+}
+
+/// The step that compiles the Kotlin package's ports of the examples against
+/// gobley's bindings and gathers them, with every library they run with,
+/// into one directory, Gradle running on the JDK at `jdk`.
+#[must_use]
+pub(crate) fn ports(jdk: &str) -> Step {
+    gradle(
+        jdk,
+        &[":examples:ports".to_owned()],
+        "the Kotlin Multiplatform ports",
+    )
+}
+
+/// The step that runs the Kotlin Multiplatform port of `example` on the
+/// `java` of the JDK at `jdk`, JNA loading eranos-kmp's library from
+/// `sequential`'s target directory before the one gobley embeds.
+#[must_use]
+pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
+    kotlin::jvm_port("Kotlin Multiplatform", PORTS, example, jdk, sequential)
 }
 
 #[cfg(test)]

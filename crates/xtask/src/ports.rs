@@ -3,14 +3,15 @@
 //! on a build of the glue whose identifiers count up from one as the Rust
 //! example's do. The ports run where their language builds: the Swift ones
 //! where the machine builds for Apple platforms, and the Kotlin ones on
-//! every machine, on the JVM that `JAVA_HOME` names.
+//! every machine, on the JVM, over the Kotlin package's bindings and again
+//! over the Kotlin Multiplatform package's.
 
 use std::path::PathBuf;
 
 use crate::Failure;
 use crate::gates::{self, Metadata};
 use crate::process::{Runner, Step};
-use crate::{kotlin, swift};
+use crate::{kmp, kotlin, swift};
 
 /// The target directory, inside cargo's, of the glue whose identifiers
 /// count up: a directory of its own, so the gates' builds stay as they are.
@@ -31,10 +32,11 @@ pub(crate) struct Reference {
 ///
 /// # Errors
 ///
-/// [`Failure::Variable`] when the JDK's variable is not set, before any step
-/// runs; the failure of the first step that fails, of clearing an earlier
-/// copy or generated source, and [`Failure::Port`] for a port whose report
-/// is not its example's.
+/// [`Failure::Variable`] for a variable the Kotlin or the Kotlin
+/// Multiplatform ports need that is not set, before any step runs; the
+/// failure of the first step that fails, of clearing an earlier copy or
+/// generated source, and [`Failure::Port`] for a port whose report is not
+/// its example's.
 pub(crate) fn run(
     runner: &mut impl Runner,
     metadata: &Metadata,
@@ -43,9 +45,15 @@ pub(crate) fn run(
     let jdk = runner
         .variable(kotlin::JDK)
         .ok_or(Failure::Variable(kotlin::JDK))?;
+    let [sdk, multiplatform_jdk] =
+        kmp::VARIABLES.map(|name| runner.variable(name).ok_or(Failure::Variable(name)));
+    // Gradle finds the Android SDK through the environment the gates run in.
+    sdk?;
+    let multiplatform_jdk = multiplatform_jdk?;
     let sequential = metadata.inner(DIRECTORY);
     let apple = runner.builds_apple_platforms();
     runner.run(&library(&sequential))?;
+    runner.run(&multiplatform_library(&sequential))?;
     for directory in cleared(&sequential, apple) {
         runner.clear(&directory)?;
     }
@@ -60,15 +68,32 @@ pub(crate) fn run(
             runner.run(&step)?;
         }
         let programs = runner.output(&swift::examples_directory(&sequential))?;
-        for reference in references {
-            let port = port("Swift", &reference.example, programs.trim());
-            compare("Swift", reference, &runner.output(&port)?)?;
-        }
+        let swift = |example: &str| port("Swift", example, programs.trim());
+        check(runner, "Swift", references, &swift)?;
     }
     runner.run(&kotlin::ports(metadata))?;
+    let kotlin = |example: &str| kotlin::port(example, &jdk, &sequential);
+    check(runner, "Kotlin", references, &kotlin)?;
+    runner.run(&kmp::ports(&multiplatform_jdk))?;
+    let multiplatform = |example: &str| kmp::port(example, &multiplatform_jdk, &sequential);
+    check(runner, "Kotlin Multiplatform", references, &multiplatform)
+}
+
+/// Runs the port in `language` of every example of `references`, the step
+/// `port` makes for its name, and compares its report with the example's,
+/// stopping at the first port that fails or differs.
+fn check(
+    runner: &mut impl Runner,
+    language: &'static str,
+    references: &[Reference],
+    port: &dyn Fn(&str) -> Step,
+) -> Result<(), Failure> {
     for reference in references {
-        let port = kotlin::port(&reference.example, &jdk, &sequential);
-        compare("Kotlin", reference, &runner.output(&port)?)?;
+        compare(
+            language,
+            reference,
+            &runner.output(&port(&reference.example))?,
+        )?;
     }
     Ok(())
 }
@@ -99,6 +124,24 @@ pub(crate) fn library(sequential: &Metadata) -> Step {
             "sequential-ids",
         ],
         "the host library of eranos-uniffi, with identifiers that count up",
+    )
+    .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
+}
+
+/// The step that builds eranos-kmp's library for the host, with
+/// identifiers that count up, into `sequential`'s target directory, where
+/// the Kotlin Multiplatform ports find it.
+#[must_use]
+pub(crate) fn multiplatform_library(sequential: &Metadata) -> Step {
+    Step::cargo(
+        &[
+            "build",
+            "--package",
+            "eranos-kmp",
+            "--features",
+            "sequential-ids",
+        ],
+        "the host library of eranos-kmp, with identifiers that count up",
     )
     .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
 }
