@@ -13,6 +13,8 @@ use std::path::PathBuf;
 
 use crate::Failure;
 use crate::gates::{self, Metadata};
+use crate::language::Language;
+use crate::plan::{self, Action, Phase};
 use crate::process::{Runner, Step};
 use crate::{capi, java, kmp, kotlin, python, swift, web};
 
@@ -29,135 +31,264 @@ pub(crate) struct Reference {
     pub(crate) report: String,
 }
 
-/// Builds the glue whose identifiers count up, runs every port of every
-/// example on it, and compares each report with its example's `references`,
-/// stopping at the first that fails.
+/// Every language with ports of the examples.
+pub(crate) const LANGUAGES: [Language; 7] = [
+    Language::Capi,
+    Language::Java,
+    Language::Kmp,
+    Language::Kotlin,
+    Language::Python,
+    Language::Swift,
+    Language::Web,
+];
+
+/// Builds the glue whose identifiers count up for the ports of `languages`,
+/// runs each of their ports of the examples of `references` on it, and
+/// compares each report with its example's, stopping at the first that
+/// fails.
 ///
 /// # Errors
 ///
-/// [`Failure::Variable`] for a variable the Kotlin, the Kotlin
-/// Multiplatform, or the C and C++ ports need that is not set, before any
-/// step runs; the failure of the first step that fails, of clearing an
-/// earlier copy or generated source, of writing the generator's settings for
-/// the TypeScript copy, and of creating the directory of the C or the C++
-/// ports, and [`Failure::Port`] for a port whose report is not its
-/// example's.
+/// [`Failure::Variable`] for a variable the ports of `languages` need that
+/// is not set, before any step runs; the failure of the first step that
+/// fails, of clearing an earlier copy or generated source, of writing the
+/// generator's settings for the TypeScript copy, and of creating the
+/// directory of the C or the C++ ports, and [`Failure::Port`] for a port
+/// whose report is not its example's.
 pub(crate) fn run(
     runner: &mut impl Runner,
     metadata: &Metadata,
     references: &[Reference],
+    languages: &[Language],
 ) -> Result<(), Failure> {
-    let jdk = runner
-        .variable(kotlin::JDK)
-        .ok_or(Failure::Variable(kotlin::JDK))?;
-    let [sdk, multiplatform_jdk] =
-        kmp::VARIABLES.map(|name| runner.variable(name).ok_or(Failure::Variable(name)));
-    // Gradle finds the Android SDK through the environment the gates run in.
-    sdk?;
-    let multiplatform_jdk = multiplatform_jdk?;
-    let llvm = runner
-        .variable(capi::VARIABLE)
-        .ok_or(Failure::Variable(capi::VARIABLE))?;
-    let sequential = metadata.inner(DIRECTORY);
-    let apple = runner.builds_apple_platforms();
-    runner.run(&library(&sequential))?;
-    runner.run(&multiplatform_library(&sequential))?;
-    runner.run(&web::sequential_library(&sequential))?;
-    runner.run(&capi::sequential_library(&sequential))?;
-    for directory in cleared(&sequential, apple) {
-        runner.clear(&directory)?;
-    }
-    for step in gates::generators(&sequential) {
-        runner.run(&step)?;
-    }
-    if apple {
-        for step in swift::copy(&sequential)
-            .into_iter()
-            .chain(swift::examples(&sequential))
-        {
-            runner.run(&step)?;
-        }
-        let programs = runner.output(&swift::examples_directory(&sequential))?;
-        let swift = |example: &str| port("Swift", example, programs.trim());
-        check(runner, "Swift", references, &swift)?;
-    }
-    runner.run(&kotlin::ports(metadata))?;
-    let kotlin = |example: &str| kotlin::port(example, &jdk, &sequential);
-    check(runner, kotlin::JVM.language, references, &kotlin)?;
-    runner.run(&kmp::ports(&multiplatform_jdk))?;
-    let multiplatform = |example: &str| kmp::port(example, &multiplatform_jdk, &sequential);
-    check(runner, kmp::JVM.language, references, &multiplatform)?;
-    runner.run(&java::ports(metadata))?;
-    let java = |example: &str| java::port(example, &jdk, &sequential);
-    check(runner, java::JVM.language, references, &java)?;
-    for step in web::copy(&sequential) {
-        runner.run(&step)?;
-    }
-    runner.write(
-        &web::copied_configuration(&sequential),
-        &web::configuration(),
-    )?;
-    runner.run(&web::copied_generator(&sequential))?;
-    let typescript = |example: &str| web::port(example, &sequential);
-    check(runner, "TypeScript", references, &typescript)?;
-    for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
-        runner.create(&capi::ports_directory(package, &sequential))?;
-        for reference in references {
-            runner.run(&capi::port_build(
-                package,
-                &llvm,
-                &sequential,
-                &reference.example,
-            ))?;
-        }
-        let native = |example: &str| capi::port(package, example, &sequential);
-        check(runner, package.name, references, &native)?;
-    }
-    for step in python::copy(&sequential) {
-        runner.run(&step)?;
-    }
-    let python = |example: &str| python::port(example, &sequential);
-    check(runner, "Python", references, &python)?;
-    Ok(())
+    let actions = actions(runner, metadata, references, languages)?;
+    plan::execute(runner, actions, &|_| true)
 }
 
-/// Runs the port in `language` of every example of `references`, the step
-/// `port` makes for its name, and compares its report with the example's,
-/// stopping at the first port that fails or differs.
-fn check(
-    runner: &mut impl Runner,
+/// The languages of `languages` whose ports run on this machine: the Swift
+/// ones only where it builds for Apple platforms, as `apple` says.
+#[must_use]
+pub(crate) fn runnable(languages: &[Language], apple: bool) -> Vec<Language> {
+    languages
+        .iter()
+        .copied()
+        .filter(|&language| apple || Language::Swift != language)
+        .collect()
+}
+
+/// The actions of the ports of `languages`, in the order the gates run
+/// them: the libraries with identifiers that count up that they run on,
+/// every directory they write cleared, the sources generated from the first
+/// library, then each language's ports.
+///
+/// # Errors
+///
+/// [`Failure::Variable`] for a variable the ports of `languages` need that
+/// is not set.
+fn actions(
+    runner: &impl Runner,
+    metadata: &Metadata,
+    references: &[Reference],
+    languages: &[Language],
+) -> Result<Vec<Action>, Failure> {
+    let languages = runnable(languages, runner.builds_apple_platforms());
+    let sequential = metadata.inner(DIRECTORY);
+    // Each language's ports read their variables before any action is made,
+    // so a missing one stops the ports before any step runs.
+    let ports = languages_ports(runner, metadata, &sequential, references, &languages)?;
+    let mut actions = libraries(&sequential, &languages);
+    actions.extend(
+        cleared(&sequential, &languages)
+            .into_iter()
+            .map(|directory| Action::clear(Phase::Prepare, directory)),
+    );
+    if languages.iter().any(|language| language.reads_uniffi()) {
+        actions.extend(Action::runs(Phase::Prepare, gates::generators(&sequential)));
+    }
+    actions.extend(ports);
+    Ok(actions)
+}
+
+/// The actions that build the libraries with identifiers that count up, in
+/// `sequential`'s target directory, that the ports of `languages` run on:
+/// eranos-uniffi's for the packages over it, and eranos-kmp's, eranos-web's,
+/// and eranos-capi's for theirs.
+fn libraries(sequential: &Metadata, languages: &[Language]) -> Vec<Action> {
+    let ported = |language| languages.contains(&language);
+    let mut steps = Vec::new();
+    if languages.iter().any(|language| language.reads_uniffi()) {
+        steps.push(library(sequential));
+    }
+    if ported(Language::Kmp) {
+        steps.push(multiplatform_library(sequential));
+    }
+    if ported(Language::Web) {
+        steps.push(web::sequential_library(sequential));
+    }
+    if ported(Language::Capi) {
+        steps.push(capi::sequential_library(sequential));
+    }
+    Action::runs(Phase::Prepare, steps)
+}
+
+/// The actions of each of `languages`' ports, over the libraries in
+/// `sequential`'s target directory, in the order the gates run them: the
+/// Swift ports, the Kotlin ones over the Kotlin package's bindings and again
+/// over the Kotlin Multiplatform package's, the Java ones, the TypeScript
+/// ones, the C and the C++ ones, and the Python ones, each report compared
+/// with its example's in `references`.
+///
+/// # Errors
+///
+/// [`Failure::Variable`] for a variable the ports of `languages` need that
+/// is not set.
+fn languages_ports(
+    runner: &impl Runner,
+    metadata: &Metadata,
+    sequential: &Metadata,
+    references: &[Reference],
+    languages: &[Language],
+) -> Result<Vec<Action>, Failure> {
+    let ported = |language| languages.contains(&language);
+    let variable = |name: &'static str| runner.variable(name).ok_or(Failure::Variable(name));
+    let mut ports = Vec::new();
+    if ported(Language::Swift) {
+        ports.extend(swift_ports(sequential, references));
+    }
+    if ported(Language::Kotlin) {
+        let jdk = variable(kotlin::JDK)?;
+        ports.push(Action::run(Phase::Prepare, kotlin::ports(metadata)));
+        ports.extend(checks(kotlin::JVM.language, references, &|example| {
+            kotlin::port(example, &jdk, sequential)
+        }));
+    }
+    if ported(Language::Kmp) {
+        let [sdk, jdk] = kmp::VARIABLES.map(variable);
+        // Gradle finds the Android SDK through the environment the ports run in.
+        sdk?;
+        let jdk = jdk?;
+        ports.push(Action::run(Phase::Prepare, kmp::ports(&jdk)));
+        ports.extend(checks(kmp::JVM.language, references, &|example| {
+            kmp::port(example, &jdk, sequential)
+        }));
+    }
+    if ported(Language::Java) {
+        let jdk = variable(kotlin::JDK)?;
+        ports.push(Action::run(Phase::Prepare, java::ports(metadata)));
+        ports.extend(checks(java::JVM.language, references, &|example| {
+            java::port(example, &jdk, sequential)
+        }));
+    }
+    if ported(Language::Web) {
+        ports.extend(Action::runs(Phase::Prepare, web::copy(sequential)));
+        ports.push(Action::write(
+            Phase::Prepare,
+            web::copied_configuration(sequential),
+            web::configuration(),
+        ));
+        ports.push(Action::run(
+            Phase::Prepare,
+            web::copied_generator(sequential),
+        ));
+        ports.extend(checks("TypeScript", references, &|example| {
+            web::port(example, sequential)
+        }));
+    }
+    if ported(Language::Capi) {
+        let llvm = variable(capi::VARIABLE)?;
+        for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
+            ports.push(Action::create(
+                Phase::Prepare,
+                capi::ports_directory(package, sequential),
+            ));
+            ports.extend(references.iter().map(|reference| {
+                Action::run(
+                    Phase::Prepare,
+                    capi::port_build(package, &llvm, sequential, &reference.example),
+                )
+            }));
+            ports.extend(checks(package.name, references, &|example| {
+                capi::port(package, example, sequential)
+            }));
+        }
+    }
+    if ported(Language::Python) {
+        ports.extend(Action::runs(Phase::Prepare, python::copy(sequential)));
+        ports.extend(checks("Python", references, &|example| {
+            python::port(example, sequential)
+        }));
+    }
+    Ok(ports)
+}
+
+/// The actions that copy the Swift package into `sequential`'s target
+/// directory over the library there, build the examples in the copy, and
+/// run the port of every example of `references` from the directory of the
+/// examples' programs, which the build prints.
+fn swift_ports(sequential: &Metadata, references: &[Reference]) -> Vec<Action> {
+    let mut actions = Action::runs(Phase::Prepare, swift::copy(sequential));
+    actions.extend(Action::runs(Phase::Prepare, swift::examples(sequential)));
+    let references = references.to_vec();
+    actions.push(Action::read(
+        Phase::Prepare,
+        swift::examples_directory(sequential),
+        move |programs| {
+            let programs = programs.trim().to_owned();
+            Ok(checks("Swift", &references, &|example| {
+                port("Swift", example, &programs)
+            }))
+        },
+    ));
+    actions
+}
+
+/// The actions that run the port in `language` of every example of
+/// `references`, the step `port` makes for its name, and compare its report
+/// with the example's.
+fn checks(
     language: &'static str,
     references: &[Reference],
     port: &dyn Fn(&str) -> Step,
-) -> Result<(), Failure> {
-    for reference in references {
-        compare(
-            language,
-            reference,
-            &runner.output(&port(&reference.example))?,
-        )?;
-    }
-    Ok(())
+) -> Vec<Action> {
+    references
+        .iter()
+        .map(|reference| {
+            let reference = reference.clone();
+            Action::read(Phase::Test, port(&reference.example), move |report| {
+                compare(language, &reference, &report).map(|()| Vec::new())
+            })
+        })
+        .collect()
 }
 
-/// What the ports clear before they build on the library, so nothing an
-/// earlier run left behind is read: the sources generated from
-/// `sequential`'s library, where `apple` the Swift package's copy but its
-/// build, the TypeScript package's copy but its dependencies' link, the C
-/// and C++ ports' programs, and the Python package's copy but its
-/// environment.
+/// What the ports of `languages` clear before they build on the library, so
+/// nothing an earlier run left behind is read: the sources generated from
+/// `sequential`'s library for the packages over eranos-uniffi, the Swift
+/// package's copy but its build, the TypeScript package's copy but its
+/// dependencies' link, the C and C++ ports' programs, and the Python
+/// package's copy but its environment.
 #[must_use]
-pub(crate) fn cleared(sequential: &Metadata, apple: bool) -> Vec<PathBuf> {
-    let mut directories = vec![gates::generated(sequential)];
-    if apple {
+pub(crate) fn cleared(sequential: &Metadata, languages: &[Language]) -> Vec<PathBuf> {
+    let ported = |language| languages.contains(&language);
+    let mut directories = Vec::new();
+    if languages.iter().any(|language| language.reads_uniffi()) {
+        directories.push(gates::generated(sequential));
+    }
+    if ported(Language::Swift) {
         directories.extend(swift::copied_directories(sequential));
     }
-    directories.extend(web::copied_directories(sequential));
-    directories.extend(
-        [capi::C_PACKAGE, capi::CPP_PACKAGE]
-            .map(|package| capi::ports_directory(package, sequential)),
-    );
-    directories.extend(python::copied_directories(sequential));
+    if ported(Language::Web) {
+        directories.extend(web::copied_directories(sequential));
+    }
+    if ported(Language::Capi) {
+        directories.extend(
+            [capi::C_PACKAGE, capi::CPP_PACKAGE]
+                .map(|package| capi::ports_directory(package, sequential)),
+        );
+    }
+    if ported(Language::Python) {
+        directories.extend(python::copied_directories(sequential));
+    }
     directories
 }
 

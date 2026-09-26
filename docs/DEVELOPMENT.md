@@ -59,6 +59,11 @@ and the test suites in [TESTING.md](TESTING.md).
 
 ```sh
 cargo xtask gates                                # every commit gate, in order
+cargo xtask gates --rust                         # the gates up to the examples', with no binding's toolchain
+cargo xtask test python                          # one language's tests, after building what they read
+cargo xtask lint c                               # one language's format checks and linters, likewise
+cargo xtask format all                           # every language's formatters, applied
+cargo xtask examples grand_tour --language web   # one example and its ports in one language, compared
 cargo xtask generate                             # the C glue's bridge, from the binding core
 cargo build -p eranos                            # the library
 cargo build -p eranos --features serde           # with serialisation
@@ -70,8 +75,19 @@ cargo doc -p eranos --all-features --open        # the API documentation
 
 `cargo xtask gates` runs the full gate sequence, listed in
 [AGENTS.md § Gates](../AGENTS.md#gates-before-committing), before every
-commit; `cargo xtask help` lists the commands. The alias lives in
-`.cargo/config.toml`, and the automation in `crates/xtask`. A change to a
+commit; `cargo xtask help` lists the commands. `test`, `lint`, and
+`format` take a language: `c`, for the C and C++ packages, `java`, `kmp`,
+`kotlin`, `python`, `rust`, `swift`, `web`, for the TypeScript package, or
+`all`, which leaves Swift out where the machine does not build for Apple
+platforms. `test` and `lint` run the gates' actions of the language's
+package that build what they read, then its tests or its format checks and
+linters; `format` runs its formatters alone, which the gates never run.
+`examples` takes an example's name, or runs every one, and `--language`
+with a language but `rust`; it runs each example, each language's actions
+that build its package, then the ports as the ports gate does, reading
+only the variables and building only the libraries those languages need.
+The alias lives in `.cargo/config.toml`, and the automation in
+`crates/xtask`. A change to a
 record or a call of the binding core needs `cargo xtask generate` too,
 which writes the C glue's bridge from them
 ([BINDINGS.md § 8](BINDINGS.md#8-the-glue-crates)); until it runs, a test of
@@ -720,7 +736,9 @@ so a failing run blocks nothing: it is a report.
   in the package's directory, marks each unrun line.
 - **`the Swift port of … prints … at line …, where the Rust example
   prints …`** from the gates, or another language's port's: the port and
-  its example first differ there;
+  its example first differ there, and
+  `cargo xtask examples <example> --language <language>` runs that
+  example and its port again;
   `swift run --package-path target/sequential/swift/examples <example>`,
   the Kotlin or the Java command of [§ 2](#2-building-and-testing) with
   `target/sequential/debug` as the library's path, the Kotlin one from

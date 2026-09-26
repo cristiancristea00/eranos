@@ -484,5 +484,16 @@ pub(crate) fn examples_directory(metadata: &Metadata) -> Step {
     )
 }
 
+/// The Swift package's formatter, applied: the fixes of its linter, with the
+/// package's settings, over the layer, its tests, and the examples.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![Action::run(
+        Phase::Format,
+        Step::new(&["lint", "--fix"], "the Swift format, applied", "swiftlint")
+            .in_directory(PACKAGE),
+    )]
+}
+
 #[cfg(test)]
 mod tests;

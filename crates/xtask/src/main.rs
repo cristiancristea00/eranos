@@ -2,13 +2,17 @@
 //! alias in `.cargo/config.toml`.
 //!
 //! `cargo xtask gates` runs the commit gates AGENTS.md lists, in its order,
-//! and stops at the first that fails; `cargo xtask coverage` measures the
-//! Rust tests and the binding glue, which the foreign tests run, in one
-//! report; `cargo xtask generate` writes the C glue's bridge from the binding
-//! core's records and calls; `cargo xtask help` lists the commands.
+//! and stops at the first that fails, and with `--rust` only the Rust part;
+//! `cargo xtask test`, `lint`, and `format` run one language's tests, format
+//! checks and linters, or formatters, and `cargo xtask examples` the ports of
+//! the examples; `cargo xtask coverage` measures the Rust tests and the
+//! binding glue, which the foreign tests run, in one report; `cargo xtask
+//! generate` writes the C glue's bridge from the binding core's records and
+//! calls; `cargo xtask help` lists the commands.
 #![forbid(unsafe_code)]
 
 mod capi;
+mod commands;
 mod coverage;
 mod gates;
 mod generate;
@@ -16,6 +20,7 @@ mod java;
 mod jvm;
 mod kmp;
 mod kotlin;
+mod language;
 mod plan;
 mod ports;
 mod process;
@@ -26,6 +31,8 @@ mod web;
 use std::io;
 use std::process::{ExitCode, ExitStatus};
 
+use crate::gates::Part;
+use crate::language::Language;
 use crate::process::{Runner, System};
 
 /// What `help` prints, and what a command line xtask does not understand
@@ -33,14 +40,26 @@ use crate::process::{Runner, System};
 const USAGE: &str = "usage: cargo xtask <command>
 
 commands:
-  coverage  measure the Rust tests and the binding glue, which the foreign tests run, in one report
-  gates     run every commit gate AGENTS.md lists, stopping at the first failure
-  generate  write the C glue's bridge from the binding core's records and calls
-  help      print this message";
+  coverage                          measure the Rust tests and the binding glue, which the foreign tests run, in one report
+  examples [<example>] [--language <language>]
+                                    run the examples of eranos, or one, and their ports in every language, or one,
+                                    comparing each port's report with its example's, after building each package
+  format <language>                 apply a language's formatters
+  gates [--rust]                    run every commit gate AGENTS.md lists, or the Rust part's, stopping at the first failure
+  generate                          write the C glue's bridge from the binding core's records and calls
+  help                              print this message
+  lint <language>                   check a language's format and run its linters, after building what they read
+  test <language>                   run a language's tests, after building what they read
+
+languages: c (the C and C++ packages), java, kmp, kotlin, python, rust, swift, web, or all; examples take every one but rust";
 
 /// Why a command of xtask failed.
 #[derive(Debug, thiserror::Error)]
 enum Failure {
+    /// A command named the Swift package alone on a machine that does not
+    /// build for Apple platforms.
+    #[error("the Swift package builds only on a machine that builds for Apple platforms")]
+    Apple,
     /// The binding core's records or calls give no C bridge.
     #[error("the C bridge cannot be written from the binding core: {0}")]
     Bridge(#[source] syn::Error),
@@ -72,6 +91,12 @@ enum Failure {
         #[source]
         source: io::Error,
     },
+    /// A command named an example that eranos does not have.
+    #[error("eranos has no example {example}; its examples are {known}")]
+    Example { example: String, known: String },
+    /// A command named a language that it does not take.
+    #[error("{language} is not one of the command's languages: {known}")]
+    Language { known: String, language: String },
     /// A package turns on features of async-lock, which the library keeps
     /// without any.
     #[error("async-lock is built with {0}, which the library keeps off")]
@@ -153,13 +178,38 @@ fn main() -> ExitCode {
 /// the command otherwise.
 fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
     let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
+    let every = ports::LANGUAGES;
     match words.as_slice() {
         ["coverage"] => coverage::run(runner),
-        ["gates"] => gates::run(runner),
+        ["examples"] => commands::examples(runner, None, &every),
+        ["examples", "--language", language] => {
+            commands::examples(runner, None, &commands::languages(language, &every)?)
+        }
+        ["examples", example] if !example.starts_with('-') => {
+            commands::examples(runner, Some(example), &every)
+        }
+        ["examples", example, "--language", language] if !example.starts_with('-') => {
+            commands::examples(
+                runner,
+                Some(example),
+                &commands::languages(language, &every)?,
+            )
+        }
+        ["format", language] => {
+            commands::format(runner, &commands::languages(language, &Language::ALL)?)
+        }
+        ["gates"] => gates::run(runner, Part::Every),
+        ["gates", "--rust"] => gates::run(runner, Part::Rust),
         ["generate"] => generate::run(runner),
         ["help"] => {
             println!("{USAGE}");
             Ok(())
+        }
+        ["lint", language] => {
+            commands::lint(runner, &commands::languages(language, &Language::ALL)?)
+        }
+        ["test", language] => {
+            commands::test(runner, &commands::languages(language, &Language::ALL)?)
         }
         _ => Err(Failure::Usage),
     }

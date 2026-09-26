@@ -347,6 +347,6 @@ both together.
 | a currency change or loading      | the gates, then `cargo bench -p eranos --features serde --bench group`                                                             |
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading    |
 | a libphonenumber metadata release | the gates, then `cargo test -p eranos-contact --lib` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
-| an example's report               | the gates, whose gate 19 compares every port with it: change each port with the example                                            |
+| an example's report               | `cargo xtask examples <example>`, then the gates, whose gate 19 compares every port with it: change each port with the example     |
 | a record or a call of the core    | `cargo xtask generate`, then the gates: until it runs, `the_committed_bridge_is_what_the_generator_writes` fails                   |
 | docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                     |

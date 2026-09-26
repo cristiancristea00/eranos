@@ -724,6 +724,10 @@ sanitizers on eranos-capi's library, and the Python ports, in a copy of the
 Python package over the first library, each report compared with its
 example's.
 
+`cargo xtask test`, `lint`, and `examples` run one language's part of this,
+and `format` its formatters
+([DEVELOPMENT.md § 2](DEVELOPMENT.md#2-building-and-testing)).
+
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, Python, C, and
 C++ tests on them, which measures the glue through the foreign tests

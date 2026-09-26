@@ -175,11 +175,13 @@ All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a
 demonstration. A test in `crates/xtask` reads this list, so the command and
 the list cannot drift apart; others keep the target lints the steps of
-CI's job, and every gate number the documents cite the gate it means. The
-VS Code task `gates` runs
-`cargo xtask gates`, and CI runs the Rust steps as its jobs on every push,
-and every step, on Linux and on macOS, on a dispatch that asks for the
-bindings
+CI's job, and every gate number the documents cite the gate it means.
+`cargo xtask gates --rust` runs the gates up to the examples', gate 9,
+alone, and `cargo xtask test`, `lint`, and `examples` one language's part,
+for iterating on a change; a commit still passes every gate. The VS Code
+task `gates` runs `cargo xtask gates`, and CI runs the Rust steps as its
+jobs on every push, and every step, on Linux and on macOS, on a dispatch
+that asks for the bindings
 ([docs/DEVELOPMENT.md § 6](docs/DEVELOPMENT.md#6-continuous-integration)).
 
 Clippy is strict on every target (library, tests, examples, benches): the

@@ -212,6 +212,16 @@ pub(crate) fn port(example: &str, sequential: &Metadata) -> Step {
     .in_directory(&copied_package(sequential).to_string_lossy())
 }
 
+/// The Python package's formatter, applied: Ruff's, over the layer, its
+/// tests, the examples, and the documentation's settings.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![Action::run(
+        Phase::Format,
+        tool(&["ruff", "format"], "the Python format, applied"),
+    )]
+}
+
 /// The step that runs `command` with the tools of the locked environment,
 /// reported as `name`.
 fn tool(command: &[&str], name: &str) -> Step {

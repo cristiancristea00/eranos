@@ -1,7 +1,8 @@
 //! What a package's gates do, as data. Each package describes its gates as
 //! actions, each in the phase it belongs to: the gates run every action in
-//! order, and a command for one package's tests, linters, or packages runs
-//! its preparing actions and the phase it names.
+//! order, and a command for one package's tests or linters runs its
+//! preparing actions and the phase it names. A package's formatters, which
+//! rewrite its sources, are a list of their own, in their own phase.
 
 use std::collections::VecDeque;
 use std::path::PathBuf;
@@ -14,6 +15,10 @@ use crate::process::{Runner, Step};
 pub(crate) enum Phase {
     /// The documentation, built with warnings as errors.
     Docs,
+    /// The formatters applied, which rewrite the sources: a list of its own
+    /// per package, which the gates never run, since they check the format
+    /// instead.
+    Format,
     /// The formatters' checks and the linters.
     Lint,
     /// The packages an app consumes.

@@ -135,5 +135,26 @@ pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
     jvm::port(&JVM, example, jdk, sequential)
 }
 
+/// The Java package's formatters, applied: google-java-format over the
+/// layer, its tests, and the examples, and ktlint over the build scripts.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![
+        Action::run(
+            Phase::Format,
+            jvm::gradle(PROJECT, &["format"], "the Java format, applied"),
+        ),
+        Action::run(
+            Phase::Format,
+            Step::new(
+                &["--format", "--relative", "*.kts"],
+                "the format of the build scripts, applied",
+                "ktlint",
+            )
+            .in_directory(PROJECT),
+        ),
+    ]
+}
+
 #[cfg(test)]
 mod tests;

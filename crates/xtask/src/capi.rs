@@ -471,15 +471,43 @@ pub(crate) fn check_coverage(package: Package, summary: &str) -> Result<(), Fail
     }
 }
 
+/// The files of `package` that clang-format checks and applies to: the
+/// layer's headers, the tests, and the ports.
+fn formatted(package: Package) -> Vec<&'static str> {
+    let mut sources = package.headers.to_vec();
+    sources.push(package.tests);
+    sources.extend(package.examples);
+    sources
+}
+
+/// The C and C++ packages' formatter, applied: clang-format, of the LLVM at
+/// `llvm`, over the files each package's check reads.
+#[must_use]
+pub(crate) fn formats(llvm: &str) -> Vec<Action> {
+    [C_PACKAGE, CPP_PACKAGE]
+        .map(|package| {
+            let mut arguments = vec!["-i"];
+            arguments.extend(formatted(package));
+            Action::run(
+                Phase::Format,
+                Step::new(
+                    &arguments,
+                    &format!("the {} format, applied", package.name),
+                    &format!("{llvm}/bin/clang-format"),
+                )
+                .in_directory(package.directory),
+            )
+        })
+        .into()
+}
+
 /// The steps that check `package`'s format with clang-format, lint its tests,
 /// its ports, and every header they include with clang-tidy, and build its
 /// documentation with Doxygen, each with warnings as errors.
 #[must_use]
 pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Action> {
     let mut sources = vec!["--dry-run", "--Werror"];
-    sources.extend(package.headers);
-    sources.push(package.tests);
-    sources.extend(package.examples);
+    sources.extend(formatted(package));
     let extension = format!(".{}", package.language);
     let mut programs = vec!["--quiet", package.tests];
     programs.extend(

@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::Failure;
-use crate::plan;
-use crate::ports::Reference;
+use crate::plan::{self, Action, Phase};
+use crate::ports::{self, Reference};
 use crate::process::{Runner, Step};
 
 /// The part of `cargo metadata`'s JSON the gates read.
@@ -54,18 +54,35 @@ struct Target {
     name: String,
 }
 
-/// Runs every gate, stopping at the first that fails.
+/// Which gates a run runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Part {
+    /// Every gate.
+    Every,
+    /// The gates of the workspace's Rust, the examples' last, for a change
+    /// that touches no binding.
+    Rust,
+}
+
+/// Runs every gate of `part`, stopping at the first that fails.
 ///
 /// # Errors
 ///
 /// The failure of the first gate that fails, and [`Failure::Metadata`] when
 /// the list of examples cannot be read.
-pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
+pub(crate) fn run(runner: &mut impl Runner, part: Part) -> Result<(), Failure> {
     for step in checks() {
         runner.run(&step)?;
     }
     check_lock_features(&runner.output(&lock_features())?)?;
     let metadata = Metadata::parse(&runner.output(&metadata())?)?;
+    if Part::Rust == part {
+        for example in examples(&metadata) {
+            runner.output(&example.step)?;
+        }
+        println!("\nevery gate of the Rust part passed");
+        return Ok(());
+    }
     // Every package's variables are checked here, before the examples run,
     // so a missing one stops the gates before minutes of gates that pass.
     let packages = [
@@ -99,7 +116,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     for actions in packages {
         plan::execute(runner, actions, &|_| true)?;
     }
-    crate::ports::run(runner, &metadata, &references)?;
+    ports::run(runner, &metadata, &references, &ports::LANGUAGES)?;
     println!("\nevery gate passed");
     Ok(())
 }
@@ -125,6 +142,29 @@ const WASI_TARGET: &str = "wasm32-wasip1";
 #[must_use]
 pub(crate) fn checks() -> Vec<Step> {
     [host_lints(), target_lints(), tests_and_documentation()].concat()
+}
+
+/// The workspace's gates as the actions of a language, for the commands that
+/// run one phase of them: the host lints, the target lints, and the check of
+/// async-lock's features lint, the two test runs test, and rustdoc documents.
+#[must_use]
+pub(crate) fn actions() -> Vec<Action> {
+    let mut actions = Action::runs(Phase::Lint, [host_lints(), target_lints()].concat());
+    actions.push(Action::read(Phase::Lint, lock_features(), |tree| {
+        check_lock_features(&tree).map(|()| Vec::new())
+    }));
+    actions.extend(Action::runs(Phase::Test, tests()));
+    actions.push(Action::run(Phase::Docs, documentation()));
+    actions
+}
+
+/// The workspace's formatter, applied.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![Action::run(
+        Phase::Format,
+        Step::cargo(&["fmt", "--all"], "the Rust format, applied"),
+    )]
 }
 
 /// The gates that lint the workspace for the host: formatting, and clippy on
@@ -213,6 +253,15 @@ pub(crate) fn target_lints() -> Vec<Step> {
 /// default ones, and the documentation.
 #[must_use]
 pub(crate) fn tests_and_documentation() -> Vec<Step> {
+    let mut steps = tests();
+    steps.push(documentation());
+    steps
+}
+
+/// The gates that run every test of the workspace, with every feature and
+/// without the default ones.
+#[must_use]
+pub(crate) fn tests() -> Vec<Step> {
     vec![
         Step::cargo(
             &["test", "--workspace", "--all-features"],
@@ -222,12 +271,18 @@ pub(crate) fn tests_and_documentation() -> Vec<Step> {
             &["test", "--workspace", "--no-default-features"],
             "tests without the default features",
         ),
-        Step::cargo(
-            &["doc", "--workspace", "--no-deps", "--all-features"],
-            "documentation",
-        )
-        .with_variable("RUSTDOCFLAGS", "-D warnings"),
     ]
+}
+
+/// The gate that builds the workspace's documentation with warnings as
+/// errors.
+#[must_use]
+pub(crate) fn documentation() -> Step {
+    Step::cargo(
+        &["doc", "--workspace", "--no-deps", "--all-features"],
+        "documentation",
+    )
+    .with_variable("RUSTDOCFLAGS", "-D warnings")
 }
 
 /// The step that prints async-lock's dependents with the features they turn

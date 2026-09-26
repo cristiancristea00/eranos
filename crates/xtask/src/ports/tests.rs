@@ -50,7 +50,7 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         let mut recorder = Recorder::new();
         recorder.apple = apple;
         recorder.metadata = "report".to_owned();
-        run(&mut recorder, &metadata, &references).unwrap();
+        run(&mut recorder, &metadata, &references, &LANGUAGES).unwrap();
         let mut expected = vec![
             library(&sequential()),
             multiplatform_library(&sequential()),
@@ -94,7 +94,11 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(python::port("quickstart", &sequential()));
         expected.push(python::port("persistence", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
-        assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
+        assert_eq!(
+            recorder.cleared,
+            cleared(&sequential(), &runnable(&LANGUAGES, apple)),
+            "{apple}"
+        );
         assert_eq!(recorder.written, [web::copied_configuration(&sequential())]);
         assert_eq!(
             recorder.created,
@@ -159,6 +163,7 @@ fn a_report_that_differs_stops_the_ports_at_its_port() {
             &mut recorder,
             &metadata,
             &[reference("quickstart", "other")],
+            &LANGUAGES,
         );
         assert!(
             matches!(&failure, Err(Failure::Port { language: found, .. }) if language == *found),
@@ -231,7 +236,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
         assert!(matches!(
-            run(&mut recorder, &metadata, &references),
+            run(&mut recorder, &metadata, &references, &LANGUAGES),
             Err(Failure::Usage)
         ));
         assert_eq!(recorder.steps.last(), Some(&failing));
@@ -239,7 +244,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
     let mut blocked = Recorder::new();
     blocked.failing_files = Some(FileOperation::Clear);
     assert!(matches!(
-        run(&mut blocked, &metadata, &[]),
+        run(&mut blocked, &metadata, &[], &LANGUAGES),
         Err(Failure::Usage)
     ));
     assert_eq!(
@@ -254,7 +259,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
     let mut uncreated = Recorder::new();
     uncreated.failing_files = Some(FileOperation::Create);
     assert!(matches!(
-        run(&mut uncreated, &metadata, &references),
+        run(&mut uncreated, &metadata, &references, &LANGUAGES),
         Err(Failure::Usage)
     ));
     assert_eq!(
@@ -264,7 +269,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
     let mut unwritten = Recorder::new();
     unwritten.failing_files = Some(FileOperation::Write);
     assert!(matches!(
-        run(&mut unwritten, &metadata, &references),
+        run(&mut unwritten, &metadata, &references, &LANGUAGES),
         Err(Failure::Usage)
     ));
     assert_eq!(unwritten.steps.last(), web::copy(&sequential()).last());
@@ -279,13 +284,47 @@ fn a_failure_stops_the_ports_where_it_happens() {
     ] {
         let mut unnamed = Recorder::new();
         unnamed.variables = variables.to_vec();
-        let failure = run(&mut unnamed, &metadata, &references);
+        let failure = run(&mut unnamed, &metadata, &references, &LANGUAGES);
         assert!(
             matches!(failure, Err(Failure::Variable(name)) if missing == name),
             "{failure:?}"
         );
         assert!(unnamed.steps.is_empty());
     }
+}
+
+/// The ports of one language that read another's variables would stop a
+/// run that needs neither, and ones that skipped their own would fail after
+/// the libraries' builds: each language's ports read only their own, before
+/// any step, and build only the libraries they run on.
+#[test]
+fn the_ports_of_one_language_read_its_variables_and_build_its_libraries() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    let references = [reference("quickstart", METADATA)];
+    let mut unset = Recorder::new();
+    unset.variables.clear();
+    let failure = run(&mut unset, &metadata, &references, &[Language::Java]);
+    assert!(
+        matches!(failure, Err(Failure::Variable("JAVA_HOME"))),
+        "{failure:?}"
+    );
+    assert!(unset.steps.is_empty());
+    let mut python = Recorder::new();
+    python.variables.clear();
+    run(&mut python, &metadata, &references, &[Language::Python]).unwrap();
+    assert_eq!(python.steps[0], library(&sequential()));
+    for other in [
+        multiplatform_library(&sequential()),
+        web::sequential_library(&sequential()),
+        capi::sequential_library(&sequential()),
+    ] {
+        assert!(!python.steps.contains(&other), "{other:?}");
+    }
+    let mut web = Recorder::new();
+    run(&mut web, &metadata, &references, &[Language::Web]).unwrap();
+    assert_eq!(web.steps[0], web::sequential_library(&sequential()));
+    assert!(!web.steps.contains(&library(&sequential())));
+    assert_eq!(web.cleared, web::copied_directories(&sequential()));
 }
 
 /// An example without a port would print its report unchecked in that

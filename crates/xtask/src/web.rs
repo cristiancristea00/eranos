@@ -275,5 +275,19 @@ pub(crate) fn port(example: &str, sequential: &Metadata) -> Step {
     .in_directory(&copied_package(sequential).to_string_lossy())
 }
 
+/// The TypeScript package's formatter, applied: Prettier over the layer, its
+/// tests, and the examples, installed first as the lock file pins it, since
+/// it is one of the package's dependencies.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![
+        Action::run(Phase::Format, install()),
+        Action::run(
+            Phase::Format,
+            npm("format", "the TypeScript format, applied"),
+        ),
+    ]
+}
+
 #[cfg(test)]
 mod tests;

@@ -125,5 +125,20 @@ pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
     jvm::port(&JVM, example, jdk, sequential)
 }
 
+/// The Kotlin Multiplatform package's formatter, applied: ktlint over the
+/// build scripts, the package's only sources of its own.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![Action::run(
+        Phase::Format,
+        Step::new(
+            &["--format", "--relative", "**/*.kts", "!**/build/**"],
+            "the format of the Kotlin Multiplatform build scripts, applied",
+            "ktlint",
+        )
+        .in_directory(PROJECT),
+    )]
+}
+
 #[cfg(test)]
 mod tests;

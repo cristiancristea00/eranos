@@ -244,6 +244,12 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     steps
 }
 
+/// What the ports of every language clear, the Swift ports' copy only where
+/// `apple`.
+fn ported_cleared(sequential: &Metadata, apple: bool) -> Vec<PathBuf> {
+    ports::cleared(sequential, &ports::runnable(&ports::LANGUAGES, apple))
+}
+
 /// The steps of the packages the gates check last, alike on every machine:
 /// the C and C++ packages over eranos-capi's library, then the Python
 /// package.
@@ -342,7 +348,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         .into_iter()
         .chain(native_cleared.clone())
         .chain([python::documentation()])
-        .chain(ports::cleared(&sequential, false))
+        .chain(ported_cleared(&sequential, false))
         .collect::<Vec<_>>()
     );
     assert_eq!(elsewhere.created, native_created);
@@ -367,7 +373,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         .into_iter()
         .chain(native_cleared)
         .chain([python::documentation()])
-        .chain(ports::cleared(&sequential, true))
+        .chain(ported_cleared(&sequential, true))
         .collect::<Vec<_>>()
     );
     assert_eq!(recorder.created, native_created);
@@ -393,6 +399,72 @@ fn generate_writes_the_bridge_and_lays_it_out() {
     assert_eq!(recorder.steps, [generate::format()]);
 }
 
+/// Each command line runs the command it names, with the languages and the
+/// example it names: `gates --rust` the Rust part, `test`, `lint`, and
+/// `format` their language's part, and `examples` its example's ports in the
+/// languages it names; a line that ran another would check what nobody
+/// asked for.
+#[test]
+fn every_command_line_runs_what_it_names() {
+    let from_line = |line: &[&str]| {
+        let mut recorder = Recorder::new();
+        run(&words(line), &mut recorder).unwrap();
+        recorder.steps
+    };
+    let from_call = |command: &dyn Fn(&mut Recorder) -> Result<(), Failure>| {
+        let mut recorder = Recorder::new();
+        command(&mut recorder).unwrap();
+        recorder.steps
+    };
+    assert_eq!(
+        from_line(&["gates", "--rust"]),
+        from_call(&|recorder| gates::run(recorder, Part::Rust))
+    );
+    assert_eq!(
+        from_line(&["test", "python"]),
+        from_call(&|recorder| commands::test(recorder, &[Language::Python]))
+    );
+    assert_eq!(
+        from_line(&["lint", "all"]),
+        from_call(&|recorder| commands::lint(recorder, &Language::ALL))
+    );
+    assert_eq!(
+        from_line(&["format", "rust"]),
+        from_call(&|recorder| commands::format(recorder, &[Language::Rust]))
+    );
+    assert_eq!(
+        from_line(&["examples"]),
+        from_call(&|recorder| commands::examples(recorder, None, &ports::LANGUAGES))
+    );
+    assert_eq!(
+        from_line(&["examples", "--language", "c"]),
+        from_call(&|recorder| commands::examples(recorder, None, &[Language::Capi]))
+    );
+    assert_eq!(
+        from_line(&["examples", "persistence"]),
+        from_call(&|recorder| commands::examples(recorder, Some("persistence"), &ports::LANGUAGES))
+    );
+    assert_eq!(
+        from_line(&["examples", "persistence", "--language", "web"]),
+        from_call(&|recorder| commands::examples(recorder, Some("persistence"), &[Language::Web]))
+    );
+    for line in [
+        &["test", "typescript"][..],
+        &["lint", "typescript"],
+        &["format", "typescript"],
+        &["examples", "--language", "rust"],
+        &["examples", "quickstart", "--language", "rust"],
+    ] {
+        let mut refused = Recorder::new();
+        let failure = run(&words(line), &mut refused).unwrap_err();
+        assert!(
+            matches!(failure, Failure::Language { .. }),
+            "{line:?} {failure:?}"
+        );
+        assert!(refused.steps.is_empty(), "{line:?}");
+    }
+}
+
 /// `help` succeeds and runs nothing.
 #[test]
 fn help_runs_nothing_and_succeeds() {
@@ -405,7 +477,17 @@ fn help_runs_nothing_and_succeeds() {
 /// error that runs nothing, so a mistyped gate run never passes for one.
 #[test]
 fn anything_but_one_known_command_is_a_usage_error() {
-    for line in [&[][..], &["gate"], &["gates", "--rust"], &["help", "gates"]] {
+    for line in [
+        &[][..],
+        &["gate"],
+        &["gates", "--all"],
+        &["help", "gates"],
+        &["test"],
+        &["test", "python", "rust"],
+        &["format"],
+        &["examples", "quickstart", "persistence"],
+        &["examples", "--language"],
+    ] {
         let mut recorder = Recorder::new();
         let failure = run(&words(line), &mut recorder).unwrap_err();
         assert!(matches!(failure, Failure::Usage), "{line:?}");
@@ -418,7 +500,9 @@ fn anything_but_one_known_command_is_a_usage_error() {
 fn a_usage_error_lists_every_command() {
     let message = Failure::Usage.to_string();
     assert!(message.starts_with("unknown command\n\nusage: cargo xtask <command>"));
-    for command in ["coverage", "gates", "generate", "help"] {
+    for command in [
+        "coverage", "examples", "format", "gates", "generate", "help", "lint", "test",
+    ] {
         assert!(message.contains(&format!("\n  {command} ")), "{command}");
     }
 }

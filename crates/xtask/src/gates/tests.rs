@@ -140,11 +140,9 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "cargo build --package eranos-uniffi --features sequential-ids",
         ]
     );
-    let sequential = Metadata::parse(METADATA)
-        .unwrap()
-        .inner(crate::ports::DIRECTORY);
+    let sequential = Metadata::parse(METADATA).unwrap().inner(ports::DIRECTORY);
     assert!(
-        crate::ports::library(&sequential)
+        ports::library(&sequential)
             .command_line()
             .ends_with(documented.last().unwrap())
     );
@@ -366,6 +364,62 @@ fn every_package_records_the_workspaces_version() {
     );
 }
 
+/// A run of the Rust part that went on to the packages would need every
+/// binding's toolchain for a change to the library alone, and one that
+/// stopped before the examples would pass an example that no longer runs:
+/// it runs the checks, async-lock's features, and every example, then
+/// stops, reading no package's variable.
+#[test]
+fn the_rust_part_ends_with_the_examples() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    let mut recorder = Recorder::new();
+    recorder.variables.clear();
+    run(&mut recorder, Part::Rust).unwrap();
+    let mut expected = checks();
+    expected.push(lock_features());
+    expected.push(super::metadata());
+    expected.extend(examples(&metadata).into_iter().map(|example| example.step));
+    assert_eq!(recorder.steps, expected);
+    assert!(recorder.cleared.is_empty());
+    let failing = examples(&metadata).remove(0).step;
+    let mut stopped = Recorder::new();
+    stopped.failing = Some(failing.clone());
+    assert!(matches!(run(&mut stopped, Part::Rust), Err(Failure::Usage)));
+    assert_eq!(stopped.steps.last(), Some(&failing));
+}
+
+/// A command for the workspace's lints that ran its tests, or one for its
+/// tests that ran rustdoc, would take minutes it was not asked for: the
+/// workspace's gates, as a language's actions, lint with the host lints,
+/// the target lints, and async-lock's features, test with the two test
+/// runs, and document with rustdoc, and apply their formatter apart.
+#[test]
+fn the_workspace_s_gates_are_in_the_phase_each_checks() {
+    let actions = actions();
+    let phases: Vec<Phase> = actions.iter().map(|action| action.phase).collect();
+    let lints = host_lints().len() + target_lints().len() + 1;
+    assert_eq!(
+        phases,
+        [
+            vec![Phase::Lint; lints],
+            vec![Phase::Test; tests().len()],
+            vec![Phase::Docs]
+        ]
+        .concat()
+    );
+    assert_eq!(
+        plan::steps(&actions),
+        [
+            host_lints(),
+            target_lints(),
+            vec![lock_features()],
+            tests_and_documentation()
+        ]
+        .concat()
+    );
+    assert!(formats().iter().all(|action| Phase::Format == action.phase));
+}
+
 /// A package that turned on async-lock's `std` would bring the clock into
 /// the library unnoticed: the gates stop at the tree that shows it, before
 /// any example runs, and name every feature once.
@@ -380,7 +434,7 @@ fn a_feature_of_async_lock_stops_the_gates() {
         "async-lock feature \"std\" (*)",
     ]
     .join("\n");
-    let failure = run(&mut recorder).unwrap_err();
+    let failure = run(&mut recorder, Part::Every).unwrap_err();
     assert!(
         matches!(&failure, Failure::LockFeatures(features) if "\"default\", \"std\"" == features),
         "{failure:?}"
@@ -398,7 +452,10 @@ fn a_feature_of_async_lock_stops_the_gates() {
 fn a_failing_feature_tree_stops_the_gates() {
     let mut recorder = Recorder::new();
     recorder.failing = Some(lock_features());
-    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut recorder, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(recorder.steps.last(), Some(&lock_features()));
 }
 
@@ -501,7 +558,10 @@ fn a_failing_check_stops_the_gates_after_it() {
     let checks = checks();
     let mut recorder = Recorder::new();
     recorder.failing = checks.get(1).cloned();
-    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut recorder, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(recorder.steps, checks[..2]);
 }
 
@@ -510,12 +570,18 @@ fn a_failing_check_stops_the_gates_after_it() {
 fn a_failing_example_list_runs_no_example() {
     let mut recorder = Recorder::new();
     recorder.failing = Some(metadata());
-    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut recorder, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(recorder.steps.last(), Some(&metadata()));
 
     let mut unreadable = Recorder::new();
     unreadable.metadata = "{}".to_owned();
-    assert!(matches!(run(&mut unreadable), Err(Failure::Metadata(_))));
+    assert!(matches!(
+        run(&mut unreadable, Part::Every),
+        Err(Failure::Metadata(_))
+    ));
     assert_eq!(unreadable.steps.last(), Some(&metadata()));
 }
 
@@ -525,7 +591,10 @@ fn a_failing_example_list_runs_no_example() {
 fn a_failing_swift_step_stops_the_gates() {
     let mut recorder = Recorder::new();
     recorder.failing = Some(crate::swift::build());
-    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut recorder, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(recorder.steps.last(), Some(&crate::swift::build()));
 }
 
@@ -538,7 +607,10 @@ fn a_failing_example_stops_the_examples_after_it() {
         .collect();
     let mut recorder = Recorder::new();
     recorder.failing = examples.first().cloned();
-    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut recorder, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(recorder.steps.last(), examples.first());
     assert!(!recorder.steps.contains(&examples[1]));
     assert!(recorder.cleared.is_empty());
@@ -553,18 +625,27 @@ fn a_failure_to_build_clear_or_generate_stops_the_generators() {
     let generators = generators(&metadata);
     let mut unbuilt = Recorder::new();
     unbuilt.failing = Some(host_library());
-    assert!(matches!(run(&mut unbuilt), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut unbuilt, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(unbuilt.steps.last(), Some(&host_library()));
     assert!(unbuilt.cleared.is_empty());
 
     let mut blocked = Recorder::new();
     blocked.failing_files = Some(FileOperation::Clear);
-    assert!(matches!(run(&mut blocked), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut blocked, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert!(!blocked.steps.contains(&generators[0]));
 
     let mut recorder = Recorder::new();
     recorder.failing = generators.first().cloned();
-    assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+    assert!(matches!(
+        run(&mut recorder, Part::Every),
+        Err(Failure::Usage)
+    ));
     assert_eq!(recorder.steps.last(), generators.first());
 }
 
@@ -576,7 +657,7 @@ fn a_missing_variable_stops_the_gates_before_the_examples() {
     for missing in ["ANDROID_HOME", "JAVA_HOME", "JAVA_HOME_21", "LLVM_HOME"] {
         let mut recorder = Recorder::new();
         recorder.variables.retain(|name| missing != *name);
-        let failure = run(&mut recorder).unwrap_err();
+        let failure = run(&mut recorder, Part::Every).unwrap_err();
         assert!(
             matches!(failure, Failure::Variable(name) if missing == name),
             "{missing}: {failure}"
@@ -597,11 +678,14 @@ fn a_failing_package_stops_the_gates_at_its_step() {
         crate::web::node(),
         plan::steps(&crate::kmp::checks("/JAVA_HOME_21", true))[0].clone(),
         crate::capi::library(),
-        crate::ports::library(&metadata.inner(crate::ports::DIRECTORY)),
+        ports::library(&metadata.inner(ports::DIRECTORY)),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
-        assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
+        assert!(matches!(
+            run(&mut recorder, Part::Every),
+            Err(Failure::Usage)
+        ));
         assert_eq!(recorder.steps.last(), Some(&failing));
     }
 }

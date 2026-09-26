@@ -207,5 +207,27 @@ pub(crate) fn tests(metadata: &Metadata) -> Step {
     gradle(metadata, &[":eranos:test", "--rerun"], "the Kotlin tests")
 }
 
+/// The Kotlin package's formatter, applied: ktlint over the layer, its
+/// tests, the examples, and the build scripts, as its check reads them.
+#[must_use]
+pub(crate) fn formats() -> Vec<Action> {
+    vec![Action::run(
+        Phase::Format,
+        Step::new(
+            &[
+                "--format",
+                "--relative",
+                "**/*.kt",
+                "**/*.kts",
+                "!generated/**",
+                "!**/build/**",
+            ],
+            "the Kotlin format, applied",
+            "ktlint",
+        )
+        .in_directory(PROJECT),
+    )]
+}
+
 #[cfg(test)]
 mod tests;
