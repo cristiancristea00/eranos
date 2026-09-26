@@ -426,6 +426,12 @@ The layer follows Effective Java and Google Java Style:
   table by class, which the error test checks against every class the
   generator writes.
 
+The source set `examples` holds a package per example of eranos, over the
+layer, that prints the example's report
+([TESTING.md § 2](TESTING.md#2-layout)); it compiles as the tests do, with
+every lint as an error and Error Prone, and google-java-format checks it
+with the layer.
+
 ### TypeScript
 
 `bindings/typescript` is the npm package `eranos`, for browsers and Node 24
@@ -569,9 +575,9 @@ and checks its format, lint, and documentation. Last, it builds
 eranos-uniffi's host library with `sequential-ids` into
 `target/sequential`, and eranos-kmp's beside it, generates the UniFFI
 sources, and runs every port: on macOS the Swift ports, on a copy of the
-Swift package over the first library, and the Kotlin ports on the JVM, over
+Swift package over the first library, the Kotlin ports on the JVM, over
 the Kotlin package's bindings and over the Kotlin Multiplatform package's,
-each report compared with its example's.
+and the Java ports, each report compared with its example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++

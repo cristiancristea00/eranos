@@ -1,10 +1,12 @@
 //! The gates of the Java package: the generated Java in the package, and the
-//! package's format, tests and their coverage, documentation, and JAR.
+//! package's format, tests and their coverage, documentation, and JAR; and
+//! the steps that build and run the ports of the examples.
 
 use std::path::{Path, PathBuf};
 
 use crate::Failure;
 use crate::gates::Metadata;
+use crate::ports::{self, Jvm};
 use crate::process::{Runner, Step, WORKSPACE};
 
 /// The Java project, from the workspace root.
@@ -13,6 +15,15 @@ const PROJECT: &str = "bindings/java";
 /// The environment variable the Java gates need: the JDK that Gradle runs
 /// on.
 pub(crate) const VARIABLES: [&str; 1] = ["JAVA_HOME"];
+
+/// The Java ports: gathered by the project's `ports` task, each a `Main`
+/// whose library the JDK loads from its library path.
+pub(crate) const JVM: Jvm = Jvm {
+    class: "Main",
+    language: "Java",
+    library_path: "java.library.path",
+    ports: "bindings/java/build/ports",
+};
 
 /// Runs the Java package's gates, stopping at the first that fails.
 ///
@@ -107,6 +118,22 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
 #[must_use]
 pub(crate) fn tests(metadata: &Metadata) -> Step {
     gradle(metadata, &["test", "--rerun"], "the Java tests")
+}
+
+/// The step that compiles the ports of the examples, with every lint as an
+/// error and Error Prone, and gathers them with the module they run on into
+/// one directory.
+#[must_use]
+pub(crate) fn ports(metadata: &Metadata) -> Step {
+    gradle(metadata, &["ports"], "the Java ports")
+}
+
+/// The step that runs the Java port of `example` on the `java` of the JDK at
+/// `jdk`, the JDK loading the host library from `sequential`'s target
+/// directory.
+#[must_use]
+pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
+    ports::jvm_port(&JVM, example, jdk, sequential)
 }
 
 #[cfg(test)]

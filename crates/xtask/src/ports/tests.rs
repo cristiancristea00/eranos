@@ -30,7 +30,8 @@ fn reference(example: &str, report: &str) -> Reference {
 /// on a copy of the package over it only where the machine builds for Apple
 /// platforms, and the Kotlin ones on every machine, on the JDK's `java`,
 /// JNA loading that library, then again over gobley's bindings, on the JDK
-/// 21's, JNA loading eranos-kmp's.
+/// 21's, JNA loading eranos-kmp's, and last the Java ones, on the JDK's
+/// `java`, which loads that library itself.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -58,12 +59,21 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(kmp::ports("/JAVA_HOME_21"));
         expected.push(kmp::port("quickstart", "/JAVA_HOME_21", &sequential()));
         expected.push(kmp::port("persistence", "/JAVA_HOME_21", &sequential()));
+        expected.push(java::ports(&metadata));
+        expected.push(java::port("quickstart", "/JAVA_HOME", &sequential()));
+        expected.push(java::port("persistence", "/JAVA_HOME", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
     }
     assert_eq!(
         library(&sequential()).command_line(),
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-uniffi --features sequential-ids"
+    );
+    assert_eq!(
+        java::port("restaurant_bill", "/JAVA_HOME", &sequential()).command_line(),
+        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 \
+         -Djava.library.path=/eranos/target/sequential/debug -cp bindings/java/build/ports/* \
+         eranos.examples.restaurantbill.Main"
     );
     assert_eq!(
         multiplatform_library(&sequential()).command_line(),
@@ -159,6 +169,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
         kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
         kmp::ports("/JAVA_HOME_21"),
         kmp::port("quickstart", "/JAVA_HOME_21", &sequential()),
+        java::ports(&metadata),
+        java::port("quickstart", "/JAVA_HOME", &sequential()),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
@@ -197,8 +209,9 @@ fn a_failure_stops_the_ports_where_it_happens() {
 /// An example without a port would print its report unchecked in that
 /// language, and a port without an example would check nothing; the Swift
 /// examples' package has a program for every Rust example of eranos and for
-/// no other, and so do the Kotlin examples, a package each, named without
-/// underscores, whose `Main.kt` holds its `main`.
+/// no other, and so do the Kotlin and the Java examples, a package each,
+/// named without underscores, whose `Main.kt` or `Main.java` holds its
+/// `main`.
 #[test]
 fn every_example_has_a_port_in_every_language() {
     let names = |directory: &str, keep: fn(&Path) -> Option<String>| {
@@ -231,11 +244,21 @@ fn every_example_has_a_port_in_every_language() {
                 .flatten()
         },
     );
+    let java = names("bindings/java/src/examples/java/eranos/examples", |path| {
+        path.join("Main.java")
+            .is_file()
+            .then(|| {
+                path.file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
+            })
+            .flatten()
+    });
     let unseparated: Vec<String> = examples
         .iter()
         .map(|example| example.replace('_', ""))
         .collect();
     assert_eq!(swift, examples);
     assert_eq!(kotlin, unseparated);
+    assert_eq!(java, unseparated);
     assert_eq!(8, examples.len());
 }

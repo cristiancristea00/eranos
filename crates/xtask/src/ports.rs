@@ -2,16 +2,16 @@
 //! with every feature, which its port in each language prints byte for byte
 //! on a build of the glue whose identifiers count up from one as the Rust
 //! example's do. The ports run where their language builds: the Swift ones
-//! where the machine builds for Apple platforms, and the Kotlin ones on
-//! every machine, on the JVM, over the Kotlin package's bindings and again
-//! over the Kotlin Multiplatform package's.
+//! where the machine builds for Apple platforms, and the Kotlin and Java
+//! ones on every machine, on the JVM, the Kotlin ones over the Kotlin
+//! package's bindings and again over the Kotlin Multiplatform package's.
 
 use std::path::PathBuf;
 
 use crate::Failure;
 use crate::gates::{self, Metadata};
 use crate::process::{Runner, Step};
-use crate::{kmp, kotlin, swift};
+use crate::{java, kmp, kotlin, swift};
 
 /// The target directory, inside cargo's, of the glue whose identifiers
 /// count up: a directory of its own, so the gates' builds stay as they are.
@@ -73,10 +73,13 @@ pub(crate) fn run(
     }
     runner.run(&kotlin::ports(metadata))?;
     let kotlin = |example: &str| kotlin::port(example, &jdk, &sequential);
-    check(runner, "Kotlin", references, &kotlin)?;
+    check(runner, kotlin::JVM.language, references, &kotlin)?;
     runner.run(&kmp::ports(&multiplatform_jdk))?;
     let multiplatform = |example: &str| kmp::port(example, &multiplatform_jdk, &sequential);
-    check(runner, "Kotlin Multiplatform", references, &multiplatform)
+    check(runner, kmp::JVM.language, references, &multiplatform)?;
+    runner.run(&java::ports(metadata))?;
+    let java = |example: &str| java::port(example, &jdk, &sequential);
+    check(runner, java::JVM.language, references, &java)
 }
 
 /// Runs the port in `language` of every example of `references`, the step
@@ -144,6 +147,47 @@ pub(crate) fn multiplatform_library(sequential: &Metadata) -> Step {
         "the host library of eranos-kmp, with identifiers that count up",
     )
     .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
+}
+
+/// Where a JVM language's ports are gathered, and how the JVM starts one.
+pub(crate) struct Jvm {
+    /// The class that holds a port's `main`, in the package
+    /// `eranos.examples.<example>`, named without underscores.
+    pub(crate) class: &'static str,
+    /// The language, as a report that differs names it.
+    pub(crate) language: &'static str,
+    /// The system property that names the directory the library loads from.
+    pub(crate) library_path: &'static str,
+    /// The directory, from the workspace root, that holds the ports and
+    /// every library they run with.
+    pub(crate) ports: &'static str,
+}
+
+/// The step that runs the port of `example` in `jvm`'s language on the
+/// `java` of the JDK at `jdk`, the library loading from `sequential`'s
+/// target directory. The port writes its report in UTF-8, as the Rust
+/// example does, whatever the machine's locale, from which the JVM would
+/// otherwise take the encoding of its output.
+#[must_use]
+pub(crate) fn jvm_port(jvm: &Jvm, example: &str, jdk: &str, sequential: &Metadata) -> Step {
+    let library = format!(
+        "-D{}={}/debug",
+        jvm.library_path, sequential.target_directory
+    );
+    let classes = format!("{}/*", jvm.ports);
+    let class = format!("eranos.examples.{}.{}", example.replace('_', ""), jvm.class);
+    Step::new(
+        &[
+            "--enable-native-access=ALL-UNNAMED",
+            "-Dstdout.encoding=UTF-8",
+            &library,
+            "-cp",
+            &classes,
+            &class,
+        ],
+        &format!("the {} port of {example}", jvm.language),
+        &format!("{jdk}/bin/java"),
+    )
 }
 
 /// The step that runs the port of `example` in `language`, a program in

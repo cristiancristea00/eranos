@@ -91,11 +91,12 @@ It runs these, in this order, and stops at the first that fails:
     `--warning-mode=fail`, all in `bindings/kotlin`
 13. `cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos`,
     with `JAVA_HOME` set, then the Java package: google-java-format's
-    check, ktlint on its build scripts, the JUnit tests with JaCoCo at
-    100 % of instructions, lines, and methods, Javadoc with
-    `-Xdoclint:all -Werror`, and the JAR, every Gradle run with
-    `--warning-mode=fail` and every compilation of the layer with
-    `-Xlint:all -Werror` and Error Prone, all in `bindings/java`
+    check of the layer, its tests, and the examples, ktlint on its build
+    scripts, the JUnit tests with JaCoCo at 100 % of instructions, lines,
+    and methods, Javadoc with `-Xdoclint:all -Werror`, and the JAR, every
+    Gradle run with `--warning-mode=fail` and every compilation of the
+    layer with `-Xlint:all -Werror` and Error Prone, all in
+    `bindings/java`
 14. `rustup target add wasm32-unknown-unknown`, with Node 24 first on
     `PATH`, then the TypeScript package: `src/internal` and `dist`
     cleared, `cargo build --package eranos-web --target
@@ -131,10 +132,13 @@ It runs these, in this order, and stops at the first that fails:
     `XCFramework` of that library, the examples built there, and every
     Swift port run; the Kotlin ports gathered by `:examples:ports` in
     `bindings/kotlin`, each run on the `java` of `JAVA_HOME`, JNA loading
-    that library; and the same ports gathered again in `bindings/kmp`,
-    over gobley's bindings, each run on the `java` of `JAVA_HOME_21`, JNA
-    loading eranos-kmp's; every report is compared byte for byte with its
-    example's from gate 8, and the first line that differs stops the gates
+    that library; the same ports gathered again in `bindings/kmp`, over
+    gobley's bindings, each run on the `java` of `JAVA_HOME_21`, JNA
+    loading eranos-kmp's; and the Java ports gathered by `ports` in
+    `bindings/java`, compiled with `-Xlint:all -Werror` and Error Prone,
+    each run on the `java` of `JAVA_HOME`, which loads the first library;
+    every report is compared byte for byte with its example's from gate 8,
+    and the first line that differs stops the gates
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a

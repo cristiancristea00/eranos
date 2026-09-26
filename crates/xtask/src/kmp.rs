@@ -7,15 +7,21 @@
 
 use crate::Failure;
 use crate::gates::Metadata;
-use crate::kotlin;
+use crate::ports::{self, Jvm};
 use crate::process::{Runner, Step};
 
 /// The Kotlin Multiplatform project, from the workspace root.
 const PROJECT: &str = "bindings/kmp";
 
-/// The directory, from the workspace root, into which the examples' `ports`
-/// task gathers the ports and every library they run with.
-const PORTS: &str = "bindings/kmp/examples/build/ports";
+/// The Kotlin package's ports, compiled here over gobley's bindings:
+/// gathered by the examples' `ports` task, each a `MainKt` whose library JNA
+/// loads.
+pub(crate) const JVM: Jvm = Jvm {
+    class: "MainKt",
+    language: "Kotlin Multiplatform",
+    library_path: "jna.library.path",
+    ports: "bindings/kmp/examples/build/ports",
+};
 
 /// The environment variable that names the JDK 21 that Gradle 9.0 runs on:
 /// the last Gradle on which the project's Android plugin builds without a
@@ -120,7 +126,7 @@ pub(crate) fn ports(jdk: &str) -> Step {
 /// `sequential`'s target directory before the one gobley embeds.
 #[must_use]
 pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    kotlin::jvm_port("Kotlin Multiplatform", PORTS, example, jdk, sequential)
+    ports::jvm_port(&JVM, example, jdk, sequential)
 }
 
 #[cfg(test)]

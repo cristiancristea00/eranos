@@ -28,6 +28,15 @@ sourceSets.test {
     runtimeClasspath += generated.output
 }
 
+// The examples in Java: each package ports the Rust example of its name and
+// prints the same report, which `cargo xtask gates` compares byte for byte,
+// run on the host library whose identifiers count up.
+val examples =
+    sourceSets.create("examples") {
+        compileClasspath += sourceSets.main.get().output + generated.output
+        runtimeClasspath += sourceSets.main.get().output + generated.output
+    }
+
 val googleJavaFormat = configurations.create("googleJavaFormat")
 
 dependencies {
@@ -67,9 +76,32 @@ tasks.compileTestJava {
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
 }
 
+tasks.named<JavaCompile>("compileExamplesJava") {
+    options.release = 25
+    options.isFork = true
+    options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
+}
+
 // One JAR holds the module: the layer and the generated classes.
 tasks.jar {
     from(generated.output)
+}
+
+val examplesJar =
+    tasks.register<Jar>("examplesJar") {
+        description = "Assembles a JAR of the ports of the examples."
+        group = "build"
+        archiveClassifier = "examples"
+        from(examples.output)
+    }
+
+// The ports and the module they run on, in one directory, from which the
+// gates start each port with `java`, the host library on its library path.
+tasks.register<Sync>("ports") {
+    description = "Gathers the ports and the module they run on."
+    group = "build"
+    from(tasks.jar, examplesJar)
+    into(layout.buildDirectory.dir("ports"))
 }
 
 // The tests load the host library that `cargo build --package eranos-uniffi`
@@ -127,10 +159,10 @@ val googleJavaFormatExports =
     listOf("api", "code", "file", "parser", "tree", "util").map {
         "--add-exports=jdk.compiler/com.sun.tools.javac.$it=ALL-UNNAMED"
     }
-val javaSources = fileTree("src") { include("main/java/**/*.java", "test/java/**/*.java") }
+val javaSources = fileTree("src") { include("main/java/**/*.java", "test/java/**/*.java", "examples/java/**/*.java") }
 
 tasks.register<JavaExec>("formatCheck") {
-    description = "Checks that google-java-format leaves the layer and its tests as they are."
+    description = "Checks that google-java-format leaves the layer, its tests, and the examples as they are."
     group = "verification"
     inputs.files(javaSources)
     classpath = googleJavaFormat
@@ -140,7 +172,7 @@ tasks.register<JavaExec>("formatCheck") {
 }
 
 tasks.register<JavaExec>("format") {
-    description = "Formats the layer and its tests with google-java-format."
+    description = "Formats the layer, its tests, and the examples with google-java-format."
     group = "formatting"
     classpath = googleJavaFormat
     mainClass.set("com.google.googlejavaformat.java.Main")

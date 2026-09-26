@@ -90,7 +90,7 @@ they build eranos-uniffi's host library again, with `sequential-ids`, into
 `target/sequential`, and eranos-kmp's beside it, and run the ports of the
 examples: on macOS the Swift ones, on a copy of the Swift package, and on
 every machine the Kotlin ones, on the JVM, over the Kotlin package's
-bindings and over the Kotlin Multiplatform package's
+bindings and over the Kotlin Multiplatform package's, and the Java ones
 ([TESTING.md § 2](TESTING.md#2-layout)). A run
 from an empty target directory takes about 7 minutes on an Apple M4 Pro,
 most of it building the library for every Apple target and every Android
@@ -128,6 +128,8 @@ generated Java; the tests load the library from `target/debug` unless
 ./gradlew jacocoTestReport                     # their coverage, in build/reports/jacoco/test/html
 ./gradlew javadoc                              # the documentation, in build/docs/javadoc
 ./gradlew format                               # google-java-format, applied
+./gradlew ports                                # the ports and the module they run on, in build/ports
+java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 -Djava.library.path=../../target/debug -cp 'build/ports/*' eranos.examples.settlingup.Main  # one port, whose identifiers are random
 ```
 
 In `bindings/typescript`, once the gates built the WebAssembly library and
@@ -602,14 +604,14 @@ so a failing run blocks nothing: it is a report.
   that none takes; `llvm-cov show build/tests -instr-profile=build/tests.profdata include`,
   in the package's directory, marks each unrun line.
 - **`the Swift port of … prints … at line …, where the Rust example
-  prints …`** from the gates, or the Kotlin or the Kotlin Multiplatform
-  port's: the port and its example first differ there;
+  prints …`** from the gates, or the Kotlin, the Kotlin Multiplatform, or
+  the Java port's: the port and its example first differ there;
   `swift run --package-path target/sequential/swift/examples <example>`,
-  or the Kotlin command of [§ 2](#2-building-and-testing) with
-  `target/sequential/debug` as JNA's path, from `bindings/kotlin` or,
-  with the JDK 21's `java`, from `bindings/kmp`, prints the port's whole
-  report on the library whose identifiers count up, to diff with
-  `cargo run -p eranos --all-features --example <example>`.
+  or the Kotlin or the Java command of [§ 2](#2-building-and-testing)
+  with `target/sequential/debug` as the library's path, the Kotlin one
+  from `bindings/kotlin` or, with the JDK 21's `java`, from `bindings/kmp`,
+  prints the port's whole report on the library whose identifiers count
+  up, to diff with `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

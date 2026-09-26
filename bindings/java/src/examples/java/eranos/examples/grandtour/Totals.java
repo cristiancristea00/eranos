@@ -1,0 +1,275 @@
+package eranos.examples.grandtour;
+
+import static eranos.examples.Report.check;
+import static eranos.examples.Report.printTable;
+import static eranos.examples.Report.section;
+import static eranos.examples.Report.totals;
+import static eranos.examples.grandtour.Tables.builtInCategory;
+import static eranos.examples.grandtour.Tables.printBalances;
+import static eranos.examples.grandtour.Tables.printCategories;
+import static eranos.examples.grandtour.Tables.printEntries;
+import static eranos.examples.grandtour.Tour.eur;
+import static eranos.examples.grandtour.Tour.groupFailure;
+import static eranos.examples.grandtour.Tour.message;
+import static eranos.examples.grandtour.Tour.name;
+import static eranos.examples.grandtour.Tour.october;
+import static eranos.examples.grandtour.Tour.refusal;
+import static eranos.examples.grandtour.Tour.ron;
+import static eranos.examples.grandtour.Tour.sum;
+
+import eranos.Balance;
+import eranos.Category;
+import eranos.CategoryId;
+import eranos.CategoryTotal;
+import eranos.Cost;
+import eranos.Currency;
+import eranos.EranosException;
+import eranos.ExchangeRate;
+import eranos.Group;
+import eranos.GroupFailure;
+import eranos.Member;
+import eranos.MemberCategoryTotals;
+import eranos.MemberId;
+import eranos.MemberSummary;
+import eranos.Money;
+import eranos.Payment;
+import eranos.Settlement;
+import eranos.SettlementStrategy;
+import eranos.Summary;
+import eranos.Transfer;
+import eranos.examples.grandtour.Tour.Categories;
+import eranos.examples.grandtour.Tour.People;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * Sections 8 to 11 of the tour: the summary, removing a category, a new group currency, and
+ * settling up.
+ */
+final class Totals {
+    private Totals() {}
+
+    /** The totals per category of {@code member} in {@code summary}. */
+    private static List<CategoryTotal> byCategory(Summary summary, MemberId member) {
+        return summary.memberCategoryTotals().stream()
+                .filter(totals -> totals.member().equals(member))
+                .findFirst()
+                .map(MemberCategoryTotals::totals)
+                .orElse(List.of());
+    }
+
+    /** The total of {@code category} among {@code totals}. */
+    private static Optional<Money> total(
+            List<CategoryTotal> totals, Optional<CategoryId> category) {
+        return totals.stream()
+                .filter(total -> Optional.of(total.category()).equals(category))
+                .findFirst()
+                .map(CategoryTotal::total);
+    }
+
+    static void summary(Group group, People people, Categories categories) throws EranosException {
+        section("8. The summary");
+        Summary summary = group.summary();
+        System.out.print(
+                """
+                The group spent %s in all. For each member, what they paid, what they
+                consumed, the transfers they sent and received, and what is left:
+                """
+                        .formatted(summary.totalSpent()));
+        printBalances(group);
+        System.out.println("The spending per category:");
+        printCategories(group);
+        System.out.println("And each member's consumption per category:");
+        Optional<CategoryId> builtIn = builtInCategory(group);
+        Money zero = new Money(group.currency(), 0);
+        List<List<String>> rows = new ArrayList<>();
+        for (Member member : group.members()) {
+            if (member.id().isPresent()) {
+                List<CategoryTotal> totals = byCategory(summary, member.id().orElseThrow());
+                rows.add(
+                        List.of(
+                                member.firstName(),
+                                total(totals, Optional.of(categories.food()))
+                                        .orElse(zero)
+                                        .toString(),
+                                total(totals, Optional.of(categories.lodging()))
+                                        .orElse(zero)
+                                        .toString(),
+                                total(totals, Optional.of(categories.transport()))
+                                        .orElse(zero)
+                                        .toString(),
+                                total(totals, builtIn).orElse(zero).toString()));
+            }
+        }
+        printTable(
+                List.of("Member", "Food", "Lodging", "Getting around", "Uncategorised"), rows, 1);
+
+        check(eur("1222.90").equals(summary.totalSpent()));
+        check(
+                Optional.of(eur("890.00"))
+                        .equals(totals(people.ana(), summary).map(MemberSummary::paid)));
+        check(
+                Optional.of(eur("140.00"))
+                        .equals(totals(people.ana(), summary).map(MemberSummary::received)));
+        check(
+                Optional.of(eur("20.00"))
+                        .equals(totals(people.bob(), summary).map(MemberSummary::sent)));
+        check(
+                Optional.of(new Balance.GetsBack(eur("12.55")))
+                        .equals(totals(people.dan(), summary).map(MemberSummary::balance)));
+        check(
+                Optional.of(new Balance.Owes(eur("42.60")))
+                        .equals(totals(people.eva(), summary).map(MemberSummary::balance)));
+        List<CategoryTotal> categoryTotals = summary.categoryTotals();
+        check(
+                Optional.of(eur("174.40"))
+                        .equals(total(categoryTotals, Optional.of(categories.food()))));
+        check(
+                Optional.of(eur("800.00"))
+                        .equals(total(categoryTotals, Optional.of(categories.lodging()))));
+        check(
+                Optional.of(eur("188.50"))
+                        .equals(total(categoryTotals, Optional.of(categories.transport()))));
+        check(Optional.of(eur("60.00")).equals(total(categoryTotals, builtIn)));
+        for (MemberSummary totals : summary.members()) {
+            List<Money> amounts =
+                    byCategory(summary, totals.member()).stream()
+                            .map(CategoryTotal::total)
+                            .toList();
+            check(sum(zero.currency(), amounts).equals(totals.share()));
+        }
+        List<Money> nets = summary.members().stream().map(MemberSummary::net).toList();
+        check(0 == sum(zero.currency(), nets).minorUnits());
+    }
+
+    static void removingACategory(Group group, Categories categories) throws EranosException {
+        section("9. Removing a category");
+        Category removed = group.removeCategory(categories.transport());
+        CategoryId uncategorised = builtInCategory(group).orElseThrow();
+        Optional<EranosException> builtIn = refusal(() -> group.removeCategory(uncategorised));
+        System.out.print(
+                """
+                Removing %s moves its expenses to Uncategorised and the category
+                totals with them; no balance changes. The built-in category cannot be removed:
+                  error: %s
+                """
+                        .formatted(removed.name(), message(builtIn)));
+        printCategories(group);
+
+        check(Optional.of(new GroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
+        check(group.category(categories.transport()).isEmpty());
+        check(
+                Optional.of(eur("248.50"))
+                        .equals(
+                                total(
+                                        group.summary().categoryTotals(),
+                                        Optional.of(uncategorised))));
+        check(
+                group.expenses().stream()
+                        .noneMatch(
+                                expense ->
+                                        Optional.of(categories.transport())
+                                                .equals(expense.category())));
+    }
+
+    static void newCurrency(Group group, People people) throws EranosException {
+        section("10. A new currency");
+        Currency euro = Currency.of("EUR");
+        Currency leu = Currency.of("RON");
+        Optional<EranosException> missing = refusal(() -> group.changeCurrency(leu, Map.of()));
+        group.changeCurrency(leu, Map.of(euro, ExchangeRate.parse("5")));
+        System.out.print(
+                """
+                Home again, the group moves its books to RON. The change needs a rate into RON
+                for every other currency in use, here only EUR, or it is refused:
+                  error: %s
+                Entries in EUR take the new rate, and the RON parking and cash become local:
+                """
+                        .formatted(message(missing)));
+        printEntries(group, currency -> true);
+        System.out.print(
+                """
+                Each entry keeps its currency and converts at the new rate. At 5 every share
+                converts exactly, so each balance is five times what it was. The trip cost
+                %s:
+                """
+                        .formatted(group.summary().totalSpent()));
+        printBalances(group);
+
+        Summary summary = group.summary();
+        check(
+                Optional.of(new GroupFailure.MissingExchangeRate(euro))
+                        .equals(groupFailure(missing)));
+        check(leu.equals(group.currency()));
+        check(ron("6114.50").equals(summary.totalSpent()));
+        check(
+                Optional.of(new Balance.GetsBack(ron("62.75")))
+                        .equals(totals(people.dan(), summary).map(MemberSummary::balance)));
+        check(
+                Optional.of(new Balance.Owes(ron("213.00")))
+                        .equals(totals(people.eva(), summary).map(MemberSummary::balance)));
+    }
+
+    /** The name of {@code strategy} as the apps show it. */
+    static String strategyName(SettlementStrategy strategy) {
+        return switch (strategy) {
+            case DIRECT -> "Direct";
+            case GREEDY -> "Greedy";
+            case MINIMUM_TRANSFERS -> "MinimumTransfers";
+        };
+    }
+
+    static void settlingUp(Group group) throws EranosException {
+        section("11. Settling up");
+        List<List<String>> counts = new ArrayList<>();
+        for (SettlementStrategy strategy : SettlementStrategy.values()) {
+            Settlement settlement = group.settlement(strategy);
+            check(strategy == settlement.strategy());
+            counts.add(
+                    List.of(
+                            strategyName(settlement.strategy()),
+                            String.valueOf(settlement.payments().size())));
+        }
+        System.out.print(
+                """
+                Each strategy turns the balances into payments: the direct one pays back every
+                pair's own debts, greedy pays the largest amounts first, and the minimum one
+                finds the fewest payments.
+                """);
+        printTable(List.of("Strategy", "Payments"), counts, 1);
+        Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
+        System.out.println("The group follows the minimum plan:");
+        List<List<String>> rows = new ArrayList<>();
+        for (Payment payment : plan.payments()) {
+            rows.add(
+                    List.of(
+                            name(group, payment.from()),
+                            name(group, payment.to()),
+                            payment.amount().toString()));
+        }
+        printTable(List.of("From", "To", "Amount"), rows, 2);
+        for (Payment payment : plan.payments()) {
+            group.addTransfer(
+                    Transfer.builder(
+                                    new Cost.Local(payment.amount()),
+                                    october(7),
+                                    payment.from(),
+                                    payment.to())
+                            .build());
+        }
+        System.out.print(
+                """
+                Each payment, once made, is recorded as a transfer, and every balance is settled:
+                """);
+        printBalances(group);
+
+        check(group.settlement(SettlementStrategy.GREEDY).payments().isEmpty());
+        check(4 == plan.payments().size());
+        check(
+                group.summary().members().stream()
+                        .allMatch(totals -> new Balance.Settled().equals(totals.balance())));
+    }
+}

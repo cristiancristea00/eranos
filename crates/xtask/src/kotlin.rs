@@ -7,14 +7,20 @@ use std::path::{Path, PathBuf};
 
 use crate::Failure;
 use crate::gates::Metadata;
+use crate::ports::{self, Jvm};
 use crate::process::{Runner, Step, WORKSPACE};
 
 /// The Kotlin project, from the workspace root.
 const PROJECT: &str = "bindings/kotlin";
 
-/// The directory, from the workspace root, into which the examples' `ports`
-/// task gathers the ports and every library they run with.
-const PORTS: &str = "bindings/kotlin/examples/build/ports";
+/// The Kotlin ports: gathered by the examples' `ports` task, each a `MainKt`
+/// whose library JNA loads.
+pub(crate) const JVM: Jvm = Jvm {
+    class: "MainKt",
+    language: "Kotlin",
+    library_path: "jna.library.path",
+    ports: "bindings/kotlin/examples/build/ports",
+};
 
 /// Every Android ABI the package ships, as the NDK names them.
 pub(crate) const ANDROID_ABIS: [&str; 4] = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"];
@@ -180,39 +186,7 @@ pub(crate) fn ports(metadata: &Metadata) -> Step {
 /// directory.
 #[must_use]
 pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    jvm_port("Kotlin", PORTS, example, jdk, sequential)
-}
-
-/// The step that runs the port of `example` in `language`, gathered with
-/// every library it runs with into `ports`, on the `java` of the JDK at
-/// `jdk`, JNA loading its native library from `sequential`'s target
-/// directory: a port is the package `eranos.examples.<example>`, named
-/// without underscores, whose `Main.kt` holds its `main`. It writes its
-/// report in UTF-8, as the Rust example does, whatever the machine's locale,
-/// from which the JVM would otherwise take the encoding of its output.
-#[must_use]
-pub(crate) fn jvm_port(
-    language: &str,
-    ports: &str,
-    example: &str,
-    jdk: &str,
-    sequential: &Metadata,
-) -> Step {
-    let library = format!("-Djna.library.path={}/debug", sequential.target_directory);
-    let classes = format!("{ports}/*");
-    let class = format!("eranos.examples.{}.MainKt", example.replace('_', ""));
-    Step::new(
-        &[
-            "--enable-native-access=ALL-UNNAMED",
-            "-Dstdout.encoding=UTF-8",
-            &library,
-            "-cp",
-            &classes,
-            &class,
-        ],
-        &format!("the {language} port of {example}"),
-        &format!("{jdk}/bin/java"),
-    )
+    ports::jvm_port(&JVM, example, jdk, sequential)
 }
 
 /// The step that runs the package's tests again, whatever Gradle holds of
