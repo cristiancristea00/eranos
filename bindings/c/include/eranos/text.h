@@ -15,7 +15,7 @@ typedef DiplomatWrite EranosText;
 /// An empty text, which the calls that return text write into.
 ///
 /// @return The text, which the caller destroys with eranosTextDestroy()
-static inline EranosText *eranosTextCreate(void) {
+[[nodiscard]] static inline EranosText *eranosTextCreate(void) {
     EranosText *const text = diplomat_buffer_write_create(1);
     text->buf[0] = '\0';
     return text;
@@ -25,19 +25,19 @@ static inline EranosText *eranosTextCreate(void) {
 ///
 /// @param text The text
 /// @return The bytes
-static inline char const *eranosTextData(EranosText const *const text) { return text->buf; }
+[[nodiscard]] static inline char const *eranosTextData(EranosText const *const text) { return text->buf; }
 
 /// How many bytes @p text holds, the NUL left out.
 ///
 /// @param text The text
 /// @return The number of bytes
-static inline size_t eranosTextLength(EranosText const *const text) { return text->len; }
+[[nodiscard]] static inline size_t eranosTextLength(EranosText const *const text) { return text->len; }
 
-/// Destroys @p text; destroying NULL does nothing, as free() does.
+/// Destroys @p text; destroying nullptr does nothing, as free() does.
 ///
-/// @param text The text, which no call uses after this one, or NULL
+/// @param text The text, which no call uses after this one, or nullptr
 static inline void eranosTextDestroy(EranosText *const text) {
-    if (NULL != text) {
+    if (nullptr != text) {
         diplomat_buffer_write_destroy(text);
     }
 }

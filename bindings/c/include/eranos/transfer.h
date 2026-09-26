@@ -11,7 +11,6 @@
 #include "eranos/expense.h"
 #include "eranos/text.h"
 
-#include <stdbool.h>
 #include <stddef.h>
 
 /// A transfer: money one member paid another.
@@ -21,15 +20,15 @@ typedef struct EranosTransfer EranosTransfer;
 ///
 /// @param cost What was paid
 /// @param date The day it was paid
-/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; NULL reads as empty text
-/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; NULL reads as empty text
-/// @param transfer Receives the transfer on success, which the caller destroys, and NULL on failure
-/// @return NULL on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-static inline EranosError *eranosTransferCreate(EranosCost const *const cost, EranosCalendarDate const date, char const *const from,
-                                                char const *const to, EranosTransfer **const transfer) {
+[[nodiscard]] static inline EranosError *eranosTransferCreate(EranosCost const *const cost, EranosCalendarDate const date, char const *const from,
+                                                              char const *const to, EranosTransfer **const transfer) {
     EranosTransfer_create_result const result = EranosTransfer_create(cost, date, eranosDetailView(from), eranosDetailView(to));
-    *transfer = result.is_ok ? result.ok : NULL;
+    *transfer = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -38,7 +37,7 @@ static inline EranosError *eranosTransferCreate(EranosCost const *const cost, Er
 /// @param transfer The transfer
 /// @param id Receives the identifier: absent for a transfer to add, present for one the group holds, replacing what it held
 /// @return Whether there is one
-static inline bool eranosTransferId(EranosTransfer const *const transfer, EranosText *const id) {
+[[nodiscard]] static inline bool eranosTransferId(EranosTransfer const *const transfer, EranosText *const id) {
     eranosDetailClear(id);
     bool const present = EranosTransfer_id(transfer, id).is_ok;
     eranosDetailFinish(id);
@@ -48,10 +47,10 @@ static inline bool eranosTransferId(EranosTransfer const *const transfer, Eranos
 /// Sets the identifier: absent for a transfer to add, present for one the group holds.
 ///
 /// @param transfer The transfer
-/// @param id The identifier: absent for a transfer to add, present for one the group holds, as UTF-8 ended by a NUL; NULL reads as empty text
-/// @return NULL on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+/// @param id The identifier: absent for a transfer to add, present for one the group holds, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-static inline EranosError *eranosTransferSetId(EranosTransfer *const transfer, char const *const id) {
+[[nodiscard]] static inline EranosError *eranosTransferSetId(EranosTransfer *const transfer, char const *const id) {
     EranosTransfer_set_id_result const result = EranosTransfer_set_id(transfer, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -64,8 +63,8 @@ static inline void eranosTransferClearId(EranosTransfer *const transfer) { Erano
 /// What was paid.
 ///
 /// @param transfer The transfer
-/// @return A copy of the value, which the caller destroys, or NULL when there is none
-static inline EranosCost *eranosTransferCost(EranosTransfer const *const transfer) { return EranosTransfer_cost(transfer); }
+/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+[[nodiscard]] static inline EranosCost *eranosTransferCost(EranosTransfer const *const transfer) { return EranosTransfer_cost(transfer); }
 
 /// Sets what was paid.
 ///
@@ -77,7 +76,7 @@ static inline void eranosTransferSetCost(EranosTransfer *const transfer, EranosC
 ///
 /// @param transfer The transfer
 /// @return The day it was paid
-static inline EranosCalendarDate eranosTransferDate(EranosTransfer const *const transfer) { return EranosTransfer_date(transfer); }
+[[nodiscard]] static inline EranosCalendarDate eranosTransferDate(EranosTransfer const *const transfer) { return EranosTransfer_date(transfer); }
 
 /// Sets the day it was paid.
 ///
@@ -98,10 +97,10 @@ static inline void eranosTransferFrom(EranosTransfer const *const transfer, Eran
 /// Sets the identifier of the member who paid.
 ///
 /// @param transfer The transfer
-/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; NULL reads as empty text
-/// @return NULL on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-static inline EranosError *eranosTransferSetFrom(EranosTransfer *const transfer, char const *const from) {
+[[nodiscard]] static inline EranosError *eranosTransferSetFrom(EranosTransfer *const transfer, char const *const from) {
     EranosTransfer_set_from_result const result = EranosTransfer_set_from(transfer, eranosDetailView(from));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -119,10 +118,10 @@ static inline void eranosTransferTo(EranosTransfer const *const transfer, Eranos
 /// Sets the identifier of the member who was paid.
 ///
 /// @param transfer The transfer
-/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; NULL reads as empty text
-/// @return NULL on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-static inline EranosError *eranosTransferSetTo(EranosTransfer *const transfer, char const *const to) {
+[[nodiscard]] static inline EranosError *eranosTransferSetTo(EranosTransfer *const transfer, char const *const to) {
     EranosTransfer_set_to_result const result = EranosTransfer_set_to(transfer, eranosDetailView(to));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -132,7 +131,7 @@ static inline EranosError *eranosTransferSetTo(EranosTransfer *const transfer, c
 /// @param transfer The transfer
 /// @param note Receives a note on the transfer, replacing what it held
 /// @return Whether there is one
-static inline bool eranosTransferNote(EranosTransfer const *const transfer, EranosText *const note) {
+[[nodiscard]] static inline bool eranosTransferNote(EranosTransfer const *const transfer, EranosText *const note) {
     eranosDetailClear(note);
     bool const present = EranosTransfer_note(transfer, note).is_ok;
     eranosDetailFinish(note);
@@ -142,10 +141,10 @@ static inline bool eranosTransferNote(EranosTransfer const *const transfer, Eran
 /// Sets a note on the transfer.
 ///
 /// @param transfer The transfer
-/// @param note A note on the transfer, as UTF-8 ended by a NUL; NULL reads as empty text
-/// @return NULL on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+/// @param note A note on the transfer, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-static inline EranosError *eranosTransferSetNote(EranosTransfer *const transfer, char const *const note) {
+[[nodiscard]] static inline EranosError *eranosTransferSetNote(EranosTransfer *const transfer, char const *const note) {
     EranosTransfer_set_note_result const result = EranosTransfer_set_note(transfer, eranosDetailView(note));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -160,7 +159,7 @@ static inline void eranosTransferClearNote(EranosTransfer *const transfer) { Era
 /// @param transfer The transfer
 /// @param time Receives the time, when there is one
 /// @return Whether there is one
-static inline bool eranosTransferTime(EranosTransfer const *const transfer, EranosTimeOfDay *const time) {
+[[nodiscard]] static inline bool eranosTransferTime(EranosTransfer const *const transfer, EranosTimeOfDay *const time) {
     EranosTransfer_time_result const result = EranosTransfer_time(transfer);
     return eranosDetailPresentTimeOfDay(result.is_ok, &result.ok, time);
 }
@@ -176,11 +175,11 @@ static inline void eranosTransferSetTime(EranosTransfer *const transfer, EranosT
 /// @param transfer The transfer
 static inline void eranosTransferClearTime(EranosTransfer *const transfer) { EranosTransfer_clear_time(transfer); }
 
-/// Destroys @p transfer; destroying NULL does nothing, as free() does.
+/// Destroys @p transfer; destroying nullptr does nothing, as free() does.
 ///
-/// @param transfer The transfer, which no call uses after this one, or NULL
+/// @param transfer The transfer, which no call uses after this one, or nullptr
 static inline void eranosTransferDestroy(EranosTransfer *const transfer) {
-    if (NULL != transfer) {
+    if (nullptr != transfer) {
         EranosTransfer_destroy(transfer);
     }
 }
@@ -192,28 +191,28 @@ typedef struct EranosTransferList EranosTransferList;
 ///
 /// @param list The transfer list
 /// @return The result
-static inline size_t eranosTransferListLength(EranosTransferList const *const list) { return EranosTransferList_len(list); }
+[[nodiscard]] static inline size_t eranosTransferListLength(EranosTransferList const *const list) { return EranosTransferList_len(list); }
 
 /// Whether the list holds no record.
 ///
 /// @param list The transfer list
 /// @return Whether it holds none
-static inline bool eranosTransferListIsEmpty(EranosTransferList const *const list) { return EranosTransferList_is_empty(list); }
+[[nodiscard]] static inline bool eranosTransferListIsEmpty(EranosTransferList const *const list) { return EranosTransferList_is_empty(list); }
 
 /// A copy of the record at `index`, absent past the end.
 ///
 /// @param list The transfer list
 /// @param index The index
-/// @return A copy of the element at @p index, which the caller destroys, or NULL past the end
-static inline EranosTransfer *eranosTransferListGet(EranosTransferList const *const list, size_t const index) {
+/// @return A copy of the element at @p index, which the caller destroys, or nullptr past the end
+[[nodiscard]] static inline EranosTransfer *eranosTransferListGet(EranosTransferList const *const list, size_t const index) {
     return EranosTransferList_get(list, index);
 }
 
-/// Destroys @p list; destroying NULL does nothing, as free() does.
+/// Destroys @p list; destroying nullptr does nothing, as free() does.
 ///
-/// @param list The transfer list, which no call uses after this one, or NULL
+/// @param list The transfer list, which no call uses after this one, or nullptr
 static inline void eranosTransferListDestroy(EranosTransferList *const list) {
-    if (NULL != list) {
+    if (nullptr != list) {
         EranosTransferList_destroy(list);
     }
 }

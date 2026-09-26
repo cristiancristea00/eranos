@@ -11,10 +11,10 @@
 
 /// The balance of @p member in @p group, as the library writes it, or ? for a member without totals.
 static Line balanceOf(EranosGroup const *const group, Id const member) {
-    EranosSummary *summary = NULL;
+    EranosSummary *summary = nullptr;
     must(eranosGroupSummary(group, &summary));
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
-    Line const line = NULL == totals ? lineOf("%s", "?") : balanceLine(eranosMemberSummaryBalance(totals));
+    Line const line = nullptr == totals ? lineOf("%s", "?") : balanceLine(eranosMemberSummaryBalance(totals));
     eranosMemberSummaryDestroy(totals);
     eranosSummaryDestroy(summary);
     return line;
@@ -35,9 +35,9 @@ static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCal
 
 int main(void) {
     EranosCalendarDate const day = {.day = 23, .month = 9, .year = 2026};
-    EranosNewGroup *details = NULL;
+    EranosNewGroup *details = nullptr;
     must(eranosNewGroupCreate("EUR", "Road trip", &details));
-    EranosGroup *group = NULL;
+    EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
@@ -63,7 +63,7 @@ int main(void) {
               "dropping fields.");
 
     section("2. Loading it back");
-    EranosGroup *loaded = NULL;
+    EranosGroup *loaded = nullptr;
     must(eranosGroupLoad(eranosTextData(saved), &loaded));
     printLine("Loading replays every entry through the same checks as adding it, then rebuilds\n"
               "the totals. The loaded group equals the saved one, and so do its balances:");
@@ -76,7 +76,7 @@ int main(void) {
         tableAdd(table, (Line const[]){firstName(group, members[index].text), before, after});
     }
     tablePrint(table);
-    EranosSettlement *plan = NULL;
+    EranosSettlement *plan = nullptr;
     must(eranosGroupSettlement(loaded, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &plan));
     EranosPaymentList *const payments = eranosSettlementPayments(plan);
     printFormatted("Payments needed to settle the loaded group: %zu.", eranosPaymentListLength(payments));
@@ -88,9 +88,9 @@ int main(void) {
               "do not add up:");
     // The fuel is the first entry that names Ana: the expenses come before the members in the saved form.
     char *const corrupted = replaceFirst(eranosTextData(saved), ana.text, "0199a000-0000-7000-8000-00000000ffff");
-    EranosGroup *refusedGroup = NULL;
+    EranosGroup *refusedGroup = nullptr;
     EranosError *const refused = eranosGroupLoad(corrupted, &refusedGroup);
-    check(NULL != refused && NULL == refusedGroup, "the file is refused");
+    check(nullptr != refused && nullptr == refusedGroup, "the file is refused");
     Line const message = messageLine(refused);
     printFormatted("  error: %s", message.text);
 

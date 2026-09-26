@@ -12,7 +12,7 @@ static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR")
 
 /// Prints the expenses of @p group: who paid each, who shares it, and its amount.
 static void printExpenses(EranosGroup const *const group) {
-    EranosExpenseList *expenses = NULL;
+    EranosExpenseList *expenses = nullptr;
     must(eranosGroupExpenses(group, &expenses));
     Table *const table = tableCreate(4, (char const *const[]){"Expense", "Paid by", "Shared by", "Amount"}, 3);
     EranosText *const name = eranosTextCreate();
@@ -22,7 +22,7 @@ static void printExpenses(EranosGroup const *const group) {
         EranosSplit *const payers = eranosExpensePayers(expense);
         Members const paidBy = splitMembers(payers);
         Members const sharedBy = participants(expense);
-        EranosMoney *total = NULL;
+        EranosMoney *total = nullptr;
         must(eranosExpenseTotal(expense, &total));
         tableAdd(table, (Line const[]){textLine(name), names(group, &paidBy), names(group, &sharedBy), moneyLine(total)});
         eranosSplitDestroy(payers);
@@ -35,7 +35,7 @@ static void printExpenses(EranosGroup const *const group) {
 
 /// Prints what each member of @p group paid and consumed in @p summary, and their balance.
 static void printMembers(EranosGroup const *const group, EranosSummary const *const summary) {
-    EranosMemberList *members = NULL;
+    EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
     Table *const table = tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, 1);
     EranosText *const text = eranosTextCreate();
@@ -43,7 +43,7 @@ static void printMembers(EranosGroup const *const group, EranosSummary const *co
         EranosMember *const member = eranosMemberListGet(members, index);
         (void)eranosMemberId(member, text);
         EranosMemberSummary *const totals = totalsOf(summary, eranosTextData(text));
-        check(NULL != totals, "every member has totals");
+        check(nullptr != totals, "every member has totals");
         eranosMemberFirstName(member, text);
         tableAdd(table, (Line const[]){
                             textLine(text),
@@ -81,9 +81,9 @@ static void printPayments(EranosGroup const *const group, EranosPaymentList cons
 }
 
 int main(void) {
-    EranosNewGroup *details = NULL;
+    EranosNewGroup *details = nullptr;
     must(eranosNewGroupCreate("EUR", "Weekend in Sinaia", &details));
-    EranosGroup *group = NULL;
+    EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
     EranosText *const text = eranosTextCreate();
@@ -99,7 +99,7 @@ int main(void) {
     Id const bob = addMember(group, "Bob");
     Id const carol = addMember(group, "Carol");
     Members const everyone = {.count = 3, .ids = {ana, bob, carol}};
-    EranosMemberList *members = NULL;
+    EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
     Line const joined = names(group, &everyone);
     printFormatted("%zu people joined the group: %s.", eranosMemberListLength(members), joined.text);
@@ -114,7 +114,7 @@ int main(void) {
     printExpenses(group);
 
     section("3. Who paid and who consumed");
-    EranosSummary *summary = NULL;
+    EranosSummary *summary = nullptr;
     must(eranosGroupSummary(group, &summary));
     Line const spent = moneyLine(eranosSummaryTotalSpent(summary));
     printFormatted("The group spent %s in total. A member's share of an expense is what they consumed,\n"
@@ -122,13 +122,13 @@ int main(void) {
                    spent.text);
     printMembers(group, summary);
     EranosMemberSummary *const anaTotals = totalsOf(summary, ana.text);
-    check(NULL != anaTotals, "Ana has totals");
+    check(nullptr != anaTotals, "Ana has totals");
     Line const paid = moneyLine(eranosMemberSummaryPaid(anaTotals));
     Line const consumed = moneyLine(eranosMemberSummaryShare(anaTotals));
     printFormatted("Ana paid %s but consumed only %s, so the others owe her the difference.", paid.text, consumed.text);
 
     section("4. Settling up");
-    EranosSettlement *settlement = NULL;
+    EranosSettlement *settlement = nullptr;
     must(eranosGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, &settlement));
     EranosPaymentList *const payments = eranosSettlementPayments(settlement);
     printFormatted("The fewest payments that bring every balance to zero (%zu in total):", eranosPaymentListLength(payments));
@@ -137,10 +137,10 @@ int main(void) {
 
     // Everyone's share is 100.00: Ana gets back 140.00 from Bob (40.00) and Carol (100.00).
     EranosMoney *const total = eranosSummaryTotalSpent(summary);
-    check(30000 == eranosMoneyMinorUnits(total), "the group spent 300.00 EUR");
+    check(30'000 == eranosMoneyMinorUnits(total), "the group spent 300.00 EUR");
     EranosBalance *const balance = eranosMemberSummaryBalance(anaTotals);
     EranosMoney *const owed = eranosBalanceAmount(balance);
-    check(ERANOS_BALANCE_KIND_GETS_BACK == eranosBalanceKind(balance) && 14000 == eranosMoneyMinorUnits(owed), "Ana gets back 140.00 EUR");
+    check(ERANOS_BALANCE_KIND_GETS_BACK == eranosBalanceKind(balance) && 14'000 == eranosMoneyMinorUnits(owed), "Ana gets back 140.00 EUR");
     check(2 == eranosPaymentListLength(payments), "two payments settle the group");
     eranosMoneyDestroy(owed);
     eranosBalanceDestroy(balance);

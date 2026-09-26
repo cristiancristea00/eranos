@@ -6,7 +6,6 @@
 #include "eranos.h"
 
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,23 +13,23 @@
 #include <string.h>
 
 /// The bits of a byte that tell whether it continues a character in UTF-8.
-static unsigned const CONTINUATION_MASK = 0xC0U;
+static constexpr unsigned CONTINUATION_MASK = 0b1100'0000U;
 
 /// Those bits in a byte that continues a character.
-static unsigned const CONTINUATION = 0x80U;
+static constexpr unsigned CONTINUATION = 0b1000'0000U;
 
 /// How many rows a table has room for before it grows.
-enum { FIRST_ROWS = 8 };
+static constexpr size_t FIRST_ROWS = 8;
 
 /// Ends the port with a failure, after the report it printed so far.
-static void stop(void) {
+[[noreturn]] static void stop(void) {
     (void)fflush(stdout);
     // NOLINTNEXTLINE(concurrency-mt-unsafe): a port stops on its main thread, and no thread of its own calls exit().
     exit(EXIT_FAILURE);
 }
 
 void must(EranosError *const error) {
-    if (NULL == error) {
+    if (nullptr == error) {
         return;
     }
     EranosText *const message = eranosTextCreate();
@@ -50,12 +49,12 @@ void check(bool const holds, char const *const claim) {
 
 bool isFailure(EranosError const *const error, EranosErrorKind const kind, EranosFailure const failure) {
     EranosFailure found = ERANOS_FAILURE_ACCOUNT_EMPTY_NAME;
-    return NULL != error && kind == eranosErrorKind(error) && eranosErrorFailure(error, &found) && failure == found;
+    return nullptr != error && kind == eranosErrorKind(error) && eranosErrorFailure(error, &found) && failure == found;
 }
 
 /// The copy of @p text in a line, which stops the port when it does not fit.
 static Line lineFrom(char const *const text) {
-    Line line = {{0}};
+    Line line = {};
     size_t const length = strlen(text);
     check(LINE_SIZE > length, "a line of the report fits its buffer");
     memcpy(line.text, text, length + 1);
@@ -63,12 +62,12 @@ static Line lineFrom(char const *const text) {
 }
 
 Line lineOf(char const *const format, ...) {
-    Line line = {{0}};
+    Line line = {};
     va_list arguments;
     va_start(arguments, format);
     int const length = vsnprintf(line.text, sizeof line.text, format, arguments);
     va_end(arguments);
-    check(0 <= length && LINE_SIZE > length, "a line of the report fits its buffer");
+    check(0 <= length && LINE_SIZE > (size_t)length, "a line of the report fits its buffer");
     return line;
 }
 
@@ -100,7 +99,7 @@ Line balanceLine(EranosBalance *const balance) {
 }
 
 Line messageLine(EranosError *const error) {
-    if (NULL == error) {
+    if (nullptr == error) {
         return lineFrom("accepted");
     }
     EranosText *const message = eranosTextCreate();
@@ -112,14 +111,14 @@ Line messageLine(EranosError *const error) {
 }
 
 Id idOf(EranosText const *const text) {
-    Id id = {{0}};
+    Id id = {};
     check(sizeof id.text > eranosTextLength(text), "an identifier fits its buffer");
     memcpy(id.text, eranosTextData(text), eranosTextLength(text) + 1);
     return id;
 }
 
 Id addMember(EranosGroup *const group, char const *const firstName) {
-    EranosMember *member = NULL;
+    EranosMember *member = nullptr;
     must(eranosMemberCreate(firstName, &member));
     EranosText *const text = eranosTextCreate();
     must(eranosGroupAddMember(group, member, text));
@@ -130,7 +129,7 @@ Id addMember(EranosGroup *const group, char const *const firstName) {
 }
 
 EranosMoney *amountOf(char const *const text, char const *const currency) {
-    EranosMoney *money = NULL;
+    EranosMoney *money = nullptr;
     must(eranosMoneyParse(text, currency, &money));
     return money;
 }
@@ -154,7 +153,7 @@ EranosSplit *amountsSplit(char const *const currency, Share const *const shares,
     EranosMemberAmountList *const list = eranosMemberAmountListCreate();
     for (size_t index = 0; count > index; ++index) {
         EranosMoney *const amount = amountOf(shares[index].value, currency);
-        EranosMemberAmount *share = NULL;
+        EranosMemberAmount *share = nullptr;
         must(eranosMemberAmountCreate(amount, shares[index].member.text, &share));
         eranosMemberAmountListPush(list, share);
         eranosMemberAmountDestroy(share);
@@ -170,7 +169,7 @@ EranosSplit *partsSplit(Share const *const shares, size_t const count) {
     for (size_t index = 0; count > index; ++index) {
         int32_t hundredths = 0;
         must(eranosPartsParse(shares[index].value, &hundredths));
-        EranosMemberParts *share = NULL;
+        EranosMemberParts *share = nullptr;
         must(eranosMemberPartsCreate(hundredths, shares[index].member.text, &share));
         eranosMemberPartsListPush(list, share);
         eranosMemberPartsDestroy(share);
@@ -185,7 +184,7 @@ EranosSplit *percentagesSplit(Share const *const shares, size_t const count) {
     for (size_t index = 0; count > index; ++index) {
         int32_t basisPoints = 0;
         must(eranosPercentageParse(shares[index].value, &basisPoints));
-        EranosMemberPercentage *share = NULL;
+        EranosMemberPercentage *share = nullptr;
         must(eranosMemberPercentageCreate(basisPoints, shares[index].member.text, &share));
         eranosMemberPercentageListPush(list, share);
         eranosMemberPercentageDestroy(share);
@@ -202,7 +201,7 @@ EranosCost *localCost(EranosMoney *const amount) {
 }
 
 EranosCost *convertedCost(EranosMoney *const amount, char const *const rate) {
-    EranosCost *cost = NULL;
+    EranosCost *cost = nullptr;
     must(eranosCostCreateConverted(amount, rate, &cost));
     eranosMoneyDestroy(amount);
     return cost;
@@ -212,7 +211,7 @@ EranosCost *convertedCost(EranosMoney *const amount, char const *const rate) {
 EranosExpense *expenseOf(EranosCost *const cost, EranosCalendarDate const date, char const *const name, EranosSplit *const payers,
                          EranosSplit *const split) {
     EranosExpenseSplit *const whole = eranosExpenseSplitCreateWhole(split);
-    EranosExpense *expense = NULL;
+    EranosExpense *expense = nullptr;
     must(eranosExpenseCreate(cost, date, name, payers, whole, &expense));
     eranosExpenseSplitDestroy(whole);
     eranosSplitDestroy(split);
@@ -240,7 +239,7 @@ EranosError *expenseRefusal(EranosGroup *const group, EranosExpense *const expen
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the sender, then the receiver, in the order the library's constructor reads them.
 EranosTransfer *transferOf(EranosCost *const cost, EranosCalendarDate const date, Id const from, Id const to) {
-    EranosTransfer *transfer = NULL;
+    EranosTransfer *transfer = nullptr;
     must(eranosTransferCreate(cost, date, from.text, to.text, &transfer));
     eranosCostDestroy(cost);
     return transfer;
@@ -256,9 +255,9 @@ Id addTransfer(EranosGroup *const group, EranosTransfer *const transfer) {
 }
 
 Line firstName(EranosGroup const *const group, char const *const member) {
-    EranosMember *found = NULL;
+    EranosMember *found = nullptr;
     must(eranosGroupMember(group, member, &found));
-    if (NULL == found) {
+    if (nullptr == found) {
         return lineFrom("?");
     }
     EranosText *const text = eranosTextCreate();
@@ -270,7 +269,7 @@ Line firstName(EranosGroup const *const group, char const *const member) {
 }
 
 Line names(EranosGroup const *const group, Members const *const members) {
-    Line line = {{0}};
+    Line line = {};
     size_t length = 0;
     for (size_t index = 0; members->count > index; ++index) {
         Line const name = firstName(group, members->ids[index].text);
@@ -302,7 +301,7 @@ static void addAll(Members *const members, EranosTextList const *const list) {
 
 Members splitMembers(EranosSplit const *const split) {
     Members members = {.count = 0};
-    EranosTextList *list = NULL;
+    EranosTextList *list = nullptr;
     must(eranosSplitParticipants(split, &list));
     addAll(&members, list);
     eranosTextListDestroy(list);
@@ -316,7 +315,7 @@ Members participants(EranosExpense const *const expense) {
     Members members = {.count = 0};
     EranosExpenseSplit *const split = eranosExpenseSplit(expense);
     EranosItemList *const items = eranosExpenseSplitItems(split);
-    if (NULL == items) {
+    if (nullptr == items) {
         EranosSplit *const whole = eranosExpenseSplitSplit(split);
         members = splitMembers(whole);
         eranosSplitDestroy(whole);
@@ -324,7 +323,7 @@ Members participants(EranosExpense const *const expense) {
         for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
             EranosItem *const item = eranosItemListGet(items, index);
             EranosSplit *const itemSplit = eranosItemSplit(item);
-            EranosTextList *list = NULL;
+            EranosTextList *list = nullptr;
             must(eranosSplitParticipants(itemSplit, &list));
             addAll(&members, list);
             eranosTextListDestroy(list);
@@ -341,8 +340,8 @@ Members participants(EranosExpense const *const expense) {
 EranosMemberSummary *totalsOf(EranosSummary const *const summary, char const *const member) {
     EranosMemberSummaryList *const list = eranosSummaryMembers(summary);
     EranosText *const text = eranosTextCreate();
-    EranosMemberSummary *found = NULL;
-    for (size_t index = 0; NULL == found && eranosMemberSummaryListLength(list) > index; ++index) {
+    EranosMemberSummary *found = nullptr;
+    for (size_t index = 0; nullptr == found && eranosMemberSummaryListLength(list) > index; ++index) {
         EranosMemberSummary *const totals = eranosMemberSummaryListGet(list, index);
         eranosMemberSummaryMember(totals, text);
         if (0 == strcmp(eranosTextData(text), member)) {
@@ -359,13 +358,13 @@ EranosMemberSummary *totalsOf(EranosSummary const *const summary, char const *co
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the text, then what to find in it and what replaces it, as a search reads.
 char *replaceFirst(char const *const text, char const *const pattern, char const *const replacement) {
     char const *const found = strstr(text, pattern);
-    check(NULL != found, "the text holds what the example replaces");
+    check(nullptr != found, "the text holds what the example replaces");
     size_t const before = (size_t)(found - text);
     size_t const patternLength = strlen(pattern);
     size_t const replacementLength = strlen(replacement);
     size_t const after = strlen(found + patternLength);
     char *const copy = malloc(before + replacementLength + after + 1);
-    check(NULL != copy, "the copy has room");
+    check(nullptr != copy, "the copy has room");
     memcpy(copy, text, before);
     // With its terminator, which the tail's copy overwrites: clang-tidy's bugprone-not-null-terminated-result refuses a
     // copy of a string's length alone wherever memcpy is glibc's plain function.
@@ -437,7 +436,7 @@ static void addRow(Table *const table, Line const *const cells) {
     if (table->capacity == table->rows) {
         size_t const capacity = 2 * table->capacity;
         Line *const grown = realloc(table->cells, capacity * table->columns * sizeof(Line));
-        check(NULL != grown, "the table has room for its rows");
+        check(nullptr != grown, "the table has room for its rows");
         table->cells = grown;
         table->capacity = capacity;
     }
@@ -447,15 +446,15 @@ static void addRow(Table *const table, Line const *const cells) {
 
 Table *tableCreate(size_t const columns, char const *const *const headers, size_t const numbersFrom) {
     Table *const table = malloc(sizeof(Table));
-    check(NULL != table, "the table has room");
+    check(nullptr != table, "the table has room");
     table->capacity = FIRST_ROWS;
     table->cells = malloc(table->capacity * columns * sizeof(Line));
     table->columns = columns;
     table->numbersFrom = numbersFrom;
     table->rows = 0;
-    check(NULL != table->cells, "the table has room for its rows");
+    check(nullptr != table->cells, "the table has room for its rows");
     Line *const header = malloc(columns * sizeof(Line));
-    check(NULL != header, "the table has room for its header");
+    check(nullptr != header, "the table has room for its header");
     for (size_t column = 0; columns > column; ++column) {
         header[column] = lineFrom(headers[column]);
     }
@@ -469,7 +468,7 @@ void tableAdd(Table *const table, Line const *const cells) { addRow(table, cells
 /// How many lines @p text holds.
 static size_t linesOf(char const *const text) {
     size_t lines = 1;
-    for (char const *next = strchr(text, '\n'); NULL != next; next = strchr(next + 1, '\n')) {
+    for (char const *next = strchr(text, '\n'); nullptr != next; next = strchr(next + 1, '\n')) {
         ++lines;
     }
     return lines;
@@ -480,14 +479,14 @@ static char const *lineAt(char const *const text, size_t const index, size_t *co
     char const *start = text;
     for (size_t skipped = 0; index > skipped; ++skipped) {
         char const *const next = strchr(start, '\n');
-        if (NULL == next) {
+        if (nullptr == next) {
             *length = 0;
             return "";
         }
         start = next + 1;
     }
     char const *const end = strchr(start, '\n');
-    *length = NULL == end ? strlen(start) : (size_t)(end - start);
+    *length = nullptr == end ? strlen(start) : (size_t)(end - start);
     return start;
 }
 
@@ -549,7 +548,7 @@ static void printRow(Table const *const table, size_t const *const widths, size_
 
 void tablePrint(Table *const table) {
     size_t *const widths = calloc(table->columns, sizeof(size_t));
-    check(NULL != widths, "the table has room for its widths");
+    check(nullptr != widths, "the table has room for its widths");
     for (size_t row = 0; table->rows > row; ++row) {
         for (size_t column = 0; table->columns > column; ++column) {
             char const *const text = cellOf(table, row, column)->text;

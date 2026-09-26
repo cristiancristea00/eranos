@@ -15,7 +15,7 @@ layer is tested.
 | Java                 | `bindings/java`, the JPMS module `eranos`                           | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen-java`             | JDK 25 and later                                                                  |
 | Kotlin Multiplatform | `bindings/kmp`                                                      | `eranos-kmp` on UniFFI 0.29.4, gobley 0.3.7                         | the JVM, Android, and eight Apple targets                                         |
 | TypeScript           | `bindings/typescript`, the npm package `eranos`                     | `eranos-web` on UniFFI 0.31.2, uniffi-bindgen-react-native 0.31.0-5 | browsers, and Node 24 and later                                                   |
-| C                    | `bindings/c`, `eranos.h`                                            | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C11                                                                               |
+| C                    | `bindings/c`, `eranos.h`                                            | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C23                                                                               |
 | C++                  | `bindings/cpp`, `eranos.hpp`                                        | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C++17                                                                             |
 
 ## Contents
@@ -526,13 +526,21 @@ for functions, parameters, and fields (`eranosGroupAddExpense`,
 `minorUnits`), and UPPER_CASE for constants and enum values
 (`ERANOS_SETTLEMENT_STRATEGY_DIRECT`), which alias Diplomat's so that a
 `switch` over an enum takes them; no name carries an affix, and every
-comparison puts its constant first (`NULL != value`, `0 < count`).
+comparison puts its constant first (`nullptr != value`, `0 < count`).
 
-- A call the library can refuse returns the error, or NULL on success,
+The package is C23: its headers need GCC 13 or later (`-std=c2x`, or
+`-std=c23` from GCC 14) or Clang 19 or later, and MSVC's C compiler cannot
+build them. Every function that answers a value is `[[nodiscard]]`, so a
+caller that wants none casts it to `void`, and an enum's constants are
+`constexpr` values of the enum's type, so comparing one with a value of
+another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
+`NULL` works wherever it does.
+
+- A call the library can refuse returns the error, or nullptr on success,
   and gives its value through its last parameter, an object the caller
   destroys; an optional value returns whether there is one. Every destroy
-  function takes NULL, as `free` does.
-- Text goes in as UTF-8 ended by a NUL, NULL reading as empty text, and
+  function takes nullptr, as `free` does.
+- Text goes in as UTF-8 ended by a NUL, nullptr reading as empty text, and
   comes back in an `EranosText`, which the call replaces and ends with a
   NUL; a buffer of Diplomat's grows or ends the program, as the library's
   own allocations do, so the NUL always has room.

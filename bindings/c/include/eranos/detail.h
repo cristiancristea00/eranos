@@ -11,14 +11,12 @@
 #include "diplomat_runtime.h"
 #include "eranos/text.h"
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
-/// The view of @p text that the generated functions read: NULL reads as empty text.
-static inline DiplomatStringView eranosDetailView(char const *const text) {
-    char const *const bytes = NULL == text ? "" : text;
+/// The view of @p text that the generated functions read: nullptr reads as empty text.
+[[nodiscard]] static inline DiplomatStringView eranosDetailView(char const *const text) {
+    char const *const bytes = nullptr == text ? "" : text;
     DiplomatStringView const view = {bytes, strlen(bytes)};
     return view;
 }
@@ -33,11 +31,11 @@ static inline void eranosDetailFinish(EranosText *const text) {
     text->buf[text->len] = '\0';
 }
 
-/// The error @p error points to when @p isOk says the call failed, and NULL when it succeeded: the error is read only when present.
-static inline EranosError *eranosDetailErrorOf(bool const isOk, EranosError *const *const error) { return isOk ? NULL : *error; }
+/// The error @p error points to when @p isOk says the call failed, and nullptr when it succeeded: the error is read only when present.
+[[nodiscard]] static inline EranosError *eranosDetailErrorOf(bool const isOk, EranosError *const *const error) { return isOk ? nullptr : *error; }
 
 /// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
-static inline bool eranosDetailPresentFailure(bool const isOk, EranosFailure const *const value, EranosFailure *const out) {
+[[nodiscard]] static inline bool eranosDetailPresentFailure(bool const isOk, EranosFailure const *const value, EranosFailure *const out) {
     if (isOk) {
         *out = *value;
     }
@@ -45,7 +43,7 @@ static inline bool eranosDetailPresentFailure(bool const isOk, EranosFailure con
 }
 
 /// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
-static inline bool eranosDetailPresentIbanReason(bool const isOk, EranosIbanReason const *const value, EranosIbanReason *const out) {
+[[nodiscard]] static inline bool eranosDetailPresentIbanReason(bool const isOk, EranosIbanReason const *const value, EranosIbanReason *const out) {
     if (isOk) {
         *out = *value;
     }
@@ -53,7 +51,7 @@ static inline bool eranosDetailPresentIbanReason(bool const isOk, EranosIbanReas
 }
 
 /// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
-static inline bool eranosDetailPresentTimeOfDay(bool const isOk, EranosTimeOfDay const *const value, EranosTimeOfDay *const out) {
+[[nodiscard]] static inline bool eranosDetailPresentTimeOfDay(bool const isOk, EranosTimeOfDay const *const value, EranosTimeOfDay *const out) {
     if (isOk) {
         *out = *value;
     }
@@ -61,7 +59,7 @@ static inline bool eranosDetailPresentTimeOfDay(bool const isOk, EranosTimeOfDay
 }
 
 /// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
-static inline bool eranosDetailPresentInt32(bool const isOk, int32_t const *const value, int32_t *const out) {
+[[nodiscard]] static inline bool eranosDetailPresentInt32(bool const isOk, int32_t const *const value, int32_t *const out) {
     if (isOk) {
         *out = *value;
     }
@@ -69,7 +67,7 @@ static inline bool eranosDetailPresentInt32(bool const isOk, int32_t const *cons
 }
 
 /// Gives @p out the value @p value points to when @p isOk says there is one, reading it only then.
-static inline bool eranosDetailPresentInt64(bool const isOk, int64_t const *const value, int64_t *const out) {
+[[nodiscard]] static inline bool eranosDetailPresentInt64(bool const isOk, int64_t const *const value, int64_t *const out) {
     if (isOk) {
         *out = *value;
     }

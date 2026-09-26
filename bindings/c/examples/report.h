@@ -6,14 +6,13 @@
 
 #include "eranos.h"
 
-#include <stdbool.h>
 #include <stddef.h>
 
 /// The most bytes a line of a report holds, its NUL included: every value, message, and cell of the examples fits.
-enum { LINE_SIZE = 512 };
+static constexpr size_t LINE_SIZE = 512;
 
 /// The most members a split or an expense of the examples names, each once.
-enum { MEMBERS_SIZE = 8 };
+static constexpr size_t MEMBERS_SIZE = 8;
 
 /// A line of text, ended by a NUL.
 typedef struct Line {
@@ -22,7 +21,7 @@ typedef struct Line {
 } Line;
 
 /// How many bytes an identifier's text holds, its NUL included: a hyphenated UUID has 36 characters.
-enum { ID_SIZE = 37 };
+static constexpr size_t ID_SIZE = 37;
 
 /// An identifier the library gave, as its text.
 typedef struct Id {
@@ -59,7 +58,7 @@ void check(bool holds, char const *claim);
 
 /// Whether @p error is a failure of @p kind, and within it of @p failure.
 ///
-/// @param error The error, or NULL
+/// @param error The error, or nullptr
 /// @param kind The module that refused the call
 /// @param failure The failure within the module
 /// @return Whether it is
@@ -69,7 +68,7 @@ bool isFailure(EranosError const *error, EranosErrorKind kind, EranosFailure fai
 ///
 /// @param format The format
 /// @return The text
-Line lineOf(char const *format, ...) __attribute__((format(printf, 1, 2)));
+[[gnu::format(printf, 1, 2)]] Line lineOf(char const *format, ...);
 
 /// Adds @p text to @p cell as its last line, which may be empty.
 ///
@@ -95,7 +94,7 @@ Line moneyLine(EranosMoney *money);
 /// @return The text
 Line balanceLine(EranosBalance *balance);
 
-/// The message of @p error, a change the library refuses, or "accepted" for NULL; destroys @p error.
+/// The message of @p error, a change the library refuses, or "accepted" for nullptr; destroys @p error.
 ///
 /// @param error The outcome of the change
 /// @return The message
@@ -193,11 +192,11 @@ EranosExpense *expenseOf(EranosCost *cost, EranosCalendarDate date, char const *
 /// @return The identifier the group gave it
 Id addExpense(EranosGroup *group, EranosExpense *expense);
 
-/// What @p group refuses @p expense with, or NULL when it adds it; destroys @p expense.
+/// What @p group refuses @p expense with, or nullptr when it adds it; destroys @p expense.
 ///
 /// @param group The group
 /// @param expense The expense
-/// @return The refusal, which the caller destroys, or NULL
+/// @return The refusal, which the caller destroys, or nullptr
 EranosError *expenseRefusal(EranosGroup *group, EranosExpense *expense);
 
 /// A transfer of @p cost from @p from to @p to; destroys @p cost.
@@ -242,11 +241,11 @@ Members splitMembers(EranosSplit const *split);
 /// @return The members
 Members participants(EranosExpense const *expense);
 
-/// The totals of @p member in @p summary, which the caller destroys, or NULL when the summary lists no totals of theirs.
+/// The totals of @p member in @p summary, which the caller destroys, or nullptr when the summary lists no totals of theirs.
 ///
 /// @param summary The summary
 /// @param member The member's identifier
-/// @return The totals, or NULL
+/// @return The totals, or nullptr
 EranosMemberSummary *totalsOf(EranosSummary const *summary, char const *member);
 
 /// The copy of @p text with the first @p pattern in it replaced by @p replacement, which stops the port when @p text does
@@ -266,7 +265,7 @@ void printLine(char const *text);
 /// Prints the text that @p format writes of the values after it, as printf() writes it, then a line break.
 ///
 /// @param format The format
-void printFormatted(char const *format, ...) __attribute__((format(printf, 1, 2)));
+[[gnu::format(printf, 1, 2)]] void printFormatted(char const *format, ...);
 
 /// Prints @p text with a double line under it, as an example opens.
 ///

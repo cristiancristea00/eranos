@@ -4,7 +4,6 @@
 #include "eranos.h"
 #include "report.h"
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,11 +47,11 @@ static char const *ruleOf(Rule const *const rules, size_t const count, char cons
 /// Prints how the expense @p id divides: every involved member's rule among the @p count rules of @p rules, what they
 /// paid, and what they consumed.
 static void report(EranosGroup const *const group, Id const id, Rule const *const rules, size_t const count) {
-    EranosExpense *expense = NULL;
+    EranosExpense *expense = nullptr;
     must(eranosGroupExpense(group, id.text, &expense));
-    EranosExpenseShares *shares = NULL;
+    EranosExpenseShares *shares = nullptr;
     must(eranosGroupExpenseShares(group, id.text, &shares));
-    if (NULL == expense || NULL == shares) {
+    if (nullptr == expense || nullptr == shares) {
         eranosExpenseSharesDestroy(shares);
         eranosExpenseDestroy(expense);
         return;
@@ -187,7 +186,7 @@ static void mistakes(EranosGroup *const group, Family const *const family) {
     };
     EranosError *const refused =
         expenseRefusal(group, expenseOf(localCost(euros("10.00")), family->day, "Invalid", soleSplit(family->ana), percentagesSplit(shares, 2)));
-    check(NULL != refused, "the split is refused");
+    check(nullptr != refused, "the split is refused");
     Line const message = messageLine(refused);
     printFormatted("  error: %s", message.text);
 }
@@ -195,11 +194,11 @@ static void mistakes(EranosGroup *const group, Family const *const family) {
 /// Prints what each member paid and consumed over the holiday, and their balance.
 static void totals(EranosGroup const *const group) {
     section("7. The holiday in total");
-    EranosSummary *summary = NULL;
+    EranosSummary *summary = nullptr;
     must(eranosGroupSummary(group, &summary));
     Line const spent = moneyLine(eranosSummaryTotalSpent(summary));
     printFormatted("%s spent over five expenses:", spent.text);
-    EranosMemberList *members = NULL;
+    EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
     Table *const table = tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, 1);
     EranosText *const text = eranosTextCreate();
@@ -207,7 +206,7 @@ static void totals(EranosGroup const *const group) {
         EranosMember *const member = eranosMemberListGet(members, index);
         (void)eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        check(NULL != found, "every member has totals");
+        check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         tableAdd(table, (Line const[]){
                             textLine(text),
@@ -226,9 +225,9 @@ static void totals(EranosGroup const *const group) {
 
 /// Whether Mia consumed 25.00 EUR of the food: 125.00 over 2.5 parts is 50.00 per part.
 static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *const family, Id const food) {
-    EranosExpenseShares *shares = NULL;
+    EranosExpenseShares *shares = nullptr;
     must(eranosGroupExpenseShares(group, food.text, &shares));
-    check(NULL != shares, "food was added");
+    check(nullptr != shares, "food was added");
     EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
     EranosText *const text = eranosTextCreate();
     bool consumed = false;
@@ -237,7 +236,7 @@ static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *c
         eranosMemberShareMember(share, text);
         if (0 == strcmp(eranosTextData(text), family->mia.text)) {
             EranosMoney *const amount = eranosMemberShareShare(share);
-            consumed = 2500 == eranosMoneyMinorUnits(amount);
+            consumed = 2'500 == eranosMoneyMinorUnits(amount);
             eranosMoneyDestroy(amount);
         }
         eranosMemberShareDestroy(share);
@@ -249,9 +248,9 @@ static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *c
 }
 
 int main(void) {
-    EranosNewGroup *details = NULL;
+    EranosNewGroup *details = nullptr;
     must(eranosNewGroupCreate("EUR", "Family holiday", &details));
-    EranosGroup *group = NULL;
+    EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
     // The members join in this order, which gives them their identifiers: an initialiser evaluates its values in no set

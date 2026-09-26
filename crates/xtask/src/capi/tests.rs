@@ -90,7 +90,7 @@ fn the_tests_build_with_warnings_as_errors_the_sanitizers_and_coverage() {
     assert!(
         tests(C_PACKAGE, "/LLVM_HOME", &metadata)[0]
             .command_line()
-            .contains("/LLVM_HOME/bin/clang -std=c11 ")
+            .contains("/LLVM_HOME/bin/clang -std=c23 ")
     );
 }
 
@@ -110,7 +110,7 @@ fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
     assert_eq!(
         port_build(C_PACKAGE, "/LLVM_HOME", &sequential, "grand_tour").command_line(),
         format!(
-            "cd bindings/c && /LLVM_HOME/bin/clang -std=c11 {flags} examples/report.c examples/grand_tour.c \
+            "cd bindings/c && /LLVM_HOME/bin/clang -std=c23 {flags} examples/report.c examples/grand_tour.c \
              /eranos/target/sequential/debug/liberanos_capi.a {} -o /eranos/target/sequential/c/grand_tour",
             SYSTEM_LIBRARIES.join(" ")
         )

@@ -183,7 +183,7 @@ export JAVA_HOME="$JAVA_HOME_21"                 # Gradle 9.0 runs on JDK 24 at 
 
 In `bindings/cpp`, once `cargo build -p eranos-capi` wrote the static
 library into `target/debug`; `bindings/c` takes the same commands with
-`c`, `clang`, `-std=c11`, `tests/tests.c`, and `-pthread`, and on Linux the
+`c`, `clang`, `-std=c23`, `tests/tests.c`, and `-pthread`, and on Linux the
 libraries that `cargo rustc -p eranos-capi --lib -- --print
 native-static-libs` lists in place of `-liconv`:
 
@@ -202,7 +202,7 @@ and `.cpp`; on macOS, `ASAN_OPTIONS=detect_leaks=1` turns on the leak check
 that Linux runs by default:
 
 ```sh
-"$LLVM_HOME/bin/clang" -std=c11 -g -fsanitize=address,undefined -pthread -Iinclude -isystem generated \
+"$LLVM_HOME/bin/clang" -std=c23 -g -fsanitize=address,undefined -pthread -Iinclude -isystem generated \
     examples/report.c examples/settling_up.c ../../target/debug/liberanos_capi.a -liconv -o build/settling_up
 ASAN_OPTIONS=detect_leaks=1 build/settling_up                               # one port, whose identifiers are random
 ```
@@ -611,7 +611,7 @@ commit was tested, and those checks show on the pull request.
 | Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                                                                                                                                                  |
 | Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                                                                                                                                                    |
 | Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                                                                                                                                                      |
-| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, on a dispatch that asks for the bindings only                                                                                                                                                                                                                         |
+| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, then the C tests compiled by GCC 14 as C23, which backs the package's GCC floor, on a dispatch that asks for the bindings only                                                                                                                                        |
 | Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                                                                                                                                                |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a

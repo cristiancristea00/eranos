@@ -8,13 +8,14 @@ changes it).
 
 ## 1. The public contract
 
-| Surface                  | What is covered                                                                                                                                |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour, whichever internal crate holds it                    |
-| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                                           |
-| The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order                  |
-| The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                                 |
-| The concurrency          | which lock each `SharedGroup` call takes, the order in which waiting calls get it, and that a call dropped before it completes changes nothing |
+| Surface                  | What is covered                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The Rust API             | every public item reachable from `eranos::`, its signature, and its documented behaviour, whichever internal crate holds it                                                                      |
+| The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                                                                                             |
+| The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order                                                                    |
+| The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                                                                                   |
+| The concurrency          | which lock each `SharedGroup` call takes, the order in which waiting calls get it, and that a call dropped before it completes changes nothing                                                   |
+| The floors               | what each binding's package runs on, as the first table of [BINDINGS.md](BINDINGS.md) lists it: a platform, a JDK or a Node release, or a language standard such as C23; raising one is breaking |
 
 The numbers are part of the contract because groups are shared: two devices
 on different releases must compute the same cent for the same expense. A

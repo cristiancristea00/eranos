@@ -11,8 +11,6 @@
 #include "eranos/money.h"
 #include "eranos/text.h"
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 
 /// A failure a call reports: its kind, the failure within its module, the library's message, and what the failure holds, each getter present for the
@@ -23,14 +21,14 @@ typedef struct EranosError EranosError;
 ///
 /// @param error The error
 /// @return The result
-static inline EranosErrorKind eranosErrorKind(EranosError const *const error) { return EranosError_kind(error); }
+[[nodiscard]] static inline EranosErrorKind eranosErrorKind(EranosError const *const error) { return EranosError_kind(error); }
 
 /// The failure within its module, absent for the core's own cases.
 ///
 /// @param error The error
 /// @param failure Receives the failure, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorFailure(EranosError const *const error, EranosFailure *const failure) {
+[[nodiscard]] static inline bool eranosErrorFailure(EranosError const *const error, EranosFailure *const failure) {
     EranosError_failure_result const result = EranosError_failure(error);
     return eranosDetailPresentFailure(result.is_ok, &result.ok, failure);
 }
@@ -48,15 +46,15 @@ static inline void eranosErrorMessage(EranosError const *const error, EranosText
 /// What the amounts add up to. Present for the failures `AmountsDoNotAddUp`, `ItemsDoNotAddUp`.
 ///
 /// @param error The error
-/// @return A copy of what the failure holds, which the caller destroys, or NULL when it holds none
-static inline EranosMoney *eranosErrorActual(EranosError const *const error) { return EranosError_actual(error); }
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosMoney *eranosErrorActual(EranosError const *const error) { return EranosError_actual(error); }
 
 /// How many decimal places the currency has. Present for the failure `TooManyDecimals`.
 ///
 /// @param error The error
 /// @param allowed Receives the allowed, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorAllowed(EranosError const *const error, int64_t *const allowed) {
+[[nodiscard]] static inline bool eranosErrorAllowed(EranosError const *const error, int64_t *const allowed) {
     EranosError_allowed_result const result = EranosError_allowed(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, allowed);
 }
@@ -66,7 +64,7 @@ static inline bool eranosErrorAllowed(EranosError const *const error, int64_t *c
 /// @param error The error
 /// @param balances Receives the balances, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorBalances(EranosError const *const error, int64_t *const balances) {
+[[nodiscard]] static inline bool eranosErrorBalances(EranosError const *const error, int64_t *const balances) {
     EranosError_balances_result const result = EranosError_balances(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, balances);
 }
@@ -76,7 +74,7 @@ static inline bool eranosErrorBalances(EranosError const *const error, int64_t *
 /// @param error The error
 /// @param category Receives the category, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorCategory(EranosError const *const error, EranosText *const category) {
+[[nodiscard]] static inline bool eranosErrorCategory(EranosError const *const error, EranosText *const category) {
     eranosDetailClear(category);
     bool const present = EranosError_category(error, category).is_ok;
     eranosDetailFinish(category);
@@ -88,7 +86,7 @@ static inline bool eranosErrorCategory(EranosError const *const error, EranosTex
 /// @param error The error
 /// @param column Receives the column, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorColumn(EranosError const *const error, int64_t *const column) {
+[[nodiscard]] static inline bool eranosErrorColumn(EranosError const *const error, int64_t *const column) {
     EranosError_column_result const result = EranosError_column(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, column);
 }
@@ -99,7 +97,7 @@ static inline bool eranosErrorColumn(EranosError const *const error, int64_t *co
 /// @param error The error
 /// @param currency Receives the currency, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorCurrency(EranosError const *const error, EranosText *const currency) {
+[[nodiscard]] static inline bool eranosErrorCurrency(EranosError const *const error, EranosText *const currency) {
     eranosDetailClear(currency);
     bool const present = EranosError_currency(error, currency).is_ok;
     eranosDetailFinish(currency);
@@ -111,7 +109,7 @@ static inline bool eranosErrorCurrency(EranosError const *const error, EranosTex
 /// @param error The error
 /// @param existing Receives the existing, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorExisting(EranosError const *const error, EranosText *const existing) {
+[[nodiscard]] static inline bool eranosErrorExisting(EranosError const *const error, EranosText *const existing) {
     eranosDetailClear(existing);
     bool const present = EranosError_existing(error, existing).is_ok;
     eranosDetailFinish(existing);
@@ -121,15 +119,15 @@ static inline bool eranosErrorExisting(EranosError const *const error, EranosTex
 /// The amount being split. Present for the failures `AmountsDoNotAddUp`, `ItemsDoNotAddUp`.
 ///
 /// @param error The error
-/// @return A copy of what the failure holds, which the caller destroys, or NULL when it holds none
-static inline EranosMoney *eranosErrorExpectedAmount(EranosError const *const error) { return EranosError_expected_amount(error); }
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosMoney *eranosErrorExpectedAmount(EranosError const *const error) { return EranosError_expected_amount(error); }
 
 /// The expense's currency. Present for the failure `CurrencyMismatch`. Writes it, if present; absent otherwise.
 ///
 /// @param error The error
 /// @param expectedCurrency Receives the expected currency, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorExpectedCurrency(EranosError const *const error, EranosText *const expectedCurrency) {
+[[nodiscard]] static inline bool eranosErrorExpectedCurrency(EranosError const *const error, EranosText *const expectedCurrency) {
     eranosDetailClear(expectedCurrency);
     bool const present = EranosError_expected_currency(error, expectedCurrency).is_ok;
     eranosDetailFinish(expectedCurrency);
@@ -141,7 +139,7 @@ static inline bool eranosErrorExpectedCurrency(EranosError const *const error, E
 /// @param error The error
 /// @param expectedLength Receives the expected length, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorExpectedLength(EranosError const *const error, int64_t *const expectedLength) {
+[[nodiscard]] static inline bool eranosErrorExpectedLength(EranosError const *const error, int64_t *const expectedLength) {
     EranosError_expected_length_result const result = EranosError_expected_length(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, expectedLength);
 }
@@ -151,7 +149,7 @@ static inline bool eranosErrorExpectedLength(EranosError const *const error, int
 /// @param error The error
 /// @param expense Receives the expense, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorExpense(EranosError const *const error, EranosText *const expense) {
+[[nodiscard]] static inline bool eranosErrorExpense(EranosError const *const error, EranosText *const expense) {
     eranosDetailClear(expense);
     bool const present = EranosError_expense(error, expense).is_ok;
     eranosDetailFinish(expense);
@@ -161,15 +159,15 @@ static inline bool eranosErrorExpense(EranosError const *const error, EranosText
 /// The expenses that name the member. Present for the failure `MemberInUse`.
 ///
 /// @param error The error
-/// @return A copy of what the failure holds, which the caller destroys, or NULL when it holds none
-static inline EranosTextList *eranosErrorExpenses(EranosError const *const error) { return EranosError_expenses(error); }
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosTextList *eranosErrorExpenses(EranosError const *const error) { return EranosError_expenses(error); }
 
 /// The format the saved group names. Present for the failure `UnsupportedFormat`.
 ///
 /// @param error The error
 /// @param format Receives the format, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorFormat(EranosError const *const error, int64_t *const format) {
+[[nodiscard]] static inline bool eranosErrorFormat(EranosError const *const error, int64_t *const format) {
     EranosError_format_result const result = EranosError_format(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, format);
 }
@@ -179,7 +177,7 @@ static inline bool eranosErrorFormat(EranosError const *const error, int64_t *co
 /// @param error The error
 /// @param foundCurrency Receives the found currency, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorFoundCurrency(EranosError const *const error, EranosText *const foundCurrency) {
+[[nodiscard]] static inline bool eranosErrorFoundCurrency(EranosError const *const error, EranosText *const foundCurrency) {
     eranosDetailClear(foundCurrency);
     bool const present = EranosError_found_currency(error, foundCurrency).is_ok;
     eranosDetailFinish(foundCurrency);
@@ -191,7 +189,7 @@ static inline bool eranosErrorFoundCurrency(EranosError const *const error, Eran
 /// @param error The error
 /// @param foundLength Receives the found length, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorFoundLength(EranosError const *const error, int64_t *const foundLength) {
+[[nodiscard]] static inline bool eranosErrorFoundLength(EranosError const *const error, int64_t *const foundLength) {
     EranosError_found_length_result const result = EranosError_found_length(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, foundLength);
 }
@@ -201,7 +199,7 @@ static inline bool eranosErrorFoundLength(EranosError const *const error, int64_
 /// @param error The error
 /// @param left Receives the left, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorLeft(EranosError const *const error, EranosText *const left) {
+[[nodiscard]] static inline bool eranosErrorLeft(EranosError const *const error, EranosText *const left) {
     eranosDetailClear(left);
     bool const present = EranosError_left(error, left).is_ok;
     eranosDetailFinish(left);
@@ -213,7 +211,7 @@ static inline bool eranosErrorLeft(EranosError const *const error, EranosText *c
 /// @param error The error
 /// @param line Receives the line, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorLine(EranosError const *const error, int64_t *const line) {
+[[nodiscard]] static inline bool eranosErrorLine(EranosError const *const error, int64_t *const line) {
     EranosError_line_result const result = EranosError_line(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, line);
 }
@@ -224,7 +222,7 @@ static inline bool eranosErrorLine(EranosError const *const error, int64_t *cons
 /// @param error The error
 /// @param member Receives the member, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorMember(EranosError const *const error, EranosText *const member) {
+[[nodiscard]] static inline bool eranosErrorMember(EranosError const *const error, EranosText *const member) {
     eranosDetailClear(member);
     bool const present = EranosError_member(error, member).is_ok;
     eranosDetailFinish(member);
@@ -236,7 +234,7 @@ static inline bool eranosErrorMember(EranosError const *const error, EranosText 
 /// @param error The error
 /// @param reason Receives the reason, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorReason(EranosError const *const error, EranosIbanReason *const reason) {
+[[nodiscard]] static inline bool eranosErrorReason(EranosError const *const error, EranosIbanReason *const reason) {
     EranosError_reason_result const result = EranosError_reason(error);
     return eranosDetailPresentIbanReason(result.is_ok, &result.ok, reason);
 }
@@ -246,7 +244,7 @@ static inline bool eranosErrorReason(EranosError const *const error, EranosIbanR
 /// @param error The error
 /// @param right Receives the right, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorRight(EranosError const *const error, EranosText *const right) {
+[[nodiscard]] static inline bool eranosErrorRight(EranosError const *const error, EranosText *const right) {
     eranosDetailClear(right);
     bool const present = EranosError_right(error, right).is_ok;
     eranosDetailFinish(right);
@@ -258,7 +256,7 @@ static inline bool eranosErrorRight(EranosError const *const error, EranosText *
 /// @param error The error
 /// @param totalBasisPoints Receives the total basis points, when there is one
 /// @return Whether there is one
-static inline bool eranosErrorTotalBasisPoints(EranosError const *const error, int64_t *const totalBasisPoints) {
+[[nodiscard]] static inline bool eranosErrorTotalBasisPoints(EranosError const *const error, int64_t *const totalBasisPoints) {
     EranosError_total_basis_points_result const result = EranosError_total_basis_points(error);
     return eranosDetailPresentInt64(result.is_ok, &result.ok, totalBasisPoints);
 }
@@ -268,7 +266,7 @@ static inline bool eranosErrorTotalBasisPoints(EranosError const *const error, i
 /// @param error The error
 /// @param transfer Receives the transfer, replacing what it held
 /// @return Whether there is one
-static inline bool eranosErrorTransfer(EranosError const *const error, EranosText *const transfer) {
+[[nodiscard]] static inline bool eranosErrorTransfer(EranosError const *const error, EranosText *const transfer) {
     eranosDetailClear(transfer);
     bool const present = EranosError_transfer(error, transfer).is_ok;
     eranosDetailFinish(transfer);
@@ -278,14 +276,14 @@ static inline bool eranosErrorTransfer(EranosError const *const error, EranosTex
 /// The transfers that name the member. Present for the failure `MemberInUse`.
 ///
 /// @param error The error
-/// @return A copy of what the failure holds, which the caller destroys, or NULL when it holds none
-static inline EranosTextList *eranosErrorTransfers(EranosError const *const error) { return EranosError_transfers(error); }
+/// @return A copy of what the failure holds, which the caller destroys, or nullptr when it holds none
+[[nodiscard]] static inline EranosTextList *eranosErrorTransfers(EranosError const *const error) { return EranosError_transfers(error); }
 
-/// Destroys @p error; destroying NULL does nothing, as free() does.
+/// Destroys @p error; destroying nullptr does nothing, as free() does.
 ///
-/// @param error The error, which no call uses after this one, or NULL
+/// @param error The error, which no call uses after this one, or nullptr
 static inline void eranosErrorDestroy(EranosError *const error) {
-    if (NULL != error) {
+    if (nullptr != error) {
         EranosError_destroy(error);
     }
 }

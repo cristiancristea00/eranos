@@ -1,6 +1,6 @@
 {
     "name": "eranos",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Split and settle shared expenses: the eranos library for the browser and Node, through WebAssembly",
     "private": true,
     "type": "module",

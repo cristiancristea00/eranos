@@ -460,7 +460,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "eranos"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "eranos-account",
@@ -482,7 +482,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-account"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -494,7 +494,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-bindings"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-account",
@@ -515,7 +515,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-calendar"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -528,7 +528,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-capi"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "diplomat",
  "diplomat-runtime",
@@ -538,7 +538,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-category"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-contact"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -565,7 +565,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-core"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "proptest",
@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-expense"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-calendar",
@@ -591,7 +591,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-glue"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-glue-macros"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos-glue",
  "syn 3.0.6",
@@ -608,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-group"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-lock",
  "eranos",
@@ -630,7 +630,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-kmp"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos-bindings",
  "eranos-glue-macros",
@@ -639,7 +639,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-ledger"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -648,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-member"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-account",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-money"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-settlement"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-core",
@@ -686,7 +686,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-transfer"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos",
  "eranos-calendar",
@@ -701,7 +701,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-uniffi"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos-bindings",
  "eranos-glue-macros",
@@ -710,7 +710,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-uniffi-bindgen"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "uniffi 0.32.2",
  "uniffi-bindgen-java",
@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "eranos-web"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos-bindings",
  "eranos-glue-macros",
@@ -2702,7 +2702,7 @@ checksum = "2f45bb2c13fec6a6cb4c0f76a7e94839e110a14ec803ec2940777a94c347bc52"
 
 [[package]]
 name = "xtask"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "eranos-glue",
  "serde",

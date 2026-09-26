@@ -193,7 +193,7 @@ test in `crates/xtask` checks every root.
 - **The constant comes first in a comparison.** When one side of a
   comparison is a literal, a null value, or a named constant and the
   other is not, the constant is written first, and an ordering comparison
-  mirrors its operator: `0 == count`, `NULL != value`, `0 < amount`,
+  mirrors its operator: `0 == count`, `nullptr != value`, `0 < amount`,
   `MAX_SCALE < scale`, `CategoryId::UNCATEGORISED != id`. Two constants,
   or two sides that are not constants, keep their order. The rule covers
   every language, tests, examples, and benchmarks included. ESLint's
@@ -388,7 +388,7 @@ over the generated code: `bindings/swift` for Apple platforms,
 `bindings/kotlin` for Android and the JVM, `bindings/java` for Java,
 `bindings/typescript` for browsers and Node, `bindings/kmp`, which
 compiles the Kotlin layer for Kotlin Multiplatform, and `bindings/c` and
-`bindings/cpp`, header-only layers for C11 and C++17
+`bindings/cpp`, header-only layers for C23 and C++17
 ([docs/BINDINGS.md](docs/BINDINGS.md)). A `Group` owns its
 members, categories, expenses, and transfers in ID-keyed maps. Each entry
 is resolved into group-currency shares when it is added or replaced

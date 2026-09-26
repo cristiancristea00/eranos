@@ -60,7 +60,7 @@ pub(crate) const C_PACKAGE: Package = Package {
     directory: "bindings/c",
     language: "c",
     compiler: "clang",
-    standard: "-std=c11",
+    standard: "-std=c23",
     tests: "tests/tests.c",
     headers: &[
         "include/eranos.h",

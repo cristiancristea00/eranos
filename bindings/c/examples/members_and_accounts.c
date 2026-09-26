@@ -4,7 +4,6 @@
 #include "eranos.h"
 #include "report.h"
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +21,7 @@ typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
 /// The account @p name, paid to @p details; destroys @p details.
 static EranosAccount *accountOf(EranosAccountDetails *const details, char const *const name) {
-    EranosAccount *account = NULL;
+    EranosAccount *account = nullptr;
     must(eranosAccountCreate(details, name, &account));
     eranosAccountDetailsDestroy(details);
     return account;
@@ -33,7 +32,7 @@ static Line accountsOf(EranosMember const *const member) {
     EranosAccountList *const accounts = eranosMemberAccounts(member);
     EranosText *const name = eranosTextCreate();
     EranosText *const text = eranosTextCreate();
-    Cell cell = {.lines = 0, .text = {{0}}};
+    Cell cell = {.lines = 0, .text = {}};
     for (size_t index = 0; eranosAccountListLength(accounts) > index; ++index) {
         EranosAccount *const account = eranosAccountListGet(accounts, index);
         eranosAccountName(account, name);
@@ -66,7 +65,7 @@ static Line fullName(EranosMember const *const member) {
 /// The phone number of @p member, grouped for reading, or nothing when there is none.
 static Line phoneOf(EranosMember const *const member) {
     EranosText *const text = eranosTextCreate();
-    Line line = {{0}};
+    Line line = {};
     if (eranosMemberPhone(member, text)) {
         EranosText *const international = eranosTextCreate();
         must(eranosPhoneNumberInternational(eranosTextData(text), international));
@@ -87,7 +86,7 @@ static Line emailOf(EranosMember const *const member) {
 
 /// Prints every member of @p group with their contact and account details.
 static void printMembers(EranosGroup const *const group) {
-    EranosMemberList *members = NULL;
+    EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
     Table *const table = tableCreate(4, (char const *const[]){"Member", "Email", "Phone", "Accounts"}, 4);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -101,9 +100,9 @@ static void printMembers(EranosGroup const *const group) {
 
 /// Prints whether each member of @p group is active or archived, what they consumed, and their balance.
 static void printBalances(EranosGroup const *const group) {
-    EranosSummary *summary = NULL;
+    EranosSummary *summary = nullptr;
     must(eranosGroupSummary(group, &summary));
-    EranosMemberList *members = NULL;
+    EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
     Table *const table = tableCreate(4, (char const *const[]){"Member", "Status", "Consumed", "Balance"}, 2);
     EranosText *const text = eranosTextCreate();
@@ -113,7 +112,7 @@ static void printBalances(EranosGroup const *const group) {
         bool archived = false;
         must(eranosGroupIsArchived(group, eranosTextData(text), &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
-        check(NULL != found, "every member has totals");
+        check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
         tableAdd(table, (Line const[]){
                             textLine(text),
@@ -133,11 +132,11 @@ static void printBalances(EranosGroup const *const group) {
 /// Adds Ana, with every detail, and Bob, with a first name only, to @p group, and prints them.
 static Flatmates members(EranosGroup *const group) {
     section("1. Members");
-    EranosMember *member = NULL;
+    EranosMember *member = nullptr;
     must(eranosMemberCreate("Ana", &member));
-    EranosAccountDetails *iban = NULL;
+    EranosAccountDetails *iban = nullptr;
     must(eranosAccountDetailsCreateIban("ro49 aaaa 1b31 0075 9384 0000", &iban));
-    EranosAccountDetails *username = NULL;
+    EranosAccountDetails *username = nullptr;
     must(eranosAccountDetailsCreateUsername("@ana", &username));
     EranosAccount *const bank = accountOf(iban, "ING");
     EranosAccount *const card = accountOf(username, "Revolut");
@@ -168,7 +167,7 @@ static Flatmates members(EranosGroup *const group) {
 static void addValidated(Table *const table, char const *const kind, Validation const validation, char const *const input) {
     EranosText *const text = eranosTextCreate();
     EranosError *const refused = validation(input, text);
-    bool const valid = NULL == refused;
+    bool const valid = nullptr == refused;
     Line const message = messageLine(refused);
     Line const result = valid ? lineOf("valid: %s", eranosTextData(text)) : lineOf("refused: %s", message.text);
     eranosTextDestroy(text);
@@ -226,24 +225,24 @@ static void movingOut(EranosGroup *const group, Id const ana, Id const bob) {
     printFormatted("October's utilities cannot include him:\n"
                    "  error: %s",
                    refusedMessage.text);
-    EranosMember *removed = NULL;
+    EranosMember *removed = nullptr;
     EranosError *const removal = eranosGroupRemoveMember(group, bob.text, &removed);
-    check(isFailure(removal, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_MEMBER_IN_USE) && NULL == removed, "the referenced member stays");
+    check(isFailure(removal, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_MEMBER_IN_USE) && nullptr == removed, "the referenced member stays");
     Line const removalMessage = messageLine(removal);
     printFormatted("Nor can he be removed while the rent references him:\n"
                    "  error: %s",
                    removalMessage.text);
 
-    EranosSummary *summary = NULL;
+    EranosSummary *summary = nullptr;
     must(eranosGroupSummary(group, &summary));
     EranosMemberSummary *const totals = totalsOf(summary, bob.text);
-    check(NULL != totals, "Bob has totals");
+    check(nullptr != totals, "Bob has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
     EranosMoney *const owed = eranosBalanceAmount(balance);
-    check(ERANOS_BALANCE_KIND_OWES == eranosBalanceKind(balance) && 45000 == eranosMoneyMinorUnits(owed), "Bob owes 450.00 EUR");
-    EranosExpense *expense = NULL;
+    check(ERANOS_BALANCE_KIND_OWES == eranosBalanceKind(balance) && 45'000 == eranosMoneyMinorUnits(owed), "Bob owes 450.00 EUR");
+    EranosExpense *expense = nullptr;
     must(eranosGroupExpense(group, rent.text, &expense));
-    check(NULL != expense, "the group keeps the rent");
+    check(nullptr != expense, "the group keeps the rent");
     eranosExpenseDestroy(expense);
     eranosMoneyDestroy(owed);
     eranosBalanceDestroy(balance);
@@ -252,9 +251,9 @@ static void movingOut(EranosGroup *const group, Id const ana, Id const bob) {
 }
 
 int main(void) {
-    EranosNewGroup *details = NULL;
+    EranosNewGroup *details = nullptr;
     must(eranosNewGroupCreate("EUR", "Flat 4B", &details));
-    EranosGroup *group = NULL;
+    EranosGroup *group = nullptr;
     must(eranosGroupCreate(details, &group));
     eranosNewGroupDestroy(details);
     printLine("Flat 4B: members and their accounts\n"
