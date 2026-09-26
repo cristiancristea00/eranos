@@ -564,8 +564,8 @@ void aSavedGroupLoadsAsItWasSaved(Check &check) {
     check.that(isFailure(broken, ErrorKind::INVALID_JSON, std::nullopt) && 1 == broken.value().line() && 1 == broken.value().column(),
                "where the text stops being JSON");
     auto tampered = json;
-    auto const format = tampered.find("\"format\":2");
-    tampered.replace(format, std::string_view("\"format\":2").size(), "\"format\":26");
+    auto const format = tampered.find("\"format\": 2");
+    tampered.replace(format, std::string_view("\"format\": 2").size(), "\"format\": 26");
     auto const newer = thrown([&] { return Group::load(tampered); });
     check.that(isFailure(newer, ErrorKind::GROUP, Failure::GROUP_UNSUPPORTED_FORMAT) && 26 == newer.value().format(),
                "a format this release cannot read");

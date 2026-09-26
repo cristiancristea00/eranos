@@ -1749,8 +1749,8 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosText *const json = eranosTextCreate();
     eranosErrorDestroy(eranosGroupSave(flat.group, json));
     char tampered[8192] = {0};
-    char const *const format = strstr(eranosTextData(json), "\"format\":2");
-    int const before = NULL == format ? 0 : (int)(format - eranosTextData(json)) + (int)strlen("\"format\":2");
+    char const *const format = strstr(eranosTextData(json), "\"format\": 2");
+    int const before = NULL == format ? 0 : (int)(format - eranosTextData(json)) + (int)strlen("\"format\": 2");
     (void)snprintf(tampered, sizeof tampered, "%.*s6%s", before, eranosTextData(json), eranosTextData(json) + before);
     EranosGroup *newer = NULL;
     EranosError *const unsupported = eranosGroupLoad(tampered, &newer);

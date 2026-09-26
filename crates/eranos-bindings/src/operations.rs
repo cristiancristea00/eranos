@@ -305,11 +305,13 @@ pub(crate) fn set_language(group: &mut Group, language: Option<&str>) -> Result<
 
 // --- The saved form ----------------------------------------------------------
 
-/// The group in its saved form, as JSON.
+/// The group in its saved form, as JSON indented by two spaces, one field to
+/// a line: the text `serde_json::to_string_pretty` writes, which the Rust
+/// examples print.
 pub(crate) fn save(group: &Group) -> String {
     // A group serialises to strings, numbers, arrays, and objects with
     // string keys only, which cannot fail, so the fallback never applies.
-    serde_json::to_string(group).unwrap_or_default()
+    serde_json::to_string_pretty(group).unwrap_or_default()
 }
 
 #[cfg(test)]
