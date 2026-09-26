@@ -1,15 +1,15 @@
 //! Expenses, how they divide, their items, and their tips, as the bindings
 //! carry them.
 
-use eranos::error::{ExpenseError, MoneyError};
-use eranos::{CategoryId, ExpenseId, MemberId};
+use eranos::error::ExpenseError;
+use eranos::{CategoryId, MemberId};
 use eranos::{expense as library, money};
 use eranos_expense::{FromExpenseSplit, FromSplit, FromTipDistribution, FromTipValue};
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::money::{Cost, Money};
-use crate::{EranosError, identifier};
+use crate::money::{Cost, Money, parts, percentage};
+use crate::{EranosError, check_new, identifier};
 
 /// An exact amount one member pays.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -100,11 +100,9 @@ impl Split {
                 shares
                     .iter()
                     .map(|share| {
-                        let hundredths = u32::try_from(share.hundredths)
-                            .map_err(|_| MoneyError::InvalidParts)?;
                         Ok(library::MemberParts::new(
                             identifier(&share.member)?,
-                            money::Parts::from_hundredths(hundredths)?,
+                            parts(share.hundredths)?,
                         ))
                     })
                     .collect::<Result<Vec<_>, EranosError>>()?,
@@ -113,11 +111,9 @@ impl Split {
                 shares
                     .iter()
                     .map(|share| {
-                        let basis_points = u32::try_from(share.basis_points)
-                            .map_err(|_| MoneyError::InvalidPercentage)?;
                         Ok(library::MemberPercentage::new(
                             identifier(&share.member)?,
-                            money::Percentage::from_basis_points(basis_points),
+                            percentage(share.basis_points)?,
                         ))
                     })
                     .collect::<Result<Vec<_>, EranosError>>()?,
@@ -337,9 +333,7 @@ impl Tip {
         let tip = match &self.value {
             TipValue::Fixed { amount } => library::Tip::fixed(amount.to_library()?),
             TipValue::Percentage { basis_points } => {
-                let basis_points =
-                    u32::try_from(*basis_points).map_err(|_| MoneyError::InvalidPercentage)?;
-                library::Tip::percentage(money::Percentage::from_basis_points(basis_points))
+                library::Tip::percentage(percentage(*basis_points)?)
             }
         };
         Ok(tip.distributed(self.distribution.to_library()))
@@ -399,9 +393,7 @@ impl Expense {
     /// the errors of the fields' conversions, and those of
     /// [`ExpenseBuilder::build`](library::ExpenseBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Expense, EranosError> {
-        if self.id.is_some() {
-            return Err(EranosError::identifier_given());
-        }
+        check_new(self.id.as_deref())?;
         let (cost, date, payers) = (
             self.cost.to_library()?,
             self.date.to_library()?,
@@ -424,21 +416,6 @@ impl Expense {
             ),
         };
         Ok(self.with_optional_fields(builder)?.build()?)
-    }
-
-    /// The identifier of a record to replace.
-    ///
-    /// # Errors
-    ///
-    /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
-    /// identifier.
-    pub(crate) fn id_to_replace(&self) -> Result<ExpenseId, EranosError> {
-        identifier(
-            self.id
-                .as_deref()
-                .ok_or_else(EranosError::identifier_missing)?,
-        )
     }
 
     /// The library's expense that replaces `existing`, keeping its

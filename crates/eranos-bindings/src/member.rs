@@ -3,10 +3,9 @@
 
 use eranos::category as categories;
 use eranos::member as library;
-use eranos::{CategoryId, MemberId};
 use eranos_account::FromAccountDetails;
 
-use crate::{EranosError, identifier};
+use crate::{EranosError, check_new};
 
 /// Where a member can be paid, without its label.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -134,25 +133,8 @@ impl Member {
     /// [`MemberFailure::EmptyFirstName`](crate::MemberFailure::EmptyFirstName)
     /// for a blank first name.
     pub(crate) fn to_new(&self) -> Result<library::Member, EranosError> {
-        if self.id.is_some() {
-            return Err(EranosError::identifier_given());
-        }
+        check_new(self.id.as_deref())?;
         self.filled(library::Member::builder(self.first_name.clone()))
-    }
-
-    /// The identifier of a record to replace.
-    ///
-    /// # Errors
-    ///
-    /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
-    /// identifier.
-    pub(crate) fn id_to_replace(&self) -> Result<MemberId, EranosError> {
-        identifier(
-            self.id
-                .as_deref()
-                .ok_or_else(EranosError::identifier_missing)?,
-        )
     }
 
     /// The library's member that replaces `existing`, keeping their
@@ -223,25 +205,8 @@ impl Category {
     /// [`CategoryFailure::EmptyName`](crate::CategoryFailure::EmptyName) for a
     /// blank name.
     pub(crate) fn to_new(&self) -> Result<categories::Category, EranosError> {
-        if self.id.is_some() {
-            return Err(EranosError::identifier_given());
-        }
+        check_new(self.id.as_deref())?;
         Ok(categories::Category::new(self.name.clone())?)
-    }
-
-    /// The identifier of a record to rename.
-    ///
-    /// # Errors
-    ///
-    /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
-    /// identifier.
-    pub(crate) fn id_to_replace(&self) -> Result<CategoryId, EranosError> {
-        identifier(
-            self.id
-                .as_deref()
-                .ok_or_else(EranosError::identifier_missing)?,
-        )
     }
 
     /// `existing` renamed to the record's name, keeping its identifier.

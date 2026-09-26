@@ -81,5 +81,29 @@ fn identifier<Id: FromStr<Err = IdError>>(text: &str) -> Result<Id, EranosError>
     Ok(text.parse()?)
 }
 
+/// Refuses a record to add whose identifier `id` is present: the group
+/// gives a new entry its own.
+///
+/// # Errors
+///
+/// [`EranosError::IdentifierGiven`] when `id` is present.
+fn check_new(id: Option<&str>) -> Result<(), EranosError> {
+    if id.is_some() {
+        return Err(EranosError::identifier_given());
+    }
+    Ok(())
+}
+
+/// The identifier `id` of a record to replace, which names the entry it
+/// replaces.
+///
+/// # Errors
+///
+/// [`EranosError::IdentifierMissing`] when `id` is absent, and
+/// [`IdFailure::InvalidId`] for text that is not a UUID.
+fn identifier_to_replace<Id: FromStr<Err = IdError>>(id: Option<&str>) -> Result<Id, EranosError> {
+    identifier(id.ok_or_else(EranosError::identifier_missing)?)
+}
+
 #[cfg(test)]
 mod tests;

@@ -1,10 +1,12 @@
 //! Members, their accounts, and categories cross the bindings as records. A
 //! record converted back and forth would change a detail, a detail the
-//! library refuses would reach it, and an entry to add or to replace would
-//! take its identifier from outside the group.
+//! library refuses would reach it, and an entry to add would take its
+//! identifier from outside the group.
+
+use eranos::MemberId;
 
 use super::*;
-use crate::{AccountFailure, CategoryFailure, ContactFailure, IdFailure, MemberFailure};
+use crate::{AccountFailure, CategoryFailure, ContactFailure, MemberFailure};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -209,31 +211,14 @@ fn a_member_refuses_every_detail_that_does_not_convert() {
 }
 
 /// An entry to add that carried an identifier would take it from outside
-/// the group, and one to replace without one could not name its member.
+/// the group.
 #[test]
-fn a_member_to_add_has_no_identifier_and_one_to_replace_has_one() {
-    let id = MemberId::from_bytes([1; 16]);
+fn a_member_to_add_carries_no_identifier() {
     let named = Member {
-        id: Some(id.to_string()),
+        id: Some(MemberId::from_bytes([1; 16]).to_string()),
         ..ana()
     };
     assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
-    assert_eq!(named.id_to_replace(), Ok(id));
-    assert_eq!(
-        ana().id_to_replace(),
-        Err(EranosError::identifier_missing())
-    );
-    let unreadable = Member {
-        id: Some("nobody".to_owned()),
-        ..ana()
-    };
-    assert!(matches!(
-        unreadable.id_to_replace(),
-        Err(EranosError::Id {
-            failure: IdFailure::InvalidId,
-            ..
-        })
-    ));
 }
 
 /// A replacement would lose the stored member's identifier, or keep a
@@ -267,14 +252,13 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
         Category::from_library(&stored),
         Category {
             id: id.clone(),
-            ..food.clone()
+            ..food
         }
     );
     let renamed = Category {
         id: id.clone(),
         name: "Groceries".to_owned(),
     };
-    assert_eq!(renamed.id_to_replace(), Ok(stored.id()));
     assert_eq!(
         renamed
             .replacing(&stored)
@@ -285,19 +269,6 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
         renamed.to_new().unwrap_err(),
         EranosError::identifier_given()
     );
-    assert_eq!(food.id_to_replace(), Err(EranosError::identifier_missing()));
-
-    let unreadable = Category {
-        id: Some("nobody".to_owned()),
-        ..food
-    };
-    assert!(matches!(
-        unreadable.id_to_replace(),
-        Err(EranosError::Id {
-            failure: IdFailure::InvalidId,
-            ..
-        })
-    ));
     let blank = Category {
         id: None,
         name: " ".to_owned(),

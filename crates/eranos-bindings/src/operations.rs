@@ -11,7 +11,7 @@ use crate::member::{Category, Member};
 use crate::money::{CurrencyRate, Money, currency};
 use crate::settlement::{Settlement, SettlementStrategy};
 use crate::transfer::Transfer;
-use crate::{EranosError, identifier};
+use crate::{EranosError, identifier, identifier_to_replace};
 
 // --- Identifier --------------------------------------------------------------
 
@@ -43,7 +43,7 @@ pub(crate) fn replace_category(
     group: &mut Group,
     category: &Category,
 ) -> Result<Category, EranosError> {
-    let id = category.id_to_replace()?;
+    let id = identifier_to_replace(category.id.as_deref())?;
     let existing = group.category(id).ok_or(GroupError::UnknownCategory(id))?;
     let replacement = category.replacing(existing)?;
     Ok(Category::from_library(
@@ -129,7 +129,7 @@ pub(crate) fn replace_expense(
     group: &mut Group,
     expense: &Expense,
 ) -> Result<Expense, EranosError> {
-    let id = expense.id_to_replace()?;
+    let id = identifier_to_replace(expense.id.as_deref())?;
     let existing = group.expense(id).ok_or(GroupError::UnknownExpense(id))?;
     let replacement = expense.replacing(existing)?;
     Ok(Expense::from_library(&group.replace_expense(replacement)?))
@@ -178,7 +178,7 @@ pub(crate) fn add_member(group: &mut Group, member: &Member) -> Result<String, E
 
 /// Replaces the member `member` names, returning them as they were.
 pub(crate) fn replace_member(group: &mut Group, member: &Member) -> Result<Member, EranosError> {
-    let id = member.id_to_replace()?;
+    let id = identifier_to_replace(member.id.as_deref())?;
     let existing = group.member(id).ok_or(GroupError::UnknownMember(id))?;
     let replacement = member.replacing(existing)?;
     // The group refuses a replacement only for a member it does not hold,
@@ -261,7 +261,7 @@ pub(crate) fn replace_transfer(
     group: &mut Group,
     transfer: &Transfer,
 ) -> Result<Transfer, EranosError> {
-    let id = transfer.id_to_replace()?;
+    let id = identifier_to_replace(transfer.id.as_deref())?;
     let existing = group.transfer(id).ok_or(GroupError::UnknownTransfer(id))?;
     let replacement = transfer.replacing(existing)?;
     Ok(Transfer::from_library(

@@ -1,7 +1,7 @@
 //! Transfers cross the bindings as records. A record converted back and
 //! forth would change who paid whom or when, a field the library refuses
-//! would reach it, and a transfer to add or to replace would take its
-//! identifier from outside the group.
+//! would reach it, and a transfer to add would take its identifier from
+//! outside the group.
 
 use eranos::MemberId;
 
@@ -217,14 +217,4 @@ fn a_replacement_keeps_the_identifier_and_takes_every_field() {
     }
     let named = Transfer { id, ..payment() };
     assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
-    assert_eq!(named.id_to_replace(), Ok(stored.id()));
-    assert_eq!(
-        payment().id_to_replace(),
-        Err(EranosError::identifier_missing())
-    );
-    let unreadable = Transfer {
-        id: Some("nobody".to_owned()),
-        ..payment()
-    };
-    assert!(invalid_id(&unreadable.id_to_replace().unwrap_err()));
 }

@@ -13,7 +13,7 @@ use crate::EranosError;
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::ledger::Balance;
-use crate::money::{CurrencyDetails, Money, currency, exchange_rate};
+use crate::money::{CurrencyDetails, Money, currency, exchange_rate, parts, percentage};
 
 // --- Money -------------------------------------------------------------------
 
@@ -108,8 +108,7 @@ pub fn percentage_parse(text: &str) -> Result<i32, EranosError> {
 /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
 /// for a negative number.
 pub fn percentage_format(basis_points: i32) -> Result<String, EranosError> {
-    let basis_points = u32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?;
-    Ok(library::Percentage::from_basis_points(basis_points).to_string())
+    Ok(percentage(basis_points)?.to_string())
 }
 
 /// The parts written `text`, in hundredths: "0.5" is 50.
@@ -129,8 +128,7 @@ pub fn parts_parse(text: &str) -> Result<i32, EranosError> {
 /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for a
 /// number that is not positive.
 pub fn parts_format(hundredths: i32) -> Result<String, EranosError> {
-    let hundredths = u32::try_from(hundredths).map_err(|_| MoneyError::InvalidParts)?;
-    Ok(library::Parts::from_hundredths(hundredths)?.to_string())
+    Ok(parts(hundredths)?.to_string())
 }
 
 // --- Dates and times ---------------------------------------------------------

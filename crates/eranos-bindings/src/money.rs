@@ -1,6 +1,7 @@
 //! Amounts, costs, exchange rates, and currencies, as the bindings carry
 //! them.
 
+use eranos::error::MoneyError;
 use eranos::money as library;
 use eranos_money::FromCost;
 
@@ -157,6 +158,28 @@ pub(crate) fn currency(code: &str) -> Result<library::Currency, EranosError> {
 /// for text that is not a positive decimal with at most 18 decimal places.
 pub(crate) fn exchange_rate(text: &str) -> Result<library::ExchangeRate, EranosError> {
     Ok(library::ExchangeRate::parse(text)?)
+}
+
+/// The percentage of `basis_points`.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
+/// for a negative number.
+pub(crate) fn percentage(basis_points: i32) -> Result<library::Percentage, EranosError> {
+    let basis_points = u32::try_from(basis_points).map_err(|_| MoneyError::InvalidPercentage)?;
+    Ok(library::Percentage::from_basis_points(basis_points))
+}
+
+/// The parts of `hundredths`.
+///
+/// # Errors
+///
+/// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for a
+/// number that is not positive.
+pub(crate) fn parts(hundredths: i32) -> Result<library::Parts, EranosError> {
+    let hundredths = u32::try_from(hundredths).map_err(|_| MoneyError::InvalidParts)?;
+    Ok(library::Parts::from_hundredths(hundredths)?)
 }
 
 #[cfg(test)]

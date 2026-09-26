@@ -1,12 +1,11 @@
 //! Transfers between members, as the bindings carry them.
 
-use eranos::TransferId;
 use eranos::transfer as library;
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::money::Cost;
-use crate::{EranosError, identifier};
+use crate::{EranosError, check_new, identifier};
 
 /// Money one member paid another, such as a repayment.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,9 +50,7 @@ impl Transfer {
     /// the errors of the fields' conversions, and those of
     /// [`TransferBuilder::build`](library::TransferBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Transfer, EranosError> {
-        if self.id.is_some() {
-            return Err(EranosError::identifier_given());
-        }
+        check_new(self.id.as_deref())?;
         let builder = library::Transfer::builder(
             self.cost.to_library()?,
             self.date.to_library()?,
@@ -61,21 +58,6 @@ impl Transfer {
             identifier(&self.to)?,
         );
         Ok(self.with_optional_fields(builder)?.build()?)
-    }
-
-    /// The identifier of a record to replace.
-    ///
-    /// # Errors
-    ///
-    /// [`EranosError::IdentifierMissing`] when the record has none, and
-    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) when it is not an
-    /// identifier.
-    pub(crate) fn id_to_replace(&self) -> Result<TransferId, EranosError> {
-        identifier(
-            self.id
-                .as_deref()
-                .ok_or_else(EranosError::identifier_missing)?,
-        )
     }
 
     /// The library's transfer that replaces `existing`, keeping its

@@ -1,8 +1,10 @@
 //! Expenses cross the bindings as records. A record converted back and forth
 //! would change how its cost divides; a split, an item, a tip, or an expense
 //! with a value the library refuses, or a number too large for its field,
-//! would reach the library; and an entry to add or to replace would take its
-//! identifier from outside the group.
+//! would reach the library; and an entry to add would take its identifier
+//! from outside the group.
+
+use eranos::ExpenseId;
 
 use super::*;
 use crate::{CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure};
@@ -551,25 +553,14 @@ fn an_expense_to_add_converts_both_ways() {
 }
 
 /// An entry to add that carried an identifier would take it from outside
-/// the group, and one to replace without one could not name its entry.
+/// the group.
 #[test]
-fn an_expense_to_add_has_no_identifier_and_one_to_replace_has_one() {
-    let id = ExpenseId::from_bytes([4; 16]);
+fn an_expense_to_add_carries_no_identifier() {
     let named = Expense {
-        id: Some(id.to_string()),
+        id: Some(ExpenseId::from_bytes([4; 16]).to_string()),
         ..dinner()
     };
     assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
-    assert_eq!(named.id_to_replace(), Ok(id));
-    assert_eq!(
-        dinner().id_to_replace(),
-        Err(EranosError::identifier_missing())
-    );
-    let unreadable = Expense {
-        id: Some("nobody".to_owned()),
-        ..dinner()
-    };
-    assert!(invalid_id(&unreadable.id_to_replace().unwrap_err()));
 }
 
 /// A replacement would lose the stored expense's identifier, or keep a
