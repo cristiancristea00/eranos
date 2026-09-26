@@ -2,7 +2,8 @@
 //! beside a link to the host library it loads, the package's environment as
 //! its lock file pins it, and the package's format, lint, type checks, tests
 //! and their coverage, and documentation; and a copy of the package over
-//! another build of the library, whose tests the coverage runs.
+//! another build of the library, whose tests the coverage runs and whose
+//! ports the ports gate runs.
 
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::path::{Path, PathBuf};
@@ -130,7 +131,7 @@ pub(crate) fn checks() -> Vec<Action> {
     .collect()
 }
 
-/// Where the Python tests run on another build of the library, in
+/// Where the Python tests and ports run on another build of the library, in
 /// `metadata`'s target directory: a copy of the package, since the
 /// generated module loads the library from its own directory.
 #[must_use]
@@ -138,19 +139,24 @@ pub(crate) fn copied_package(metadata: &Metadata) -> PathBuf {
     PathBuf::from(format!("{}/python", metadata.target_directory))
 }
 
-/// What is cleared before the package is copied: the copy's layer and its
-/// tests, so a file the package no longer has leaves nothing behind; the
-/// copy's environment stays, so a later run installs only what changed.
+/// What is cleared before the package is copied: the copy's layer, its
+/// tests, and its ports, so a file the package no longer has leaves nothing
+/// behind; the copy's environment stays, so a later run installs only what
+/// changed.
 #[must_use]
 pub(crate) fn copied_directories(metadata: &Metadata) -> Vec<PathBuf> {
     let package = copied_package(metadata);
-    vec![package.join("src"), package.join("tests")]
+    vec![
+        package.join("src"),
+        package.join("tests"),
+        package.join("examples"),
+    ]
 }
 
-/// The steps that copy the layer, its tests, and the project's settings and
-/// lock file into the copy, then the module generated from `metadata`'s
-/// library and a link to that library beside it, and install the copy's
-/// environment as the lock file pins it.
+/// The steps that copy the layer, its tests, its ports, and the project's
+/// settings and lock file into the copy, then the module generated from
+/// `metadata`'s library and a link to that library beside it, and install
+/// the copy's environment as the lock file pins it.
 #[must_use]
 pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
     let package = copied_package(metadata).to_string_lossy().into_owned();
@@ -160,6 +166,7 @@ pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
             &[
                 "-R",
                 &format!("{PROJECT}/.python-version"),
+                &format!("{PROJECT}/examples"),
                 &format!("{PROJECT}/pyproject.toml"),
                 &format!("{PROJECT}/src"),
                 &format!("{PROJECT}/tests"),
@@ -181,6 +188,28 @@ pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
 pub(crate) fn copy_tests(metadata: &Metadata) -> Step {
     Step::new(&["run", "--locked", "pytest"], "the Python tests", "uv")
         .in_directory(&copied_package(metadata).to_string_lossy())
+}
+
+/// The step that runs the port of `example` in the copy in `sequential`'s
+/// target directory, over the library whose identifiers count up: the
+/// module of the port run with the layer on the path, and its output in
+/// UTF-8 whatever the locale, which the tables' borders need.
+#[must_use]
+pub(crate) fn port(example: &str, sequential: &Metadata) -> Step {
+    Step::new(
+        &[
+            "run",
+            "--locked",
+            "python",
+            "-m",
+            &format!("examples.{example}"),
+        ],
+        &format!("the Python port of {example}"),
+        "uv",
+    )
+    .with_variable("PYTHONPATH", "src")
+    .with_variable("PYTHONUTF8", "1")
+    .in_directory(&copied_package(sequential).to_string_lossy())
 }
 
 /// The step that runs `command` with the tools of the locked environment,

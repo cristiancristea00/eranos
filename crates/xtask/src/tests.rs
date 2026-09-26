@@ -192,9 +192,10 @@ fn words(line: &[&str]) -> Vec<String> {
 /// The ports' steps: of the two examples of eranos that [`METADATA`] lists,
 /// the Swift ports only where `apple`, the Kotlin ports over each package's
 /// bindings, the Java ports, the TypeScript ports in their copy of the
-/// package, and the C and the C++ ports, each language's built before any
-/// runs; the recorder answers the programs' directory with [`PROGRAMS`],
-/// and an example of another package has no port.
+/// package, the C and the C++ ports, each language's built before any runs,
+/// and the Python ports in their copy of the package; the recorder answers
+/// the programs' directory with [`PROGRAMS`], and an example of another
+/// package has no port.
 fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     let sequential = metadata.inner(ports::DIRECTORY);
     let mut steps = vec![
@@ -238,6 +239,8 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
             ["quickstart", "persistence"].map(|example| capi::port(package, example, &sequential)),
         );
     }
+    steps.extend(python::copy(&sequential));
+    steps.extend(["quickstart", "persistence"].map(|example| python::port(example, &sequential)));
     steps
 }
 

@@ -164,9 +164,12 @@ It runs these, in this order, and stops at the first that fails:
     run on Node through tsx; and the C and C++ ports built in `bindings/c`
     and `bindings/cpp` as their tests are, under the sanitizers, on
     eranos-capi's library, into `target/sequential/c` and
-    `target/sequential/cpp`, each run with `LeakSanitizer`; every report is
-    compared byte for byte with its example's from gate 9, and the first
-    line that differs stops the gates
+    `target/sequential/cpp`, each run with `LeakSanitizer`; and the Python
+    package copied into `target/sequential/python`, over the module
+    generated from the first library and a link to it, and every Python port
+    run as a module through `uv run --locked`, with `PYTHONUTF8=1`; every
+    report is compared byte for byte with its example's from gate 9, and the
+    first line that differs stops the gates
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a

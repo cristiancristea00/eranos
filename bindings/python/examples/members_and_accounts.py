@@ -1,0 +1,239 @@
+"""
+Print a flat's members with their contact details and accounts, what validation accepts of each, and a flatmate who moves out.
+
+The port of the Rust example ``members_and_accounts``, which prints the same report.
+
+"""
+
+from collections.abc import Callable
+from typing import assert_never
+
+from eranos import (
+    Account,
+    CalendarDate,
+    Currency,
+    Email,
+    EqualSplit,
+    EranosError,
+    Expense,
+    Group,
+    GroupError,
+    Iban,
+    IbanAccountDetails,
+    LocalCost,
+    Member,
+    MemberId,
+    Money,
+    OwesBalance,
+    PhoneNumber,
+    Username,
+    UsernameAccountDetails,
+    WholeExpenseSplit,
+)
+from examples.report import print_lines, print_table, refusal, section, title, totals
+
+
+def describe(account: Account) -> str:
+    """
+    Write an account with its label and its details.
+
+    Args:
+        account: The account.
+
+    Returns:
+        The text, such as ``"ING: RO49AAAA1B31007593840000"``.
+
+    """
+    match account.details:
+        case IbanAccountDetails(iban=iban):
+            details = str(iban)
+        case UsernameAccountDetails(username=username):
+            details = str(username)
+        case _:
+            assert_never(account.details)
+    return f'{account.name}: {details}'
+
+
+def checked(text: str, kind: str, parse: Callable[[str], object]) -> tuple[str, str, str]:
+    """
+    Check text as kind with parse: a row of the table of what validation accepts.
+
+    Args:
+        text: The text to check.
+        kind: What the text is checked as, such as ``"IBAN"``.
+        parse: What checks the text, such as ``Iban``.
+
+    Returns:
+        The text, the kind, and ``valid:`` with the value as the library writes it, or ``refused:`` with the library's
+        message.
+
+    """
+    try:
+        value = parse(text)
+    except EranosError as error:
+        return text, kind, f'refused: {error}'
+    return text, kind, f'valid: {value}'
+
+
+def print_members(group: Group) -> None:
+    """
+    Print each member's full name, email, phone, and accounts, an account per line.
+
+    Args:
+        group: The group.
+
+    """
+    print_table(
+        ('Member', 'Email', 'Phone', 'Accounts'),
+        [
+            (
+                ' '.join(name for name in (member.first_name, member.last_name) if name is not None),
+                '' if member.email is None else str(member.email),
+                '' if member.phone is None else member.phone.international(),
+                '\n'.join(describe(account) for account in member.accounts),
+            )
+            for member in group.members()
+        ],
+        4,
+    )
+
+
+def print_balances(group: Group) -> None:
+    """
+    Print whether each member is active or archived, what they consumed, and where they stand.
+
+    Args:
+        group: The group.
+
+    """
+    summary = group.summary()
+    print_table(
+        ('Member', 'Status', 'Consumed', 'Balance'),
+        [
+            (member.first_name, 'archived' if group.is_archived(member.id) else 'active', str(found.share), str(found.balance))
+            for member in group.members()
+            if member.id is not None and (found := totals(member.id, summary)) is not None
+        ],
+        2,
+    )
+
+
+def members(group: Group) -> tuple[MemberId, MemberId]:
+    """
+    Add Ana, with every detail a member can have, and Bob, with a first name only, and print them.
+
+    Args:
+        group: The group.
+
+    Returns:
+        Ana's and Bob's identifiers.
+
+    """
+    section('1. Members')
+    ana = group.add_member(
+        Member(
+            first_name='Ana',
+            accounts=(
+                Account(IbanAccountDetails(Iban('ro49 aaaa 1b31 0075 9384 0000')), 'ING'),
+                Account(UsernameAccountDetails(Username('@ana')), 'Revolut'),
+            ),
+            email=Email('ana@example.com'),
+            last_name='Popescu',
+            phone=PhoneNumber('+40 712 345 678'),
+        )
+    )
+    bob = group.add_member(Member(first_name='Bob'))
+    print_members(group)
+    print_lines(
+        'The phone number was stored in E.164 form, +40712345678, and the table shows it',
+        'grouped for reading; the IBAN was stored in its electronic form, uppercase and',
+        'without spaces, the way banking apps accept it.',
+    )
+    return ana, bob
+
+
+def validation() -> None:
+    """Print what validation makes of IBANs, emails, and phone numbers, valid and mistyped."""
+    section('2. What validation accepts')
+    print_lines(
+        'IBANs are checked against the SWIFT registry: the country, its length, which',
+        'positions hold digits and which letters, and the mod-97 check digits, which catch',
+        'any single mistyped character. Emails are checked against the rules of RFC 5321',
+        'and 5322, which refuse the doubled dots and stray commas of hurried typing, and',
+        "phone numbers against their country's numbering plan, stored in E.164 form.",
+    )
+    print_table(
+        ('Input', 'Checked as', 'Result'),
+        [
+            checked('ro49 aaaa 1b31 0075 9384 0000', 'IBAN', Iban),
+            checked('RO49 AAAA 1B31 0075 9384 0001', 'IBAN', Iban),
+            checked('RO49 AAAA 1B31 0075', 'IBAN', Iban),
+            checked('DE46 37O4 0044 0532 0130 00', 'IBAN', Iban),
+            checked('ana@example.com', 'email', Email),
+            checked('ana.example.com', 'email', Email),
+            checked('ana..popescu@example.com', 'email', Email),
+            checked('+40 (712) 345-678', 'phone', PhoneNumber),
+            checked('0712 345 678', 'phone', PhoneNumber),
+            checked('+40 612 345 678', 'phone', PhoneNumber),
+            checked('+44 (0)20 7946 0958', 'phone', PhoneNumber),
+        ],
+        3,
+    )
+
+
+def moving_out(group: Group, ana: MemberId, bob: MemberId) -> None:
+    """
+    Archive Bob after he shares the rent, print the balances, and print what the group refuses of him.
+
+    Args:
+        group: The group.
+        ana: The member who pays the rent.
+        bob: The member who moves out.
+
+    """
+    section('3. A flatmate moves out')
+    euro = Currency('EUR')
+    both = WholeExpenseSplit(EqualSplit((ana, bob)))
+    rent = group.add_expense(
+        Expense(cost=LocalCost(Money.parse('900.00', euro)), date=CalendarDate(1, 9, 2026), name='Rent', payers=EqualSplit((ana,)), split=both)
+    )
+    group.archive_member(bob)
+    print_lines(
+        "Bob shared September's rent, then moved out. He is archived, not removed: his",
+        'history and his balance stay, and he can still pay Ana back.',
+    )
+    print_balances(group)
+
+    utilities = Expense(
+        cost=LocalCost(Money.parse('60.00', euro)), date=CalendarDate(1, 10, 2026), name='Utilities', payers=EqualSplit((ana,)), split=both
+    )
+    refused = refusal(lambda: group.add_expense(utilities))
+    assert isinstance(refused, GroupError), 'the archived member must be refused'
+    print_lines("October's utilities cannot include him:", f'  error: {refused}')
+    removal = refusal(lambda: group.remove_member(bob))
+    assert isinstance(removal, GroupError), 'the referenced member must stay'
+    print_lines('Nor can he be removed while the rent references him:', f'  error: {removal}')
+
+    assert refused.failure == GroupError.ArchivedMember(bob)
+    assert isinstance(removal.failure, GroupError.MemberInUse)
+    bob_totals = totals(bob, group.summary())
+    assert bob_totals is not None
+    assert bob_totals.balance == OwesBalance(Money.parse('450.00', euro))
+    assert group.expense(rent) is not None
+
+
+def main() -> None:
+    """Print the report, checking its key numbers."""
+    group = Group.create(Currency('EUR'), 'Flat 4B')
+    title('Flat 4B: members and their accounts')
+    print_lines(
+        'Ana and Bob share a flat. A member needs only a first name; the last name,',
+        'email, phone, and the accounts they can be paid to are optional.',
+    )
+    ana, bob = members(group)
+    validation()
+    moving_out(group, ana, bob)
+
+
+if __name__ == '__main__':
+    main()

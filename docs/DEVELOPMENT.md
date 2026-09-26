@@ -105,8 +105,9 @@ the ports of the examples: on macOS the Swift ones, on a copy of the Swift
 package, and on every machine the Kotlin ones, on the JVM, over the Kotlin
 package's bindings and over the Kotlin Multiplatform package's, the Java
 ones, the TypeScript ones, on Node, in a copy of the TypeScript package
-over eranos-web built with `sequential-ids` for WebAssembly, and the C and
-C++ ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)).
+over eranos-web built with `sequential-ids` for WebAssembly, the C and C++
+ones, built under the sanitizers, and the Python ones, in a copy of the
+Python package ([TESTING.md § 2](TESTING.md#2-layout)).
 A run from an empty target directory first builds the library for every
 Apple target and every Android ABI, and checks it for the mobile and wasm
 targets, which takes about 2.5 minutes of its own. A warm run, whose
@@ -229,6 +230,7 @@ uv run ruff check                                               # Ruff's lint, w
 uv run ruff format                                              # Ruff's formatter, applied
 uv run ty check                                                 # ty, every rule an error
 uv run sphinx-build -W --keep-going -n -b html docs build/docs  # the documentation, in build/docs
+PYTHONPATH=src uv run python -m examples.settling_up            # one port, whose identifiers are random
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
@@ -723,8 +725,9 @@ so a failing run blocks nothing: it is a report.
   the Kotlin or the Java command of [§ 2](#2-building-and-testing) with
   `target/sequential/debug` as the library's path, the Kotlin one from
   `bindings/kotlin` or, with the JDK 21's `java`, from `bindings/kmp`, the
-  TypeScript command in `target/sequential/typescript`, or the C or C++
-  commands with `target/sequential/debug/liberanos_capi.a` prints the
+  TypeScript command in `target/sequential/typescript`, the Python one in
+  `target/sequential/python`, or the C or C++ commands with
+  `target/sequential/debug/liberanos_capi.a` prints the
   port's whole report on the library whose identifiers count up, to diff
   with `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put

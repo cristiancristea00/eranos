@@ -1,0 +1,249 @@
+"""
+Print a trip across currencies: a group in EUR, expenses and a cash repayment in RON and HUF at fixed rates, and its books moved to RON.
+
+The port of the Rust example ``multi_currency``, which prints the same report.
+
+"""
+
+from typing import assert_never
+
+from eranos import (
+    Balance,
+    CalendarDate,
+    ConvertedCost,
+    Cost,
+    Currency,
+    CurrencyRate,
+    EqualSplit,
+    ExchangeRate,
+    Expense,
+    GetsBackBalance,
+    Group,
+    LocalCost,
+    Member,
+    MemberId,
+    Money,
+    SettledBalance,
+    Transfer,
+    WholeExpenseSplit,
+)
+from examples.report import names, print_lines, print_table, section, title, totals
+
+
+def rate(cost: Cost) -> ExchangeRate:
+    """
+    Find the rate cost was entered at: 1 for a cost in the group currency.
+
+    Args:
+        cost: What an entry cost.
+
+    Returns:
+        The rate into the group currency.
+
+    """
+    match cost:
+        case ConvertedCost(rate=converted):
+            return converted
+        case LocalCost():
+            return ExchangeRate('1')
+        case _:
+            assert_never(cost)
+
+
+def balance(group: Group, member: MemberId) -> Balance | None:
+    """
+    Find where member stands in group.
+
+    Args:
+        group: The group.
+        member: The member.
+
+    Returns:
+        The member's balance, or none for a member the summary leaves out.
+
+    """
+    found = totals(member, group.summary())
+    return None if found is None else found.balance
+
+
+def print_entries(group: Group) -> None:
+    """
+    Print every expense and transfer, as entered and in the group currency.
+
+    Args:
+        group: The group.
+
+    """
+    zero = Money(group.currency(), 0)
+    expenses = [
+        (
+            expense.name,
+            names(group, expense.payers.members),
+            str(expense.total()),
+            str(rate(expense.cost)),
+            str(shares.total if expense.id is not None and (shares := group.expense_shares(expense.id)) is not None else zero),
+        )
+        for expense in group.expenses()
+    ]
+    transfers = [
+        (
+            f'Transfer to {names(group, (transfer.receiver,))}',
+            names(group, (transfer.sender,)),
+            str(transfer.cost.amount),
+            str(rate(transfer.cost)),
+            str(amount if transfer.id is not None and (amount := group.transfer_amount(transfer.id)) is not None else zero),
+        )
+        for transfer in group.transfers()
+    ]
+    print_table(('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency'), [*expenses, *transfers], 2)
+
+
+def print_balances(group: Group) -> None:
+    """
+    Print what each member paid, consumed, sent, and received, and where they stand.
+
+    Args:
+        group: The group.
+
+    """
+    summary = group.summary()
+    print_table(
+        ('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance'),
+        [
+            (member.first_name, str(found.paid), str(found.share), str(found.sent), str(found.received), str(found.balance))
+            for member in group.members()
+            if member.id is not None and (found := totals(member.id, summary)) is not None
+        ],
+        1,
+    )
+
+
+def expenses(group: Group, ana: MemberId, bob: MemberId) -> None:
+    """
+    Add the fuel in RON, the dinner in HUF, and the ferry in EUR, and print them.
+
+    Args:
+        group: The group, whose books are in EUR.
+        ana: The member who pays for the fuel.
+        bob: The member who pays for the dinner and the ferry.
+
+    """
+    section('1. Expenses in three currencies')
+    both = WholeExpenseSplit(EqualSplit((ana, bob)))
+    group.add_expense(
+        Expense(
+            cost=ConvertedCost(Money.parse('400.00', Currency('RON')), ExchangeRate('0.2')),
+            date=CalendarDate(1, 8, 2026),
+            name='Fuel',
+            payers=EqualSplit((ana,)),
+            split=both,
+        )
+    )
+    group.add_expense(
+        Expense(
+            cost=ConvertedCost(Money.parse('24000.00', Currency('HUF')), ExchangeRate('0.0025')),
+            date=CalendarDate(2, 8, 2026),
+            name='Dinner',
+            payers=EqualSplit((bob,)),
+            split=both,
+        )
+    )
+    group.add_expense(
+        Expense(
+            cost=LocalCost(Money.parse('60.00', Currency('EUR'))),
+            date=CalendarDate(3, 8, 2026),
+            name='Ferry',
+            payers=EqualSplit((bob,)),
+            split=both,
+        )
+    )
+    print_entries(group)
+    print_lines(
+        f"The rate says how many {group.currency()} one unit of the entry's currency is worth: 400.00 RON at",
+        '0.2 is 80.00 EUR. The ferry was paid in the group currency, a local cost at 1.',
+    )
+
+
+def repayment(group: Group, ana: MemberId, bob: MemberId) -> None:
+    """
+    Add Ana's repayment to Bob, in cash and in RON, and print the balances it settles.
+
+    Args:
+        group: The group, whose books are in EUR.
+        ana: The member who pays back.
+        bob: The member who is paid back.
+
+    """
+    section('3. A repayment in cash, in another currency')
+    cash = Transfer(
+        cost=ConvertedCost(Money.parse('100.00', Currency('RON')), ExchangeRate('0.2')),
+        date=CalendarDate(4, 8, 2026),
+        receiver=bob,
+        sender=ana,
+        note='Cash at the border',
+    )
+    group.add_transfer(cash)
+    print_lines(
+        'Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.',
+        f'Transfers move balances but are not spending, so the total stays at {group.summary().total_spent}:',
+    )
+    print_balances(group)
+
+
+def new_currency(group: Group) -> None:
+    """
+    Move the group's books from EUR to RON, and print the entries and the balances again.
+
+    Args:
+        group: The group, whose books are in EUR.
+
+    """
+    section('4. Moving the books to another currency')
+    print_lines(
+        'Changing the group currency needs a rate into the new currency for every other',
+        'currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies',
+        'take the new rate; entries already in RON become local costs, at 1.',
+    )
+    group.change_currency(
+        Currency('RON'),
+        (CurrencyRate(Currency('EUR'), ExchangeRate('5')), CurrencyRate(Currency('HUF'), ExchangeRate('0.0125'))),
+    )
+    print_entries(group)
+    print_lines(f'In {group.currency()}, the trip cost {group.summary().total_spent}, and everyone is still settled:')
+    print_balances(group)
+
+
+def main() -> None:
+    """Print the report, checking its key numbers."""
+    euro = Currency('EUR')
+    group = Group.create(euro, 'Danube road trip')
+    ana = group.add_member(Member(first_name='Ana'))
+    bob = group.add_member(Member(first_name='Bob'))
+
+    title(f'{group.name()}: expenses in several currencies')
+    print_lines(
+        f'Ana and Bob drive from Romania to Hungary. The group keeps its books in {group.currency()}; an',
+        'expense in another currency carries the exchange rate used when it was entered,',
+        'and is converted once, rounding half away from zero to the cent.',
+    )
+    expenses(group, ana, bob)
+
+    section('2. Balances')
+    print_lines(
+        f'The group spent {group.summary().total_spent}. Bob paid 120.00 of it but consumed half, so he gets back the',
+        'difference:',
+    )
+    print_balances(group)
+    assert balance(group, bob) == GetsBackBalance(Money.parse('20.00', euro))
+
+    repayment(group, ana, bob)
+    assert balance(group, bob) == SettledBalance()
+
+    new_currency(group)
+    # 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
+    assert group.summary().total_spent == Money.parse('1000.00', Currency('RON'))
+    assert balance(group, bob) == SettledBalance()
+
+
+if __name__ == '__main__':
+    main()

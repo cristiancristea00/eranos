@@ -1,8 +1,8 @@
 # The eranos library for Python: a hand-written layer in `src/eranos` over the
 # module that UniFFI generates from eranos-uniffi, which `cargo xtask` copies
 # into `src/eranos/_internal` beside a link to the library it loads. The
-# gates run the package's tests and checks from the source tree, without
-# building or installing the package.
+# gates run the package's tests, ports, and checks from the source tree,
+# without building or installing the package.
 
 [project]
 name = "eranos"

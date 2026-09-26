@@ -3,17 +3,18 @@
 //! on a build of the glue whose identifiers count up from one as the Rust
 //! example's do. The ports run where their language builds: the Swift ones
 //! where the machine builds for Apple platforms, and the Kotlin, Java,
-//! TypeScript, C, and C++ ones on every machine, the Kotlin ones over the
-//! Kotlin package's bindings and again over the Kotlin Multiplatform
-//! package's, the TypeScript ones on Node, over a WebAssembly build of the
-//! glue, and the C and C++ ones under the sanitizers.
+//! TypeScript, C, C++, and Python ones on every machine, the Kotlin ones
+//! over the Kotlin package's bindings and again over the Kotlin
+//! Multiplatform package's, the TypeScript ones on Node, over a WebAssembly
+//! build of the glue, the C and C++ ones under the sanitizers, and the
+//! Python ones in a copy of the Python package.
 
 use std::path::PathBuf;
 
 use crate::Failure;
 use crate::gates::{self, Metadata};
 use crate::process::{Runner, Step};
-use crate::{capi, java, kmp, kotlin, swift, web};
+use crate::{capi, java, kmp, kotlin, python, swift, web};
 
 /// The target directory, inside cargo's, of the glue whose identifiers
 /// count up: a directory of its own, so the gates' builds stay as they are.
@@ -112,6 +113,11 @@ pub(crate) fn run(
         let native = |example: &str| capi::port(package, example, &sequential);
         check(runner, package.name, references, &native)?;
     }
+    for step in python::copy(&sequential) {
+        runner.run(&step)?;
+    }
+    let python = |example: &str| python::port(example, &sequential);
+    check(runner, "Python", references, &python)?;
     Ok(())
 }
 
@@ -137,8 +143,9 @@ fn check(
 /// What the ports clear before they build on the library, so nothing an
 /// earlier run left behind is read: the sources generated from
 /// `sequential`'s library, where `apple` the Swift package's copy but its
-/// build, the TypeScript package's copy but its dependencies' link, and the
-/// C and C++ ports' programs.
+/// build, the TypeScript package's copy but its dependencies' link, the C
+/// and C++ ports' programs, and the Python package's copy but its
+/// environment.
 #[must_use]
 pub(crate) fn cleared(sequential: &Metadata, apple: bool) -> Vec<PathBuf> {
     let mut directories = vec![gates::generated(sequential)];
@@ -150,6 +157,7 @@ pub(crate) fn cleared(sequential: &Metadata, apple: bool) -> Vec<PathBuf> {
         [capi::C_PACKAGE, capi::CPP_PACKAGE]
             .map(|package| capi::ports_directory(package, sequential)),
     );
+    directories.extend(python::copied_directories(sequential));
     directories
 }
 

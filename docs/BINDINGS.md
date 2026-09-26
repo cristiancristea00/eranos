@@ -675,6 +675,14 @@ leaves it out:
 Sphinx's autodoc writes the documentation from the docstrings, in Google's
 style, which napoleon reads, with every warning an error.
 
+`examples` holds a module per example of eranos, over the layer, that
+prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
+`report.py`, the tables and headings the modules share; the tour is a
+package, whose `__main__.py` tells its story, run as
+`python -m examples.grand_tour`. Ruff and ty check them with the layer,
+Ruff without its magic values, which in a port are the amounts and dates
+of its report.
+
 ## 10. How the gates build the packages
 
 `cargo xtask gates` writes every language's sources into
@@ -711,8 +719,9 @@ port: on macOS the Swift ports, on a copy of the Swift package over the
 first library, the Kotlin ports on the JVM, over the Kotlin package's
 bindings and over the Kotlin Multiplatform package's, the Java ports, the
 TypeScript ports, on Node, in a copy of the TypeScript package over
-eranos-web built the same way, and the C and C++ ports, built under the
-sanitizers on eranos-capi's library, each report compared with its
+eranos-web built the same way, the C and C++ ports, built under the
+sanitizers on eranos-capi's library, and the Python ports, in a copy of the
+Python package over the first library, each report compared with its
 example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust

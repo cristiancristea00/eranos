@@ -33,9 +33,10 @@ fn reference(example: &str, report: &str) -> Reference {
 /// over gobley's bindings, on the JDK 21's, JNA loading eranos-kmp's, then
 /// the Java ones, on the JDK's `java`, which loads that library itself, the
 /// TypeScript ones, on Node, in a copy of the package over the WebAssembly
-/// build of the glue, whose generator's settings the ports write, and last
-/// the C and the C++ ones, each language's built into a directory of its
-/// own, then run. The Kotlin and Java ports refuse native access the command
+/// build of the glue, whose generator's settings the ports write, the C and
+/// the C++ ones, each language's built into a directory of its own, then
+/// run, and last the Python ones, in a copy of the package over that
+/// library. The Kotlin and Java ports refuse native access the command
 /// line does not grant, as the Java tests do; JDK 21's launcher has no such
 /// option.
 #[test]
@@ -89,6 +90,9 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
             expected.push(capi::port(package, "quickstart", &sequential()));
             expected.push(capi::port(package, "persistence", &sequential()));
         }
+        expected.extend(python::copy(&sequential()));
+        expected.push(python::port("quickstart", &sequential()));
+        expected.push(python::port("persistence", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
         assert_eq!(recorder.written, [web::copied_configuration(&sequential())]);
@@ -289,8 +293,9 @@ fn a_failure_stops_the_ports_where_it_happens() {
 /// examples' package has a program for every Rust example of eranos and for
 /// no other, and so do the Kotlin and the Java examples, a package each,
 /// named without underscores, whose `Main.kt` or `Main.java` holds its
-/// `main`, and the TypeScript, the C, and the C++ examples, a module or a
-/// source each beside the report's.
+/// `main`, the TypeScript, the C, and the C++ examples, a module or a source
+/// each beside the report's, and the Python examples, a module each beside
+/// the report's, or a package with a `__main__.py`, as the tour is.
 #[test]
 fn every_example_has_a_port_in_every_language() {
     let names = |directory: &str, keep: fn(&Path) -> Option<String>| {
@@ -366,5 +371,22 @@ fn every_example_has_a_port_in_every_language() {
         native.sort();
         assert_eq!(native, examples, "{language}");
     }
+    let python = names("bindings/python/examples", |path| {
+        let module = path
+            .extension()
+            .is_some_and(|extension| "py" == extension)
+            .then(|| path.file_stem())
+            .flatten();
+        let package = path
+            .join("__main__.py")
+            .is_file()
+            .then(|| path.file_name())
+            .flatten();
+        module
+            .or(package)
+            .map(|name| name.to_string_lossy().into_owned())
+            .filter(|name| !["__init__", "report"].contains(&name.as_str()))
+    });
+    assert_eq!(python, examples);
     assert_eq!(8, examples.len());
 }

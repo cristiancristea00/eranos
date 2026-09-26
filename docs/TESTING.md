@@ -95,8 +95,12 @@ WebAssembly, since wasm-bindgen's glue follows the module it is written for.
 The C and C++ ports build as their packages' tests do, under the
 sanitizers, on eranos-capi's static library built with the feature, and run
 with `LeakSanitizer`, which `AddressSanitizer` runs by default on Linux
-alone, so a port that leaks fails on macOS too. A test in `crates/xtask` holds every example to a port
-in every language the ports cover.
+alone, so a port that leaks fails on macOS too. The Python ports run in a
+copy of the Python package in `target/sequential/python`, over the module
+generated from eranos-uniffi built with the feature and a link to that
+library, with `PYTHONUTF8=1`, so they write UTF-8 whatever the locale. A
+test in `crates/xtask` holds every example to a port in every language the
+ports cover.
 
 ## 3. The invariants
 

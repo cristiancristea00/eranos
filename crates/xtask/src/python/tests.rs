@@ -1,7 +1,7 @@
 //! The Python package's gates: the generated module and the link to the host
 //! library in the package, the locked environment, and the package's checks
 //! and documentation, in that order; and the copy in which the coverage runs
-//! the tests.
+//! the tests and the ports gate the ports.
 
 use super::*;
 use crate::plan;
@@ -76,12 +76,14 @@ fn every_step_is_in_the_phase_it_checks() {
     );
 }
 
-/// The coverage would measure the gates' library, or run a module of another
-/// build, if the copy took another module, linked another library, or kept
-/// the files of an earlier copy; its steps pin every argument, and it clears
-/// the copy's layer and tests but not its environment.
+/// The coverage would measure the gates' library, or the ports print
+/// identifiers of another build, if the copy took another module, linked
+/// another library, or kept the files of an earlier copy; its steps pin
+/// every argument, and it clears the copy's layer, tests, and ports but not
+/// its environment. A port runs as a module, with the layer on the path and
+/// its output in UTF-8.
 #[test]
-fn the_copy_runs_the_tests_on_the_library_beside_its_module() {
+fn the_copy_runs_the_tests_and_the_ports_on_the_library_beside_its_module() {
     let metadata = Metadata::parse(METADATA).unwrap().inner("measured");
     let package = "/eranos/target/measured/python";
     assert_eq!(copied_package(&metadata), Path::new(package));
@@ -89,7 +91,8 @@ fn the_copy_runs_the_tests_on_the_library_beside_its_module() {
         copied_directories(&metadata),
         [
             Path::new(package).join("src"),
-            Path::new(package).join("tests")
+            Path::new(package).join("tests"),
+            Path::new(package).join("examples")
         ]
     );
     let library = format!("{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}");
@@ -103,7 +106,7 @@ fn the_copy_runs_the_tests_on_the_library_beside_its_module() {
         [
             format!("mkdir -p {package}"),
             format!(
-                "cp -R bindings/python/.python-version bindings/python/pyproject.toml bindings/python/src bindings/python/tests bindings/python/uv.lock {package}"
+                "cp -R bindings/python/.python-version bindings/python/examples bindings/python/pyproject.toml bindings/python/src bindings/python/tests bindings/python/uv.lock {package}"
             ),
             format!(
                 "cp /eranos/target/measured/uniffi/python/eranos.py {package}/src/eranos/_internal"
@@ -114,5 +117,11 @@ fn the_copy_runs_the_tests_on_the_library_beside_its_module() {
             format!("cd {package} && uv sync --locked"),
             format!("cd {package} && uv run --locked pytest"),
         ]
+    );
+    assert_eq!(
+        port("grand_tour", &metadata).command_line(),
+        format!(
+            "cd {package} && PYTHONPATH='src' PYTHONUTF8='1' uv run --locked python -m examples.grand_tour"
+        )
     );
 }
