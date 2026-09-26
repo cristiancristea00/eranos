@@ -281,14 +281,21 @@ Line names(EranosGroup const *const group, Members const *const members) {
     return line;
 }
 
-/// Adds the identifiers of @p list to @p members, each at the end.
+/// Adds each identifier of @p list that @p members lacks to @p members, at the end.
 static void addAll(Members *const members, EranosTextList const *const list) {
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosTextListLength(list) > index; ++index) {
-        check(MEMBERS_SIZE > members->count, "a split names no more members than the ports hold");
         (void)eranosTextListGet(list, index, text);
-        members->ids[members->count] = idOf(text);
-        ++members->count;
+        Id const id = idOf(text);
+        bool known = false;
+        for (size_t other = 0; members->count > other; ++other) {
+            known = known || 0 == strcmp(members->ids[other].text, id.text);
+        }
+        if (!known) {
+            check(MEMBERS_SIZE > members->count, "a split names no more members than the ports hold");
+            members->ids[members->count] = id;
+            ++members->count;
+        }
     }
     eranosTextDestroy(text);
 }
@@ -328,14 +335,6 @@ Members participants(EranosExpense const *const expense) {
     eranosItemListDestroy(items);
     eranosExpenseSplitDestroy(split);
     qsort(members.ids, members.count, sizeof members.ids[0], compareIds);
-    size_t kept = 0;
-    for (size_t index = 0; members.count > index; ++index) {
-        if (0 == kept || 0 != strcmp(members.ids[kept - 1].text, members.ids[index].text)) {
-            members.ids[kept] = members.ids[index];
-            ++kept;
-        }
-    }
-    members.count = kept;
     return members;
 }
 

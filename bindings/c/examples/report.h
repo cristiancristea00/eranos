@@ -12,7 +12,7 @@
 /// The most bytes a line of a report holds, its NUL included: every value, message, and cell of the examples fits.
 enum { LINE_SIZE = 512 };
 
-/// The most members a split of the examples names.
+/// The most members a split or an expense of the examples names, each once.
 enum { MEMBERS_SIZE = 8 };
 
 /// A line of text, ended by a NUL.
