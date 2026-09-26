@@ -115,7 +115,7 @@ unless `-Peranos.library=<directory>` names another:
 ./gradlew :eranos:apiDump                     # the API dump, after a change to the layer's API
 ./gradlew :eranos:dokkaGenerate               # the documentation, in eranos/build/dokka/html
 ./gradlew :examples:ports                     # the ports and the libraries they run with, in examples/build/ports
-java --enable-native-access=ALL-UNNAMED -Djna.library.path=../../target/debug -cp 'examples/build/ports/*' eranos.examples.settlingup.MainKt  # one port, whose identifiers are random
+java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 -Djna.library.path=../../target/debug -cp 'examples/build/ports/*' eranos.examples.settlingup.MainKt  # one port, whose identifiers are random
 ktlint --format --relative '**/*.kt' '**/*.kts' '!generated/**' '!**/build/**'  # the formatter
 ```
 

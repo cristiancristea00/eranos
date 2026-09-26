@@ -71,13 +71,15 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     );
     assert_eq!(
         kmp::port("grand_tour", "/JAVA_HOME_21", &sequential()).command_line(),
-        "/JAVA_HOME_21/bin/java --enable-native-access=ALL-UNNAMED -Djna.library.path=/eranos/target/sequential/debug \
-         -cp bindings/kmp/examples/build/ports/* eranos.examples.grandtour.MainKt"
+        "/JAVA_HOME_21/bin/java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 \
+         -Djna.library.path=/eranos/target/sequential/debug -cp bindings/kmp/examples/build/ports/* \
+         eranos.examples.grandtour.MainKt"
     );
     assert_eq!(
         kotlin::port("split_methods", "/JAVA_HOME", &sequential()).command_line(),
-        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED -Djna.library.path=/eranos/target/sequential/debug \
-         -cp bindings/kotlin/examples/build/ports/* eranos.examples.splitmethods.MainKt"
+        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED -Dstdout.encoding=UTF-8 \
+         -Djna.library.path=/eranos/target/sequential/debug -cp bindings/kotlin/examples/build/ports/* \
+         eranos.examples.splitmethods.MainKt"
     );
 }
 

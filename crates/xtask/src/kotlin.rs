@@ -187,7 +187,9 @@ pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
 /// every library it runs with into `ports`, on the `java` of the JDK at
 /// `jdk`, JNA loading its native library from `sequential`'s target
 /// directory: a port is the package `eranos.examples.<example>`, named
-/// without underscores, whose `Main.kt` holds its `main`.
+/// without underscores, whose `Main.kt` holds its `main`. It writes its
+/// report in UTF-8, as the Rust example does, whatever the machine's locale,
+/// from which the JVM would otherwise take the encoding of its output.
 #[must_use]
 pub(crate) fn jvm_port(
     language: &str,
@@ -202,6 +204,7 @@ pub(crate) fn jvm_port(
     Step::new(
         &[
             "--enable-native-access=ALL-UNNAMED",
+            "-Dstdout.encoding=UTF-8",
             &library,
             "-cp",
             &classes,
