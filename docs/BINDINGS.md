@@ -589,8 +589,10 @@ Core Guidelines with the naming rule above:
   on every parameter the function does not move from, and on every member
   function that changes nothing a later call sees; `noexcept`,
   `constexpr`, and `[[nodiscard]]` go wherever they apply.
-- Equality is defaulted wherever it compares every field, and an
-  identifier's order too, by `<=>`; `Currency` compares its code alone.
+- Equality is defaulted wherever it compares every field; `Currency`
+  compares its code alone. An identifier orders by its text through a
+  `<=>` written out, since the defaulted one holds a branch that no
+  comparison takes, which the layer's coverage would report as unrun.
   A call that reads a list takes a `std::span`, such as the rates of
   `changeCurrency`.
 
