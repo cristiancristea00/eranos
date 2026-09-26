@@ -87,18 +87,19 @@ bindings, and then eranos-capi's static library, from which Diplomat
 generates each of the C and C++ packages' headers, whose tests the LLVM
 that `LLVM_HOME` names builds under the sanitizers and measures. Then
 they build eranos-uniffi's host library again, with `sequential-ids`, into
-`target/sequential`, and eranos-kmp's beside it, and run the ports of the
-examples: on macOS the Swift ones, on a copy of the Swift package, and on
-every machine the Kotlin ones, on the JVM, over the Kotlin package's
-bindings and over the Kotlin Multiplatform package's, the Java ones, and
-the TypeScript ones, on Node, in a copy of the TypeScript package over
-eranos-web built with `sequential-ids` for WebAssembly
-([TESTING.md § 2](TESTING.md#2-layout)). A run
+`target/sequential`, and eranos-kmp's and eranos-capi's beside it, and run
+the ports of the examples: on macOS the Swift ones, on a copy of the Swift
+package, and on every machine the Kotlin ones, on the JVM, over the Kotlin
+package's bindings and over the Kotlin Multiplatform package's, the Java
+ones, the TypeScript ones, on Node, in a copy of the TypeScript package
+over eranos-web built with `sequential-ids` for WebAssembly, and the C
+ones, built under the sanitizers ([TESTING.md § 2](TESTING.md#2-layout)). A run
 from an empty target directory takes about 7 minutes on an Apple M4 Pro,
 most of it building the library for every Apple target and every Android
-ABI; a warm one takes about 4 minutes in all, 40 seconds of it
-clang-tidy's pass over the C and C++ tests and 20 seconds the Swift
-examples' two builds and their ports.
+ABI; a warm one takes about 5 minutes in all, 50 seconds of it
+clang-tidy's pass over the C and C++ tests and the C ports, 20 seconds the
+Swift examples' two builds and their ports, and 15 seconds the C ports'
+builds and runs.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -177,6 +178,16 @@ diplomat-tool cpp generated --entry ../../crates/eranos-capi/src/lib.rs     # Di
 build/tests                                                                 # run them
 "$LLVM_HOME/bin/clang-format" -i include/eranos.hpp include/eranos/*.hpp include/eranos/detail/*.hpp tests/tests.cpp  # the formatter, applied
 doxygen Doxyfile                                                            # the documentation, in build/docs/html
+```
+
+A C port builds the same way in `bindings/c`, from its program and the
+report module; on macOS, `ASAN_OPTIONS=detect_leaks=1` turns on the leak
+check that Linux runs by default:
+
+```sh
+"$LLVM_HOME/bin/clang" -std=c11 -g -fsanitize=address,undefined -pthread -Iinclude -isystem generated \
+    examples/report.c examples/settling_up.c ../../target/debug/liberanos_capi.a -liconv -o build/settling_up
+ASAN_OPTIONS=detect_leaks=1 build/settling_up                               # one port, whose identifiers are random
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
@@ -612,10 +623,11 @@ so a failing run blocks nothing: it is a report.
   `swift run --package-path target/sequential/swift/examples <example>`,
   the Kotlin or the Java command of [§ 2](#2-building-and-testing) with
   `target/sequential/debug` as the library's path, the Kotlin one from
-  `bindings/kotlin` or, with the JDK 21's `java`, from `bindings/kmp`, or
-  the TypeScript command in `target/sequential/typescript` prints the
-  port's whole report on the library whose identifiers count up, to diff
-  with `cargo run -p eranos --all-features --example <example>`.
+  `bindings/kotlin` or, with the JDK 21's `java`, from `bindings/kmp`, the
+  TypeScript command in `target/sequential/typescript`, or the C commands
+  with `target/sequential/debug/liberanos_capi.a` prints the port's whole
+  report on the library whose identifiers count up, to diff with
+  `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

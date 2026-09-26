@@ -91,8 +91,11 @@ loads eranos-kmp's library, built beside it, before the one gobley embeds.
 The TypeScript ports run on Node, in a copy of the TypeScript package whose
 generated TypeScript comes from eranos-web built with the feature for
 WebAssembly, since wasm-bindgen's glue follows the module it is written for.
-A test in `crates/xtask` holds every example to a port in every language the
-ports cover.
+The C ports build as the C tests do, under the sanitizers, on eranos-capi's
+static library built with the feature, and run with `LeakSanitizer`, which
+`AddressSanitizer` runs by default on Linux alone, so a port that leaks
+fails on macOS too. A test in `crates/xtask` holds every example to a port
+in every language the ports cover.
 
 ## 3. The invariants
 

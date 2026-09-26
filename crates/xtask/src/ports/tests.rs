@@ -26,14 +26,15 @@ fn reference(example: &str, report: &str) -> Reference {
 /// A port that ran on the gates' glue would print identifiers the Rust
 /// example does not, and one that ran before its library was built would
 /// print nothing; the glue whose identifiers count up is built first, with
-/// eranos-kmp's library, its sources generated from it, the Swift ports run
-/// on a copy of the package over it only where the machine builds for Apple
-/// platforms, and the Kotlin ones on every machine, on the JDK's `java`,
-/// JNA loading that library, then again over gobley's bindings, on the JDK
-/// 21's, JNA loading eranos-kmp's, then the Java ones, on the JDK's `java`,
-/// which loads that library itself, and last the TypeScript ones, on Node,
-/// in a copy of the package over the WebAssembly build of the glue, whose
-/// generator's settings the ports write.
+/// eranos-kmp's, eranos-web's, and eranos-capi's libraries, its sources
+/// generated from it, the Swift ports run on a copy of the package over it
+/// only where the machine builds for Apple platforms, and the Kotlin ones on
+/// every machine, on the JDK's `java`, JNA loading that library, then again
+/// over gobley's bindings, on the JDK 21's, JNA loading eranos-kmp's, then
+/// the Java ones, on the JDK's `java`, which loads that library itself, the
+/// TypeScript ones, on Node, in a copy of the package over the WebAssembly
+/// build of the glue, whose generator's settings the ports write, and last
+/// the C ones, each built into a directory of their own, then each run.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -50,6 +51,7 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
             library(&sequential()),
             multiplatform_library(&sequential()),
             web::sequential_library(&sequential()),
+            capi::sequential_library(&sequential()),
         ];
         expected.extend(gates::generators(&sequential()));
         if apple {
@@ -72,9 +74,23 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(web::copied_generator(&sequential()));
         expected.push(web::port("quickstart", &sequential()));
         expected.push(web::port("persistence", &sequential()));
+        for example in ["quickstart", "persistence"] {
+            expected.push(capi::port_build(
+                capi::C_PACKAGE,
+                "/LLVM_HOME",
+                &sequential(),
+                example,
+            ));
+        }
+        expected.push(capi::port(capi::C_PACKAGE, "quickstart", &sequential()));
+        expected.push(capi::port(capi::C_PACKAGE, "persistence", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
         assert_eq!(recorder.written, [web::copied_configuration(&sequential())]);
+        assert_eq!(
+            recorder.created,
+            [capi::ports_directory(capi::C_PACKAGE, &sequential())]
+        );
     }
     assert_eq!(
         web::port("members_and_accounts", &sequential()).command_line(),
@@ -169,9 +185,10 @@ fn a_report_passes_only_byte_for_byte() {
 /// not built or on sources that were not generated, and no report is
 /// compared with another example's: the library, a generator, the copy or
 /// the build of the Swift examples, the programs' directory that could not
-/// be printed, the build of the Kotlin or the Kotlin Multiplatform ports, a
-/// port that fails, a directory that could not be cleared, or a variable
-/// the JVM's ports need that is not set, which stops them before any step.
+/// be printed, the build of the Kotlin or the Kotlin Multiplatform ports or
+/// of a C one, a port that fails, a directory that could not be cleared or
+/// created, or a variable the JVM's or the C ports need that is not set,
+/// which stops them before any step.
 #[test]
 fn a_failure_stops_the_ports_where_it_happens() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -195,6 +212,9 @@ fn a_failure_stops_the_ports_where_it_happens() {
         web::copy(&sequential())[1].clone(),
         web::copied_generator(&sequential()),
         web::port("quickstart", &sequential()),
+        capi::sequential_library(&sequential()),
+        capi::port_build(capi::C_PACKAGE, "/LLVM_HOME", &sequential(), "quickstart"),
+        capi::port(capi::C_PACKAGE, "quickstart", &sequential()),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
@@ -215,8 +235,19 @@ fn a_failure_stops_the_ports_where_it_happens() {
         [
             library(&sequential()),
             multiplatform_library(&sequential()),
-            web::sequential_library(&sequential())
+            web::sequential_library(&sequential()),
+            capi::sequential_library(&sequential()),
         ]
+    );
+    let mut uncreated = Recorder::new();
+    uncreated.failing_files = Some(FileOperation::Create);
+    assert!(matches!(
+        run(&mut uncreated, &metadata, &references),
+        Err(Failure::Usage)
+    ));
+    assert_eq!(
+        uncreated.steps.last(),
+        Some(&web::port("quickstart", &sequential()))
     );
     let mut unwritten = Recorder::new();
     unwritten.failing_files = Some(FileOperation::Write);
@@ -229,6 +260,10 @@ fn a_failure_stops_the_ports_where_it_happens() {
         (&[][..], "JAVA_HOME"),
         (&["JAVA_HOME"][..], "ANDROID_HOME"),
         (&["JAVA_HOME", "ANDROID_HOME"][..], "JAVA_HOME_21"),
+        (
+            &["JAVA_HOME", "ANDROID_HOME", "JAVA_HOME_21"][..],
+            "LLVM_HOME",
+        ),
     ] {
         let mut unnamed = Recorder::new();
         unnamed.variables = variables.to_vec();
@@ -246,7 +281,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
 /// examples' package has a program for every Rust example of eranos and for
 /// no other, and so do the Kotlin and the Java examples, a package each,
 /// named without underscores, whose `Main.kt` or `Main.java` holds its
-/// `main`, and the TypeScript examples, a module each beside the report's.
+/// `main`, and the TypeScript and the C examples, a module or a source each
+/// beside the report's.
 #[test]
 fn every_example_has_a_port_in_every_language() {
     let names = |directory: &str, keep: fn(&Path) -> Option<String>| {
@@ -302,5 +338,12 @@ fn every_example_has_a_port_in_every_language() {
             .filter(|name| "report" != name)
     });
     assert_eq!(typescript, examples);
+    let native = names("bindings/c/examples", |path| {
+        path.file_stem()
+            .filter(|_| path.extension().is_some_and(|extension| "c" == extension))
+            .map(|stem| stem.to_string_lossy().into_owned())
+            .filter(|name| "report" != name)
+    });
+    assert_eq!(native, examples);
     assert_eq!(8, examples.len());
 }

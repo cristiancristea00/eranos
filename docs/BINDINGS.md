@@ -522,6 +522,14 @@ comparison puts its constant first (`NULL != value`, `0 < count`).
   changes what later calls see takes its object as not `const`, though
   Diplomat's function takes it `const`.
 
+`examples` holds a program per example of eranos, over the layer, that
+prints the example's report ([TESTING.md § 2](TESTING.md#2-layout)), and
+`report.h` and `report.c`, the tables and headings the programs share;
+each builds as the tests do, under the sanitizers, and leaks nothing,
+which `LeakSanitizer` checks. clang-format and clang-tidy check them with
+the layer, clang-tidy without its magic numbers, which in a port are the
+amounts and dates of its report.
+
 ### C++
 
 `bindings/cpp` is the C++17 package: `eranos.hpp`, which includes a part
@@ -576,13 +584,14 @@ bridge with `diplomat-tool`, and, for each package, builds its tests with
 the LLVM that `LLVM_HOME` names, runs them under the sanitizers, holds every
 line and function of its layer covered, and checks its format, lint, and
 documentation. Last, it builds eranos-uniffi's host library with
-`sequential-ids` into `target/sequential`, and eranos-kmp's and eranos-web's
-beside it, generates the UniFFI sources, and runs every port: on macOS the
-Swift ports, on a copy of the Swift package over the first library, the
-Kotlin ports on the JVM, over the Kotlin package's bindings and over the
-Kotlin Multiplatform package's, the Java ports, and the TypeScript ports, on
-Node, in a copy of the TypeScript package over eranos-web built the same
-way, each report compared with its example's.
+`sequential-ids` into `target/sequential`, and eranos-kmp's, eranos-web's,
+and eranos-capi's beside it, generates the UniFFI sources, and runs every
+port: on macOS the Swift ports, on a copy of the Swift package over the
+first library, the Kotlin ports on the JVM, over the Kotlin package's
+bindings and over the Kotlin Multiplatform package's, the Java ports, the
+TypeScript ports, on Node, in a copy of the TypeScript package over
+eranos-web built the same way, and the C ports, built under the sanitizers
+on eranos-capi's library, each report compared with its example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++

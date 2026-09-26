@@ -190,15 +190,17 @@ fn words(line: &[&str]) -> Vec<String> {
 
 /// The ports' steps: of the two examples of eranos that [`METADATA`] lists,
 /// the Swift ports only where `apple`, the Kotlin ports over each package's
-/// bindings, the Java ports, and the TypeScript ports in their copy of the
-/// package; the recorder answers the programs' directory with [`PROGRAMS`],
-/// and an example of another package has no port.
+/// bindings, the Java ports, the TypeScript ports in their copy of the
+/// package, and the C ports, built before any runs; the recorder answers
+/// the programs' directory with [`PROGRAMS`], and an example of another
+/// package has no port.
 fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     let sequential = metadata.inner(ports::DIRECTORY);
     let mut steps = vec![
         ports::library(&sequential),
         ports::multiplatform_library(&sequential),
         web::sequential_library(&sequential),
+        capi::sequential_library(&sequential),
     ];
     steps.extend(gates::generators(&sequential));
     if apple {
@@ -226,6 +228,14 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     steps.extend(web::copy(&sequential));
     steps.push(web::copied_generator(&sequential));
     steps.extend(["quickstart", "persistence"].map(|example| web::port(example, &sequential)));
+    steps.extend(
+        ["quickstart", "persistence"]
+            .map(|example| capi::port_build(capi::C_PACKAGE, "/LLVM_HOME", &sequential, example)),
+    );
+    steps.extend(
+        ["quickstart", "persistence"]
+            .map(|example| capi::port(capi::C_PACKAGE, example, &sequential)),
+    );
     steps
 }
 
@@ -287,8 +297,10 @@ fn gates_runs_every_check_every_example_and_every_generator() {
             ]
         })
         .concat();
-    let native_created =
-        [capi::C_PACKAGE, capi::CPP_PACKAGE].map(|package| capi::directory(package, "build"));
+    let mut native_created = [capi::C_PACKAGE, capi::CPP_PACKAGE]
+        .map(|package| capi::directory(package, "build"))
+        .to_vec();
+    native_created.push(capi::ports_directory(capi::C_PACKAGE, &sequential));
     let cleared = gates::generated(&metadata);
     let mut elsewhere = Recorder::new();
     elsewhere.apple = false;

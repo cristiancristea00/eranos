@@ -1,0 +1,280 @@
+// Every way to divide an expense: equally, by percentage, by parts (including half a part for a child), by exact
+// amounts, and with several payers. The port of the Rust example `split_methods`, which prints the same report.
+
+#include "eranos.h"
+#include "report.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+
+/// The family and the day every expense happened.
+typedef struct Family {
+    /// The first parent.
+    Id ana;
+    /// The second parent.
+    Id bob;
+    /// The day of every expense.
+    EranosCalendarDate day;
+    /// Their daughter.
+    Id mia;
+} Family;
+
+/// The rule by which a member shares an expense, as the report names it.
+typedef struct Rule {
+    /// The member.
+    Id member;
+    /// The rule.
+    char const *text;
+} Rule;
+
+/// The amount @p text of euros.
+static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
+
+/// The three members of @p family.
+static Members everyone(Family const *const family) { return (Members){.count = 3, .ids = {family->ana, family->bob, family->mia}}; }
+
+/// The rule of @p member among the @p count rules of @p rules, or (payer only) for a member they do not name.
+static char const *ruleOf(Rule const *const rules, size_t const count, char const *const member) {
+    for (size_t index = 0; count > index; ++index) {
+        if (0 == strcmp(rules[index].member.text, member)) {
+            return rules[index].text;
+        }
+    }
+    return "(payer only)";
+}
+
+/// Prints how the expense @p id divides: every involved member's rule among the @p count rules of @p rules, what they
+/// paid, and what they consumed.
+static void report(EranosGroup const *const group, Id const id, Rule const *const rules, size_t const count) {
+    EranosExpense *expense = NULL;
+    must(eranosGroupExpense(group, id.text, &expense));
+    EranosExpenseShares *shares = NULL;
+    must(eranosGroupExpenseShares(group, id.text, &shares));
+    if (NULL == expense || NULL == shares) {
+        eranosExpenseSharesDestroy(shares);
+        eranosExpenseDestroy(expense);
+        return;
+    }
+    EranosText *const text = eranosTextCreate();
+    eranosExpenseName(expense, text);
+    Line const total = moneyLine(eranosExpenseSharesTotal(shares));
+    printFormatted("%s, %s:", eranosTextData(text), total.text);
+    Table *const table = tableCreate(4, (char const *const[]){"Member", "Rule", "Paid", "Consumed"}, 2);
+    EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
+    for (size_t index = 0; eranosMemberShareListLength(members) > index; ++index) {
+        EranosMemberShare *const share = eranosMemberShareListGet(members, index);
+        eranosMemberShareMember(share, text);
+        tableAdd(table, (Line const[]){
+                            firstName(group, eranosTextData(text)),
+                            lineOf("%s", ruleOf(rules, count, eranosTextData(text))),
+                            moneyLine(eranosMemberSharePaid(share)),
+                            moneyLine(eranosMemberShareShare(share)),
+                        });
+        eranosMemberShareDestroy(share);
+    }
+    tablePrint(table);
+    eranosMemberShareListDestroy(members);
+    eranosTextDestroy(text);
+    eranosExpenseSharesDestroy(shares);
+    eranosExpenseDestroy(expense);
+}
+
+/// Adds the taxi, which the three share equally, the leftover cent going to one of them.
+static void equally(EranosGroup *const group, Family const *const family) {
+    section("1. Equally");
+    printLine("Everyone pays the same. 10.00 does not divide by three, so one member pays the\n"
+              "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
+              "nobody always pays it.");
+    Members const members = everyone(family);
+    Id const taxi = addExpense(group, expenseOf(localCost(euros("10.00")), family->day, "Taxi", soleSplit(family->ana), equalSplit(&members)));
+    Rule const thirds[] = {
+        {.member = family->ana, .text = "an equal third"},
+        {.member = family->bob, .text = "an equal third"},
+        {.member = family->mia, .text = "an equal third"},
+    };
+    report(group, taxi, thirds, 3);
+}
+
+/// Adds the flat, which the three share by percentage.
+static void byPercentage(EranosGroup *const group, Family const *const family) {
+    section("2. By percentage");
+    printLine("Everyone pays a percentage of the amount; the percentages must add up to exactly\n"
+              "100 %. Mia's room is smaller, so she takes 20 %.");
+    Share const shares[] = {
+        {.member = family->ana, .value = "40"},
+        {.member = family->bob, .value = "40"},
+        {.member = family->mia, .value = "20"},
+    };
+    Id const rent =
+        addExpense(group, expenseOf(localCost(euros("500.00")), family->day, "Flat", soleSplit(family->bob), percentagesSplit(shares, 3)));
+    Rule const rules[] = {
+        {.member = family->ana, .text = "40%"},
+        {.member = family->bob, .text = "40%"},
+        {.member = family->mia, .text = "20%"},
+    };
+    report(group, rent, rules, 3);
+}
+
+/// Adds the food, which the three share by parts, Mia counting as half an adult.
+static Id byParts(EranosGroup *const group, Family const *const family) {
+    section("3. By parts");
+    printLine("Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n"
+              "2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.");
+    Share const shares[] = {
+        {.member = family->ana, .value = "1"},
+        {.member = family->bob, .value = "1"},
+        {.member = family->mia, .value = "0.5"},
+    };
+    Id const food = addExpense(group, expenseOf(localCost(euros("125.00")), family->day, "Food", soleSplit(family->ana), partsSplit(shares, 3)));
+    Rule const rules[] = {
+        {.member = family->ana, .text = "1 part"},
+        {.member = family->bob, .text = "1 part"},
+        {.member = family->mia, .text = "0.5 parts"},
+    };
+    report(group, food, rules, 3);
+    return food;
+}
+
+/// Adds the museum tickets, which the three share by exact amounts.
+static void byAmounts(EranosGroup *const group, Family const *const family) {
+    section("4. By exact amounts");
+    printLine("Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n"
+              "exactly the expense amount.");
+    Share const shares[] = {
+        {.member = family->ana, .value = "15.00"},
+        {.member = family->bob, .value = "15.00"},
+        {.member = family->mia, .value = "5.00"},
+    };
+    Id const tickets =
+        addExpense(group, expenseOf(localCost(euros("35.00")), family->day, "Museum", soleSplit(family->bob), amountsSplit("EUR", shares, 3)));
+    Rule const rules[] = {
+        {.member = family->ana, .text = "15.00 EUR"},
+        {.member = family->bob, .text = "15.00 EUR"},
+        {.member = family->mia, .text = "5.00 EUR"},
+    };
+    report(group, tickets, rules, 3);
+}
+
+/// Adds the dinner, which two of them paid and the three share equally.
+static void severalPayers(EranosGroup *const group, Family const *const family) {
+    section("5. Several payers");
+    printLine("The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n"
+              "divided with the same methods as the participants.");
+    Share const cards[] = {
+        {.member = family->ana, .value = "50.00"},
+        {.member = family->bob, .value = "40.00"},
+    };
+    Members const members = everyone(family);
+    Id const dinner =
+        addExpense(group, expenseOf(localCost(euros("90.00")), family->day, "Dinner", amountsSplit("EUR", cards, 2), equalSplit(&members)));
+    Rule const thirds[] = {
+        {.member = family->ana, .text = "an equal third"},
+        {.member = family->bob, .text = "an equal third"},
+        {.member = family->mia, .text = "an equal third"},
+    };
+    report(group, dinner, thirds, 3);
+}
+
+/// Shows that a split whose percentages do not add up to 100 % is refused.
+static void mistakes(EranosGroup *const group, Family const *const family) {
+    section("6. Mistakes are refused");
+    printLine("A percentage split that adds up to 90 % is refused when the expense is built:");
+    Share const shares[] = {
+        {.member = family->ana, .value = "60"},
+        {.member = family->bob, .value = "30"},
+    };
+    EranosError *const refused =
+        expenseRefusal(group, expenseOf(localCost(euros("10.00")), family->day, "Invalid", soleSplit(family->ana), percentagesSplit(shares, 2)));
+    check(NULL != refused, "the split is refused");
+    Line const message = messageLine(refused);
+    printFormatted("  error: %s", message.text);
+}
+
+/// Prints what each member paid and consumed over the holiday, and their balance.
+static void totals(EranosGroup const *const group) {
+    section("7. The holiday in total");
+    EranosSummary *summary = NULL;
+    must(eranosGroupSummary(group, &summary));
+    Line const spent = moneyLine(eranosSummaryTotalSpent(summary));
+    printFormatted("%s spent over five expenses:", spent.text);
+    EranosMemberList *members = NULL;
+    must(eranosGroupMembers(group, &members));
+    Table *const table = tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, 1);
+    EranosText *const text = eranosTextCreate();
+    for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
+        EranosMember *const member = eranosMemberListGet(members, index);
+        (void)eranosMemberId(member, text);
+        EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
+        check(NULL != found, "every member has totals");
+        eranosMemberFirstName(member, text);
+        tableAdd(table, (Line const[]){
+                            textLine(text),
+                            moneyLine(eranosMemberSummaryPaid(found)),
+                            moneyLine(eranosMemberSummaryShare(found)),
+                            balanceLine(eranosMemberSummaryBalance(found)),
+                        });
+        eranosMemberSummaryDestroy(found);
+        eranosMemberDestroy(member);
+    }
+    tablePrint(table);
+    eranosTextDestroy(text);
+    eranosMemberListDestroy(members);
+    eranosSummaryDestroy(summary);
+}
+
+/// Whether Mia consumed 25.00 EUR of the food: 125.00 over 2.5 parts is 50.00 per part.
+static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *const family, Id const food) {
+    EranosExpenseShares *shares = NULL;
+    must(eranosGroupExpenseShares(group, food.text, &shares));
+    check(NULL != shares, "food was added");
+    EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
+    EranosText *const text = eranosTextCreate();
+    bool consumed = false;
+    for (size_t index = 0; eranosMemberShareListLength(members) > index; ++index) {
+        EranosMemberShare *const share = eranosMemberShareListGet(members, index);
+        eranosMemberShareMember(share, text);
+        if (0 == strcmp(eranosTextData(text), family->mia.text)) {
+            EranosMoney *const amount = eranosMemberShareShare(share);
+            consumed = 2500 == eranosMoneyMinorUnits(amount);
+            eranosMoneyDestroy(amount);
+        }
+        eranosMemberShareDestroy(share);
+    }
+    eranosTextDestroy(text);
+    eranosMemberShareListDestroy(members);
+    eranosExpenseSharesDestroy(shares);
+    return consumed;
+}
+
+int main(void) {
+    EranosNewGroup *details = NULL;
+    must(eranosNewGroupCreate("EUR", "Family holiday", &details));
+    EranosGroup *group = NULL;
+    must(eranosGroupCreate(details, &group));
+    eranosNewGroupDestroy(details);
+    // The members join in this order, which gives them their identifiers: an initialiser evaluates its values in no set
+    // order.
+    Id const ana = addMember(group, "Ana");
+    Id const bob = addMember(group, "Bob");
+    Id const mia = addMember(group, "Mia");
+    Family const family = {.ana = ana, .bob = bob, .day = {.day = 14, .month = 7, .year = 2026}, .mia = mia};
+
+    printLine("Family holiday: every way to split an expense\n"
+              "═════════════════════════════════════════════");
+    printLine("Ana, Bob, and their daughter Mia share a holiday. Each expense below uses a\n"
+              "different split method; whatever the method, the shares add up to exactly the\n"
+              "amount, to the cent.");
+    equally(group, &family);
+    byPercentage(group, &family);
+    Id const food = byParts(group, &family);
+    byAmounts(group, &family);
+    severalPayers(group, &family);
+    mistakes(group, &family);
+    totals(group);
+
+    check(miaConsumedHalfAPart(group, &family, food), "Mia consumed 25.00 EUR of the food");
+    eranosGroupDestroy(group);
+    return EXIT_SUCCESS;
+}

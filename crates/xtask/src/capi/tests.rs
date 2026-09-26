@@ -83,6 +83,77 @@ fn the_tests_build_with_warnings_as_errors_the_sanitizers_and_coverage() {
     );
 }
 
+/// A port built without the tests' flags would pass code the layer's rules
+/// refuse, or read freed memory unnoticed, and one linked with the gates'
+/// library would print identifiers its Rust example does not; each port
+/// builds under the sanitizers, its program with the report module, on the
+/// library whose identifiers count up, into a directory of its own, and runs
+/// with `LeakSanitizer`, which macOS leaves off.
+#[test]
+fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
+    let sequential = Metadata::parse(METADATA)
+        .unwrap()
+        .inner(crate::ports::DIRECTORY);
+    let flags = "-Wall -Wextra -Wpedantic -Werror -g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer \
+                 -pthread -Iinclude -isystem generated";
+    assert_eq!(
+        port_build(C_PACKAGE, "/LLVM_HOME", &sequential, "grand_tour").command_line(),
+        format!(
+            "cd bindings/c && /LLVM_HOME/bin/clang -std=c11 {flags} examples/report.c examples/grand_tour.c \
+             /eranos/target/sequential/debug/liberanos_capi.a {} -o /eranos/target/sequential/c/grand_tour",
+            SYSTEM_LIBRARIES.join(" ")
+        )
+    );
+    assert_eq!(
+        port(C_PACKAGE, "quickstart", &sequential).command_line(),
+        "ASAN_OPTIONS='detect_leaks=1' /eranos/target/sequential/c/quickstart"
+    );
+    assert_eq!(
+        sequential_library(&sequential).command_line(),
+        "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-capi --features sequential-ids"
+    );
+}
+
+/// A port the formatter skipped could drift from the package's style, one
+/// the linter skipped could hide what the tests' rules refuse, and one the
+/// list named but the directory lost would fail for a file no one wrote;
+/// the list is the files of each package's `examples` but the linter's
+/// settings, which the formatter reads whole and the linter by its sources.
+#[test]
+fn the_format_and_the_lint_check_every_port() {
+    for package in [C_PACKAGE, CPP_PACKAGE] {
+        let mut found: Vec<String> = fs::read_dir(
+            Path::new(WORKSPACE)
+                .join(package.directory)
+                .join("examples"),
+        )
+        .map(|entries| {
+            entries
+                .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+                .filter(|name| !name.starts_with('.'))
+                .map(|name| format!("examples/{name}"))
+                .collect()
+        })
+        .unwrap_or_default();
+        found.sort();
+        assert_eq!(found, package.examples, "{}", package.name);
+        let words = |step: &Step| -> Vec<String> {
+            step.command_line().split(' ').map(str::to_owned).collect()
+        };
+        let steps = checks(package, "/LLVM_HOME");
+        let format = words(&steps[0]);
+        let lint = words(&steps[1]);
+        for example in package.examples {
+            assert!(format.iter().any(|word| word == example), "{example}");
+            assert_eq!(
+                lint.iter().any(|word| word == example),
+                example.ends_with(&format!(".{}", package.language)),
+                "{example}"
+            );
+        }
+    }
+}
+
 /// A header the formatter skipped could drift from the package's style, and
 /// one the list named but the directory lost would fail the formatter for a
 /// file no one wrote; the lists are the files of each package's `include`.

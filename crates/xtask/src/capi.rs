@@ -2,7 +2,8 @@
 //! and C++ headers that Diplomat generates from it beneath each package's
 //! hand-written layer, and each package's tests, built with warnings as errors
 //! and run under `AddressSanitizer` and `UndefinedBehaviorSanitizer`, with their
-//! coverage of the layer, format, lint, and documentation.
+//! coverage of the layer, format, lint, and documentation; and the ports of
+//! the examples, built the same way on a library whose identifiers count up.
 
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::path::{Path, PathBuf};
@@ -46,6 +47,10 @@ pub(crate) struct Package {
     /// The hand-written headers, from the package's directory: the layer
     /// the tests cover and the formatter checks.
     pub(crate) headers: &'static [&'static str],
+    /// The ports of the examples, from the package's directory: the report
+    /// module they share, its header and its source, and one program per
+    /// example, which the formatter and the linter check.
+    pub(crate) examples: &'static [&'static str],
 }
 
 /// The C package: the hand-written C header over Diplomat's C API.
@@ -76,6 +81,18 @@ pub(crate) const C_PACKAGE: Package = Package {
         "include/eranos/text.h",
         "include/eranos/totals.h",
         "include/eranos/transfer.h",
+    ],
+    examples: &[
+        "examples/grand_tour.c",
+        "examples/members_and_accounts.c",
+        "examples/multi_currency.c",
+        "examples/persistence.c",
+        "examples/quickstart.c",
+        "examples/report.c",
+        "examples/report.h",
+        "examples/restaurant_bill.c",
+        "examples/settling_up.c",
+        "examples/split_methods.c",
     ],
 };
 
@@ -108,6 +125,7 @@ pub(crate) const CPP_PACKAGE: Package = Package {
         "include/eranos/totals.hpp",
         "include/eranos/transfer.hpp",
     ],
+    examples: &[],
 };
 
 /// Runs the C and C++ packages' gates, stopping at the first that fails.
@@ -149,6 +167,23 @@ pub(crate) fn library() -> Step {
     )
 }
 
+/// The step that builds eranos-capi's static library with identifiers that
+/// count up, into `sequential`'s target directory, which the ports link.
+#[must_use]
+pub(crate) fn sequential_library(sequential: &Metadata) -> Step {
+    Step::cargo(
+        &[
+            "build",
+            "--package",
+            "eranos-capi",
+            "--features",
+            "sequential-ids",
+        ],
+        "the static library of eranos-capi, with identifiers that count up",
+    )
+    .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
+}
+
 /// The directory `name` of `package`: `generated`, where Diplomat's headers
 /// go, and `build`, where the tests, their coverage, and the documentation
 /// go; the gates clear both first, so nothing an earlier run left behind is
@@ -176,15 +211,12 @@ pub(crate) fn headers(package: Package) -> Step {
     .in_directory(package.directory)
 }
 
-/// The steps that build `package`'s tests with LLVM's compiler at `llvm`,
-/// with warnings as errors, `AddressSanitizer` and `UndefinedBehaviorSanitizer`,
-/// whose every finding ends the run, and coverage, linked with the static
-/// library in `metadata`'s target directory; run them; and merge their
-/// profile for llvm-cov.
-#[must_use]
-pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<Step> {
-    let library = format!("{}/debug/liberanos_capi.a", metadata.target_directory);
-    let mut arguments = vec![
+/// The flags of every build of `package` under the sanitizers, the tests'
+/// and the ports': its standard, warnings as errors, debugging information,
+/// and `AddressSanitizer` and `UndefinedBehaviorSanitizer`, whose every
+/// finding ends the run.
+const fn sanitised(package: Package) -> [&'static str; 9] {
+    [
         package.standard,
         "-Wall",
         "-Wextra",
@@ -194,6 +226,18 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
         "-fsanitize=address,undefined",
         "-fno-sanitize-recover=all",
         "-fno-omit-frame-pointer",
+    ]
+}
+
+/// The steps that build `package`'s tests with LLVM's compiler at `llvm`,
+/// under the sanitizers and with coverage, linked with the static library in
+/// `metadata`'s target directory; run them; and merge their profile for
+/// llvm-cov.
+#[must_use]
+pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<Step> {
+    let library = format!("{}/debug/liberanos_capi.a", metadata.target_directory);
+    let mut arguments = sanitised(package).to_vec();
+    arguments.extend([
         "-fprofile-instr-generate",
         "-fcoverage-mapping",
         "-pthread",
@@ -202,7 +246,7 @@ pub(crate) fn tests(package: Package, llvm: &str, metadata: &Metadata) -> Vec<St
         "generated",
         package.tests,
         &library,
-    ];
+    ]);
     arguments.extend(SYSTEM_LIBRARIES);
     arguments.extend(["-o", "build/tests"]);
     let program = directory(package, "build").join("tests");
@@ -284,6 +328,65 @@ pub(crate) fn measured_tests(package: Package, llvm: &str, metadata: &Metadata) 
     ]
 }
 
+/// Where the ports of `package` are built: a directory of their own in
+/// `sequential`'s target directory, beside the library they link.
+#[must_use]
+pub(crate) fn ports_directory(package: Package, sequential: &Metadata) -> PathBuf {
+    Path::new(&sequential.target_directory).join(package.language)
+}
+
+/// The step that builds the port of `example` in `package`'s language, its
+/// program and the report module, with LLVM's compiler at `llvm`, under the
+/// sanitizers as the tests are, on the headers that the package's gates
+/// generated, linked with the static library in `sequential`'s target
+/// directory, whose identifiers count up.
+#[must_use]
+pub(crate) fn port_build(
+    package: Package,
+    llvm: &str,
+    sequential: &Metadata,
+    example: &str,
+) -> Step {
+    let library = format!("{}/debug/liberanos_capi.a", sequential.target_directory);
+    let report = format!("examples/report.{}", package.language);
+    let program = format!("examples/{example}.{}", package.language);
+    let output = ports_directory(package, sequential)
+        .join(example)
+        .to_string_lossy()
+        .into_owned();
+    let mut arguments = sanitised(package).to_vec();
+    arguments.extend([
+        "-pthread",
+        "-Iinclude",
+        "-isystem",
+        "generated",
+        &report,
+        &program,
+        &library,
+    ]);
+    arguments.extend(SYSTEM_LIBRARIES);
+    arguments.extend(["-o", &output]);
+    Step::new(
+        &arguments,
+        &format!("the build of the {} port of {example}", package.name),
+        &format!("{llvm}/bin/{}", package.compiler),
+    )
+    .in_directory(package.directory)
+}
+
+/// The step that runs the port of `example` in `package`'s language, with
+/// `LeakSanitizer`, which `AddressSanitizer` runs by default on Linux alone,
+/// so that a port that leaks fails on macOS too.
+#[must_use]
+pub(crate) fn port(package: Package, example: &str, sequential: &Metadata) -> Step {
+    crate::ports::port(
+        package.name,
+        example,
+        &ports_directory(package, sequential).to_string_lossy(),
+    )
+    .with_variable("ASAN_OPTIONS", "detect_leaks=1")
+}
+
 /// The step that prints, as llvm-cov's JSON summary, what `package`'s tests
 /// cover of its hand-written headers, the files under `include`.
 #[must_use]
@@ -353,14 +456,24 @@ pub(crate) fn check_coverage(package: Package, summary: &str) -> Result<(), Fail
     }
 }
 
-/// The steps that check `package`'s format with clang-format, lint its tests
-/// and every header they include with clang-tidy, and build its
+/// The steps that check `package`'s format with clang-format, lint its tests,
+/// its ports, and every header they include with clang-tidy, and build its
 /// documentation with Doxygen, each with warnings as errors.
 #[must_use]
 pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Step> {
     let mut sources = vec!["--dry-run", "--Werror"];
     sources.extend(package.headers);
     sources.push(package.tests);
+    sources.extend(package.examples);
+    let extension = format!(".{}", package.language);
+    let mut programs = vec!["--quiet", package.tests];
+    programs.extend(
+        package
+            .examples
+            .iter()
+            .filter(|example| example.ends_with(&extension)),
+    );
+    programs.extend(["--", package.standard, "-Iinclude", "-isystem", "generated"]);
     vec![
         Step::new(
             &sources,
@@ -369,15 +482,7 @@ pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Step> {
         )
         .in_directory(package.directory),
         Step::new(
-            &[
-                "--quiet",
-                package.tests,
-                "--",
-                package.standard,
-                "-Iinclude",
-                "-isystem",
-                "generated",
-            ],
+            &programs,
             &format!("the {} lint", package.name),
             &format!("{llvm}/bin/clang-tidy"),
         )

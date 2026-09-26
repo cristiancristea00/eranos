@@ -1,0 +1,7 @@
+# The checks of the C ports: the package's, less one, and the ports' own
+# header beside the files they lint. A port's numbers are the amounts, dates,
+# and counts its report names, so they are not magic.
+InheritParentConfig: true
+Checks: >
+  -readability-magic-numbers
+HeaderFilterRegex: '(.*/)?examples/report\.h$'

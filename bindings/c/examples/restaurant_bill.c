@@ -1,0 +1,254 @@
+// An itemised restaurant bill: every line is split among the people who had it, quantities multiply the unit price, and
+// the tip is shared either in proportion to what each person ordered or equally. The port of the Rust example
+// `restaurant_bill`, which prints the same report.
+
+#include "eranos.h"
+#include "report.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+/// The three friends and the day they had dinner.
+typedef struct Friends {
+    /// Who paid.
+    Id ana;
+    /// The second friend.
+    Id bob;
+    /// The third friend, who ordered the most.
+    Id carol;
+    /// The day of the dinner.
+    EranosCalendarDate day;
+} Friends;
+
+/// The amount @p text of euros.
+static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
+
+/// Adds the line @p name of the receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
+/// @p split.
+static void addItem(EranosItemList *const items, char const *const name, EranosSplit *const split, char const *const unitPrice,
+                    int32_t const quantity) {
+    EranosMoney *const price = euros(unitPrice);
+    EranosItem *item = NULL;
+    must(eranosItemCreate(name, split, price, &item));
+    eranosItemSetQuantity(item, quantity);
+    eranosItemListPush(items, item);
+    eranosItemDestroy(item);
+    eranosMoneyDestroy(price);
+    eranosSplitDestroy(split);
+}
+
+/// The receipt: every line with the members who had it.
+static EranosItemList *receipt(Friends const *const friends) {
+    EranosItemList *const items = eranosItemListCreate();
+    addItem(items, "Ciorbă", soleSplit(friends->ana), "8.00", 1);
+    Members const sarmale = {.count = 2, .ids = {friends->bob, friends->carol}};
+    addItem(items, "Sarmale", equalSplit(&sarmale), "14.00", 2);
+    Share const papanasi[] = {
+        {.member = friends->ana, .value = "1"},
+        {.member = friends->carol, .value = "2"},
+    };
+    addItem(items, "Papanași", partsSplit(papanasi, 2), "9.00", 1);
+    Members const everyone = {.count = 3, .ids = {friends->ana, friends->bob, friends->carol}};
+    addItem(items, "Lemonade", equalSplit(&everyone), "3.00", 3);
+    return items;
+}
+
+/// The dinner of @p amount euros that Ana paid, over the receipt's lines.
+static EranosExpense *billOf(Friends const *const friends, char const *const amount) {
+    EranosCost *const cost = localCost(euros(amount));
+    EranosSplit *const payers = soleSplit(friends->ana);
+    EranosItemList *const items = receipt(friends);
+    EranosExpenseSplit *const split = eranosExpenseSplitCreateItemised(items);
+    EranosExpense *expense = NULL;
+    must(eranosExpenseCreate(cost, friends->day, "Dinner", payers, split, &expense));
+    eranosExpenseSplitDestroy(split);
+    eranosItemListDestroy(items);
+    eranosSplitDestroy(payers);
+    eranosCostDestroy(cost);
+    return expense;
+}
+
+/// The dinner with a tip of 10 %, shared by @p distribution.
+static EranosExpense *tippedBillOf(Friends const *const friends, EranosTipDistribution const distribution) {
+    EranosExpense *const expense = billOf(friends, "54.00");
+    int32_t basisPoints = 0;
+    must(eranosPercentageParse("10", &basisPoints));
+    EranosTipValue *const value = eranosTipValueCreatePercentage(basisPoints);
+    EranosTip *const tip = eranosTipCreate(value, distribution);
+    eranosExpenseSetTip(expense, tip);
+    eranosTipDestroy(tip);
+    eranosTipValueDestroy(value);
+    return expense;
+}
+
+/// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so
+/// the group itself is unchanged; destroys @p expense.
+static EranosExpenseShares *preview(EranosGroup const *const group, EranosExpense *const expense) {
+    EranosText *const text = eranosTextCreate();
+    must(eranosGroupSave(group, text));
+    EranosGroup *copy = NULL;
+    must(eranosGroupLoad(eranosTextData(text), &copy));
+    must(eranosGroupAddExpense(copy, expense, text));
+    EranosExpenseShares *shares = NULL;
+    must(eranosGroupExpenseShares(copy, eranosTextData(text), &shares));
+    check(NULL != shares, "the copy holds the dinner");
+    eranosGroupDestroy(copy);
+    eranosTextDestroy(text);
+    eranosExpenseDestroy(expense);
+    return shares;
+}
+
+/// What @p member consumed of the expense that @p shares divides, which the caller destroys.
+static EranosMoney *consumed(EranosExpenseShares const *const shares, Id const member) {
+    EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
+    EranosText *const text = eranosTextCreate();
+    EranosMoney *found = NULL;
+    for (size_t index = 0; NULL == found && eranosMemberShareListLength(members) > index; ++index) {
+        EranosMemberShare *const share = eranosMemberShareListGet(members, index);
+        eranosMemberShareMember(share, text);
+        if (0 == strcmp(eranosTextData(text), member.text)) {
+            found = eranosMemberShareShare(share);
+        }
+        eranosMemberShareDestroy(share);
+    }
+    eranosTextDestroy(text);
+    eranosMemberShareListDestroy(members);
+    check(NULL != found, "every member ordered");
+    return found;
+}
+
+/// What @p total adds to @p subtotal.
+static Line addedTo(EranosMoney const *const total, EranosMoney const *const subtotal) {
+    EranosMoney *difference = NULL;
+    must(eranosMoneySubtract(total, subtotal, &difference));
+    return moneyLine(difference);
+}
+
+/// Whether @p member consumed @p minorUnits of the expense that @p shares divides.
+static bool consumedIs(EranosExpenseShares const *const shares, Id const member, int64_t const minorUnits) {
+    EranosMoney *const amount = consumed(shares, member);
+    bool const same = minorUnits == eranosMoneyMinorUnits(amount);
+    eranosMoneyDestroy(amount);
+    return same;
+}
+
+/// Prints the receipt's lines: who shared each, its quantity, its unit price, and its total.
+static void printReceipt(EranosGroup const *const group, Friends const *const friends) {
+    EranosItemList *const items = receipt(friends);
+    Table *const table = tableCreate(5, (char const *const[]){"Item", "Shared by", "Quantity", "Unit price", "Line total"}, 2);
+    EranosText *const text = eranosTextCreate();
+    for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
+        EranosItem *const item = eranosItemListGet(items, index);
+        EranosSplit *const split = eranosItemSplit(item);
+        Members const sharedBy = splitMembers(split);
+        EranosMoney *const unitPrice = eranosItemUnitPrice(item);
+        int32_t const quantity = eranosItemQuantity(item);
+        eranosMoneyCurrency(unitPrice, text);
+        EranosMoney *total = NULL;
+        must(eranosMoneyCreate(eranosTextData(text), eranosMoneyMinorUnits(unitPrice) * quantity, &total));
+        eranosItemName(item, text);
+        tableAdd(table, (Line const[]){
+                            textLine(text),
+                            names(group, &sharedBy),
+                            lineOf("%ld", (long)quantity),
+                            moneyLine(unitPrice),
+                            moneyLine(total),
+                        });
+        eranosSplitDestroy(split);
+        eranosItemDestroy(item);
+    }
+    tablePrint(table);
+    eranosTextDestroy(text);
+    eranosItemListDestroy(items);
+}
+
+/// Prints what each friend ordered, and what they pay with the tip shared by consumption, in @p byConsumption, and
+/// equally, in @p even; @p ordered divides the dinner without a tip.
+static void printTips(EranosGroup const *const group, Friends const *const friends, EranosExpenseShares const *const ordered,
+                      EranosExpenseShares const *const byConsumption, EranosExpenseShares const *const even) {
+    Table *const table = tableCreate(6, (char const *const[]){"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"}, 1);
+    Id const members[] = {friends->ana, friends->bob, friends->carol};
+    for (size_t index = 0; 3 > index; ++index) {
+        EranosMoney *const subtotal = consumed(ordered, members[index]);
+        EranosMoney *const proportionalTotal = consumed(byConsumption, members[index]);
+        EranosMoney *const equalTotal = consumed(even, members[index]);
+        // The tips first: the cells of a row are made in no set order, and three of them destroy the amounts they write.
+        Line const proportionalTip = addedTo(proportionalTotal, subtotal);
+        Line const equalTip = addedTo(equalTotal, subtotal);
+        tableAdd(table, (Line const[]){
+                            firstName(group, members[index].text),
+                            moneyLine(subtotal),
+                            proportionalTip,
+                            moneyLine(proportionalTotal),
+                            equalTip,
+                            moneyLine(equalTotal),
+                        });
+    }
+    tablePrint(table);
+}
+
+int main(void) {
+    EranosNewGroup *details = NULL;
+    must(eranosNewGroupCreate("EUR", "Dinner at Caru' cu Bere", &details));
+    EranosGroup *group = NULL;
+    must(eranosGroupCreate(details, &group));
+    eranosNewGroupDestroy(details);
+    Id const ana = addMember(group, "Ana");
+    Id const bob = addMember(group, "Bob");
+    Id const carol = addMember(group, "Carol");
+    Friends const friends = {.ana = ana, .bob = bob, .carol = carol, .day = {.day = 23, .month = 9, .year = 2026}};
+
+    EranosText *const name = eranosTextCreate();
+    must(eranosGroupName(group, name));
+    Line const heading = lineOf("%s: an itemised bill", eranosTextData(name));
+    eranosTextDestroy(name);
+    title(heading.text);
+    printLine("Three friends share a Romanian dinner. Instead of splitting the whole bill evenly,\n"
+              "every line of the receipt is split among the people who had it.");
+
+    section("1. The receipt");
+    printReceipt(group, &friends);
+    printLine("The papanași are split by parts: Carol ate two of the three. The line totals add up\n"
+              "to 54.00 EUR, and the expense's amount must match them exactly.");
+
+    section("2. Who ordered what, and the tip");
+    EranosExpenseShares *const ordered = preview(group, billOf(&friends, "54.00"));
+    Id const proportional = addExpense(group, tippedBillOf(&friends, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL));
+    EranosExpenseShares *byConsumption = NULL;
+    must(eranosGroupExpenseShares(group, proportional.text, &byConsumption));
+    check(NULL != byConsumption, "the group holds the dinner");
+    EranosExpenseShares *const even = preview(group, tippedBillOf(&friends, ERANOS_TIP_DISTRIBUTION_EQUAL));
+    Line const tip = moneyLine(eranosExpenseSharesTip(byConsumption));
+    printFormatted("Ana paid the bill plus a 10 %% tip (%s). A tip can be shared in proportion to what\n"
+                   "each person ordered, or equally; both are shown:",
+                   tip.text);
+    printTips(group, &friends, ordered, byConsumption, even);
+    printLine("By consumption, Carol, who ordered the most, adds the largest part of the tip;\n"
+              "shared equally, everyone adds the same 1.80.");
+
+    section("3. A total that does not match is refused");
+    EranosError *const mismatch = expenseRefusal(group, billOf(&friends, "55.00"));
+    check(NULL != mismatch, "the mismatch is refused");
+    Line const message = messageLine(mismatch);
+    printFormatted("An amount of 55.00 EUR with these lines is refused when the expense is built:\n"
+                   "  error: %s",
+                   message.text);
+
+    // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to
+    // each; an equal one 1.80 to everyone.
+    check(consumedIs(byConsumption, ana, 1540), "Ana pays 15.40 EUR with the tip by consumption");
+    check(consumedIs(byConsumption, bob, 1870), "Bob pays 18.70 EUR with the tip by consumption");
+    check(consumedIs(byConsumption, carol, 2530), "Carol pays 25.30 EUR with the tip by consumption");
+    check(consumedIs(even, carol, 2480), "Carol pays 24.80 EUR with the tip shared equally");
+    EranosMoney *const total = eranosExpenseSharesTotal(even);
+    check(5940 == eranosMoneyMinorUnits(total), "the dinner comes to 59.40 EUR with its tip");
+    eranosMoneyDestroy(total);
+    eranosExpenseSharesDestroy(even);
+    eranosExpenseSharesDestroy(byConsumption);
+    eranosExpenseSharesDestroy(ordered);
+    eranosGroupDestroy(group);
+    return EXIT_SUCCESS;
+}
