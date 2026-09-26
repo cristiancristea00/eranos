@@ -188,10 +188,10 @@ fn words(line: &[&str]) -> Vec<String> {
     line.iter().map(|&word| word.to_owned()).collect()
 }
 
-/// The ports' steps, the Swift ports of the two examples of eranos that
-/// [`METADATA`] lists only where `apple`: the recorder answers the programs'
-/// directory with [`PROGRAMS`], and an example of another package has no
-/// port.
+/// The ports' steps: of the two examples of eranos that [`METADATA`] lists,
+/// the Swift ports only where `apple`, and the Kotlin ports; the recorder
+/// answers the programs' directory with [`PROGRAMS`], and an example of
+/// another package has no port.
 fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     let sequential = metadata.inner(ports::DIRECTORY);
     let mut steps = vec![ports::library(&sequential)];
@@ -204,6 +204,11 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
             ["quickstart", "persistence"].map(|example| ports::port("Swift", example, "/programs")),
         );
     }
+    steps.push(kotlin::ports(metadata));
+    steps.extend(
+        ["quickstart", "persistence"]
+            .map(|example| kotlin::port(example, "/JAVA_HOME", &sequential)),
+    );
     steps
 }
 

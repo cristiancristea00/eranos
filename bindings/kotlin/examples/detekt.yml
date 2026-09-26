@@ -1,0 +1,15 @@
+# What the examples change of the layer's configuration, each with its
+# reason.
+
+complexity:
+  LongMethod:
+    # A port follows its Rust example function for function, and the
+    # examples keep clippy's limit of 100 lines, as the Swift ports keep
+    # SwiftLint's.
+    threshold: 100
+
+style:
+  MagicNumber:
+    # An example's numbers are what its report shows and its checks assert,
+    # as a test's are, which detekt's defaults exempt.
+    active: false

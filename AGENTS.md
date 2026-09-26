@@ -85,10 +85,10 @@ It runs these, in this order, and stops at the first that fails:
     `JAVA_HOME` set, then the Kotlin package: `cargo ndk` for the four
     Android ABIs into `generated-android/src/main/jniLibs`, the generated
     Kotlin copied into `generated/src`, and the JUnit tests with Kover at
-    100 % of lines, ktlint, detekt, the API check against
-    `eranos/api/eranos.api`, Dokka with warnings as errors, and both
-    Android libraries, every Gradle run with `--warning-mode=fail`, all in
-    `bindings/kotlin`
+    100 % of lines, ktlint, detekt on the layer and the examples, the API
+    check against `eranos/api/eranos.api`, Dokka with warnings as errors,
+    and both Android libraries, every Gradle run with
+    `--warning-mode=fail`, all in `bindings/kotlin`
 13. `cp -R target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos`,
     with `JAVA_HOME` set, then the Java package: google-java-format's
     check, ktlint on its build scripts, the JUnit tests with JaCoCo at
@@ -126,11 +126,13 @@ It runs these, in this order, and stops at the first that fails:
 17. `cargo build --package eranos-uniffi --features sequential-ids`, into
     `target/sequential`, the host library whose identifiers count up as the
     examples' do, then the ports: the UniFFI sources generated from it
-    into `target/sequential/uniffi`, and, on macOS, the Swift package
-    copied into `target/sequential/swift` over an `XCFramework` of that
-    library, the examples built there, and every Swift port run, its
-    report compared byte for byte with its example's from gate 8; the
-    first line that differs stops the gates
+    into `target/sequential/uniffi`; on macOS, the Swift package copied
+    into `target/sequential/swift` over an `XCFramework` of that library,
+    the examples built there, and every Swift port run; and the Kotlin
+    ports gathered by `:examples:ports` in `bindings/kotlin`, each run on
+    the `java` of `JAVA_HOME`, JNA loading that library; every report is
+    compared byte for byte with its example's from gate 8, and the first
+    line that differs stops the gates
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a

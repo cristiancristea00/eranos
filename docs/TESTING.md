@@ -83,9 +83,10 @@ runs every port on a host library built with `sequential-ids` into
 `target/sequential`, whose identifiers count up as the example's do, and
 stops at the first line that differs, printing both versions of it. The
 Swift ports run on macOS, on a copy of the Swift package over that library,
-since the identifiers of the package's own XCFramework are random. A test in
-`crates/xtask` holds every example to a port in every language the ports
-cover.
+since the identifiers of the package's own XCFramework are random; the
+Kotlin ports run on every machine, on the JVM, where JNA loads that library
+from `target/sequential/debug`. A test in `crates/xtask` holds every example
+to a port in every language the ports cover.
 
 ## 3. The invariants
 

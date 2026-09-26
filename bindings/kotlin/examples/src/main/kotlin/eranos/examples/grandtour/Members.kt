@@ -1,0 +1,177 @@
+// Sections 1 to 3 of the tour: the group and its details, the members with their contact details and accounts, and
+// the categories.
+package eranos.examples.grandtour
+
+import eranos.Account
+import eranos.AccountDetails
+import eranos.Category
+import eranos.Currency
+import eranos.Email
+import eranos.EranosException
+import eranos.Group
+import eranos.GroupFailure
+import eranos.Iban
+import eranos.Language
+import eranos.Member
+import eranos.PhoneNumber
+import eranos.Username
+import eranos.examples.printTable
+import eranos.examples.section
+
+internal fun theGroup(): Group {
+    section("1. The group")
+    val group = Group(Currency.of("EUR"), "Lisbon", "A week by the Atlantic", Language.parse("pt-pt"))
+    val blank = refusal { group.renameBlocking("   ") }
+    group.renameBlocking("Lisbon and Porto")
+    group.setDescriptionBlocking("A week by the Atlantic, with a day in Porto")
+    printTable(
+        listOf("Detail", "Value"),
+        listOf(
+            listOf("Name", group.nameBlocking()),
+            listOf("Currency", "${group.currencyBlocking()}"),
+            listOf("Language", group.languageBlocking()?.toString().orEmpty()),
+            listOf("Description", group.descriptionBlocking().orEmpty()),
+        ),
+        numbersFrom = 2,
+    )
+    println(
+        """
+        The group started as Lisbon and was renamed when a day in Porto joined the plan.
+        Every total is kept in its currency, ${group.currencyBlocking()}. The language is a BCP 47 tag the apps
+        show the group in, stored in canonical form: pt-pt became ${group.languageBlocking()?.toString().orEmpty()}. A blank name is
+        refused:
+          error: ${message(blank)}
+        """.trimIndent(),
+    )
+
+    check(GroupFailure.EmptyName == (blank as? EranosException.Group)?.failure)
+    check("Lisbon and Porto" == group.nameBlocking())
+    check("pt-PT" == group.languageBlocking()?.toString())
+    return group
+}
+
+/** An account with its label, its kind, and its details. */
+internal fun describe(account: Account): String =
+    when (val details = account.details) {
+        is AccountDetails.Iban -> "${account.name}, IBAN ${details.iban}"
+        is AccountDetails.Username -> "${account.name}, username ${details.username}"
+    }
+
+internal fun printMembers(group: Group) {
+    printTable(
+        listOf("Member", "Email", "Phone", "Accounts"),
+        group.membersBlocking().map { member ->
+            listOf(
+                listOfNotNull(member.firstName, member.lastName).joinToString(" "),
+                member.email?.toString().orEmpty(),
+                member.phone?.toString().orEmpty(),
+                cell(member.accounts.map(::describe)),
+            )
+        },
+        numbersFrom = 4,
+    )
+}
+
+internal fun validation(group: Group) {
+    println(
+        """
+        IBANs are checked against the SWIFT registry and their mod-97 check digits,
+        emails against RFC 5321 and 5322, and phone numbers against their country's
+        numbering plan. Required text must not be blank:
+        """.trimIndent(),
+    )
+    val iban = { input: String ->
+        listOf("\"$input\"", "IBAN", outcome({ Iban.parse(input) }, { iban -> "$iban, country ${iban.countryCode}" }))
+    }
+    val email = { input: String -> listOf("\"$input\"", "email", outcome({ Email.parse(input) }, Email::toString)) }
+    val phone = { input: String ->
+        listOf("\"$input\"", "phone", outcome({ PhoneNumber.parse(input) }, { phone -> "$phone, stored as ${phone.e164}" }))
+    }
+    printTable(
+        listOf("Input", "Checked as", "Result"),
+        listOf(
+            iban("ro49 aaaa 1b31 0075 9384 0000"),
+            iban("RO49 AAAA 1B31 0075 9384 0001"),
+            email("ana..popescu@example.com"),
+            phone("+351 912 345 678"),
+            phone("+40 612 345 678"),
+            listOf("\"   \"", "username", outcome({ Username.parse("   ") }, Username::toString)),
+            listOf("\"  \"", "first name", outcome({ group.addBlocking(Member("  ")) }, { id -> id.value })),
+        ),
+        numbersFrom = 3,
+    )
+}
+
+internal fun members(group: Group): People {
+    section("2. Members")
+    val ana =
+        group.addBlocking(
+            Member(
+                "Ana",
+                accounts =
+                    listOf(
+                        Account(AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000")), "ING"),
+                        Account(AccountDetails.Username(Username.parse("@ana")), "Revolut"),
+                    ),
+                email = Email.parse("ana@example.com"),
+                lastName = "Popescu",
+                phone = PhoneNumber.parse("+40 712 345 678"),
+            ),
+        )
+    val bob = group.addBlocking(Member("Bob"))
+    val carol = group.addBlocking(Member("Carol"))
+    val dan = group.addBlocking(Member("Dan"))
+    val eva = group.addBlocking(Member("Eva"))
+    val filip = group.addBlocking(Member("Filip"))
+    // An edit starts from a copy of the member, which keeps its identifier.
+    val edited = checkNotNull(group.memberBlocking(bob)) { "Bob is a member" }.copy(email = Email.parse("bob@example.com"), lastName = "Ionescu")
+    val before = group.replaceBlocking(edited)
+    printMembers(group)
+    println(
+        """
+        Only a first name is required. Ana gave every detail; Bob added his last name and
+        email later, through an edit that kept his identifier:
+          $bob
+        Eva is Carol's daughter, and Filip was added by mistake.
+        """.trimIndent(),
+    )
+    validation(group)
+
+    check(null == before.lastName)
+    check("Ionescu" == group.memberBlocking(bob)?.lastName)
+    check(2 == group.memberBlocking(ana)?.accounts?.size)
+    return People(ana, bob, carol, dan, eva, filip)
+}
+
+internal fun addCategories(group: Group): Categories {
+    section("3. Categories")
+    val food = group.addBlocking(Category("Food"))
+    val lodging = group.addBlocking(Category("Lodging"))
+    val transport = group.addBlocking(Category("Transport"))
+    val homonym = refusal { group.addBlocking(Category("FOOD")) }
+    val renamed = checkNotNull(group.categoryBlocking(transport)) { "Transport was added" }.copy(name = "Getting around")
+    group.replaceBlocking(renamed)
+    val other = checkNotNull(group.categoriesBlocking().firstOrNull()) { "every group has the built-in category" }.copy(name = "Other")
+    val builtIn = refusal { group.replaceBlocking(other) }
+    println(
+        """
+        Every group has the built-in Uncategorised; this one adds Food, Lodging, and
+        Transport, then renames Transport, which keeps its identifier. In identifier order:
+          ${group.categoriesBlocking().joinToString(", ") { category -> category.name }}
+        Names are compared caselessly, and the built-in category keeps its name:
+        """.trimIndent(),
+    )
+    printTable(
+        listOf("Change", "Refused with"),
+        listOf(
+            listOf("Add a category named FOOD", message(homonym)),
+            listOf("Rename Uncategorised to Other", message(builtIn)),
+        ),
+        numbersFrom = 2,
+    )
+
+    check(GroupFailure.DuplicateCategoryName(food) == (homonym as? EranosException.Group)?.failure)
+    check(GroupFailure.BuiltInCategory == (builtIn as? EranosException.Group)?.failure)
+    check("Getting around" == group.categoryBlocking(transport)?.name)
+    return Categories(food, lodging, transport)
+}

@@ -143,8 +143,9 @@ cargo run -p eranos --features serde --example persistence
 cargo run -p eranos --all-features --example grand_tour   # the same identifiers every run
 ```
 
-Every example also has a Swift port, in `bindings/swift/examples`, that
-prints the same report byte for byte, which the gates check
+Every example also has a Swift and a Kotlin port, in
+`bindings/swift/examples` and `bindings/kotlin/examples`, each printing the
+same report byte for byte, which the gates check
 ([docs/TESTING.md § 2](docs/TESTING.md#2-layout)).
 
 ## Features

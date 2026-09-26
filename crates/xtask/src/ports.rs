@@ -2,14 +2,15 @@
 //! with every feature, which its port in each language prints byte for byte
 //! on a build of the glue whose identifiers count up from one as the Rust
 //! example's do. The ports run where their language builds: the Swift ones
-//! where the machine builds for Apple platforms.
+//! where the machine builds for Apple platforms, and the Kotlin ones on
+//! every machine, on the JVM that `JAVA_HOME` names.
 
 use std::path::PathBuf;
 
 use crate::Failure;
 use crate::gates::{self, Metadata};
 use crate::process::{Runner, Step};
-use crate::swift;
+use crate::{kotlin, swift};
 
 /// The target directory, inside cargo's, of the glue whose identifiers
 /// count up: a directory of its own, so the gates' builds stay as they are.
@@ -30,14 +31,18 @@ pub(crate) struct Reference {
 ///
 /// # Errors
 ///
-/// The failure of the first step that fails, of clearing an earlier copy or
-/// generated source, and [`Failure::Port`] for a port whose report is not
-/// its example's.
+/// [`Failure::Variable`] when the JDK's variable is not set, before any step
+/// runs; the failure of the first step that fails, of clearing an earlier
+/// copy or generated source, and [`Failure::Port`] for a port whose report
+/// is not its example's.
 pub(crate) fn run(
     runner: &mut impl Runner,
     metadata: &Metadata,
     references: &[Reference],
 ) -> Result<(), Failure> {
+    let jdk = runner
+        .variable(kotlin::JDK)
+        .ok_or(Failure::Variable(kotlin::JDK))?;
     let sequential = metadata.inner(DIRECTORY);
     let apple = runner.builds_apple_platforms();
     runner.run(&library(&sequential))?;
@@ -59,6 +64,11 @@ pub(crate) fn run(
             let port = port("Swift", &reference.example, programs.trim());
             compare("Swift", reference, &runner.output(&port)?)?;
         }
+    }
+    runner.run(&kotlin::ports(metadata))?;
+    for reference in references {
+        let port = kotlin::port(&reference.example, &jdk, &sequential);
+        compare("Kotlin", reference, &runner.output(&port)?)?;
     }
     Ok(())
 }

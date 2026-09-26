@@ -393,6 +393,11 @@ its code. The layer follows the Kotlin library guidelines:
 - The binary-compatibility validator checks the layer's API against the
   committed dump, `eranos/api/eranos.api`.
 
+The module `examples` holds a package per example of eranos, over the layer,
+that prints the example's report ([TESTING.md § 2](TESTING.md#2-layout));
+ktlint and detekt check it with the layer, detekt with the two exceptions
+its `detekt.yml` gives the reasons for.
+
 ### Java
 
 `bindings/java` is the Java package, for JDK 25 and later: one Gradle
@@ -561,9 +566,9 @@ package, builds its tests with the LLVM that `LLVM_HOME` names, runs them
 under the sanitizers, holds every line and function of its layer covered,
 and checks its format, lint, and documentation. Last, it builds
 eranos-uniffi's host library with `sequential-ids` into
-`target/sequential`, generates its sources, and, on macOS, runs every Swift
-port on a copy of the Swift package over it, each report compared with its
-example's.
+`target/sequential`, generates its sources, and runs every port on it: on
+macOS the Swift ports, on a copy of the Swift package over it, and the
+Kotlin ports on the JVM, each report compared with its example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++

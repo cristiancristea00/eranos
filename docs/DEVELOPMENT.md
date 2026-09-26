@@ -87,9 +87,9 @@ bindings, and then eranos-capi's static library, from which Diplomat
 generates each of the C and C++ packages' headers, whose tests the LLVM
 that `LLVM_HOME` names builds under the sanitizers and measures. Then
 they build eranos-uniffi's host library again, with `sequential-ids`, into
-`target/sequential`, and on macOS run the Swift ports of the examples on a
-copy of the Swift package over it
-([TESTING.md § 2](TESTING.md#2-layout)). A run
+`target/sequential`, and run the ports of the examples on it: on macOS the
+Swift ones, on a copy of the Swift package over it, and on every machine
+the Kotlin ones, on the JVM ([TESTING.md § 2](TESTING.md#2-layout)). A run
 from an empty target directory takes about 7 minutes on an Apple M4 Pro,
 most of it building the library for every Apple target and every Android
 ABI; a warm one takes about 4 minutes in all, 40 seconds of it
@@ -112,6 +112,8 @@ unless `-Peranos.library=<directory>` names another:
 ./gradlew :eranos:koverHtmlReport             # their coverage, in eranos/build/reports/kover/html
 ./gradlew :eranos:apiDump                     # the API dump, after a change to the layer's API
 ./gradlew :eranos:dokkaGenerate               # the documentation, in eranos/build/dokka/html
+./gradlew :examples:ports                     # the ports and the libraries they run with, in examples/build/ports
+java --enable-native-access=ALL-UNNAMED -Djna.library.path=../../target/debug -cp 'examples/build/ports/*' eranos.examples.settlingup.MainKt  # one port, whose identifiers are random
 ktlint --format --relative '**/*.kt' '**/*.kts' '!generated/**' '!**/build/**'  # the formatter
 ```
 
@@ -597,10 +599,13 @@ so a failing run blocks nothing: it is a report.
   that none takes; `llvm-cov show build/tests -instr-profile=build/tests.profdata include`,
   in the package's directory, marks each unrun line.
 - **`the Swift port of … prints … at line …, where the Rust example
-  prints …`** from the gates: the port and its example first differ there;
-  `swift run --package-path target/sequential/swift/examples <example>`
-  prints the port's whole report on the library whose identifiers count
-  up, to diff with `cargo run -p eranos --all-features --example <example>`.
+  prints …`** from the gates, or the Kotlin port's: the port and its
+  example first differ there;
+  `swift run --package-path target/sequential/swift/examples <example>`,
+  or the Kotlin command of [§ 2](#2-building-and-testing) with
+  `target/sequential/debug` as JNA's path, prints the port's whole report
+  on the library whose identifiers count up, to diff with
+  `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

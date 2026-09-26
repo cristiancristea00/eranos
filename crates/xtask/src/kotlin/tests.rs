@@ -63,7 +63,7 @@ fn the_package_is_tested_linted_and_documented_in_order() {
             format!("{gradle} :eranos:test :eranos:koverVerify"),
             "cd bindings/kotlin && ktlint --relative **/*.kt **/*.kts !generated/** !**/build/**"
                 .to_owned(),
-            format!("{gradle} :eranos:detekt"),
+            format!("{gradle} :eranos:detekt :examples:detekt"),
             format!("{gradle} :eranos:apiCheck"),
             format!("{gradle} :eranos:dokkaGenerate"),
             format!("{gradle} :generated-android:assembleDebug :eranos-android:assembleDebug"),

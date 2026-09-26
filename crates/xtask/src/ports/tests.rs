@@ -26,20 +26,22 @@ fn reference(example: &str, report: &str) -> Reference {
 /// A port that ran on the gates' glue would print identifiers the Rust
 /// example does not, and one that ran before its library was built would
 /// print nothing; the glue whose identifiers count up is built first, its
-/// sources generated from it, and the Swift ports run on a copy of the
-/// package over it, only where the machine builds for Apple platforms.
+/// sources generated from it, the Swift ports run on a copy of the package
+/// over it only where the machine builds for Apple platforms, and the
+/// Kotlin ones on every machine, on the JDK's `java`, JNA loading that
+/// library.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
+    let metadata = Metadata::parse(METADATA).unwrap();
     let references = [
         reference("quickstart", "report"),
-        reference("persistence", "saved"),
+        reference("persistence", "report"),
     ];
     for apple in [true, false] {
         let mut recorder = Recorder::new();
         recorder.apple = apple;
-        let answered = Metadata::parse(METADATA).unwrap();
         recorder.metadata = "report".to_owned();
-        let failure = run(&mut recorder, &answered, &references);
+        run(&mut recorder, &metadata, &references).unwrap();
         let mut expected = vec![library(&sequential())];
         expected.extend(gates::generators(&sequential()));
         if apple {
@@ -48,13 +50,10 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
             expected.push(swift::examples_directory(&sequential()));
             expected.push(port("Swift", "quickstart", "/programs"));
             expected.push(port("Swift", "persistence", "/programs"));
-            assert!(
-                matches!(&failure, Err(Failure::Port { example, .. }) if "persistence" == example),
-                "{failure:?}"
-            );
-        } else {
-            assert!(failure.is_ok());
         }
+        expected.push(kotlin::ports(&metadata));
+        expected.push(kotlin::port("quickstart", "/JAVA_HOME", &sequential()));
+        expected.push(kotlin::port("persistence", "/JAVA_HOME", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
     }
@@ -62,6 +61,40 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         library(&sequential()).command_line(),
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-uniffi --features sequential-ids"
     );
+    assert_eq!(
+        kotlin::port("split_methods", "/JAVA_HOME", &sequential()).command_line(),
+        "/JAVA_HOME/bin/java --enable-native-access=ALL-UNNAMED -Djna.library.path=/eranos/target/sequential/debug \
+         -cp bindings/kotlin/examples/build/ports/* eranos.examples.splitmethods.MainKt"
+    );
+}
+
+/// A port whose report is not its example's stops the ports at it, naming
+/// its language, so no later port hides it: the Swift one where the machine
+/// builds for Apple platforms, the Kotlin one elsewhere.
+#[test]
+fn a_report_that_differs_stops_the_ports_at_its_port() {
+    let metadata = Metadata::parse(METADATA).unwrap();
+    for (apple, language, last) in [
+        (true, "Swift", port("Swift", "quickstart", "/programs")),
+        (
+            false,
+            "Kotlin",
+            kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
+        ),
+    ] {
+        let mut recorder = Recorder::new();
+        recorder.apple = apple;
+        let failure = run(
+            &mut recorder,
+            &metadata,
+            &[reference("quickstart", "other")],
+        );
+        assert!(
+            matches!(&failure, Err(Failure::Port { language: found, .. }) if language == *found),
+            "{failure:?}"
+        );
+        assert_eq!(recorder.steps.last(), Some(&last));
+    }
 }
 
 /// A report that differs anywhere, its end included, would pass for the
@@ -91,11 +124,14 @@ fn a_report_passes_only_byte_for_byte() {
 /// not built or on sources that were not generated, and no report is
 /// compared with another example's: the library, a generator, the copy or
 /// the build of the Swift examples, the programs' directory that could not
-/// be printed, a port that fails, or a directory that could not be cleared.
+/// be printed, the build of the Kotlin ports, a port that fails, a
+/// directory that could not be cleared, or a JDK that no variable names,
+/// which stops them before any step.
 #[test]
 fn a_failure_stops_the_ports_where_it_happens() {
     let metadata = Metadata::parse(METADATA).unwrap();
-    let references = [reference("quickstart", "report")];
+    // What the recorder answers every port with, so each report matches.
+    let references = [reference("quickstart", METADATA)];
     for failing in [
         library(&sequential()),
         gates::generators(&sequential())[0].clone(),
@@ -103,6 +139,8 @@ fn a_failure_stops_the_ports_where_it_happens() {
         swift::examples(&sequential())[2].clone(),
         swift::examples_directory(&sequential()),
         port("Swift", "quickstart", "/programs"),
+        kotlin::ports(&metadata),
+        kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
@@ -119,12 +157,20 @@ fn a_failure_stops_the_ports_where_it_happens() {
         Err(Failure::Usage)
     ));
     assert_eq!(blocked.steps, [library(&sequential())]);
+    let mut unnamed = Recorder::new();
+    unnamed.variables.clear();
+    assert!(matches!(
+        run(&mut unnamed, &metadata, &references),
+        Err(Failure::Variable("JAVA_HOME"))
+    ));
+    assert!(unnamed.steps.is_empty());
 }
 
 /// An example without a port would print its report unchecked in that
 /// language, and a port without an example would check nothing; the Swift
 /// examples' package has a program for every Rust example of eranos and for
-/// no other.
+/// no other, and so do the Kotlin examples, a package each, named without
+/// underscores, whose `Main.kt` holds its `main`.
 #[test]
 fn every_example_has_a_port_in_every_language() {
     let names = |directory: &str, keep: fn(&Path) -> Option<String>| {
@@ -145,6 +191,23 @@ fn every_example_has_a_port_in_every_language() {
             .map(|name| name.to_string_lossy().into_owned())
             .filter(|name| "Report" != name)
     });
+    let kotlin = names(
+        "bindings/kotlin/examples/src/main/kotlin/eranos/examples",
+        |path| {
+            path.join("Main.kt")
+                .is_file()
+                .then(|| {
+                    path.file_name()
+                        .map(|name| name.to_string_lossy().into_owned())
+                })
+                .flatten()
+        },
+    );
+    let unseparated: Vec<String> = examples
+        .iter()
+        .map(|example| example.replace('_', ""))
+        .collect();
     assert_eq!(swift, examples);
+    assert_eq!(kotlin, unseparated);
     assert_eq!(8, examples.len());
 }

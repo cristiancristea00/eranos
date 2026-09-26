@@ -1,6 +1,7 @@
 //! The gates of the Kotlin package: the library of every Android ABI, the
 //! generated Kotlin in the package, and the package's tests and their
-//! coverage, linters, API dump, documentation, and Android libraries.
+//! coverage, linters, API dump, documentation, and Android libraries; and
+//! the steps that build and run the ports of the examples on the JVM.
 
 use std::path::{Path, PathBuf};
 
@@ -10,6 +11,10 @@ use crate::process::{Runner, Step, WORKSPACE};
 
 /// The Kotlin project, from the workspace root.
 const PROJECT: &str = "bindings/kotlin";
+
+/// The directory, from the workspace root, into which the examples' `ports`
+/// task gathers the ports and every library they run with.
+const PORTS: &str = "bindings/kotlin/examples/build/ports";
 
 /// Every Android ABI the package ships, as the NDK names them.
 pub(crate) const ANDROID_ABIS: [&str; 4] = ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"];
@@ -26,9 +31,12 @@ pub(crate) const ANDROID_TARGETS: [&str; 4] = [
 /// `minSdk`, which the NDK's linker is named for.
 const API_LEVEL: &str = "26";
 
+/// The environment variable that names the JDK Gradle and the ports run on.
+pub(crate) const JDK: &str = "JAVA_HOME";
+
 /// The environment variables the Kotlin gates need: the Android SDK, which
 /// holds the NDK and the platform, and the JDK that Gradle runs on.
-pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", "JAVA_HOME"];
+pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", JDK];
 
 /// Runs the Kotlin package's gates, stopping at the first that fails.
 ///
@@ -147,7 +155,7 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
             "ktlint",
         )
         .in_directory(PROJECT),
-        gradle(&[":eranos:detekt"], "detekt"),
+        gradle(&[":eranos:detekt", ":examples:detekt"], "detekt"),
         gradle(&[":eranos:apiCheck"], "the Kotlin API against its dump"),
         gradle(&[":eranos:dokkaGenerate"], "the Kotlin documentation"),
         gradle(
@@ -158,6 +166,35 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
             "the Android libraries",
         ),
     ]
+}
+
+/// The step that compiles the ports of the examples and gathers them, with
+/// every library they run with, into one directory.
+#[must_use]
+pub(crate) fn ports(metadata: &Metadata) -> Step {
+    gradle(metadata, &[":examples:ports"], "the Kotlin ports")
+}
+
+/// The step that runs the Kotlin port of `example` on the `java` of the JDK
+/// at `jdk`, JNA loading the host library from `sequential`'s target
+/// directory: a port is the package `eranos.examples.<example>`, named
+/// without underscores, whose `Main.kt` holds its `main`.
+#[must_use]
+pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
+    let library = format!("-Djna.library.path={}/debug", sequential.target_directory);
+    let classes = format!("{PORTS}/*");
+    let class = format!("eranos.examples.{}.MainKt", example.replace('_', ""));
+    Step::new(
+        &[
+            "--enable-native-access=ALL-UNNAMED",
+            &library,
+            "-cp",
+            &classes,
+            &class,
+        ],
+        &format!("the Kotlin port of {example}"),
+        &format!("{jdk}/bin/java"),
+    )
 }
 
 /// The step that runs the package's tests again, whatever Gradle holds of
