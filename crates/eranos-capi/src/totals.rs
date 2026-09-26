@@ -16,6 +16,7 @@ pub mod ffi {
 
     /// How a settlement plans its payments.
     #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::SettlementStrategy)]
     pub enum EranosSettlementStrategy {
         /// Every debt between two members, unsimplified.
         Direct,
@@ -440,26 +441,6 @@ pub mod ffi {
             let text = eranos_bindings::balance_format(&self.0).map_err(crate::failed)?;
             crate::write_text(write, &text);
             Ok(())
-        }
-    }
-}
-
-impl From<ffi::EranosSettlementStrategy> for eranos_bindings::SettlementStrategy {
-    fn from(value: ffi::EranosSettlementStrategy) -> Self {
-        match value {
-            ffi::EranosSettlementStrategy::Direct => Self::Direct,
-            ffi::EranosSettlementStrategy::Greedy => Self::Greedy,
-            ffi::EranosSettlementStrategy::MinimumTransfers => Self::MinimumTransfers,
-        }
-    }
-}
-
-impl From<eranos_bindings::SettlementStrategy> for ffi::EranosSettlementStrategy {
-    fn from(value: eranos_bindings::SettlementStrategy) -> Self {
-        match value {
-            eranos_bindings::SettlementStrategy::Direct => Self::Direct,
-            eranos_bindings::SettlementStrategy::Greedy => Self::Greedy,
-            eranos_bindings::SettlementStrategy::MinimumTransfers => Self::MinimumTransfers,
         }
     }
 }

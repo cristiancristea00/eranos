@@ -16,6 +16,7 @@ pub mod ffi {
 
     /// How a tip is shared among the participants.
     #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::TipDistribution)]
     pub enum EranosTipDistribution {
         /// The same for every participant.
         Equal,
@@ -1556,24 +1557,6 @@ pub mod ffi {
                 }
                 eranos_bindings::AccountDetails::Iban { .. } => None,
             }
-        }
-    }
-}
-
-impl From<ffi::EranosTipDistribution> for eranos_bindings::TipDistribution {
-    fn from(value: ffi::EranosTipDistribution) -> Self {
-        match value {
-            ffi::EranosTipDistribution::Equal => Self::Equal,
-            ffi::EranosTipDistribution::Proportional => Self::Proportional,
-        }
-    }
-}
-
-impl From<eranos_bindings::TipDistribution> for ffi::EranosTipDistribution {
-    fn from(value: eranos_bindings::TipDistribution) -> Self {
-        match value {
-            eranos_bindings::TipDistribution::Equal => Self::Equal,
-            eranos_bindings::TipDistribution::Proportional => Self::Proportional,
         }
     }
 }
