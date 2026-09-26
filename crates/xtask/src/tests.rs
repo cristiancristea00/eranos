@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::*;
 use crate::gates::Metadata;
+use crate::plan;
 use crate::process::{Step, WORKSPACE};
 
 /// Two packages as `cargo metadata --no-deps --format-version 1` prints
@@ -266,24 +267,24 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     expected.extend(gates::generators(&metadata));
     let mut packages = kotlin::libraries();
     packages.extend(kotlin::sources(&metadata));
-    packages.extend(kotlin::checks(&metadata));
+    packages.extend(plan::steps(&kotlin::checks(&metadata)));
     packages.extend(java::sources(&metadata));
-    packages.extend(java::checks(&metadata));
+    packages.extend(plan::steps(&java::checks(&metadata)));
     packages.push(web::node());
     packages.extend(web::library());
     packages.push(web::install());
     packages.push(web::generator());
-    packages.extend(web::checks());
-    packages.extend(web::package());
+    packages.extend(plan::steps(&web::checks()));
+    packages.extend(plan::steps(&web::package()));
     let mut elsewhere_packages = packages.clone();
-    packages.extend(kmp::checks("/JAVA_HOME_21", true));
-    elsewhere_packages.extend(kmp::checks("/JAVA_HOME_21", false));
+    packages.extend(plan::steps(&kmp::checks("/JAVA_HOME_21", true)));
+    elsewhere_packages.extend(plan::steps(&kmp::checks("/JAVA_HOME_21", false)));
     let mut native = vec![capi::library()];
     for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
         native.push(capi::headers(package));
         native.extend(capi::tests(package, "/LLVM_HOME", &metadata));
         native.push(capi::coverage(package, "/LLVM_HOME"));
-        native.extend(capi::checks(package, "/LLVM_HOME"));
+        native.extend(plan::steps(&capi::checks(package, "/LLVM_HOME")));
     }
     packages.extend(native.clone());
     elsewhere_packages.extend(native);
@@ -333,7 +334,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     expected.extend(swift::package(&metadata));
     expected.push(swift::build());
     expected.push(swift::build_examples());
-    expected.extend(swift::checks(&metadata));
+    expected.extend(plan::steps(&swift::checks(&metadata)));
     expected.extend(packages);
     assert_eq!(recorder.steps, expected);
     assert_eq!(

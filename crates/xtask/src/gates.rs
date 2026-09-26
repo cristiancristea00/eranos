@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::Failure;
+use crate::plan;
 use crate::ports::Reference;
 use crate::process::{Runner, Step};
 
@@ -81,13 +82,17 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
         runner.run(&step)?;
     }
     if runner.builds_apple_platforms() {
-        crate::swift::run(runner, &metadata)?;
+        plan::execute(runner, crate::swift::actions(&metadata), |_| true)?;
     }
-    crate::kotlin::run(runner, &metadata)?;
-    crate::java::run(runner, &metadata)?;
-    crate::web::run(runner)?;
-    crate::kmp::run(runner)?;
-    crate::capi::run(runner, &metadata)?;
+    let kotlin = crate::kotlin::actions(runner, &metadata)?;
+    plan::execute(runner, kotlin, |_| true)?;
+    let java = crate::java::actions(runner, &metadata)?;
+    plan::execute(runner, java, |_| true)?;
+    plan::execute(runner, crate::web::actions(), |_| true)?;
+    let multiplatform = crate::kmp::actions(runner)?;
+    plan::execute(runner, multiplatform, |_| true)?;
+    let native = crate::capi::actions(runner, &metadata)?;
+    plan::execute(runner, native, |_| true)?;
     crate::ports::run(runner, &metadata, &references)?;
     println!("\nevery gate passed");
     Ok(())

@@ -6,7 +6,14 @@
 use std::fs;
 
 use super::*;
+use crate::plan;
 use crate::tests::{FileOperation, METADATA, Recorder};
+
+/// Runs the packages' gates with `runner`, as the gates run them.
+fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
+    let actions = actions(runner, metadata)?;
+    plan::execute(runner, actions, |_| true)
+}
 
 /// The steps the gates run for `package`, from the library on, with the LLVM
 /// the recorder names.
@@ -14,7 +21,7 @@ fn package_steps(package: Package, metadata: &Metadata) -> Vec<Step> {
     let mut steps = vec![headers(package)];
     steps.extend(tests(package, "/LLVM_HOME", metadata));
     steps.push(coverage(package, "/LLVM_HOME"));
-    steps.extend(checks(package, "/LLVM_HOME"));
+    steps.extend(plan::steps(&checks(package, "/LLVM_HOME")));
     steps
 }
 
@@ -153,7 +160,7 @@ fn the_format_and_the_lint_check_every_port() {
         let words = |step: &Step| -> Vec<String> {
             step.command_line().split(' ').map(str::to_owned).collect()
         };
-        let steps = checks(package, "/LLVM_HOME");
+        let steps = plan::steps(&checks(package, "/LLVM_HOME"));
         let format = words(&steps[0]);
         let lint = words(&steps[1]);
         for example in package.examples {
@@ -276,7 +283,7 @@ fn a_failure_stops_the_c_and_cpp_gates_where_it_happens() {
         headers(C_PACKAGE),
         tests(C_PACKAGE, "/LLVM_HOME", &metadata)[0].clone(),
         coverage(C_PACKAGE, "/LLVM_HOME"),
-        checks(C_PACKAGE, "/LLVM_HOME")[0].clone(),
+        plan::steps(&checks(C_PACKAGE, "/LLVM_HOME"))[0].clone(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

@@ -141,6 +141,26 @@ impl Step {
     }
 }
 
+/// The steps that copy the generated `language` sources at `sources` into
+/// `directory`, reported as `created` and as the generated `language`:
+/// `mkdir` creates the directory first, with every directory above it, and
+/// `cp` takes `options`, `-R` for a directory of sources.
+#[must_use]
+pub(crate) fn generated_copy(
+    language: &str,
+    sources: &str,
+    directory: &str,
+    created: &str,
+    options: &[&str],
+) -> Vec<Step> {
+    let mut arguments = options.to_vec();
+    arguments.extend([sources, directory]);
+    vec![
+        Step::new(&["-p", directory], created, "mkdir"),
+        Step::new(&arguments, &format!("the generated {language}"), "cp"),
+    ]
+}
+
 /// Runs steps. The gates take a runner, so their tests record the steps
 /// instead of running them.
 pub(crate) trait Runner {

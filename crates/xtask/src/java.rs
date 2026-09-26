@@ -6,8 +6,9 @@ use std::path::{Path, PathBuf};
 
 use crate::Failure;
 use crate::gates::Metadata;
-use crate::ports::{self, Jvm};
-use crate::process::{Runner, Step, WORKSPACE};
+use crate::jvm::{self, Jvm};
+use crate::plan::{Action, Phase};
+use crate::process::{self, Runner, Step, WORKSPACE};
 
 /// The Java project, from the workspace root.
 const PROJECT: &str = "bindings/java";
@@ -26,28 +27,23 @@ pub(crate) const JVM: Jvm = Jvm {
     strict_native_access: true,
 };
 
-/// Runs the Java package's gates, stopping at the first that fails.
+/// The Java package's gates, in order: the generated Java in a cleared
+/// directory, then the package's checks.
 ///
 /// # Errors
 ///
-/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set,
-/// before any step runs; the failure of the first step that fails, and of
-/// clearing the old generated sources.
-pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), Failure> {
+/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
+pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
     if let Some(name) = VARIABLES
         .into_iter()
         .find(|name| runner.variable(name).is_none())
     {
         return Err(Failure::Variable(name));
     }
-    runner.clear(&generated_sources())?;
-    for step in sources(metadata) {
-        runner.run(&step)?;
-    }
-    for step in checks(metadata) {
-        runner.run(&step)?;
-    }
-    Ok(())
+    let mut actions = vec![Action::clear(Phase::Prepare, generated_sources())];
+    actions.extend(Action::runs(Phase::Prepare, sources(metadata)));
+    actions.extend(checks(metadata));
+    Ok(actions)
 }
 
 /// Where the package keeps the generated Java, the source set it compiles
@@ -69,47 +65,49 @@ pub(crate) fn generated_sources() -> PathBuf {
 pub(crate) fn sources(metadata: &Metadata) -> Vec<Step> {
     let directory = format!("{PROJECT}/src/generated/java/eranos");
     let generated = format!("{}/uniffi/java/eranos/internal", metadata.target_directory);
-    vec![
-        Step::new(
-            &["-p", &directory],
-            "the generated source set's directory",
-            "mkdir",
-        ),
-        Step::new(&["-R", &generated, &directory], "the generated Java", "cp"),
-    ]
+    process::generated_copy(
+        "Java",
+        &generated,
+        &directory,
+        "the generated source set's directory",
+        &["-R"],
+    )
 }
 
 /// The step that runs Gradle's `tasks` in the project, reported as `name`,
 /// with the tests loading the host library from `metadata`'s target
 /// directory.
 fn gradle(metadata: &Metadata, tasks: &[&str], name: &str) -> Step {
-    let library = format!("-Peranos.library={}/debug", metadata.target_directory);
-    let mut arguments = vec!["gradlew", "--warning-mode=fail", &library];
-    arguments.extend(tasks);
-    Step::new(&arguments, name, "sh").in_directory(PROJECT)
+    jvm::gradle_on_library(PROJECT, metadata, tasks, name)
 }
 
-/// The steps that check the format of the package and of its build scripts,
-/// test it with its coverage, build its documentation, and build its JAR,
-/// each with warnings as errors; every compilation of the layer runs the
-/// lint and Error Prone.
+/// The actions that check the format of the package and of its build
+/// scripts, test it with its coverage, build its documentation, and build
+/// its JAR, each with warnings as errors; every compilation of the layer
+/// runs the lint and Error Prone.
 #[must_use]
-pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
+pub(crate) fn checks(metadata: &Metadata) -> Vec<Action> {
     let gradle = |tasks: &[&str], name: &str| gradle(metadata, tasks, name);
     vec![
-        gradle(&["formatCheck"], "google-java-format"),
-        Step::new(
-            &["--relative", "*.kts"],
-            "ktlint on the build scripts",
-            "ktlint",
-        )
-        .in_directory(PROJECT),
-        gradle(
-            &["test", "jacocoTestCoverageVerification"],
-            "the Java tests and their coverage",
+        Action::run(Phase::Lint, gradle(&["formatCheck"], "google-java-format")),
+        Action::run(
+            Phase::Lint,
+            Step::new(
+                &["--relative", "*.kts"],
+                "ktlint on the build scripts",
+                "ktlint",
+            )
+            .in_directory(PROJECT),
         ),
-        gradle(&["javadoc"], "the Java documentation"),
-        gradle(&["jar"], "the Java package"),
+        Action::run(
+            Phase::Test,
+            gradle(
+                &["test", "jacocoTestCoverageVerification"],
+                "the Java tests and their coverage",
+            ),
+        ),
+        Action::run(Phase::Docs, gradle(&["javadoc"], "the Java documentation")),
+        Action::run(Phase::Package, gradle(&["jar"], "the Java package")),
     ]
 }
 
@@ -134,7 +132,7 @@ pub(crate) fn ports(metadata: &Metadata) -> Step {
 /// directory.
 #[must_use]
 pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    ports::jvm_port(&JVM, example, jdk, sequential)
+    jvm::port(&JVM, example, jdk, sequential)
 }
 
 #[cfg(test)]

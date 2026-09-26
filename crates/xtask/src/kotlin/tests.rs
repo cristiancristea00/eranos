@@ -5,7 +5,14 @@
 //! JDK.
 
 use super::*;
+use crate::plan;
 use crate::tests::{FileOperation, METADATA, Recorder};
+
+/// Runs the package's gates with `runner`, as the gates run them.
+fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
+    let actions = actions(runner, metadata)?;
+    plan::execute(runner, actions, |_| true)
+}
 
 fn metadata() -> Metadata {
     Metadata::parse(METADATA).unwrap()
@@ -37,7 +44,7 @@ fn the_package_is_tested_linted_and_documented_in_order() {
     run(&mut recorder, &metadata()).unwrap();
     let mut expected = libraries();
     expected.extend(sources(&metadata()));
-    expected.extend(checks(&metadata()));
+    expected.extend(plan::steps(&checks(&metadata())));
     assert_eq!(recorder.steps, expected);
     assert_eq!(recorder.cleared, [generated_sources()]);
     assert_eq!(
@@ -55,7 +62,10 @@ fn the_package_is_tested_linted_and_documented_in_order() {
             "cp /eranos/target/uniffi/kotlin/eranos/internal/eranos.kt bindings/kotlin/generated/src/main/kotlin/eranos/internal",
         ]
     );
-    let lines: Vec<String> = checks(&metadata()).iter().map(Step::command_line).collect();
+    let lines: Vec<String> = plan::steps(&checks(&metadata()))
+        .iter()
+        .map(Step::command_line)
+        .collect();
     let gradle = "cd bindings/kotlin && sh gradlew --warning-mode=fail -Peranos.library=/eranos/target/debug";
     assert_eq!(
         lines,
@@ -102,7 +112,7 @@ fn a_failure_stops_the_kotlin_gates_where_it_happens() {
     for failing in [
         libraries()[0].clone(),
         sources(&metadata())[0].clone(),
-        checks(&metadata())[0].clone(),
+        plan::steps(&checks(&metadata()))[0].clone(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

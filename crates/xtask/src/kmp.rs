@@ -7,7 +7,8 @@
 
 use crate::Failure;
 use crate::gates::Metadata;
-use crate::ports::{self, Jvm};
+use crate::jvm::{self, Jvm};
+use crate::plan::{Action, Phase};
 use crate::process::{Runner, Step};
 
 /// The Kotlin Multiplatform project, from the workspace root.
@@ -47,67 +48,65 @@ pub(crate) const APPLE_TARGETS: [&str; 8] = [
     "WatchosSimulatorArm64",
 ];
 
-/// Runs the Kotlin Multiplatform package's gates, stopping at the first that
-/// fails; the Apple targets compile only where the machine builds for Apple
-/// platforms.
+/// The Kotlin Multiplatform package's gates, in order; the Apple targets
+/// compile only where the machine builds for Apple platforms.
 ///
 /// # Errors
 ///
-/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set,
-/// before any step runs, and the failure of the first step that fails.
-pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
+/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
+pub(crate) fn actions(runner: &impl Runner) -> Result<Vec<Action>, Failure> {
     let [sdk, jdk] = VARIABLES.map(|name| runner.variable(name).ok_or(Failure::Variable(name)));
     // Gradle finds the Android SDK through the environment the gates run in.
     sdk?;
-    let apple = runner.builds_apple_platforms();
-    for step in checks(&jdk?, apple) {
-        runner.run(&step)?;
-    }
-    Ok(())
+    Ok(checks(&jdk?, runner.builds_apple_platforms()))
 }
 
-/// The steps that run the layer's tests on the JVM, build the Android
+/// The actions that run the layer's tests on the JVM, build the Android
 /// libraries and, when `apple`, compile the layer for every Apple target,
 /// each Gradle run on the JDK at `jdk` and with deprecations as errors, and
 /// check the format of the build scripts. gobley's plugins build the library
 /// for each target, adding its Rust target first, and generate the bindings.
 #[must_use]
-pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Step> {
-    let gradle = |tasks: &[String], name: &str| gradle(jdk, tasks, name);
-    let mut libraries = vec![
-        ":generated:assembleDebug".to_owned(),
-        ":eranos:assembleDebug".to_owned(),
-    ];
+pub(crate) fn checks(jdk: &str, apple: bool) -> Vec<Action> {
+    let mut compiled = Vec::new();
     if apple {
-        libraries.extend(
+        compiled.extend(
             APPLE_TARGETS
                 .iter()
                 .map(|target| format!(":eranos:compileKotlin{target}")),
         );
     }
+    let mut libraries = vec![":generated:assembleDebug", ":eranos:assembleDebug"];
+    libraries.extend(compiled.iter().map(String::as_str));
     vec![
-        gradle(
-            &[":eranos:jvmTest".to_owned()],
-            "the Kotlin Multiplatform tests on the JVM",
+        Action::run(
+            Phase::Test,
+            gradle(
+                jdk,
+                &[":eranos:jvmTest"],
+                "the Kotlin Multiplatform tests on the JVM",
+            ),
         ),
-        gradle(&libraries, "the Kotlin Multiplatform libraries"),
-        Step::new(
-            &["--relative", "**/*.kts", "!**/build/**"],
-            "ktlint on the Kotlin Multiplatform build scripts",
-            "ktlint",
-        )
-        .in_directory(PROJECT),
+        Action::run(
+            Phase::Package,
+            gradle(jdk, &libraries, "the Kotlin Multiplatform libraries"),
+        ),
+        Action::run(
+            Phase::Lint,
+            Step::new(
+                &["--relative", "**/*.kts", "!**/build/**"],
+                "ktlint on the Kotlin Multiplatform build scripts",
+                "ktlint",
+            )
+            .in_directory(PROJECT),
+        ),
     ]
 }
 
 /// The step that runs Gradle's `tasks` in the project, reported as `name`,
-/// on the JDK at `jdk` and with deprecations as errors.
-fn gradle(jdk: &str, tasks: &[String], name: &str) -> Step {
-    let mut arguments = vec!["gradlew", "--warning-mode=fail"];
-    arguments.extend(tasks.iter().map(String::as_str));
-    Step::new(&arguments, name, "sh")
-        .in_directory(PROJECT)
-        .with_variable("JAVA_HOME", jdk)
+/// on the JDK at `jdk`.
+fn gradle(jdk: &str, tasks: &[&str], name: &str) -> Step {
+    jvm::gradle(PROJECT, tasks, name).with_variable("JAVA_HOME", jdk)
 }
 
 /// The step that compiles the Kotlin package's ports of the examples against
@@ -115,11 +114,7 @@ fn gradle(jdk: &str, tasks: &[String], name: &str) -> Step {
 /// into one directory, Gradle running on the JDK at `jdk`.
 #[must_use]
 pub(crate) fn ports(jdk: &str) -> Step {
-    gradle(
-        jdk,
-        &[":examples:ports".to_owned()],
-        "the Kotlin Multiplatform ports",
-    )
+    gradle(jdk, &[":examples:ports"], "the Kotlin Multiplatform ports")
 }
 
 /// The step that runs the Kotlin Multiplatform port of `example` on the
@@ -127,7 +122,7 @@ pub(crate) fn ports(jdk: &str) -> Step {
 /// `sequential`'s target directory before the one gobley embeds.
 #[must_use]
 pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    ports::jvm_port(&JVM, example, jdk, sequential)
+    jvm::port(&JVM, example, jdk, sequential)
 }
 
 #[cfg(test)]

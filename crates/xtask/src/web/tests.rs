@@ -4,7 +4,14 @@
 //! on another Node than 24.
 
 use super::*;
+use crate::plan;
+use crate::process::Runner;
 use crate::tests::{FileOperation, Recorder};
+
+/// Runs the package's gates with `runner`, as the gates run them.
+fn run(runner: &mut impl Runner) -> Result<(), Failure> {
+    plan::execute(runner, actions(), |_| true)
+}
 
 /// The package would check stale generated TypeScript, or pack a declaration
 /// of a module it no longer has, if the steps ran in another order or
@@ -17,8 +24,8 @@ fn the_package_is_generated_checked_documented_and_bundled_in_order() {
     expected.extend(library());
     expected.push(install());
     expected.push(generator());
-    expected.extend(checks());
-    expected.extend(package());
+    expected.extend(plan::steps(&checks()));
+    expected.extend(plan::steps(&package()));
     assert_eq!(recorder.steps, expected);
     assert_eq!(recorder.cleared, [generated_sources(), bundle()]);
     assert_eq!(
@@ -84,8 +91,8 @@ fn a_failure_stops_the_web_gates_where_it_happens() {
         library()[0].clone(),
         install(),
         generator(),
-        checks()[0].clone(),
-        package()[0].clone(),
+        plan::steps(&checks())[0].clone(),
+        plan::steps(&package())[0].clone(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

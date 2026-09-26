@@ -4,7 +4,14 @@
 //! stopping at the first that fails.
 
 use super::*;
+use crate::Failure;
+use crate::plan;
 use crate::tests::{FileOperation, METADATA, Recorder};
+
+/// Runs the package's gates with `runner`, as the gates run them.
+fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
+    plan::execute(runner, actions(metadata), |_| true)
+}
 
 fn metadata() -> Metadata {
     Metadata::parse(METADATA).unwrap()
@@ -59,7 +66,7 @@ fn the_package_is_built_tested_linted_and_documented_in_order() {
     expected.extend(package(&metadata()));
     expected.push(build());
     expected.push(build_examples());
-    expected.extend(checks(&metadata()));
+    expected.extend(plan::steps(&checks(&metadata())));
     assert_eq!(recorder.steps, expected);
     assert_eq!(
         recorder.cleared,
@@ -81,7 +88,10 @@ fn the_package_is_built_tested_linted_and_documented_in_order() {
         build_examples().command_line(),
         "swift build --package-path bindings/swift/examples --verbose"
     );
-    let lines: Vec<String> = checks(&metadata()).iter().map(Step::command_line).collect();
+    let lines: Vec<String> = plan::steps(&checks(&metadata()))
+        .iter()
+        .map(Step::command_line)
+        .collect();
     assert_eq!(
         lines,
         [
@@ -118,7 +128,7 @@ fn a_failure_stops_the_swift_gates_where_it_happens() {
         package(&metadata())[0].clone(),
         build(),
         build_examples(),
-        checks(&metadata())[0].clone(),
+        plan::steps(&checks(&metadata()))[0].clone(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

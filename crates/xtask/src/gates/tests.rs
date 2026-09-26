@@ -531,7 +531,7 @@ fn a_failing_package_stops_the_gates_at_its_step() {
         crate::kotlin::libraries()[0].clone(),
         crate::java::sources(&metadata)[0].clone(),
         crate::web::node(),
-        crate::kmp::checks("/JAVA_HOME_21", true)[0].clone(),
+        plan::steps(&crate::kmp::checks("/JAVA_HOME_21", true))[0].clone(),
         crate::capi::library(),
         crate::ports::library(&metadata.inner(crate::ports::DIRECTORY)),
     ] {

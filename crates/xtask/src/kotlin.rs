@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 
 use crate::Failure;
 use crate::gates::Metadata;
-use crate::ports::{self, Jvm};
-use crate::process::{Runner, Step, WORKSPACE};
+use crate::jvm::{self, Jvm};
+use crate::plan::{Action, Phase};
+use crate::process::{self, Runner, Step, WORKSPACE};
 
 /// The Kotlin project, from the workspace root.
 const PROJECT: &str = "bindings/kotlin";
@@ -45,31 +46,25 @@ pub(crate) const JDK: &str = "JAVA_HOME";
 /// holds the NDK and the platform, and the JDK that Gradle runs on.
 pub(crate) const VARIABLES: [&str; 2] = ["ANDROID_HOME", JDK];
 
-/// Runs the Kotlin package's gates, stopping at the first that fails.
+/// The Kotlin package's gates, in order: the libraries of the Android ABIs
+/// and the generated Kotlin in a cleared directory, then the package's
+/// checks.
 ///
 /// # Errors
 ///
-/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set,
-/// before any step runs; the failure of the first step that fails, and of
-/// clearing the old generated sources.
-pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), Failure> {
+/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
+pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
     if let Some(name) = VARIABLES
         .into_iter()
         .find(|name| runner.variable(name).is_none())
     {
         return Err(Failure::Variable(name));
     }
-    for step in libraries() {
-        runner.run(&step)?;
-    }
-    runner.clear(&generated_sources())?;
-    for step in sources(metadata) {
-        runner.run(&step)?;
-    }
-    for step in checks(metadata) {
-        runner.run(&step)?;
-    }
-    Ok(())
+    let mut actions = Action::runs(Phase::Prepare, libraries());
+    actions.push(Action::clear(Phase::Prepare, generated_sources()));
+    actions.extend(Action::runs(Phase::Prepare, sources(metadata)));
+    actions.extend(checks(metadata));
+    Ok(actions)
 }
 
 /// The steps that add the Android targets and build the library of every
@@ -119,58 +114,72 @@ pub(crate) fn sources(metadata: &Metadata) -> Vec<Step> {
         "{}/uniffi/kotlin/eranos/internal/eranos.kt",
         metadata.target_directory
     );
-    vec![
-        Step::new(
-            &["-p", &directory],
-            "the generated module's directory",
-            "mkdir",
-        ),
-        Step::new(&[&generated, &directory], "the generated Kotlin", "cp"),
-    ]
+    process::generated_copy(
+        "Kotlin",
+        &generated,
+        &directory,
+        "the generated module's directory",
+        &[],
+    )
 }
 
 /// The step that runs Gradle's `tasks` in the project, reported as `name`,
 /// with the tests loading the host library from `metadata`'s target
 /// directory.
 fn gradle(metadata: &Metadata, tasks: &[&str], name: &str) -> Step {
-    let library = format!("-Peranos.library={}/debug", metadata.target_directory);
-    let mut arguments = vec!["gradlew", "--warning-mode=fail", &library];
-    arguments.extend(tasks);
-    Step::new(&arguments, name, "sh").in_directory(PROJECT)
+    jvm::gradle_on_library(PROJECT, metadata, tasks, name)
 }
 
-/// The steps that test the package with its coverage, lint it, check its
+/// The actions that test the package with its coverage, lint it, check its
 /// API against the committed dump, build its documentation, and build the
 /// Android libraries, each with warnings as errors.
 #[must_use]
-pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
+pub(crate) fn checks(metadata: &Metadata) -> Vec<Action> {
     let gradle = |tasks: &[&str], name: &str| gradle(metadata, tasks, name);
     vec![
-        gradle(
-            &[":eranos:test", ":eranos:koverVerify"],
-            "the Kotlin tests and their coverage",
+        Action::run(
+            Phase::Test,
+            gradle(
+                &[":eranos:test", ":eranos:koverVerify"],
+                "the Kotlin tests and their coverage",
+            ),
         ),
-        Step::new(
-            &[
-                "--relative",
-                "**/*.kt",
-                "**/*.kts",
-                "!generated/**",
-                "!**/build/**",
-            ],
-            "ktlint",
-            "ktlint",
-        )
-        .in_directory(PROJECT),
-        gradle(&[":eranos:detekt", ":examples:detekt"], "detekt"),
-        gradle(&[":eranos:apiCheck"], "the Kotlin API against its dump"),
-        gradle(&[":eranos:dokkaGenerate"], "the Kotlin documentation"),
-        gradle(
-            &[
-                ":generated-android:assembleDebug",
-                ":eranos-android:assembleDebug",
-            ],
-            "the Android libraries",
+        Action::run(
+            Phase::Lint,
+            Step::new(
+                &[
+                    "--relative",
+                    "**/*.kt",
+                    "**/*.kts",
+                    "!generated/**",
+                    "!**/build/**",
+                ],
+                "ktlint",
+                "ktlint",
+            )
+            .in_directory(PROJECT),
+        ),
+        Action::run(
+            Phase::Lint,
+            gradle(&[":eranos:detekt", ":examples:detekt"], "detekt"),
+        ),
+        Action::run(
+            Phase::Lint,
+            gradle(&[":eranos:apiCheck"], "the Kotlin API against its dump"),
+        ),
+        Action::run(
+            Phase::Docs,
+            gradle(&[":eranos:dokkaGenerate"], "the Kotlin documentation"),
+        ),
+        Action::run(
+            Phase::Package,
+            gradle(
+                &[
+                    ":generated-android:assembleDebug",
+                    ":eranos-android:assembleDebug",
+                ],
+                "the Android libraries",
+            ),
         ),
     ]
 }
@@ -187,7 +196,7 @@ pub(crate) fn ports(metadata: &Metadata) -> Step {
 /// directory.
 #[must_use]
 pub(crate) fn port(example: &str, jdk: &str, sequential: &Metadata) -> Step {
-    ports::jvm_port(&JVM, example, jdk, sequential)
+    jvm::port(&JVM, example, jdk, sequential)
 }
 
 /// The step that runs the package's tests again, whatever Gradle holds of

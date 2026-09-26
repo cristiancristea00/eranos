@@ -12,6 +12,7 @@ use serde::Deserialize;
 
 use crate::Failure;
 use crate::gates::Metadata;
+use crate::plan::{Action, Phase};
 use crate::process::{Runner, Step, WORKSPACE};
 
 /// The environment variable that names the LLVM installation whose tools the
@@ -139,34 +140,34 @@ pub(crate) const CPP_PACKAGE: Package = Package {
     ],
 };
 
-/// Runs the C and C++ packages' gates, stopping at the first that fails.
+/// The C and C++ packages' gates, in order: the library, then for each
+/// package its headers in a cleared `generated` directory, its tests in a
+/// new `build` directory, their coverage of the hand-written layer, which
+/// must be whole, and its checks.
 ///
 /// # Errors
 ///
-/// [`Failure::Variable`] when [`VARIABLE`] is not set, before any step runs;
-/// the failure of clearing or creating a package's directories, of the first
-/// step that fails, and [`Failure::Coverage`] when a package's tests leave a
-/// line or a function of its layer unrun.
-pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), Failure> {
+/// [`Failure::Variable`] when [`VARIABLE`] is not set.
+pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
     let llvm = runner
         .variable(VARIABLE)
         .ok_or(Failure::Variable(VARIABLE))?;
-    runner.run(&library())?;
+    let mut actions = vec![Action::run(Phase::Prepare, library())];
     for package in [C_PACKAGE, CPP_PACKAGE] {
         for name in ["generated", "build"] {
-            runner.clear(&directory(package, name))?;
+            actions.push(Action::clear(Phase::Prepare, directory(package, name)));
         }
-        runner.create(&directory(package, "build"))?;
-        runner.run(&headers(package))?;
-        for step in tests(package, &llvm, metadata) {
-            runner.run(&step)?;
-        }
-        check_coverage(package, &runner.output(&coverage(package, &llvm))?)?;
-        for step in checks(package, &llvm) {
-            runner.run(&step)?;
-        }
+        actions.push(Action::create(Phase::Prepare, directory(package, "build")));
+        actions.push(Action::run(Phase::Prepare, headers(package)));
+        actions.extend(Action::runs(Phase::Test, tests(package, &llvm, metadata)));
+        actions.push(Action::read(
+            Phase::Test,
+            coverage(package, &llvm),
+            move |summary| check_coverage(package, &summary).map(|()| Vec::new()),
+        ));
+        actions.extend(checks(package, &llvm));
     }
-    Ok(())
+    Ok(actions)
 }
 
 /// The step that builds eranos-capi's static library, which the tests link.
@@ -470,7 +471,7 @@ pub(crate) fn check_coverage(package: Package, summary: &str) -> Result<(), Fail
 /// its ports, and every header they include with clang-tidy, and build its
 /// documentation with Doxygen, each with warnings as errors.
 #[must_use]
-pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Step> {
+pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Action> {
     let mut sources = vec!["--dry-run", "--Werror"];
     sources.extend(package.headers);
     sources.push(package.tests);
@@ -485,24 +486,33 @@ pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Step> {
     );
     programs.extend(["--", package.standard, "-Iinclude", "-isystem", "generated"]);
     vec![
-        Step::new(
-            &sources,
-            &format!("the {} format", package.name),
-            &format!("{llvm}/bin/clang-format"),
-        )
-        .in_directory(package.directory),
-        Step::new(
-            &programs,
-            &format!("the {} lint", package.name),
-            &format!("{llvm}/bin/clang-tidy"),
-        )
-        .in_directory(package.directory),
-        Step::new(
-            &["Doxyfile"],
-            &format!("the {} documentation", package.name),
-            "doxygen",
-        )
-        .in_directory(package.directory),
+        Action::run(
+            Phase::Lint,
+            Step::new(
+                &sources,
+                &format!("the {} format", package.name),
+                &format!("{llvm}/bin/clang-format"),
+            )
+            .in_directory(package.directory),
+        ),
+        Action::run(
+            Phase::Lint,
+            Step::new(
+                &programs,
+                &format!("the {} lint", package.name),
+                &format!("{llvm}/bin/clang-tidy"),
+            )
+            .in_directory(package.directory),
+        ),
+        Action::run(
+            Phase::Docs,
+            Step::new(
+                &["Doxyfile"],
+                &format!("the {} documentation", package.name),
+                "doxygen",
+            )
+            .in_directory(package.directory),
+        ),
     ]
 }
 

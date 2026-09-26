@@ -3,7 +3,14 @@
 //! at the first that fails, and none of them without the JDK.
 
 use super::*;
+use crate::plan;
 use crate::tests::{FileOperation, METADATA, Recorder};
+
+/// Runs the package's gates with `runner`, as the gates run them.
+fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
+    let actions = actions(runner, metadata)?;
+    plan::execute(runner, actions, |_| true)
+}
 
 fn metadata() -> Metadata {
     Metadata::parse(METADATA).unwrap()
@@ -17,7 +24,7 @@ fn the_package_is_formatted_tested_documented_and_packed_in_order() {
     let mut recorder = Recorder::new();
     run(&mut recorder, &metadata()).unwrap();
     let mut expected = sources(&metadata());
-    expected.extend(checks(&metadata()));
+    expected.extend(plan::steps(&checks(&metadata())));
     assert_eq!(recorder.steps, expected);
     assert_eq!(recorder.cleared, [generated_sources()]);
     assert_eq!(
@@ -35,7 +42,10 @@ fn the_package_is_formatted_tested_documented_and_packed_in_order() {
             "cp -R /eranos/target/uniffi/java/eranos/internal bindings/java/src/generated/java/eranos",
         ]
     );
-    let lines: Vec<String> = checks(&metadata()).iter().map(Step::command_line).collect();
+    let lines: Vec<String> = plan::steps(&checks(&metadata()))
+        .iter()
+        .map(Step::command_line)
+        .collect();
     let gradle =
         "cd bindings/java && sh gradlew --warning-mode=fail -Peranos.library=/eranos/target/debug";
     assert_eq!(
@@ -79,7 +89,7 @@ fn a_failure_stops_the_java_gates_where_it_happens() {
 
     for failing in [
         sources(&metadata())[0].clone(),
-        checks(&metadata())[0].clone(),
+        plan::steps(&checks(&metadata()))[0].clone(),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

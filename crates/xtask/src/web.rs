@@ -9,7 +9,8 @@ use std::path::{Path, PathBuf};
 
 use crate::Failure;
 use crate::gates::Metadata;
-use crate::process::{Runner, Step, WORKSPACE};
+use crate::plan::{Action, Phase};
+use crate::process::{Step, WORKSPACE};
 
 /// The TypeScript project, from the workspace root.
 const PROJECT: &str = "bindings/typescript";
@@ -23,33 +24,27 @@ pub(crate) const TARGET: &str = "wasm32-unknown-unknown";
 /// fails its tests.
 const NODE: &str = "v24.";
 
-/// Runs the TypeScript package's gates, stopping at the first that fails.
-///
-/// # Errors
-///
-/// [`Failure::Node`] when the `node` on `PATH` is not Node 24, before any
-/// other step runs; the failure of clearing the old generated sources or the
-/// old bundle, and of the first step that fails.
-pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
-    let version = runner.output(&node())?;
-    if !version.starts_with(NODE) {
-        return Err(Failure::Node(version.trim().to_owned()));
-    }
-    for directory in [generated_sources(), bundle()] {
-        runner.clear(&directory)?;
-    }
-    for step in library() {
-        runner.run(&step)?;
-    }
-    runner.run(&install())?;
-    runner.run(&generator())?;
-    for step in checks() {
-        runner.run(&step)?;
-    }
-    for step in package() {
-        runner.run(&step)?;
-    }
-    Ok(())
+/// The TypeScript package's gates, in order: Node's version, which must be
+/// Node 24's before anything else runs, then the WebAssembly library, the
+/// package's dependencies, and its generated TypeScript, in cleared
+/// directories, then the package's checks and its package.
+#[must_use]
+pub(crate) fn actions() -> Vec<Action> {
+    vec![Action::read(Phase::Prepare, node(), |version| {
+        if !version.starts_with(NODE) {
+            return Err(Failure::Node(version.trim().to_owned()));
+        }
+        let mut actions = vec![
+            Action::clear(Phase::Prepare, generated_sources()),
+            Action::clear(Phase::Prepare, bundle()),
+        ];
+        actions.extend(Action::runs(Phase::Prepare, library()));
+        actions.push(Action::run(Phase::Prepare, install()));
+        actions.push(Action::run(Phase::Prepare, generator()));
+        actions.extend(checks());
+        actions.extend(package());
+        Ok(actions)
+    })]
 }
 
 /// The step that prints the version of the `node` on `PATH`.
@@ -127,15 +122,19 @@ pub(crate) fn generator() -> Step {
 /// and its tests, and run the tests with their coverage, each with warnings
 /// as errors.
 #[must_use]
-pub(crate) fn checks() -> Vec<Step> {
+pub(crate) fn checks() -> Vec<Action> {
     [
-        ("format:check", "Prettier"),
-        ("lint", "ESLint"),
-        ("typecheck", "the TypeScript type checks"),
-        ("coverage", "the TypeScript tests and their coverage"),
+        (Phase::Lint, "format:check", "Prettier"),
+        (Phase::Lint, "lint", "ESLint"),
+        (Phase::Lint, "typecheck", "the TypeScript type checks"),
+        (
+            Phase::Test,
+            "coverage",
+            "the TypeScript tests and their coverage",
+        ),
     ]
     .into_iter()
-    .map(|(script, name)| npm(script, name))
+    .map(|(phase, script, name)| Action::run(phase, npm(script, name)))
     .collect()
 }
 
@@ -150,10 +149,10 @@ pub(crate) fn bundle() -> PathBuf {
 /// The steps that build the documentation, with warnings as errors, and the
 /// package: its declarations and its bundle.
 #[must_use]
-pub(crate) fn package() -> Vec<Step> {
+pub(crate) fn package() -> Vec<Action> {
     vec![
-        npm("docs", "the TypeScript documentation"),
-        npm("build", "the TypeScript package"),
+        Action::run(Phase::Docs, npm("docs", "the TypeScript documentation")),
+        Action::run(Phase::Package, npm("build", "the TypeScript package")),
     ]
 }
 

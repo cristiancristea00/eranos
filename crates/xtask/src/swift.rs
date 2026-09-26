@@ -5,9 +5,9 @@
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::path::{Path, PathBuf};
 
-use crate::Failure;
 use crate::gates::Metadata;
-use crate::process::{Runner, Step, WORKSPACE};
+use crate::plan::{Action, Phase};
+use crate::process::{self, Step, WORKSPACE};
 
 /// The Swift package, from the workspace root.
 const PACKAGE: &str = "bindings/swift";
@@ -73,31 +73,36 @@ pub(crate) const APPLE_LIBRARIES: [AppleLibrary; 10] = [
     },
 ];
 
-/// Runs the Swift package's gates, stopping at the first that fails.
-///
-/// # Errors
-///
-/// The failure of the first step that fails, and of clearing the old
-/// `XCFramework` or writing the builds' log the analyzer reads.
-pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), Failure> {
-    for step in libraries(metadata) {
-        runner.run(&step)?;
-    }
-    runner.clear(
-        &Path::new(WORKSPACE)
+/// The Swift package's gates, in order: the libraries of every Apple target,
+/// the `XCFramework` in place of the old one, the generated Swift, and the
+/// package's and the examples' builds, whose log the analyzer reads, then
+/// the package's checks.
+#[must_use]
+pub(crate) fn actions(metadata: &Metadata) -> Vec<Action> {
+    let mut actions = Action::runs(Phase::Prepare, libraries(metadata));
+    actions.push(Action::clear(
+        Phase::Prepare,
+        Path::new(WORKSPACE)
             .join(PACKAGE)
             .join("EranosFFI.xcframework"),
-    )?;
-    for step in package(metadata) {
-        runner.run(&step)?;
-    }
-    let package = runner.output(&build())?;
-    let examples = runner.output(&build_examples())?;
-    runner.write(&build_log(metadata), &format!("{package}{examples}"))?;
-    for step in checks(metadata) {
-        runner.run(&step)?;
-    }
-    Ok(())
+    ));
+    actions.extend(Action::runs(Phase::Prepare, package(metadata)));
+    let log = build_log(metadata);
+    actions.push(Action::read(Phase::Prepare, build(), move |package| {
+        Ok(vec![Action::read(
+            Phase::Prepare,
+            build_examples(),
+            move |examples| {
+                Ok(vec![Action::write(
+                    Phase::Prepare,
+                    log,
+                    format!("{package}{examples}"),
+                )])
+            },
+        )])
+    }));
+    actions.extend(checks(metadata));
+    actions
 }
 
 /// Where the gates keep the Apple libraries, their headers, and the build
@@ -214,14 +219,15 @@ pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
         "{}/uniffi/swift/EranosGenerated.swift",
         metadata.target_directory
     );
-    vec![
-        Step::new(&framework, "the XCFramework", "xcodebuild"),
-        Step::new(
-            &["-p", &sources],
-            "the generated module's directory",
-            "mkdir",
-        ),
-        Step::new(&[&generated, &sources], "the generated Swift", "cp"),
+    let mut steps = vec![Step::new(&framework, "the XCFramework", "xcodebuild")];
+    steps.extend(process::generated_copy(
+        "Swift",
+        &generated,
+        &sources,
+        "the generated module's directory",
+        &[],
+    ));
+    steps.extend([
         Step::new(
             &["package", "--package-path", PACKAGE, "clean"],
             "the Swift package's earlier build",
@@ -232,7 +238,8 @@ pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
             "the Swift examples' earlier build",
             "swift",
         ),
-    ]
+    ]);
+    steps
 }
 
 /// The step that builds the package and its tests, printing every compiler
@@ -274,33 +281,45 @@ pub(crate) fn build_log(metadata: &Metadata) -> PathBuf {
 /// The steps that test the package, lint it, analyze it, and build its
 /// documentation, each with warnings as errors.
 #[must_use]
-pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
+pub(crate) fn checks(metadata: &Metadata) -> Vec<Action> {
     let log = build_log(metadata).to_string_lossy().into_owned();
     vec![
-        Step::new(
-            &["test", "--package-path", PACKAGE],
-            "the Swift tests",
-            "swift",
+        Action::run(
+            Phase::Test,
+            Step::new(
+                &["test", "--package-path", PACKAGE],
+                "the Swift tests",
+                "swift",
+            ),
         ),
-        Step::new(&["lint", "--strict"], "SwiftLint", "swiftlint").in_directory(PACKAGE),
-        Step::new(
-            &["analyze", "--strict", "--compiler-log-path", &log],
-            "SwiftLint's analyzer",
-            "swiftlint",
-        )
-        .in_directory(PACKAGE),
-        Step::new(
-            &[
-                "package",
-                "--package-path",
-                PACKAGE,
-                "generate-documentation",
-                "--target",
-                "Eranos",
-                "--warnings-as-errors",
-            ],
-            "the Swift documentation",
-            "swift",
+        Action::run(
+            Phase::Lint,
+            Step::new(&["lint", "--strict"], "SwiftLint", "swiftlint").in_directory(PACKAGE),
+        ),
+        Action::run(
+            Phase::Lint,
+            Step::new(
+                &["analyze", "--strict", "--compiler-log-path", &log],
+                "SwiftLint's analyzer",
+                "swiftlint",
+            )
+            .in_directory(PACKAGE),
+        ),
+        Action::run(
+            Phase::Docs,
+            Step::new(
+                &[
+                    "package",
+                    "--package-path",
+                    PACKAGE,
+                    "generate-documentation",
+                    "--target",
+                    "Eranos",
+                    "--warnings-as-errors",
+                ],
+                "the Swift documentation",
+                "swift",
+            ),
         ),
     ]
 }
@@ -346,7 +365,7 @@ pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
         metadata.target_directory
     );
     let framework = format!("{package}/EranosFFI.xcframework");
-    vec![
+    let mut steps = vec![
         Step::new(
             &["-p", &package, &headers],
             "the package's copy and its headers",
@@ -364,16 +383,15 @@ pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
             "the Swift package",
             "cp",
         ),
-        Step::new(
-            &["-p", &sources],
-            "the generated module's directory",
-            "mkdir",
-        ),
-        Step::new(
-            &[&format!("{generated}/EranosGenerated.swift"), &sources],
-            "the generated Swift",
-            "cp",
-        ),
+    ];
+    steps.extend(process::generated_copy(
+        "Swift",
+        &format!("{generated}/EranosGenerated.swift"),
+        &sources,
+        "the generated module's directory",
+        &[],
+    ));
+    steps.extend([
         Step::new(
             &[
                 &format!("{generated}/EranosGeneratedFFI.h"),
@@ -403,7 +421,8 @@ pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
             "the XCFramework of the copy's library",
             "xcodebuild",
         ),
-    ]
+    ]);
+    steps
 }
 
 /// The step that runs the copy's tests on its library.

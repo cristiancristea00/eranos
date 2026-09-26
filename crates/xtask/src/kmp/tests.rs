@@ -4,7 +4,14 @@
 //! SDK or a JDK 21.
 
 use super::*;
+use crate::plan;
 use crate::tests::Recorder;
+
+/// Runs the package's gates with `runner`, as the gates run them.
+fn run(runner: &mut Recorder) -> Result<(), Failure> {
+    let actions = actions(runner)?;
+    plan::execute(runner, actions, |_| true)
+}
 
 /// The package would pass without its Apple libraries, or run Gradle on a
 /// JDK that Gradle 9.0 cannot run on, if the steps asked for other tasks or
@@ -13,7 +20,7 @@ use crate::tests::Recorder;
 fn the_package_is_tested_built_for_every_target_and_linted_in_order() {
     let mut recorder = Recorder::new();
     run(&mut recorder).unwrap();
-    assert_eq!(recorder.steps, checks("/JAVA_HOME_21", true));
+    assert_eq!(recorder.steps, plan::steps(&checks("/JAVA_HOME_21", true)));
     assert!(recorder.cleared.is_empty());
     let gradle = "cd bindings/kmp && JAVA_HOME='/JAVA_HOME_21' sh gradlew --warning-mode=fail";
     let apple = APPLE_TARGETS
@@ -38,7 +45,7 @@ fn the_apple_libraries_build_only_where_the_machine_builds_for_apple_platforms()
     let mut recorder = Recorder::new();
     recorder.apple = false;
     run(&mut recorder).unwrap();
-    assert_eq!(recorder.steps, checks("/JAVA_HOME_21", false));
+    assert_eq!(recorder.steps, plan::steps(&checks("/JAVA_HOME_21", false)));
     assert_eq!(
         recorder.steps[1].command_line(),
         "cd bindings/kmp && JAVA_HOME='/JAVA_HOME_21' sh gradlew --warning-mode=fail :generated:assembleDebug :eranos:assembleDebug"
@@ -69,7 +76,7 @@ fn a_missing_variable_stops_the_kotlin_multiplatform_gates_before_any_step() {
 /// hide it.
 #[test]
 fn a_failing_step_stops_the_kotlin_multiplatform_gates() {
-    for failing in checks("/JAVA_HOME_21", true) {
+    for failing in plan::steps(&checks("/JAVA_HOME_21", true)) {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
         assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
