@@ -12,6 +12,7 @@ mod gates;
 mod java;
 mod kmp;
 mod kotlin;
+mod ports;
 mod process;
 mod swift;
 mod web;
@@ -74,6 +75,17 @@ enum Failure {
         "the gates run on Node 24, the oldest the package supports, and found {0}; docs/DEVELOPMENT.md § 1 says how to put it first on PATH"
     )]
     Node(String),
+    /// A port of an example printed another report than the Rust example's.
+    #[error(
+        "the {language} port of {example} prints {found} at line {line}, where the Rust example prints {expected}"
+    )]
+    Port {
+        example: String,
+        expected: String,
+        found: String,
+        language: &'static str,
+        line: usize,
+    },
     /// A step's program could not be started.
     #[error("{step}: the program could not be started: {source}")]
     Start {

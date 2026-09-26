@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::Failure;
+use crate::ports::Reference;
 use crate::process::{Runner, Step};
 
 /// The part of `cargo metadata`'s JSON the gates read.
@@ -64,8 +65,15 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     }
     check_lock_features(&runner.output(&lock_features())?)?;
     let metadata = Metadata::parse(&runner.output(&metadata())?)?;
-    for step in examples(&metadata) {
-        runner.run(&step)?;
+    let mut references = Vec::new();
+    for example in examples(&metadata) {
+        let report = runner.output(&example.step)?;
+        if "eranos" == example.package {
+            references.push(Reference {
+                example: example.name,
+                report,
+            });
+        }
     }
     runner.run(&host_library())?;
     runner.clear(&generated(&metadata))?;
@@ -80,6 +88,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
     crate::web::run(runner)?;
     crate::kmp::run(runner)?;
     crate::capi::run(runner, &metadata)?;
+    crate::ports::run(runner, &metadata, &references)?;
     println!("\nevery gate passed");
     Ok(())
 }
@@ -183,11 +192,22 @@ pub(crate) fn metadata() -> Step {
     )
 }
 
-/// One step per example of every workspace package, in the order `cargo
-/// metadata` lists them. Every example asserts its key numbers, so running
-/// one is a check.
+/// An example of a workspace package, and the step that runs it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Example {
+    /// The example's name.
+    pub(crate) name: String,
+    /// The package whose example it is.
+    pub(crate) package: String,
+    /// The step that runs it, with every feature.
+    pub(crate) step: Step,
+}
+
+/// Every example of every workspace package, in the order `cargo metadata`
+/// lists them. Every example asserts its key numbers, so running one is a
+/// check.
 #[must_use]
-pub(crate) fn examples(metadata: &Metadata) -> Vec<Step> {
+pub(crate) fn examples(metadata: &Metadata) -> Vec<Example> {
     metadata
         .packages
         .iter()
@@ -196,8 +216,10 @@ pub(crate) fn examples(metadata: &Metadata) -> Vec<Step> {
                 .targets
                 .iter()
                 .filter(|target| target.kind == ["example"])
-                .map(|target| {
-                    Step::cargo(
+                .map(|target| Example {
+                    name: target.name.clone(),
+                    package: package.name.clone(),
+                    step: Step::cargo(
                         &[
                             "run",
                             "--quiet",
@@ -208,7 +230,7 @@ pub(crate) fn examples(metadata: &Metadata) -> Vec<Step> {
                             &target.name,
                         ],
                         &format!("example {}", target.name),
-                    )
+                    ),
                 })
         })
         .collect()

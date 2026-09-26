@@ -32,10 +32,11 @@ fn the_rust_tests_run_then_every_foreign_suite_on_the_instrumented_glue_then_the
         assert_eq!(recorder.created, created(&measured()), "{apple}");
     }
     let every = steps(&measured(), "/LLVM_HOME", &environment, true);
-    for step in swift::measured_tests(&measured())
-        .into_iter()
-        .chain([kotlin::tests(&measured()), java::tests(&measured())])
-    {
+    for step in swift::copy(&measured()).into_iter().chain([
+        swift::copy_tests(&measured()),
+        kotlin::tests(&measured()),
+        java::tests(&measured()),
+    ]) {
         assert!(every.contains(&step.with_environment(&environment)));
     }
     assert_eq!(every.first(), rust().first());

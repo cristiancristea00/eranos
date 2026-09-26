@@ -47,8 +47,10 @@ fn every_apple_target_builds_one_library_of_the_framework() {
 }
 
 /// The package would build against a stale framework or stale generated
-/// Swift, or the analyzer would read a log that names no file, if the steps
-/// ran in another order.
+/// Swift, or the analyzer would read a log that names no file or none of
+/// the examples, if the steps ran in another order; the examples' earlier
+/// build is cleared as the package's is, since an incremental build names
+/// only what it compiles again.
 #[test]
 fn the_package_is_built_tested_linted_and_documented_in_order() {
     let mut recorder = Recorder::new();
@@ -56,6 +58,7 @@ fn the_package_is_built_tested_linted_and_documented_in_order() {
     let mut expected = libraries(&metadata());
     expected.extend(package(&metadata()));
     expected.push(build());
+    expected.push(build_examples());
     expected.extend(checks(&metadata()));
     assert_eq!(recorder.steps, expected);
     assert_eq!(
@@ -63,6 +66,21 @@ fn the_package_is_built_tested_linted_and_documented_in_order() {
         [Path::new(WORKSPACE).join("bindings/swift/EranosFFI.xcframework")]
     );
     assert_eq!(recorder.written, [build_log(&metadata())]);
+    let cleared: Vec<String> = package(&metadata())[3..]
+        .iter()
+        .map(Step::command_line)
+        .collect();
+    assert_eq!(
+        cleared,
+        [
+            "swift package --package-path bindings/swift clean",
+            "swift package --package-path bindings/swift/examples clean",
+        ]
+    );
+    assert_eq!(
+        build_examples().command_line(),
+        "swift build --package-path bindings/swift/examples --verbose"
+    );
     let lines: Vec<String> = checks(&metadata()).iter().map(Step::command_line).collect();
     assert_eq!(
         lines,
@@ -93,12 +111,13 @@ fn a_failure_stops_the_swift_gates_where_it_happens() {
         run(&mut unwritten, &metadata()),
         Err(Failure::Usage)
     ));
-    assert_eq!(unwritten.steps.last(), Some(&build()));
+    assert_eq!(unwritten.steps.last(), Some(&build_examples()));
 
     for failing in [
         libraries(&metadata())[0].clone(),
         package(&metadata())[0].clone(),
         build(),
+        build_examples(),
         checks(&metadata())[0].clone(),
     ] {
         let mut recorder = Recorder::new();

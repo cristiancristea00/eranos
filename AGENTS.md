@@ -61,7 +61,8 @@ It runs these, in this order, and stops at the first that fails:
    which must show no line `async-lock feature "…"`: with `std`, the lock
    would gain blocking methods that read the clock and a per-thread parker
 8. `cargo run --quiet --package <package> --all-features --example <name>`
-   for every example of every package, as `cargo metadata` lists them
+   for every example of every package, as `cargo metadata` lists them,
+   keeping the reports of eranos's examples for gate 17
 9. `cargo build --package eranos-uniffi`, the host library the generators
    read
 10. `cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>`
@@ -73,10 +74,13 @@ It runs these, in this order, and stops at the first that fails:
     package: `cargo build --package eranos-uniffi --lib` for the 13 Apple
     targets, `lipo` and `xcodebuild -create-xcframework` into
     `bindings/swift/EranosFFI.xcframework`, the generated Swift copied into
-    `Sources/EranosGenerated`, and `swift build --build-tests --verbose`,
-    `swift test`, `swiftlint lint --strict`, `swiftlint analyze --strict` on
-    the build's log, and `swift package generate-documentation
-    --warnings-as-errors`, all in `bindings/swift`
+    `Sources/EranosGenerated`, and, each after its earlier build is
+    cleared, `swift build --build-tests --verbose` and the examples'
+    `swift build --verbose` in `examples`, `swift test`,
+    `swiftlint lint --strict`, `swiftlint analyze --strict` on the two
+    builds' log, which names the examples too, and
+    `swift package generate-documentation --warnings-as-errors`, all in
+    `bindings/swift`
 12. `rustup target add <every Android target>`, with `ANDROID_HOME` and
     `JAVA_HOME` set, then the Kotlin package: `cargo ndk` for the four
     Android ABIs into `generated-android/src/main/jniLibs`, the generated
@@ -119,6 +123,14 @@ It runs these, in this order, and stops at the first that fails:
     layer covered, as llvm-cov's summary shows; clang-format's check;
     clang-tidy on the tests and every header they include; and Doxygen
     with warnings as errors
+17. `cargo build --package eranos-uniffi --features sequential-ids`, into
+    `target/sequential`, the host library whose identifiers count up as the
+    examples' do, then the ports: the UniFFI sources generated from it
+    into `target/sequential/uniffi`, and, on macOS, the Swift package
+    copied into `target/sequential/swift` over an `XCFramework` of that
+    library, the examples built there, and every Swift port run, its
+    report compared byte for byte with its example's from gate 8; the
+    first line that differs stops the gates
 
 All of them pass before a commit; clippy findings are fixed, not silenced.
 The examples assert their key numbers, so running them is a check, not a

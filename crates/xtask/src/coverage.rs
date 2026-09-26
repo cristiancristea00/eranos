@@ -75,7 +75,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
 pub(crate) fn cleared(measured: &Metadata, apple: bool) -> Vec<PathBuf> {
     let mut directories = vec![gates::generated(measured)];
     if apple {
-        directories.extend(swift::measured_directories(measured));
+        directories.extend(swift::copied_directories(measured));
     }
     directories.extend([
         kotlin::generated_sources(),
@@ -116,7 +116,8 @@ pub(crate) fn steps(
     steps.push(libraries(measured).with_environment(environment));
     steps.extend(gates::generators(measured));
     if apple {
-        steps.extend(measuring(swift::measured_tests(measured)));
+        steps.extend(measuring(swift::copy(measured)));
+        steps.extend(measuring(vec![swift::copy_tests(measured)]));
     }
     steps.extend(kotlin::sources(measured));
     steps.extend(measuring(vec![kotlin::tests(measured)]));

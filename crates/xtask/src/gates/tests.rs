@@ -23,9 +23,10 @@ fn documented_gates() -> Vec<String> {
 
 /// The checks, then async-lock's features, are the gates AGENTS.md lists, in
 /// its order, and the last documented gates are the examples, the host
-/// library, the generators, and the Swift, Kotlin, Java, TypeScript, Kotlin
-/// Multiplatform, and C and C++ packages; a check the code dropped, added, or
-/// reordered would pass a commit the documented gates refuse.
+/// library, the generators, the Swift, Kotlin, Java, TypeScript, Kotlin
+/// Multiplatform, and C and C++ packages, and the ports; a check the code
+/// dropped, added, or reordered would pass a commit the documented gates
+/// refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
@@ -44,7 +45,16 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "rustup target add wasm32-unknown-unknown",
             "sh gradlew --warning-mode=fail :eranos:jvmTest",
             &crate::capi::library().command_line(),
+            "cargo build --package eranos-uniffi --features sequential-ids",
         ]
+    );
+    let sequential = Metadata::parse(METADATA)
+        .unwrap()
+        .inner(crate::ports::DIRECTORY);
+    assert!(
+        crate::ports::library(&sequential)
+            .command_line()
+            .ends_with(documented.last().unwrap())
     );
 }
 
@@ -97,23 +107,29 @@ fn a_lock_without_features_passes() {
 /// targets do not run as examples.
 #[test]
 fn every_example_of_every_package_runs_with_every_feature() {
-    let run = |example: &str| {
-        Step::cargo(
+    let run = |package: &str, example: &str| Example {
+        name: example.to_owned(),
+        package: package.to_owned(),
+        step: Step::cargo(
             &[
                 "run",
                 "--quiet",
                 "--package",
-                "eranos",
+                package,
                 "--all-features",
                 "--example",
                 example,
             ],
             &format!("example {example}"),
-        )
+        ),
     };
     assert_eq!(
         examples(&Metadata::parse(METADATA).unwrap()),
-        [run("quickstart"), run("persistence")]
+        [
+            run("eranos", "quickstart"),
+            run("eranos", "persistence"),
+            run("xtask", "demo")
+        ]
     );
 }
 
@@ -205,7 +221,10 @@ fn a_failing_swift_step_stops_the_gates() {
 /// A failing example stops the examples after it, and nothing is generated.
 #[test]
 fn a_failing_example_stops_the_examples_after_it() {
-    let examples = examples(&Metadata::parse(METADATA).unwrap());
+    let examples: Vec<Step> = examples(&Metadata::parse(METADATA).unwrap())
+        .into_iter()
+        .map(|example| example.step)
+        .collect();
     let mut recorder = Recorder::new();
     recorder.failing = examples.first().cloned();
     assert!(matches!(run(&mut recorder), Err(Failure::Usage)));
@@ -250,6 +269,7 @@ fn a_failing_package_stops_the_gates_at_its_step() {
         crate::web::node(),
         crate::kmp::checks("/JAVA_HOME_21", true)[0].clone(),
         crate::capi::library(),
+        crate::ports::library(&metadata.inner(crate::ports::DIRECTORY)),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());

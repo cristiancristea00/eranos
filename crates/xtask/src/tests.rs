@@ -20,7 +20,10 @@ pub(crate) const METADATA: &str = r#"{
                 {"kind": ["example"], "name": "persistence"}
             ]
         },
-        {"name": "xtask", "targets": [{"kind": ["bin"], "name": "xtask"}]}
+        {
+            "name": "xtask",
+            "targets": [{"kind": ["bin"], "name": "xtask"}, {"kind": ["example"], "name": "demo"}]
+        }
     ],
     "target_directory": "/eranos/target",
     "version": 1
@@ -41,11 +44,17 @@ pub(crate) const EXPORTS: &str =
 export RUSTC_WRAPPER=/cargo-llvm-cov
 ";
 
+/// What `swift build --show-bin-path` prints: the directory of the built
+/// programs, and a new line.
+pub(crate) const PROGRAMS: &str = "/programs\n";
+
 /// A runner that records every step instead of running it, answers the
 /// step that prints async-lock's features with `tree`, the one that prints
 /// Node's version with `node`, those that print the C and C++ tests'
 /// coverage with `coverage`, the one that prints cargo-llvm-cov's
-/// environment with `exports`, and every other output with `metadata`,
+/// environment with `exports`, the one that prints the directory of the
+/// Swift examples' programs with [`PROGRAMS`], and every other output with
+/// `metadata`,
 /// records every directory it clears or creates and every file it writes,
 /// builds for Apple platforms when `apple`, has set only the environment
 /// variables `variables`, and fails at the step `failing` or at every file
@@ -132,6 +141,8 @@ impl Runner for Recorder {
             .ends_with("cargo llvm-cov show-env --sh")
         {
             Ok(self.exports.clone())
+        } else if step.command_line().ends_with("--show-bin-path") {
+            Ok(PROGRAMS.to_owned())
         } else {
             Ok(self.metadata.clone())
         }
@@ -177,14 +188,33 @@ fn words(line: &[&str]) -> Vec<String> {
     line.iter().map(|&word| word.to_owned()).collect()
 }
 
+/// The ports' steps, the Swift ports of the two examples of eranos that
+/// [`METADATA`] lists only where `apple`: the recorder answers the programs'
+/// directory with [`PROGRAMS`], and an example of another package has no
+/// port.
+fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
+    let sequential = metadata.inner(ports::DIRECTORY);
+    let mut steps = vec![ports::library(&sequential)];
+    steps.extend(gates::generators(&sequential));
+    if apple {
+        steps.extend(swift::copy(&sequential));
+        steps.extend(swift::examples(&sequential));
+        steps.push(swift::examples_directory(&sequential));
+        steps.extend(
+            ["quickstart", "persistence"].map(|example| ports::port("Swift", example, "/programs")),
+        );
+    }
+    steps
+}
+
 /// `gates` runs every check, reads async-lock's features, lists the
 /// examples, runs each one, builds the host library, generates every
 /// language's sources into a cleared directory, runs the Swift package's
 /// gates where the machine builds for Apple platforms, and the Kotlin,
 /// Java, TypeScript, Kotlin Multiplatform, C, and C++ packages', the Kotlin
 /// Multiplatform package with its Apple libraries only where the machine
-/// builds them; if it ran less, `cargo xtask gates` would pass commits the
-/// documented gates refuse.
+/// builds them, then the ports, the Swift ones only there; if it ran less,
+/// `cargo xtask gates` would pass commits the documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -194,7 +224,11 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     let mut expected = gates::checks();
     expected.push(gates::lock_features());
     expected.push(gates::metadata());
-    expected.extend(gates::examples(&metadata));
+    expected.extend(
+        gates::examples(&metadata)
+            .into_iter()
+            .map(|example| example.step),
+    );
     expected.push(gates::host_library());
     expected.extend(gates::generators(&metadata));
     let mut packages = kotlin::libraries();
@@ -220,6 +254,9 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     }
     packages.extend(native.clone());
     elsewhere_packages.extend(native);
+    packages.extend(ported(&metadata, true));
+    elsewhere_packages.extend(ported(&metadata, false));
+    let sequential = metadata.inner(ports::DIRECTORY);
     let native_cleared = [capi::C_PACKAGE, capi::CPP_PACKAGE]
         .map(|package| {
             [
@@ -249,6 +286,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         ]
         .into_iter()
         .chain(native_cleared.clone())
+        .chain(ports::cleared(&sequential, false))
         .collect::<Vec<_>>()
     );
     assert_eq!(elsewhere.created, native_created);
@@ -256,6 +294,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     expected.extend(swift::libraries(&metadata));
     expected.extend(swift::package(&metadata));
     expected.push(swift::build());
+    expected.push(swift::build_examples());
     expected.extend(swift::checks(&metadata));
     expected.extend(packages);
     assert_eq!(recorder.steps, expected);
@@ -271,6 +310,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         ]
         .into_iter()
         .chain(native_cleared)
+        .chain(ports::cleared(&sequential, true))
         .collect::<Vec<_>>()
     );
     assert_eq!(recorder.created, native_created);

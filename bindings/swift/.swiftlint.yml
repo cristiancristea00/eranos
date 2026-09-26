@@ -1,13 +1,17 @@
 # SwiftLint for the hand-written Swift of the package: its manifest, the
-# Eranos module, and the tests. The generated module is never linted.
+# Eranos module, the tests, and the examples. The generated module is never
+# linted.
 included:
   - Package.swift
   - Sources/Eranos
   - Tests
+  - examples/Package.swift
+  - examples/Sources
 
 excluded:
   - Sources/EranosGenerated
   - .build
+  - examples/.build
 
 reporter: "xcode"
 

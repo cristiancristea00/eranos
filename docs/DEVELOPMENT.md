@@ -85,16 +85,22 @@ the Kotlin Multiplatform package on the JDK 21 that `JAVA_HOME_21` names,
 where gobley's plugins build the library for each target and generate its
 bindings, and then eranos-capi's static library, from which Diplomat
 generates each of the C and C++ packages' headers, whose tests the LLVM
-that `LLVM_HOME` names builds under the sanitizers and measures. A run
-from an empty target directory takes about 6 minutes on an Apple M4 Pro,
+that `LLVM_HOME` names builds under the sanitizers and measures. Then
+they build eranos-uniffi's host library again, with `sequential-ids`, into
+`target/sequential`, and on macOS run the Swift ports of the examples on a
+copy of the Swift package over it
+([TESTING.md § 2](TESTING.md#2-layout)). A run
+from an empty target directory takes about 7 minutes on an Apple M4 Pro,
 most of it building the library for every Apple target and every Android
-ABI; a warm one takes about 3 minutes in all, 40 seconds of it
-clang-tidy's pass over the C and C++ tests.
+ABI; a warm one takes about 4 minutes in all, 40 seconds of it
+clang-tidy's pass over the C and C++ tests and 20 seconds the Swift
+examples' two builds and their ports.
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
 swift test --package-path bindings/swift --enable-code-coverage # with coverage; the JSON is at `swift test --show-codecov-path`
-(cd bindings/swift && swiftlint lint --strict)                  # SwiftLint, with the package's .swiftlint.yml
+swift run --package-path bindings/swift/examples settling_up    # one Swift port, on that framework, whose identifiers are random
+(cd bindings/swift && swiftlint lint --strict)                  # SwiftLint, with the package's .swiftlint.yml, the examples included
 ```
 
 In `bindings/kotlin`, once the gates built the host library and copied
@@ -590,6 +596,11 @@ so a failing run blocks nothing: it is a report.
   gates: a function of the layer that no test calls, or a branch of one
   that none takes; `llvm-cov show build/tests -instr-profile=build/tests.profdata include`,
   in the package's directory, marks each unrun line.
+- **`the Swift port of … prints … at line …, where the Rust example
+  prints …`** from the gates: the port and its example first differ there;
+  `swift run --package-path target/sequential/swift/examples <example>`
+  prints the port's whole report on the library whose identifiers count
+  up, to diff with `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the

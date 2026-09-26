@@ -12,6 +12,10 @@ use crate::process::{Runner, Step, WORKSPACE};
 /// The Swift package, from the workspace root.
 const PACKAGE: &str = "bindings/swift";
 
+/// The package of the Swift ports of the examples, from the workspace root,
+/// which depends on the Swift package as `..`.
+const EXAMPLES: &str = "bindings/swift/examples";
+
 /// The static library every Apple target builds.
 const LIBRARY: &str = "liberanos_uniffi.a";
 
@@ -74,7 +78,7 @@ pub(crate) const APPLE_LIBRARIES: [AppleLibrary; 10] = [
 /// # Errors
 ///
 /// The failure of the first step that fails, and of clearing the old
-/// `XCFramework` or writing the build log the analyzer reads.
+/// `XCFramework` or writing the builds' log the analyzer reads.
 pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), Failure> {
     for step in libraries(metadata) {
         runner.run(&step)?;
@@ -87,8 +91,9 @@ pub(crate) fn run(runner: &mut impl Runner, metadata: &Metadata) -> Result<(), F
     for step in package(metadata) {
         runner.run(&step)?;
     }
-    let log = runner.output(&build())?;
-    runner.write(&build_log(metadata), &log)?;
+    let package = runner.output(&build())?;
+    let examples = runner.output(&build_examples())?;
+    runner.write(&build_log(metadata), &format!("{package}{examples}"))?;
     for step in checks(metadata) {
         runner.run(&step)?;
     }
@@ -189,8 +194,8 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
 }
 
 /// The steps that make the `XCFramework` of every library, copy the generated
-/// Swift into the package, and clear the package's earlier build, so that
-/// the analyzer's log names every file.
+/// Swift into the package, and clear the earlier builds of the package and
+/// of its examples, so that the analyzer's log names every file.
 #[must_use]
 pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
     let headers = format!("{}/headers", apple(metadata));
@@ -222,6 +227,11 @@ pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
             "the Swift package's earlier build",
             "swift",
         ),
+        Step::new(
+            &["package", "--package-path", EXAMPLES, "clean"],
+            "the Swift examples' earlier build",
+            "swift",
+        ),
     ]
 }
 
@@ -242,7 +252,20 @@ pub(crate) fn build() -> Step {
     )
 }
 
-/// Where the build's compiler calls go, for the analyzer.
+/// The step that builds the examples' package over the package, printing
+/// every compiler call for the analyzer; the ports run from a copy, on a
+/// library whose identifiers count up.
+#[must_use]
+pub(crate) fn build_examples() -> Step {
+    Step::new(
+        &["build", "--package-path", EXAMPLES, "--verbose"],
+        "the Swift examples' build",
+        "swift",
+    )
+}
+
+/// Where the builds' compiler calls go, for the analyzer: the package's,
+/// then its examples'.
 #[must_use]
 pub(crate) fn build_log(metadata: &Metadata) -> PathBuf {
     PathBuf::from(format!("{}/swift-build.log", apple(metadata)))
@@ -282,36 +305,39 @@ pub(crate) fn checks(metadata: &Metadata) -> Vec<Step> {
     ]
 }
 
-/// Where the coverage copies the package, in `metadata`'s target directory,
-/// to test it on the instrumented library, so the package keeps the
-/// `XCFramework` the gates built.
+/// Where the package is copied in `metadata`'s target directory, beside a
+/// library built there: the instrumented one the coverage measures, or the
+/// one whose identifiers count up that the examples print. The package keeps
+/// the `XCFramework` the gates built.
 #[must_use]
-pub(crate) fn measured_package(metadata: &Metadata) -> PathBuf {
+pub(crate) fn copied_package(metadata: &Metadata) -> PathBuf {
     Path::new(&metadata.target_directory).join("swift")
 }
 
-/// What the coverage clears before it copies the package: the copy's
-/// sources and tests, so a file the package no longer has leaves nothing
-/// behind, its `XCFramework`, and the headers it gathers; the copy's build
-/// stays, so a later run builds only what changed.
+/// What is cleared before the package is copied: the copy's sources, tests,
+/// and examples, so a file the package no longer has leaves nothing behind,
+/// its `XCFramework`, and the headers it gathers; the copy's builds stay, so
+/// a later run builds only what changed.
 #[must_use]
-pub(crate) fn measured_directories(metadata: &Metadata) -> Vec<PathBuf> {
-    let package = measured_package(metadata);
+pub(crate) fn copied_directories(metadata: &Metadata) -> Vec<PathBuf> {
+    let package = copied_package(metadata);
     vec![
         package.join("Sources"),
         package.join("Tests"),
+        package.join("examples").join("Sources"),
         package.join("EranosFFI.xcframework"),
         PathBuf::from(format!("{}/headers", apple(metadata))),
     ]
 }
 
 /// The steps that copy the package, with the generated Swift, into
-/// `metadata`'s target directory, make an `XCFramework` of the shared library
-/// there, which holds its own profiling runtime, and run the copy's tests on
-/// it.
+/// `metadata`'s target directory, and make its `XCFramework` of the shared
+/// library there, which a program loads when it starts: the library's
+/// instrumentation, when it has any, then writes a profile as the program
+/// ends.
 #[must_use]
-pub(crate) fn measured_tests(metadata: &Metadata) -> Vec<Step> {
-    let package = measured_package(metadata).to_string_lossy().into_owned();
+pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
+    let package = copied_package(metadata).to_string_lossy().into_owned();
     let headers = format!("{}/headers", apple(metadata));
     let generated = format!("{}/uniffi/swift", metadata.target_directory);
     let sources = format!("{package}/Sources/EranosGenerated");
@@ -374,15 +400,72 @@ pub(crate) fn measured_tests(metadata: &Metadata) -> Vec<Step> {
                 "-output",
                 &framework,
             ],
-            "the XCFramework of the instrumented library",
+            "the XCFramework of the copy's library",
             "xcodebuild",
         ),
+    ]
+}
+
+/// The step that runs the copy's tests on its library.
+#[must_use]
+pub(crate) fn copy_tests(metadata: &Metadata) -> Step {
+    Step::new(
+        &[
+            "test",
+            "--package-path",
+            &copied_package(metadata).to_string_lossy(),
+        ],
+        "the Swift tests",
+        "swift",
+    )
+}
+
+/// Where the examples' package sits in the copy, whose `..` it depends on.
+fn copied_examples(metadata: &Metadata) -> String {
+    copied_package(metadata)
+        .join("examples")
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// The steps that copy the examples' package into the copy of the package
+/// and build every example there, on the copy's library.
+#[must_use]
+pub(crate) fn examples(metadata: &Metadata) -> Vec<Step> {
+    let examples = copied_examples(metadata);
+    vec![
+        Step::new(&["-p", &examples], "the examples' directory", "mkdir"),
         Step::new(
-            &["test", "--package-path", &package],
-            "the Swift tests",
+            &[
+                "-R",
+                &format!("{EXAMPLES}/Package.swift"),
+                &format!("{EXAMPLES}/Sources"),
+                &examples,
+            ],
+            "the Swift examples",
+            "cp",
+        ),
+        Step::new(
+            &["build", "--package-path", &examples],
+            "the Swift examples' build in the copy",
             "swift",
         ),
     ]
+}
+
+/// The step that prints the directory of the examples' programs.
+#[must_use]
+pub(crate) fn examples_directory(metadata: &Metadata) -> Step {
+    Step::new(
+        &[
+            "build",
+            "--package-path",
+            &copied_examples(metadata),
+            "--show-bin-path",
+        ],
+        "the Swift examples' directory",
+        "swift",
+    )
 }
 
 #[cfg(test)]

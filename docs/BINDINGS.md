@@ -250,7 +250,9 @@ library's: identifiers count up from one instead of reading the clock, so
 a program that builds the same entries in the same order gets the same
 identifiers and prints the same text. It is for examples and tests; the
 identifiers of two devices would collide
-([README.md](../README.md#features)).
+([README.md](../README.md#features)). The ports of the examples run on it
+and print their examples' reports byte for byte
+([TESTING.md § 2](TESTING.md#2-layout)).
 
 ## 8. The glue crates
 
@@ -347,6 +349,11 @@ Design Guidelines:
   picks the form that waits for the lock without blocking a thread of the
   pool, and cancelling its task cancels the call. `Group.withRead` holds a
   read handle for a closure.
+
+`bindings/swift/examples` is a package of its own over this one, with a
+program per example of eranos that prints the example's report
+([TESTING.md § 2](TESTING.md#2-layout)); SwiftLint lints and analyses it
+with the package.
 
 ### Kotlin
 
@@ -533,8 +540,9 @@ Core Guidelines with the naming rule above:
 `cargo xtask gates` writes every language's sources into
 `target/uniffi/<language>`; they are never committed. On macOS it also
 builds the Swift package's XCFramework in the dev profile, 1.3 GB of debug
-libraries, copies the generated Swift into the package, and builds, tests,
-lints, and documents the package. On every machine it builds the library
+libraries, copies the generated Swift into the package, builds the package
+and its examples, tests the package, lints and analyses both, and
+documents the package. On every machine it builds the library
 of the four Android ABIs with `cargo ndk`, copies the generated Kotlin
 into the Kotlin package, and tests, lints, and documents that package and
 builds its two Android libraries, whose native libraries the Android build
@@ -551,7 +559,11 @@ target. Then it builds `eranos-capi`'s static library, generates the C and
 the C++ headers from its bridge with `diplomat-tool`, and, for each
 package, builds its tests with the LLVM that `LLVM_HOME` names, runs them
 under the sanitizers, holds every line and function of its layer covered,
-and checks its format, lint, and documentation.
+and checks its format, lint, and documentation. Last, it builds
+eranos-uniffi's host library with `sequential-ids` into
+`target/sequential`, generates its sources, and, on macOS, runs every Swift
+port on a copy of the Swift package over it, each report compared with its
+example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++

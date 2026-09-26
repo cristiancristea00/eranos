@@ -1,0 +1,174 @@
+// Sections 1 to 3 of the tour: the group and its details, the members with their contact details and accounts, and
+// the categories.
+
+import Eranos
+import Report
+
+func theGroup() throws(EranosError) -> Group {
+    section("1. The group")
+    let group = try Group(currency: Currency(code: "EUR"), name: "Lisbon", description: "A week by the Atlantic", language: Language("pt-pt"))
+    let blank = Result { () throws(EranosError) in try group.rename(to: "   ") }
+    try group.rename(to: "Lisbon and Porto")
+    try group.changeDescription(to: "A week by the Atlantic, with a day in Porto")
+    printTable(
+        ["Detail", "Value"],
+        [
+            ["Name", try group.name()],
+            ["Currency", "\(try group.currency())"],
+            ["Language", try group.language()?.description ?? ""],
+            ["Description", try group.description() ?? ""]
+        ],
+        numbersFrom: 2
+    )
+    print("""
+        The group started as Lisbon and was renamed when a day in Porto joined the plan.
+        Every total is kept in its currency, \(try group.currency()). The language is a BCP 47 tag the apps
+        show the group in, stored in canonical form: pt-pt became \(try group.language()?.description ?? ""). A blank name is
+        refused:
+          error: \(message(blank))
+        """)
+
+    guard case .failure(.group(.emptyName, _)) = blank else {
+        preconditionFailure("a blank name is refused")
+    }
+    expect("Lisbon and Porto", try group.name(), "the group is renamed")
+    expect("pt-PT", try group.language()?.description, "the tag is stored in canonical form")
+    return group
+}
+
+/// An account with its label, its kind, and its details.
+func describe(_ account: Account) -> String {
+    switch account.details {
+    case let .iban(iban):
+        "\(account.name), IBAN \(iban)"
+    case let .username(username):
+        "\(account.name), username \(username)"
+    }
+}
+
+func printMembers(_ group: Group) throws(EranosError) {
+    printTable(
+        ["Member", "Email", "Phone", "Accounts"],
+        try group.members().map { member in
+            [
+                [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
+                member.email?.description ?? "",
+                member.phone?.description ?? "",
+                cell(member.accounts.map(describe))
+            ]
+        },
+        numbersFrom: 4
+    )
+}
+
+func validation(_ group: Group) {
+    print("""
+        IBANs are checked against the SWIFT registry and their mod-97 check digits,
+        emails against RFC 5321 and 5322, and phone numbers against their country's
+        numbering plan. Required text must not be blank:
+        """)
+    let iban = { (input: String) in
+        ["\"\(input)\"", "IBAN", outcome({ () throws(EranosError) in try IBAN(input) }, { iban in "\(iban), country \(iban.countryCode)" })]
+    }
+    let email = { (input: String) in
+        ["\"\(input)\"", "email", outcome({ () throws(EranosError) in try Email(input) }, \.description)]
+    }
+    let phone = { (input: String) in
+        ["\"\(input)\"", "phone", outcome({ () throws(EranosError) in try PhoneNumber(input) }, { phone in "\(phone), stored as \(phone.e164)" })]
+    }
+    printTable(
+        ["Input", "Checked as", "Result"],
+        [
+            iban("ro49 aaaa 1b31 0075 9384 0000"),
+            iban("RO49 AAAA 1B31 0075 9384 0001"),
+            email("ana..popescu@example.com"),
+            phone("+351 912 345 678"),
+            phone("+40 612 345 678"),
+            ["\"   \"", "username", outcome({ () throws(EranosError) in try Username("   ") }, \.description)],
+            ["\"  \"", "first name", outcome({ () throws(EranosError) in try group.add(Member(firstName: "  ")) }, \.rawValue)]
+        ],
+        numbersFrom: 3
+    )
+}
+
+func members(_ group: Group) throws(EranosError) -> People {
+    section("2. Members")
+    let ana = try group.add(
+        Member(
+            firstName: "Ana",
+            accounts: [
+                Account(details: .iban(try IBAN("RO49 AAAA 1B31 0075 9384 0000")), name: "ING"),
+                Account(details: .username(try Username("@ana")), name: "Revolut")
+            ],
+            email: try Email("ana@example.com"),
+            lastName: "Popescu",
+            phone: try PhoneNumber("+40 712 345 678")
+        )
+    )
+    let bob = try group.add(Member(firstName: "Bob"))
+    let carol = try group.add(Member(firstName: "Carol"))
+    let dan = try group.add(Member(firstName: "Dan"))
+    let eva = try group.add(Member(firstName: "Eva"))
+    let filip = try group.add(Member(firstName: "Filip"))
+    // An edit starts from a copy of the member, which keeps its identifier.
+    guard var edited = try group.member(withID: bob) else {
+        preconditionFailure("Bob is a member")
+    }
+    edited.lastName = "Ionescu"
+    edited.email = try Email("bob@example.com")
+    let before = try group.replace(edited)
+    try printMembers(group)
+    print("""
+        Only a first name is required. Ana gave every detail; Bob added his last name and
+        email later, through an edit that kept his identifier:
+          \(bob)
+        Eva is Carol's daughter, and Filip was added by mistake.
+        """)
+    validation(group)
+
+    precondition(nil == before.lastName)
+    expect("Ionescu", try group.member(withID: bob)?.lastName, "Bob's edit is kept")
+    expect(2, try group.member(withID: ana)?.accounts.count, "Ana has two accounts")
+    return People(ana: ana, bob: bob, carol: carol, dan: dan, eva: eva, filip: filip)
+}
+
+func addCategories(_ group: Group) throws(EranosError) -> Categories {
+    section("3. Categories")
+    let food = try group.add(Category(name: "Food"))
+    let lodging = try group.add(Category(name: "Lodging"))
+    let transport = try group.add(Category(name: "Transport"))
+    let homonym = Result { () throws(EranosError) in try group.add(Category(name: "FOOD")) }
+    guard var renamed = try group.category(withID: transport) else {
+        preconditionFailure("Transport was added")
+    }
+    renamed.name = "Getting around"
+    _ = try group.replace(renamed)
+    guard var other = try group.categories().first else {
+        preconditionFailure("every group has the built-in category")
+    }
+    other.name = "Other"
+    let builtIn = Result { () throws(EranosError) in try group.replace(other) }
+    print("""
+        Every group has the built-in Uncategorised; this one adds Food, Lodging, and
+        Transport, then renames Transport, which keeps its identifier. In identifier order:
+          \(try group.categories().map(\.name).joined(separator: ", "))
+        Names are compared caselessly, and the built-in category keeps its name:
+        """)
+    printTable(
+        ["Change", "Refused with"],
+        [
+            ["Add a category named FOOD", message(homonym)],
+            ["Rename Uncategorised to Other", message(builtIn)]
+        ],
+        numbersFrom: 2
+    )
+
+    guard case .failure(.group(.duplicateCategoryName(food), _)) = homonym else {
+        preconditionFailure("the name is Food's")
+    }
+    guard case .failure(.group(.builtInCategory, _)) = builtIn else {
+        preconditionFailure("the built-in category keeps its name")
+    }
+    expect("Getting around", try group.category(withID: transport)?.name, "Transport is renamed")
+    return Categories(food: food, lodging: lodging, transport: transport)
+}

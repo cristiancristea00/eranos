@@ -21,6 +21,7 @@
 /bindings/swift/.build/
 /bindings/swift/EranosFFI.xcframework/
 /bindings/swift/Sources/EranosGenerated/
+/bindings/swift/examples/.build/
 
 # The Kotlin project's caches and build products, what `cargo xtask` writes
 # into it (the generated Kotlin and the Android libraries, both built from
