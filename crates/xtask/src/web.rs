@@ -1,11 +1,14 @@
 //! The gates of the TypeScript package: the library for the WebAssembly
 //! target of browsers and Node, the generated TypeScript in the package, and
 //! the package's format, lint, type checks, tests and their coverage,
-//! documentation, and bundle.
+//! documentation, and bundle; and the steps that run the ports of the
+//! examples in a copy of the package over the library whose identifiers
+//! count up.
 
 use std::path::{Path, PathBuf};
 
 use crate::Failure;
+use crate::gates::Metadata;
 use crate::process::{Runner, Step, WORKSPACE};
 
 /// The TypeScript project, from the workspace root.
@@ -157,6 +160,124 @@ pub(crate) fn package() -> Vec<Step> {
 /// The step that runs the package's script `script`, reported as `name`.
 fn npm(script: &str, name: &str) -> Step {
     Step::new(&["run", script], name, "npm").in_directory(PROJECT)
+}
+
+/// Where the ports run, in `sequential`'s target directory: a copy of the
+/// layer and the ports over TypeScript generated from the library whose
+/// identifiers count up, since wasm-bindgen's glue follows the module it is
+/// written for, and one that reads no clock imports less.
+#[must_use]
+pub(crate) fn copied_package(sequential: &Metadata) -> PathBuf {
+    Path::new(&sequential.target_directory).join("typescript")
+}
+
+/// What is cleared before the package is copied: the copy's layer and its
+/// ports, so a file the package no longer has leaves nothing behind.
+#[must_use]
+pub(crate) fn copied_directories(sequential: &Metadata) -> Vec<PathBuf> {
+    let package = copied_package(sequential);
+    vec![package.join("src"), package.join("examples")]
+}
+
+/// The step that builds the library for WebAssembly, with identifiers that
+/// count up, into `sequential`'s target directory.
+#[must_use]
+pub(crate) fn sequential_library(sequential: &Metadata) -> Step {
+    Step::cargo(
+        &[
+            "build",
+            "--package",
+            "eranos-web",
+            "--target",
+            TARGET,
+            "--lib",
+            "--features",
+            "sequential-ids",
+        ],
+        "the WebAssembly library, with identifiers that count up",
+    )
+    .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
+}
+
+/// The steps that copy the layer, the ports, and the package's manifest and
+/// compiler settings into the copy, and link the package's installed
+/// dependencies there. The generator writes every file of the copied
+/// `src/internal` again.
+#[must_use]
+pub(crate) fn copy(sequential: &Metadata) -> Vec<Step> {
+    let package = copied_package(sequential).to_string_lossy().into_owned();
+    let dependencies = Path::new(WORKSPACE).join(PROJECT).join("node_modules");
+    vec![
+        Step::new(&["-p", &package], "the TypeScript package's copy", "mkdir"),
+        Step::new(
+            &[
+                "-R",
+                &format!("{PROJECT}/src"),
+                &format!("{PROJECT}/examples"),
+                &format!("{PROJECT}/package.json"),
+                &format!("{PROJECT}/tsconfig.json"),
+                &package,
+            ],
+            "the TypeScript package into its copy",
+            "cp",
+        ),
+        Step::new(
+            &[
+                "-sfn",
+                &dependencies.to_string_lossy(),
+                &format!("{package}/node_modules"),
+            ],
+            "the TypeScript dependencies of the copy",
+            "ln",
+        ),
+    ]
+}
+
+/// Where the generator's settings for the copy go.
+#[must_use]
+pub(crate) fn copied_configuration(sequential: &Metadata) -> PathBuf {
+    copied_package(sequential).join("ubrn.config.yaml")
+}
+
+/// The generator's settings for the copy: the workspace's crate, and the
+/// copy's layer as where the generated TypeScript goes.
+#[must_use]
+pub(crate) fn configuration() -> String {
+    format!(
+        "rust:\n    directory: {WORKSPACE}\n    manifestPath: crates/eranos-web/Cargo.toml\nwasm2:\n    tsBindings: src/internal\n"
+    )
+}
+
+/// The step that generates the copy's TypeScript from the library whose
+/// identifiers count up, which the generator finds through cargo's target
+/// directory.
+#[must_use]
+pub(crate) fn copied_generator(sequential: &Metadata) -> Step {
+    Step::new(
+        &[
+            "build",
+            "wasm2",
+            "--config",
+            "ubrn.config.yaml",
+            "--no-wasm-build",
+        ],
+        "the copy's generated TypeScript",
+        "uniffi-bindgen-react-native",
+    )
+    .in_directory(&copied_package(sequential).to_string_lossy())
+    .with_variable("CARGO_TARGET_DIR", &sequential.target_directory)
+}
+
+/// The step that runs the TypeScript port of `example` in the copy, on Node
+/// through tsx.
+#[must_use]
+pub(crate) fn port(example: &str, sequential: &Metadata) -> Step {
+    Step::new(
+        &["--import", "tsx", &format!("examples/{example}.ts")],
+        &format!("the TypeScript port of {example}"),
+        "node",
+    )
+    .in_directory(&copied_package(sequential).to_string_lossy())
 }
 
 #[cfg(test)]

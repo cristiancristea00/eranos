@@ -30,8 +30,10 @@ fn reference(example: &str, report: &str) -> Reference {
 /// on a copy of the package over it only where the machine builds for Apple
 /// platforms, and the Kotlin ones on every machine, on the JDK's `java`,
 /// JNA loading that library, then again over gobley's bindings, on the JDK
-/// 21's, JNA loading eranos-kmp's, and last the Java ones, on the JDK's
-/// `java`, which loads that library itself.
+/// 21's, JNA loading eranos-kmp's, then the Java ones, on the JDK's `java`,
+/// which loads that library itself, and last the TypeScript ones, on Node,
+/// in a copy of the package over the WebAssembly build of the glue, whose
+/// generator's settings the ports write.
 #[test]
 fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
     let metadata = Metadata::parse(METADATA).unwrap();
@@ -44,7 +46,11 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         recorder.apple = apple;
         recorder.metadata = "report".to_owned();
         run(&mut recorder, &metadata, &references).unwrap();
-        let mut expected = vec![library(&sequential()), multiplatform_library(&sequential())];
+        let mut expected = vec![
+            library(&sequential()),
+            multiplatform_library(&sequential()),
+            web::sequential_library(&sequential()),
+        ];
         expected.extend(gates::generators(&sequential()));
         if apple {
             expected.extend(swift::copy(&sequential()));
@@ -62,9 +68,23 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
         expected.push(java::ports(&metadata));
         expected.push(java::port("quickstart", "/JAVA_HOME", &sequential()));
         expected.push(java::port("persistence", "/JAVA_HOME", &sequential()));
+        expected.extend(web::copy(&sequential()));
+        expected.push(web::copied_generator(&sequential()));
+        expected.push(web::port("quickstart", &sequential()));
+        expected.push(web::port("persistence", &sequential()));
         assert_eq!(recorder.steps, expected, "{apple}");
         assert_eq!(recorder.cleared, cleared(&sequential(), apple), "{apple}");
+        assert_eq!(recorder.written, [web::copied_configuration(&sequential())]);
     }
+    assert_eq!(
+        web::port("members_and_accounts", &sequential()).command_line(),
+        "cd /eranos/target/sequential/typescript && node --import tsx examples/members_and_accounts.ts"
+    );
+    assert_eq!(
+        web::copied_generator(&sequential()).command_line(),
+        "cd /eranos/target/sequential/typescript && CARGO_TARGET_DIR='/eranos/target/sequential' \
+         uniffi-bindgen-react-native build wasm2 --config ubrn.config.yaml --no-wasm-build"
+    );
     assert_eq!(
         library(&sequential()).command_line(),
         "CARGO_TARGET_DIR='/eranos/target/sequential' cargo build --package eranos-uniffi --features sequential-ids"
@@ -171,6 +191,10 @@ fn a_failure_stops_the_ports_where_it_happens() {
         kmp::port("quickstart", "/JAVA_HOME_21", &sequential()),
         java::ports(&metadata),
         java::port("quickstart", "/JAVA_HOME", &sequential()),
+        web::sequential_library(&sequential()),
+        web::copy(&sequential())[1].clone(),
+        web::copied_generator(&sequential()),
+        web::port("quickstart", &sequential()),
     ] {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
@@ -188,8 +212,19 @@ fn a_failure_stops_the_ports_where_it_happens() {
     ));
     assert_eq!(
         blocked.steps,
-        [library(&sequential()), multiplatform_library(&sequential())]
+        [
+            library(&sequential()),
+            multiplatform_library(&sequential()),
+            web::sequential_library(&sequential())
+        ]
     );
+    let mut unwritten = Recorder::new();
+    unwritten.failing_files = Some(FileOperation::Write);
+    assert!(matches!(
+        run(&mut unwritten, &metadata, &references),
+        Err(Failure::Usage)
+    ));
+    assert_eq!(unwritten.steps.last(), web::copy(&sequential()).last());
     for (variables, missing) in [
         (&[][..], "JAVA_HOME"),
         (&["JAVA_HOME"][..], "ANDROID_HOME"),
@@ -211,7 +246,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
 /// examples' package has a program for every Rust example of eranos and for
 /// no other, and so do the Kotlin and the Java examples, a package each,
 /// named without underscores, whose `Main.kt` or `Main.java` holds its
-/// `main`.
+/// `main`, and the TypeScript examples, a module each beside the report's.
 #[test]
 fn every_example_has_a_port_in_every_language() {
     let names = |directory: &str, keep: fn(&Path) -> Option<String>| {
@@ -260,5 +295,12 @@ fn every_example_has_a_port_in_every_language() {
     assert_eq!(swift, examples);
     assert_eq!(kotlin, unseparated);
     assert_eq!(java, unseparated);
+    let typescript = names("bindings/typescript/examples", |path| {
+        path.file_stem()
+            .filter(|_| path.extension().is_some_and(|extension| "ts" == extension))
+            .map(|stem| stem.to_string_lossy().into_owned())
+            .filter(|name| "report" != name)
+    });
+    assert_eq!(typescript, examples);
     assert_eq!(8, examples.len());
 }

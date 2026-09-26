@@ -1,0 +1,221 @@
+// Sections 5 to 7 of the tour: entries in another currency, edits and refused changes, and members who come and go.
+
+import assert from 'node:assert/strict';
+
+import {
+    type Expense,
+    type ExpenseId,
+    type Group,
+    Currency,
+    ExchangeRate,
+    ExpenseError,
+    GroupError,
+    Money,
+    Percentage,
+    TimeOfDay,
+    TransferError,
+    formatBalance,
+} from '../../src/index.js';
+import { message, printLines, printTable, refusal, section, totals } from '../report.js';
+import { type Categories, type People, eur, name, october, printBalances, printEntries, ron } from './tour.js';
+
+export function anotherCurrency(group: Group, people: People, categories: Categories): void {
+    section('5. Another currency');
+    const euro = Currency.of('EUR');
+    const rate = ExchangeRate.parse('0.2');
+    const parking = group.addExpenseSync({
+        cost: { kind: 'converted', amount: ron('250.00'), rate },
+        date: october(6),
+        name: 'Airport parking',
+        payers: { kind: 'equal', members: [people.ana] },
+        split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob] } },
+        category: categories.transport,
+    });
+    const cash = group.addTransferSync({
+        cost: { kind: 'converted', amount: ron('100.00'), rate },
+        date: october(6),
+        from: people.bob,
+        to: people.ana,
+        note: 'Cash for the parking',
+        time: TimeOfDay.of(7, 40),
+    });
+    printLines(
+        'Back at the Bucharest airport, Ana paid the parking in RON and Bob paid her back in',
+        'cash. An entry in another currency carries the rate into the group currency, how',
+        'many EUR one RON is worth, and is converted once, when it is entered:',
+    );
+    printEntries(group, (currency) => euro.code !== currency.code);
+    const transfer = group.transferSync(cash);
+    assert.ok(undefined !== transfer, 'the cash was recorded');
+    const converted = ExchangeRate.parse('0.2011').convert(ron('250.00'), euro);
+    printLines(
+        `Bob's transfer, at ${transfer.time?.toString() ?? ''} ("${transfer.note ?? ''}"), counts as ${(group.transferAmountSync(cash) ?? new Money(euro, 0n)).toString()}.`,
+        'A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,',
+        `which becomes ${converted.toString()}.`,
+    );
+
+    assert.ok(eur('50.28').equals(converted));
+    assert.ok(eur('50.00').equals(group.expenseSharesSync(parking)?.total ?? eur('0')));
+    assert.ok(eur('20.00').equals(group.transferAmountSync(cash) ?? eur('0')));
+    assert.equal(transfer.cost.kind, 'converted');
+}
+
+/** Replaces an expense and a transfer, and removes one of each; returns what changed. */
+function replaceAndRemove(group: Group, people: People, categories: Categories, seafood: ExpenseId): string[][] {
+    // The dinner's receipt said 99.00.
+    const dinner = group.expenseSync(seafood);
+    assert.ok(undefined !== dinner, 'the dinner was added');
+    const previous = group.replaceExpenseSync({ ...dinner, cost: { kind: 'local', amount: eur('99.00') }, description: 'Cervejaria Ramiro' });
+    // Bob entered the coffee twice.
+    const coffee: Expense = {
+        cost: { kind: 'local', amount: eur('6.00') },
+        date: october(5),
+        name: 'Coffee',
+        payers: { kind: 'equal', members: [people.bob] },
+        split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob, people.carol] } },
+        category: categories.food,
+    };
+    group.addExpenseSync(coffee);
+    const copy = group.addExpenseSync(coffee);
+    const removed = group.removeExpenseSync(copy);
+    // Dan's part of the apartment was 120.00, not 100.00.
+    const first = group.addTransferSync({ cost: { kind: 'local', amount: eur('100.00') }, date: october(5), from: people.dan, to: people.ana });
+    const stored = group.transferSync(first);
+    assert.ok(undefined !== stored, 'the transfer was added');
+    const replaced = group.replaceTransferSync({ ...stored, cost: { kind: 'local', amount: eur('120.00') }, note: 'Apartment' });
+    // Carol sent 10.00 to the wrong member.
+    const mistake = group.addTransferSync({ cost: { kind: 'local', amount: eur('10.00') }, date: october(5), from: people.carol, to: people.bob });
+    const undone = group.removeTransferSync(mistake);
+
+    assert.ok(eur('90.00').equals(previous.cost.amount));
+    assert.equal(group.expenseSync(copy), undefined);
+    assert.ok(eur('120.00').equals(group.transferAmountSync(first) ?? eur('0')));
+    assert.equal(group.transferSync(mistake), undefined);
+    const zero = new Money(Currency.of('EUR'), 0n);
+    const corrected = group.expenseSync(seafood);
+    const apartment = group.transferSync(first);
+    return [
+        [
+            previous.name,
+            `${previous.cost.amount.toString()} became ${(corrected?.cost.amount ?? zero).toString()}, at ${corrected?.description ?? ''}`,
+        ],
+        [removed.name, `entered twice; the copy of ${removed.cost.amount.toString()} was removed`],
+        [
+            `${name(group, people.dan)} to ${name(group, people.ana)}`,
+            `${replaced.cost.amount.toString()} became ${(apartment?.cost.amount ?? zero).toString()}, noted ${apartment?.note ?? ''}`,
+        ],
+        [`${name(group, people.carol)} to ${name(group, people.bob)}`, `${undone.cost.amount.toString()} sent to the wrong member; removed`],
+    ];
+}
+
+export function edits(group: Group, people: People, categories: Categories, seafood: ExpenseId): void {
+    section('6. Edits');
+    const changes = replaceAndRemove(group, people, categories, seafood);
+    printLines(
+        'Entries are values: an edit starts from a copy made with to_builder, keeps the',
+        'identifier, and replaces the entry; a removal takes it out with its totals.',
+    );
+    printTable(['Entry', 'Edit'], changes, 2);
+    printLines('The balances after the edits:');
+    printBalances(group);
+
+    const before = group.summarySync();
+    const unbalanced = refusal(() =>
+        group.addExpenseSync({
+            cost: { kind: 'local', amount: eur('30.00') },
+            date: october(6),
+            name: 'Taxi',
+            payers: { kind: 'equal', members: [people.ana] },
+            split: {
+                kind: 'whole',
+                split: {
+                    kind: 'percentages',
+                    shares: [
+                        { member: people.ana, percentage: Percentage.parse('50') },
+                        { member: people.bob, percentage: Percentage.parse('49.99') },
+                    ],
+                },
+            },
+        }),
+    );
+    const toHerself = refusal(() =>
+        group.addTransferSync({ cost: { kind: 'local', amount: eur('5.00') }, date: october(6), from: people.ana, to: people.ana }),
+    );
+    const unrated = refusal(() =>
+        group.addExpenseSync({
+            cost: { kind: 'local', amount: ron('40.00') },
+            date: october(6),
+            name: 'Souvenirs',
+            payers: { kind: 'equal', members: [people.ana] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [people.ana] } },
+        }),
+    );
+    printLines('A change that does not fit is refused, and the group stays as it was:');
+    printTable(
+        ['Change', 'Refused with'],
+        [
+            ['A taxi split 50% and 49.99%', message(unbalanced)],
+            ['Ana paying herself back', message(toHerself)],
+            ['Souvenirs in RON, without a rate', message(unrated)],
+        ],
+        2,
+    );
+    printLines('The balances again, unchanged:');
+    printBalances(group);
+
+    assert.ok(unbalanced instanceof ExpenseError);
+    assert.deepEqual(unbalanced.failure, { kind: 'percentagesDoNotAddUp', totalBasisPoints: 9_999 });
+    assert.ok(toHerself instanceof TransferError && 'sameMember' === toHerself.failure.kind);
+    assert.ok(unrated instanceof GroupError);
+    assert.deepEqual(unrated.failure, { kind: 'missingExchangeRate', currency: Currency.of('RON') });
+    assert.deepEqual(group.summarySync(), before);
+}
+
+export function comingsAndGoings(group: Group, people: People): void {
+    section('7. Members come and go');
+    const removed = group.removeMemberSync(people.filip);
+    group.archiveMemberSync(people.dan);
+    const farewell = refusal(() =>
+        group.addExpenseSync({
+            cost: { kind: 'local', amount: eur('40.00') },
+            date: october(6),
+            name: 'Farewell dinner',
+            payers: { kind: 'equal', members: [people.ana] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob, people.carol, people.dan] } },
+        }),
+    );
+    const inUse = refusal(() => group.removeMemberSync(people.dan));
+    printLines(
+        `${removed.firstName} was never part of an entry, so removing him leaves no trace. Dan flew home`,
+        'early and was archived: his history and his balance stay, but a new expense',
+        'cannot include him, and he cannot be removed while entries reference him.',
+    );
+    const summary = group.summarySync();
+    printTable(
+        ['Member', 'Status', 'Balance'],
+        group.membersSync().flatMap((member) => {
+            const found = undefined === member.id ? undefined : totals(member.id, summary);
+            return undefined === member.id || undefined === found
+                ? []
+                : [[member.firstName, group.isArchivedSync(member.id) ? 'archived' : 'active', formatBalance(found.balance)]];
+        }),
+        2,
+    );
+    printTable(
+        ['Change', 'Refused with'],
+        [
+            ['A farewell dinner with Dan', message(farewell)],
+            ['Removing Dan', message(inUse)],
+        ],
+        2,
+    );
+    group.unarchiveMemberSync(people.dan);
+    printLines('When Dan joins the next trip, unarchiving him makes him active again.');
+
+    assert.equal(removed.firstName, 'Filip');
+    assert.equal(group.memberSync(people.filip), undefined);
+    assert.ok(farewell instanceof GroupError);
+    assert.deepEqual(farewell.failure, { kind: 'archivedMember', member: people.dan });
+    assert.ok(inUse instanceof GroupError && 'memberInUse' === inUse.failure.kind);
+    assert.ok(!group.isArchivedSync(people.dan));
+}

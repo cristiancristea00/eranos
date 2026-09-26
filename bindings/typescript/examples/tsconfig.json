@@ -1,0 +1,9 @@
+{
+    // The ports of the examples, which run in Node and read the WebAssembly module from a file, with the layer they use.
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "types": ["node"]
+    },
+    "include": [".", "../src"],
+    "exclude": ["../src/internal/index.ts"]
+}

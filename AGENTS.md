@@ -103,9 +103,9 @@ It runs these, in this order, and stops at the first that fails:
     wasm32-unknown-unknown --lib`, `npm ci`,
     `uniffi-bindgen-react-native build wasm2` into `src/internal` from the
     library just built, and Prettier's check, ESLint with no warnings,
-    `tsc` on the layer and on its tests, the Node tests with c8 at 100 % of
-    lines, branches, functions, and statements, TypeDoc with warnings as
-    errors, and the bundle with its declarations, all in
+    `tsc` on the layer, on its tests, and on the examples, the Node tests
+    with c8 at 100 % of lines, branches, functions, and statements, TypeDoc
+    with warnings as errors, and the bundle with its declarations, all in
     `bindings/typescript`
 15. `sh gradlew --warning-mode=fail :eranos:jvmTest`, with `ANDROID_HOME`
     set and `JAVA_HOME_21` naming the JDK 21 that the Kotlin Multiplatform
@@ -126,17 +126,20 @@ It runs these, in this order, and stops at the first that fails:
     with warnings as errors
 17. `cargo build --package eranos-uniffi --features sequential-ids`, into
     `target/sequential`, the host library whose identifiers count up as the
-    examples' do, and eranos-kmp's beside it, then the ports: the UniFFI
-    sources generated from the first into `target/sequential/uniffi`; on
-    macOS, the Swift package copied into `target/sequential/swift` over an
-    `XCFramework` of that library, the examples built there, and every
-    Swift port run; the Kotlin ports gathered by `:examples:ports` in
-    `bindings/kotlin`, each run on the `java` of `JAVA_HOME`, JNA loading
-    that library; the same ports gathered again in `bindings/kmp`, over
-    gobley's bindings, each run on the `java` of `JAVA_HOME_21`, JNA
-    loading eranos-kmp's; and the Java ports gathered by `ports` in
-    `bindings/java`, compiled with `-Xlint:all -Werror` and Error Prone,
-    each run on the `java` of `JAVA_HOME`, which loads the first library;
+    examples' do, and beside it eranos-kmp's and eranos-web's for
+    WebAssembly, then the ports: the UniFFI sources generated from the first
+    into `target/sequential/uniffi`; on macOS, the Swift package copied into
+    `target/sequential/swift` over an `XCFramework` of that library, the
+    examples built there, and every Swift port run; the Kotlin ports
+    gathered by `:examples:ports` in `bindings/kotlin`, each run on the
+    `java` of `JAVA_HOME`, JNA loading that library; the same ports gathered
+    again in `bindings/kmp`, over gobley's bindings, each run on the `java`
+    of `JAVA_HOME_21`, JNA loading eranos-kmp's; the Java ports gathered by
+    `ports` in `bindings/java`, compiled with `-Xlint:all -Werror` and Error
+    Prone, each run on the `java` of `JAVA_HOME`, which loads the first
+    library; and the TypeScript package copied into
+    `target/sequential/typescript`, its TypeScript generated there from the
+    WebAssembly library, and every TypeScript port run on Node through tsx;
     every report is compared byte for byte with its example's from gate 8,
     and the first line that differs stops the gates
 

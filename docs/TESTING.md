@@ -79,17 +79,20 @@ Every text of a report is one the library writes
 ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)), so a port that
 prints another byte is a layer that shows a value otherwise, or a port that
 no longer follows its example. Gate 8 keeps each example's report; gate 17
-runs every port on a host library built with `sequential-ids` into
+runs every port on a build of the glue with `sequential-ids` in
 `target/sequential`, whose identifiers count up as the example's do, and
 stops at the first line that differs, printing both versions of it. The
-Swift ports run on macOS, on a copy of the Swift package over that library,
-since the identifiers of the package's own XCFramework are random; the
-Kotlin and Java ports run on every machine, on the JVM, loading that library
-from `target/sequential/debug`, and the Kotlin ones again on the Kotlin
-Multiplatform package's JVM target, over gobley's bindings, where JNA loads
-eranos-kmp's library, built beside it, before the one gobley embeds. A test
-in `crates/xtask` holds every example to a port in every language the ports
-cover.
+Swift ports run on macOS, on a copy of the Swift package over the host
+library, since the identifiers of the package's own XCFramework are random;
+the Kotlin and Java ports run on every machine, on the JVM, loading that
+library from `target/sequential/debug`, and the Kotlin ones again on the
+Kotlin Multiplatform package's JVM target, over gobley's bindings, where JNA
+loads eranos-kmp's library, built beside it, before the one gobley embeds.
+The TypeScript ports run on Node, in a copy of the TypeScript package whose
+generated TypeScript comes from eranos-web built with the feature for
+WebAssembly, since wasm-bindgen's glue follows the module it is written for.
+A test in `crates/xtask` holds every example to a port in every language the
+ports cover.
 
 ## 3. The invariants
 

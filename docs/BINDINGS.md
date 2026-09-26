@@ -464,6 +464,10 @@ build. The layer follows the Google TypeScript Style Guide:
   wait for it. `Group` and `GroupReader` are `Disposable`, so `using` frees
   them at the end of a block.
 
+`examples` holds a module per example of eranos, over the layer, that prints
+the example's report on Node ([TESTING.md § 2](TESTING.md#2-layout));
+Prettier, ESLint, and `tsc` check it with the layer.
+
 ### Kotlin Multiplatform
 
 `bindings/kmp` is the Kotlin Multiplatform package: a Gradle build of two
@@ -553,31 +557,32 @@ Core Guidelines with the naming rule above:
 `target/uniffi/<language>`; they are never committed. On macOS it also
 builds the Swift package's XCFramework in the dev profile, 1.3 GB of debug
 libraries, copies the generated Swift into the package, builds the package
-and its examples, tests the package, lints and analyses both, and
-documents the package. On every machine it builds the library
-of the four Android ABIs with `cargo ndk`, copies the generated Kotlin
-into the Kotlin package, and tests, lints, and documents that package and
-builds its two Android libraries, whose native libraries the Android build
-strips. It copies the generated Java into the Java package, and checks its
-format, tests it, documents it, and builds its JAR. Last, it builds the
-library for `wasm32-unknown-unknown`, generates the TypeScript and the
-module into the TypeScript package with uniffi-bindgen-react-native, and
-checks the package's format, lints it, type-checks it, tests it, documents
-it, and builds its bundle, on Node 24, the oldest the package supports.
-Then it runs the Kotlin package's tests on the Kotlin Multiplatform
-package's JVM target, against gobley's bindings, builds that package's
-Android libraries, and, on macOS, compiles its layer for every Apple
-target. Then it builds `eranos-capi`'s static library, generates the C and
-the C++ headers from its bridge with `diplomat-tool`, and, for each
-package, builds its tests with the LLVM that `LLVM_HOME` names, runs them
-under the sanitizers, holds every line and function of its layer covered,
-and checks its format, lint, and documentation. Last, it builds
-eranos-uniffi's host library with `sequential-ids` into
-`target/sequential`, and eranos-kmp's beside it, generates the UniFFI
-sources, and runs every port: on macOS the Swift ports, on a copy of the
-Swift package over the first library, the Kotlin ports on the JVM, over
-the Kotlin package's bindings and over the Kotlin Multiplatform package's,
-and the Java ports, each report compared with its example's.
+and its examples, tests the package, lints and analyses both, and documents
+the package. On every machine it builds the library of the four Android ABIs
+with `cargo ndk`, copies the generated Kotlin into the Kotlin package, and
+tests, lints, and documents that package and builds its two Android
+libraries, whose native libraries the Android build strips. It copies the
+generated Java into the Java package, and checks its format, tests it,
+documents it, and builds its JAR. Last, it builds the library for
+`wasm32-unknown-unknown`, generates the TypeScript and the module into the
+TypeScript package with uniffi-bindgen-react-native, and checks the
+package's format, lints it, type-checks it, tests it, documents it, and
+builds its bundle, on Node 24, the oldest the package supports. Then it runs
+the Kotlin package's tests on the Kotlin Multiplatform package's JVM target,
+against gobley's bindings, builds that package's Android libraries, and, on
+macOS, compiles its layer for every Apple target. Then it builds
+`eranos-capi`'s static library, generates the C and the C++ headers from its
+bridge with `diplomat-tool`, and, for each package, builds its tests with
+the LLVM that `LLVM_HOME` names, runs them under the sanitizers, holds every
+line and function of its layer covered, and checks its format, lint, and
+documentation. Last, it builds eranos-uniffi's host library with
+`sequential-ids` into `target/sequential`, and eranos-kmp's and eranos-web's
+beside it, generates the UniFFI sources, and runs every port: on macOS the
+Swift ports, on a copy of the Swift package over the first library, the
+Kotlin ports on the JVM, over the Kotlin package's bindings and over the
+Kotlin Multiplatform package's, the Java ports, and the TypeScript ports, on
+Node, in a copy of the TypeScript package over eranos-web built the same
+way, each report compared with its example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
 coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++
