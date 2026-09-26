@@ -8,6 +8,7 @@ use eranos_account::FromAccountDetails;
 use crate::{EranosError, check_new};
 
 /// Where a member can be paid, without its label.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AccountDetails {
     /// A bank account.
@@ -55,6 +56,7 @@ impl FromAccountDetails for AccountDetails {
 
 /// A place to send a member money: a bank account or a payment-app
 /// username, with a label.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Account {
     /// The IBAN or the username.
@@ -88,6 +90,7 @@ impl Account {
 }
 
 /// A person in the group.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Member {
     /// The identifier: absent for a member to add, present for one the
@@ -178,6 +181,7 @@ impl Member {
 }
 
 /// A label the group gives expenses.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Category {
     /// The identifier: absent for a category to add, present for one the

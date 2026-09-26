@@ -25,6 +25,7 @@ sequential-ids = ["eranos-bindings/sequential-ids"]
 
 [dependencies]
 eranos-bindings = { workspace = true }
+eranos-glue-macros = { workspace = true }
 uniffi = { workspace = true }
 
 [lints]

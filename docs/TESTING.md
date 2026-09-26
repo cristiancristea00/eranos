@@ -199,8 +199,10 @@ The glue is measured through the foreign tests instead:
 instrumentation of the Rust runs, runs the Swift, Kotlin, Java, C, and C++
 tests on that build, and merges what they ran into the same report. The
 Swift, Kotlin, and Java tests run every line, region, and function of
-eranos-uniffi's sources, and the C and C++ tests every line and function
-of eranos-capi's bridge. Two kinds of the bridge's regions stay unrun: the
+eranos-uniffi's hand-written sources, and the C and C++ tests every line
+and function of eranos-capi's bridge. The objects' methods and the copies
+of the core's items that the glue's macros stamp are not in the report,
+as the core's forms are not. Two kinds of the bridge's regions stay unrun: the
 check that a text parameter is UTF-8, which only a call given other bytes
 takes and which would need a test for each function, and the failure
 branch of a synchronous call that fails only on wasm, for which the bridge

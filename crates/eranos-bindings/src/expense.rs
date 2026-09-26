@@ -12,6 +12,7 @@ use crate::money::{Cost, Money, parts, percentage};
 use crate::{EranosError, check_new, identifier};
 
 /// An exact amount one member pays.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberAmount {
     /// The amount.
@@ -21,6 +22,7 @@ pub struct MemberAmount {
 }
 
 /// The parts one member pays in proportion to.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberParts {
     /// The parts, in hundredths: 50 for half a part.
@@ -30,6 +32,7 @@ pub struct MemberParts {
 }
 
 /// The percentage one member pays.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberPercentage {
     /// The percentage, in basis points: 2 500 for 25 %.
@@ -39,6 +42,7 @@ pub struct MemberPercentage {
 }
 
 /// How an amount divides among members.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Split {
     /// Every member pays an exact amount; the amounts add up to what they
@@ -172,6 +176,7 @@ impl FromSplit for Split {
 }
 
 /// A line of an itemised bill.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Item {
     /// What was bought.
@@ -217,6 +222,7 @@ impl Item {
 }
 
 /// How an expense's cost is shared: as a whole, or item by item.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExpenseSplit {
     /// Every item is divided by its own split.
@@ -246,6 +252,7 @@ impl FromExpenseSplit for ExpenseSplit {
 }
 
 /// How a tip is expressed.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TipValue {
     /// A fixed amount in the expense's currency.
@@ -275,6 +282,7 @@ impl FromTipValue for TipValue {
 }
 
 /// How a tip is shared among the participants.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TipDistribution {
     /// The same for every participant.
@@ -304,6 +312,7 @@ impl FromTipDistribution for TipDistribution {
 }
 
 /// A tip on top of an expense, covered by its payers.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Tip {
     /// How the tip is expressed.
@@ -341,6 +350,7 @@ impl Tip {
 }
 
 /// Something bought for the group.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expense {
     /// The identifier: absent for an expense to add, present for one the

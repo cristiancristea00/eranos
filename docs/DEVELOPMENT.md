@@ -335,9 +335,10 @@ breaking.
    (`crates/eranos-bindings/src/`), in the same place of the field order,
    read in the record's `from_library` and written in its conversion to the
    library, where an absent optional field clears the stored one; the
-   record's round trip in its module's `tests.rs` then covers it. Repeat
-   the field in the record's mirror in `crates/eranos-uniffi/src/records.rs`,
-   which fails to build until it does, and in the Swift entry type in
+   record's round trip in its module's `tests.rs` then covers it; the
+   UniFFI glue's copy of the record is stamped from its `#[mirrored]`
+   definition, so it takes the field too. Repeat the field in the Swift
+   entry type in
    `bindings/swift/Sources/Eranos/Entries/`, with its conversions both ways,
    and the Kotlin entry class in
    `bindings/kotlin/eranos/src/main/kotlin/eranos/`, with its conversions,
@@ -363,10 +364,12 @@ its row to the conversion test in the crate's `error/tests.rs`. The binding
 core then fails to build until the module's failure enum in
 `crates/eranos-bindings/src/error.rs` (`GroupFailure` for `GroupError`,
 and the like) has a case for the variant, in alphabetical order, with what
-it holds, and its row in that crate's `error/tests.rs`; and the UniFFI glue
-until the failure's mirror in `crates/eranos-uniffi/src/error.rs` repeats
-the case. A new error type is a new case of `EranosError`, with a failure
-enum of its own. The Swift layer's failure enum in
+it holds, and its row in that crate's `error/tests.rs`; the UniFFI glue's copy of
+the failure is stamped from its `#[mirrored]` definition, so it takes the
+case too. A new error type is a new case of `EranosError`, with a failure
+enum of its own, marked `#[mirrored]` and named in the core's `mirrors!`
+list in `crates/eranos-bindings/src/mirrors.rs`, without which a glue
+signature that names it fails to build. The Swift layer's failure enum in
 `bindings/swift/Sources/Eranos/Errors/Failures.swift` gets the case, with
 its payload typed, the conversion from the generated one gets its arm, and
 `Tests/EranosTests/ErrorTests.swift` its row; so does the Kotlin layer's
@@ -477,10 +480,11 @@ When code in one crate needs something another crate holds:
    Test the conversion in `operations/tests.rs` and the two forms in
    `group/tests.rs` (`every_read_answers_alike_in_both_forms` or the
    change's `*_change_alike_in_both_forms`).
-6. Forward both forms from `Group` in `crates/eranos-uniffi/src/objects.rs`,
-   and a read also from its `GroupReader`, with the core's documentation;
-   nothing fails to build while one is missing, so the methods of each
-   object follow the core's, section by section.
+6. The UniFFI glue's `Group` and `GroupReader` take both forms and the
+   read's from the same trait, with the core's documentation, through the
+   core's `group_calls!` table in `crates/eranos-uniffi/src/objects.rs`: a
+   parameter the trait takes as optional text crosses as an owned
+   `Option<String>`, and the rest as the core takes them.
 7. Add both forms, one name overloaded by `async`, to the Swift layer's
    `Group` in `bindings/swift/Sources/Eranos/Group/Group+<section>.swift`,
    named by the Swift API Design Guidelines, and a read to its

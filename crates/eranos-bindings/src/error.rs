@@ -30,6 +30,7 @@ use crate::Money;
 /// it holds, and the library's message; and the binding's own cases. A
 /// synchronous call on wasm that finds the group locked by another call
 /// fails with [`GroupFailure::Busy`].
+#[eranos_glue_macros::mirrored(error)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EranosError {
     /// An [`AccountError`], about a payment account: its IBAN, username, or
@@ -235,6 +236,7 @@ impl std::error::Error for EranosError {}
 
 /// What an [`AccountError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AccountFailure {
     /// [`AccountError::EmptyName`].
@@ -250,6 +252,7 @@ pub enum AccountFailure {
 
 /// What a [`CalendarError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CalendarFailure {
     /// [`CalendarError::InvalidDate`].
@@ -260,6 +263,7 @@ pub enum CalendarFailure {
 
 /// What a [`CategoryError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CategoryFailure {
     /// [`CategoryError::EmptyName`].
@@ -268,6 +272,7 @@ pub enum CategoryFailure {
 
 /// What a [`ContactError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ContactFailure {
     /// [`ContactError::InvalidEmail`].
@@ -278,6 +283,7 @@ pub enum ContactFailure {
 
 /// What an [`ExpenseError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExpenseFailure {
     /// [`ExpenseError::AmountsDoNotAddUp`].
@@ -336,6 +342,7 @@ pub enum ExpenseFailure {
 
 /// What a [`GroupError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GroupFailure {
     /// [`GroupError::ArchivedMember`].
@@ -426,6 +433,7 @@ pub enum GroupFailure {
 
 /// What an [`IdError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IdFailure {
     /// [`IdError::InvalidId`].
@@ -434,6 +442,7 @@ pub enum IdFailure {
 
 /// What a [`LanguageError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LanguageFailure {
     /// [`LanguageError::InvalidLanguage`].
@@ -442,6 +451,7 @@ pub enum LanguageFailure {
 
 /// What a [`MemberError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MemberFailure {
     /// [`MemberError::EmptyFirstName`].
@@ -450,6 +460,7 @@ pub enum MemberFailure {
 
 /// What a [`MoneyError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MoneyFailure {
     /// [`MoneyError::CurrencyMismatch`].
@@ -482,6 +493,7 @@ pub enum MoneyFailure {
 
 /// What a [`SettlementError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SettlementFailure {
     /// [`SettlementError::OutOfMemory`].
@@ -493,6 +505,7 @@ pub enum SettlementFailure {
 
 /// What a [`TransferError`] reports: a case per variant, with
 /// what the variant holds.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TransferFailure {
     /// [`TransferError::NonPositiveAmount`].
@@ -503,6 +516,7 @@ pub enum TransferFailure {
 
 /// Why an IBAN was refused: the [`IbanError`] inside
 /// [`AccountFailure::InvalidIban`].
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IbanReason {
     /// [`IbanError::InvalidCharacter`].

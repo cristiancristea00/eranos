@@ -14,11 +14,9 @@ uniffi::setup_scaffolding!("eranos");
 #[cfg(target_family = "wasm")]
 extern crate uniffi_runtime_wasm as _;
 
-#[path = "../../eranos-uniffi/src/error.rs"]
-mod error;
+#[path = "../../eranos-uniffi/src/mirrors.rs"]
+mod mirrors;
 #[path = "../../eranos-uniffi/src/objects.rs"]
 mod objects;
-#[path = "../../eranos-uniffi/src/records.rs"]
-mod records;
 #[path = "../../eranos-uniffi/src/values.rs"]
 mod values;

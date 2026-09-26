@@ -6,6 +6,7 @@ use eranos_ledger::FromBalance;
 use crate::money::Money;
 
 /// Where a member stands with the group.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Balance {
     /// The others owe the member `amount`.
@@ -41,6 +42,7 @@ impl FromBalance for Balance {
 }
 
 /// A member's totals, in the group currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberSummary {
     /// Where the member stands.
@@ -76,6 +78,7 @@ impl MemberSummary {
 }
 
 /// What the expenses of a category add up to, in the group currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CategoryTotal {
     /// The category, as its identifier.
@@ -95,6 +98,7 @@ impl CategoryTotal {
 }
 
 /// What one member's shares add up to in each category.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberCategoryTotals {
     /// The member, as their identifier.
@@ -105,6 +109,7 @@ pub struct MemberCategoryTotals {
 
 /// The group's totals: overall, per member, per category, and per member per
 /// category, all in the group currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Summary {
     /// The total of every category.
@@ -142,6 +147,7 @@ impl Summary {
 }
 
 /// What one member paid of an expense and what their share of it is.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MemberShare {
     /// The member, as their identifier.
@@ -153,6 +159,7 @@ pub struct MemberShare {
 }
 
 /// How one expense divides, in the group currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ExpenseShares {
     /// What every member paid and consumed.

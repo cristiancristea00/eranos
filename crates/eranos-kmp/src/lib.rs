@@ -8,11 +8,9 @@
 
 uniffi::setup_scaffolding!("eranos");
 
-#[path = "../../eranos-uniffi/src/error.rs"]
-mod error;
+#[path = "../../eranos-uniffi/src/mirrors.rs"]
+mod mirrors;
 #[path = "../../eranos-uniffi/src/objects.rs"]
 mod objects;
-#[path = "../../eranos-uniffi/src/records.rs"]
-mod records;
 #[path = "../../eranos-uniffi/src/values.rs"]
 mod values;

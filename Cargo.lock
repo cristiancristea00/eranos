@@ -633,6 +633,7 @@ name = "eranos-kmp"
 version = "0.4.0"
 dependencies = [
  "eranos-bindings",
+ "eranos-glue-macros",
  "uniffi 0.29.4",
 ]
 
@@ -703,6 +704,7 @@ name = "eranos-uniffi"
 version = "0.4.0"
 dependencies = [
  "eranos-bindings",
+ "eranos-glue-macros",
  "uniffi 0.32.2",
 ]
 
@@ -719,6 +721,7 @@ name = "eranos-web"
 version = "0.4.0"
 dependencies = [
  "eranos-bindings",
+ "eranos-glue-macros",
  "uniffi 0.31.2",
  "uniffi-runtime-wasm",
  "uuid",

@@ -15,6 +15,7 @@ use crate::reader::GroupReader;
 use crate::settlement::{Settlement, SettlementStrategy};
 
 /// What a new group starts with.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NewGroup {
     /// The ISO 4217 code of the group currency, which every total is in.

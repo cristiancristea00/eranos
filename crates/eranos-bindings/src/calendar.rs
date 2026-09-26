@@ -6,6 +6,7 @@ use eranos::error::CalendarError;
 use crate::EranosError;
 
 /// A day of the calendar, without a time zone.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CalendarDate {
     /// The day of the month, from 1.
@@ -44,6 +45,7 @@ impl CalendarDate {
 }
 
 /// A time of day, to the minute.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TimeOfDay {
     /// The hour, from 0 to 23.

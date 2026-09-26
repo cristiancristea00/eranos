@@ -256,22 +256,29 @@ and print their examples' reports byte for byte
 
 ## 8. The glue crates
 
-`eranos-uniffi` mirrors the core's records, enums, and error with
-`#[uniffi::remote]`, which repeats each definition field for field, so a
-change to a core type that the mirror does not repeat fails the glue's
-build. It wraps the group handle, the read handle, and the cancellation in
+`eranos-uniffi` copies the core's records, enums, and error for UniFFI
+with `#[uniffi::remote]`, which repeats each definition field for field. A
+crate carries the derives of one UniFFI release, so the core's items cannot
+carry them; instead each carries `#[mirrored]`, which adds a macro of its
+fields, and the core's `mirrors!` hands every mirror to the glue's
+`uniffi_mirror!`, which stamps the copies, so a copy always repeats its
+item. It wraps the group handle, the read handle, and the cancellation in
 the objects `Group`, `GroupReader`, and `Cancellation`, whose methods
-forward to the core, and exports the value helpers as functions and the
-asynchronous load as `load_group_async`. Its four source files are
-compiled by `eranos-web` as well, against UniFFI 0.31.2, and by
-`eranos-kmp`, against 0.29.4: they keep to what 0.29 accepts, and every
-release compiles them.
+forward to the core: every group call's two forms and every read's are
+stamped from the core's `group_calls!` table, the trait that lists the
+calls, with the core's documentation, its links as code spans; the
+constructors, `read`, and `release` are written by hand. It exports the
+value helpers as functions and the asynchronous load as
+`load_group_async`. Its three source files are compiled by `eranos-web` as
+well, against UniFFI 0.31.2, and by `eranos-kmp`, against 0.29.4: they keep
+to what 0.29 accepts, and every release compiles them and the code the
+macros stamp in them.
 `uniffi.toml` names the generated Swift module `EranosGenerated` and the
 generated Kotlin and Java package `eranos.internal`: the generated code sits
 beneath each package's hand-written layer.
 
 `eranos-web` builds the same glue for browsers and Node. A crate carries
-the derives of one UniFFI release, so it includes the four source files of
+the derives of one UniFFI release, so it includes the three source files of
 `eranos-uniffi` by path and compiles them against 0.31.2, the release whose
 metadata uniffi-bindgen-react-native 0.31.0-5 reads, with what the
 generator's `wasm2` flavour links: `uniffi-runtime-wasm`, the runtime its
@@ -282,7 +289,7 @@ support the generator embeds to write the glue beside the module. On
 bounds a target without threads has no use for.
 
 `eranos-kmp` builds the same glue for Kotlin Multiplatform, the same way:
-it includes the four source files and compiles them against UniFFI 0.29.4,
+it includes the three source files and compiles them against UniFFI 0.29.4,
 the release whose metadata gobley 0.3.7's generator reads, as a shared
 library for the JVM and Android, whose metadata the generator reads too,
 and as a static library that each Apple target links.

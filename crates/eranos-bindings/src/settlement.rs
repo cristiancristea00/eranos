@@ -6,6 +6,7 @@ use eranos_settlement::FromSettlementStrategy;
 use crate::money::Money;
 
 /// How balances turn into payments.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SettlementStrategy {
     /// Everyone pays back the people who paid for them.
@@ -42,6 +43,7 @@ impl FromSettlementStrategy for SettlementStrategy {
 }
 
 /// One payment of a settlement: `from` pays `amount` to `to`.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Payment {
     /// The amount, in the group currency.
@@ -53,6 +55,7 @@ pub struct Payment {
 }
 
 /// The payments that settle every balance.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Settlement {
     /// The payments, ordered by payer and then by recipient.

@@ -23,6 +23,7 @@ sequential-ids = ["eranos-bindings/sequential-ids"]
 
 [dependencies]
 eranos-bindings = { workspace = true }
+eranos-glue-macros = { workspace = true }
 # Pinned here rather than in the workspace, which pins 0.32.2 for
 # eranos-uniffi: UniFFI's macros name the crate `::uniffi`, so a crate can
 # depend on one release only, under that name.

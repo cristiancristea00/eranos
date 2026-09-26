@@ -8,6 +8,7 @@ use eranos_money::FromCost;
 use crate::EranosError;
 
 /// An amount: a whole number of minor units of a currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Money {
     /// The ISO 4217 code of the currency.
@@ -41,6 +42,7 @@ impl Money {
 
 /// What an entry cost: an amount in the group currency, or one in another
 /// currency with its exchange rate into the group currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Cost {
     /// An amount in another currency than the group's, converted at `rate`.
@@ -91,6 +93,7 @@ impl FromCost for Cost {
 
 /// The rate of a currency into another: one of the rates a currency change
 /// takes.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CurrencyRate {
     /// The ISO 4217 code of the currency the rate converts from.
@@ -116,6 +119,7 @@ impl CurrencyRate {
 }
 
 /// What ISO 4217 says of a currency.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CurrencyDetails {
     /// The three-letter code: "EUR".

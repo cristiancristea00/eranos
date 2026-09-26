@@ -8,6 +8,7 @@ use crate::money::Cost;
 use crate::{EranosError, check_new, identifier};
 
 /// Money one member paid another, such as a repayment.
+#[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Transfer {
     /// The identifier: absent for a transfer to add, present for one the

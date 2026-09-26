@@ -30,6 +30,7 @@ mod flat;
 mod group;
 mod ledger;
 mod member;
+mod mirrors;
 mod money;
 mod operations;
 mod reader;
