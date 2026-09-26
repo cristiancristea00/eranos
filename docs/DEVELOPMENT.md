@@ -22,8 +22,9 @@ and the test suites in [TESTING.md](TESTING.md).
 - **Homebrew tools**: `brew bundle --file Brewfile.develop` installs
   `cargo-llvm-cov` and `cargo-mutants`, neither of which is needed to
   build or test the library, and the bindings' toolchains: JDKs 25 and 21,
-  Node 24, LLVM (clang, clang-format, clang-tidy, llvm-profdata, and
-  llvm-cov), Doxygen, ktlint, SwiftLint, actionlint, zizmor, cargo-deny,
+  Node 24, Python 3.14 and uv, LLVM (clang, clang-format, clang-tidy,
+  llvm-profdata, and llvm-cov), Doxygen, ktlint, SwiftLint, actionlint,
+  zizmor, cargo-deny,
   the Android command-line tools, cargo-ndk 4.1.2, diplomat-tool 0.16.1,
   and uniffi-bindgen-react-native 0.31.0-5, the last three built from
   their release tags.
@@ -77,7 +78,7 @@ which writes the C glue's bridge from them
 xtask fails. The gates lint
 the libraries for the mobile and wasm targets as CI's job of that name
 does, after adding each target with `rustup target add`. They also write
-the Swift, Kotlin, and Java sources of the UniFFI glue into
+the Swift, Kotlin, Java, and Python sources of the UniFFI glue into
 `target/uniffi/<language>`, from the host library in `target/debug`, and
 on macOS they build the Swift package's XCFramework from the library's
 thirteen Apple targets, which they add with `rustup target add`. On every
@@ -87,12 +88,17 @@ Gradle build, whose JVM `JAVA_HOME` names; the gates check every variable a
 package needs before the examples run, and stop there when one is not set. They build the Java package with
 the same JDK, and the TypeScript package on Node 24: the library for
 `wasm32-unknown-unknown`, then its TypeScript, which
-uniffi-bindgen-react-native generates into the package. Last, they build
+uniffi-bindgen-react-native generates into the package. Then they build
 the Kotlin Multiplatform package on the JDK 21 that `JAVA_HOME_21` names,
 where gobley's plugins build the library for each target and generate its
 bindings, and then eranos-capi's static library, from which Diplomat
 generates each of the C and C++ packages' headers, whose tests the LLVM
-that `LLVM_HOME` names builds under the sanitizers and measures. Then
+that `LLVM_HOME` names builds under the sanitizers and measures. Last,
+they check the Python package over its generated module, beside which
+they link the host library, which the module loads from its own
+directory: `uv sync --locked` installs the tools that `uv.lock` pins into
+the package's `.venv`, on the system's Python 3.14 or, where there is
+none, one that uv downloads, and `uv run --locked` runs each. Then
 they build eranos-uniffi's host library again, with `sequential-ids`, into
 `target/sequential`, and eranos-kmp's and eranos-capi's beside it, and run
 the ports of the examples: on macOS the Swift ones, on a copy of the Swift
@@ -115,7 +121,8 @@ of which parses the layer's header again:
 | 12, the Swift package                                                  |  72 s | the analyzer, 33 s, and the examples' clean build, 23 s             |
 | 13–16, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  38 s | the Kotlin Multiplatform libraries, 11 s                            |
 | 17, the C and C++ packages                                             | 169 s | clang-tidy, 28 s on the C tests and ports and 129 s on the C++ ones |
-| 18, the ports                                                          |  91 s | the C++ ports' builds, 45 s                                         |
+| 18, the Python package                                                 |   3 s | Sphinx, 1.6 s                                                       |
+| 19, the ports                                                          |  91 s | the C++ ports' builds, 45 s                                         |
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
@@ -206,6 +213,22 @@ turns on the leak check that Linux runs by default:
 "$LLVM_HOME/bin/clang" -std=c23 -g -fsanitize=address,undefined -pthread -Iinclude -isystem generated \
     examples/report.c examples/settling_up.c ../../target/debug/liberanos_capi.a -liconv -o build/settling_up
 ASAN_OPTIONS=detect_leaks=1 build/settling_up                               # one port, whose identifiers are random
+```
+
+In `bindings/python`, once the gates copied the generated module into
+`src/eranos/_internal` and linked the host library beside it; after a
+change to the glue, `cargo build -p eranos-uniffi` and the gates write the
+module again. `ruff.toml` sets `fix = true`, so `ruff check` applies the
+fixes it can, where the gates pass `--no-fix`:
+
+```sh
+uv sync --locked                                                # the tools, as uv.lock pins them, in .venv
+uv run pytest                                                   # the Python tests
+uv run coverage run -m pytest && uv run coverage report         # with their coverage, which coverage.py holds at 100 %
+uv run ruff check                                               # Ruff's lint, with its fixes applied
+uv run ruff format                                              # Ruff's formatter, applied
+uv run ty check                                                 # ty, every rule an error
+uv run sphinx-build -W --keep-going -n -b html docs build/docs  # the documentation, in build/docs
 ```
 
 Every internal crate's tests link the facade, which its doc examples use,
@@ -361,7 +384,10 @@ breaking.
    builder's setter, and its place in its conversions, equality, hash, and
    text. The TypeScript entry interface in
    `bindings/typescript/src/entries.ts` gets the field, optional where the
-   library's is, and both of its conversions carry it.
+   library's is, and both of its conversions carry it. So does the Python
+   entry dataclass in `bindings/python/src/eranos/_entries.py`, whose
+   field has a default where the library's is optional, and its
+   conversions from the generated record and to it.
 
 ### 3.6 A new error variant
 
@@ -393,9 +419,16 @@ interface in `bindings/java/src/main/java/eranos/`, whose conversion in
 `EranosException.java` fails to build without the case, and
 `src/test/java/eranos/ErrorTest.java`; and the TypeScript layer's failure
 union in `bindings/typescript/src/errors.ts`, whose conversion fails to
-type-check without the case, and `test/errors.test.ts`. A new error type is
-also a registration in the conversion table of `EranosException.java`,
-which the Java error test checks.
+type-check without the case, and `test/errors.test.ts`. The Python
+layer's error class of the module in `bindings/python/src/eranos/_errors.py`
+gets a nested dataclass for the case, with what it holds typed, a member
+of the module's failure union (`GroupFailure`), and a row in the module's
+conversion table, keyed by the generated case, which
+`tests/test_conversions.py` checks against every case the generated module
+writes. A new error type is also a registration in the conversion table of
+`EranosException.java`, which the Java error test checks, and in the
+Python layer's table of the generated error's cases, `_ERRORS`, with an
+error class of its own.
 
 ### 3.7 A lint exception
 
@@ -420,6 +453,19 @@ in a comment above it. In the TypeScript layer, an ESLint finding is fixed,
 or disabled for its line with
 `// eslint-disable-next-line <rule> -- <reason>` above it; ESLint reports a
 directive whose rule no longer fires there, so it goes with the finding.
+
+In the Python layer, a Ruff finding is fixed, or suppressed with
+`# ruff: ignore[rule-name]`, which names the rule rather than its code, at
+the end of its line or on a line of its own above the definition it
+covers, with the reason in a comment above it; `# ruff: disable[rule-name]`
+and `# ruff: enable[rule-name]` bound a range. A rule that a whole kind of
+file contradicts, such as the magic values in the tests' claims, is turned
+off for those files in `per-file-ignores` of `bindings/python/ruff.toml`,
+with the reason beside it. A ty finding is fixed, or ignored on its line
+with `# ty: ignore[rule]` and the reason above it: the layer has one, at
+its one catch of the generated error, whose name the generated module
+binds twice, so ty reads the container the module builds the cases in.
+Ruff and ty each report a suppression whose rule no longer fires there.
 
 ### 3.8 A libphonenumber metadata release
 
@@ -515,7 +561,12 @@ When code in one crate needs something another crate holds:
     `bindings/typescript/src/group.ts`, the Promise under the call's name
     and its twin with `Sync` after it, and a read to its `GroupReader` in
     `group_reader.ts`; call them in `test/group.test.ts`.
-11. Run `cargo xtask generate`: the C glue's `EranosGroup` takes both
+11. Add both forms to the Python layer's `Group` in
+    `bindings/python/src/eranos/_group.py`, the blocking one under the
+    call's name and its coroutine with `_async` after it, and a read to its
+    `GroupReader` in `_group_reader.py`; call them in `tests/test_group.py`
+    and `tests/test_asynchronous.py`.
+12. Run `cargo xtask generate`: the C glue's `EranosGroup` takes both
     forms and `EranosGroupReader` the read's, from the same trait, with an
     outcome for a new kind of answer; a call that takes optional text gets
     a twin of each form that passes none, `clear_` for its `set_`. Add the
@@ -553,16 +604,19 @@ cargo mutants --file crates/eranos-money/src/allocation.rs
 ```
 
 `cargo xtask coverage` needs what the gates need for the Kotlin, Java, C,
-and C++ packages, the variables of [§ 1](#1-prerequisites), and on macOS
+C++, and Python packages, the variables of [§ 1](#1-prerequisites), and on
+macOS
 Xcode for the Swift one. It drops the earlier runs, runs the workspace's
 tests under cargo-llvm-cov with every feature and without the default
 ones, and then measures the binding glue through the foreign tests: it
 builds eranos-uniffi and eranos-capi with cargo-llvm-cov's instrumentation
 into its target directory, `target/llvm-cov-target`, so the gates' builds
-stay as they are, generates the Swift, Kotlin, and Java sources from that
-library, and runs the Swift tests, on a copy of the package there whose
-`XCFramework` holds the instrumented shared library, and the Kotlin, Java,
-C, and C++ tests on it, each writing the coverage of the glue it runs. The
+stay as they are, generates the Swift, Kotlin, Java, and Python sources
+from that library, and runs the Swift tests, on a copy of the package there
+whose `XCFramework` holds the instrumented shared library, the Kotlin,
+Java, C, and C++ tests on it, and the Python tests on a copy of the Python
+package there, whose generated module loads it, each writing the coverage
+of the glue it runs. The
 report comes last; `cargo llvm-cov report` reads the same runs again in
 another form. The first run on an Apple M4 Pro took about 9 minutes, and a
 run after it takes about 2.
@@ -612,7 +666,7 @@ commit was tested, and those checks show on the pull request.
 | Workflow lint           | actionlint and zizmor, configured in `.github/zizmor.yml`                                                                                                                                                                                                                                                                                                                  |
 | Coverage                | both feature sets, merged into the coverage page and its summary, below                                                                                                                                                                                                                                                                                                    |
 | Test (macOS, Windows)   | the tests on `macos-26` and `windows-2025`, on a manual dispatch only                                                                                                                                                                                                                                                                                                      |
-| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, and C++ packages, then the C and C++ tests compiled by GCC 14 as C23 and as C++23 without exceptions, which backs the packages' GCC floors, on a dispatch that asks for the bindings only                                                                                               |
+| Bindings on Linux       | every gate, with the toolchains of the Kotlin, Java, web, Kotlin Multiplatform, C, C++, and Python packages, then the C and C++ tests compiled by GCC 14 as C23 and as C++23 without exceptions, which backs the packages' GCC floors, on a dispatch that asks for the bindings only                                                                                       |
 | Bindings on macOS       | every gate, the Swift package's included, and `cargo xtask coverage`, whose report it uploads and summarises, on a dispatch that asks for the bindings only                                                                                                                                                                                                                |
 
 The repository is private on the GitHub Free plan: 2,000 Actions minutes a
@@ -672,6 +726,11 @@ so a failing run blocks nothing: it is a report.
   with `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
+- **`ModuleNotFoundError: No module named 'eranos._internal.eranos'`** or
+  **`OSError: dlopen(…liberanos_uniffi…)`** from the Python tests: the
+  generated module is missing, or the host library that the link beside
+  it names; `cargo build --package eranos-uniffi` writes the library into
+  `target/debug`, and the gates copy the module and make the link.
 - **`Cannot find module '…/src/internal/eranos.js'`** from the
   TypeScript tests: the generated TypeScript is missing; the gates, or the first two
   commands of the TypeScript package in [§ 2](#2-building-and-testing),

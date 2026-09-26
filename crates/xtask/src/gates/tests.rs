@@ -102,9 +102,9 @@ fn timed_gates(development: &str) -> Vec<(usize, usize)> {
 /// async-lock's features are the gates AGENTS.md lists, in its order, the
 /// target lints under the command that adds their targets, and the last
 /// documented gates are the examples, the host library, the generators, the
-/// Swift, Kotlin, Java, TypeScript, Kotlin Multiplatform, and C and C++
-/// packages, and the ports; a check the code dropped, added, or reordered
-/// would pass a commit the documented gates refuse.
+/// Swift, Kotlin, Java, TypeScript, Kotlin Multiplatform, C and C++, and
+/// Python packages, and the ports; a check the code dropped, added, or
+/// reordered would pass a commit the documented gates refuse.
 #[test]
 fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
     let documented = documented_gates();
@@ -136,6 +136,7 @@ fn the_checks_are_the_gates_agents_md_lists_in_its_order() {
             "rustup target add wasm32-unknown-unknown",
             "sh gradlew --warning-mode=fail :eranos:jvmTest",
             &crate::capi::library().command_line(),
+            "cp target/uniffi/python/eranos.py bindings/python/src/eranos/_internal",
             "cargo build --package eranos-uniffi --features sequential-ids",
         ]
     );
@@ -322,6 +323,49 @@ fn every_crate_root_but_the_c_glue_s_forbids_unsafe_code() {
     }
 }
 
+/// The value of the first `version = "…"` line after the line `header` in
+/// `manifest`, a TOML file: a section's header, or the line that names a
+/// package of a lock file.
+fn version_after<'manifest>(manifest: &'manifest str, header: &str) -> &'manifest str {
+    manifest
+        .lines()
+        .skip_while(|line| header != *line)
+        .find_map(|line| line.strip_prefix("version = \""))
+        .and_then(|rest| rest.strip_suffix('"'))
+        .unwrap()
+}
+
+/// Every package that records a version records the workspace's, in its
+/// manifest and in its lock file: a package whose version drifted from the
+/// workspace's would promise another release's behaviour, and a lock file
+/// behind its manifest would stop `npm ci` or `uv sync --locked` in the
+/// gates.
+#[test]
+fn every_package_records_the_workspaces_version() {
+    let workspace = version_after(
+        include_str!("../../../../Cargo.toml"),
+        "[workspace.package]",
+    );
+    let package: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../bindings/typescript/package.json")).unwrap();
+    let lock: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../bindings/typescript/package-lock.json"
+    ))
+    .unwrap();
+    let project = include_str!("../../../../bindings/python/pyproject.toml");
+    let locked = include_str!("../../../../bindings/python/uv.lock");
+    assert_eq!(
+        [
+            package["version"].as_str(),
+            lock["version"].as_str(),
+            lock["packages"][""]["version"].as_str(),
+            Some(version_after(project, "[project]")),
+            Some(version_after(locked, "name = \"eranos\"")),
+        ],
+        [Some(workspace); 5]
+    );
+}
+
 /// A package that turned on async-lock's `std` would bring the clock into
 /// the library unnoticed: the gates stop at the tree that shows it, before
 /// any example runs, and name every feature once.
@@ -422,6 +466,9 @@ fn every_language_is_generated_from_the_host_library() {
             ),
             format!(
                 "{prefix} uniffi-bindgen-java -- generate --out-dir /eranos/target/uniffi/java --no-format {library}"
+            ),
+            format!(
+                "{prefix} uniffi-bindgen -- generate --library {library} --language python --out-dir /eranos/target/uniffi/python --no-format"
             ),
         ]
     );

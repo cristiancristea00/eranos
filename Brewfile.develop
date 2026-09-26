@@ -12,8 +12,8 @@ brew "cargo-llvm-cov"
 cargo "cargo-mutants"
 
 # --- The bindings -------------------------------------------------------------
-# The Swift, Kotlin, Java, KMP, web, C, and C++ packages, their tests, and
-# their formatters and linters. Xcode comes from the App Store.
+# The Swift, Kotlin, Java, KMP, web, C, C++, and Python packages, their
+# tests, and their formatters and linters. Xcode comes from the App Store.
 
 # The JDK the Java package builds and tests with, and that Gradle, Kotlin,
 # and the Android tools run on. Keg-only: JAVA_HOME points at it
@@ -38,6 +38,13 @@ brew "llvm"
 
 # The C and C++ layers' documentation.
 brew "doxygen"
+
+# The Python the Python package is tested on, the oldest it supports, which
+# uv takes before a Python of its own (bindings/python/pyproject.toml), and
+# uv, which installs the package's tools as its lock file pins them and runs
+# them.
+brew "python@3.14"
+brew "uv"
 
 # The Kotlin formatter.
 brew "ktlint"

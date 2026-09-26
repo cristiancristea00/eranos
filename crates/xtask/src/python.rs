@@ -1,0 +1,195 @@
+//! The gates of the Python package: the generated module in the package,
+//! beside a link to the host library it loads, the package's environment as
+//! its lock file pins it, and the package's format, lint, type checks, tests
+//! and their coverage, and documentation; and a copy of the package over
+//! another build of the library, whose tests the coverage runs.
+
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
+use std::path::{Path, PathBuf};
+
+use crate::gates::Metadata;
+use crate::plan::{Action, Phase};
+use crate::process::{Step, WORKSPACE};
+
+/// The Python project, from the workspace root.
+const PROJECT: &str = "bindings/python";
+
+/// Where the package holds the generated module and the link to the
+/// library, from the project.
+const INTERNAL: &str = "src/eranos/_internal";
+
+/// The Python package's gates, in order: the generated module and the link
+/// to the library, the environment, a cleared documentation directory, then
+/// the package's checks.
+#[must_use]
+pub(crate) fn actions(metadata: &Metadata) -> Vec<Action> {
+    let mut actions = Action::runs(
+        Phase::Prepare,
+        vec![module(metadata), library(metadata), environment()],
+    );
+    actions.push(Action::clear(Phase::Prepare, documentation()));
+    actions.extend(checks());
+    actions
+}
+
+/// The step that copies the module generated from the host library into the
+/// package, whose layer imports it.
+#[must_use]
+pub(crate) fn module(metadata: &Metadata) -> Step {
+    module_into(metadata, &format!("{WORKSPACE}/{PROJECT}"))
+}
+
+/// The step that links the host library beside the generated module, which
+/// loads it from its own directory: a link, so a rebuild of the library
+/// never leaves a stale copy beside a newer module.
+#[must_use]
+pub(crate) fn library(metadata: &Metadata) -> Step {
+    library_into(metadata, &format!("{WORKSPACE}/{PROJECT}"))
+}
+
+/// The step that copies the module generated from `metadata`'s library into
+/// the package at `package`.
+fn module_into(metadata: &Metadata, package: &str) -> Step {
+    let module = format!("{}/uniffi/python/eranos.py", metadata.target_directory);
+    let destination = format!("{package}/{INTERNAL}");
+    Step::new(&[&module, &destination], "the generated Python", "cp")
+}
+
+/// The step that links `metadata`'s library beside the generated module of
+/// the package at `package`.
+fn library_into(metadata: &Metadata, package: &str) -> Step {
+    let name = format!("{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}");
+    let library = format!("{}/debug/{name}", metadata.target_directory);
+    let link = format!("{package}/{INTERNAL}/{name}");
+    Step::new(
+        &["-sf", &library, &link],
+        "the link to the host library",
+        "ln",
+    )
+}
+
+/// The step that installs the package's tools exactly as its lock file
+/// lists them, and fails when the lock file and `pyproject.toml` disagree.
+#[must_use]
+pub(crate) fn environment() -> Step {
+    Step::new(&["sync", "--locked"], "the Python environment", "uv").in_directory(PROJECT)
+}
+
+/// Where Sphinx writes the documentation; the gates clear it first, so a
+/// page of a name the package no longer has is not left behind.
+#[must_use]
+pub(crate) fn documentation() -> PathBuf {
+    Path::new(WORKSPACE).join(PROJECT).join("build")
+}
+
+/// The steps that check the package's format, lint it, type-check it, run
+/// its tests with their coverage of every line and branch, and build its
+/// documentation, each with warnings as errors.
+#[must_use]
+pub(crate) fn checks() -> Vec<Action> {
+    [
+        (
+            Phase::Lint,
+            &["ruff", "format", "--check"][..],
+            "the Python format",
+        ),
+        (
+            Phase::Lint,
+            &["ruff", "check", "--no-fix"][..],
+            "the Python lint",
+        ),
+        (Phase::Lint, &["ty", "check"][..], "the Python type checks"),
+        (
+            Phase::Test,
+            &["coverage", "run", "-m", "pytest"][..],
+            "the Python tests",
+        ),
+        (
+            Phase::Test,
+            &["coverage", "report"][..],
+            "the Python tests' coverage",
+        ),
+        (
+            Phase::Docs,
+            &[
+                "sphinx-build",
+                "-W",
+                "--keep-going",
+                "-n",
+                "-q",
+                "-b",
+                "html",
+                "docs",
+                "build/docs",
+            ][..],
+            "the Python documentation",
+        ),
+    ]
+    .into_iter()
+    .map(|(phase, command, name)| Action::run(phase, tool(command, name)))
+    .collect()
+}
+
+/// Where the Python tests run on another build of the library, in
+/// `metadata`'s target directory: a copy of the package, since the
+/// generated module loads the library from its own directory.
+#[must_use]
+pub(crate) fn copied_package(metadata: &Metadata) -> PathBuf {
+    PathBuf::from(format!("{}/python", metadata.target_directory))
+}
+
+/// What is cleared before the package is copied: the copy's layer and its
+/// tests, so a file the package no longer has leaves nothing behind; the
+/// copy's environment stays, so a later run installs only what changed.
+#[must_use]
+pub(crate) fn copied_directories(metadata: &Metadata) -> Vec<PathBuf> {
+    let package = copied_package(metadata);
+    vec![package.join("src"), package.join("tests")]
+}
+
+/// The steps that copy the layer, its tests, and the project's settings and
+/// lock file into the copy, then the module generated from `metadata`'s
+/// library and a link to that library beside it, and install the copy's
+/// environment as the lock file pins it.
+#[must_use]
+pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
+    let package = copied_package(metadata).to_string_lossy().into_owned();
+    vec![
+        Step::new(&["-p", &package], "the Python package's copy", "mkdir"),
+        Step::new(
+            &[
+                "-R",
+                &format!("{PROJECT}/.python-version"),
+                &format!("{PROJECT}/pyproject.toml"),
+                &format!("{PROJECT}/src"),
+                &format!("{PROJECT}/tests"),
+                &format!("{PROJECT}/uv.lock"),
+                &package,
+            ],
+            "the Python package into its copy",
+            "cp",
+        ),
+        module_into(metadata, &package),
+        library_into(metadata, &package),
+        Step::new(&["sync", "--locked"], "the copy's Python environment", "uv")
+            .in_directory(&package),
+    ]
+}
+
+/// The step that runs the copy's tests on its library.
+#[must_use]
+pub(crate) fn copy_tests(metadata: &Metadata) -> Step {
+    Step::new(&["run", "--locked", "pytest"], "the Python tests", "uv")
+        .in_directory(&copied_package(metadata).to_string_lossy())
+}
+
+/// The step that runs `command` with the tools of the locked environment,
+/// reported as `name`.
+fn tool(command: &[&str], name: &str) -> Step {
+    let mut arguments = vec!["run", "--locked"];
+    arguments.extend(command);
+    Step::new(&arguments, name, "uv").in_directory(PROJECT)
+}
+
+#[cfg(test)]
+mod tests;

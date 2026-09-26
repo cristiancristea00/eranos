@@ -1,6 +1,6 @@
 # Bindings
 
-How eranos reaches apps in seven languages: one binding core in plain
+How eranos reaches apps in eight languages: one binding core in plain
 Rust, the glue crates that export it, and a package per language, whose
 hand-written layer is what an app uses. [ARCHITECTURE.md](ARCHITECTURE.md)
 says how a group works inside,
@@ -17,6 +17,7 @@ layer is tested.
 | TypeScript           | `bindings/typescript`, the npm package `eranos`                     | `eranos-web` on UniFFI 0.31.2, uniffi-bindgen-react-native 0.31.0-5 | browsers, and Node 24 and later                                                   |
 | C                    | `bindings/c`, `eranos.h`                                            | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C23                                                                               |
 | C++                  | `bindings/cpp`, `eranos.hpp`                                        | `eranos-capi` on Diplomat 0.16.1, `diplomat-tool`                   | C++23                                                                             |
+| Python               | `bindings/python`, the package `eranos`                             | `eranos-uniffi` on UniFFI 0.32.2, `uniffi-bindgen`                  | Python 3.14 and later                                                             |
 
 ## Contents
 
@@ -38,6 +39,7 @@ layer is tested.
     - [Kotlin Multiplatform](#kotlin-multiplatform)
     - [C](#c)
     - [C++](#c-1)
+    - [Python](#python)
   - [10. How the gates build the packages](#10-how-the-gates-build-the-packages)
 
 ## 1. The crates
@@ -45,7 +47,7 @@ layer is tested.
 `eranos-bindings` holds, in plain Rust, everything the bindings expose.
 The glue crates beside it mirror its types and forward every call to it,
 converting nothing and deciding nothing, so every rule a binding applies
-is tested in Rust: `eranos-uniffi` for Swift, Kotlin, and Java,
+is tested in Rust: `eranos-uniffi` for Swift, Kotlin, Java, and Python,
 `eranos-web` for browsers and Node, `eranos-kmp` for Kotlin Multiplatform,
 and `eranos-capi` for C and C++. Each package puts a hand-written layer
 over the code its generator writes, and apps see only the layer; the
@@ -60,6 +62,7 @@ flowchart TD
     TYPESCRIPT["bindings/typescript<br/>TypeScript, for browsers and Node"]
     C["bindings/c<br/>C"]
     CPP["bindings/cpp<br/>C++"]
+    PYTHON["bindings/python<br/>Python"]
     UNIFFI["eranos-uniffi<br/>the glue, on UniFFI 0.32.2"]
     KMP["eranos-kmp<br/>eranos-uniffi's sources on UniFFI 0.29.4"]
     WEB["eranos-web<br/>eranos-uniffi's sources on UniFFI 0.31.2"]
@@ -74,6 +77,7 @@ flowchart TD
     TYPESCRIPT --> WEB
     C --> CAPI
     CPP --> CAPI
+    PYTHON --> UNIFFI
     UNIFFI --> BINDINGS
     KMP --> BINDINGS
     WEB --> BINDINGS
@@ -94,6 +98,7 @@ flowchart TD
  │ bindings/typescript  TypeScript, for browsers and Node, on eranos-web    │
  │ bindings/c           C, on eranos-capi                                   │
  │ bindings/cpp         C++, on eranos-capi                                 │
+ │ bindings/python      Python, on eranos-uniffi                            │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos-uniffi        the glue, on UniFFI 0.32.2                          │
  │ eranos-kmp           eranos-uniffi's sources on UniFFI 0.29.4            │
@@ -186,15 +191,15 @@ flowchart TD
 Each layer turns the core's records into its language's own kinds of type,
 under the core's names, and every value prints the library's text.
 
-| What            | Swift                         | Kotlin                         | Java                                         | TypeScript                    | C                               | C++                                    |
-| --------------- | ----------------------------- | ------------------------------ | -------------------------------------------- | ----------------------------- | ------------------------------- | -------------------------------------- |
-| the group       | `final class Group`           | `class Group`, `AutoCloseable` | `final class Group`, `AutoCloseable`         | `class Group`, `Disposable`   | `EranosGroup *`                 | `Group`, which only moves              |
-| a read handle   | `GroupReader`, `withRead`     | `GroupReader`, `withRead`      | `GroupReader`                                | `GroupReader`, `Disposable`   | `EranosGroupReader *`           | `GroupReader`                          |
-| an identifier   | `Member.ID`                   | the value class `MemberId`     | the record `MemberId`                        | the branded string `MemberId` | text                            | the class `MemberId`                   |
-| a checked value | a struct: `Currency`, `Money` | a class: `Currency`, `Money`   | `Currency`, a final class; `Money`, a record | a class: `Currency`, `Money`  | an opaque object: `EranosMoney` | `Currency`, a class; `Money`, a struct |
-| an entry        | a struct: `Expense`           | a class: `Expense`             | a final class with a builder                 | an interface: `Expense`       | an opaque object with setters   | a struct: `Expense`                    |
-| a variant       | an enum: `Split`              | a sealed interface: `Split`    | a sealed interface of records                | a union by `kind`: `Split`    | an opaque object with `kind`    | a `std::variant`                       |
-| a failure       | `EranosError`, thrown typed   | `EranosException`, thrown      | `EranosException`, checked                   | `EranosError`, thrown         | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`  |
+| What            | Swift                         | Kotlin                         | Java                                         | TypeScript                    | C                               | C++                                    | Python                                           |
+| --------------- | ----------------------------- | ------------------------------ | -------------------------------------------- | ----------------------------- | ------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| the group       | `final class Group`           | `class Group`, `AutoCloseable` | `final class Group`, `AutoCloseable`         | `class Group`, `Disposable`   | `EranosGroup *`                 | `Group`, which only moves              | `class Group`, a context manager                 |
+| a read handle   | `GroupReader`, `withRead`     | `GroupReader`, `withRead`      | `GroupReader`                                | `GroupReader`, `Disposable`   | `EranosGroupReader *`           | `GroupReader`                          | `GroupReader`, a context manager                 |
+| an identifier   | `Member.ID`                   | the value class `MemberId`     | the record `MemberId`                        | the branded string `MemberId` | text                            | the class `MemberId`                   | the `NewType` `MemberId`                         |
+| a checked value | a struct: `Currency`, `Money` | a class: `Currency`, `Money`   | `Currency`, a final class; `Money`, a record | a class: `Currency`, `Money`  | an opaque object: `EranosMoney` | `Currency`, a class; `Money`, a struct | `Currency`, a class; `Money`, a frozen dataclass |
+| an entry        | a struct: `Expense`           | a class: `Expense`             | a final class with a builder                 | an interface: `Expense`       | an opaque object with setters   | a struct: `Expense`                    | a frozen dataclass: `Expense`                    |
+| a variant       | an enum: `Split`              | a sealed interface: `Split`    | a sealed interface of records                | a union by `kind`: `Split`    | an opaque object with `kind`    | a `std::variant`                       | a union of frozen dataclasses: `Split`           |
+| a failure       | `EranosError`, thrown typed   | `EranosException`, thrown      | `EranosException`, checked                   | `EranosError`, thrown         | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`  | `EranosError`, raised                            |
 
 ## 4. Calls, threads, and cancellation
 
@@ -213,11 +218,14 @@ it was.
 | TypeScript | `group.nameSync()`, which does not wait | `group.name()`, a Promise                             | the `AbortSignal` of its options |
 | C          | `eranosGroupName(group, text)`          | `eranosGroupNameAsync(group, cancellation, callback)` | `eranosCancellationCancel`       |
 | C++        | `group.name()`                          | `group.nameAsync(&cancellation)`, a `std::future`     | `cancellation.cancel()`          |
+| Python     | `group.name()`                          | `await group.name_async()`, a coroutine               | `cancel()` on the task           |
 
 A synchronous call waits while another call holds the group's write lock,
 or while a change waits behind a read in progress, since the lock lets a
 waiting change turn new reads away until it has run: on Swift's main
-thread too, where an app calls the asynchronous form instead. On wasm,
+thread too, where an app calls the asynchronous form instead, and on the
+thread of Python's event loop, where a coroutine awaits the `_async` form
+instead. On wasm,
 whose one thread must not wait, the TypeScript package's synchronous form
 fails with `GroupFailure::Busy` while another call holds the lock. The C
 and C++ packages run every asynchronous call on the group's worker thread,
@@ -274,8 +282,10 @@ well, against UniFFI 0.31.2, and by `eranos-kmp`, against 0.29.4: they keep
 to what 0.29 accepts, and every release compiles them and the code the
 macros stamp in them.
 `uniffi.toml` names the generated Swift module `EranosGenerated` and the
-generated Kotlin and Java package `eranos.internal`: the generated code sits
-beneath each package's hand-written layer.
+generated Kotlin and Java package `eranos.internal`, and the generated
+Python module keeps the namespace's name, `eranos`, which the Python
+package holds as `eranos._internal.eranos`: the generated code sits beneath
+each package's hand-written layer.
 
 `eranos-web` builds the same glue for browsers and Node. A crate carries
 the derives of one UniFFI release, so it includes the three source files of
@@ -335,7 +345,7 @@ the C and C++ APIs document that a callback runs on another thread. Only
 one Diplomat library links into a program, since the runtime exports fixed
 symbol names.
 
-The generators, `uniffi-bindgen` for Swift and Kotlin and
+The generators, `uniffi-bindgen` for Swift, Kotlin, and Python and
 `uniffi-bindgen-java` for Java, are the binaries of `eranos-uniffi-bindgen`,
 built on the UniFFI release that builds the library, so the code they write
 reads the library's metadata as written. They sit in a package of their
@@ -618,6 +628,53 @@ reads one it expects with `value()`, which ends the port when it is
 absent, as `must()` ends it, printing the library's message, when the
 library refuses a call the example makes.
 
+### Python
+
+`bindings/python` is the Python package `eranos`, for Python 3.14 and
+later. The generated module, `eranos._internal.eranos`, loads the host
+library from its own directory through ctypes, which releases the GIL for
+every call, so the gates link the library beside it. The layer's modules
+are private (`eranos._group`, `eranos._entries`), and `eranos` exports what
+apps use, as its `__all__` lists, so no generated class reaches an app.
+The layer follows PEP 8, with lines of 150 columns as in the other
+languages, and carries a type on every function, parameter, and return,
+which ty checks with every rule an error; the generated module keeps to no
+checker, so ty reads its annotations without checking its code, and Ruff
+leaves it out:
+
+- Every entry has an identifier type of its own, a `NewType` over `str`
+  (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
+  checks is a class whose constructor checks it, as `datetime.date`'s
+  does (`Currency('EUR')`, `CalendarDate(23, 9, 2026)`,
+  `Email('ana@example.com')`), and prints the library's text. Amounts,
+  entries, and totals are frozen dataclasses: an entry takes its fields by
+  keyword and is edited with `copy.replace`, which keeps its identifier,
+  and a variant is a union of frozen dataclasses (`EqualSplit`,
+  `LocalCost`), which a `match` takes apart.
+- A failure the library reports raises an `EranosError`, a subclass per
+  module holding the module's failure, a dataclass nested in it
+  (`GroupError.MemberInUse`), with the library's message; a saved group
+  that is not JSON raises `InvalidJsonError`, with the line and column.
+  A call the program should not make raises the standard error for it:
+  `ValueError` for an entry to add that has an identifier or one to
+  replace that has none, and `RuntimeError` for a call on a closed `Group`
+  or a read through a released `GroupReader`.
+- Every group call blocks, and its twin, whose name ends in `_async`, is a
+  coroutine that waits for the lock without blocking the event loop;
+  cancelling its task drops the library's call, which leaves the group as
+  it was, and raises `asyncio.CancelledError` in the task. `Group` and
+  `GroupReader` are context managers: leaving the block closes the group
+  or releases the reader.
+- A transfer's and a payment's members are `sender` and `receiver`, since
+  `from` is a keyword; the generated module names the field `_from`.
+- The generated module attaches a data enum's cases to it only after it
+  defines them, and nothing seals its classes, so the conversion from them
+  is a table by class, which the conversion tests check against every
+  class the generator writes.
+
+Sphinx's autodoc writes the documentation from the docstrings, in Google's
+style, which napoleon reads, with every warning an error.
+
 ## 10. How the gates build the packages
 
 `cargo xtask gates` writes every language's sources into
@@ -642,7 +699,12 @@ macOS, compiles its layer for every Apple target. Then it builds
 bridge with `diplomat-tool`, and, for each package, builds its tests with
 the LLVM that `LLVM_HOME` names, runs them under the sanitizers, holds every
 line and function of its layer covered, and checks its format, lint, and
-documentation. Last, it builds eranos-uniffi's host library with
+documentation. Then it copies the generated Python into the Python
+package, beside a link to the host library, installs the package's tools
+as `uv.lock` pins them, and checks the package's format, lints it,
+type-checks it, tests it and holds every line and branch of its layer
+covered, and documents it, on Python 3.14, the oldest the package
+supports. Last, it builds eranos-uniffi's host library with
 `sequential-ids` into `target/sequential`, and eranos-kmp's, eranos-web's,
 and eranos-capi's beside it, generates the UniFFI sources, and runs every
 port: on macOS the Swift ports, on a copy of the Swift package over the
@@ -654,6 +716,6 @@ sanitizers on eranos-capi's library, each report compared with its
 example's.
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust
-coverage's instrumentation and runs the Swift, Kotlin, Java, C, and C++
-tests on them, which measures the glue through the foreign tests
+coverage's instrumentation and runs the Swift, Kotlin, Java, Python, C, and
+C++ tests on them, which measures the glue through the foreign tests
 ([TESTING.md § 5](TESTING.md#5-coverage)).

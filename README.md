@@ -10,7 +10,7 @@ payments with the strategy the app chooses: the fewest payments possible,
 a fast greedy plan, or the unsimplified debts between each pair of people.
 
 It is the shared core of the eranos apps for iOS, Android, and the web,
-which reach it through its [bindings](#bindings) for seven languages; the
+which reach it through its [bindings](#bindings) for eight languages; the
 library itself is plain Rust with no I/O and no async runtime.
 
 ## Concepts
@@ -168,6 +168,7 @@ Multiplatform package too ([docs/TESTING.md § 2](docs/TESTING.md#2-layout)).
 | TypeScript           | `bindings/typescript` | browsers, and Node 24 and later                                           |
 | C                    | `bindings/c`          | C23                                                                       |
 | C++                  | `bindings/cpp`        | C++23                                                                     |
+| Python               | `bindings/python`     | Python 3.14 and later                                                     |
 
 Each package puts a hand-written layer, in its language's own idiom, over
 code generated from the library, and every one prints the library's own
@@ -205,6 +206,7 @@ eranos/
 │   ├── java/                  the Java package, over the UniFFI glue
 │   ├── kmp/                   the Kotlin Multiplatform package, over the glue gobley generates
 │   ├── kotlin/                the Kotlin package for Android and the JVM, over the UniFFI glue
+│   ├── python/                the Python package, over the UniFFI glue
 │   ├── swift/                 the Swift package for Apple platforms, over the UniFFI glue
 │   └── typescript/            the npm package for browsers and Node, over the WebAssembly glue
 ├── crates/
@@ -230,7 +232,7 @@ eranos/
 │   ├── eranos-glue-macros/    the proc macros the binding core and the UniFFI glue invoke
 │   ├── eranos-capi/           the bindings for C and C++, through Diplomat
 │   ├── eranos-kmp/            the bindings for Kotlin Multiplatform, through UniFFI and gobley
-│   ├── eranos-uniffi/         the bindings for Swift, Kotlin, and Java, through UniFFI
+│   ├── eranos-uniffi/         the bindings for Swift, Kotlin, Java, and Python, through UniFFI
 │   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages
 │   ├── eranos-web/            the bindings for browsers and Node, through UniFFI and WebAssembly
 │   └── xtask/                 the repository's automation: `cargo xtask gates`, and `generate` for the C bridge

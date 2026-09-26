@@ -30,8 +30,9 @@ Signed-off-by: <committer name> <<committer email>>
   for the UniFFI glue and its generators, `swift` for the Swift
   package, `kotlin` for the Kotlin package, `java` for the Java package,
   `web` for the WebAssembly glue and the TypeScript package, `kmp` for the
-  Kotlin Multiplatform glue and package, and `capi` for the C glue and the
-  C and C++ packages; and besides them `serde`,
+  Kotlin Multiplatform glue and package, `capi` for the C glue and the
+  C and C++ packages, and `python` for the Python package; and besides
+  them `serde`,
   `docs`, `examples`, `build`, and `xtask`. A change to the facade alone,
   or to several crates, takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
@@ -39,9 +40,10 @@ Signed-off-by: <committer name> <<committer email>>
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
   committer's name and email, as `git commit -s` writes it.
 - **The version moves with the commit**: edit `[workspace.package] version`
-  in `Cargo.toml` in the same commit as the change it describes. What bumps
-  what, including why a rounding change is breaking:
-  [docs/VERSIONING.md](docs/VERSIONING.md).
+  in `Cargo.toml`, and the TypeScript and Python packages' versions, which
+  a test of xtask holds to it, in the same commit as the change it
+  describes. The steps, and what bumps what, including why a rounding
+  change is breaking: [docs/VERSIONING.md](docs/VERSIONING.md).
 - Never commit or push without being asked.
 
 ## Gates before committing
@@ -72,11 +74,12 @@ It runs these, in this order, and stops at the first that fails:
    would gain blocking methods that read the clock and a per-thread parker
 9. `cargo run --quiet --package <package> --all-features --example <name>`
    for every example of every package, as `cargo metadata` lists them,
-   keeping the reports of eranos's examples for gate 18
+   keeping the reports of eranos's examples for gate 19
 10. `cargo build --package eranos-uniffi`, the host library the generators
     read
 11. `cargo run --quiet --package eranos-uniffi-bindgen --bin <generator> -- generate <arguments>`
-    for Swift and Kotlin (`uniffi-bindgen`) and Java (`uniffi-bindgen-java`),
+    for Swift, Kotlin, and Python (`uniffi-bindgen`) and Java
+    (`uniffi-bindgen-java`),
     which writes each language's sources from the host library into
     `target/uniffi/<language>`, cleared first: a type a generator cannot
     read stops the gates, and the generated sources are never committed
@@ -134,7 +137,15 @@ It runs these, in this order, and stops at the first that fails:
     llvm-cov's summary shows; clang-format's check of the layer, the tests,
     and the ports; clang-tidy on the tests, the ports, and every header they
     include; and Doxygen with warnings as errors
-18. `cargo build --package eranos-uniffi --features sequential-ids`, into
+18. `cp target/uniffi/python/eranos.py bindings/python/src/eranos/_internal`,
+    then the Python package: a link beside the module to the host library,
+    which the module loads from its own directory, `uv sync --locked`, which
+    installs the tools that `uv.lock` pins into an environment of Python
+    3.14, and, each through `uv run --locked`, Ruff's format check and its
+    lint with `--no-fix`, ty with every rule an error, the pytest tests
+    under coverage.py at 100 % of lines and branches, and Sphinx with
+    warnings as errors, all in `bindings/python`
+19. `cargo build --package eranos-uniffi --features sequential-ids`, into
     `target/sequential`, the host library whose identifiers count up as the
     examples' do, and beside it eranos-kmp's, eranos-web's for WebAssembly,
     and eranos-capi's static library, then the ports: the UniFFI sources
@@ -196,10 +207,12 @@ test in `crates/xtask` checks every root.
   mirrors its operator: `0 == count`, `nullptr != value`, `0 < amount`,
   `MAX_SCALE < scale`, `CategoryId::UNCATEGORISED != id`. Two constants,
   or two sides that are not constants, keep their order. The rule covers
-  every language, tests, examples, and benchmarks included. ESLint's
-  `yoda` rule checks it in TypeScript; no other language's linter has a
-  rule for it, and the rules of Error Prone and SwiftLint that ask for the
-  opposite are off.
+  every language but Python, and in each its tests, examples, and
+  benchmarks. ESLint's `yoda` rule checks it in TypeScript; no other
+  language's linter has a rule for it, and the rules of Error Prone and
+  SwiftLint that ask for the opposite are off. Python writes the constant
+  last, as PEP 8 writes `value is None`, and Ruff's `SIM300` refuses the
+  other order.
 - **Money is never a float.** Amounts are `i64` minor units; every division
   goes through `eranos_money::allocation::allocate`, every conversion through
   `ExchangeRate::convert`, and every percentage through
@@ -346,8 +359,11 @@ test in `crates/xtask` checks every root.
   module has a `//!` doc and every test a `///` doc stating what breaks in
   production if it regresses; names read as claims
   (`an_archived_member_keeps_history_but_joins_no_new_expense`), never
-  `test_*`. No `#[ignore]`, no `#[should_panic]`, no snapshot tests. Details:
-  [docs/TESTING.md](docs/TESTING.md).
+  `test_*`, but in the Python package, where pytest finds a test by that
+  prefix and the claim follows it
+  (`test_an_archived_member_joins_no_new_expense`), each with a docstring
+  stating what breaks. No `#[ignore]`, no `#[should_panic]`, no snapshot
+  tests. Details: [docs/TESTING.md](docs/TESTING.md).
 
 ### Deliberate choices
 
@@ -376,8 +392,8 @@ of the domain, from `eranos-core` (identifiers) up to `eranos-group`
 one error, and a group handle with a synchronous and an asynchronous form
 of every call, both written, with the read handle's reads, by the proc
 macros of `eranos-glue-macros` and `eranos-glue` from one trait that lists
-the calls. `eranos-uniffi` mirrors it for Swift, Kotlin, and Java
-through UniFFI, whose generators are the binaries of
+the calls. `eranos-uniffi` mirrors it for Swift, Kotlin, Java, and
+Python through UniFFI, whose generators are the binaries of
 `eranos-uniffi-bindgen`; `eranos-web` and `eranos-kmp` compile the same
 sources on the UniFFI releases that uniffi-bindgen-react-native and gobley
 read, for WebAssembly and for Kotlin Multiplatform; `eranos-capi` exports
@@ -387,10 +403,11 @@ and calls. Each language's package in `bindings/` puts a hand-written layer
 over the generated code: `bindings/swift` for Apple platforms,
 `bindings/kotlin` for Android and the JVM, `bindings/java` for Java,
 `bindings/typescript` for browsers and Node, `bindings/kmp`, which
-compiles the Kotlin layer for Kotlin Multiplatform, and `bindings/c` and
-`bindings/cpp`, header-only layers for C23 and C++23
-([docs/BINDINGS.md](docs/BINDINGS.md)). A `Group` owns its
-members, categories, expenses, and transfers in ID-keyed maps. Each entry
+compiles the Kotlin layer for Kotlin Multiplatform, `bindings/c` and
+`bindings/cpp`, header-only layers for C23 and C++23, and
+`bindings/python` for Python 3.14
+([docs/BINDINGS.md](docs/BINDINGS.md)). A `Group` owns its members,
+categories, expenses, and transfers in ID-keyed maps. Each entry
 is resolved into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the
 pairwise debts behind the direct settlement;
@@ -418,7 +435,7 @@ read-write lock. Diagrams, rules, and numbers:
 - Coverage is a diagnostic, never a gate: `cargo xtask coverage` merges a
   run with every feature and one without the default features, because each
   compiles an identifier generator the other leaves out, with the binding
-  glue, which the Swift, Kotlin, Java, C, and C++ tests run on an
+  glue, which the Swift, Kotlin, Java, Python, C, and C++ tests run on an
   instrumented build, into one report
   ([docs/DEVELOPMENT.md § 5](docs/DEVELOPMENT.md#5-coverage-and-mutation-testing)).
   It does not count doctests on the stable toolchain. Every line, region,

@@ -1,0 +1,97 @@
+# Ruff's built-in exclude list already covers .git, .vscode, caches, and
+# virtualenvs; extend it with the module UniFFI generates, which `cargo xtask`
+# copies into the package from the Rust sources.
+extend-exclude = [
+    "src/eranos/_internal",   # the generated module and the library it loads
+]
+fix = true
+line-length = 150
+indent-width = 4
+
+target-version = "py314"
+
+[lint]
+
+preview = true
+select = [
+    "ANN",
+    "B",
+    "A",
+    "C",
+    "CPY",
+    "EM",
+    "FIX",
+    "FA",
+    "LOG",
+    "G",
+    "PIE",
+    "RET",
+    "SLF",
+    "SIM",
+    "ARG",
+    "PTH",
+    "NPY",
+    "PD",
+    "N",
+    "PERF",
+    "E",
+    "W",
+    "DOC",
+    "D",
+    "F",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "FURB",
+    "RUF",
+]
+
+ignore = [
+    "logging-f-string",
+    "blank-line-before-class",
+    "multi-line-summary-first-line",
+    "incorrect-blank-line-before-class",
+    "non-lowercase-variable-in-function",
+    "missing-copyright-notice",
+    "invalid-argument-name",
+    "lowercase-imported-as-non-lowercase",
+    "unused-function-argument",
+    "unused-method-argument",
+    "any-type",
+]
+
+[lint.flake8-type-checking]
+
+quote-annotations = true
+strict = true
+
+[lint.isort]
+
+combine-as-imports = true
+from-first = true
+lines-after-imports = 2
+lines-between-types = 1
+
+[lint.pycodestyle]
+
+max-doc-length = 150
+max-line-length = 150
+
+[format]
+
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 150
+
+[lint.per-file-ignores]
+# A test's and a port's numbers are the amounts, dates, and counts that its claims or its report name, so they are not
+# magic, as the C and C++ packages' clang-tidy settings for their tests and ports say.
+"tests/**" = ["magic-value-comparison"]
+"examples/**" = ["magic-value-comparison"]
+# The tests of the conversions build every case the generated module writes and convert it as the layer does, which
+# only the package's private modules can.
+"tests/test_conversions.py" = ["import-private-name", "private-member-access"]

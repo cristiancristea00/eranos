@@ -63,7 +63,8 @@ every command.
 | Kotlin Multiplatform | the Kotlin suite, `bindings/kotlin/eranos/src/test/kotlin/` | the `eranos` package over gobley's bindings, on the JVM    | `./gradlew :eranos:jvmTest`, in `bindings/kmp`           |
 | C                    | `bindings/c/tests/tests.c`                                  | the `eranos.h` layer, and Diplomat's C API beneath it      | `build/tests`, in `bindings/c`, once built               |
 | C++                  | `bindings/cpp/tests/tests.cpp`                              | the `eranos.hpp` layer, and Diplomat's classes beneath it  | `build/tests`, in `bindings/cpp`, once built             |
-| Ports                | `bindings/<language>/examples/`                             | every example's report, byte for byte, through the layer   | `cargo xtask gates`, gate 18                             |
+| Python               | `bindings/python/tests/test_*.py`                           | the `eranos` package, and the generated module's values    | `uv run pytest`, in `bindings/python`                    |
+| Ports                | `bindings/<language>/examples/`                             | every example's report, byte for byte, through the layer   | `cargo xtask gates`, gate 19                             |
 
 Unit tests live in a sibling file: eranos-money's `allocation.rs` ends with
 `#[cfg(test)] mod tests;` and its tests are in `allocation/tests.rs`.
@@ -78,7 +79,7 @@ language's hand-written layer alone, and prints its report byte for byte.
 Every text of a report is one the library writes
 ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)), so a port that
 prints another byte is a layer that shows a value otherwise, or a port that
-no longer follows its example. Gate 9 keeps each example's report; gate 18
+no longer follows its example. Gate 9 keeps each example's report; gate 19
 runs every port on a build of the glue with `sequential-ids` in
 `target/sequential`, whose identifiers count up as the example's do, and
 stops at the first line that differs, printing both versions of it. The
@@ -123,12 +124,15 @@ companion that pins concrete numbers.
 
 Every test module starts with a `//!` doc saying what its tests protect,
 and every test has a `///` doc stating what breaks in production if it
-regresses, not what the code does. Inside a test, each group of assertions
-gets a `//` line naming the case.
+regresses, not what the code does; in Python, the module's docstring and
+the test's say the same. Inside a test, each group of assertions gets a
+`//` line naming the case.
 
 ### Naming
 
-Names are claims in snake_case, never `test_*`:
+Names are claims in snake_case, never `test_*`, but in the Python package,
+where pytest collects a test by that prefix and the claim follows it
+(`test_a_member_in_use_is_not_removed`):
 
 | Shape                    | Use                        | Examples                                                                                        |
 | ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -196,24 +200,24 @@ result as a page: [DEVELOPMENT.md § 6](DEVELOPMENT.md#6-continuous-integration)
 
 The glue is measured through the foreign tests instead:
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the
-instrumentation of the Rust runs, runs the Swift, Kotlin, Java, C, and C++
-tests on that build, and merges what they ran into the same report. The
-Swift, Kotlin, and Java tests run every line, region, and function of
-eranos-uniffi's hand-written sources, and the C and C++ tests every line
-and function of eranos-capi's bridge, whose generated modules are files
-like any other: eranos-glue's tests measure the generator that writes
-them, and a test of xtask holds the committed files to what it writes. The
-objects' methods and the copies
-of the core's items that the glue's macros stamp are not in the report,
-as the core's forms are not. Two kinds of the bridge's regions stay unrun: the
-check that a text parameter is UTF-8, which only a call given other bytes
-takes and which would need a test for each function, and the failure
-branch of a synchronous call that fails only on wasm, for which the bridge
-is not built. Only the Swift layer passes the UniFFI glue a
-`Cancellation`, so a run off macOS, where the Swift tests do not run,
-reports its two methods unrun. eranos-web and eranos-kmp compile
-eranos-uniffi's sources again and are not measured: stable Rust does not
-measure WebAssembly, and gobley builds its own library.
+instrumentation of the Rust runs, runs the Swift, Kotlin, Java, Python, C,
+and C++ tests on that build, and merges what they ran into the same report.
+The Swift, Kotlin, Java, and Python tests run every line, region, and
+function of eranos-uniffi's hand-written sources, and the C and C++ tests
+every line and function of eranos-capi's bridge, whose generated modules
+are files like any other: eranos-glue's tests measure the generator that
+writes them, and a test of xtask holds the committed files to what it
+writes. The objects' methods and the copies of the core's items that the
+glue's macros stamp are not in the report, as the core's forms are not. Two
+kinds of the bridge's regions stay unrun: the check that a text parameter
+is UTF-8, which only a call given other bytes takes and which would need a
+test for each function, and the failure branch of a synchronous call that
+fails only on wasm, for which the bridge is not built. Only the Swift layer
+passes the UniFFI glue a `Cancellation`, so a run off macOS, where the
+Swift tests do not run, reports its two methods unrun. eranos-web and
+eranos-kmp compile eranos-uniffi's sources again and are not measured:
+stable Rust does not measure WebAssembly, and gobley builds its own
+library.
 
 The suites cover every line, region, and function. Keeping it that way
 follows three rules:
@@ -268,6 +272,16 @@ compare whole, with no equality written out field by field. The tests
 import what callers use through the package's entry point, `src/index.ts`,
 and reach an internal conversion, such as that of every failure the
 generated code can report, through its own module.
+
+The Python layer's tests hold it to every line and branch, which
+coverage.py measures and enforces through `fail_under = 100` in
+`pyproject.toml`; the generated module is not measured. The last arm of an
+exhaustive `match`, `case _: assert_never(value)`, which ty proves no value
+reaches, is left out through `exclude_also`. A conversion from the
+generated classes goes through a table keyed by the generated class, so no
+`match` over them needs an arm that never runs, and
+`tests/test_conversions.py` checks each table's keys against the cases the
+generated module writes and converts every failure it can report.
 
 The C and C++ layers are headers of inline functions, which the tests'
 programs compile; llvm-cov reports an inline function that no test calls
@@ -327,6 +341,6 @@ both together.
 | a currency change or loading      | the gates, then `cargo bench -p eranos --features serde --bench group`                                                             |
 | serialised shapes                 | `cargo test -p eranos --all-features --test persistence`, and update [VERSIONING.md](VERSIONING.md) if older files stop loading    |
 | a libphonenumber metadata release | the gates, then `cargo test -p eranos-contact --lib` ([DEVELOPMENT.md § 3.8](DEVELOPMENT.md#38-a-libphonenumber-metadata-release)) |
-| an example's report               | the gates, whose gate 18 compares every port with it: change each port with the example                                            |
+| an example's report               | the gates, whose gate 19 compares every port with it: change each port with the example                                            |
 | a record or a call of the core    | `cargo xtask generate`, then the gates: until it runs, `the_committed_bridge_is_what_the_generator_writes` fails                   |
 | docs or README                    | `cargo test --workspace --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features`                     |

@@ -74,6 +74,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
         Ok(crate::web::actions()),
         crate::kmp::actions(runner),
         crate::capi::actions(runner, &metadata),
+        Ok(crate::python::actions(&metadata)),
     ]
     .into_iter()
     .collect::<Result<Vec<_>, _>>()?;
@@ -344,11 +345,12 @@ pub(crate) fn generated(metadata: &Metadata) -> PathBuf {
     Path::new(&metadata.target_directory).join("uniffi")
 }
 
-/// The steps that generate the Swift, Kotlin, and Java sources from the host
-/// library of eranos-uniffi, each with the generator of eranos-uniffi-bindgen
-/// that the library's `uniffi` release builds, so a type a generator cannot
-/// read stops the gates. Their paths are written with `/`, which the programs
-/// of every host accept, so a step reads alike on every host.
+/// The steps that generate the Swift, Kotlin, Java, and Python sources from
+/// the host library of eranos-uniffi, each with the generator of
+/// eranos-uniffi-bindgen that the library's `uniffi` release builds, so a
+/// type a generator cannot read stops the gates. Their paths are written
+/// with `/`, which the programs of every host accept, so a step reads alike
+/// on every host.
 #[must_use]
 pub(crate) fn generators(metadata: &Metadata) -> Vec<Step> {
     let library = format!(
@@ -370,7 +372,12 @@ pub(crate) fn generators(metadata: &Metadata) -> Vec<Step> {
         command.extend(arguments);
         Step::cargo(&command, name)
     };
-    let (swift, kotlin, java) = (directory("swift"), directory("kotlin"), directory("java"));
+    let (swift, kotlin, java, python) = (
+        directory("swift"),
+        directory("kotlin"),
+        directory("java"),
+        directory("python"),
+    );
     vec![
         generator(
             "uniffi-bindgen",
@@ -402,6 +409,19 @@ pub(crate) fn generators(metadata: &Metadata) -> Vec<Step> {
             "uniffi-bindgen-java",
             &["--out-dir", &java, "--no-format", &library],
             "the Java sources",
+        ),
+        generator(
+            "uniffi-bindgen",
+            &[
+                "--library",
+                &library,
+                "--language",
+                "python",
+                "--out-dir",
+                &python,
+                "--no-format",
+            ],
+            "the Python sources",
         ),
     ]
 }

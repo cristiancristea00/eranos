@@ -342,9 +342,9 @@ jobs:
   bindings-linux:
     name: Bindings on Linux
     # Every gate of AGENTS.md, with the toolchains of the Kotlin, Java, web,
-    # Kotlin Multiplatform, C, and C++ packages, which a push does not
-    # install; the Swift package and the Apple targets need macOS. Only on a
-    # dispatch that asks for the bindings, like the job after it.
+    # Kotlin Multiplatform, C, C++, and Python packages, which a push does
+    # not install; the Swift package and the Apple targets need macOS. Only
+    # on a dispatch that asks for the bindings, like the job after it.
     if: github.event_name == 'workflow_dispatch' && inputs.bindings
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -376,6 +376,14 @@ jobs:
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
+      # uv installs the Python package's tools as uv.lock pins them, on the
+      # Python 3.14 of .python-version, which it downloads where the image
+      # has none; the release is the one Homebrew installs, which wrote
+      # uv.lock.
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: 0.12.17
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
       # The packages of docs/DEVELOPMENT.md § 1, into the image's SDK.
       - uses: android-actions/setup-android@v4.0.4
         with:
@@ -458,6 +466,10 @@ jobs:
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: 0.12.17
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
       - uses: android-actions/setup-android@v4.0.4
         with:
           packages: platform-tools platforms;android-36 build-tools;36.1.0 ndk;30.0.16248370
@@ -465,7 +477,8 @@ jobs:
       - name: Name the NDK
         run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >>"$GITHUB_ENV"
       # The tools a developer's Brewfile.develop installs, but for the Android
-      # command-line tools, the JDKs, and Node, which the steps above set up.
+      # command-line tools, the JDKs, Node, and uv, which the steps above set
+      # up.
       - name: Install LLVM, Doxygen, ktlint, and SwiftLint
         run: |
           brew install llvm doxygen ktlint swiftlint

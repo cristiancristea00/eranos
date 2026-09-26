@@ -2,8 +2,9 @@
 //! cargo-llvm-cov's runs of the workspace's tests with every feature and
 //! without the default ones, then eranos-uniffi and eranos-capi built with
 //! cargo-llvm-cov's instrumentation, whose shared libraries the Swift tests
-//! (where the machine builds for Apple platforms), the Kotlin, Java, C, and
-//! C++ tests load, each writing the coverage of the glue it runs. The glue
+//! (where the machine builds for Apple platforms), the Kotlin, Java, C,
+//! C++, and Python tests load, each writing the coverage of the glue it
+//! runs. The glue
 //! has no Rust tests: it forwards every call to the binding core, which the
 //! Rust tests measure. eranos-web and eranos-kmp compile the glue's sources
 //! again, for WebAssembly, which stable Rust cannot measure, and for gobley,
@@ -14,7 +15,7 @@ use std::path::PathBuf;
 use crate::Failure;
 use crate::gates::{self, Metadata};
 use crate::process::{Runner, Step, Variable};
-use crate::{capi, java, kotlin, swift};
+use crate::{capi, java, kotlin, python, swift};
 
 /// The crates the Rust runs leave out: the glue and the generators, which
 /// have no Rust tests, and the glue's proc macros, which run inside the
@@ -73,8 +74,8 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
 /// What the coverage clears before it runs anything, so nothing an earlier
 /// run left behind is read: the sources generated from `measured`'s
 /// instrumented library, where `apple` the Swift package's copy but its
-/// build, and the generated sources the Kotlin, Java, C, and C++ packages
-/// compile.
+/// build, the generated sources the Kotlin, Java, C, and C++ packages
+/// compile, and the Python package's copy but its environment.
 #[must_use]
 pub(crate) fn cleared(measured: &Metadata, apple: bool) -> Vec<PathBuf> {
     let mut directories = vec![gates::generated(measured)];
@@ -87,6 +88,7 @@ pub(crate) fn cleared(measured: &Metadata, apple: bool) -> Vec<PathBuf> {
         capi::directory(capi::C_PACKAGE, "generated"),
         capi::directory(capi::CPP_PACKAGE, "generated"),
     ]);
+    directories.extend(python::copied_directories(measured));
     directories
 }
 
@@ -101,8 +103,8 @@ pub(crate) fn created(measured: &Metadata) -> Vec<PathBuf> {
 
 /// Every step, in order: the Rust runs, the instrumented glue, the sources
 /// generated from it, the Swift tests where `apple`, the Kotlin, Java, C,
-/// and C++ tests, each suite in `environment`, which writes its coverage
-/// where the report reads it, and the report.
+/// C++, and Python tests, each suite in `environment`, which writes its
+/// coverage where the report reads it, and the report.
 #[must_use]
 pub(crate) fn steps(
     measured: &Metadata,
@@ -131,6 +133,8 @@ pub(crate) fn steps(
         steps.push(capi::headers(package));
         steps.extend(measuring(capi::measured_tests(package, llvm, measured)));
     }
+    steps.extend(python::copy(measured));
+    steps.extend(measuring(vec![python::copy_tests(measured)]));
     steps.push(report());
     steps
 }

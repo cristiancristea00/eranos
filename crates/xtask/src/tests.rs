@@ -241,14 +241,34 @@ fn ported(metadata: &Metadata, apple: bool) -> Vec<Step> {
     steps
 }
 
+/// The steps of the packages the gates check last, alike on every machine:
+/// the C and C++ packages over eranos-capi's library, then the Python
+/// package.
+fn last_packages(metadata: &Metadata) -> Vec<Step> {
+    let mut steps = vec![capi::library()];
+    for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
+        steps.push(capi::headers(package));
+        steps.extend(capi::tests(package, "/LLVM_HOME", metadata));
+        steps.push(capi::coverage(package, "/LLVM_HOME"));
+        steps.extend(plan::steps(&capi::checks(package, "/LLVM_HOME")));
+    }
+    steps.extend([
+        python::module(metadata),
+        python::library(metadata),
+        python::environment(),
+    ]);
+    steps.extend(plan::steps(&python::checks()));
+    steps
+}
+
 /// `gates` runs every check, reads async-lock's features, lists the
 /// examples, runs each one, builds the host library, generates every
 /// language's sources into a cleared directory, runs the Swift package's
 /// gates where the machine builds for Apple platforms, and the Kotlin,
-/// Java, TypeScript, Kotlin Multiplatform, C, and C++ packages', the Kotlin
-/// Multiplatform package with its Apple libraries only where the machine
-/// builds them, then the ports, the Swift ones only there; if it ran less,
-/// `cargo xtask gates` would pass commits the documented gates refuse.
+/// Java, TypeScript, Kotlin Multiplatform, C, C++, and Python packages', the
+/// Kotlin Multiplatform package with its Apple libraries only where the
+/// machine builds them, then the ports, the Swift ones only there; if it ran
+/// less, `cargo xtask gates` would pass commits the documented gates refuse.
 #[test]
 fn gates_runs_every_check_every_example_and_every_generator() {
     let mut recorder = Recorder::new();
@@ -279,15 +299,8 @@ fn gates_runs_every_check_every_example_and_every_generator() {
     let mut elsewhere_packages = packages.clone();
     packages.extend(plan::steps(&kmp::checks("/JAVA_HOME_21", true)));
     elsewhere_packages.extend(plan::steps(&kmp::checks("/JAVA_HOME_21", false)));
-    let mut native = vec![capi::library()];
-    for package in [capi::C_PACKAGE, capi::CPP_PACKAGE] {
-        native.push(capi::headers(package));
-        native.extend(capi::tests(package, "/LLVM_HOME", &metadata));
-        native.push(capi::coverage(package, "/LLVM_HOME"));
-        native.extend(plan::steps(&capi::checks(package, "/LLVM_HOME")));
-    }
-    packages.extend(native.clone());
-    elsewhere_packages.extend(native);
+    packages.extend(last_packages(&metadata));
+    elsewhere_packages.extend(last_packages(&metadata));
     packages.extend(ported(&metadata, true));
     elsewhere_packages.extend(ported(&metadata, false));
     let sequential = metadata.inner(ports::DIRECTORY);
@@ -325,6 +338,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         ]
         .into_iter()
         .chain(native_cleared.clone())
+        .chain([python::documentation()])
         .chain(ports::cleared(&sequential, false))
         .collect::<Vec<_>>()
     );
@@ -349,6 +363,7 @@ fn gates_runs_every_check_every_example_and_every_generator() {
         ]
         .into_iter()
         .chain(native_cleared)
+        .chain([python::documentation()])
         .chain(ports::cleared(&sequential, true))
         .collect::<Vec<_>>()
     );

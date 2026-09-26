@@ -36,6 +36,7 @@ fn the_rust_tests_run_then_every_foreign_suite_on_the_instrumented_glue_then_the
         swift::copy_tests(&measured()),
         kotlin::tests(&measured()),
         java::tests(&measured()),
+        python::copy_tests(&measured()),
     ]) {
         assert!(every.contains(&step.with_environment(&environment)));
     }

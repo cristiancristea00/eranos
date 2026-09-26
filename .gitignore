@@ -67,3 +67,16 @@
 /bindings/c/generated/
 /bindings/cpp/build/
 /bindings/cpp/generated/
+
+# The Python package's virtual environment, caches, coverage data, and
+# documentation, and what `cargo xtask` writes into it: the generated Python
+# module and a link to the library it loads, both built from the Rust
+# sources; none is committed.
+/bindings/python/.venv/
+/bindings/python/.coverage
+/bindings/python/.pytest_cache/
+/bindings/python/.ruff_cache/
+/bindings/python/build/
+/bindings/python/src/eranos/_internal/eranos.py
+/bindings/python/src/eranos/_internal/liberanos_uniffi.*
+/bindings/python/**/__pycache__/

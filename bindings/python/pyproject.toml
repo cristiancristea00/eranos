@@ -1,0 +1,59 @@
+# The eranos library for Python: a hand-written layer in `src/eranos` over the
+# module that UniFFI generates from eranos-uniffi, which `cargo xtask` copies
+# into `src/eranos/_internal` beside a link to the library it loads. The
+# gates run the package's tests and checks from the source tree, without
+# building or installing the package.
+
+[project]
+name = "eranos"
+version = "0.5.0"
+description = "Split and settle shared expenses: the eranos library for Python"
+requires-python = ">=3.14"
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/cristiancristea00/eranos"
+
+[dependency-groups]
+dev = [
+    "coverage",
+    "pytest",
+    "ruff",
+    "sphinx",
+    "ty",
+]
+
+[tool.uv]
+package = false
+# A system Python 3.14, such as Homebrew's, before one uv installed itself,
+# which may be a free-threaded build.
+python-preference = "system"
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+# The generated module is read for its types, but not checked: its code keeps to no checker.
+exclude = ["src/eranos/_internal/eranos.py"]
+
+[tool.ty.rules]
+all = "error"
+
+[tool.pytest]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = ["--strict-config", "--strict-markers", "--import-mode=importlib"]
+filterwarnings = ["error"]
+xfail_strict = true
+
+[tool.coverage.run]
+branch = true
+source = ["src/eranos"]
+omit = ["src/eranos/_internal/*"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+# An exhaustive match ends in assert_never, which no value reaches.
+exclude_also = ["assert_never\\("]
