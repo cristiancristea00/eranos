@@ -569,7 +569,7 @@ fn install_name(library: &str) -> Vec<Step> {
 /// No step: elsewhere, what links a library records the file name alone,
 /// which the run path finds.
 #[cfg(not(target_os = "macos"))]
-fn install_name(_library: &str) -> Vec<Step> {
+const fn install_name(_library: &str) -> Vec<Step> {
     Vec::new()
 }
 
