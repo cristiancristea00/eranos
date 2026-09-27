@@ -550,5 +550,101 @@ pub(crate) fn checks(package: Package, llvm: &str) -> Vec<Action> {
     ]
 }
 
+/// The step that names the shared library at `library` by the run path, so
+/// an app that links it finds it through its own: macOS records the name a
+/// library gives itself, which cargo makes the path it built it at.
+#[cfg(target_os = "macos")]
+fn install_name(library: &str) -> Vec<Step> {
+    vec![Step::new(
+        &[
+            "-id",
+            &format!("@rpath/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}"),
+            library,
+        ],
+        "the shared library's name",
+        "install_name_tool",
+    )]
+}
+
+/// No step: elsewhere, what links a library records the file name alone,
+/// which the run path finds.
+#[cfg(not(target_os = "macos"))]
+fn install_name(_library: &str) -> Vec<Step> {
+    Vec::new()
+}
+
+/// The actions that build the C and C++ bundle an app consumes into its
+/// directory of the packages, cleared first: eranos-capi's static and shared
+/// libraries in release, in `lib`, and each package's hand-written headers
+/// and the headers Diplomat generates beneath them, in `c` and `cpp`, laid
+/// out as the package lays them, so an app builds with the flags the tests
+/// build with.
+#[must_use]
+pub(crate) fn release(metadata: &Metadata) -> Vec<Action> {
+    let packaged = crate::gates::packaged(metadata, "c");
+    let bundle = packaged.to_string_lossy().into_owned();
+    let libraries = format!("{bundle}/lib");
+    let release = format!("{}/release", metadata.target_directory);
+    let mut actions = vec![
+        Action::clear(Phase::Package, packaged),
+        Action::run(
+            Phase::Package,
+            Step::cargo(
+                &["build", "--release", "--package", "eranos-capi"],
+                "the libraries of eranos-capi, in release",
+            ),
+        ),
+        Action::run(
+            Phase::Package,
+            Step::new(&["-p", &libraries], "the libraries' directory", "mkdir"),
+        ),
+        Action::run(
+            Phase::Package,
+            Step::new(
+                &[
+                    &format!("{release}/liberanos_capi.a"),
+                    &format!("{release}/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}"),
+                    &libraries,
+                ],
+                "the libraries of eranos-capi",
+                "cp",
+            ),
+        ),
+    ];
+    actions.extend(Action::runs(
+        Phase::Package,
+        install_name(&format!("{libraries}/{DLL_PREFIX}eranos_capi{DLL_SUFFIX}")),
+    ));
+    for package in [C_PACKAGE, CPP_PACKAGE] {
+        let destination = format!("{bundle}/{}", package.language);
+        actions.push(Action::clear(
+            Phase::Package,
+            directory(package, "generated"),
+        ));
+        actions.push(Action::run(Phase::Package, headers(package)));
+        actions.extend(Action::runs(
+            Phase::Package,
+            vec![
+                Step::new(
+                    &["-p", &destination],
+                    &format!("the {} headers' directory", package.name),
+                    "mkdir",
+                ),
+                Step::new(
+                    &[
+                        "-R",
+                        &format!("{}/include", package.directory),
+                        &format!("{}/generated", package.directory),
+                        &destination,
+                    ],
+                    &format!("the {} headers", package.name),
+                    "cp",
+                ),
+            ],
+        ));
+    }
+    actions
+}
+
 #[cfg(test)]
 mod tests;

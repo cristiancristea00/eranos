@@ -17,11 +17,29 @@ Repository = "https://github.com/cristiancristea00/eranos"
 [dependency-groups]
 dev = [
     "coverage",
+    "maturin",
     "pytest",
     "ruff",
     "sphinx",
     "ty",
 ]
+
+[build-system]
+requires = ["maturin>=1.15,<2"]
+build-backend = "maturin"
+
+[tool.maturin]
+# The wheel of `cargo xtask package python`: the layer beside the module that
+# UniFFI's generator writes from eranos-uniffi's release library, which
+# maturin runs through the workspace's `uniffi-bindgen`, and the library
+# itself, in `eranos._internal`. maturin writes that directory whole, its
+# `__init__.py` included, so none of what the source tree holds there goes
+# in: the gates' module and the link to the debug library among it.
+bindings = "uniffi"
+manifest-path = "../../crates/eranos-uniffi/Cargo.toml"
+module-name = "eranos._internal"
+python-source = "src"
+exclude = ["src/eranos/_internal/*", "**/__pycache__/**"]
 
 [tool.uv]
 package = false

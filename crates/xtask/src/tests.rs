@@ -405,9 +405,10 @@ fn generate_writes_the_bridge_and_lays_it_out() {
 
 /// Each command line runs the command it names, with the languages and the
 /// example it names: `gates --rust` the Rust part, `test`, `lint`, and
-/// `format` their language's part, `examples` its example's ports in the
-/// languages it names, and `doctor` the check of every tool; a line that ran
-/// another would check what nobody asked for.
+/// `format` their language's part, `package` its release packages,
+/// `examples` its example's ports in the languages it names, and `doctor` the
+/// check of every tool; a line that ran another would check what nobody
+/// asked for.
 #[test]
 fn every_command_line_runs_what_it_names() {
     let from_line = |line: &[&str]| {
@@ -435,6 +436,10 @@ fn every_command_line_runs_what_it_names() {
     assert_eq!(
         from_line(&["format", "rust"]),
         from_call(&|recorder| commands::format(recorder, &[Language::Rust]))
+    );
+    assert_eq!(
+        from_line(&["package", "c"]),
+        from_call(&|recorder| commands::package(recorder, &[Language::Capi]))
     );
     assert_eq!(
         from_line(&["examples"]),
@@ -470,6 +475,7 @@ fn every_command_line_runs_what_it_names() {
         &["format", "typescript"],
         &["examples", "--language", "rust"],
         &["examples", "quickstart", "--language", "rust"],
+        &["package", "rust"],
     ] {
         let mut refused = Recorder::new();
         let failure = run(&words(line), &mut refused).unwrap_err();
@@ -517,7 +523,8 @@ fn a_usage_error_lists_every_command() {
     let message = Failure::Usage.to_string();
     assert!(message.starts_with("unknown command\n\nusage: cargo xtask <command>"));
     for command in [
-        "coverage", "examples", "format", "gates", "generate", "help", "lint", "test",
+        "coverage", "doctor", "examples", "format", "gates", "generate", "help", "lint", "package",
+        "test",
     ] {
         assert!(message.contains(&format!("\n  {command} ")), "{command}");
     }

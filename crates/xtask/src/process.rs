@@ -11,6 +11,37 @@ use crate::Failure;
 /// under it, whatever directory `cargo xtask` was started from.
 pub(crate) const WORKSPACE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
+/// A profile cargo builds in: the debug builds the gates check, or the
+/// release builds of the packages an app consumes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Profile {
+    /// The dev profile, whose builds go into `debug`.
+    Debug,
+    /// The release profile, whose builds go into `release`.
+    Release,
+}
+
+impl Profile {
+    /// The directory of cargo's target directory, or of a target's, that
+    /// its builds go into.
+    #[must_use]
+    pub(crate) const fn directory(self) -> &'static str {
+        match self {
+            Self::Debug => "debug",
+            Self::Release => "release",
+        }
+    }
+
+    /// The arguments of `cargo build` that build in it.
+    #[must_use]
+    pub(crate) const fn arguments(self) -> &'static [&'static str] {
+        match self {
+            Self::Debug => &[],
+            Self::Release => &["--release"],
+        }
+    }
+}
+
 /// A program a gate runs, with its arguments and the environment it needs.
 ///
 /// A path a step names is written with `/`, which the programs of every host

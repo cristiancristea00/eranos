@@ -725,7 +725,8 @@ Python package over the first library, each report compared with its
 example's.
 
 `cargo xtask test`, `lint`, and `examples` run one language's part of this,
-and `format` its formatters
+`format` its formatters, and `package` builds its release packages, which
+an app consumes, into `target/packages`
 ([DEVELOPMENT.md § 2](DEVELOPMENT.md#2-building-and-testing)).
 
 `cargo xtask coverage` builds eranos-uniffi and eranos-capi with the Rust

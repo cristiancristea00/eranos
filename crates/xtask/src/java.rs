@@ -8,7 +8,7 @@ use crate::Failure;
 use crate::gates::Metadata;
 use crate::jvm::{self, Jvm};
 use crate::plan::{Action, Phase};
-use crate::process::{self, Runner, Step, WORKSPACE};
+use crate::process::{self, Profile, Runner, Step, WORKSPACE};
 
 /// The Java project, from the workspace root.
 const PROJECT: &str = "bindings/java";
@@ -154,6 +154,48 @@ pub(crate) fn formats() -> Vec<Action> {
             .in_directory(PROJECT),
         ),
     ]
+}
+
+/// The actions that build the Java package an app consumes into its
+/// directory of the packages, cleared first: the generated Java, the JAR,
+/// and beside it the host library in release, which the JVM loads from the
+/// directory `java.library.path` names.
+///
+/// # Errors
+///
+/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
+pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
+    if let Some(name) = VARIABLES
+        .into_iter()
+        .find(|name| runner.variable(name).is_none())
+    {
+        return Err(Failure::Variable(name));
+    }
+    let packaged = crate::gates::packaged(metadata, "java");
+    let package = packaged.to_string_lossy().into_owned();
+    let mut actions = vec![
+        Action::clear(Phase::Package, packaged),
+        Action::clear(Phase::Package, generated_sources()),
+    ];
+    actions.extend(Action::runs(Phase::Package, sources(metadata)));
+    actions.extend(Action::runs(
+        Phase::Package,
+        vec![
+            gradle(metadata, &["jar"], "the Java package"),
+            crate::gates::release_host_library(),
+            Step::new(&["-p", &package], "the Java package's directory", "mkdir"),
+            Step::new(
+                &[
+                    &format!("{PROJECT}/build/libs/eranos.jar"),
+                    &crate::gates::host_library_file(metadata, Profile::Release),
+                    &package,
+                ],
+                "the Java package",
+                "cp",
+            ),
+        ],
+    ));
+    Ok(actions)
 }
 
 #[cfg(test)]

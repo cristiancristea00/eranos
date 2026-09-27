@@ -68,6 +68,7 @@ cargo xtask test python                          # one language's tests, after b
 cargo xtask lint c                               # one language's format checks and linters, likewise
 cargo xtask format all                           # every language's formatters, applied
 cargo xtask examples grand_tour --language web   # one example and its ports in one language, compared
+cargo xtask package python                       # one language's release packages, into target/packages/<language>
 cargo xtask generate                             # the C glue's bridge, from the binding core
 cargo build -p eranos                            # the library
 cargo build -p eranos --features serde           # with serialisation
@@ -90,8 +91,26 @@ linters; `format` runs its formatters alone, which the gates never run.
 with a language but `rust`; it runs each example, each language's actions
 that build its package, then the ports as the ports gate does, reading
 only the variables and building only the libraries those languages need.
-The alias lives in `.cargo/config.toml`, and the automation in
-`crates/xtask`. A change to a
+`package` takes the same languages as `examples` and builds, in release,
+the packages an app consumes, each into `target/packages/<language>`,
+cleared first, after the host library and its sources where the package
+reads them:
+
+| Language | What `target/packages/<language>` holds                                                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `swift`  | a copy of the Swift package over an `XCFramework` of the library for every Apple target, which an app adds as a local package                                                                    |
+| `kotlin` | both Android libraries, their ABIs' libraries inside, and the JVM's JARs beside the host library, which JNA loads from the directory `jna.library.path` names                                    |
+| `java`   | the JAR beside the host library, which the JVM loads from the directory `java.library.path` names                                                                                                |
+| `kmp`    | the Kotlin Multiplatform package's Android libraries and JVM JARs beside eranos-kmp's host library; an Apple target's layer reaches an app through a publication, which the packages do not make |
+| `web`    | the npm package's tarball, which `npm install` takes                                                                                                                                             |
+| `c`      | `lib`, the static and the shared library, the latter named by the run path on macOS, and `c` and `cpp`, each package's `include` and `generated`, which an app builds with as the tests do       |
+| `python` | the wheel for the host, which maturin builds from `pyproject.toml` and `pip install` takes                                                                                                       |
+
+The release builds of every target take about 10 GB of disk beside the
+gates' builds: about 0.4 GB for each Apple target, 0.6 GB for each Android
+ABI, with Kotlin's and Kotlin Multiplatform's libraries, 2.4 GB for the
+host's, and 0.2 GB for WebAssembly. The alias lives in
+`.cargo/config.toml`, and the automation in `crates/xtask`. A change to a
 record or a call of the binding core needs `cargo xtask generate` too,
 which writes the C glue's bridge from them
 ([BINDINGS.md § 8](BINDINGS.md#8-the-glue-crates)); until it runs, a test of

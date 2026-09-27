@@ -296,8 +296,9 @@ fn an_unknown_example_or_language_names_the_known_ones() {
 /// A command for the Swift package on a machine that cannot build it would
 /// pass having run nothing, and one that read a package's variable late
 /// would fail after minutes of steps: the Swift package alone is refused
-/// there, before anything runs, and a missing variable stops a command
-/// before any of its package's actions, after cargo's metadata alone.
+/// there by every command, before anything runs, and a missing variable
+/// stops a command before any of its package's actions, after cargo's
+/// metadata alone.
 #[test]
 fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
     let mut elsewhere = Recorder::new();
@@ -308,6 +309,10 @@ fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
     ));
     assert!(matches!(
         format(&mut elsewhere, &[Language::Swift]),
+        Err(Failure::Apple)
+    ));
+    assert!(matches!(
+        package(&mut elsewhere, &[Language::Swift]),
         Err(Failure::Apple)
     ));
     assert!(elsewhere.steps.is_empty());
@@ -335,8 +340,9 @@ fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
 
 /// A command that went on after a step failed would report a pass, or run a
 /// package's checks on what was not built: the metadata that could not be
-/// printed or read, a failing test, a failing example, and a failing action
-/// that builds a package each stop the command there.
+/// printed or read, a failing test, a failing example, a failing action
+/// that builds a package, and a failing release build each stop the command
+/// there.
 #[test]
 fn a_failure_stops_a_command_where_it_happens() {
     let metadata = metadata();
@@ -349,11 +355,15 @@ fn a_failure_stops_a_command_where_it_happens() {
     let python = |recorder: &mut Recorder| test(recorder, &[Language::Python]);
     let example =
         |recorder: &mut Recorder| examples(recorder, Some("quickstart"), &[Language::Python]);
-    let runs: [(Step, &Command); 4] = [
+    let packaged = |recorder: &mut Recorder| package(recorder, &[Language::Python]);
+    let wheel = plan::steps(&python::release(&metadata))[0].clone();
+    let runs: [(Step, &Command); 6] = [
         (gates::metadata(), &python),
         (tests, &python),
         (quickstart, &example),
         (python::module(&metadata), &example),
+        (gates::metadata(), &packaged),
+        (wheel, &packaged),
     ];
     for (failing, run) in runs {
         let mut recorder = Recorder::new();
@@ -364,12 +374,14 @@ fn a_failure_stops_a_command_where_it_happens() {
         );
         assert_eq!(recorder.steps.last(), Some(&failing));
     }
-    let mut unreadable = Recorder::new();
-    unreadable.metadata = String::new();
-    assert!(matches!(
-        lint(&mut unreadable, &[Language::Rust]),
-        Err(Failure::Metadata(_))
-    ));
+    for command in [lint, package] {
+        let mut unreadable = Recorder::new();
+        unreadable.metadata = String::new();
+        assert!(matches!(
+            command(&mut unreadable, &[Language::Rust]),
+            Err(Failure::Metadata(_))
+        ));
+    }
 }
 
 /// A package's command that ran without the variable its gates read would
@@ -400,5 +412,176 @@ fn every_package_s_variable_stops_its_command_before_it_builds() {
             matches!(failure, Err(Failure::Variable(name)) if missing == name),
             "{language} {failure:?}"
         );
+    }
+}
+
+/// A package built before what it reads, or in another profile, would ship
+/// an app a stale or an unoptimised library: `package python` builds the
+/// host library and its sources, then the wheel in release into its
+/// directory of the packages, cleared first; the workspace's Rust has no
+/// package, and with every language each one's release runs, in the order
+/// of the languages, the Swift package's only where the machine builds for
+/// Apple platforms.
+#[test]
+fn a_language_s_packages_build_in_release_after_what_they_read() {
+    let metadata = metadata();
+    let runner = Recorder::new();
+    let mut recorder = Recorder::new();
+    package(&mut recorder, &[Language::Python]).unwrap();
+    let mut uniffi = vec![gates::metadata(), gates::host_library()];
+    uniffi.extend(gates::generators(&metadata));
+    let mut expected = uniffi.clone();
+    expected.extend(plan::steps(&python::release(&metadata)));
+    assert_eq!(recorder.steps, expected);
+    assert_eq!(
+        recorder.cleared,
+        [
+            gates::generated(&metadata),
+            gates::packaged(&metadata, "python")
+        ]
+    );
+    let mut rust = Recorder::new();
+    package(&mut rust, &[Language::Rust]).unwrap();
+    assert_eq!(rust.steps, [gates::metadata()]);
+    for apple in [true, false] {
+        let mut every = Recorder::new();
+        every.apple = apple;
+        package(&mut every, &ports::LANGUAGES).unwrap();
+        let mut releases = uniffi.clone();
+        for release in [
+            capi::release(&metadata),
+            java::release(&runner, &metadata).unwrap(),
+            kmp::release(&runner, &metadata).unwrap(),
+            kotlin::release(&runner, &metadata).unwrap(),
+            python::release(&metadata),
+        ] {
+            releases.extend(plan::steps(&release));
+        }
+        if apple {
+            releases.extend(plan::steps(&swift::release(&metadata)));
+        }
+        releases.extend(plan::steps(&web::release(&metadata)));
+        assert_eq!(every.steps, releases, "{apple}");
+    }
+}
+
+/// A package that built another crate, in another profile, or into another
+/// directory would leave an app nothing to take, or the gates' debug build:
+/// each builds its library in release and puts what an app takes into its
+/// directory of the packages.
+#[test]
+fn every_package_is_built_in_release_where_an_app_takes_it() {
+    let metadata = metadata();
+    let runner = Recorder::new();
+    assert_eq!(
+        lines(&python::release(&metadata)),
+        [
+            "cd bindings/python && uv run --locked maturin build --release --out /eranos/target/packages/python"
+        ]
+    );
+    assert_eq!(
+        lines(&web::release(&metadata)),
+        [
+            "rustup target add wasm32-unknown-unknown",
+            "cargo build --release --package eranos-web --target wasm32-unknown-unknown --lib",
+            "cd bindings/typescript && npm ci",
+            "cd bindings/typescript && uniffi-bindgen-react-native build wasm2 --config ubrn.config.yaml --no-wasm-build --release",
+            "cd bindings/typescript && npm run build",
+            "mkdir -p /eranos/target/packages/web",
+            "cd bindings/typescript && npm pack --pack-destination /eranos/target/packages/web",
+        ]
+    );
+    let expected = [
+        (
+            capi::release(&metadata),
+            [
+                "cargo build --release --package eranos-capi",
+                "cp -R bindings/c/include bindings/c/generated /eranos/target/packages/c/c",
+                "cp -R bindings/cpp/include bindings/cpp/generated /eranos/target/packages/c/cpp",
+            ]
+            .as_slice(),
+        ),
+        (
+            java::release(&runner, &metadata).unwrap(),
+            &[
+                "cd bindings/java && sh gradlew --warning-mode=fail -Peranos.library=/eranos/target/debug jar",
+                "cargo build --release --package eranos-uniffi",
+            ],
+        ),
+        (
+            kmp::release(&runner, &metadata).unwrap(),
+            &[
+                "cd bindings/kmp && JAVA_HOME='/JAVA_HOME_21' sh gradlew --warning-mode=fail :generated:assembleRelease :eranos:assembleRelease :generated:jvmJar :eranos:jvmJar",
+                "cargo build --release --package eranos-kmp",
+            ],
+        ),
+        (
+            kotlin::release(&runner, &metadata).unwrap(),
+            &[
+                "cargo ndk --platform 26 --target arm64-v8a --target armeabi-v7a --target x86 --target x86_64 --output-dir bindings/kotlin/generated-android/src/main/jniLibs build --package eranos-uniffi --lib --release",
+                "cd bindings/kotlin && sh gradlew --warning-mode=fail -Peranos.library=/eranos/target/debug :generated-android:assembleRelease :eranos-android:assembleRelease :generated:jar :eranos:jar",
+                "cargo build --release --package eranos-uniffi",
+            ],
+        ),
+        (
+            swift::release(&metadata),
+            &[
+                "cp -R bindings/swift/Package.swift bindings/swift/Package.resolved bindings/swift/Sources bindings/swift/Tests /eranos/target/packages/swift",
+                "cp /eranos/target/uniffi/swift/EranosGenerated.swift /eranos/target/packages/swift/Sources/EranosGenerated",
+            ],
+        ),
+    ];
+    for (release, found) in expected {
+        let written = lines(&release);
+        for line in found {
+            assert!(written.iter().any(|written| line == written), "{line}");
+        }
+    }
+    let swift = lines(&swift::release(&metadata));
+    assert!(swift[1].starts_with("cargo build --package eranos-uniffi --lib --release --target "));
+    assert!(swift.iter().any(|line| line.starts_with(
+        "xcodebuild -create-xcframework -library /eranos/target/aarch64-apple-ios/release/"
+    )
+        && line.ends_with(" -output /eranos/target/packages/swift/EranosFFI.xcframework")));
+    for (language, release) in [
+        ("c", capi::release(&metadata)),
+        ("java", java::release(&runner, &metadata).unwrap()),
+        ("kmp", kmp::release(&runner, &metadata).unwrap()),
+        ("kotlin", kotlin::release(&runner, &metadata).unwrap()),
+        ("python", python::release(&metadata)),
+        ("swift", swift::release(&metadata)),
+        ("web", web::release(&metadata)),
+    ] {
+        assert!(
+            matches!(&release[0].work, plan::Work::Clear(directory) if gates::packaged(&metadata, language) == *directory),
+            "{language}"
+        );
+        assert!(
+            release.iter().all(|action| Phase::Package == action.phase),
+            "{language}"
+        );
+    }
+}
+
+/// A package of a JVM language built without its JDK or the Android SDK
+/// would fail after the other packages' builds: each stops the command
+/// after cargo's metadata alone, the Kotlin Multiplatform one on either of
+/// its variables.
+#[test]
+fn every_jvm_package_s_variable_stops_the_packages_before_they_build() {
+    for (language, set, missing) in [
+        (Language::Java, &[][..], java::VARIABLES[0]),
+        (Language::Kotlin, &[][..], kotlin::VARIABLES[0]),
+        (Language::Kmp, &[][..], kmp::VARIABLES[0]),
+        (Language::Kmp, &[kmp::VARIABLES[0]][..], kmp::VARIABLES[1]),
+    ] {
+        let mut recorder = Recorder::new();
+        recorder.variables = set.to_vec();
+        let failure = package(&mut recorder, &[language]);
+        assert!(
+            matches!(failure, Err(Failure::Variable(name)) if missing == name),
+            "{language} {failure:?}"
+        );
+        assert_eq!(recorder.steps, [gates::metadata()], "{language}");
     }
 }

@@ -5,7 +5,8 @@
 //! and stops at the first that fails, and with `--rust` only the Rust part;
 //! `cargo xtask test`, `lint`, and `format` run one language's tests, format
 //! checks and linters, or formatters, and `cargo xtask examples` the ports of
-//! the examples; `cargo xtask doctor` prints the version of every tool the
+//! the examples; `cargo xtask package` builds the release packages an app
+//! consumes; `cargo xtask doctor` prints the version of every tool the
 //! gates run and how to install one that is missing; `cargo xtask coverage` measures the Rust tests and the
 //! binding glue, which the foreign tests run, in one report; `cargo xtask
 //! generate` writes the C glue's bridge from the binding core's records and
@@ -52,9 +53,11 @@ commands:
   generate                          write the C glue's bridge from the binding core's records and calls
   help                              print this message
   lint <language>                   check a language's format and run its linters, after building what they read
+  package <language>                build a language's release packages, which an app consumes, into target/packages
   test <language>                   run a language's tests, after building what they read
 
-languages: c (the C and C++ packages), java, kmp, kotlin, python, rust, swift, web, or all; examples take every one but rust";
+languages: c (the C and C++ packages), java, kmp, kotlin, python, rust, swift, web, or all; examples and package take every
+one but rust";
 
 /// Why a command of xtask failed.
 #[derive(Debug, thiserror::Error)]
@@ -215,6 +218,7 @@ fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
             println!("{USAGE}");
             Ok(())
         }
+        ["package", language] => commands::package(runner, &commands::languages(language, &every)?),
         ["lint", language] => {
             commands::lint(runner, &commands::languages(language, &Language::ALL)?)
         }

@@ -87,6 +87,37 @@ pub(crate) fn format(runner: &mut impl Runner, languages: &[Language]) -> Result
     plan::execute(runner, formats, &|_| true)
 }
 
+/// Builds the release packages of `languages` that an app consumes, each
+/// into its directory under `packages` in cargo's target directory, after
+/// the host library of eranos-uniffi and the sources generated from it when
+/// a package over it is among them; the workspace's Rust has no package of
+/// its own.
+///
+/// # Errors
+///
+/// As [`prepared`] fails, and the failure of the first action that fails.
+pub(crate) fn package(runner: &mut impl Runner, languages: &[Language]) -> Result<(), Failure> {
+    let languages = runnable(runner, languages)?;
+    let metadata = Metadata::parse(&runner.output(&gates::metadata())?)?;
+    let mut releases = vec![uniffi(&metadata, &languages)];
+    for language in languages {
+        releases.push(match language {
+            Language::Capi => capi::release(&metadata),
+            Language::Java => java::release(runner, &metadata)?,
+            Language::Kmp => kmp::release(runner, &metadata)?,
+            Language::Kotlin => kotlin::release(runner, &metadata)?,
+            Language::Python => python::release(&metadata),
+            Language::Rust => Vec::new(),
+            Language::Swift => swift::release(&metadata),
+            Language::Web => web::release(&metadata),
+        });
+    }
+    for actions in releases {
+        plan::execute(runner, actions, &|_| true)?;
+    }
+    Ok(())
+}
+
 /// Runs the example of eranos called `example`, or every one, and its ports
 /// in each of `languages`, each language's package built first, comparing
 /// every port's report with its example's byte for byte, as the gates do.
@@ -169,15 +200,7 @@ fn prepared(
 ) -> Result<(Metadata, Vec<Vec<Action>>), Failure> {
     let languages = runnable(runner, languages)?;
     let metadata = Metadata::parse(&runner.output(&gates::metadata())?)?;
-    let mut prepared = Vec::new();
-    if languages.iter().any(|language| language.reads_uniffi()) {
-        let mut uniffi = vec![
-            Action::run(Phase::Prepare, gates::host_library()),
-            Action::clear(Phase::Prepare, gates::generated(&metadata)),
-        ];
-        uniffi.extend(Action::runs(Phase::Prepare, gates::generators(&metadata)));
-        prepared.push(uniffi);
-    }
+    let mut prepared = vec![uniffi(&metadata, &languages)];
     for language in languages {
         prepared.push(match language {
             Language::Capi => capi::actions(runner, &metadata)?,
@@ -191,6 +214,22 @@ fn prepared(
         });
     }
     Ok((metadata, prepared))
+}
+
+/// The actions that build the host library of eranos-uniffi and generate
+/// the sources from it into a cleared directory, when a package over it is
+/// among `languages`, and none otherwise: a release library's sources are
+/// its debug library's, since both have one interface.
+fn uniffi(metadata: &Metadata, languages: &[Language]) -> Vec<Action> {
+    if !languages.iter().any(|language| language.reads_uniffi()) {
+        return Vec::new();
+    }
+    let mut actions = vec![
+        Action::run(Phase::Prepare, gates::host_library()),
+        Action::clear(Phase::Prepare, gates::generated(metadata)),
+    ];
+    actions.extend(Action::runs(Phase::Prepare, gates::generators(metadata)));
+    actions
 }
 
 /// The languages of `languages` whose packages the machine builds: the

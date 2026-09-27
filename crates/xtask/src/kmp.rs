@@ -5,6 +5,8 @@
 //! package's gates lint, document, and measure the layer's sources and the
 //! ports', which this package compiles unchanged.
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
+
 use crate::Failure;
 use crate::gates::Metadata;
 use crate::jvm::{self, Jvm};
@@ -138,6 +140,75 @@ pub(crate) fn formats() -> Vec<Action> {
         )
         .in_directory(PROJECT),
     )]
+}
+
+/// The actions that build the Kotlin Multiplatform packages an app consumes
+/// into their directory of the packages, cleared first: gobley's release
+/// libraries of the Android ABIs in both Android libraries in release, and
+/// the JVM's JARs beside eranos-kmp's host library in release, which JNA
+/// loads from the directory `jna.library.path` names; gobley's own JAR of
+/// the host library is its debug one. An Apple target's layer reaches an app
+/// through a publication, which the packages leave to the app's build.
+///
+/// # Errors
+///
+/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
+pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
+    let [sdk, jdk] = VARIABLES.map(|name| runner.variable(name).ok_or(Failure::Variable(name)));
+    // Gradle finds the Android SDK through the environment the packages build in.
+    sdk?;
+    let jdk = jdk?;
+    let packaged = crate::gates::packaged(metadata, "kmp");
+    let package = packaged.to_string_lossy().into_owned();
+    Ok(vec![
+        Action::clear(Phase::Package, packaged),
+        Action::run(
+            Phase::Package,
+            gradle(
+                &jdk,
+                &[
+                    ":generated:assembleRelease",
+                    ":eranos:assembleRelease",
+                    ":generated:jvmJar",
+                    ":eranos:jvmJar",
+                ],
+                "the Kotlin Multiplatform packages",
+            ),
+        ),
+        Action::run(
+            Phase::Package,
+            Step::cargo(
+                &["build", "--release", "--package", "eranos-kmp"],
+                "the host library of eranos-kmp, in release",
+            ),
+        ),
+        Action::run(
+            Phase::Package,
+            Step::new(
+                &["-p", &package],
+                "the Kotlin Multiplatform packages' directory",
+                "mkdir",
+            ),
+        ),
+        Action::run(
+            Phase::Package,
+            Step::new(
+                &[
+                    &format!("{PROJECT}/generated/build/outputs/aar/generated-release.aar"),
+                    &format!("{PROJECT}/eranos/build/outputs/aar/eranos-release.aar"),
+                    &format!("{PROJECT}/generated/build/libs/generated-jvm.jar"),
+                    &format!("{PROJECT}/eranos/build/libs/eranos-jvm.jar"),
+                    &format!(
+                        "{}/release/{DLL_PREFIX}eranos_kmp{DLL_SUFFIX}",
+                        metadata.target_directory
+                    ),
+                    &package,
+                ],
+                "the Kotlin Multiplatform packages",
+                "cp",
+            ),
+        ),
+    ])
 }
 
 #[cfg(test)]

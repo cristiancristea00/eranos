@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use crate::gates::Metadata;
 use crate::plan::{Action, Phase};
-use crate::process::{self, Step, WORKSPACE};
+use crate::process::{self, Profile, Step, WORKSPACE};
 
 /// The Swift package, from the workspace root.
 const PACKAGE: &str = "bindings/swift";
@@ -106,24 +106,31 @@ pub(crate) fn actions(metadata: &Metadata) -> Vec<Action> {
 }
 
 /// Where the gates keep the Apple libraries, their headers, and the build
-/// log, under cargo's target directory. The steps' paths are written with
-/// `/`, which the programs of every host accept, so a step reads alike on
-/// every host.
-fn apple(metadata: &Metadata) -> String {
-    format!("{}/apple", metadata.target_directory)
+/// log, under cargo's target directory, and where the packages keep those of
+/// the release libraries. The steps' paths are written with `/`, which the
+/// programs of every host accept, so a step reads alike on every host.
+fn apple(metadata: &Metadata, profile: Profile) -> String {
+    match profile {
+        Profile::Debug => format!("{}/apple", metadata.target_directory),
+        Profile::Release => format!("{}/apple-release", metadata.target_directory),
+    }
 }
 
-/// The static library cargo builds for `target`.
-fn target_library(metadata: &Metadata, target: &str) -> String {
-    format!("{}/{target}/debug/{LIBRARY}", metadata.target_directory)
+/// The static library cargo builds for `target` in `profile`.
+fn target_library(metadata: &Metadata, target: &str, profile: Profile) -> String {
+    format!(
+        "{}/{target}/{}/{LIBRARY}",
+        metadata.target_directory,
+        profile.directory()
+    )
 }
 
-/// The library of the `XCFramework` for `library`: the one target's own, or
-/// the one `lipo` joins from two.
-fn joined_library(metadata: &Metadata, library: &AppleLibrary) -> String {
+/// The library of the `XCFramework` for `library` in `profile`: the one
+/// target's own, or the one `lipo` joins from two.
+fn joined_library(metadata: &Metadata, library: &AppleLibrary, profile: Profile) -> String {
     match library.targets {
-        [target] => target_library(metadata, target),
-        _ => format!("{}/{}/{LIBRARY}", apple(metadata), library.name),
+        [target] => target_library(metadata, target, profile),
+        _ => format!("{}/{}/{LIBRARY}", apple(metadata, profile), library.name),
     }
 }
 
@@ -132,6 +139,11 @@ fn joined_library(metadata: &Metadata, library: &AppleLibrary) -> String {
 /// the generated Swift imports.
 #[must_use]
 pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
+    libraries_in(metadata, Profile::Debug)
+}
+
+/// The steps of [`libraries`] in `profile`.
+fn libraries_in(metadata: &Metadata, profile: Profile) -> Vec<Step> {
     let targets: Vec<&str> = APPLE_LIBRARIES
         .iter()
         .flat_map(|library| library.targets.iter().copied())
@@ -139,6 +151,7 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
     let mut add = vec!["target", "add"];
     add.extend(&targets);
     let mut build = vec!["build", "--package", "eranos-uniffi", "--lib"];
+    build.extend(profile.arguments());
     for target in &targets {
         build.extend(["--target", target]);
     }
@@ -150,15 +163,18 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
         .iter()
         .filter(|library| 1 < library.targets.len())
     {
-        let directory = format!("{}/{}", apple(metadata), library.name);
+        let directory = format!("{}/{}", apple(metadata, profile), library.name);
         let mut lipo = vec!["-create".to_owned()];
         lipo.extend(
             library
                 .targets
                 .iter()
-                .map(|target| target_library(metadata, target)),
+                .map(|target| target_library(metadata, target, profile)),
         );
-        lipo.extend(["-output".to_owned(), joined_library(metadata, library)]);
+        lipo.extend([
+            "-output".to_owned(),
+            joined_library(metadata, library, profile),
+        ]);
         let lipo: Vec<&str> = lipo.iter().map(String::as_str).collect();
         steps.push(Step::new(
             &["-p", &directory],
@@ -172,7 +188,7 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
         ));
     }
     let generated = format!("{}/uniffi/swift", metadata.target_directory);
-    let headers = format!("{}/headers", apple(metadata));
+    let headers = format!("{}/headers", apple(metadata, profile));
     let copy = |from: &str, to: &str, name: &str| {
         Step::new(
             &[&format!("{generated}/{from}"), &format!("{headers}/{to}")],
@@ -203,23 +219,13 @@ pub(crate) fn libraries(metadata: &Metadata) -> Vec<Step> {
 /// of its examples, so that the analyzer's log names every file.
 #[must_use]
 pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
-    let headers = format!("{}/headers", apple(metadata));
-    let libraries: Vec<String> = APPLE_LIBRARIES
-        .iter()
-        .map(|library| joined_library(metadata, library))
-        .collect();
-    let mut framework = vec!["-create-xcframework"];
-    for library in &libraries {
-        framework.extend(["-library", library, "-headers", &headers]);
-    }
     let output = format!("{PACKAGE}/EranosFFI.xcframework");
-    framework.extend(["-output", &output]);
     let sources = format!("{PACKAGE}/Sources/EranosGenerated");
     let generated = format!(
         "{}/uniffi/swift/EranosGenerated.swift",
         metadata.target_directory
     );
-    let mut steps = vec![Step::new(&framework, "the XCFramework", "xcodebuild")];
+    let mut steps = vec![framework(metadata, Profile::Debug, &output)];
     steps.extend(process::generated_copy(
         "Swift",
         &generated,
@@ -240,6 +246,72 @@ pub(crate) fn package(metadata: &Metadata) -> Vec<Step> {
         ),
     ]);
     steps
+}
+
+/// The step that makes the `XCFramework` at `output` of every library in
+/// `profile`, with the headers the generated Swift imports.
+fn framework(metadata: &Metadata, profile: Profile, output: &str) -> Step {
+    let headers = format!("{}/headers", apple(metadata, profile));
+    let libraries: Vec<String> = APPLE_LIBRARIES
+        .iter()
+        .map(|library| joined_library(metadata, library, profile))
+        .collect();
+    let mut arguments = vec!["-create-xcframework"];
+    for library in &libraries {
+        arguments.extend(["-library", library, "-headers", &headers]);
+    }
+    arguments.extend(["-output", output]);
+    Step::new(&arguments, "the XCFramework", "xcodebuild")
+}
+
+/// The actions that build the Swift package an app consumes into its
+/// directory of the packages, cleared first: the static library of every Apple target in
+/// release, joined and gathered as the gates do, their `XCFramework`, and a
+/// copy of the package's manifests, sources, tests, and generated Swift
+/// beside it, which an app adds as a local package.
+#[must_use]
+pub(crate) fn release(metadata: &Metadata) -> Vec<Action> {
+    let packaged = crate::gates::packaged(metadata, "swift");
+    let package = packaged.to_string_lossy().into_owned();
+    let framework_path = format!("{package}/EranosFFI.xcframework");
+    let mut actions = vec![Action::clear(Phase::Package, packaged)];
+    actions.extend(Action::runs(
+        Phase::Package,
+        libraries_in(metadata, Profile::Release),
+    ));
+    actions.extend(Action::runs(
+        Phase::Package,
+        vec![
+            Step::new(&["-p", &package], "the Swift package's directory", "mkdir"),
+            framework(metadata, Profile::Release, &framework_path),
+            Step::new(
+                &[
+                    "-R",
+                    &format!("{PACKAGE}/Package.swift"),
+                    &format!("{PACKAGE}/Package.resolved"),
+                    &format!("{PACKAGE}/Sources"),
+                    &format!("{PACKAGE}/Tests"),
+                    &package,
+                ],
+                "the Swift package's sources",
+                "cp",
+            ),
+        ],
+    ));
+    actions.extend(Action::runs(
+        Phase::Package,
+        process::generated_copy(
+            "Swift",
+            &format!(
+                "{}/uniffi/swift/EranosGenerated.swift",
+                metadata.target_directory
+            ),
+            &format!("{package}/Sources/EranosGenerated"),
+            "the generated module's directory",
+            &[],
+        ),
+    ));
+    actions
 }
 
 /// The step that builds the package and its tests, printing every compiler
@@ -275,7 +347,10 @@ pub(crate) fn build_examples() -> Step {
 /// then its examples'.
 #[must_use]
 pub(crate) fn build_log(metadata: &Metadata) -> PathBuf {
-    PathBuf::from(format!("{}/swift-build.log", apple(metadata)))
+    PathBuf::from(format!(
+        "{}/swift-build.log",
+        apple(metadata, Profile::Debug)
+    ))
 }
 
 /// The steps that test the package, lint it, analyze it, and build its
@@ -345,7 +420,7 @@ pub(crate) fn copied_directories(metadata: &Metadata) -> Vec<PathBuf> {
         package.join("Tests"),
         package.join("examples").join("Sources"),
         package.join("EranosFFI.xcframework"),
-        PathBuf::from(format!("{}/headers", apple(metadata))),
+        PathBuf::from(format!("{}/headers", apple(metadata, Profile::Debug))),
     ]
 }
 
@@ -357,7 +432,7 @@ pub(crate) fn copied_directories(metadata: &Metadata) -> Vec<PathBuf> {
 #[must_use]
 pub(crate) fn copy(metadata: &Metadata) -> Vec<Step> {
     let package = copied_package(metadata).to_string_lossy().into_owned();
-    let headers = format!("{}/headers", apple(metadata));
+    let headers = format!("{}/headers", apple(metadata, Profile::Debug));
     let generated = format!("{}/uniffi/swift", metadata.target_directory);
     let sources = format!("{package}/Sources/EranosGenerated");
     let library = format!(

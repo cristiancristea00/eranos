@@ -58,11 +58,7 @@ pub(crate) fn node() -> Step {
 #[must_use]
 pub(crate) fn library() -> Vec<Step> {
     vec![
-        Step::new(
-            &["target", "add", TARGET],
-            "the WebAssembly target",
-            "rustup",
-        ),
+        target(),
         Step::cargo(
             &[
                 "build",
@@ -287,6 +283,72 @@ pub(crate) fn formats() -> Vec<Action> {
             npm("format", "the TypeScript format, applied"),
         ),
     ]
+}
+
+/// The step that adds the WebAssembly target, whose standard library the
+/// builds for it link.
+fn target() -> Step {
+    Step::new(
+        &["target", "add", TARGET],
+        "the WebAssembly target",
+        "rustup",
+    )
+}
+
+/// The actions that build the npm package an app consumes into its
+/// directory of the packages, cleared first: the library for WebAssembly in
+/// release, its TypeScript, generated with the module beside it, the
+/// bundle, and the package's tarball, which `npm install` takes.
+#[must_use]
+pub(crate) fn release(metadata: &Metadata) -> Vec<Action> {
+    let packaged = crate::gates::packaged(metadata, "web");
+    let package = packaged.to_string_lossy().into_owned();
+    let mut actions = vec![
+        Action::clear(Phase::Package, packaged),
+        Action::clear(Phase::Package, generated_sources()),
+        Action::clear(Phase::Package, bundle()),
+    ];
+    actions.extend(Action::runs(
+        Phase::Package,
+        vec![
+            target(),
+            Step::cargo(
+                &[
+                    "build",
+                    "--release",
+                    "--package",
+                    "eranos-web",
+                    "--target",
+                    TARGET,
+                    "--lib",
+                ],
+                "the WebAssembly library, in release",
+            ),
+            install(),
+            Step::new(
+                &[
+                    "build",
+                    "wasm2",
+                    "--config",
+                    "ubrn.config.yaml",
+                    "--no-wasm-build",
+                    "--release",
+                ],
+                "the generated TypeScript, from the release library",
+                "uniffi-bindgen-react-native",
+            )
+            .in_directory(PROJECT),
+            npm("build", "the TypeScript package"),
+            Step::new(&["-p", &package], "the npm package's directory", "mkdir"),
+            Step::new(
+                &["pack", "--pack-destination", &package],
+                "the npm package",
+                "npm",
+            )
+            .in_directory(PROJECT),
+        ],
+    ));
+    actions
 }
 
 #[cfg(test)]

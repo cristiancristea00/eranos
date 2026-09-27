@@ -161,21 +161,23 @@ Kotlin Multiplatform package too
 
 ## Bindings
 
-| Language             | Package               | Runs on                                                                   |
-| -------------------- | --------------------- | ------------------------------------------------------------------------- |
-| Swift                | `bindings/swift`      | iOS, iPadOS, macOS, Mac Catalyst, tvOS, watchOS, and visionOS             |
-| Kotlin               | `bindings/kotlin`     | Android and the JVM                                                       |
-| Java                 | `bindings/java`       | JDK 25 and later                                                          |
-| Kotlin Multiplatform | `bindings/kmp`        | the JVM, Android, and Apple platforms, from one Kotlin source set         |
-| TypeScript           | `bindings/typescript` | browsers, and Node 24 and later                                           |
-| C                    | `bindings/c`          | C23                                                                       |
-| C++                  | `bindings/cpp`        | C++23                                                                     |
-| Python               | `bindings/python`     | Python 3.14 and later                                                     |
+| Language             | Package               | Runs on                                                           |
+| -------------------- | --------------------- | ----------------------------------------------------------------- |
+| Swift                | `bindings/swift`      | iOS, iPadOS, macOS, Mac Catalyst, tvOS, watchOS, and visionOS     |
+| Kotlin               | `bindings/kotlin`     | Android and the JVM                                               |
+| Java                 | `bindings/java`       | JDK 25 and later                                                  |
+| Kotlin Multiplatform | `bindings/kmp`        | the JVM, Android, and Apple platforms, from one Kotlin source set |
+| TypeScript           | `bindings/typescript` | browsers, and Node 24 and later                                   |
+| C                    | `bindings/c`          | C23                                                               |
+| C++                  | `bindings/cpp`        | C++23                                                             |
+| Python               | `bindings/python`     | Python 3.14 and later                                             |
 
 Each package puts a hand-written layer, in its language's own idiom, over
 code generated from the library, and every one prints the library's own
-text for every value; `cargo xtask gates` builds and tests them all. How
-they are built, and each layer's shape: [docs/BINDINGS.md](docs/BINDINGS.md).
+text for every value; `cargo xtask gates` builds and tests them all, and
+`cargo xtask package <language>` builds a language's release packages,
+which an app consumes, into `target/packages`. How they are built, and
+each layer's shape: [docs/BINDINGS.md](docs/BINDINGS.md).
 
 ## Development
 

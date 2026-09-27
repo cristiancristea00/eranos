@@ -212,6 +212,26 @@ pub(crate) fn port(example: &str, sequential: &Metadata) -> Step {
     .in_directory(&copied_package(sequential).to_string_lossy())
 }
 
+/// The actions that build the Python package's wheel for the host into its
+/// directory of the packages, cleared first: maturin builds eranos-uniffi's
+/// library in release, runs the workspace's `uniffi-bindgen` on it, and packs
+/// the layer beside both, as `pyproject.toml` sets it.
+#[must_use]
+pub(crate) fn release(metadata: &Metadata) -> Vec<Action> {
+    let packaged = crate::gates::packaged(metadata, "python");
+    let wheel = packaged.to_string_lossy().into_owned();
+    vec![
+        Action::clear(Phase::Package, packaged),
+        Action::run(
+            Phase::Package,
+            tool(
+                &["maturin", "build", "--release", "--out", &wheel],
+                "the Python wheel",
+            ),
+        ),
+    ]
+}
+
 /// The Python package's formatter, applied: Ruff's, over the layer, its
 /// tests, the examples, and the documentation's settings.
 #[must_use]

@@ -8,7 +8,7 @@ use serde::Deserialize;
 use crate::Failure;
 use crate::plan::{self, Action, Phase};
 use crate::ports::{self, Reference};
-use crate::process::{Runner, Step};
+use crate::process::{Profile, Runner, Step};
 
 /// The part of `cargo metadata`'s JSON the gates read.
 #[derive(Debug, Deserialize)]
@@ -390,6 +390,34 @@ pub(crate) fn host_library() -> Step {
         &["build", "--package", "eranos-uniffi"],
         "the host library of eranos-uniffi",
     )
+}
+
+/// The step that builds eranos-uniffi's library for the host in release,
+/// which the JVM packages ship beside their JARs.
+#[must_use]
+pub(crate) fn release_host_library() -> Step {
+    Step::cargo(
+        &["build", "--release", "--package", "eranos-uniffi"],
+        "the host library of eranos-uniffi, in release",
+    )
+}
+
+/// The file of eranos-uniffi's host library in `metadata`'s target
+/// directory, built in `profile`.
+#[must_use]
+pub(crate) fn host_library_file(metadata: &Metadata, profile: Profile) -> String {
+    format!(
+        "{}/{}/{DLL_PREFIX}eranos_uniffi{DLL_SUFFIX}",
+        metadata.target_directory,
+        profile.directory()
+    )
+}
+
+/// Where the package of `language` goes, a directory each under
+/// `packages` in `metadata`'s target directory.
+#[must_use]
+pub(crate) fn packaged(metadata: &Metadata, language: &str) -> PathBuf {
+    PathBuf::from(format!("{}/packages/{language}", metadata.target_directory))
 }
 
 /// Where the generated sources go, one directory per language, under

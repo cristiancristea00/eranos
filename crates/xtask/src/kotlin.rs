@@ -9,7 +9,7 @@ use crate::Failure;
 use crate::gates::Metadata;
 use crate::jvm::{self, Jvm};
 use crate::plan::{Action, Phase};
-use crate::process::{self, Runner, Step, WORKSPACE};
+use crate::process::{self, Profile, Runner, Step, WORKSPACE};
 
 /// The Kotlin project, from the workspace root.
 const PROJECT: &str = "bindings/kotlin";
@@ -72,6 +72,11 @@ pub(crate) fn actions(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<A
 /// loads it from.
 #[must_use]
 pub(crate) fn libraries() -> Vec<Step> {
+    libraries_in(Profile::Debug)
+}
+
+/// The steps of [`libraries`] in `profile`.
+fn libraries_in(profile: Profile) -> Vec<Step> {
     let mut add = vec!["target", "add"];
     add.extend(ANDROID_TARGETS);
     let jni_libraries = format!("{PROJECT}/generated-android/src/main/jniLibs");
@@ -87,6 +92,7 @@ pub(crate) fn libraries() -> Vec<Step> {
         "eranos-uniffi",
         "--lib",
     ]);
+    build.extend(profile.arguments());
     vec![
         Step::new(&add, "the Android targets", "rustup"),
         Step::cargo(&build, "the library of every Android ABI"),
@@ -227,6 +233,61 @@ pub(crate) fn formats() -> Vec<Action> {
         )
         .in_directory(PROJECT),
     )]
+}
+
+/// The actions that build the Kotlin packages an app consumes into their
+/// directory of the packages, cleared first: the library of every Android
+/// ABI in release, in the generated Android library's `jniLibs`, the
+/// generated Kotlin, both Android libraries in release, and the JVM's JARs
+/// beside the host library in release, which JNA loads from the directory
+/// `jna.library.path` names.
+///
+/// # Errors
+///
+/// [`Failure::Variable`] for a variable of [`VARIABLES`] that is not set.
+pub(crate) fn release(runner: &impl Runner, metadata: &Metadata) -> Result<Vec<Action>, Failure> {
+    if let Some(name) = VARIABLES
+        .into_iter()
+        .find(|name| runner.variable(name).is_none())
+    {
+        return Err(Failure::Variable(name));
+    }
+    let packaged = crate::gates::packaged(metadata, "kotlin");
+    let package = packaged.to_string_lossy().into_owned();
+    let mut actions = vec![Action::clear(Phase::Package, packaged)];
+    actions.extend(Action::runs(Phase::Package, libraries_in(Profile::Release)));
+    actions.push(Action::clear(Phase::Package, generated_sources()));
+    actions.extend(Action::runs(Phase::Package, sources(metadata)));
+    actions.extend(Action::runs(
+        Phase::Package,
+        vec![
+            gradle(
+                metadata,
+                &[
+                    ":generated-android:assembleRelease",
+                    ":eranos-android:assembleRelease",
+                    ":generated:jar",
+                    ":eranos:jar",
+                ],
+                "the Kotlin packages",
+            ),
+            crate::gates::release_host_library(),
+            Step::new(&["-p", &package], "the Kotlin packages' directory", "mkdir"),
+            Step::new(
+                &[
+                    &format!("{PROJECT}/generated-android/build/outputs/aar/generated-android-release.aar"),
+                    &format!("{PROJECT}/eranos-android/build/outputs/aar/eranos-android-release.aar"),
+                    &format!("{PROJECT}/generated/build/libs/generated.jar"),
+                    &format!("{PROJECT}/eranos/build/libs/eranos.jar"),
+                    &crate::gates::host_library_file(metadata, Profile::Release),
+                    &package,
+                ],
+                "the Kotlin packages",
+                "cp",
+            ),
+        ],
+    ));
+    Ok(actions)
 }
 
 #[cfg(test)]
