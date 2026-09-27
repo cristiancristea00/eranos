@@ -366,12 +366,12 @@ jobs:
       # for every target pass 40 GB, more than a runner's disk leaves free.
       CARGO_PROFILE_DEV_DEBUG: "0"
     steps:
-      # The image leaves about 20 of its 72 GB free, and the gates' builds
-      # need more: without this, the disk fills during the gates, and the
-      # runner stops without keeping the job's log. No gate runs any of what
-      # goes: Haskell, .NET, Swift, PowerShell, CodeQL, and the image's
-      # Android NDKs, since both Android builds pin r30, which the SDK step
-      # installs.
+      # The image leaves 14 of its 72 GB free, and the job takes about 16:
+      # without this, the disk fills during the gates, and the runner stops
+      # without keeping the job's log. What goes frees about 22 GB, and no
+      # gate runs any of it: Haskell, .NET, Swift, PowerShell, CodeQL, and
+      # the image's Android NDKs, since both Android builds pin r30, which
+      # the SDK step installs.
       - name: Free the runner's disk
         run: |
           df --human-readable /

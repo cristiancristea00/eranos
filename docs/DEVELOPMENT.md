@@ -725,8 +725,10 @@ binding's toolchain and run every gate. The dispatch's `platform`, `both`
 unless chosen, runs one platform's binding job alone (`-f platform=linux`
 or `-f platform=macos`) and then leaves out the tests on macOS and Windows,
 so a fix to one binding job is checked without the other jobs' minutes.
-When the minutes run out, runs stop until the next month; nothing is
-billed. The plan has no branch protection, so a failing run blocks
+A dispatch with the bindings costs about 300 minutes, 190 of them the macOS
+binding job's, and one for Linux alone about 70, its binding job about 50
+of them. When the minutes run out, runs stop until the next month; nothing
+is billed. The plan has no branch protection, so a failing run blocks
 nothing: it is a report.
 
 - **The coverage page.** The Coverage job uploads `eranos-coverage.html`,
