@@ -5,7 +5,8 @@
 //! and stops at the first that fails, and with `--rust` only the Rust part;
 //! `cargo xtask test`, `lint`, and `format` run one language's tests, format
 //! checks and linters, or formatters, and `cargo xtask examples` the ports of
-//! the examples; `cargo xtask coverage` measures the Rust tests and the
+//! the examples; `cargo xtask doctor` prints the version of every tool the
+//! gates run and how to install one that is missing; `cargo xtask coverage` measures the Rust tests and the
 //! binding glue, which the foreign tests run, in one report; `cargo xtask
 //! generate` writes the C glue's bridge from the binding core's records and
 //! calls; `cargo xtask help` lists the commands.
@@ -14,6 +15,7 @@
 mod capi;
 mod commands;
 mod coverage;
+mod doctor;
 mod gates;
 mod generate;
 mod java;
@@ -41,6 +43,7 @@ const USAGE: &str = "usage: cargo xtask <command>
 
 commands:
   coverage                          measure the Rust tests and the binding glue, which the foreign tests run, in one report
+  doctor                            print every tool the gates run with its version, and how to install a missing one
   examples [<example>] [--language <language>]
                                     run the examples of eranos, or one, and their ports in every language, or one,
                                     comparing each port's report with its example's, after building each package
@@ -91,6 +94,12 @@ enum Failure {
         #[source]
         source: io::Error,
     },
+    /// Tools the gates run are missing, or of another release than the gates
+    /// run on.
+    #[error(
+        "{0} of the tools the gates run are missing or of another release; the lines above say how to install each"
+    )]
+    Doctor(usize),
     /// A command named an example that eranos does not have.
     #[error("eranos has no example {example}; its examples are {known}")]
     Example { example: String, known: String },
@@ -181,6 +190,7 @@ fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
     let every = ports::LANGUAGES;
     match words.as_slice() {
         ["coverage"] => coverage::run(runner),
+        ["doctor"] => doctor::run(runner),
         ["examples"] => commands::examples(runner, None, &every),
         ["examples", "--language", language] => {
             commands::examples(runner, None, &commands::languages(language, &every)?)

@@ -149,6 +149,10 @@ impl Runner for Recorder {
         }
     }
 
+    fn probe(&mut self, step: &Step) -> Option<String> {
+        self.output(step).ok()
+    }
+
     fn clear(&mut self, directory: &Path) -> Result<(), Failure> {
         self.cleared.push(directory.to_owned());
         if Some(FileOperation::Clear) == self.failing_files {
@@ -401,9 +405,9 @@ fn generate_writes_the_bridge_and_lays_it_out() {
 
 /// Each command line runs the command it names, with the languages and the
 /// example it names: `gates --rust` the Rust part, `test`, `lint`, and
-/// `format` their language's part, and `examples` its example's ports in the
-/// languages it names; a line that ran another would check what nobody
-/// asked for.
+/// `format` their language's part, `examples` its example's ports in the
+/// languages it names, and `doctor` the check of every tool; a line that ran
+/// another would check what nobody asked for.
 #[test]
 fn every_command_line_runs_what_it_names() {
     let from_line = |line: &[&str]| {
@@ -448,6 +452,18 @@ fn every_command_line_runs_what_it_names() {
         from_line(&["examples", "persistence", "--language", "web"]),
         from_call(&|recorder| commands::examples(recorder, Some("persistence"), &[Language::Web]))
     );
+    // The recorder's machine lacks the tools only cargo's list names, so the
+    // doctor fails both ways, having checked the same tools.
+    let mut routed = Recorder::new();
+    let mut called = Recorder::new();
+    assert!(matches!(
+        (
+            run(&words(&["doctor"]), &mut routed),
+            doctor::run(&mut called)
+        ),
+        (Err(Failure::Doctor(2)), Err(Failure::Doctor(2)))
+    ));
+    assert_eq!(routed.steps, called.steps);
     for line in [
         &["test", "typescript"][..],
         &["lint", "typescript"],

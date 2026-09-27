@@ -87,6 +87,18 @@ fn output_fails_when_its_step_fails() {
     assert!(matches!(failure, Failure::Step { .. }), "{failure:?}");
 }
 
+/// A probe that failed on a missing tool would stop the doctor at the first
+/// tool a machine lacks, and one that passed a failing tool would report it
+/// as there: a probe returns what a step printed, and none for a step that
+/// fails or whose program is missing.
+#[test]
+fn a_probe_answers_what_a_tool_printed_or_none() {
+    let output = System.probe(&version()).unwrap();
+    assert!(output.starts_with("cargo "), "{output}");
+    assert_eq!(System.probe(&failing()), None);
+    assert_eq!(System.probe(&missing_program()), None);
+}
+
 /// A step runs its program with its arguments and variables from the
 /// workspace root, so `cargo xtask gates` checks the whole workspace from
 /// any directory it is started in.

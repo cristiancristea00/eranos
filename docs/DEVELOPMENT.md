@@ -24,10 +24,13 @@ and the test suites in [TESTING.md](TESTING.md).
   build or test the library, and the bindings' toolchains: JDKs 25 and 21,
   Node 24, Python 3.14 and uv, LLVM (clang, clang-format, clang-tidy,
   llvm-profdata, and llvm-cov), Doxygen, ktlint, SwiftLint, actionlint,
-  zizmor, cargo-deny,
-  the Android command-line tools, cargo-ndk 4.1.2, diplomat-tool 0.16.1,
-  and uniffi-bindgen-react-native 0.31.0-5, the last three built from
-  their release tags.
+  zizmor, cargo-deny, the Android command-line tools, cargo-ndk 4.1.2,
+  diplomat-tool 0.16.1, and uniffi-bindgen-react-native 0.31.0-5, the
+  last three built from their release tags. `cargo xtask doctor` prints
+  every tool the gates run with the version found, the variables below
+  with theirs, and for one that is missing, or a Node other than 24 first
+  on `PATH`, the entry of Brewfile.develop that installs it; it fails
+  when one is, after checking every one.
 - **Paths**: the JDKs, Node 24, and LLVM are keg-only, and the Android
   tools look for their SDK; the gates run the TypeScript package on the
   `node` first on `PATH`, and stop unless it is Node 24, the Kotlin
@@ -59,6 +62,7 @@ and the test suites in [TESTING.md](TESTING.md).
 
 ```sh
 cargo xtask gates                                # every commit gate, in order
+cargo xtask doctor                               # every tool the gates run, with its version or how to install it
 cargo xtask gates --rust                         # the gates up to the examples', with no binding's toolchain
 cargo xtask test python                          # one language's tests, after building what they read
 cargo xtask lint c                               # one language's format checks and linters, likewise
@@ -729,7 +733,8 @@ so a failing run blocks nothing: it is a report.
   eranos-uniffi` writes it into `target/debug`.
 - **`ANDROID_HOME is not set`**, **`JAVA_HOME_21 is not set`**, or
   **`LLVM_HOME is not set`** from the gates, or `SDK location not found`
-  from Gradle: export the variables of [§ 1](#1-prerequisites).
+  from Gradle: export the variables of [§ 1](#1-prerequisites);
+  `cargo xtask doctor` names every one that is missing.
 - **`the C tests run … lines and … functions of the C layer`** from the
   gates: a function of the layer that no test calls, or a branch of one
   that none takes; `llvm-cov show build/tests -instr-profile=build/tests.profdata include`,

@@ -64,6 +64,12 @@ impl Step {
         }
     }
 
+    /// The program the step runs.
+    #[cfg(test)]
+    pub(crate) fn program(&self) -> &str {
+        &self.program
+    }
+
     /// The same step, run in `directory`, under the workspace root.
     #[must_use]
     pub(crate) fn in_directory(mut self, directory: &str) -> Self {
@@ -181,6 +187,12 @@ pub(crate) trait Runner {
     /// [`Failure::Step`] when it does not succeed.
     fn output(&mut self, step: &Step) -> Result<String, Failure>;
 
+    /// Runs `step` with its standard error discarded and returns its
+    /// standard output, or none when its program cannot be started or does
+    /// not succeed: what a check of whether a tool is there reads, since a
+    /// tool that is missing is an answer, not a failure.
+    fn probe(&mut self, step: &Step) -> Option<String>;
+
     /// Removes `directory` and everything in it; a missing directory is
     /// already clear.
     ///
@@ -236,6 +248,14 @@ impl Runner for System {
         step.check(output.status)?;
         // Cargo's JSON is UTF-8; anything else fails as the JSON it is not.
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    }
+
+    fn probe(&mut self, step: &Step) -> Option<String> {
+        let output = step.command().stderr(Stdio::null()).output().ok()?;
+        output
+            .status
+            .success()
+            .then(|| String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
     fn clear(&mut self, directory: &Path) -> Result<(), Failure> {

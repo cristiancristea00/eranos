@@ -13,7 +13,7 @@ use crate::plan::{Action, Phase};
 use crate::process::{Step, WORKSPACE};
 
 /// The Python project, from the workspace root.
-const PROJECT: &str = "bindings/python";
+pub(crate) const PROJECT: &str = "bindings/python";
 
 /// Where the package holds the generated module and the link to the
 /// library, from the project.

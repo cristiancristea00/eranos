@@ -22,7 +22,7 @@ pub(crate) const TARGET: &str = "wasm32-unknown-unknown";
 /// How `node --version` starts for the Node the gates run on: the oldest
 /// release line the package supports, so a call that only a later Node has
 /// fails its tests.
-const NODE: &str = "v24.";
+pub(crate) const NODE: &str = "v24.";
 
 /// The TypeScript package's gates, in order: Node's version, which must be
 /// Node 24's before anything else runs, then the WebAssembly library, the
