@@ -131,19 +131,19 @@ Python package ([TESTING.md § 2](TESTING.md#2-layout)).
 A run from an empty target directory first builds the library for every
 Apple target and every Android ABI, and checks it for the mobile and wasm
 targets, which takes about 2.5 minutes of its own. A warm run, whose
-builds are all up to date, takes about 7 minutes on an Apple M4 Pro, a
-third of it clang-tidy's pass over the C and C++ translation units, each
+builds are all up to date, takes about 7 minutes on an Apple M4 Pro, two
+fifths of it clang-tidy's pass over the C and C++ translation units, each
 of which parses the layer's header again:
 
 | Gates                                                                  |  Warm | Most of it                                                          |
 | ---------------------------------------------------------------------- | ----: | ------------------------------------------------------------------- |
-| 1–9, the Rust checks, the target lints, and the examples               |  56 s | the two test runs, 27 s and 22 s                                    |
-| 10–11, the host library and its sources                                |   6 s |                                                                     |
-| 12, the Swift package                                                  |  72 s | the analyzer, 33 s, and the examples' clean build, 23 s             |
-| 13–16, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  38 s | the Kotlin Multiplatform libraries, 11 s                            |
-| 17, the C and C++ packages                                             | 169 s | clang-tidy, 28 s on the C tests and ports and 129 s on the C++ ones |
-| 18, the Python package                                                 |   3 s | Sphinx, 1.6 s                                                       |
-| 19, the ports                                                          |  91 s | the C++ ports' builds, 45 s                                         |
+| 1–9, the Rust checks, the target lints, and the examples               |  37 s | the two test runs, 16 s and 14 s                                    |
+| 10–11, the host library and its sources                                |   4 s |                                                                     |
+| 12, the Swift package                                                  |  65 s | the analyzer, 29 s, and the examples' clean build, 22 s             |
+| 13–16, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  33 s | the TypeScript package, 12 s                                        |
+| 17, the C and C++ packages                                             | 178 s | clang-tidy, 28 s on the C tests and ports and 138 s on the C++ ones |
+| 18, the Python package                                                 |   3 s | Sphinx, 2 s                                                         |
+| 19, the ports                                                          | 102 s | the C++ ports' builds, 62 s                                         |
 
 ```sh
 swift test --package-path bindings/swift                        # the Swift tests, once the gates built the framework
