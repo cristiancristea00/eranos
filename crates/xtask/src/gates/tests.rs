@@ -238,19 +238,22 @@ fn job_commands(workflow: &str, name: &str) -> Vec<String> {
 
 /// The target lints are the steps of CI's Mobile and wasm targets job, which
 /// adds `--locked` to every cargo call as the workflow does, and the job
-/// reads the same from a checkout with Windows line endings; if they drifted
-/// apart, a commit that passes the gates could fail its push run, and a
-/// target CI lints could break with no gate to show it before the push. On
-/// Windows, where a checkout ends each line with a carriage return and a
-/// line feed, a split at `"\n  mobile:\n"` found no job.
+/// reads the same with either kind of line ending, whichever the checkout
+/// has; if they drifted apart, a commit that passes the gates could fail its
+/// push run, and a target CI lints could break with no gate to show it
+/// before the push. On Windows, where a checkout ends each line with a
+/// carriage return and a line feed, a split at `"\n  mobile:\n"` found no
+/// job, and a copy that put a carriage return before every line feed ended
+/// each line with two.
 #[test]
 fn the_target_lints_are_the_steps_of_ci_s_mobile_job() {
     let workflow = include_str!("../../../../.github/workflows/ci.yml");
     let commands = job_commands(workflow, "mobile");
-    assert_eq!(
-        job_commands(&workflow.replace('\n', "\r\n"), "mobile"),
-        commands
-    );
+    let line_feeds = workflow.replace("\r\n", "\n");
+    let carriage_returns = line_feeds.replace('\n', "\r\n");
+    for form in [line_feeds, carriage_returns] {
+        assert_eq!(job_commands(&form, "mobile"), commands);
+    }
     let commands: Vec<String> = commands
         .into_iter()
         .filter(|command| !command.starts_with("rustup toolchain "))
