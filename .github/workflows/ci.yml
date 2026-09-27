@@ -1,8 +1,8 @@
 # The gates of AGENTS.md, plus an MSRV build, compile checks for the mobile
 # targets, a dependency audit, a lint of the workflow files, and a coverage
 # page; on a manual dispatch, every gate with the bindings' toolchains, on
-# Linux and on macOS, and the coverage of the binding glue. Coverage is
-# reported, never enforced.
+# Linux, on macOS, or on both, and the coverage of the binding glue.
+# Coverage is reported, never enforced.
 name: CI
 
 on:
@@ -18,9 +18,17 @@ on:
   workflow_dispatch:
     inputs:
       bindings:
-        description: Also run every gate with the bindings' toolchains, on Linux and on macOS
+        description: Also run every gate with the bindings' toolchains, on the platforms below
         type: boolean
         default: false
+      # A dispatch for one platform checks a fix to that platform's binding
+      # job without the other job's minutes, and skips the tests on macOS and
+      # Windows as well.
+      platform:
+        description: The platforms of the binding jobs; both also runs the tests on macOS and Windows
+        type: choice
+        options: [both, linux, macos]
+        default: both
 
 permissions:
   # Cloning a private repository needs read access; no job writes.
@@ -126,9 +134,10 @@ jobs:
     # No matrix context in the name: GitHub appends the matrix values to a
     # job it runs, but shows a skipped job's name unexpanded.
     name: Test on other OS
-    # Dispatched by hand only: macOS minutes count about ten times and Windows
-    # minutes about twice against the 2,000 included each month.
-    if: github.event_name == 'workflow_dispatch'
+    # Dispatched by hand only, on both platforms: macOS minutes count about
+    # ten times and Windows minutes about twice against the 2,000 included
+    # each month.
+    if: github.event_name == 'workflow_dispatch' && inputs.platform == 'both'
     strategy:
       fail-fast: false
       matrix:
@@ -347,8 +356,9 @@ jobs:
     # Every gate of AGENTS.md, with the toolchains of the Kotlin, Java, web,
     # Kotlin Multiplatform, C, C++, and Python packages, which a push does
     # not install; the Swift package and the Apple targets need macOS. Only
-    # on a dispatch that asks for the bindings, like the job after it.
-    if: github.event_name == 'workflow_dispatch' && inputs.bindings
+    # on a dispatch that asks for the bindings on Linux or on both
+    # platforms, like the job after it on macOS.
+    if: github.event_name == 'workflow_dispatch' && inputs.bindings && (inputs.platform == 'both' || inputs.platform == 'linux')
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env: &bindings-env
@@ -458,9 +468,9 @@ jobs:
     # Every gate, the Swift package and the Kotlin Multiplatform package's
     # Apple targets included, then the coverage of the Rust tests and of the
     # binding glue, which only the Swift tests reach whole. Only on a
-    # dispatch that asks for the bindings: macOS minutes count about ten
-    # times.
-    if: github.event_name == 'workflow_dispatch' && inputs.bindings
+    # dispatch that asks for the bindings on macOS or on both platforms:
+    # macOS minutes count about ten times.
+    if: github.event_name == 'workflow_dispatch' && inputs.bindings && (inputs.platform == 'both' || inputs.platform == 'macos')
     runs-on: macos-26
     timeout-minutes: 180
     env: *bindings-env
