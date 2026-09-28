@@ -13,7 +13,7 @@ use crate::plan::{Action, Phase};
 use crate::process::{Step, WORKSPACE};
 
 /// The TypeScript project, from the workspace root.
-const PROJECT: &str = "bindings/typescript";
+pub(crate) const PROJECT: &str = "bindings/typescript";
 
 /// The WebAssembly target of browsers and Node, which has no operating
 /// system.

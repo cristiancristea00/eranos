@@ -184,6 +184,7 @@ each layer's shape: [docs/BINDINGS.md](docs/BINDINGS.md).
 ```sh
 cargo xtask gates                                   # every commit gate, in order
 cargo xtask test python                             # one language's tests: also lint, format, and examples
+cargo xtask clean                                   # what the builds leave: target/ and every ignored path
 cargo test --workspace --all-features               # unit, integration, property, and doc tests
 cargo bench -p eranos --features serde --bench '*'  # every benchmark
 ```

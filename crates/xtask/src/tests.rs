@@ -54,7 +54,8 @@ pub(crate) const PROGRAMS: &str = "/programs\n";
 /// Node's version with `node`, those that print the C and C++ tests'
 /// coverage with `coverage`, the one that prints cargo-llvm-cov's
 /// environment with `exports`, the one that prints the directory of the
-/// Swift examples' programs with [`PROGRAMS`], and every other output with
+/// Swift examples' programs with [`PROGRAMS`], the one that lists the paths
+/// `.gitignore` ignores with `ignored`, and every other output with
 /// `metadata`,
 /// records every directory it clears or creates and every file it writes,
 /// builds for Apple platforms when `apple`, has set only the environment
@@ -67,6 +68,7 @@ pub(crate) struct Recorder {
     pub(crate) coverage: String,
     pub(crate) created: Vec<PathBuf>,
     pub(crate) exports: String,
+    pub(crate) ignored: String,
     pub(crate) metadata: String,
     pub(crate) node: String,
     pub(crate) steps: Vec<Step>,
@@ -144,6 +146,8 @@ impl Runner for Recorder {
             Ok(self.exports.clone())
         } else if step.command_line().ends_with("--show-bin-path") {
             Ok(PROGRAMS.to_owned())
+        } else if *step == clean::listing() {
+            Ok(self.ignored.clone())
         } else {
             Ok(self.metadata.clone())
         }
@@ -487,6 +491,47 @@ fn every_command_line_runs_what_it_names() {
     }
 }
 
+/// Each `clean` command line runs the clean it names, its flags in either
+/// order; one that ran another would remove more than was asked, or print
+/// instead of removing. Only a clean that reaches the caches fails without
+/// `HOME`, and only a dry run runs cargo's own, so each line's outcome and
+/// steps show which clean it ran.
+#[test]
+fn every_clean_command_line_runs_the_clean_it_names() {
+    let outcome = |clean: &dyn Fn(&mut Recorder) -> Result<(), Failure>, home: bool| {
+        let mut recorder = Recorder::new();
+        recorder.ignored = "bindings/c/build/\0".to_owned();
+        if home {
+            recorder.variables.push("HOME");
+        }
+        let passed = clean(&mut recorder).is_ok();
+        (passed, recorder.steps)
+    };
+    for (line, scope, mode) in [
+        (&["clean"][..], Scope::Repository, Mode::Remove),
+        (&["clean", "--caches"], Scope::WithCaches, Mode::Remove),
+        (
+            &["clean", "--caches", "--dry-run"],
+            Scope::WithCaches,
+            Mode::DryRun,
+        ),
+        (
+            &["clean", "--dry-run", "--caches"],
+            Scope::WithCaches,
+            Mode::DryRun,
+        ),
+        (&["clean", "--dry-run"], Scope::Repository, Mode::DryRun),
+    ] {
+        for home in [true, false] {
+            assert_eq!(
+                outcome(&|recorder| run(&words(line), recorder), home),
+                outcome(&|recorder| clean::run(recorder, scope, mode), home),
+                "{line:?} {home}"
+            );
+        }
+    }
+}
+
 /// `help` succeeds and runs nothing.
 #[test]
 fn help_runs_nothing_and_succeeds() {
@@ -509,6 +554,10 @@ fn anything_but_one_known_command_is_a_usage_error() {
         &["format"],
         &["examples", "quickstart", "persistence"],
         &["examples", "--language"],
+        &["clean", "--caches", "--caches"],
+        &["clean", "--dry-run", "--dry-run"],
+        &["clean", "--force"],
+        &["clean", "all"],
     ] {
         let mut recorder = Recorder::new();
         let failure = run(&words(line), &mut recorder).unwrap_err();
@@ -523,8 +572,8 @@ fn a_usage_error_lists_every_command() {
     let message = Failure::Usage.to_string();
     assert!(message.starts_with("unknown command\n\nusage: cargo xtask <command>"));
     for command in [
-        "coverage", "doctor", "examples", "format", "gates", "generate", "help", "lint", "package",
-        "test",
+        "clean", "coverage", "doctor", "examples", "format", "gates", "generate", "help", "lint",
+        "package", "test",
     ] {
         assert!(message.contains(&format!("\n  {command} ")), "{command}");
     }

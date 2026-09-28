@@ -46,6 +46,10 @@ and the test suites in [TESTING.md](TESTING.md).
   export PATH="$(brew --prefix node@24)/bin:$LLVM_HOME/bin:$PATH"
   ```
 
+  `cargo xtask clean --caches` finds each cache it empties through its
+  tool's variable, `CARGO_HOME`, `GRADLE_USER_HOME`, or `KONAN_DATA_DIR`,
+  and under `HOME` where that is unset.
+
 - **Android SDK packages**, once, after accepting their licences:
 
   ```sh
@@ -70,6 +74,8 @@ cargo xtask format all                           # every language's formatters, 
 cargo xtask examples grand_tour --language web   # one example and its ports in one language, compared
 cargo xtask package python                       # one language's release packages, into target/packages/<language>
 cargo xtask generate                             # the C glue's bridge, from the binding core
+cargo xtask clean --dry-run                      # what clean would remove: target/ and every ignored path
+cargo xtask clean --caches                       # those, and the caches the gates fill outside the repository
 cargo build -p eranos                            # the library
 cargo build -p eranos --features serde           # with serialisation
 cargo test --workspace --all-features            # every suite, doctests included
@@ -109,7 +115,28 @@ reads them:
 The release builds of every target take about 10 GB of disk beside the
 gates' builds: about 0.4 GB for each Apple target, 0.6 GB for each Android
 ABI, with Kotlin's and Kotlin Multiplatform's libraries, 2.4 GB for the
-host's, and 0.2 GB for WebAssembly. The alias lives in
+host's, and 0.2 GB for WebAssembly.
+
+`clean` frees what the builds take, here about 36 GB in `target/` and 5 GB
+in the packages' directories. `cargo clean` removes cargo's target
+directory, and then every path the repository's `.gitignore` files ignore
+goes, as `git ls-files --others --ignored` lists them, but
+`local.properties`, Android Studio's SDK path, and Finder's `.DS_Store`.
+Git's per-user and per-checkout ignore files are not read, since they name
+a developer's own files. `--caches` also empties the caches the gates fill
+outside the repository, about 11 GB here, which the machine's other
+projects share: uv's, npm's, and on macOS the Swift package manager's,
+each through its own command, then Gradle's daemons' registry, caches,
+and wrapper distributions, Kotlin/Native's downloads, and cargo's registry
+and git checkouts. Gradle's registry goes first: a build reaches a daemon
+only through it, so none reaches one whose caches are gone. Cargo's
+installed tools and Gradle's settings stay. A clean removes what a running
+build reads, so it runs with no build running, and the next gates run is
+cold and downloads again what the caches held. `--dry-run` prints every
+step a clean would run and removes nothing. Like the gates, `clean` runs
+on macOS and Linux: Windows refuses to delete the running `xtask.exe`.
+
+The alias lives in
 `.cargo/config.toml`, and the automation in `crates/xtask`. A change to a
 record or a call of the binding core needs `cargo xtask generate` too,
 which writes the C glue's bridge from them
@@ -780,6 +807,10 @@ nothing: it is a report.
   with `cargo run -p eranos --all-features --example <example>`.
 - **`the gates run on Node 24`**: another Node is first on `PATH`; put
   Node 24 before it, as [§ 1](#1-prerequisites) does.
+- **`No space left on device`** from a build: `cargo xtask clean` frees
+  what the builds take, and `--dry-run` shows it first; `--caches` also
+  empties the caches the gates fill outside the repository
+  ([§ 2](#2-building-and-testing)).
 - **`ModuleNotFoundError: No module named 'eranos._internal.eranos'`** or
   **`OSError: dlopen(…liberanos_uniffi…)`** from the Python tests: the
   generated module is missing, or the host library that the link beside

@@ -4,7 +4,7 @@
 # writes the C glue's bridge with eranos-glue's generator.
 [package]
 name = "xtask"
-description = "The eranos repository's automation: the commit gates and the C glue's bridge"
+description = "The eranos repository's automation: the commit gates, the C glue's bridge, and removing what the builds leave"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

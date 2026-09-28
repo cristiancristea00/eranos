@@ -10,7 +10,7 @@ use crate::plan::{Action, Phase};
 use crate::process::{self, Profile, Step, WORKSPACE};
 
 /// The Swift package, from the workspace root.
-const PACKAGE: &str = "bindings/swift";
+pub(crate) const PACKAGE: &str = "bindings/swift";
 
 /// The package of the Swift ports of the examples, from the workspace root,
 /// which depends on the Swift package as `..`.

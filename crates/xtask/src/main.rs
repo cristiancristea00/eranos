@@ -7,13 +7,16 @@
 //! checks and linters, or formatters, and `cargo xtask examples` the ports of
 //! the examples; `cargo xtask package` builds the release packages an app
 //! consumes; `cargo xtask doctor` prints the version of every tool the
-//! gates run and how to install one that is missing; `cargo xtask coverage` measures the Rust tests and the
-//! binding glue, which the foreign tests run, in one report; `cargo xtask
-//! generate` writes the C glue's bridge from the binding core's records and
-//! calls; `cargo xtask help` lists the commands.
+//! gates run and how to install one that is missing; `cargo xtask clean`
+//! removes what the builds leave in the repository, and with `--caches` the
+//! caches they fill outside it; `cargo xtask coverage` measures the Rust
+//! tests and the binding glue, which the foreign tests run, in one report;
+//! `cargo xtask generate` writes the C glue's bridge from the binding core's
+//! records and calls; `cargo xtask help` lists the commands.
 #![forbid(unsafe_code)]
 
 mod capi;
+mod clean;
 mod commands;
 mod coverage;
 mod doctor;
@@ -34,6 +37,7 @@ mod web;
 use std::io;
 use std::process::{ExitCode, ExitStatus};
 
+use crate::clean::{Mode, Scope};
 use crate::gates::Part;
 use crate::language::Language;
 use crate::process::{Runner, System};
@@ -43,6 +47,8 @@ use crate::process::{Runner, System};
 const USAGE: &str = "usage: cargo xtask <command>
 
 commands:
+  clean [--caches] [--dry-run]      remove target/ and every path .gitignore ignores, and with --caches the caches the gates
+                                    fill outside the repository; with --dry-run, print what would go and remove nothing
   coverage                          measure the Rust tests and the binding glue, which the foreign tests run, in one report
   doctor                            print every tool the gates run with its version, and how to install a missing one
   examples [<example>] [--language <language>]
@@ -192,6 +198,12 @@ fn run(arguments: &[String], runner: &mut impl Runner) -> Result<(), Failure> {
     let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
     let every = ports::LANGUAGES;
     match words.as_slice() {
+        ["clean"] => clean::run(runner, Scope::Repository, Mode::Remove),
+        ["clean", "--caches"] => clean::run(runner, Scope::WithCaches, Mode::Remove),
+        ["clean", "--caches", "--dry-run"] | ["clean", "--dry-run", "--caches"] => {
+            clean::run(runner, Scope::WithCaches, Mode::DryRun)
+        }
+        ["clean", "--dry-run"] => clean::run(runner, Scope::Repository, Mode::DryRun),
         ["coverage"] => coverage::run(runner),
         ["doctor"] => doctor::run(runner),
         ["examples"] => commands::examples(runner, None, &every),
