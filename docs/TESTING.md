@@ -333,10 +333,9 @@ exact solver's worst case: every member pays one expense everyone shares),
 `benches/ledger.rs` times adding, replacing, and removing one expense in a
 group of 10 000, and `benches/group.rs` times a currency change and loading
 a saved group (feature `serde`) with 1 000 and 10 000 expenses, the
-operations that touch every entry. The timings quoted on
-`SettlementStrategy` and in
-[ARCHITECTURE § 13](ARCHITECTURE.md#13-key-numbers) come from them; update
-both together.
+operations that touch every entry. The timings of
+[ARCHITECTURE § 13](ARCHITECTURE.md#13-key-numbers) come from them; no
+comment or doc comment quotes one.
 
 ## 8. What to run for a given change
 

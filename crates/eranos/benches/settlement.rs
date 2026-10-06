@@ -1,6 +1,6 @@
 //! Benchmarks of the four settlement strategies against groups of growing
-//! size. The timings documented on `SettlementStrategy` come from here; run
-//! on an idle machine with `cargo bench -p eranos --bench settlement`.
+//! size. The timings of docs/ARCHITECTURE.md § 13 come from here; run on an
+//! idle machine with `cargo bench -p eranos --bench settlement`.
 #![forbid(unsafe_code)]
 #![expect(
     clippy::panic,

@@ -87,9 +87,7 @@ pub enum SettlementStrategy {
     /// that payer paid; the debts between each pair of members are netted
     /// across all entries. Each payment traces back to shared expenses, at
     /// the cost of the most payments. O(p) time for p pairs with a debt,
-    /// which the group keeps current as entries change (110 µs for 100
-    /// members who all share every expense, 4 950 pairs, on an Apple M4
-    /// Pro).
+    /// which the group keeps current as entries change.
     Direct,
     /// The largest debtor pays the largest creditor, repeatedly, after exact
     /// opposites pay each other where that saves a payment.
@@ -97,10 +95,9 @@ pub enum SettlementStrategy {
     /// Two plans are computed: the largest debtor paying the largest creditor
     /// throughout, and the same after every debtor who owes exactly what a
     /// creditor is owed has paid them; the one with fewer payments is kept,
-    /// the first on a tie. O(n log n) time and at most n − 1 payments (about
-    /// 0.1 ms for 1 000 members on an Apple M4 Pro), within 3/2 of
-    /// [`MinimumTransfers`](Self::MinimumTransfers) and usually as few, but
-    /// not always.
+    /// the first on a tie. O(n log n) time and at most n − 1 payments,
+    /// within 3/2 of [`MinimumTransfers`](Self::MinimumTransfers) and
+    /// usually as few, but not always.
     Greedy,
     /// The fewest payments possible.
     ///
@@ -110,9 +107,8 @@ pub enum SettlementStrategy {
     /// number of groups that each sum to zero; every such group settles with
     /// one payment fewer than its size. It needs O(2ⁿ·n) time and 2ⁿ bytes
     /// of memory, with no size limit, so every extra open balance doubles
-    /// both: on an Apple M4 Pro, 12 balances take 18 µs, 16 take 0.36 ms,
-    /// and 20 take 7 ms and 1 MiB; 30 would take seconds and 1 GiB. The
-    /// operating system may end the process before an allocation fails, so
+    /// both: 20 balances take 1 MiB and 30 take 1 GiB. The operating system
+    /// may end the process before an allocation fails, so
     /// prefer [`Adaptive`](Self::Adaptive), which settles large groups
     /// greedily.
     MinimumTransfers,

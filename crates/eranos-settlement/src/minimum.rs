@@ -20,8 +20,7 @@ use crate::opposites::{Pairing, pair_opposites};
 const SUBSETS_PER_CHECK: usize = 1 << 12;
 
 /// The work between two yields of the table fill, counted as subsets times
-/// balances: about 0.7 ms on the reference machine, so a table of 16
-/// balances or fewer fills without a yield.
+/// balances, so a table of 16 balances or fewer fills without a yield.
 const UNITS_PER_YIELD: u64 = 1 << 21;
 
 /// Settles `balances`, ordered by member, with the fewest payments, yielding

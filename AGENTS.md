@@ -356,6 +356,12 @@ test in `crates/xtask` checks every root.
   what a change did. An incident becomes a conditional ("without this, X
   would…"). Regression witnesses in tests are the exception: the recorded
   failure is the constraint.
+- **Comments quote no timings.** No comment or doc comment, in any
+  language, states how long something takes or names a processor or a
+  machine: such numbers change with every machine and release. A comment
+  gives sizes, counts, complexity, or doublings instead, and the measured
+  numbers live in [docs/ARCHITECTURE.md § 13](docs/ARCHITECTURE.md#13-key-numbers)
+  and the prose that cites it.
 - **Prose says what it means.** Comments, docs, and error messages use the
   literal phrase when one exists: no metaphor, no ALL-CAPS emphasis inside a
   sentence, no reassurance ("cheap", "for free"), no signposting ("worth
@@ -463,5 +469,5 @@ read-write lock. Diagrams, rules, and numbers:
   would have noticed it was wrong.
 - Benchmarks are wall-clock timings: run
   `cargo bench -p eranos --features serde --bench '*'` on an idle machine,
-  and update the timings quoted on `SettlementStrategy` and in
-  docs/ARCHITECTURE.md together.
+  and update the timings in docs/ARCHITECTURE.md § 13 and the prose that
+  cites them together.

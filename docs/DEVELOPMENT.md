@@ -398,7 +398,8 @@ breaking.
 ### 3.4 A new settlement strategy
 
 1. Add the variant to `SettlementStrategy` with a doc comment stating its
-   algorithm, cost, guarantee, and a measured timing.
+   algorithm, cost, and guarantee; its timing goes in ARCHITECTURE § 13,
+   never in a comment.
 2. Implement it as `pub(super) fn settle(…) -> Vec<Flow>` in a new
    `crates/eranos-settlement/src/<name>.rs`, reading the ledger's balances or
    pair debts, and dispatch to it in the crate's `settle_paced`, which both
