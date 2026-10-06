@@ -43,7 +43,7 @@ members = [
 [workspace.package]
 version = "0.6.0"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.99"
 description = "Group expense tracking: exact money splitting, cached balances, and repayment plans"
 # Not published to crates.io: the apps consume it from this repository.
 publish = false

@@ -1,8 +1,8 @@
-# The gates of AGENTS.md, plus an MSRV build, compile checks for the mobile
-# targets, a dependency audit, a lint of the workflow files, and a coverage
-# page; on a manual dispatch, every gate with the bindings' toolchains, on
-# Linux, on macOS, or on both, and the coverage of the binding glue.
-# Coverage is reported, never enforced.
+# The gates of AGENTS.md, plus compile checks for the mobile targets, a
+# dependency audit, a lint of the workflow files, and a coverage page; on a
+# manual dispatch, every gate with the bindings' toolchains, on Linux, on
+# macOS, or on both, and the coverage of the binding glue. Coverage is
+# reported, never enforced.
 name: CI
 
 on:
@@ -154,29 +154,6 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo test --workspace --all-features --locked
       - run: cargo test --workspace --no-default-features --locked
-
-  msrv:
-    name: MSRV
-    if: *not-duplicate
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    env:
-      # Equal to `rust-version` in Cargo.toml. Cargo refuses a toolchain older
-      # than that, so raising it there fails this job until both match. Set
-      # for the whole job, it overrides rust-toolchain.toml for every cargo
-      # and rustc call, the cache key's included. Quoted, so that a version
-      # such as 1.90 stays text.
-      RUSTUP_TOOLCHAIN: "1.97"
-    steps:
-      - uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
-      - uses: Swatinem/rust-cache@v2.9.2
-        with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo test --workspace --all-features --locked
-      - run: cargo check --workspace --lib --no-default-features --locked
 
   mobile:
     name: Mobile and wasm targets

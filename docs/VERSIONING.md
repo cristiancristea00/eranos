@@ -105,6 +105,8 @@ an old format stays until a breaking release says otherwise.
 
 ## 6. The minimum Rust version
 
-`rust-version` is the toolchain the workspace is built and tested with.
-Raising it is a `build` commit and bumps the minor version, because it can
-break a consumer's build.
+`rust-version` is the oldest toolchain the workspace supports. CI builds,
+lints, and tests with the latest stable release, and no job checks an
+older one, so `rust-version` moves up whenever the code needs a newer
+release. Raising it is a `build` commit and bumps the minor version,
+because it can break a consumer's build.
