@@ -22,59 +22,51 @@ pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
     let equal = weights.iter().all(|&weight| 0 == weight);
     let weight_of = |weight: u64| if equal { 1 } else { i128::from(weight) };
     let weight_sum: i128 = weights.iter().map(|&weight| weight_of(weight)).sum();
-    let total = i128::from(total);
-    // |total| ≤ 2^63 and weight < 2^64, so every product fits in i128.
-    // Division rounds towards zero, so every part has the sign of `total`.
-    let mut parts: Vec<Part> = weights
-        .iter()
-        .map(|&weight| {
-            let product = total * weight_of(weight);
-            Part {
-                amount: product / weight_sum,
-                remainder: (product % weight_sum).unsigned_abs(),
-            }
-        })
-        .collect();
-    // Σ remainders = weight_sum × leftover, so leftover < weights.len().
-    let leftover = (total - parts.iter().map(|part| part.amount).sum::<i128>()).unsigned_abs();
-    if 0 < leftover {
-        // A usize is at most 64 bits wide on every target Rust supports.
-        let len = u64::try_from(weights.len()).unwrap_or(u64::MAX);
-        let start = rotation % len;
-        let claims: Vec<LeftoverClaim> = (0_u64..)
-            .zip(&parts)
-            .map(|(position, part)| LeftoverClaim {
-                position: (position + len - start) % len,
-                remainder: part.remainder,
-            })
-            .collect();
-        let mut ranked = claims.clone();
-        ranked.sort_unstable();
-        // The claim of the last part to receive a leftover unit. At least
-        // leftover + 1 parts have a positive remainder, so a zero-weight
-        // part never receives one.
-        let last = (1_u128..)
-            .zip(ranked)
-            .find_map(|(rank, claim)| (rank == leftover).then_some(claim));
-        for (part, claim) in parts.iter_mut().zip(claims) {
-            if last.is_some_and(|last_claim| claim <= last_claim) {
-                part.amount += total.signum();
+    // A usize is at most 64 bits wide on every target Rust supports.
+    let len = u64::try_from(weights.len()).unwrap_or(u64::MAX);
+    let start = rotation % len;
+    let wide_total = i128::from(total);
+    // Every part's exact share rounded towards zero, and its claim to one of
+    // the units the rounding leaves over.
+    let mut parts = Vec::with_capacity(weights.len());
+    let mut claims = Vec::with_capacity(weights.len());
+    let mut allocated = 0_i128;
+    for (position, &weight) in (0_u64..).zip(weights) {
+        // |total| ≤ 2^63 and weight < 2^64, so every product fits in i128.
+        // Division rounds towards zero, so every part has the sign of
+        // `total` and lies between zero and it, so it fits in i64.
+        let product = wide_total * weight_of(weight);
+        let part = product / weight_sum;
+        allocated += part;
+        parts.push(i64::try_from(part).unwrap_or_default());
+        claims.push(LeftoverClaim {
+            position: (position + len - start) % len,
+            remainder: (product % weight_sum).unsigned_abs(),
+        });
+    }
+    // Σ remainders = weight_sum × leftover, so leftover < weights.len(), and
+    // the rank of the last claim to receive a unit is an index of `claims`.
+    let leftover = (wide_total - allocated).unsigned_abs();
+    if let Some(rank) = usize::try_from(leftover)
+        .ok()
+        .and_then(|count| count.checked_sub(1))
+    {
+        // The claim of the last part to receive a leftover unit: every claim
+        // is distinct, so the claims ranked up to it are the same whatever
+        // order the selection leaves them in. At least leftover + 1 parts
+        // have a positive remainder, so a zero-weight part never receives
+        // one.
+        let (_, &mut last, _) = claims.select_nth_unstable(rank);
+        for claim in &claims {
+            let index = usize::try_from((claim.position + start) % len).ok();
+            if *claim <= last
+                && let Some(part) = index.and_then(|index| parts.get_mut(index))
+            {
+                *part += total.signum();
             }
         }
     }
-    // Every part lies between zero and `total`, so it fits back in i64.
     parts
-        .into_iter()
-        .map(|part| i64::try_from(part.amount).unwrap_or_default())
-        .collect()
-}
-
-/// One part of an allocation: its exact share rounded towards zero, until it
-/// receives a leftover unit, and the remainder of that rounding.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Part {
-    amount: i128,
-    remainder: u128,
 }
 
 /// A part's claim to a leftover unit: its remainder, and its position counted
