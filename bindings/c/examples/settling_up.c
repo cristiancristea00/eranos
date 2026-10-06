@@ -5,10 +5,17 @@
 #include "report.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+
+/// How many friends the festival's group holds: more open balances than the adaptive strategy settles exactly.
+static constexpr size_t FRIENDS = 21;
 
 /// How many payments each strategy plans.
 typedef struct Counts {
+    /// The payments of the adaptive plan.
+    size_t adaptive;
     /// The payments of the direct plan.
     size_t direct;
     /// The payments of the greedy plan.
@@ -99,6 +106,31 @@ static void addStrategyRow(Table *const table, StrategyRow const *const row) {
     tableAdd(table, (Line const[]){row->strategy, row->guarantee, row->cost, row->payments});
 }
 
+/// A payment of a plan as values two plans compare: who pays whom, and how much.
+typedef struct Payment {
+    /// How much is paid, in minor units of the group's currency.
+    int64_t amount;
+    /// Who pays.
+    Id from;
+    /// Who is paid.
+    Id to;
+} Payment;
+
+/// The name of @p strategy as the apps show it.
+static char const *strategyName(EranosSettlementStrategy const strategy) {
+    switch (strategy) {
+    case ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE:
+        return "Adaptive";
+    case ERANOS_SETTLEMENT_STRATEGY_DIRECT:
+        return "Direct";
+    case ERANOS_SETTLEMENT_STRATEGY_GREEDY:
+        return "Greedy";
+    case ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS:
+        return "MinimumTransfers";
+    }
+    unreachable();
+}
+
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the amount, then the name, in the order the library's constructor reads them.
 static void spend(EranosGroup *const group, char const *const amount, char const *const name, Id const payer, Members const members) {
@@ -184,16 +216,49 @@ static void printPayments(EranosGroup const *const group, EranosPaymentList cons
     tablePrint(table);
 }
 
-/// The payments of the plan that @p strategy makes for @p group, which the caller destroys.
-static EranosPaymentList *planOf(EranosGroup const *const group, EranosSettlementStrategy const strategy) {
+/// The plan that @p strategy makes for @p group, which the caller destroys.
+static EranosSettlement *settlementOf(EranosGroup const *const group, EranosSettlementStrategy const strategy) {
     EranosSettlement *settlement = nullptr;
     must(eranosGroupSettlement(group, strategy, &settlement));
+    return settlement;
+}
+
+/// The payments of the plan that @p strategy makes for @p group, which the caller destroys.
+static EranosPaymentList *planOf(EranosGroup const *const group, EranosSettlementStrategy const strategy) {
+    EranosSettlement *const settlement = settlementOf(group, strategy);
     EranosPaymentList *const payments = eranosSettlementPayments(settlement);
     eranosSettlementDestroy(settlement);
     return payments;
 }
 
-/// Prints each strategy's plan with what it promises.
+/// The values of @p payment; destroys @p payment.
+static Payment paymentOf(EranosPayment *const payment) {
+    EranosText *const text = eranosTextCreate();
+    eranosPaymentFrom(payment, text);
+    Id const from = idOf(text);
+    eranosPaymentTo(payment, text);
+    Id const to = idOf(text);
+    EranosMoney *const amount = eranosPaymentAmount(payment);
+    Payment const values = {.amount = eranosMoneyMinorUnits(amount), .from = from, .to = to};
+    eranosMoneyDestroy(amount);
+    eranosTextDestroy(text);
+    eranosPaymentDestroy(payment);
+    return values;
+}
+
+/// Whether @p left and @p right hold the same payments, in the same order.
+static bool samePayments(EranosPaymentList const *const left, EranosPaymentList const *const right) {
+    bool same = eranosPaymentListLength(left) == eranosPaymentListLength(right);
+    for (size_t index = 0; same && eranosPaymentListLength(left) > index; ++index) {
+        Payment const leftPayment = paymentOf(eranosPaymentListGet(left, index));
+        Payment const rightPayment = paymentOf(eranosPaymentListGet(right, index));
+        same = leftPayment.amount == rightPayment.amount && 0 == strcmp(leftPayment.from.text, rightPayment.from.text) &&
+               0 == strcmp(leftPayment.to.text, rightPayment.to.text);
+    }
+    return same;
+}
+
+/// Prints each strategy's plan with what it promises; returns the number of payments of each.
 static Counts strategies(EranosGroup const *const group) {
     section("3. Minimum transfers");
     EranosPaymentList *const minimum = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
@@ -220,8 +285,18 @@ static Counts strategies(EranosGroup const *const group) {
                    eranosPaymentListLength(direct));
     printPayments(group, direct);
 
-    section("6. The strategies side by side");
+    section("6. Adaptive");
+    EranosSettlement *const settlement = settlementOf(group, ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE);
+    EranosPaymentList *const adaptive = eranosSettlementPayments(settlement);
+    printFormatted("The fewest payments while they are quick to find, greedy's beyond: up to 20 open\n"
+                   "balances the minimum solver settles them, past that greedy does, and the plan\n"
+                   "names the strategy whose plan it is. Six balances are well within the limit, so\n"
+                   "the plan is the one %s gives, the same %zu payments.",
+                   strategyName(eranosSettlementStrategy(settlement)), eranosPaymentListLength(adaptive));
+
+    section("7. The strategies side by side");
     Counts const counts = {
+        .adaptive = eranosPaymentListLength(adaptive),
         .direct = eranosPaymentListLength(direct),
         .greedy = eranosPaymentListLength(greedy),
         .minimum = eranosPaymentListLength(minimum),
@@ -245,11 +320,85 @@ static Counts strategies(EranosGroup const *const group) {
                               .payments = lineOf("%zu", counts.direct),
                               .strategy = lineOf("Direct"),
                           });
+    addStrategyRow(table, &(StrategyRow){
+                              .cost = lineOf("as MinimumTransfers, then Greedy"),
+                              .guarantee = lineOf("the fewest up to 20 balances"),
+                              .payments = lineOf("%zu", counts.adaptive),
+                              .strategy = lineOf("Adaptive"),
+                          });
     tablePrint(table);
+    eranosPaymentListDestroy(adaptive);
+    eranosSettlementDestroy(settlement);
     eranosPaymentListDestroy(direct);
     eranosPaymentListDestroy(greedy);
     eranosPaymentListDestroy(minimum);
     return counts;
+}
+
+/// How many members of @p group have a balance that is not zero.
+static size_t openBalances(EranosGroup const *const group) {
+    EranosSummary *summary = nullptr;
+    must(eranosGroupSummary(group, &summary));
+    EranosMemberSummaryList *const members = eranosSummaryMembers(summary);
+    size_t open = 0;
+    for (size_t index = 0; eranosMemberSummaryListLength(members) > index; ++index) {
+        EranosMemberSummary *const totals = eranosMemberSummaryListGet(members, index);
+        EranosMoney *const net = eranosMemberSummaryNet(totals);
+        if (0 != eranosMoneyMinorUnits(net)) {
+            ++open;
+        }
+        eranosMoneyDestroy(net);
+        eranosMemberSummaryDestroy(totals);
+    }
+    eranosMemberSummaryListDestroy(members);
+    eranosSummaryDestroy(summary);
+    return open;
+}
+
+/// Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly, and prints which
+/// strategy's plan it took; returns the number of payments.
+static size_t festival(void) {
+    section("8. A larger group");
+    EranosNewGroup *details = nullptr;
+    must(eranosNewGroupCreate("EUR", "Festival", &details));
+    EranosGroup *group = nullptr;
+    must(eranosGroupCreate(details, &group));
+    eranosNewGroupDestroy(details);
+    Id friends[FRIENDS] = {};
+    EranosTextList *const everyone = eranosTextListCreate();
+    for (size_t index = 0; FRIENDS > index; ++index) {
+        Line const name = lineOf("Friend %zu", index + 1);
+        friends[index] = addMember(group, name.text);
+        must(eranosTextListPush(everyone, friends[index].text));
+    }
+    // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
+    // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
+    EranosCalendarDate const date = {.day = 18, .month = 9, .year = 2026};
+    for (size_t index = 0; FRIENDS > index; ++index) {
+        int64_t const number = (int64_t)index + 1;
+        EranosMoney *amount = nullptr;
+        must(eranosMoneyCreate("EUR", (int64_t)FRIENDS * number * number, &amount));
+        addExpense(group, expenseOf(localCost(amount), date, "Round", soleSplit(friends[index]), eranosSplitCreateEqual(everyone)));
+    }
+    size_t const open = openBalances(group);
+    EranosSettlement *const settlement = settlementOf(group, ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE);
+    EranosPaymentList *const adaptive = eranosSettlementPayments(settlement);
+    EranosPaymentList *const greedy = planOf(group, ERANOS_SETTLEMENT_STRATEGY_GREEDY);
+    printFormatted("Twenty-one friends at a festival each bought one round for everyone, each round\n"
+                   "at another price, so all %zu end with a balance and no two of them cancel out.\n"
+                   "That is more than the 20 the adaptive strategy settles exactly, so it takes the\n"
+                   "plan %s gives and says so: the same %zu payments.",
+                   open, strategyName(eranosSettlementStrategy(settlement)), eranosPaymentListLength(adaptive));
+    check(FRIENDS == open, "every friend has a balance");
+    check(ERANOS_SETTLEMENT_STRATEGY_GREEDY == eranosSettlementStrategy(settlement), "the adaptive plan is greedy's");
+    check(samePayments(adaptive, greedy), "the adaptive plan makes greedy's payments");
+    size_t const payments = eranosPaymentListLength(adaptive);
+    eranosPaymentListDestroy(greedy);
+    eranosPaymentListDestroy(adaptive);
+    eranosSettlementDestroy(settlement);
+    eranosTextListDestroy(everyone);
+    eranosGroupDestroy(group);
+    return payments;
 }
 
 /// Records every payment of the minimum plan for @p group as a transfer.
@@ -297,10 +446,9 @@ int main(void) {
     Id const eva = addMember(group, "Eva");
     Id const filip = addMember(group, "Filip");
 
-    printLine("Ski week: three ways to settle up\n"
-              "═════════════════════════════════");
+    title("Ski week: four ways to settle up");
     printLine("Six friends spent a week in the mountains. The library can turn their balances\n"
-              "into payments in three ways; the app picks one, and they differ here.");
+              "into payments in four ways, and the app picks one.");
 
     section("1. What was spent");
     spend(group, "12.00", "Cabin", dan, (Members){.count = 3, .ids = {dan, eva, filip}});
@@ -315,8 +463,9 @@ int main(void) {
     printBalances(group);
 
     Counts const counts = strategies(group);
+    size_t const festivalPayments = festival();
 
-    section("7. Settling up for real");
+    section("9. Settling up for real");
     settle(group);
     printLine("Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n"
               "every balance is zero and a new settlement has nothing left to pay:");
@@ -325,9 +474,12 @@ int main(void) {
     printFormatted("Payments still needed: %zu.", eranosPaymentListLength(remaining));
     eranosPaymentListDestroy(remaining);
 
-    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
-    // first and needs five; the unsimplified debts between pairs need seven.
-    check(4 == counts.minimum && 5 == counts.greedy && 7 == counts.direct, "the plans take 4, 5, and 7 payments");
+    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one;
+    // greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
+    check(4 == counts.adaptive && 7 == counts.direct && 5 == counts.greedy && 4 == counts.minimum,
+          "the adaptive, direct, greedy, and minimum plans take 4, 7, 5, and 4 payments");
+    // Greedy settles the festival's 21 balances in 19 payments.
+    check(19 == festivalPayments, "the festival's plan takes 19 payments");
     Id const everyone[] = {ana, bob, carol, dan, eva, filip};
     for (size_t index = 0; 6 > index; ++index) {
         check(settled(group, everyone[index]), "every member is settled");

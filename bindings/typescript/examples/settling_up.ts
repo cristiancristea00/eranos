@@ -78,9 +78,24 @@ const strategyColumns: Columns<StrategyRow> = [
 
 /** The number of payments of each strategy's plan. */
 interface Counts {
+    readonly adaptive: number;
     readonly direct: number;
     readonly greedy: number;
     readonly minimum: number;
+}
+
+/** The name of `strategy` as the apps show it. */
+function strategyName(strategy: SettlementStrategy): string {
+    switch (strategy) {
+        case SettlementStrategy.ADAPTIVE:
+            return 'Adaptive';
+        case SettlementStrategy.DIRECT:
+            return 'Direct';
+        case SettlementStrategy.GREEDY:
+            return 'Greedy';
+        case SettlementStrategy.MINIMUM_TRANSFERS:
+            return 'MinimumTransfers';
+    }
 }
 
 /** Records an expense of `amount` EUR paid by `payer` and split equally. */
@@ -144,7 +159,16 @@ function strategies(group: Group): Counts {
     );
     printPayments(group, direct);
 
-    section('6. The strategies side by side');
+    section('6. Adaptive');
+    const adaptive = group.settlementSync(SettlementStrategy.ADAPTIVE);
+    printLines(
+        "The fewest payments while they are quick to find, greedy's beyond: up to 20 open",
+        'balances the minimum solver settles them, past that greedy does, and the plan',
+        'names the strategy whose plan it is. Six balances are well within the limit, so',
+        `the plan is the one ${strategyName(adaptive.strategy)} gives, the same ${String(adaptive.payments.length)} payments.`,
+    );
+
+    section('7. The strategies side by side');
     printTable(
         strategyColumns,
         [
@@ -156,10 +180,60 @@ function strategies(group: Group): Counts {
             },
             { cost: 'O(n log n)', guarantee: 'at most n − 1 payments', payments: greedy.payments.length, strategy: 'Greedy' },
             { cost: 'O(pairs)', guarantee: 'one payment per pair in debt', payments: direct.payments.length, strategy: 'Direct' },
+            {
+                cost: 'as MinimumTransfers, then Greedy',
+                guarantee: 'the fewest up to 20 balances',
+                payments: adaptive.payments.length,
+                strategy: 'Adaptive',
+            },
         ],
         3,
     );
-    return { direct: direct.payments.length, greedy: greedy.payments.length, minimum: minimum.payments.length };
+    return {
+        adaptive: adaptive.payments.length,
+        direct: direct.payments.length,
+        greedy: greedy.payments.length,
+        minimum: minimum.payments.length,
+    };
+}
+
+/**
+ * Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly, and prints which
+ * strategy's plan it took; returns the number of payments.
+ */
+function festival(): number {
+    section('8. A larger group');
+    const euro = Currency.of('EUR');
+    using group = Group.create(euro, 'Festival');
+    const friends: MemberId[] = [];
+    for (let number = 1; 21 >= number; number += 1) {
+        friends.push(group.addMemberSync({ firstName: `Friend ${String(number)}` }));
+    }
+    // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
+    // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
+    for (const [index, payer] of friends.entries()) {
+        const number = BigInt(index + 1);
+        group.addExpenseSync({
+            cost: { kind: 'local', amount: new Money(euro, 21n * number * number) },
+            date: CalendarDate.of(18, 9, 2026),
+            name: 'Round',
+            payers: { kind: 'equal', members: [payer] },
+            split: { kind: 'whole', split: { kind: 'equal', members: friends } },
+        });
+    }
+    const open = group.summarySync().members.filter((member) => 0n !== member.net.minorUnits).length;
+    const adaptive = group.settlementSync(SettlementStrategy.ADAPTIVE);
+    const greedy = group.settlementSync(SettlementStrategy.GREEDY);
+    printLines(
+        'Twenty-one friends at a festival each bought one round for everyone, each round',
+        `at another price, so all ${String(open)} end with a balance and no two of them cancel out.`,
+        'That is more than the 20 the adaptive strategy settles exactly, so it takes the',
+        `plan ${strategyName(adaptive.strategy)} gives and says so: the same ${String(adaptive.payments.length)} payments.`,
+    );
+    assert.equal(open, 21);
+    assert.equal(adaptive.strategy, SettlementStrategy.GREEDY);
+    assert.deepEqual(adaptive.payments, greedy.payments);
+    return adaptive.payments.length;
 }
 
 await load();
@@ -171,11 +245,8 @@ const dan = group.addMemberSync({ firstName: 'Dan' });
 const eva = group.addMemberSync({ firstName: 'Eva' });
 const filip = group.addMemberSync({ firstName: 'Filip' });
 
-printLines('Ski week: three ways to settle up', '═════════════════════════════════');
-printLines(
-    'Six friends spent a week in the mountains. The library can turn their balances',
-    'into payments in three ways; the app picks one, and they differ here.',
-);
+printLines('Ski week: four ways to settle up', '════════════════════════════════');
+printLines('Six friends spent a week in the mountains. The library can turn their balances', 'into payments in four ways, and the app picks one.');
 
 section('1. What was spent');
 spend(group, 'Cabin', '12.00', dan, [dan, eva, filip]);
@@ -199,8 +270,9 @@ printLines('Four members are owed money and two owe it:');
 printBalances(group);
 
 const counts = strategies(group);
+const festivalPayments = festival();
 
-section('7. Settling up for real');
+section('9. Settling up for real');
 const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 for (const payment of plan.payments) {
     group.addTransferSync({
@@ -217,9 +289,11 @@ printLines(
 printBalances(group);
 printLines(`Payments still needed: ${String(group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS).payments.length)}.`);
 
-// {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
-// first and needs five; the unsimplified debts between pairs need seven.
-assert.deepEqual(counts, { direct: 7, greedy: 5, minimum: 4 });
+// {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one;
+// greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
+assert.deepEqual(counts, { adaptive: 4, direct: 7, greedy: 5, minimum: 4 });
+// Greedy settles the festival's 21 balances in 19 payments.
+assert.equal(festivalPayments, 19);
 const summary = group.summarySync();
 for (const member of [ana, bob, carol, dan, eva, filip]) {
     assert.deepEqual(totals(member, summary)?.balance, { kind: 'settled' });

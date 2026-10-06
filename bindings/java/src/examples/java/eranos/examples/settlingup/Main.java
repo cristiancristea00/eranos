@@ -84,7 +84,17 @@ public final class Main {
     }
 
     /** The number of payments of each strategy's plan. */
-    private record Counts(int direct, int greedy, int minimum) {}
+    private record Counts(int adaptive, int direct, int greedy, int minimum) {}
+
+    /** The name of {@code strategy} as the apps show it. */
+    private static String strategyName(SettlementStrategy strategy) {
+        return switch (strategy) {
+            case ADAPTIVE -> "Adaptive";
+            case DIRECT -> "Direct";
+            case GREEDY -> "Greedy";
+            case MINIMUM_TRANSFERS -> "MinimumTransfers";
+        };
+    }
 
     /** Records an expense of {@code amount} EUR paid by {@code payer} and split equally. */
     private static void spend(
@@ -167,7 +177,18 @@ public final class Main {
                         .formatted(direct.payments().size()));
         printPayments(group, direct);
 
-        section("6. The strategies side by side");
+        section("6. Adaptive");
+        Settlement adaptive = group.settlement(SettlementStrategy.ADAPTIVE);
+        System.out.print(
+                """
+                The fewest payments while they are quick to find, greedy's beyond: up to 20 open
+                balances the minimum solver settles them, past that greedy does, and the plan
+                names the strategy whose plan it is. Six balances are well within the limit, so
+                the plan is the one %s gives, the same %d payments.
+                """
+                        .formatted(strategyName(adaptive.strategy()), adaptive.payments().size()));
+
+        section("7. The strategies side by side");
         printTable(
                 StrategyRow.HEADERS,
                 List.of(
@@ -185,10 +206,68 @@ public final class Main {
                                 "O(pairs)",
                                 "one payment per pair in debt",
                                 direct.payments().size(),
-                                "Direct")),
+                                "Direct"),
+                        new StrategyRow(
+                                "as MinimumTransfers, then Greedy",
+                                "the fewest up to 20 balances",
+                                adaptive.payments().size(),
+                                "Adaptive")),
                 3);
         return new Counts(
-                direct.payments().size(), greedy.payments().size(), minimum.payments().size());
+                adaptive.payments().size(),
+                direct.payments().size(),
+                greedy.payments().size(),
+                minimum.payments().size());
+    }
+
+    /**
+     * Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly,
+     * and prints which strategy's plan it took; returns the number of payments.
+     */
+    private static int festival() throws EranosException {
+        section("8. A larger group");
+        try (Group group = Group.builder(Currency.of("EUR"), "Festival").build()) {
+            List<MemberId> friends = new ArrayList<>();
+            for (int number = 1; 21 >= number; number++) {
+                friends.add(group.addMember(Member.builder("Friend " + number).build()));
+            }
+            // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with
+            // nothing to round, and friend i's balance is 21·i² − 3311 cents: never zero, and
+            // never the opposite of another's.
+            for (int number = 1; 21 >= number; number++) {
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(
+                                                new Money(
+                                                        Currency.of("EUR"), 21L * number * number)),
+                                        CalendarDate.of(18, 9, 2026),
+                                        "Round",
+                                        new Split.Equal(List.of(friends.get(number - 1))),
+                                        new ExpenseSplit.Whole(new Split.Equal(friends)))
+                                .build());
+            }
+            long open =
+                    group.summary().members().stream()
+                            .filter(member -> 0 != member.net().minorUnits())
+                            .count();
+            Settlement adaptive = group.settlement(SettlementStrategy.ADAPTIVE);
+            Settlement greedy = group.settlement(SettlementStrategy.GREEDY);
+            System.out.print(
+                    """
+                    Twenty-one friends at a festival each bought one round for everyone, each round
+                    at another price, so all %d end with a balance and no two of them cancel out.
+                    That is more than the 20 the adaptive strategy settles exactly, so it takes the
+                    plan %s gives and says so: the same %d payments.
+                    """
+                            .formatted(
+                                    open,
+                                    strategyName(adaptive.strategy()),
+                                    adaptive.payments().size()));
+            check(21 == open);
+            check(SettlementStrategy.GREEDY == adaptive.strategy());
+            check(adaptive.payments().equals(greedy.payments()));
+            return adaptive.payments().size();
+        }
     }
 
     /**
@@ -206,12 +285,12 @@ public final class Main {
             MemberId eva = group.addMember(Member.builder("Eva").build());
             MemberId filip = group.addMember(Member.builder("Filip").build());
 
-            System.out.println("Ski week: three ways to settle up");
-            System.out.println("═════════════════════════════════");
+            System.out.println("Ski week: four ways to settle up");
+            System.out.println("════════════════════════════════");
             System.out.print(
                     """
                     Six friends spent a week in the mountains. The library can turn their balances
-                    into payments in three ways; the app picks one, and they differ here.
+                    into payments in four ways, and the app picks one.
                     """);
 
             section("1. What was spent");
@@ -236,8 +315,9 @@ public final class Main {
             printBalances(group);
 
             Counts payments = strategies(group);
+            int festivalPayments = festival();
 
-            section("7. Settling up for real");
+            section("9. Settling up for real");
             Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
             for (Payment payment : plan.payments()) {
                 group.addTransfer(
@@ -258,10 +338,12 @@ public final class Main {
                     "Payments still needed: %d.%n",
                     group.settlement(SettlementStrategy.MINIMUM_TRANSFERS).payments().size());
 
-            // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice;
-            // greedy pays the largest amounts first and needs five; the unsimplified debts between
-            // pairs need seven.
-            check(new Counts(7, 5, 4).equals(payments));
+            // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice,
+            // and the adaptive plan is that one; greedy pays the largest amounts first and needs
+            // five; the unsimplified debts between pairs need seven.
+            check(new Counts(4, 7, 5, 4).equals(payments));
+            // Greedy settles the festival's 21 balances in 19 payments.
+            check(19 == festivalPayments);
             Summary summary = group.summary();
             for (MemberId member : List.of(ana, bob, carol, dan, eva, filip)) {
                 check(

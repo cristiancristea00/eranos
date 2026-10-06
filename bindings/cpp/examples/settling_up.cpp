@@ -4,9 +4,12 @@
 #include "eranos.hpp"
 #include "report.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <print>
 #include <string>
 #include <string_view>
@@ -16,8 +19,13 @@
 namespace eranos::examples {
 namespace {
 
+/// How many friends the festival's group holds: more open balances than the adaptive strategy settles exactly.
+constexpr std::size_t FRIENDS = 21;
+
 /// How many payments each strategy plans.
 struct Counts final {
+    /// The payments of the adaptive plan.
+    std::size_t adaptive;
     /// The payments of the direct plan.
     std::size_t direct;
     /// The payments of the greedy plan.
@@ -104,6 +112,21 @@ struct StrategyRow final {
     [[nodiscard]] Cells<4> cells() const noexcept { return {strategy, guarantee, cost, payments}; }
 };
 
+/// The name of @p strategy as the apps show it.
+[[nodiscard]] std::string_view strategyName(SettlementStrategy const strategy) {
+    switch (strategy) {
+    case SettlementStrategy::ADAPTIVE:
+        return "Adaptive";
+    case SettlementStrategy::DIRECT:
+        return "Direct";
+    case SettlementStrategy::GREEDY:
+        return "Greedy";
+    case SettlementStrategy::MINIMUM_TRANSFERS:
+        return "MinimumTransfers";
+    }
+    std::unreachable();
+}
+
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the Rust example gives them.
 void spend(Group &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
@@ -138,7 +161,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
     printTable(rows, 2);
 }
 
-/// Prints each strategy's plan with what it promises.
+/// Prints each strategy's plan with what it promises; returns the number of payments of each.
 [[nodiscard]] Counts strategies(Group const &group) {
     section("3. Minimum transfers");
     auto const minimum = must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS));
@@ -165,8 +188,21 @@ void printPayments(Group const &group, Settlement const &settlement) {
                  direct.payments.size());
     printPayments(group, direct);
 
-    section("6. The strategies side by side");
-    Counts const counts{.direct = direct.payments.size(), .greedy = greedy.payments.size(), .minimum = minimum.payments.size()};
+    section("6. Adaptive");
+    auto const adaptive = must(group.settlement(SettlementStrategy::ADAPTIVE));
+    std::println("The fewest payments while they are quick to find, greedy's beyond: up to 20 open\n"
+                 "balances the minimum solver settles them, past that greedy does, and the plan\n"
+                 "names the strategy whose plan it is. Six balances are well within the limit, so\n"
+                 "the plan is the one {} gives, the same {} payments.",
+                 strategyName(adaptive.strategy), adaptive.payments.size());
+
+    section("7. The strategies side by side");
+    Counts const counts{
+        .adaptive = adaptive.payments.size(),
+        .direct = direct.payments.size(),
+        .greedy = greedy.payments.size(),
+        .minimum = minimum.payments.size(),
+    };
     printTable<StrategyRow>(
         {
             {
@@ -187,9 +223,52 @@ void printPayments(Group const &group, Settlement const &settlement) {
                 .payments = std::to_string(counts.direct),
                 .strategy = "Direct",
             },
+            {
+                .cost = "as MinimumTransfers, then Greedy",
+                .guarantee = "the fewest up to 20 balances",
+                .payments = std::to_string(counts.adaptive),
+                .strategy = "Adaptive",
+            },
         },
         3);
     return counts;
+}
+
+/// Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly, and prints which
+/// strategy's plan it took; returns the number of payments.
+[[nodiscard]] std::size_t festival() {
+    section("8. A larger group");
+    auto const euro = must(Currency::of("EUR"));
+    auto group = must(Group::create(euro, "Festival"));
+    std::vector<MemberId> friends;
+    friends.reserve(FRIENDS);
+    for (std::size_t number = 1; FRIENDS >= number; ++number) {
+        auto const member = must(group.addMember(Member(std::format("Friend {}", number))));
+        friends.push_back(member);
+    }
+    // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
+    // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
+    auto const date = must(CalendarDate::of(18, 9, 2026));
+    for (std::size_t index = 0; friends.size() > index; ++index) {
+        auto const number = static_cast<std::int64_t>(index) + 1;
+        Expense const expense(LocalCost{Money(euro, static_cast<std::int64_t>(FRIENDS) * number * number)}, date, "Round",
+                              EqualSplit{{friends.at(index)}}, WholeExpenseSplit{EqualSplit{friends}});
+        static_cast<void>(must(group.addExpense(expense)));
+    }
+    auto const summary = group.summary();
+    auto const open =
+        static_cast<std::size_t>(std::ranges::count_if(summary.members, [](MemberSummary const &totals) { return 0 != totals.net.minorUnits; }));
+    auto const adaptive = must(group.settlement(SettlementStrategy::ADAPTIVE));
+    auto const greedy = must(group.settlement(SettlementStrategy::GREEDY));
+    std::println("Twenty-one friends at a festival each bought one round for everyone, each round\n"
+                 "at another price, so all {} end with a balance and no two of them cancel out.\n"
+                 "That is more than the 20 the adaptive strategy settles exactly, so it takes the\n"
+                 "plan {} gives and says so: the same {} payments.",
+                 open, strategyName(adaptive.strategy), adaptive.payments.size());
+    check(FRIENDS == open, "every friend has a balance");
+    check(SettlementStrategy::GREEDY == adaptive.strategy, "the adaptive plan is greedy's");
+    check(greedy.payments == adaptive.payments, "the adaptive plan makes greedy's payments");
+    return adaptive.payments.size();
 }
 
 /// Runs the example.
@@ -202,10 +281,9 @@ void run() {
     auto const eva = must(group.addMember(Member("Eva")));
     auto const filip = must(group.addMember(Member("Filip")));
 
-    printLine("Ski week: three ways to settle up\n"
-              "═════════════════════════════════");
+    title("Ski week: four ways to settle up");
     printLine("Six friends spent a week in the mountains. The library can turn their balances\n"
-              "into payments in three ways; the app picks one, and they differ here.");
+              "into payments in four ways, and the app picks one.");
 
     section("1. What was spent");
     spend(group, "Cabin", "12.00", dan, {dan, eva, filip});
@@ -229,8 +307,9 @@ void run() {
     printBalances(group);
 
     auto const counts = strategies(group);
+    auto const festivalPayments = festival();
 
-    section("7. Settling up for real");
+    section("9. Settling up for real");
     for (auto const &payment : must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments) {
         static_cast<void>(
             must(group.addTransfer(Transfer(LocalCost{payment.amount}, must(CalendarDate::of(27, 9, 2026)), payment.from, payment.to))));
@@ -240,9 +319,12 @@ void run() {
     printBalances(group);
     std::println("Payments still needed: {}.", must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS)).payments.size());
 
-    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
-    // first and needs five; the unsimplified debts between pairs need seven.
-    check(4 == counts.minimum && 5 == counts.greedy && 7 == counts.direct, "the plans take 4, 5, and 7 payments");
+    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one;
+    // greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
+    check(4 == counts.adaptive && 7 == counts.direct && 5 == counts.greedy && 4 == counts.minimum,
+          "the adaptive, direct, greedy, and minimum plans take 4, 7, 5, and 4 payments");
+    // Greedy settles the festival's 21 balances in 19 payments.
+    check(19 == festivalPayments, "the festival's plan takes 19 payments");
     auto const summary = group.summary();
     for (auto const &member : std::array<MemberId, 6>{ana, bob, carol, dan, eva, filip}) {
         check(Balance(SettledBalance{}) == totalsOf(summary, member).value().balance, "every member is settled");

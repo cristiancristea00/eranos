@@ -80,10 +80,20 @@ private data class StrategyRow(
 
 /** The number of payments of each strategy's plan. */
 private data class Counts(
+    val adaptive: Int,
     val direct: Int,
     val greedy: Int,
     val minimum: Int,
 )
+
+/** The name of [strategy] as the apps show it. */
+private fun strategyName(strategy: SettlementStrategy): String =
+    when (strategy) {
+        SettlementStrategy.ADAPTIVE -> "Adaptive"
+        SettlementStrategy.DIRECT -> "Direct"
+        SettlementStrategy.GREEDY -> "Greedy"
+        SettlementStrategy.MINIMUM_TRANSFERS -> "MinimumTransfers"
+    }
 
 /** Records an expense of [amount] EUR paid by [payer] and split equally. */
 private fun spend(
@@ -166,7 +176,18 @@ private fun strategies(group: Group): Counts {
     )
     printPayments(group, direct)
 
-    section("6. The strategies side by side")
+    section("6. Adaptive")
+    val adaptive = group.settlementBlocking(SettlementStrategy.ADAPTIVE)
+    println(
+        """
+        The fewest payments while they are quick to find, greedy's beyond: up to 20 open
+        balances the minimum solver settles them, past that greedy does, and the plan
+        names the strategy whose plan it is. Six balances are well within the limit, so
+        the plan is the one ${strategyName(adaptive.strategy)} gives, the same ${adaptive.payments.size} payments.
+        """.trimIndent(),
+    )
+
+    section("7. The strategies side by side")
     printTable(
         StrategyRow.HEADERS,
         listOf(
@@ -178,10 +199,61 @@ private fun strategies(group: Group): Counts {
             ),
             StrategyRow(cost = "O(n log n)", guarantee = "at most n − 1 payments", payments = greedy.payments.size, strategy = "Greedy"),
             StrategyRow(cost = "O(pairs)", guarantee = "one payment per pair in debt", payments = direct.payments.size, strategy = "Direct"),
+            StrategyRow(
+                cost = "as MinimumTransfers, then Greedy",
+                guarantee = "the fewest up to 20 balances",
+                payments = adaptive.payments.size,
+                strategy = "Adaptive",
+            ),
         ),
         numbersFrom = 3,
     )
-    return Counts(direct = direct.payments.size, greedy = greedy.payments.size, minimum = minimum.payments.size)
+    return Counts(
+        adaptive = adaptive.payments.size,
+        direct = direct.payments.size,
+        greedy = greedy.payments.size,
+        minimum = minimum.payments.size,
+    )
+}
+
+/**
+ * Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly, and prints which strategy's
+ * plan it took; returns the number of payments.
+ */
+private fun festival(): Int {
+    section("8. A larger group")
+    return Group(Currency.of("EUR"), "Festival").use { group ->
+        val friends = (1..21).map { number -> group.addBlocking(Member("Friend $number")) }
+        // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
+        // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
+        for ((index, payer) in friends.withIndex()) {
+            val number = index + 1L
+            group.addBlocking(
+                Expense(
+                    Cost.Local(Money(Currency.of("EUR"), 21 * number * number)),
+                    CalendarDate.of(day = 18, month = 9, year = 2026),
+                    "Round",
+                    Split.Equal(listOf(payer)),
+                    ExpenseSplit.Whole(Split.Equal(friends)),
+                ),
+            )
+        }
+        val open = group.summaryBlocking().members.count { totals -> 0L != totals.net.minorUnits }
+        val adaptive = group.settlementBlocking(SettlementStrategy.ADAPTIVE)
+        val greedy = group.settlementBlocking(SettlementStrategy.GREEDY)
+        println(
+            """
+            Twenty-one friends at a festival each bought one round for everyone, each round
+            at another price, so all $open end with a balance and no two of them cancel out.
+            That is more than the 20 the adaptive strategy settles exactly, so it takes the
+            plan ${strategyName(adaptive.strategy)} gives and says so: the same ${adaptive.payments.size} payments.
+            """.trimIndent(),
+        )
+        check(21 == open)
+        check(SettlementStrategy.GREEDY == adaptive.strategy)
+        check(adaptive.payments == greedy.payments)
+        adaptive.payments.size
+    }
 }
 
 /** Prints the report of the ski week. */
@@ -194,12 +266,12 @@ fun main() {
         val eva = group.addBlocking(Member("Eva"))
         val filip = group.addBlocking(Member("Filip"))
 
-        println("Ski week: three ways to settle up")
-        println("═════════════════════════════════")
+        println("Ski week: four ways to settle up")
+        println("════════════════════════════════")
         println(
             """
             Six friends spent a week in the mountains. The library can turn their balances
-            into payments in three ways; the app picks one, and they differ here.
+            into payments in four ways, and the app picks one.
             """.trimIndent(),
         )
 
@@ -227,8 +299,9 @@ fun main() {
         printBalances(group)
 
         val counts = strategies(group)
+        val festivalPayments = festival()
 
-        section("7. Settling up for real")
+        section("9. Settling up for real")
         val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
         for (payment in plan.payments) {
             group.addBlocking(Transfer(Cost.Local(payment.amount), CalendarDate.of(day = 27, month = 9, year = 2026), payment.from, payment.to))
@@ -242,9 +315,11 @@ fun main() {
         printBalances(group)
         println("Payments still needed: ${group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS).payments.size}.")
 
-        // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest
-        // amounts first and needs five; the unsimplified debts between pairs need seven.
-        check(Counts(direct = 7, greedy = 5, minimum = 4) == counts)
+        // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that
+        // one; greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
+        check(Counts(adaptive = 4, direct = 7, greedy = 5, minimum = 4) == counts)
+        // Greedy settles the festival's 21 balances in 19 payments.
+        check(19 == festivalPayments)
         val summary = group.summaryBlocking()
         for (member in listOf(ana, bob, carol, dan, eva, filip)) {
             check(Balance.Settled == totals(member, summary)?.balance)

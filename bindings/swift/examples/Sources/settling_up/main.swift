@@ -57,12 +57,27 @@ struct StrategyRow: TableRow {
 
 /// The number of payments of each strategy's plan.
 struct Counts: Equatable {
+    let adaptive: Int
     let direct: Int
     let greedy: Int
     let minimum: Int
 }
 
 let euro = try Currency(code: "EUR")
+
+/// The name of `strategy` as the apps show it.
+func strategyName(_ strategy: SettlementStrategy) -> String {
+    switch strategy {
+    case .adaptive:
+        "Adaptive"
+    case .direct:
+        "Direct"
+    case .greedy:
+        "Greedy"
+    case .minimumTransfers:
+        "MinimumTransfers"
+    }
+}
 
 /// Records an expense of `amount` EUR paid by `payer` and split equally.
 func spend(_ group: Group, _ name: String, _ amount: String, _ payer: Member.ID, _ participants: [Member.ID]) throws(EranosError) {
@@ -128,16 +143,68 @@ func strategies(_ group: Group) throws(EranosError) -> Counts {
         """)
     try printPayments(group, direct)
 
-    section("6. The strategies side by side")
+    section("6. Adaptive")
+    let adaptive = try group.settlement(by: .adaptive)
+    print("""
+        The fewest payments while they are quick to find, greedy's beyond: up to 20 open
+        balances the minimum solver settles them, past that greedy does, and the plan
+        names the strategy whose plan it is. Six balances are well within the limit, so
+        the plan is the one \(strategyName(adaptive.strategy)) gives, the same \(adaptive.payments.count) payments.
+        """)
+
+    section("7. The strategies side by side")
     printTable(
         [
             StrategyRow(cost: "O(2ⁿ·n) for n open balances", guarantee: "the fewest payments", payments: minimum.payments.count, strategy: "MinimumTransfers"),
             StrategyRow(cost: "O(n log n)", guarantee: "at most n − 1 payments", payments: greedy.payments.count, strategy: "Greedy"),
-            StrategyRow(cost: "O(pairs)", guarantee: "one payment per pair in debt", payments: direct.payments.count, strategy: "Direct")
+            StrategyRow(cost: "O(pairs)", guarantee: "one payment per pair in debt", payments: direct.payments.count, strategy: "Direct"),
+            StrategyRow(cost: "as MinimumTransfers, then Greedy", guarantee: "the fewest up to 20 balances", payments: adaptive.payments.count, strategy: "Adaptive")
         ],
         numbersFrom: 3
     )
-    return Counts(direct: direct.payments.count, greedy: greedy.payments.count, minimum: minimum.payments.count)
+    return Counts(
+        adaptive: adaptive.payments.count,
+        direct: direct.payments.count,
+        greedy: greedy.payments.count,
+        minimum: minimum.payments.count
+    )
+}
+
+/// Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly, and prints which
+/// strategy's plan it took; returns the number of payments.
+func festival() throws(EranosError) -> Int {
+    section("8. A larger group")
+    let group = try Group(currency: euro, name: "Festival")
+    var friends: [Member.ID] = []
+    for number in 1...21 {
+        friends.append(try group.add(Member(firstName: "Friend \(number)")))
+    }
+    // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
+    // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
+    for (number, payer) in zip(Int64(1)..., friends) {
+        _ = try group.add(
+            Expense(
+                cost: .local(Money(currency: euro, minorUnits: 21 * number * number)),
+                date: try CalendarDate(day: 18, month: 9, year: 2026),
+                name: "Round",
+                payers: .equal([payer]),
+                split: .whole(.equal(friends))
+            )
+        )
+    }
+    let open = try group.summary().members.count { member in 0 != member.net.minorUnits }
+    let adaptive = try group.settlement(by: .adaptive)
+    let greedy = try group.settlement(by: .greedy)
+    print("""
+        Twenty-one friends at a festival each bought one round for everyone, each round
+        at another price, so all \(open) end with a balance and no two of them cancel out.
+        That is more than the 20 the adaptive strategy settles exactly, so it takes the
+        plan \(strategyName(adaptive.strategy)) gives and says so: the same \(adaptive.payments.count) payments.
+        """)
+    precondition(21 == open)
+    precondition(SettlementStrategy.greedy == adaptive.strategy)
+    precondition(adaptive.payments == greedy.payments)
+    return adaptive.payments.count
 }
 
 func main() throws(EranosError) {
@@ -149,11 +216,10 @@ func main() throws(EranosError) {
     let eva = try group.add(Member(firstName: "Eva"))
     let filip = try group.add(Member(firstName: "Filip"))
 
-    print("Ski week: three ways to settle up")
-    print("═════════════════════════════════")
+    title("Ski week: four ways to settle up")
     print("""
         Six friends spent a week in the mountains. The library can turn their balances
-        into payments in three ways; the app picks one, and they differ here.
+        into payments in four ways, and the app picks one.
         """)
 
     section("1. What was spent")
@@ -179,8 +245,9 @@ func main() throws(EranosError) {
     try printBalances(group)
 
     let counts = try strategies(group)
+    let festivalPayments = try festival()
 
-    section("7. Settling up for real")
+    section("9. Settling up for real")
     let plan = try group.settlement(by: .minimumTransfers)
     for payment in plan.payments {
         _ = try group.add(Transfer(cost: .local(payment.amount), date: try CalendarDate(day: 27, month: 9, year: 2026), from: payment.from, to: payment.to))
@@ -192,9 +259,11 @@ func main() throws(EranosError) {
     try printBalances(group)
     print("Payments still needed: \(try group.settlement(by: .minimumTransfers).payments.count).")
 
-    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
-    // first and needs five; the unsimplified debts between pairs need seven.
-    precondition(Counts(direct: 7, greedy: 5, minimum: 4) == counts)
+    // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that
+    // one; greedy pays the largest amounts first and needs five; the unsimplified debts between pairs need seven.
+    precondition(Counts(adaptive: 4, direct: 7, greedy: 5, minimum: 4) == counts)
+    // Greedy settles the festival's 21 balances in 19 payments.
+    precondition(19 == festivalPayments)
     let summary = try group.summary()
     for member in [ana, bob, carol, dan, eva, filip] {
         precondition(Balance.settled == totals(of: member, in: summary)?.balance)

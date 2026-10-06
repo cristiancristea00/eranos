@@ -6,7 +6,7 @@ The port of the Rust example ``settling_up``, which prints the same report.
 """
 
 import dataclasses
-from typing import ClassVar, final, override
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
     Balance,
@@ -126,6 +126,9 @@ class StrategyRow(Row):
 class Counts:
     """The number of payments of each strategy's plan."""
 
+    adaptive: int
+    """The payments of the adaptive plan."""
+
     direct: int
     """The payments of the direct plan."""
 
@@ -134,6 +137,30 @@ class Counts:
 
     minimum: int
     """The payments of the minimum plan."""
+
+
+def strategy_name(strategy: SettlementStrategy) -> str:
+    """
+    Name strategy as the apps show it.
+
+    Args:
+        strategy: The strategy.
+
+    Returns:
+        The name, such as ``"MinimumTransfers"``.
+
+    """
+    match strategy:
+        case SettlementStrategy.ADAPTIVE:
+            return 'Adaptive'
+        case SettlementStrategy.DIRECT:
+            return 'Direct'
+        case SettlementStrategy.GREEDY:
+            return 'Greedy'
+        case SettlementStrategy.MINIMUM_TRANSFERS:
+            return 'MinimumTransfers'
+        case _:
+            assert_never(strategy)
 
 
 def spend(group: Group, name: str, amount: str, payer: MemberId, members: tuple[MemberId, ...]) -> None:
@@ -237,7 +264,16 @@ def strategies(group: Group) -> Counts:
     )
     print_payments(group, direct)
 
-    section('6. The strategies side by side')
+    section('6. Adaptive')
+    adaptive = group.settlement(SettlementStrategy.ADAPTIVE)
+    print_lines(
+        "The fewest payments while they are quick to find, greedy's beyond: up to 20 open",
+        'balances the minimum solver settles them, past that greedy does, and the plan',
+        'names the strategy whose plan it is. Six balances are well within the limit, so',
+        f'the plan is the one {strategy_name(adaptive.strategy)} gives, the same {len(adaptive.payments)} payments.',
+    )
+
+    section('7. The strategies side by side')
     print_table(
         StrategyRow,
         [
@@ -260,10 +296,55 @@ def strategies(group: Group) -> Counts:
                 payments=len(direct.payments),
                 strategy='Direct',
             ),
+            StrategyRow(
+                cost='as MinimumTransfers, then Greedy',
+                guarantee='the fewest up to 20 balances',
+                payments=len(adaptive.payments),
+                strategy='Adaptive',
+            ),
         ],
         3,
     )
-    return Counts(direct=len(direct.payments), greedy=len(greedy.payments), minimum=len(minimum.payments))
+    return Counts(adaptive=len(adaptive.payments), direct=len(direct.payments), greedy=len(greedy.payments), minimum=len(minimum.payments))
+
+
+def festival() -> int:
+    """
+    Settle a group of 21 friends, more open balances than the adaptive strategy settles exactly, and print which strategy's plan it took.
+
+    Returns:
+        The number of payments.
+
+    """
+    section('8. A larger group')
+    euro = Currency('EUR')
+    group = Group.create(euro, 'Festival')
+    friends = tuple(group.add_member(Member(first_name=f'Friend {number}')) for number in range(1, 22))
+    # Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's balance is 21·i² - 3311
+    # cents: never zero, and never the opposite of another's.
+    for number, payer in enumerate(friends, start=1):
+        group.add_expense(
+            Expense(
+                cost=LocalCost(Money(euro, 21 * number**2)),
+                date=CalendarDate(18, 9, 2026),
+                name='Round',
+                payers=EqualSplit((payer,)),
+                split=WholeExpenseSplit(EqualSplit(friends)),
+            )
+        )
+    open_balances = sum(1 for member in group.summary().members if member.net.minor_units != 0)
+    adaptive = group.settlement(SettlementStrategy.ADAPTIVE)
+    greedy = group.settlement(SettlementStrategy.GREEDY)
+    print_lines(
+        'Twenty-one friends at a festival each bought one round for everyone, each round',
+        f'at another price, so all {open_balances} end with a balance and no two of them cancel out.',
+        'That is more than the 20 the adaptive strategy settles exactly, so it takes the',
+        f'plan {strategy_name(adaptive.strategy)} gives and says so: the same {len(adaptive.payments)} payments.',
+    )
+    assert open_balances == 21
+    assert adaptive.strategy is SettlementStrategy.GREEDY
+    assert adaptive.payments == greedy.payments
+    return len(adaptive.payments)
 
 
 def main() -> None:
@@ -276,10 +357,10 @@ def main() -> None:
     eva = group.add_member(Member(first_name='Eva'))
     filip = group.add_member(Member(first_name='Filip'))
 
-    title('Ski week: three ways to settle up')
+    title('Ski week: four ways to settle up')
     print_lines(
         'Six friends spent a week in the mountains. The library can turn their balances',
-        'into payments in three ways; the app picks one, and they differ here.',
+        'into payments in four ways, and the app picks one.',
     )
 
     section('1. What was spent')
@@ -307,8 +388,9 @@ def main() -> None:
     print_balances(group)
 
     counts = strategies(group)
+    festival_payments = festival()
 
-    section('7. Settling up for real')
+    section('9. Settling up for real')
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
     for payment in plan.payments:
         # A settlement's payments are in the group currency, so the transfer that records one has a local cost.
@@ -320,9 +402,11 @@ def main() -> None:
     print_balances(group)
     print_lines(f'Payments still needed: {len(group.settlement(SettlementStrategy.MINIMUM_TRANSFERS).payments)}.')
 
-    # {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts first and needs
-    # five; the unsimplified debts between pairs need seven.
-    assert counts == Counts(direct=7, greedy=5, minimum=4)
+    # {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice, and the adaptive plan is that one; greedy pays
+    # the largest amounts first and needs five; the unsimplified debts between pairs need seven.
+    assert counts == Counts(adaptive=4, direct=7, greedy=5, minimum=4)
+    # Greedy settles the festival's 21 balances in 19 payments.
+    assert festival_payments == 19
     summary = group.summary()
     for member in (ana, bob, carol, dan, eva, filip):
         found = totals(member, summary)

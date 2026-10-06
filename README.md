@@ -134,7 +134,7 @@ balances, and payments, and asserts its own numbers:
 | `split_methods`        | Equal, percentage, parts (half a share for a child), exact amounts, two payers                |
 | `restaurant_bill`      | Itemised receipt with quantities and per-item splits; proportional vs equal tip               |
 | `multi_currency`       | Foreign expenses and a cash repayment at fixed rates; moving the books to another currency    |
-| `settling_up`          | The three strategies on one group, then recording the payments                                |
+| `settling_up`          | The four strategies on one group, Adaptive on a larger one, then recording the payments       |
 | `members_and_accounts` | Contact details, IBAN validation, archiving a member                                          |
 | `persistence`          | Saving and loading a group as JSON (needs the `serde` feature)                                |
 | `grand_tour`           | Every feature in one story, from creating a group to sharing it between tasks (needs `serde`) |

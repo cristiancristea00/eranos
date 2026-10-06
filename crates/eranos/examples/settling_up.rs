@@ -63,9 +63,21 @@ struct StrategyRow {
 /// The number of payments of each strategy's plan.
 #[derive(Debug, PartialEq, Eq)]
 struct Counts {
+    adaptive: usize,
     direct: usize,
     greedy: usize,
     minimum: usize,
+}
+
+/// The name of `strategy` as the apps show it.
+const fn strategy_name(strategy: SettlementStrategy) -> &'static str {
+    match strategy {
+        SettlementStrategy::Adaptive => "Adaptive",
+        SettlementStrategy::Direct => "Direct",
+        SettlementStrategy::Greedy => "Greedy",
+        SettlementStrategy::MinimumTransfers => "MinimumTransfers",
+        _ => "another strategy",
+    }
 }
 
 /// Prints a section heading with a line under it.
@@ -173,7 +185,18 @@ fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
     );
     print_payments(group, direct);
 
-    section("6. The strategies side by side");
+    section("6. Adaptive");
+    let adaptive = group.settlement(SettlementStrategy::Adaptive)?;
+    println!(
+        "The fewest payments while they are quick to find, greedy's beyond: up to 20 open\n\
+         balances the minimum solver settles them, past that greedy does, and the plan\n\
+         names the strategy whose plan it is. Six balances are well within the limit, so\n\
+         the plan is the one {} gives, the same {} payments.",
+        strategy_name(adaptive.strategy()),
+        adaptive.len()
+    );
+
+    section("7. The strategies side by side");
     print_table(
         [
             StrategyRow {
@@ -194,14 +217,66 @@ fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
                 payments: direct.len(),
                 strategy: "Direct",
             },
+            StrategyRow {
+                cost: "as MinimumTransfers, then Greedy",
+                guarantee: "the fewest up to 20 balances",
+                payments: adaptive.len(),
+                strategy: "Adaptive",
+            },
         ],
         3,
     );
     Ok(Counts {
+        adaptive: adaptive.len(),
         direct: direct.len(),
         greedy: greedy.len(),
         minimum: minimum.len(),
     })
+}
+
+/// Settles a group of 21 friends, more open balances than the adaptive
+/// strategy settles exactly, and prints which strategy's plan it took;
+/// returns the number of payments.
+fn festival() -> Result<usize, Box<dyn Error>> {
+    section("8. A larger group");
+    let mut group = Group::builder(Currency::EUR, "Festival").build()?;
+    let mut friends = Vec::new();
+    for number in 1..=21 {
+        friends.push(group.add_member(Member::builder(format!("Friend {number}")).build()?)?);
+    }
+    // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i²
+    // cents with nothing to round, and friend i's balance is 21·i² − 3311
+    // cents: never zero, and never the opposite of another's.
+    for (number, &payer) in (1_i64..).zip(&friends) {
+        let expense = Expense::builder(
+            Money::from_minor_units(Currency::EUR, 21 * number * number),
+            CalendarDate::new(18, 9, 2026)?,
+            "Round",
+            payer,
+            Split::equal(friends.iter().copied()),
+        )
+        .build()?;
+        group.add_expense(expense)?;
+    }
+    let open = group
+        .summary()
+        .members()
+        .filter(|member| !member.net().is_zero())
+        .count();
+    let adaptive = group.settlement(SettlementStrategy::Adaptive)?;
+    let greedy = group.settlement(SettlementStrategy::Greedy)?;
+    println!(
+        "Twenty-one friends at a festival each bought one round for everyone, each round\n\
+         at another price, so all {open} end with a balance and no two of them cancel out.\n\
+         That is more than the 20 the adaptive strategy settles exactly, so it takes the\n\
+         plan {} gives and says so: the same {} payments.",
+        strategy_name(adaptive.strategy()),
+        adaptive.len()
+    );
+    assert_eq!(open, 21);
+    assert_eq!(adaptive.strategy(), SettlementStrategy::Greedy);
+    assert_eq!(adaptive.payments(), greedy.payments());
+    Ok(adaptive.len())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -212,11 +287,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (ana, bob, carol) = (add("Ana")?, add("Bob")?, add("Carol")?);
     let (dan, eva, filip) = (add("Dan")?, add("Eva")?, add("Filip")?);
 
-    println!("Ski week: three ways to settle up");
-    println!("═════════════════════════════════");
+    println!("Ski week: four ways to settle up");
+    println!("════════════════════════════════");
     println!(
         "Six friends spent a week in the mountains. The library can turn their balances\n\
-         into payments in three ways; the app picks one, and they differ here."
+         into payments in four ways, and the app picks one."
     );
 
     section("1. What was spent");
@@ -240,8 +315,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     print_balances(&group);
 
     let counts = strategies(&group)?;
+    let festival_payments = festival()?;
 
-    section("7. Settling up for real");
+    section("9. Settling up for real");
     let plan = group
         .settlement(SettlementStrategy::MinimumTransfers)?
         .clone();
@@ -264,16 +340,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four
-    // payments suffice; greedy pays the largest amounts first and needs
-    // five; the unsimplified debts between pairs need seven.
+    // payments suffice, and the adaptive plan is that one; greedy pays the
+    // largest amounts first and needs five; the unsimplified debts between
+    // pairs need seven.
     assert_eq!(
         counts,
         Counts {
+            adaptive: 4,
             direct: 7,
             greedy: 5,
             minimum: 4,
         }
     );
+    // Greedy settles the festival's 21 balances in 19 payments.
+    assert_eq!(festival_payments, 19);
     for member in [ana, bob, carol, dan, eva, filip] {
         assert_eq!(group.summary().member(member).balance(), Balance::Settled);
     }
