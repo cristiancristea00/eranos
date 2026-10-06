@@ -16,8 +16,8 @@ import java.util.concurrent.CancellationException;
 
 /** The conversions of every failure the generated code can report. */
 class ErrorTest {
-    /** A failure of the generated code, beside the failure it must become. */
-    private record Conversion(eranos.internal.EranosException generated, Object failure) {}
+    /** The failure an app must see, beside the failure of the generated code that becomes it. */
+    private record Conversion(Object failure, eranos.internal.EranosException generated) {}
 
     /** Where a saved group that is not JSON stops being JSON. */
     private record Position(long column, long line) {}
@@ -117,308 +117,311 @@ class ErrorTest {
     private static final List<Conversion> CONVERSIONS =
             List.of(
                     new Conversion(
+                            new AccountFailure.EmptyName(),
                             new eranos.internal.EranosException.Account(
-                                    "detail", new eranos.internal.AccountFailure.EmptyName()),
-                            new AccountFailure.EmptyName()),
+                                    "detail", new eranos.internal.AccountFailure.EmptyName())),
                     new Conversion(
+                            new AccountFailure.EmptyUsername(),
                             new eranos.internal.EranosException.Account(
-                                    "detail", new eranos.internal.AccountFailure.EmptyUsername()),
-                            new AccountFailure.EmptyUsername()),
+                                    "detail", new eranos.internal.AccountFailure.EmptyUsername())),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.InvalidChecksum())),
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum())),
+                                            new eranos.internal.IbanReason.InvalidChecksum()))),
                     new Conversion(
+                            new CalendarFailure.InvalidDate(),
                             new eranos.internal.EranosException.Calendar(
-                                    "detail", eranos.internal.CalendarFailure.INVALID_DATE),
-                            new CalendarFailure.InvalidDate()),
+                                    "detail", eranos.internal.CalendarFailure.INVALID_DATE)),
                     new Conversion(
+                            new CalendarFailure.InvalidTime(),
                             new eranos.internal.EranosException.Calendar(
-                                    "detail", eranos.internal.CalendarFailure.INVALID_TIME),
-                            new CalendarFailure.InvalidTime()),
+                                    "detail", eranos.internal.CalendarFailure.INVALID_TIME)),
                     new Conversion(
+                            new CategoryFailure.EmptyName(),
                             new eranos.internal.EranosException.Category(
-                                    "detail", eranos.internal.CategoryFailure.EMPTY_NAME),
-                            new CategoryFailure.EmptyName()),
+                                    "detail", eranos.internal.CategoryFailure.EMPTY_NAME)),
                     new Conversion(
+                            new ContactFailure.InvalidEmail(),
                             new eranos.internal.EranosException.Contact(
-                                    "detail", eranos.internal.ContactFailure.INVALID_EMAIL),
-                            new ContactFailure.InvalidEmail()),
+                                    "detail", eranos.internal.ContactFailure.INVALID_EMAIL)),
                     new Conversion(
+                            new ContactFailure.InvalidPhoneNumber(),
                             new eranos.internal.EranosException.Contact(
-                                    "detail", eranos.internal.ContactFailure.INVALID_PHONE_NUMBER),
-                            new ContactFailure.InvalidPhoneNumber()),
+                                    "detail", eranos.internal.ContactFailure.INVALID_PHONE_NUMBER)),
                     new Conversion(
+                            new ExpenseFailure.AmountsDoNotAddUp(euros(2), euros(3)),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
                                     new eranos.internal.ExpenseFailure.AmountsDoNotAddUp(
                                             new eranos.internal.Money("EUR", 2),
-                                            new eranos.internal.Money("EUR", 3))),
-                            new ExpenseFailure.AmountsDoNotAddUp(euros(2), euros(3))),
+                                            new eranos.internal.Money("EUR", 3)))),
                     new Conversion(
+                            new ExpenseFailure.CurrencyMismatch(
+                                    Currency.known("USD"), Currency.known("GBP")),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
                                     new eranos.internal.ExpenseFailure.CurrencyMismatch(
-                                            "USD", "GBP")),
-                            new ExpenseFailure.CurrencyMismatch(
-                                    Currency.known("USD"), Currency.known("GBP"))),
+                                            "USD", "GBP"))),
                     new Conversion(
+                            new ExpenseFailure.DuplicateMember(new MemberId("member-6")),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
-                                    new eranos.internal.ExpenseFailure.DuplicateMember("member-6")),
-                            new ExpenseFailure.DuplicateMember(new MemberId("member-6"))),
+                                    new eranos.internal.ExpenseFailure.DuplicateMember(
+                                            "member-6"))),
                     new Conversion(
+                            new ExpenseFailure.EmptyItemName(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.EmptyItemName()),
-                            new ExpenseFailure.EmptyItemName()),
+                                    "detail", new eranos.internal.ExpenseFailure.EmptyItemName())),
                     new Conversion(
+                            new ExpenseFailure.EmptyName(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.EmptyName()),
-                            new ExpenseFailure.EmptyName()),
+                                    "detail", new eranos.internal.ExpenseFailure.EmptyName())),
                     new Conversion(
+                            new ExpenseFailure.EmptySplit(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.EmptySplit()),
-                            new ExpenseFailure.EmptySplit()),
+                                    "detail", new eranos.internal.ExpenseFailure.EmptySplit())),
                     new Conversion(
+                            new ExpenseFailure.ItemsDoNotAddUp(euros(7), euros(8)),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
                                     new eranos.internal.ExpenseFailure.ItemsDoNotAddUp(
                                             new eranos.internal.Money("EUR", 7),
-                                            new eranos.internal.Money("EUR", 8))),
-                            new ExpenseFailure.ItemsDoNotAddUp(euros(7), euros(8))),
+                                            new eranos.internal.Money("EUR", 8)))),
                     new Conversion(
+                            new ExpenseFailure.NegativeTip(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.NegativeTip()),
-                            new ExpenseFailure.NegativeTip()),
+                                    "detail", new eranos.internal.ExpenseFailure.NegativeTip())),
                     new Conversion(
+                            new ExpenseFailure.NoItems(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.NoItems()),
-                            new ExpenseFailure.NoItems()),
+                                    "detail", new eranos.internal.ExpenseFailure.NoItems())),
                     new Conversion(
+                            new ExpenseFailure.NonPositiveAmount(),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
-                                    new eranos.internal.ExpenseFailure.NonPositiveAmount()),
-                            new ExpenseFailure.NonPositiveAmount()),
+                                    new eranos.internal.ExpenseFailure.NonPositiveAmount())),
                     new Conversion(
+                            new ExpenseFailure.NonPositiveShare(new MemberId("member-9")),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
                                     new eranos.internal.ExpenseFailure.NonPositiveShare(
-                                            "member-9")),
-                            new ExpenseFailure.NonPositiveShare(new MemberId("member-9"))),
+                                            "member-9"))),
                     new Conversion(
+                            new ExpenseFailure.Overflow(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.Overflow()),
-                            new ExpenseFailure.Overflow()),
+                                    "detail", new eranos.internal.ExpenseFailure.Overflow())),
                     new Conversion(
+                            new ExpenseFailure.PercentagesDoNotAddUp(10L),
                             new eranos.internal.EranosException.Expense(
                                     "detail",
-                                    new eranos.internal.ExpenseFailure.PercentagesDoNotAddUp(10L)),
-                            new ExpenseFailure.PercentagesDoNotAddUp(10L)),
+                                    new eranos.internal.ExpenseFailure.PercentagesDoNotAddUp(10L))),
                     new Conversion(
+                            new ExpenseFailure.ZeroQuantity(),
                             new eranos.internal.EranosException.Expense(
-                                    "detail", new eranos.internal.ExpenseFailure.ZeroQuantity()),
-                            new ExpenseFailure.ZeroQuantity()),
+                                    "detail", new eranos.internal.ExpenseFailure.ZeroQuantity())),
                     new Conversion(
+                            new GroupFailure.ArchivedMember(new MemberId("member-11")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.ArchivedMember("member-11")),
-                            new GroupFailure.ArchivedMember(new MemberId("member-11"))),
+                                    new eranos.internal.GroupFailure.ArchivedMember("member-11"))),
                     new Conversion(
+                            new GroupFailure.BuiltInCategory(),
                             new eranos.internal.EranosException.Group(
-                                    "detail", new eranos.internal.GroupFailure.BuiltInCategory()),
-                            new GroupFailure.BuiltInCategory()),
+                                    "detail", new eranos.internal.GroupFailure.BuiltInCategory())),
                     new Conversion(
+                            new GroupFailure.Busy(),
                             new eranos.internal.EranosException.Group(
-                                    "detail", new eranos.internal.GroupFailure.Busy()),
-                            new GroupFailure.Busy()),
+                                    "detail", new eranos.internal.GroupFailure.Busy())),
                     new Conversion(
+                            new GroupFailure.DuplicateCategory(new CategoryId("category-12")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.DuplicateCategory(
-                                            "category-12")),
-                            new GroupFailure.DuplicateCategory(new CategoryId("category-12"))),
+                                            "category-12"))),
                     new Conversion(
+                            new GroupFailure.DuplicateCategoryName(new CategoryId("existing-13")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.DuplicateCategoryName(
-                                            "existing-13")),
-                            new GroupFailure.DuplicateCategoryName(new CategoryId("existing-13"))),
+                                            "existing-13"))),
                     new Conversion(
+                            new GroupFailure.DuplicateExchangeRate(Currency.known("GBP")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.DuplicateExchangeRate("GBP")),
-                            new GroupFailure.DuplicateExchangeRate(Currency.known("GBP"))),
+                                    new eranos.internal.GroupFailure.DuplicateExchangeRate("GBP"))),
                     new Conversion(
+                            new GroupFailure.DuplicateExpense(new ExpenseId("expense-15")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.DuplicateExpense(
-                                            "expense-15")),
-                            new GroupFailure.DuplicateExpense(new ExpenseId("expense-15"))),
+                                            "expense-15"))),
                     new Conversion(
+                            new GroupFailure.DuplicateMember(new MemberId("member-16")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.DuplicateMember("member-16")),
-                            new GroupFailure.DuplicateMember(new MemberId("member-16"))),
+                                    new eranos.internal.GroupFailure.DuplicateMember("member-16"))),
                     new Conversion(
+                            new GroupFailure.DuplicateTransfer(new TransferId("transfer-17")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.DuplicateTransfer(
-                                            "transfer-17")),
-                            new GroupFailure.DuplicateTransfer(new TransferId("transfer-17"))),
+                                            "transfer-17"))),
                     new Conversion(
+                            new GroupFailure.EmptyName(),
                             new eranos.internal.EranosException.Group(
-                                    "detail", new eranos.internal.GroupFailure.EmptyName()),
-                            new GroupFailure.EmptyName()),
+                                    "detail", new eranos.internal.GroupFailure.EmptyName())),
                     new Conversion(
+                            new GroupFailure.MemberInUse(
+                                    List.of(new ExpenseId("expenses-18")),
+                                    new MemberId("member-19"),
+                                    List.of(new TransferId("transfers-20"))),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.MemberInUse(
                                             List.of("expenses-18"),
                                             "member-19",
-                                            List.of("transfers-20"))),
-                            new GroupFailure.MemberInUse(
-                                    List.of(new ExpenseId("expenses-18")),
-                                    new MemberId("member-19"),
-                                    List.of(new TransferId("transfers-20")))),
+                                            List.of("transfers-20")))),
                     new Conversion(
+                            new GroupFailure.MissingExchangeRate(Currency.known("RON")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.MissingExchangeRate("RON")),
-                            new GroupFailure.MissingExchangeRate(Currency.known("RON"))),
+                                    new eranos.internal.GroupFailure.MissingExchangeRate("RON"))),
                     new Conversion(
+                            new GroupFailure.Overflow(),
                             new eranos.internal.EranosException.Group(
-                                    "detail", new eranos.internal.GroupFailure.Overflow()),
-                            new GroupFailure.Overflow()),
+                                    "detail", new eranos.internal.GroupFailure.Overflow())),
                     new Conversion(
+                            new GroupFailure.UnexpectedExchangeRate(),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.UnexpectedExchangeRate()),
-                            new GroupFailure.UnexpectedExchangeRate()),
+                                    new eranos.internal.GroupFailure.UnexpectedExchangeRate())),
                     new Conversion(
+                            new GroupFailure.UnknownCategory(new CategoryId("category-22")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.UnknownCategory(
-                                            "category-22")),
-                            new GroupFailure.UnknownCategory(new CategoryId("category-22"))),
+                                            "category-22"))),
                     new Conversion(
+                            new GroupFailure.UnknownExpense(new ExpenseId("expense-23")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.UnknownExpense("expense-23")),
-                            new GroupFailure.UnknownExpense(new ExpenseId("expense-23"))),
+                                    new eranos.internal.GroupFailure.UnknownExpense("expense-23"))),
                     new Conversion(
+                            new GroupFailure.UnknownMember(new MemberId("member-24")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.UnknownMember("member-24")),
-                            new GroupFailure.UnknownMember(new MemberId("member-24"))),
+                                    new eranos.internal.GroupFailure.UnknownMember("member-24"))),
                     new Conversion(
+                            new GroupFailure.UnknownTransfer(new TransferId("transfer-25")),
                             new eranos.internal.EranosException.Group(
                                     "detail",
                                     new eranos.internal.GroupFailure.UnknownTransfer(
-                                            "transfer-25")),
-                            new GroupFailure.UnknownTransfer(new TransferId("transfer-25"))),
+                                            "transfer-25"))),
                     new Conversion(
+                            new GroupFailure.UnsupportedFormat(26L),
                             new eranos.internal.EranosException.Group(
                                     "detail",
-                                    new eranos.internal.GroupFailure.UnsupportedFormat(26L)),
-                            new GroupFailure.UnsupportedFormat(26L)),
+                                    new eranos.internal.GroupFailure.UnsupportedFormat(26L))),
                     new Conversion(
+                            new IdFailure.InvalidId(),
                             new eranos.internal.EranosException.Id(
-                                    "detail", eranos.internal.IdFailure.INVALID_ID),
-                            new IdFailure.InvalidId()),
+                                    "detail", eranos.internal.IdFailure.INVALID_ID)),
                     new Conversion(
+                            new LanguageFailure.InvalidLanguage(),
                             new eranos.internal.EranosException.Language(
-                                    "detail", eranos.internal.LanguageFailure.INVALID_LANGUAGE),
-                            new LanguageFailure.InvalidLanguage()),
+                                    "detail", eranos.internal.LanguageFailure.INVALID_LANGUAGE)),
                     new Conversion(
+                            new MemberFailure.EmptyFirstName(),
                             new eranos.internal.EranosException.Member(
-                                    "detail", eranos.internal.MemberFailure.EMPTY_FIRST_NAME),
-                            new MemberFailure.EmptyFirstName()),
+                                    "detail", eranos.internal.MemberFailure.EMPTY_FIRST_NAME)),
                     new Conversion(
+                            new MoneyFailure.CurrencyMismatch(
+                                    Currency.known("RON"), Currency.known("USD")),
                             new eranos.internal.EranosException.Money(
                                     "detail",
                                     new eranos.internal.MoneyFailure.CurrencyMismatch(
-                                            "RON", "USD")),
-                            new MoneyFailure.CurrencyMismatch(
-                                    Currency.known("RON"), Currency.known("USD"))),
+                                            "RON", "USD"))),
                     new Conversion(
+                            new MoneyFailure.InvalidAmount(),
                             new eranos.internal.EranosException.Money(
-                                    "detail", new eranos.internal.MoneyFailure.InvalidAmount()),
-                            new MoneyFailure.InvalidAmount()),
+                                    "detail", new eranos.internal.MoneyFailure.InvalidAmount())),
                     new Conversion(
-                            new eranos.internal.EranosException.Money(
-                                    "detail",
-                                    new eranos.internal.MoneyFailure.InvalidExchangeRate()),
-                            new MoneyFailure.InvalidExchangeRate()),
-                    new Conversion(
-                            new eranos.internal.EranosException.Money(
-                                    "detail", new eranos.internal.MoneyFailure.InvalidParts()),
-                            new MoneyFailure.InvalidParts()),
-                    new Conversion(
-                            new eranos.internal.EranosException.Money(
-                                    "detail", new eranos.internal.MoneyFailure.InvalidPercentage()),
-                            new MoneyFailure.InvalidPercentage()),
-                    new Conversion(
-                            new eranos.internal.EranosException.Money(
-                                    "detail", new eranos.internal.MoneyFailure.Overflow()),
-                            new MoneyFailure.Overflow()),
-                    new Conversion(
+                            new MoneyFailure.InvalidExchangeRate(),
                             new eranos.internal.EranosException.Money(
                                     "detail",
-                                    new eranos.internal.MoneyFailure.TooManyDecimals(29L, "RON")),
-                            new MoneyFailure.TooManyDecimals(29L, Currency.known("RON"))),
+                                    new eranos.internal.MoneyFailure.InvalidExchangeRate())),
                     new Conversion(
+                            new MoneyFailure.InvalidParts(),
                             new eranos.internal.EranosException.Money(
-                                    "detail", new eranos.internal.MoneyFailure.UnknownCurrency()),
-                            new MoneyFailure.UnknownCurrency()),
+                                    "detail", new eranos.internal.MoneyFailure.InvalidParts())),
                     new Conversion(
+                            new MoneyFailure.InvalidPercentage(),
+                            new eranos.internal.EranosException.Money(
+                                    "detail",
+                                    new eranos.internal.MoneyFailure.InvalidPercentage())),
+                    new Conversion(
+                            new MoneyFailure.Overflow(),
+                            new eranos.internal.EranosException.Money(
+                                    "detail", new eranos.internal.MoneyFailure.Overflow())),
+                    new Conversion(
+                            new MoneyFailure.TooManyDecimals(29L, Currency.known("RON")),
+                            new eranos.internal.EranosException.Money(
+                                    "detail",
+                                    new eranos.internal.MoneyFailure.TooManyDecimals(29L, "RON"))),
+                    new Conversion(
+                            new MoneyFailure.UnknownCurrency(),
+                            new eranos.internal.EranosException.Money(
+                                    "detail", new eranos.internal.MoneyFailure.UnknownCurrency())),
+                    new Conversion(
+                            new SettlementFailure.OutOfMemory(31L),
                             new eranos.internal.EranosException.Settlement(
                                     "detail",
-                                    new eranos.internal.SettlementFailure.OutOfMemory(31L)),
-                            new SettlementFailure.OutOfMemory(31L)),
+                                    new eranos.internal.SettlementFailure.OutOfMemory(31L))),
                     new Conversion(
+                            new TransferFailure.NonPositiveAmount(),
                             new eranos.internal.EranosException.Transfer(
-                                    "detail", eranos.internal.TransferFailure.NON_POSITIVE_AMOUNT),
-                            new TransferFailure.NonPositiveAmount()),
+                                    "detail", eranos.internal.TransferFailure.NON_POSITIVE_AMOUNT)),
                     new Conversion(
+                            new TransferFailure.SameMember(),
                             new eranos.internal.EranosException.Transfer(
-                                    "detail", eranos.internal.TransferFailure.SAME_MEMBER),
-                            new TransferFailure.SameMember()),
+                                    "detail", eranos.internal.TransferFailure.SAME_MEMBER)),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.InvalidCharacter()),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.InvalidCharacter())),
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidCharacter())),
+                                            new eranos.internal.IbanReason.InvalidCharacter()))),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.InvalidChecksum())),
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum())),
+                                            new eranos.internal.IbanReason.InvalidChecksum()))),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.InvalidFormat()),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.InvalidFormat())),
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidFormat())),
+                                            new eranos.internal.IbanReason.InvalidFormat()))),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.InvalidStructure()),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.InvalidStructure())),
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidStructure())),
+                                            new eranos.internal.IbanReason.InvalidStructure()))),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.UnknownCountry()),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.UnknownCountry())),
-                            new AccountFailure.InvalidIban(new IbanReason.UnknownCountry())),
+                                            new eranos.internal.IbanReason.UnknownCountry()))),
                     new Conversion(
+                            new AccountFailure.InvalidIban(new IbanReason.WrongLength(24L, 22L)),
                             new eranos.internal.EranosException.Account(
                                     "detail",
                                     new eranos.internal.AccountFailure.InvalidIban(
-                                            new eranos.internal.IbanReason.WrongLength(24L, 22L))),
-                            new AccountFailure.InvalidIban(new IbanReason.WrongLength(24L, 22L))));
+                                            new eranos.internal.IbanReason.WrongLength(
+                                                    24L, 22L)))));
 }

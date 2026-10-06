@@ -163,16 +163,16 @@ static EranosTransfer *transferOf(int64_t const cents, char const *const from, c
 
 /// A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them.
 typedef struct Flat {
-    /// The group.
-    EranosGroup *group;
     /// Ana's identifier.
     EranosText *ana;
     /// Bob's identifier.
     EranosText *bob;
-    /// The food category's identifier.
-    EranosText *food;
     /// The dinner Ana paid for the two of them, in the food category.
     EranosText *dinner;
+    /// The food category's identifier.
+    EranosText *food;
+    /// The group.
+    EranosGroup *group;
     /// The 10.00 EUR Bob paid Ana back.
     EranosText *repayment;
 } Flat;
@@ -227,31 +227,31 @@ static void flatDestroy(Flat const flat) {
 
 /// What an asynchronous call reported, and whether it has: its callback runs on another thread, which signals the waiting one.
 typedef struct Waiter {
-    /// Guards the rest.
-    pthread_mutex_t mutex;
     /// Signalled once the callback ran.
     pthread_cond_t condition;
     /// Whether the callback ran.
     bool done;
+    /// Guards every other field.
+    pthread_mutex_t mutex;
     /// The error the call reported, or nullptr.
     EranosError *error;
-    /// The text the call reported, or nullptr.
-    EranosText *text;
-    /// The object the call reported, or nullptr.
-    void *object;
     /// The answer the call reported.
     bool flag;
+    /// The object the call reported, or nullptr.
+    void *object;
+    /// The text the call reported, or nullptr.
+    EranosText *text;
 } Waiter;
 
 /// @p waiter, ready for a call.
 static Waiter *waiting(Waiter *const waiter) {
-    waiter->done = false;
-    waiter->error = nullptr;
-    waiter->text = nullptr;
-    waiter->object = nullptr;
-    waiter->flag = false;
-    (void)pthread_mutex_init(&waiter->mutex, nullptr);
     (void)pthread_cond_init(&waiter->condition, nullptr);
+    waiter->done = false;
+    (void)pthread_mutex_init(&waiter->mutex, nullptr);
+    waiter->error = nullptr;
+    waiter->flag = false;
+    waiter->object = nullptr;
+    waiter->text = nullptr;
     return waiter;
 }
 
