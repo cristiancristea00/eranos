@@ -320,7 +320,12 @@ impl Expense {
     #[must_use]
     pub fn members(&self) -> BTreeSet<MemberId> {
         let mut members: BTreeSet<MemberId> = self.payers.members().collect();
-        members.extend(self.split.participants());
+        match &self.split {
+            ExpenseSplit::Itemised(items) => {
+                members.extend(items.iter().flat_map(|item| item.split().members()));
+            }
+            ExpenseSplit::Whole(split) => members.extend(split.members()),
+        }
         members
     }
 }

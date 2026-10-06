@@ -1,6 +1,7 @@
 //! Dividing an amount among members.
 
 use std::collections::BTreeSet;
+use std::slice;
 
 use eranos_core::MemberId;
 use eranos_money::allocation::allocate;
@@ -88,13 +89,20 @@ impl Split {
 
     /// The members, in the order they were listed.
     pub fn members(&self) -> impl Iterator<Item = MemberId> + '_ {
-        let members: Box<dyn Iterator<Item = MemberId> + '_> = match self {
-            Self::Amounts(shares) => Box::new(shares.iter().map(|share| share.member)),
-            Self::Equal(members) => Box::new(members.iter().copied()),
-            Self::Parts(shares) => Box::new(shares.iter().map(|share| share.member)),
-            Self::Percentages(shares) => Box::new(shares.iter().map(|share| share.member)),
-        };
-        members
+        match self {
+            Self::Amounts(shares) => Members::Amounts {
+                shares: shares.iter(),
+            },
+            Self::Equal(members) => Members::Equal {
+                members: members.iter(),
+            },
+            Self::Parts(shares) => Members::Parts {
+                shares: shares.iter(),
+            },
+            Self::Percentages(shares) => Members::Percentages {
+                shares: shares.iter(),
+            },
+        }
     }
 
     /// The number of members.
@@ -217,6 +225,37 @@ impl Split {
                 member: entry.member,
             })
             .collect()
+    }
+}
+
+/// The members of a [`Split`], in the order they were listed: one iterator
+/// for every kind of split, so that listing them allocates nothing.
+#[derive(Debug, Clone)]
+enum Members<'split> {
+    Amounts {
+        shares: slice::Iter<'split, MemberAmount>,
+    },
+    Equal {
+        members: slice::Iter<'split, MemberId>,
+    },
+    Parts {
+        shares: slice::Iter<'split, MemberParts>,
+    },
+    Percentages {
+        shares: slice::Iter<'split, MemberPercentage>,
+    },
+}
+
+impl Iterator for Members<'_> {
+    type Item = MemberId;
+
+    fn next(&mut self) -> Option<MemberId> {
+        match self {
+            Self::Amounts { shares } => shares.next().map(|share| share.member),
+            Self::Equal { members } => members.next().copied(),
+            Self::Parts { shares } => shares.next().map(|share| share.member),
+            Self::Percentages { shares } => shares.next().map(|share| share.member),
+        }
     }
 }
 

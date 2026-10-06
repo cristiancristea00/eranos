@@ -904,13 +904,16 @@ impl Group {
         expense: &Expense,
         previous: Option<&Expense>,
     ) -> Result<(), GroupError> {
-        let kept = previous.map(Expense::members).unwrap_or_default();
         for member in expense.members() {
             let record = self
                 .members
                 .get(&member)
                 .ok_or(GroupError::UnknownMember(member))?;
-            if record.archived && !kept.contains(&member) {
+            // Only an archived member needs the members of the version
+            // replaced, so they are listed only then.
+            if record.archived
+                && !previous.is_some_and(|previous| previous.members().contains(&member))
+            {
                 return Err(GroupError::ArchivedMember(member));
             }
         }
