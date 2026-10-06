@@ -13,14 +13,41 @@ import eranos.Money
 import eranos.Parts
 import eranos.Percentage
 import eranos.TimeOfDay
+import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
+
+private data class CurrencyRow(
+    val code: String,
+    val decimalPlaces: Int,
+    val name: String,
+    val numericCode: Int,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(code, name, "$numericCode", "$decimalPlaces")
+
+    companion object {
+        val HEADERS = listOf("Code", "Name", "Numeric code", "Decimal places")
+    }
+}
+
+private data class ValueRow(
+    val input: String,
+    val result: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(input, result)
+
+    companion object {
+        val HEADERS = listOf("Input", "Result")
+    }
+}
 
 internal fun currencies() {
     val rows =
         listOf("EUR", "RON", "JPY", "BHD").map { code ->
             val currency = Currency.of(code)
-            listOf(currency.code, currency.name, "${currency.numericCode}", "${currency.decimalPlaces}")
+            CurrencyRow(code = currency.code, decimalPlaces = currency.decimalPlaces, name = currency.name, numericCode = currency.numericCode)
         }
     val unknown = refusal { Currency.of("XYZ") }
     println(
@@ -29,7 +56,7 @@ internal fun currencies() {
         refused (${message(unknown)}):
         """.trimIndent(),
     )
-    printTable(listOf("Code", "Name", "Numeric code", "Decimal places"), rows, numbersFrom = 2)
+    printTable(CurrencyRow.HEADERS, rows, numbersFrom = 2)
     check(3 == Currency.of("BHD").decimalPlaces)
 }
 
@@ -44,16 +71,16 @@ internal fun amounts() {
     val doubled = Cost.Converted(eur("20.00"), rate(cost))
     println("Amounts are exact minor units in their currency:")
     printTable(
-        listOf("Input", "Result"),
+        ValueRow.HEADERS,
         listOf(
-            listOf("12.34 EUR + 0.66 EUR", "$total"),
-            listOf("5.00 EUR − 7.50 EUR", "$change, negative: ${0L > change.minorUnits}"),
-            listOf("1.00 EUR + 1.00 RON", message(mixed)),
-            listOf("1.005 EUR", message(refusal { eur("1.005") })),
-            listOf("1500 JPY", "$yen, ${yen.minorUnits} minor units"),
-            listOf("1234 minor units of BHD", "$dinars"),
-            listOf("zero RON", "$nothing, zero: ${0L == nothing.minorUnits}"),
-            listOf("10.00 EUR at 4.9765", "${cost.amount} at ${rate(cost)}, then ${doubled.amount} at the same rate"),
+            ValueRow("12.34 EUR + 0.66 EUR", "$total"),
+            ValueRow("5.00 EUR − 7.50 EUR", "$change, negative: ${0L > change.minorUnits}"),
+            ValueRow("1.00 EUR + 1.00 RON", message(mixed)),
+            ValueRow("1.005 EUR", message(refusal { eur("1.005") })),
+            ValueRow("1500 JPY", "$yen, ${yen.minorUnits} minor units"),
+            ValueRow("1234 minor units of BHD", "$dinars"),
+            ValueRow("zero RON", "$nothing, zero: ${0L == nothing.minorUnits}"),
+            ValueRow("10.00 EUR at 4.9765", "${cost.amount} at ${rate(cost)}, then ${doubled.amount} at the same rate"),
         ),
         numbersFrom = 2,
     )
@@ -69,17 +96,17 @@ internal fun ratios() {
     val rate = ExchangeRate.parse("4.97650")
     println("Percentages, parts, and rates are exact decimals:")
     printTable(
-        listOf("Input", "Result"),
+        ValueRow.HEADERS,
         listOf(
-            listOf("12.5%", "$percentage, ${percentage.basisPoints} basis points"),
-            listOf("333 basis points", "${Percentage.ofBasisPoints(333)}"),
-            listOf("33.333%", message(refusal { Percentage.parse("33.333") })),
-            listOf("1.5 parts", "$parts, ${parts.hundredths} hundredths"),
-            listOf("3 whole parts", "${Parts.ofHundredths(300)}"),
-            listOf("25 hundredths of a part", "${Parts.ofHundredths(25)}"),
-            listOf("0 parts", message(refusal { Parts.parse("0") })),
-            listOf("a rate of 4.97650", "$rate"),
-            listOf("a rate of 0", message(refusal { ExchangeRate.parse("0") })),
+            ValueRow("12.5%", "$percentage, ${percentage.basisPoints} basis points"),
+            ValueRow("333 basis points", "${Percentage.ofBasisPoints(333)}"),
+            ValueRow("33.333%", message(refusal { Percentage.parse("33.333") })),
+            ValueRow("1.5 parts", "$parts, ${parts.hundredths} hundredths"),
+            ValueRow("3 whole parts", "${Parts.ofHundredths(300)}"),
+            ValueRow("25 hundredths of a part", "${Parts.ofHundredths(25)}"),
+            ValueRow("0 parts", message(refusal { Parts.parse("0") })),
+            ValueRow("a rate of 4.97650", "$rate"),
+            ValueRow("a rate of 0", message(refusal { ExchangeRate.parse("0") })),
         ),
         numbersFrom = 2,
     )
@@ -98,16 +125,16 @@ internal fun datesAndIdentifiers(
     val language = Language.parse("pt-pt")
     println("Dates, times, identifiers, and language tags read and print the ISO forms:")
     printTable(
-        listOf("Input", "Result"),
+        ValueRow.HEADERS,
         listOf(
-            listOf("2026-10-01", "$date: day ${date.day}, month ${date.month}, year ${date.year}"),
-            listOf("29 February 2027", message(refusal { CalendarDate.of(29, 2, 2027) })),
-            listOf("22:15", "$time: hour ${time.hour}, minute ${time.minute}"),
-            listOf("24:00", message(refusal { TimeOfDay.of(24, 0) })),
-            listOf("Ana's identifier", "$parsed, the same after a round trip: ${people.ana == found}"),
-            listOf("not-a-uuid", message(refusal { group.memberBlocking(MemberId("not-a-uuid")) })),
-            listOf("pt-pt", "$language"),
-            listOf("pt_PT", message(refusal { Language.parse("pt_PT") })),
+            ValueRow("2026-10-01", "$date: day ${date.day}, month ${date.month}, year ${date.year}"),
+            ValueRow("29 February 2027", message(refusal { CalendarDate.of(29, 2, 2027) })),
+            ValueRow("22:15", "$time: hour ${time.hour}, minute ${time.minute}"),
+            ValueRow("24:00", message(refusal { TimeOfDay.of(24, 0) })),
+            ValueRow("Ana's identifier", "$parsed, the same after a round trip: ${people.ana == found}"),
+            ValueRow("not-a-uuid", message(refusal { group.memberBlocking(MemberId("not-a-uuid")) })),
+            ValueRow("pt-pt", "$language"),
+            ValueRow("pt_PT", message(refusal { Language.parse("pt_PT") })),
         ),
         numbersFrom = 2,
     )

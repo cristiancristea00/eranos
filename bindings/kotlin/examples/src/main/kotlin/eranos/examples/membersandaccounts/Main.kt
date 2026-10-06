@@ -21,9 +21,57 @@ import eranos.Money
 import eranos.PhoneNumber
 import eranos.Split
 import eranos.Username
+import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.totals
+
+private data class MemberRow(
+    val accounts: String,
+    val email: String,
+    val name: String,
+    val phone: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, email, phone, accounts)
+
+    companion object {
+        val HEADERS = listOf("Member", "Email", "Phone", "Accounts")
+    }
+}
+
+private data class CheckRow(
+    val input: String,
+    val kind: String,
+    val result: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(input, kind, result)
+
+    companion object {
+        val HEADERS = listOf("Input", "Checked as", "Result")
+    }
+}
+
+private data class BalanceRow(
+    val balance: Balance,
+    val consumed: Money,
+    val name: String,
+    val status: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, status, "$consumed", "$balance")
+
+    companion object {
+        val HEADERS = listOf("Member", "Status", "Consumed", "Balance")
+    }
+}
+
+/** The two flatmates: Ana, who gives every detail, and Bob, who moves out. */
+private data class Flatmates(
+    val ana: MemberId,
+    val bob: MemberId,
+)
 
 /** An account with its label and its details. */
 private fun describe(account: Account): String {
@@ -48,13 +96,13 @@ private fun <Value> outcome(
 
 private fun printMembers(group: Group) {
     printTable(
-        listOf("Member", "Email", "Phone", "Accounts"),
+        MemberRow.HEADERS,
         group.membersBlocking().map { member ->
-            listOf(
-                listOfNotNull(member.firstName, member.lastName).joinToString(" "),
-                member.email?.toString().orEmpty(),
-                member.phone?.toString().orEmpty(),
-                member.accounts.joinToString("\n", transform = ::describe),
+            MemberRow(
+                accounts = member.accounts.joinToString("\n", transform = ::describe),
+                email = member.email?.toString().orEmpty(),
+                name = listOfNotNull(member.firstName, member.lastName).joinToString(" "),
+                phone = member.phone?.toString().orEmpty(),
             )
         },
         numbersFrom = 4,
@@ -67,14 +115,19 @@ private fun printBalances(group: Group) {
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id ->
                 totals(id, summary)?.let { totals ->
-                    listOf(member.firstName, if (group.isArchivedBlocking(id)) "archived" else "active", "${totals.share}", "${totals.balance}")
+                    BalanceRow(
+                        balance = totals.balance,
+                        consumed = totals.share,
+                        name = member.firstName,
+                        status = if (group.isArchivedBlocking(id)) "archived" else "active",
+                    )
                 }
             }
         }
-    printTable(listOf("Member", "Status", "Consumed", "Balance"), rows, numbersFrom = 2)
+    printTable(BalanceRow.HEADERS, rows, numbersFrom = 2)
 }
 
-private fun members(group: Group): Pair<MemberId, MemberId> {
+private fun members(group: Group): Flatmates {
     section("1. Members")
     val ana =
         group.addBlocking(
@@ -99,7 +152,7 @@ private fun members(group: Group): Pair<MemberId, MemberId> {
         without spaces, the way banking apps accept it.
         """.trimIndent(),
     )
-    return ana to bob
+    return Flatmates(ana, bob)
 }
 
 private fun validation() {
@@ -113,11 +166,11 @@ private fun validation() {
         phone numbers against their country's numbering plan, stored in E.164 form.
         """.trimIndent(),
     )
-    val iban = { input: String -> listOf(input, "IBAN", outcome({ Iban.parse(input) }, Iban::toString)) }
-    val email = { input: String -> listOf(input, "email", outcome({ Email.parse(input) }, Email::toString)) }
-    val phone = { input: String -> listOf(input, "phone", outcome({ PhoneNumber.parse(input) }, PhoneNumber::e164)) }
+    val iban = { input: String -> CheckRow(input, "IBAN", outcome({ Iban.parse(input) }, Iban::toString)) }
+    val email = { input: String -> CheckRow(input, "email", outcome({ Email.parse(input) }, Email::toString)) }
+    val phone = { input: String -> CheckRow(input, "phone", outcome({ PhoneNumber.parse(input) }, PhoneNumber::e164)) }
     printTable(
-        listOf("Input", "Checked as", "Result"),
+        CheckRow.HEADERS,
         listOf(
             iban("ro49 aaaa 1b31 0075 9384 0000"),
             iban("RO49 AAAA 1B31 0075 9384 0001"),
@@ -146,10 +199,11 @@ private fun refusal(change: () -> Unit): EranosException =
 
 private fun movingOut(
     group: Group,
-    ana: MemberId,
-    bob: MemberId,
+    flatmates: Flatmates,
 ) {
     section("3. A flatmate moves out")
+    val ana = flatmates.ana
+    val bob = flatmates.bob
     val euro = Currency.of("EUR")
     val both = ExpenseSplit.Whole(Split.Equal(listOf(ana, bob)))
     val rent =
@@ -201,8 +255,8 @@ fun main() {
             email, phone, and the accounts they can be paid to are optional.
             """.trimIndent(),
         )
-        val (ana, bob) = members(group)
+        val flatmates = members(group)
         validation()
-        movingOut(group, ana, bob)
+        movingOut(group, flatmates)
     }
 }

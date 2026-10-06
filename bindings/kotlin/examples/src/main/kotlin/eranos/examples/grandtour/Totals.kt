@@ -13,9 +13,37 @@ import eranos.MemberId
 import eranos.Money
 import eranos.SettlementStrategy
 import eranos.Transfer
+import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.totals
+
+private data class MemberCategoryRow(
+    val food: Money,
+    val lodging: Money,
+    val name: String,
+    val transport: Money,
+    val uncategorised: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, "$food", "$lodging", "$transport", "$uncategorised")
+
+    companion object {
+        val HEADERS = listOf("Member", "Food", "Lodging", "Getting around", "Uncategorised")
+    }
+}
+
+private data class StrategyRow(
+    val payments: Int,
+    val strategy: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(strategy, "$payments")
+
+    companion object {
+        val HEADERS = listOf("Strategy", "Payments")
+    }
+}
 
 internal fun summary(
     group: Group,
@@ -37,7 +65,7 @@ internal fun summary(
     val builtIn = builtInCategory(group)
     val zero = Money(group.currencyBlocking(), 0)
     printTable(
-        listOf("Member", "Food", "Lodging", "Getting around", "Uncategorised"),
+        MemberCategoryRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id ->
                 val totals =
@@ -45,8 +73,14 @@ internal fun summary(
                         .firstOrNull { entry -> entry.member == id }
                         ?.totals
                         .orEmpty()
-                val total = { category: CategoryId? -> "${totals.firstOrNull { total -> total.category == category }?.total ?: zero}" }
-                listOf(member.firstName, total(categories.food), total(categories.lodging), total(categories.transport), total(builtIn))
+                val total = { category: CategoryId? -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
+                MemberCategoryRow(
+                    food = total(categories.food),
+                    lodging = total(categories.lodging),
+                    name = member.firstName,
+                    transport = total(categories.transport),
+                    uncategorised = total(builtIn),
+                )
             }
         },
         numbersFrom = 1,
@@ -154,7 +188,7 @@ internal fun settlingUp(group: Group) {
         SettlementStrategy.entries.map { strategy ->
             val settlement = group.settlementBlocking(strategy)
             check(strategy == settlement.strategy)
-            listOf(strategyName(settlement.strategy), "${settlement.payments.size}")
+            StrategyRow(payments = settlement.payments.size, strategy = strategyName(settlement.strategy))
         }
     println(
         """
@@ -163,12 +197,12 @@ internal fun settlingUp(group: Group) {
         finds the fewest payments.
         """.trimIndent(),
     )
-    printTable(listOf("Strategy", "Payments"), counts, numbersFrom = 1)
+    printTable(StrategyRow.HEADERS, counts, numbersFrom = 1)
     val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
     println("The group follows the minimum plan:")
     printTable(
-        listOf("From", "To", "Amount"),
-        plan.payments.map { payment -> listOf(name(group, payment.from), name(group, payment.to), "${payment.amount}") },
+        PaymentRow.HEADERS,
+        plan.payments.map { payment -> PaymentRow(amount = payment.amount, from = name(group, payment.from), to = name(group, payment.to)) },
         numbersFrom = 2,
     )
     for (payment in plan.payments) {

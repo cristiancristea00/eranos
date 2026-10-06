@@ -7,7 +7,7 @@ The port of the Rust example ``split_methods``, which prints the same report.
 
 import dataclasses
 from collections.abc import Mapping
-from typing import final
+from typing import ClassVar, final, override
 
 from eranos import (
     AmountsSplit,
@@ -30,7 +30,55 @@ from eranos import (
     PercentagesSplit,
     WholeExpenseSplit,
 )
-from examples.report import names, print_lines, print_table, refusal, section, title, totals
+from examples.report import Row, names, print_lines, print_table, refusal, section, title, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ShareRow(Row):
+    """A row of the table of how one expense divides: a member's rule, what they paid, and what they consumed."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Rule', 'Paid', 'Consumed')
+
+    consumed: Money
+    """What the member consumed."""
+
+    name: str
+    """The member's first name."""
+
+    paid: Money
+    """What the member paid."""
+
+    rule: str
+    """The rule the member's share follows."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.rule, str(self.paid), str(self.consumed)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class TotalRow(Row):
+    """A row of the table of the holiday in total: what a member paid and consumed, and where they stand."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Balance')
+
+    balance: str
+    """Where the member stands."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    name: str
+    """The member's first name."""
+
+    paid: Money
+    """What the member paid."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, str(self.paid), str(self.consumed), self.balance
 
 
 @final
@@ -81,8 +129,11 @@ def report(group: Group, expense_id: ExpenseId, rules: Mapping[MemberId, str]) -
         return
     print_lines(f'{expense.name}, {shares.total}:')
     print_table(
-        ('Member', 'Rule', 'Paid', 'Consumed'),
-        [(names(group, (share.member,)), rules.get(share.member, '(payer only)'), str(share.paid), str(share.share)) for share in shares.members],
+        ShareRow,
+        [
+            ShareRow(consumed=share.share, name=names(group, (share.member,)), paid=share.paid, rule=rules.get(share.member, '(payer only)'))
+            for share in shares.members
+        ],
         2,
     )
 
@@ -296,9 +347,9 @@ def print_totals(group: Group) -> None:
     summary = group.summary()
     print_lines(f'{summary.total_spent} spent over five expenses:')
     print_table(
-        ('Member', 'Paid', 'Consumed', 'Balance'),
+        TotalRow,
         [
-            (member.first_name, str(found.paid), str(found.share), str(found.balance))
+            TotalRow(balance=str(found.balance), consumed=found.share, name=member.first_name, paid=found.paid)
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],

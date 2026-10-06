@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 
 import {
+    type Balance,
     type Cost,
     type MemberId,
     type Split,
@@ -17,7 +18,43 @@ import {
     formatBalance,
     splitMembers,
 } from '../src/index.js';
-import { load, names, printLines, printTable, section, totals } from './report.js';
+import { type Columns, load, names, printLines, printTable, section, totals } from './report.js';
+
+/** An expense or a transfer, as entered and in the group currency, as the table of entries prints it. */
+interface EntryRow {
+    readonly converted: Money;
+    readonly name: string;
+    readonly original: Money;
+    readonly payer: string;
+    readonly rate: ExchangeRate;
+}
+
+const entryColumns: Columns<EntryRow> = [
+    { header: 'Entry', text: (row) => row.name },
+    { header: 'Paid by', text: (row) => row.payer },
+    { header: 'Entered as', text: (row) => row.original.toString() },
+    { header: 'Rate', text: (row) => row.rate.toString() },
+    { header: 'In the group currency', text: (row) => row.converted.toString() },
+];
+
+/** A member's totals, as the table of balances prints them. */
+interface BalanceRow {
+    readonly balance: Balance;
+    readonly consumed: Money;
+    readonly name: string;
+    readonly paid: Money;
+    readonly received: Money;
+    readonly sent: Money;
+}
+
+const balanceColumns: Columns<BalanceRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Paid', text: (row) => row.paid.toString() },
+    { header: 'Consumed', text: (row) => row.consumed.toString() },
+    { header: 'Sent', text: (row) => row.sent.toString() },
+    { header: 'Received', text: (row) => row.received.toString() },
+    { header: 'Balance', text: (row) => formatBalance(row.balance) },
+];
 
 /** The rate `cost` was entered at: 1 for a cost in the group currency. */
 function rate(cost: Cost): ExchangeRate {
@@ -27,44 +64,40 @@ function rate(cost: Cost): ExchangeRate {
 /** Every expense and transfer, as entered and in the group currency. */
 function printEntries(group: Group): void {
     const zero = new Money(group.currencySync(), 0n);
-    const expenses = group
-        .expensesSync()
-        .map((expense) => [
-            expense.name,
-            names(group, splitMembers(expense.payers)),
-            expenseTotal(expense).toString(),
-            rate(expense.cost).toString(),
-            (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total.toString() ?? zero.toString(),
-        ]);
-    const transfers = group
-        .transfersSync()
-        .map((transfer) => [
-            `Transfer to ${names(group, [transfer.to])}`,
-            names(group, [transfer.from]),
-            transfer.cost.amount.toString(),
-            rate(transfer.cost).toString(),
-            (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id))?.toString() ?? zero.toString(),
-        ]);
-    printTable(['Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency'], [...expenses, ...transfers], 2);
+    const expenses = group.expensesSync().map((expense): EntryRow => ({
+        converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
+        name: expense.name,
+        original: expenseTotal(expense),
+        payer: names(group, splitMembers(expense.payers)),
+        rate: rate(expense.cost),
+    }));
+    const transfers = group.transfersSync().map((transfer): EntryRow => ({
+        converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
+        name: `Transfer to ${names(group, [transfer.to])}`,
+        original: transfer.cost.amount,
+        payer: names(group, [transfer.from]),
+        rate: rate(transfer.cost),
+    }));
+    printTable(entryColumns, [...expenses, ...transfers], 2);
 }
 
 function printBalances(group: Group): void {
     const summary = group.summarySync();
     printTable(
-        ['Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance'],
+        balanceColumns,
         group.membersSync().flatMap((member) => {
             const found = undefined === member.id ? undefined : totals(member.id, summary);
             return undefined === found
                 ? []
                 : [
-                      [
-                          member.firstName,
-                          found.paid.toString(),
-                          found.share.toString(),
-                          found.sent.toString(),
-                          found.received.toString(),
-                          formatBalance(found.balance),
-                      ],
+                      {
+                          balance: found.balance,
+                          consumed: found.share,
+                          name: member.firstName,
+                          paid: found.paid,
+                          received: found.received,
+                          sent: found.sent,
+                      },
                   ];
         }),
         1,

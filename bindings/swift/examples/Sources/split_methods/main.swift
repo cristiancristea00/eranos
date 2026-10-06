@@ -4,6 +4,32 @@
 import Eranos
 import Report
 
+struct ShareRow: TableRow {
+    static let headers = ["Member", "Rule", "Paid", "Consumed"]
+
+    let consumed: Money
+    let name: String
+    let paid: Money
+    let rule: String
+
+    var cells: [String] {
+        [name, rule, "\(paid)", "\(consumed)"]
+    }
+}
+
+struct TotalRow: TableRow {
+    static let headers = ["Member", "Paid", "Consumed", "Balance"]
+
+    let balance: String
+    let consumed: Money
+    let name: String
+    let paid: Money
+
+    var cells: [String] {
+        [name, "\(paid)", "\(consumed)", balance]
+    }
+}
+
 let euro = try Currency(code: "EUR")
 
 func eur(_ text: String) throws(EranosError) -> Money {
@@ -17,9 +43,8 @@ func report(_ group: Group, _ id: Expense.ID, _ rules: [Member.ID: String]) thro
     }
     print("\(expense.name), \(shares.total):")
     printTable(
-        ["Member", "Rule", "Paid", "Consumed"],
         try shares.members.map { share throws(EranosError) in
-            [try names(group, [share.member]), rules[share.member] ?? "(payer only)", "\(share.paid)", "\(share.share)"]
+            ShareRow(consumed: share.share, name: try names(group, [share.member]), paid: share.paid, rule: rules[share.member] ?? "(payer only)")
         },
         numbersFrom: 2
     )
@@ -179,10 +204,9 @@ func printTotals(_ group: Group) throws(EranosError) {
     let summary = try group.summary()
     print("\(summary.totalSpent) spent over five expenses:")
     printTable(
-        ["Member", "Paid", "Consumed", "Balance"],
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                [member.firstName, "\(totals.paid)", "\(totals.share)", "\(totals.balance)"]
+                TotalRow(balance: "\(totals.balance)", consumed: totals.share, name: member.firstName, paid: totals.paid)
             }
         },
         numbersFrom: 1

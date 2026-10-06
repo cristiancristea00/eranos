@@ -1,9 +1,12 @@
 """Check that the layer converts every case the generator wrote."""
 
 import asyncio
+import dataclasses
 import enum
 import inspect
 import re
+from collections.abc import Mapping
+from typing import Any, final
 
 import pytest
 
@@ -12,21 +15,48 @@ from eranos._errors import library_errors
 from eranos._internal import eranos as generated
 
 
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CaseTable:
+    """A data enum the generator wrote, and the layer's table that converts its cases."""
+
+    kind: type
+    """The generated data enum."""
+
+    table: Mapping[Any, object]
+    """The layer's table, keyed by the cases it converts."""
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Conversion[Error: EranosError]:
+    """A module's generated failure, the layer's table of its cases, and the layer's error that holds it."""
+
+    error: type[Error]
+    """The layer's error that holds the failure."""
+
+    kind: type
+    """The generated failure: a data enum, or an enum of cases without fields."""
+
+    table: Mapping[Any, object]
+    """The layer's table, keyed by the cases it converts."""
+
+
 FAILURES = {
-    'Account': (generated.AccountFailure, _errors._ACCOUNT_FAILURES, _errors.AccountError),
-    'Calendar': (generated.CalendarFailure, _errors._CALENDAR_FAILURES, _errors.CalendarError),
-    'Category': (generated.CategoryFailure, _errors._CATEGORY_FAILURES, _errors.CategoryError),
-    'Contact': (generated.ContactFailure, _errors._CONTACT_FAILURES, _errors.ContactError),
-    'Expense': (generated.ExpenseFailure, _errors._EXPENSE_FAILURES, _errors.ExpenseError),
-    'Group': (generated.GroupFailure, _errors._GROUP_FAILURES, _errors.GroupError),
-    'Id': (generated.IdFailure, _errors._ID_FAILURES, _errors.IdError),
-    'Language': (generated.LanguageFailure, _errors._LANGUAGE_FAILURES, _errors.LanguageError),
-    'Member': (generated.MemberFailure, _errors._MEMBER_FAILURES, _errors.MemberError),
-    'Money': (generated.MoneyFailure, _errors._MONEY_FAILURES, _errors.MoneyError),
-    'Settlement': (generated.SettlementFailure, _errors._SETTLEMENT_FAILURES, _errors.SettlementError),
-    'Transfer': (generated.TransferFailure, _errors._TRANSFER_FAILURES, _errors.TransferError),
+    'Account': Conversion(error=_errors.AccountError, kind=generated.AccountFailure, table=_errors._ACCOUNT_FAILURES),
+    'Calendar': Conversion(error=_errors.CalendarError, kind=generated.CalendarFailure, table=_errors._CALENDAR_FAILURES),
+    'Category': Conversion(error=_errors.CategoryError, kind=generated.CategoryFailure, table=_errors._CATEGORY_FAILURES),
+    'Contact': Conversion(error=_errors.ContactError, kind=generated.ContactFailure, table=_errors._CONTACT_FAILURES),
+    'Expense': Conversion(error=_errors.ExpenseError, kind=generated.ExpenseFailure, table=_errors._EXPENSE_FAILURES),
+    'Group': Conversion(error=_errors.GroupError, kind=generated.GroupFailure, table=_errors._GROUP_FAILURES),
+    'Id': Conversion(error=_errors.IdError, kind=generated.IdFailure, table=_errors._ID_FAILURES),
+    'Language': Conversion(error=_errors.LanguageError, kind=generated.LanguageFailure, table=_errors._LANGUAGE_FAILURES),
+    'Member': Conversion(error=_errors.MemberError, kind=generated.MemberFailure, table=_errors._MEMBER_FAILURES),
+    'Money': Conversion(error=_errors.MoneyError, kind=generated.MoneyFailure, table=_errors._MONEY_FAILURES),
+    'Settlement': Conversion(error=_errors.SettlementError, kind=generated.SettlementFailure, table=_errors._SETTLEMENT_FAILURES),
+    'Transfer': Conversion(error=_errors.TransferError, kind=generated.TransferFailure, table=_errors._TRANSFER_FAILURES),
 }
-"""Each module's generated failure, its table, and the layer's error that holds it, by the module's name."""
+"""How each module's failure converts, by the module's name."""
 
 
 def cases(kind: type) -> list[type]:
@@ -97,19 +127,19 @@ def title(name: str) -> str:
 
 def test_every_table_converts_every_case_the_generator_wrote() -> None:
     """A case the generator wrote and no table holds would reach an app as a KeyError; one left over would name no case at all."""
-    for kind, table in [
-        (generated.Split, _entries._SPLITS),
-        (generated.Cost, _entries._COSTS),
-        (generated.TipValue, _entries._TIP_VALUES),
-        (generated.ExpenseSplit, _entries._EXPENSE_SPLITS),
-        (generated.AccountDetails, _entries._ACCOUNT_DETAILS),
-        (generated.Balance, _totals._BALANCES),
-        (generated.IbanReason, _errors._IBAN_REASONS),
+    for case_table in [
+        CaseTable(kind=generated.Split, table=_entries._SPLITS),
+        CaseTable(kind=generated.Cost, table=_entries._COSTS),
+        CaseTable(kind=generated.TipValue, table=_entries._TIP_VALUES),
+        CaseTable(kind=generated.ExpenseSplit, table=_entries._EXPENSE_SPLITS),
+        CaseTable(kind=generated.AccountDetails, table=_entries._ACCOUNT_DETAILS),
+        CaseTable(kind=generated.Balance, table=_totals._BALANCES),
+        CaseTable(kind=generated.IbanReason, table=_errors._IBAN_REASONS),
     ]:
-        assert set(table) == set(cases(kind)), kind
-    for kind, table, _ in FAILURES.values():
-        expected = set(kind) if isinstance(kind, type) and issubclass(kind, enum.Enum) else set(cases(kind))
-        assert set(table) == expected, kind
+        assert set(case_table.table) == set(cases(case_table.kind)), case_table.kind
+    for conversion in FAILURES.values():
+        expected = set(conversion.kind) if issubclass(conversion.kind, enum.Enum) else set(cases(conversion.kind))
+        assert set(conversion.table) == expected, conversion.kind
     assert set(_errors._ERRORS) == {value for value in vars(generated.EranosError).values() if isinstance(value, type)}
     assert [member.name for member in _entries.TipDistribution] == [member.name for member in generated.TipDistribution]
     assert [member.name for member in _totals.SettlementStrategy] == [member.name for member in generated.SettlementStrategy]
@@ -117,11 +147,11 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
 
 def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_name() -> None:
     """A failure that converted to another case, or lost its module, would send an app's handling of it to the wrong branch."""
-    for module, (kind, _, error) in FAILURES.items():
-        failures = list(kind) if isinstance(kind, type) and issubclass(kind, enum.Enum) else [instance(case) for case in cases(kind)]
+    for module, conversion in FAILURES.items():
+        failures = list(conversion.kind) if issubclass(conversion.kind, enum.Enum) else [instance(case) for case in cases(conversion.kind)]
         for failure in failures:
             raised = converted(getattr(generated.EranosError, module)('the message', failure))
-            assert isinstance(raised, error), failure
+            assert isinstance(raised, conversion.error), failure
             assert isinstance(raised, EranosError), failure
             assert str(raised) == 'the message'
             name = failure.name if isinstance(failure, enum.Enum) else re.sub(r'.*\.', '', type(failure).__name__)
@@ -143,4 +173,6 @@ def test_the_librarys_own_errors_convert_to_the_standard_errors_they_stand_for()
     assert isinstance(converted(generated.EranosError.Released('released')), RuntimeError)
     invalid = converted(generated.EranosError.InvalidJson(3, 'invalid', 2))
     assert isinstance(invalid, InvalidJsonError)
-    assert (invalid.column, invalid.line, str(invalid)) == (3, 2, 'invalid')
+    assert invalid.column == 3
+    assert invalid.line == 2
+    assert str(invalid) == 'invalid'

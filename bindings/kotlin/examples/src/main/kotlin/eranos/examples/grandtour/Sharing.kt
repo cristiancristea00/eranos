@@ -46,10 +46,14 @@ internal suspend fun sharing(
         val rows =
             group.read().use { reader ->
                 plan.payments.map { payment ->
-                    listOf(reader.member(payment.from)?.firstName ?: "?", reader.member(payment.to)?.firstName ?: "?", "${payment.amount}")
+                    PaymentRow(
+                        amount = payment.amount,
+                        from = reader.member(payment.from)?.firstName ?: "?",
+                        to = reader.member(payment.to)?.firstName ?: "?",
+                    )
                 }
             }
-        printTable(listOf("From", "To", "Amount"), rows, numbersFrom = 2)
+        printTable(PaymentRow.HEADERS, rows, numbersFrom = 2)
 
         val before = group.summary()
         val rates = mapOf(Currency.of("RON") to ExchangeRate.parse("0.2"))

@@ -93,15 +93,21 @@ func builtInCategory(_ group: Group) throws(EranosError) -> Category.ID? {
 
 func printBalances(_ group: Group) throws(EranosError) {
     let summary = try group.summary()
-    let zero = "\(Money(currency: try group.currency(), minorUnits: 0))"
+    let zero = Money(currency: try group.currency(), minorUnits: 0)
     printTable(
-        ["Member", "Paid", "Consumed", "Sent", "Received", "Balance"],
         try group.members().map { member in
             // The summary lists the members with a total; every total of the others is zero.
             guard let totals = member.id.flatMap({ id in totals(of: id, in: summary) }) else {
-                return [member.firstName, zero, zero, zero, zero, "\(Balance.settled)"]
+                return BalanceRow(balance: .settled, consumed: zero, name: member.firstName, paid: zero, received: zero, sent: zero)
             }
-            return [member.firstName, "\(totals.paid)", "\(totals.share)", "\(totals.sent)", "\(totals.received)", "\(totals.balance)"]
+            return BalanceRow(
+                balance: totals.balance,
+                consumed: totals.share,
+                name: member.firstName,
+                paid: totals.paid,
+                received: totals.received,
+                sent: totals.sent
+            )
         },
         numbersFrom: 1
     )
@@ -111,13 +117,12 @@ func printCategories(_ group: Group) throws(EranosError) {
     let expenses = try group.expenses()
     let builtIn = try builtInCategory(group)
     printTable(
-        ["Category", "Expenses", "Total"],
         try group.summary().categoryTotals.map { total throws(EranosError) in
-            [
-                try group.category(withID: total.category)?.name ?? "?",
-                "\(expenses.filter { expense in (expense.category ?? builtIn) == total.category }.count)",
-                "\(total.total)"
-            ]
+            CategoryRow(
+                expenses: expenses.filter { expense in (expense.category ?? builtIn) == total.category }.count,
+                name: try group.category(withID: total.category)?.name ?? "?",
+                total: total.total
+            )
         },
         numbersFrom: 1
     )
@@ -127,22 +132,22 @@ func printCategories(_ group: Group) throws(EranosError) {
 func printEntries(_ group: Group, _ shown: (Currency) -> Bool) throws(EranosError) {
     let zero = Money(currency: try group.currency(), minorUnits: 0)
     let expenses = try group.expenses().filter { expense in shown(expense.cost.amount.currency) }.map { expense throws(EranosError) in
-        [
-            expense.name,
-            try names(group, expense.payers.members),
-            "\(try expense.total())",
-            "\(try rate(of: expense.cost))",
-            "\(try expense.id.flatMap { id throws(EranosError) in try group.shares(of: id) }?.total ?? zero)"
-        ]
+        EntryRow(
+            converted: try expense.id.flatMap { id throws(EranosError) in try group.shares(of: id) }?.total ?? zero,
+            name: expense.name,
+            original: try expense.total(),
+            payer: try names(group, expense.payers.members),
+            rate: try rate(of: expense.cost)
+        )
     }
     let transfers = try group.transfers().filter { transfer in shown(transfer.cost.amount.currency) }.map { transfer throws(EranosError) in
-        [
-            "Transfer to \(try name(group, transfer.to))",
-            try name(group, transfer.from),
-            "\(transfer.cost.amount)",
-            "\(try rate(of: transfer.cost))",
-            "\(try transfer.id.flatMap { id throws(EranosError) in try group.amount(of: id) } ?? zero)"
-        ]
+        EntryRow(
+            converted: try transfer.id.flatMap { id throws(EranosError) in try group.amount(of: id) } ?? zero,
+            name: "Transfer to \(try name(group, transfer.to))",
+            original: transfer.cost.amount,
+            payer: try name(group, transfer.from),
+            rate: try rate(of: transfer.cost)
+        )
     }
-    printTable(["Entry", "Paid by", "Entered as", "Rate", "In the group currency"], expenses + transfers, numbersFrom: 2)
+    printTable(expenses + transfers, numbersFrom: 2)
 }

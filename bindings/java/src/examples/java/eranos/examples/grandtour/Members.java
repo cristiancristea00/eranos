@@ -24,6 +24,10 @@ import eranos.Member;
 import eranos.MemberId;
 import eranos.PhoneNumber;
 import eranos.Username;
+import eranos.examples.grandtour.Tables.CheckRow;
+import eranos.examples.grandtour.Tables.DetailRow;
+import eranos.examples.grandtour.Tables.MemberRow;
+import eranos.examples.grandtour.Tables.RefusalRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
 
@@ -52,12 +56,12 @@ final class Members {
         group.setDescription("A week by the Atlantic, with a day in Porto");
         String language = group.language().map(Language::toString).orElse("");
         printTable(
-                List.of("Detail", "Value"),
+                DetailRow.HEADERS,
                 List.of(
-                        List.of("Name", group.name()),
-                        List.of("Currency", group.currency().toString()),
-                        List.of("Language", language),
-                        List.of("Description", group.description().orElse(""))),
+                        new DetailRow("Name", group.name()),
+                        new DetailRow("Currency", group.currency().toString()),
+                        new DetailRow("Language", language),
+                        new DetailRow("Description", group.description().orElse(""))),
                 2);
         System.out.print(
                 """
@@ -85,17 +89,17 @@ final class Members {
     }
 
     static void printMembers(Group group) {
-        List<List<String>> rows = new ArrayList<>();
+        List<MemberRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             rows.add(
-                    List.of(
+                    new MemberRow(
+                            cell(member.accounts().stream().map(Members::describe).toList()),
+                            member.email().map(Email::toString).orElse(""),
                             Stream.concat(Stream.of(member.firstName()), member.lastName().stream())
                                     .collect(Collectors.joining(" ")),
-                            member.email().map(Email::toString).orElse(""),
-                            member.phone().map(PhoneNumber::toString).orElse(""),
-                            cell(member.accounts().stream().map(Members::describe).toList())));
+                            member.phone().map(PhoneNumber::toString).orElse("")));
         }
-        printTable(List.of("Member", "Email", "Phone", "Accounts"), rows, 4);
+        printTable(MemberRow.HEADERS, rows, 4);
     }
 
     static void validation(Group group) {
@@ -105,11 +109,11 @@ final class Members {
                 emails against RFC 5321 and 5322, and phone numbers against their country's
                 numbering plan. Required text must not be blank:
                 """);
-        List<List<String>> rows = new ArrayList<>();
+        List<CheckRow> rows = new ArrayList<>();
         for (String input :
                 List.of("ro49 aaaa 1b31 0075 9384 0000", "RO49 AAAA 1B31 0075 9384 0001")) {
             rows.add(
-                    List.of(
+                    new CheckRow(
                             "\"" + input + "\"",
                             "IBAN",
                             outcome(
@@ -117,13 +121,13 @@ final class Members {
                                     iban -> iban + ", country " + iban.countryCode())));
         }
         rows.add(
-                List.of(
+                new CheckRow(
                         "\"ana..popescu@example.com\"",
                         "email",
                         outcome(() -> Email.parse("ana..popescu@example.com"), Email::toString)));
         for (String input : List.of("+351 912 345 678", "+40 612 345 678")) {
             rows.add(
-                    List.of(
+                    new CheckRow(
                             "\"" + input + "\"",
                             "phone",
                             outcome(
@@ -131,18 +135,18 @@ final class Members {
                                     phone -> phone + ", stored as " + phone.e164())));
         }
         rows.add(
-                List.of(
+                new CheckRow(
                         "\"   \"",
                         "username",
                         outcome(() -> Username.parse("   "), Username::toString)));
         rows.add(
-                List.of(
+                new CheckRow(
                         "\"  \"",
                         "first name",
                         outcome(
                                 () -> group.addMember(Member.builder("  ").build()),
                                 MemberId::value)));
-        printTable(List.of("Input", "Checked as", "Result"), rows, 3);
+        printTable(CheckRow.HEADERS, rows, 3);
     }
 
     static People members(Group group) throws EranosException {
@@ -210,10 +214,10 @@ final class Members {
                                         .map(Category::name)
                                         .collect(Collectors.joining(", "))));
         printTable(
-                List.of("Change", "Refused with"),
+                RefusalRow.HEADERS,
                 List.of(
-                        List.of("Add a category named FOOD", message(homonym)),
-                        List.of("Rename Uncategorised to Other", message(builtIn))),
+                        new RefusalRow("Add a category named FOOD", message(homonym)),
+                        new RefusalRow("Rename Uncategorised to Other", message(builtIn))),
                 2);
 
         check(

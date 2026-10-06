@@ -65,9 +65,15 @@ fn name(group: &Group, member: MemberId) -> String {
         .to_owned()
 }
 
+/// The rule by which a member shares an expense, as the report names it.
+struct Rule {
+    member: MemberId,
+    text: &'static str,
+}
+
 /// Prints how one expense divides: every involved member's rule, what they
 /// paid, and what they consumed.
-fn report(group: &Group, id: ExpenseId, rules: &[(MemberId, &str)]) {
+fn report(group: &Group, id: ExpenseId, rules: &[Rule]) {
     let (Some(expense), Some(shares)) = (group.expense(id), group.expense_shares(id)) else {
         return;
     };
@@ -79,8 +85,8 @@ fn report(group: &Group, id: ExpenseId, rules: &[(MemberId, &str)]) {
             paid: share.paid(),
             rule: rules
                 .iter()
-                .find(|(member, _)| *member == share.member())
-                .map_or("(payer only)", |&(_, rule)| rule)
+                .find(|rule| rule.member == share.member())
+                .map_or("(payer only)", |rule| rule.text)
                 .to_owned(),
         }),
         2,
@@ -117,11 +123,20 @@ fn equally(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Erro
     Ok(taxi)
 }
 
-const fn thirds(family: &Family) -> [(MemberId, &'static str); 3] {
+const fn thirds(family: &Family) -> [Rule; 3] {
     [
-        (family.ana, "an equal third"),
-        (family.bob, "an equal third"),
-        (family.mia, "an equal third"),
+        Rule {
+            member: family.ana,
+            text: "an equal third",
+        },
+        Rule {
+            member: family.bob,
+            text: "an equal third",
+        },
+        Rule {
+            member: family.mia,
+            text: "an equal third",
+        },
     ]
 }
 
@@ -146,7 +161,24 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
         )
         .build()?,
     )?;
-    report(group, rent, &[(ana, "40%"), (bob, "40%"), (mia, "20%")]);
+    report(
+        group,
+        rent,
+        &[
+            Rule {
+                member: ana,
+                text: "40%",
+            },
+            Rule {
+                member: bob,
+                text: "40%",
+            },
+            Rule {
+                member: mia,
+                text: "20%",
+            },
+        ],
+    );
     Ok(rent)
 }
 
@@ -174,7 +206,20 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
     report(
         group,
         food,
-        &[(ana, "1 part"), (bob, "1 part"), (mia, "0.5 parts")],
+        &[
+            Rule {
+                member: ana,
+                text: "1 part",
+            },
+            Rule {
+                member: bob,
+                text: "1 part",
+            },
+            Rule {
+                member: mia,
+                text: "0.5 parts",
+            },
+        ],
     );
     Ok(food)
 }
@@ -203,7 +248,20 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
     report(
         group,
         tickets,
-        &[(ana, "15.00 EUR"), (bob, "15.00 EUR"), (mia, "5.00 EUR")],
+        &[
+            Rule {
+                member: ana,
+                text: "15.00 EUR",
+            },
+            Rule {
+                member: bob,
+                text: "15.00 EUR",
+            },
+            Rule {
+                member: mia,
+                text: "5.00 EUR",
+            },
+        ],
     );
     Ok(tickets)
 }

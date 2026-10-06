@@ -29,6 +29,11 @@ fn parts(text: &str) -> Parts {
     Parts::parse(text).unwrap()
 }
 
+/// The share of `member`: `amount` minor units.
+const fn share(amount: i64, member: MemberId) -> Share {
+    Share { amount, member }
+}
+
 /// The member at `index` of a generated split.
 fn member_at(index: usize) -> MemberId {
     MemberId::from_bytes([u8::try_from(index).unwrap(); 16])
@@ -40,16 +45,16 @@ fn member_at(index: usize) -> MemberId {
 fn shares_keep_their_member_and_value() {
     // An exact amount.
     let amount = MemberAmount::new(euros(1_250), ANA);
-    assert_eq!((amount.amount(), amount.member()), (euros(1_250), ANA));
+    assert_eq!(amount.amount(), euros(1_250));
+    assert_eq!(amount.member(), ANA);
     // Parts.
     let share = MemberParts::new(BOB, parts("1.5"));
-    assert_eq!((share.member(), share.parts()), (BOB, parts("1.5")));
+    assert_eq!(share.member(), BOB);
+    assert_eq!(share.parts(), parts("1.5"));
     // A percentage.
     let percentage = MemberPercentage::new(CAROL, per_cent("70"));
-    assert_eq!(
-        (percentage.member(), percentage.percentage()),
-        (CAROL, per_cent("70"))
-    );
+    assert_eq!(percentage.member(), CAROL);
+    assert_eq!(percentage.percentage(), per_cent("70"));
 }
 
 /// Groups saved before shares had names would stop loading, or load with
@@ -396,7 +401,7 @@ fn shares_are_sorted_by_member_whatever_the_listing_order() {
     for order in [[CAROL, BOB, ANA], [BOB, CAROL, ANA], [ANA, BOB, CAROL]] {
         assert_eq!(
             Split::equal(order).divide(300, 0),
-            vec![(ANA, 100), (BOB, 100), (CAROL, 100)]
+            vec![share(100, ANA), share(100, BOB), share(100, CAROL)]
         );
     }
 }
@@ -406,7 +411,7 @@ fn shares_are_sorted_by_member_whatever_the_listing_order() {
 fn an_equal_split_hands_out_the_leftover_cent() {
     // 10.00 among three: two shares of 3.33 and one of 3.34.
     let shares = Split::equal([ANA, BOB, CAROL]).divide(1_000, 7);
-    let mut amounts: Vec<i64> = shares.iter().map(|&(_, share)| share).collect();
+    let mut amounts: Vec<i64> = shares.iter().map(|share| share.amount).collect();
     amounts.sort_unstable();
     assert_eq!(amounts, [333, 333, 334]);
 }
@@ -419,15 +424,15 @@ fn the_rotation_decides_who_gets_the_leftover_cent() {
     // Each rotation starts at the next member in ID order.
     assert_eq!(
         split.divide(1_000, 0),
-        vec![(ANA, 334), (BOB, 333), (CAROL, 333)]
+        vec![share(334, ANA), share(333, BOB), share(333, CAROL)]
     );
     assert_eq!(
         split.divide(1_000, 1),
-        vec![(ANA, 333), (BOB, 334), (CAROL, 333)]
+        vec![share(333, ANA), share(334, BOB), share(333, CAROL)]
     );
     assert_eq!(
         split.divide(1_000, 2),
-        vec![(ANA, 333), (BOB, 333), (CAROL, 334)]
+        vec![share(333, ANA), share(333, BOB), share(334, CAROL)]
     );
     // The rotation wraps around.
     assert_eq!(split.divide(1_000, 3), split.divide(1_000, 0));
@@ -435,7 +440,7 @@ fn the_rotation_decides_who_gets_the_leftover_cent() {
     // Positions count in ID order, not in listing order.
     assert_eq!(
         Split::equal([CAROL, BOB, ANA]).divide(1_000, 1),
-        vec![(ANA, 333), (BOB, 334), (CAROL, 333)]
+        vec![share(333, ANA), share(334, BOB), share(333, CAROL)]
     );
 }
 
@@ -447,7 +452,10 @@ fn parts_divide_in_proportion() {
         MemberParts::new(ANA, parts("2")),
         MemberParts::new(BOB, Parts::ONE),
     ]);
-    assert_eq!(split.divide(3_000, 0), vec![(ANA, 2_000), (BOB, 1_000)]);
+    assert_eq!(
+        split.divide(3_000, 0),
+        vec![share(2_000, ANA), share(1_000, BOB)]
+    );
     // Fractional parts.
     let fractional_parts_split = Split::parts([
         MemberParts::new(ANA, parts("0.5")),
@@ -456,7 +464,7 @@ fn parts_divide_in_proportion() {
     ]);
     assert_eq!(
         fractional_parts_split.divide(3_000, 0),
-        vec![(ANA, 500), (BOB, 1_000), (CAROL, 1_500)]
+        vec![share(500, ANA), share(1_000, BOB), share(1_500, CAROL)]
     );
 }
 
@@ -468,7 +476,10 @@ fn percentages_divide_in_proportion() {
         MemberPercentage::new(ANA, per_cent("70")),
         MemberPercentage::new(BOB, per_cent("30")),
     ]);
-    assert_eq!(split.divide(10_000, 0), vec![(ANA, 7_000), (BOB, 3_000)]);
+    assert_eq!(
+        split.divide(10_000, 0),
+        vec![share(7_000, ANA), share(3_000, BOB)]
+    );
     // The leftover cent goes to the largest remainder, whatever the
     // rotation.
     let uneven_thirds_split = Split::percentages([
@@ -479,7 +490,7 @@ fn percentages_divide_in_proportion() {
     for rotation in 0..3 {
         assert_eq!(
             uneven_thirds_split.divide(100, rotation),
-            vec![(ANA, 33), (BOB, 33), (CAROL, 34)]
+            vec![share(33, ANA), share(33, BOB), share(34, CAROL)]
         );
     }
 }
@@ -495,7 +506,7 @@ fn amounts_are_returned_exactly() {
     for rotation in 0..4 {
         assert_eq!(
             split.divide(2_000, rotation),
-            vec![(ANA, 1_250), (BOB, 750)]
+            vec![share(1_250, ANA), share(750, BOB)]
         );
     }
 }
@@ -506,13 +517,13 @@ fn a_zero_total_gives_every_member_zero() {
     // Equal splits and parts.
     assert_eq!(
         Split::equal([ANA, BOB, CAROL]).divide(0, 1),
-        vec![(ANA, 0), (BOB, 0), (CAROL, 0)]
+        vec![share(0, ANA), share(0, BOB), share(0, CAROL)]
     );
     let split = Split::parts([
         MemberParts::new(ANA, parts("2")),
         MemberParts::new(BOB, Parts::ONE),
     ]);
-    assert_eq!(split.divide(0, 0), vec![(ANA, 0), (BOB, 0)]);
+    assert_eq!(split.divide(0, 0), vec![share(0, ANA), share(0, BOB)]);
 }
 
 /// A refund would be divided differently from the expense it reverses.
@@ -522,7 +533,7 @@ fn negative_totals_divide_like_positive_ones() {
     let split = Split::equal([ANA, BOB, CAROL]);
     assert_eq!(
         split.divide(-1_000, 0),
-        vec![(ANA, -334), (BOB, -333), (CAROL, -333)]
+        vec![share(-334, ANA), share(-333, BOB), share(-333, CAROL)]
     );
 }
 
@@ -552,15 +563,15 @@ proptest! {
         let shares = split.divide(total, rotation);
         prop_assert_eq!(shares.len(), hundredths.len());
         // Exact: the shares add up to the total.
-        let sum: i128 = shares.iter().map(|&(_, share)| i128::from(share)).sum();
+        let sum: i128 = shares.iter().map(|share| i128::from(share.amount)).sum();
         prop_assert_eq!(sum, i128::from(total));
         // Fair: |share − total × weight / Σ weights| < 1.
         let weight_sum: i128 = hundredths.iter().map(|&weight| i128::from(weight)).sum();
         for (index, &weight) in hundredths.iter().enumerate() {
-            let (member, share) = shares[index];
+            let Share { amount, member } = shares[index];
             prop_assert_eq!(member, member_at(index));
             let deviation =
-                i128::from(share) * weight_sum - i128::from(total) * i128::from(weight);
+                i128::from(amount) * weight_sum - i128::from(total) * i128::from(weight);
             prop_assert!(deviation.abs() < weight_sum);
         }
     }

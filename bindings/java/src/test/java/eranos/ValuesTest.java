@@ -13,8 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 /** The currencies, amounts, ratios, dates, times, contact details, and identifiers. */
 class ValuesTest {
     /**
@@ -24,9 +22,11 @@ class ValuesTest {
     @Test
     void currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws EranosException {
         Currency euro = Currency.of("EUR");
-        assertEquals(
-                List.of("EUR", "Euro", "EUR"), List.of(euro.code(), euro.name(), euro.toString()));
-        assertEquals(List.of(978, 2), List.of(euro.numericCode(), euro.decimalPlaces()));
+        assertEquals("EUR", euro.code());
+        assertEquals("Euro", euro.name());
+        assertEquals("EUR", euro.toString());
+        assertEquals(978, euro.numericCode());
+        assertEquals(2, euro.decimalPlaces());
         assertTrue(Currency.all().contains(euro));
         Currency lei = Currency.of("RON");
         assertValue(euro, Currency.known("EUR"), lei);
@@ -93,7 +93,9 @@ class ValuesTest {
     void datesAndTimesReadAndWriteAsTheLibraryDoes() throws EranosException {
         CalendarDate date = CalendarDate.of(23, 9, 2026);
         assertEquals("2026-09-23", date.toString());
-        assertEquals(List.of(23, 9, 2026), List.of(date.day(), date.month(), date.year()));
+        assertEquals(23, date.day());
+        assertEquals(9, date.month());
+        assertEquals(2026, date.year());
         assertValue(date, CalendarDate.parse("2026-09-23"), CalendarDate.of(24, 9, 2026));
         EranosException.Calendar invalid =
                 assertThrows(EranosException.Calendar.class, () -> CalendarDate.of(30, 2, 2026));
@@ -105,7 +107,8 @@ class ValuesTest {
 
         TimeOfDay time = TimeOfDay.of(18, 30);
         assertEquals("18:30", time.toString());
-        assertEquals(List.of(18, 30), List.of(time.hour(), time.minute()));
+        assertEquals(18, time.hour());
+        assertEquals(30, time.minute());
         assertValue(time, TimeOfDay.parse("18:30"), TimeOfDay.of(18, 31));
         assertThrows(EranosException.Calendar.class, () -> TimeOfDay.of(24, 0));
         assertThrows(EranosException.Calendar.class, () -> TimeOfDay.parse("25:00"));
@@ -165,9 +168,8 @@ class ValuesTest {
     @Test
     void anIdentifierIsItsText() {
         String text = "0192f1c3-0000-7000-8000-000000000001";
-        assertEquals(
-                List.of(text, text),
-                List.of(new GroupId(text).value(), new GroupId(text).toString()));
+        assertEquals(text, new GroupId(text).value());
+        assertEquals(text, new GroupId(text).toString());
         assertEquals(text, new MemberId(text).toString());
         assertEquals(text, new CategoryId(text).toString());
         assertEquals(text, new ExpenseId(text).toString());
@@ -182,13 +184,10 @@ class ValuesTest {
     @Test
     void aValueTheLibraryNeverSendsStillPrints() {
         Currency unlisted = Currency.known("XYZ");
-        assertEquals(
-                List.of("XYZ", "XYZ", 0, 0),
-                List.of(
-                        unlisted.code(),
-                        unlisted.name(),
-                        unlisted.decimalPlaces(),
-                        unlisted.numericCode()));
+        assertEquals("XYZ", unlisted.code());
+        assertEquals("XYZ", unlisted.name());
+        assertEquals(0, unlisted.decimalPlaces());
+        assertEquals(0, unlisted.numericCode());
         assertEquals("5 XYZ", new Money(unlisted, 5).toString());
         assertEquals("-1 bp", Percentage.known(-1).toString());
         assertEquals("0/100", Parts.known(0).toString());

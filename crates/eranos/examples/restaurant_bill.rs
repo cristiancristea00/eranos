@@ -166,14 +166,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         by_consumption.tip()
     );
     let mut rows = Vec::new();
-    for (member, first_name) in [(ana, "Ana"), (bob, "Bob"), (carol, "Carol")] {
+    for member in [ana, bob, carol] {
         let subtotal = consumed(&ordered, member)?;
         let proportional_total = consumed(by_consumption, member)?;
         let equal_total = consumed(&even, member)?;
         rows.push(TipRow {
             equal_tip: equal_total.checked_sub(subtotal)?,
             equal_total,
-            name: first_name.to_owned(),
+            name: names(&group, [member]),
             proportional_tip: proportional_total.checked_sub(subtotal)?,
             proportional_total,
             subtotal,

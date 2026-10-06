@@ -13,6 +13,7 @@
 #include <format>
 #include <optional>
 #include <print>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -127,11 +128,12 @@ void title(std::string_view const text) { std::println("{}\n{}", text, repeated(
 
 void section(std::string_view const text) { std::println("\n{}\n{}", text, repeated("─", widthOf(text))); }
 
-void printTable(std::vector<std::string> const &headers, Rows const &rows, std::size_t const numbersFrom) {
-    auto const cellsOf = [](std::vector<std::string> const &row) {
+void printCells(std::span<std::string_view const> const headers, std::vector<std::vector<std::string_view>> const &rows,
+                std::size_t const numbersFrom) {
+    auto const cellsOf = [](std::span<std::string_view const> const row) {
         std::vector<std::vector<std::string>> cells;
         cells.reserve(row.size());
-        for (auto const &text : row) {
+        for (auto const text : row) {
             cells.push_back(linesOf(text));
         }
         return cells;

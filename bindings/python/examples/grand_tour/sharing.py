@@ -21,7 +21,7 @@ from eranos import (
     SettlementStrategy,
     WholeExpenseSplit,
 )
-from examples.grand_tour.tour import People, october, ron
+from examples.grand_tour.tour import PaymentRow, People, october, ron
 from examples.report import print_lines, print_table, section
 
 
@@ -72,8 +72,11 @@ async def sharing(group: Group, people: People) -> None:
     )
     with await group.read_async() as reader:
         print_table(
-            ('From', 'To', 'Amount'),
-            [(_first_name(reader, payment.sender), _first_name(reader, payment.receiver), str(payment.amount)) for payment in plan.payments],
+            PaymentRow,
+            [
+                PaymentRow(amount=payment.amount, from_=_first_name(reader, payment.sender), to=_first_name(reader, payment.receiver))
+                for payment in plan.payments
+            ],
             2,
         )
 

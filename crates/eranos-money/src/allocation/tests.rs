@@ -7,11 +7,19 @@ use proptest::prelude::*;
 
 use super::*;
 
-/// The exact share `total × weight / Σ weights`, as a rational
-/// (numerator, denominator) in 128-bit arithmetic.
-fn exact_share(total: i64, weights: &[u64], index: usize) -> (i128, i128) {
-    let sum: i128 = weights.iter().map(|&weight| i128::from(weight)).sum();
-    (i128::from(total) * i128::from(weights[index]), sum)
+/// A rational number in 128-bit arithmetic.
+#[derive(Debug, Clone, Copy)]
+struct Fraction {
+    denominator: i128,
+    numerator: i128,
+}
+
+/// The exact share `total × weight / Σ weights`.
+fn exact_share(total: i64, weights: &[u64], index: usize) -> Fraction {
+    Fraction {
+        denominator: weights.iter().map(|&weight| i128::from(weight)).sum(),
+        numerator: i128::from(total) * i128::from(weights[index]),
+    }
 }
 
 proptest! {
@@ -39,8 +47,8 @@ proptest! {
         prop_assume!(weights.iter().any(|&weight| 0 < weight));
         let parts = allocate(total, &weights, rotation);
         for (index, &part) in parts.iter().enumerate() {
-            let (numerator, denominator) = exact_share(total, &weights, index);
-            let floor = numerator / denominator;
+            let share = exact_share(total, &weights, index);
+            let floor = share.numerator / share.denominator;
             prop_assert!(i128::from(part) == floor || i128::from(part) == floor + 1);
         }
     }

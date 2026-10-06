@@ -19,15 +19,24 @@ fun section(title: String) {
 }
 
 /**
+ * A row of a report's table. Its type declares the fields alphabetically, as the Rust example's row does, and names the
+ * columns once, in a `HEADERS` constant of its companion object, in the order [cells] lists them.
+ */
+interface Row {
+    /** The text of each cell, from the first column to the last. */
+    val cells: List<String>
+}
+
+/**
  * Prints [rows] under [headers] with rounded borders, as the Rust examples' tables are printed, right-aligning the
  * columns from [numbersFrom] on. A cell of several lines makes its row as tall as its tallest cell.
  */
 fun printTable(
     headers: List<String>,
-    rows: List<List<String>>,
+    rows: List<Row>,
     numbersFrom: Int,
 ) {
-    val table = (listOf(headers) + rows).map { row -> row.map { cell -> cell.split("\n") } }
+    val table = (listOf(headers) + rows.map { row -> row.cells }).map { row -> row.map { cell -> cell.split("\n") } }
     val widths = headers.indices.map { column -> table.maxOf { row -> row[column].maxOf(::width) } }
     val border = { left: String, middle: String, right: String ->
         widths.joinToString(middle, left, right) { width -> "─".repeat(width + 2) }

@@ -150,6 +150,16 @@ fn forms<'call>(call: &'call Call, core: &Core) -> syn::Result<Vec<Form<'call>>>
     }
 }
 
+/// How a synchronous form hands out its answer.
+struct Delivery {
+    /// The form's body.
+    body: TokenStream,
+    /// What its `Result` holds when it succeeds.
+    output: TokenStream,
+    /// The parameter it writes its text into, for an answer of text.
+    write: Option<TokenStream>,
+}
+
 /// The synchronous `form` of `call`, which answers `answer`: it calls the
 /// core's form on `receiver`, the group's handle or the read handle, which
 /// fails as `own` says besides the call's refusal.
@@ -172,67 +182,75 @@ fn synchronous(
         .map(|argument| argument.as_ref().map_or_else(|| quote!(None), lent));
     let invocation = quote!(#receiver.#core_name(#(#arguments),*));
     let write = quote!(, write: &mut DiplomatWrite);
-    let (write, output, body) = match answer {
-        Answer::Flag => (
-            None,
-            quote!(bool),
-            quote!(#invocation.map_err(crate::failed)),
-        ),
+    let Delivery {
+        body,
+        output,
+        write,
+    } = match answer {
+        Answer::Flag => Delivery {
+            body: quote!(#invocation.map_err(crate::failed)),
+            output: quote!(bool),
+            write: None,
+        },
         Answer::Found(record) => {
             let object = eranos(record);
-            (
-                None,
-                quote!(Option<Box<#object>>),
-                quote! {
+            Delivery {
+                body: quote! {
                     #invocation
                         .map(|value| value.map(|value| Box::new(#object(value))))
                         .map_err(crate::failed)
                 },
-            )
+                output: quote!(Option<Box<#object>>),
+                write: None,
+            }
         }
         Answer::List(element) => {
             let list = list(element);
-            (
-                None,
-                quote!(Box<#list>),
-                quote! {
+            Delivery {
+                body: quote! {
                     #invocation
                         .map(|list| Box::new(#list(list)))
                         .map_err(crate::failed)
                 },
-            )
+                output: quote!(Box<#list>),
+                write: None,
+            }
         }
-        Answer::Nothing => (None, quote!(()), quote!(#invocation.map_err(crate::failed))),
-        Answer::OptionalText => (
-            Some(write),
-            quote!(()),
-            quote! {
+        Answer::Nothing => Delivery {
+            body: quote!(#invocation.map_err(crate::failed)),
+            output: quote!(()),
+            write: None,
+        },
+        Answer::OptionalText => Delivery {
+            body: quote! {
                 let text = #invocation.map_err(crate::failed)?;
                 crate::write_optional(write, text.as_deref());
                 Ok(())
             },
-        ),
+            output: quote!(()),
+            write: Some(write),
+        },
         Answer::Record(record) => {
             let object = eranos(record);
-            (
-                None,
-                quote!(Box<#object>),
-                quote! {
+            Delivery {
+                body: quote! {
                     #invocation
                         .map(|value| Box::new(#object(value)))
                         .map_err(crate::failed)
                 },
-            )
+                output: quote!(Box<#object>),
+                write: None,
+            }
         }
-        Answer::Text => (
-            Some(write),
-            quote!(()),
-            quote! {
+        Answer::Text => Delivery {
+            body: quote! {
                 let text = #invocation.map_err(crate::failed)?;
                 crate::write_text(write, &text);
                 Ok(())
             },
-        ),
+            output: quote!(()),
+            write: Some(write),
+        },
     };
     let documentation = synchronous_doc(call, answer, form, own);
     quote! {

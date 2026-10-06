@@ -18,7 +18,43 @@ import {
     TipDistribution,
     splitMembers,
 } from '../src/index.js';
-import { load, names, printLines, printTable, refusal, section, title } from './report.js';
+import { type Columns, load, names, printLines, printTable, refusal, section, title } from './report.js';
+
+/** A line of the receipt, as the table of the receipt prints it. */
+interface LineRow {
+    readonly lineTotal: Money;
+    readonly name: string;
+    readonly participants: string;
+    readonly quantity: number;
+    readonly unitPrice: Money;
+}
+
+const lineColumns: Columns<LineRow> = [
+    { header: 'Item', text: (row) => row.name },
+    { header: 'Shared by', text: (row) => row.participants },
+    { header: 'Quantity', text: (row) => String(row.quantity) },
+    { header: 'Unit price', text: (row) => row.unitPrice.toString() },
+    { header: 'Line total', text: (row) => row.lineTotal.toString() },
+];
+
+/** What a member ordered and pays with each way of sharing the tip, as the table of tips prints it. */
+interface TipRow {
+    readonly equalTip: Money;
+    readonly equalTotal: Money;
+    readonly name: string;
+    readonly proportionalTip: Money;
+    readonly proportionalTotal: Money;
+    readonly subtotal: Money;
+}
+
+const tipColumns: Columns<TipRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Ordered', text: (row) => row.subtotal.toString() },
+    { header: 'Tip by consumption', text: (row) => row.proportionalTip.toString() },
+    { header: 'Pays', text: (row) => row.proportionalTotal.toString() },
+    { header: 'Tip shared equally', text: (row) => row.equalTip.toString() },
+    { header: 'Pays', text: (row) => row.equalTotal.toString() },
+];
 
 /** The amount written `text`, in euros. */
 function eur(text: string): Money {
@@ -74,11 +110,16 @@ printLines(
 
 section('1. The receipt');
 printTable(
-    ['Item', 'Shared by', 'Quantity', 'Unit price', 'Line total'],
+    lineColumns,
     receipt(ana, bob, carol).map((item) => {
         const quantity = item.quantity ?? 1;
-        const total = new Money(item.unitPrice.currency, item.unitPrice.minorUnits * BigInt(quantity));
-        return [item.name, names(group, splitMembers(item.split)), String(quantity), item.unitPrice.toString(), total.toString()];
+        return {
+            lineTotal: new Money(item.unitPrice.currency, item.unitPrice.minorUnits * BigInt(quantity)),
+            name: item.name,
+            participants: names(group, splitMembers(item.split)),
+            quantity,
+            unitPrice: item.unitPrice,
+        };
     }),
     2,
 );
@@ -113,20 +154,20 @@ printLines(
     'each person ordered, or equally; both are shown:',
 );
 printTable(
-    ['Member', 'Ordered', 'Tip by consumption', 'Pays', 'Tip shared equally', 'Pays'],
+    tipColumns,
     [ana, bob, carol].map((member) => {
         const subtotal = consumed(ordered, member);
         const proportionalTotal = consumed(byConsumption, member);
         const equalTotal = consumed(even, member);
         assert.ok(undefined !== subtotal && undefined !== proportionalTotal && undefined !== equalTotal, 'every member ordered');
-        return [
-            names(group, [member]),
-            subtotal.toString(),
-            proportionalTotal.minus(subtotal).toString(),
-            proportionalTotal.toString(),
-            equalTotal.minus(subtotal).toString(),
-            equalTotal.toString(),
-        ];
+        return {
+            equalTip: equalTotal.minus(subtotal),
+            equalTotal,
+            name: names(group, [member]),
+            proportionalTip: proportionalTotal.minus(subtotal),
+            proportionalTotal,
+            subtotal,
+        };
     }),
     1,
 );

@@ -17,12 +17,17 @@ func summary(_ group: Group, _ people: People, _ categories: Categories) throws(
     let builtIn = try builtInCategory(group)
     let zero = Money(currency: try group.currency(), minorUnits: 0)
     printTable(
-        ["Member", "Food", "Lodging", "Getting around", "Uncategorised"],
         try group.members().compactMap { member in
             member.id.map { id in
                 let totals = summary.memberCategoryTotals.first { totals in totals.member == id }?.totals ?? []
-                let total = { (category: Category.ID?) in "\(totals.first { total in total.category == category }?.total ?? zero)" }
-                return [member.firstName, total(categories.food), total(categories.lodging), total(categories.transport), total(builtIn)]
+                let total = { (category: Category.ID?) in totals.first { total in total.category == category }?.total ?? zero }
+                return MemberCategoryRow(
+                    food: total(categories.food),
+                    lodging: total(categories.lodging),
+                    name: member.firstName,
+                    transport: total(categories.transport),
+                    uncategorised: total(builtIn)
+                )
             }
         },
         numbersFrom: 1
@@ -116,23 +121,22 @@ func strategyName(_ strategy: SettlementStrategy) -> String {
 
 func settlingUp(_ group: Group) throws(EranosError) {
     section("11. Settling up")
-    var counts: [[String]] = []
+    var counts: [StrategyRow] = []
     for strategy in SettlementStrategy.allCases {
         let settlement = try group.settlement(by: strategy)
         precondition(strategy == settlement.strategy, "a settlement follows its strategy")
-        counts.append([strategyName(settlement.strategy), "\(settlement.payments.count)"])
+        counts.append(StrategyRow(payments: settlement.payments.count, strategy: strategyName(settlement.strategy)))
     }
     print("""
         Each strategy turns the balances into payments: the direct one pays back every
         pair's own debts, greedy pays the largest amounts first, and the minimum one
         finds the fewest payments.
         """)
-    printTable(["Strategy", "Payments"], counts, numbersFrom: 1)
+    printTable(counts, numbersFrom: 1)
     let plan = try group.settlement(by: .minimumTransfers)
     print("The group follows the minimum plan:")
     printTable(
-        ["From", "To", "Amount"],
-        try plan.payments.map { payment throws(EranosError) in [try name(group, payment.from), try name(group, payment.to), "\(payment.amount)"] },
+        try plan.payments.map { payment throws(EranosError) in PaymentRow(amount: payment.amount, from: try name(group, payment.from), to: try name(group, payment.to)) },
         numbersFrom: 2
     )
     for payment in plan.payments {

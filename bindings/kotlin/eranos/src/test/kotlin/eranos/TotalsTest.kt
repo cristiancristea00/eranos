@@ -17,17 +17,20 @@ class TotalsTest {
         assertEquals(listOf(flat.food), summary.categoryTotals.map { it.category })
         assertEquals(listOf(flat.euros(3_000)), summary.categoryTotals.map { it.total })
         val (ana, bob) = summary.members
-        assertEquals(listOf(flat.ana, flat.bob), listOf(ana.member, bob.member))
-        assertEquals(
-            listOf(flat.euros(3_000), flat.euros(1_500), flat.euros(0), flat.euros(1_000)),
-            listOf(ana.paid, ana.share, ana.sent, ana.received),
-        )
+        assertEquals(flat.ana, ana.member)
+        assertEquals(flat.bob, bob.member)
+        assertEquals(flat.euros(3_000), ana.paid)
+        assertEquals(flat.euros(1_500), ana.share)
+        assertEquals(flat.euros(0), ana.sent)
+        assertEquals(flat.euros(1_000), ana.received)
         assertEquals(flat.euros(500), ana.net)
         assertEquals(Balance.GetsBack(flat.euros(500)), ana.balance)
         assertEquals(Balance.Owes(flat.euros(500)), bob.balance)
-        assertEquals(listOf(flat.euros(1_000), flat.euros(0)), listOf(bob.sent, bob.received))
+        assertEquals(flat.euros(1_000), bob.sent)
+        assertEquals(flat.euros(0), bob.received)
         val (anaTotals, bobTotals) = summary.memberCategoryTotals
-        assertEquals(listOf(flat.ana, flat.bob), listOf(anaTotals.member, bobTotals.member))
+        assertEquals(flat.ana, anaTotals.member)
+        assertEquals(flat.bob, bobTotals.member)
         assertEquals(listOf(flat.euros(1_500)), anaTotals.totals.map { it.total })
 
         val again = flat.group.summaryBlocking()
@@ -62,9 +65,12 @@ class TotalsTest {
     fun sharesAndSettlementsHoldTheGroupsAmounts() {
         val flat = Flat()
         val shares = present(flat.group.expenseSharesBlocking(flat.dinner))
-        assertEquals(listOf(flat.euros(3_000), flat.euros(0)), listOf(shares.total, shares.tip))
+        assertEquals(flat.euros(3_000), shares.total)
+        assertEquals(flat.euros(0), shares.tip)
         val (ana, bob) = shares.members
-        assertEquals(listOf(flat.ana, flat.euros(3_000), flat.euros(1_500)), listOf(ana.member, ana.paid, ana.share))
+        assertEquals(flat.ana, ana.member)
+        assertEquals(flat.euros(3_000), ana.paid)
+        assertEquals(flat.euros(1_500), ana.share)
         val again = present(flat.group.expenseSharesBlocking(flat.dinner))
         assertValue(shares, again, ExpenseShares(shares.members, flat.euros(1), shares.total))
         assertValue(ana, again.members[0], bob)
@@ -78,7 +84,9 @@ class TotalsTest {
             assertEquals(strategy, settlement.strategy)
             assertEquals(strategy, strategy.generated.converted())
             val (payment) = settlement.payments
-            assertEquals(listOf(flat.bob, flat.ana, flat.euros(500)), listOf(payment.from, payment.to, payment.amount))
+            assertEquals(flat.bob, payment.from)
+            assertEquals(flat.ana, payment.to)
+            assertEquals(flat.euros(500), payment.amount)
             assertValue(settlement, flat.group.settlementBlocking(strategy), Settlement(emptyList(), strategy))
             assertValue(payment, Payment(flat.euros(500), flat.bob, flat.ana), Payment(flat.euros(500), flat.ana, flat.bob))
         }

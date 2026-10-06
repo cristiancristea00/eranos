@@ -303,21 +303,33 @@ fn dates_times_and_languages_parse_and_format_as_the_library_does() {
     ));
 }
 
+/// A balance, beside the text the library writes for it.
+struct BalanceText {
+    balance: Balance,
+    text: &'static str,
+}
+
 /// A balance would be written another way than the library's, and the
 /// currencies would reach the apps other than ISO 4217 lists them.
 #[test]
 fn balances_and_currencies_read_as_the_library_writes_them() {
     let balances = [
-        (
-            Balance::GetsBack {
+        BalanceText {
+            balance: Balance::GetsBack {
                 amount: euros(1_200),
             },
-            "gets back 12.00 EUR",
-        ),
-        (Balance::Owes { amount: euros(300) }, "owes 3.00 EUR"),
-        (Balance::Settled, "settled"),
+            text: "gets back 12.00 EUR",
+        },
+        BalanceText {
+            balance: Balance::Owes { amount: euros(300) },
+            text: "owes 3.00 EUR",
+        },
+        BalanceText {
+            balance: Balance::Settled,
+            text: "settled",
+        },
     ];
-    for (balance, text) in balances {
+    for BalanceText { balance, text } in balances {
         assert_eq!(balance_format(&balance).as_deref(), Ok(text));
     }
     for balance in [

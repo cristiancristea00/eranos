@@ -9,6 +9,59 @@ use crate::tests::{METADATA, Recorder};
 /// A command, run with the recorder.
 type Command = dyn Fn(&mut Recorder) -> Result<(), Failure>;
 
+/// A language and its formatters.
+struct Formats {
+    /// The formatters' actions.
+    formats: Vec<Action>,
+    /// The language.
+    language: Language,
+}
+
+/// A language whose command stops when every variable is unset, and the
+/// variable it names.
+struct Unset {
+    /// The language.
+    language: Language,
+    /// The variable the failure names.
+    missing: &'static str,
+}
+
+/// A language whose packages stop when only `set` of the variables is set,
+/// and the variable the failure names.
+struct PartlySet {
+    /// The language.
+    language: Language,
+    /// The variable the failure names.
+    missing: &'static str,
+    /// The variables set.
+    set: &'static [&'static str],
+}
+
+/// A step that fails, and the command that runs it.
+struct Failing<'command> {
+    /// The command.
+    run: &'command Command,
+    /// The step.
+    step: Step,
+}
+
+/// A package's release actions, and command lines among their steps.
+struct ReleaseLines {
+    /// The command lines.
+    found: &'static [&'static str],
+    /// The actions.
+    release: Vec<Action>,
+}
+
+/// A package's release actions, and the name of its directory of the
+/// packages.
+struct Packaged {
+    /// The name of the directory.
+    language: &'static str,
+    /// The actions.
+    release: Vec<Action>,
+}
+
 /// The metadata the recorder answers with.
 fn metadata() -> Metadata {
     Metadata::parse(METADATA).unwrap()
@@ -122,14 +175,38 @@ fn the_formatters_run_alone_and_every_language_s_with_all() {
     format(&mut alone, &[Language::Python]).unwrap();
     assert_eq!(alone.steps, plan::steps(&python::formats()));
     let every = [
-        (Language::Capi, capi::formats("/LLVM_HOME")),
-        (Language::Java, java::formats()),
-        (Language::Kmp, kmp::formats()),
-        (Language::Kotlin, kotlin::formats()),
-        (Language::Python, python::formats()),
-        (Language::Rust, gates::formats()),
-        (Language::Swift, swift::formats()),
-        (Language::Web, web::formats()),
+        Formats {
+            formats: capi::formats("/LLVM_HOME"),
+            language: Language::Capi,
+        },
+        Formats {
+            formats: java::formats(),
+            language: Language::Java,
+        },
+        Formats {
+            formats: kmp::formats(),
+            language: Language::Kmp,
+        },
+        Formats {
+            formats: kotlin::formats(),
+            language: Language::Kotlin,
+        },
+        Formats {
+            formats: python::formats(),
+            language: Language::Python,
+        },
+        Formats {
+            formats: gates::formats(),
+            language: Language::Rust,
+        },
+        Formats {
+            formats: swift::formats(),
+            language: Language::Swift,
+        },
+        Formats {
+            formats: web::formats(),
+            language: Language::Web,
+        },
     ];
     for apple in [true, false] {
         let mut recorder = Recorder::new();
@@ -137,8 +214,8 @@ fn the_formatters_run_alone_and_every_language_s_with_all() {
         format(&mut recorder, &Language::ALL).unwrap();
         let expected: Vec<Step> = every
             .iter()
-            .filter(|(language, _)| apple || Language::Swift != *language)
-            .flat_map(|(_, formats)| plan::steps(formats))
+            .filter(|row| apple || Language::Swift != row.language)
+            .flat_map(|row| plan::steps(&row.formats))
             .collect();
         assert_eq!(recorder.steps, expected, "{apple}");
     }
@@ -323,9 +400,15 @@ fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
         Err(Failure::Variable("ANDROID_HOME"))
     ));
     assert_eq!(unset.steps, [gates::metadata()]);
-    for (language, missing) in [
-        (Language::Capi, capi::VARIABLE),
-        (Language::Java, java::VARIABLES[0]),
+    for Unset { language, missing } in [
+        Unset {
+            language: Language::Capi,
+            missing: capi::VARIABLE,
+        },
+        Unset {
+            language: Language::Java,
+            missing: java::VARIABLES[0],
+        },
     ] {
         let mut unformatted = Recorder::new();
         unformatted.variables.clear();
@@ -357,15 +440,33 @@ fn a_failure_stops_a_command_where_it_happens() {
         |recorder: &mut Recorder| examples(recorder, Some("quickstart"), &[Language::Python]);
     let packaged = |recorder: &mut Recorder| package(recorder, &[Language::Python]);
     let wheel = plan::steps(&python::release(&metadata))[0].clone();
-    let runs: [(Step, &Command); 6] = [
-        (gates::metadata(), &python),
-        (tests, &python),
-        (quickstart, &example),
-        (python::module(&metadata), &example),
-        (gates::metadata(), &packaged),
-        (wheel, &packaged),
+    let runs = [
+        Failing {
+            run: &python,
+            step: gates::metadata(),
+        },
+        Failing {
+            run: &python,
+            step: tests,
+        },
+        Failing {
+            run: &example,
+            step: quickstart,
+        },
+        Failing {
+            run: &example,
+            step: python::module(&metadata),
+        },
+        Failing {
+            run: &packaged,
+            step: gates::metadata(),
+        },
+        Failing {
+            run: &packaged,
+            step: wheel,
+        },
     ];
-    for (failing, run) in runs {
+    for Failing { run, step: failing } in runs {
         let mut recorder = Recorder::new();
         recorder.failing = Some(failing.clone());
         assert!(
@@ -389,11 +490,23 @@ fn a_failure_stops_a_command_where_it_happens() {
 /// command after cargo's metadata alone, the ports of the examples too.
 #[test]
 fn every_package_s_variable_stops_its_command_before_it_builds() {
-    for (language, missing) in [
-        (Language::Capi, capi::VARIABLE),
-        (Language::Java, java::VARIABLES[0]),
-        (Language::Kmp, kmp::VARIABLES[0]),
-        (Language::Kotlin, kotlin::VARIABLES[0]),
+    for Unset { language, missing } in [
+        Unset {
+            language: Language::Capi,
+            missing: capi::VARIABLE,
+        },
+        Unset {
+            language: Language::Java,
+            missing: java::VARIABLES[0],
+        },
+        Unset {
+            language: Language::Kmp,
+            missing: kmp::VARIABLES[0],
+        },
+        Unset {
+            language: Language::Kotlin,
+            missing: kotlin::VARIABLES[0],
+        },
     ] {
         for command in [test, lint] {
             let mut recorder = Recorder::new();
@@ -470,6 +583,10 @@ fn a_language_s_packages_build_in_release_after_what_they_read() {
 /// each builds its library in release and puts what an app takes into its
 /// directory of the packages.
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "a row for each package's release lines and one for each package's directory, which read best as two tables"
+)]
 fn every_package_is_built_in_release_where_an_app_takes_it() {
     let metadata = metadata();
     let runner = Recorder::new();
@@ -492,46 +609,45 @@ fn every_package_is_built_in_release_where_an_app_takes_it() {
         ]
     );
     let expected = [
-        (
-            capi::release(&metadata),
-            [
+        ReleaseLines {
+            found: &[
                 "cargo build --release --package eranos-capi",
                 "cp -R bindings/c/include bindings/c/generated /eranos/target/packages/c/c",
                 "cp -R bindings/cpp/include bindings/cpp/generated /eranos/target/packages/c/cpp",
-            ]
-            .as_slice(),
-        ),
-        (
-            java::release(&runner, &metadata).unwrap(),
-            &[
+            ],
+            release: capi::release(&metadata),
+        },
+        ReleaseLines {
+            found: &[
                 "cd bindings/java && sh gradlew --warning-mode=fail -Peranos.library=/eranos/target/debug jar",
                 "cargo build --release --package eranos-uniffi",
             ],
-        ),
-        (
-            kmp::release(&runner, &metadata).unwrap(),
-            &[
+            release: java::release(&runner, &metadata).unwrap(),
+        },
+        ReleaseLines {
+            found: &[
                 "cd bindings/kmp && JAVA_HOME='/JAVA_HOME_21' sh gradlew --warning-mode=fail :generated:assembleRelease :eranos:assembleRelease :generated:jvmJar :eranos:jvmJar",
                 "cargo build --release --package eranos-kmp",
             ],
-        ),
-        (
-            kotlin::release(&runner, &metadata).unwrap(),
-            &[
+            release: kmp::release(&runner, &metadata).unwrap(),
+        },
+        ReleaseLines {
+            found: &[
                 "cargo ndk --platform 26 --target arm64-v8a --target armeabi-v7a --target x86 --target x86_64 --output-dir bindings/kotlin/generated-android/src/main/jniLibs build --package eranos-uniffi --lib --release",
                 "cd bindings/kotlin && sh gradlew --warning-mode=fail -Peranos.library=/eranos/target/debug :generated-android:assembleRelease :eranos-android:assembleRelease :generated:jar :eranos:jar",
                 "cargo build --release --package eranos-uniffi",
             ],
-        ),
-        (
-            swift::release(&metadata),
-            &[
+            release: kotlin::release(&runner, &metadata).unwrap(),
+        },
+        ReleaseLines {
+            found: &[
                 "cp -R bindings/swift/Package.swift bindings/swift/Package.resolved bindings/swift/Sources bindings/swift/Tests /eranos/target/packages/swift",
                 "cp /eranos/target/uniffi/swift/EranosGenerated.swift /eranos/target/packages/swift/Sources/EranosGenerated",
             ],
-        ),
+            release: swift::release(&metadata),
+        },
     ];
-    for (release, found) in expected {
+    for ReleaseLines { found, release } in expected {
         let written = lines(&release);
         for line in found {
             assert!(written.iter().any(|written| line == written), "{line}");
@@ -543,14 +659,35 @@ fn every_package_is_built_in_release_where_an_app_takes_it() {
         "xcodebuild -create-xcframework -library /eranos/target/aarch64-apple-ios/release/"
     )
         && line.ends_with(" -output /eranos/target/packages/swift/EranosFFI.xcframework")));
-    for (language, release) in [
-        ("c", capi::release(&metadata)),
-        ("java", java::release(&runner, &metadata).unwrap()),
-        ("kmp", kmp::release(&runner, &metadata).unwrap()),
-        ("kotlin", kotlin::release(&runner, &metadata).unwrap()),
-        ("python", python::release(&metadata)),
-        ("swift", swift::release(&metadata)),
-        ("web", web::release(&metadata)),
+    for Packaged { language, release } in [
+        Packaged {
+            language: "c",
+            release: capi::release(&metadata),
+        },
+        Packaged {
+            language: "java",
+            release: java::release(&runner, &metadata).unwrap(),
+        },
+        Packaged {
+            language: "kmp",
+            release: kmp::release(&runner, &metadata).unwrap(),
+        },
+        Packaged {
+            language: "kotlin",
+            release: kotlin::release(&runner, &metadata).unwrap(),
+        },
+        Packaged {
+            language: "python",
+            release: python::release(&metadata),
+        },
+        Packaged {
+            language: "swift",
+            release: swift::release(&metadata),
+        },
+        Packaged {
+            language: "web",
+            release: web::release(&metadata),
+        },
     ] {
         assert!(
             matches!(&release[0].work, plan::Work::Clear(directory) if gates::packaged(&metadata, language) == *directory),
@@ -569,11 +706,31 @@ fn every_package_is_built_in_release_where_an_app_takes_it() {
 /// its variables.
 #[test]
 fn every_jvm_package_s_variable_stops_the_packages_before_they_build() {
-    for (language, set, missing) in [
-        (Language::Java, &[][..], java::VARIABLES[0]),
-        (Language::Kotlin, &[][..], kotlin::VARIABLES[0]),
-        (Language::Kmp, &[][..], kmp::VARIABLES[0]),
-        (Language::Kmp, &[kmp::VARIABLES[0]][..], kmp::VARIABLES[1]),
+    for PartlySet {
+        language,
+        missing,
+        set,
+    } in [
+        PartlySet {
+            language: Language::Java,
+            missing: java::VARIABLES[0],
+            set: &[],
+        },
+        PartlySet {
+            language: Language::Kotlin,
+            missing: kotlin::VARIABLES[0],
+            set: &[],
+        },
+        PartlySet {
+            language: Language::Kmp,
+            missing: kmp::VARIABLES[0],
+            set: &[],
+        },
+        PartlySet {
+            language: Language::Kmp,
+            missing: kmp::VARIABLES[1],
+            set: &[kmp::VARIABLES[0]],
+        },
     ] {
         let mut recorder = Recorder::new();
         recorder.variables = set.to_vec();

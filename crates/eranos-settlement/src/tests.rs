@@ -71,24 +71,23 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
         assert_eq!(settlement.strategy(), strategy);
         assert_eq!(settlement.len(), 2);
         assert!(!settlement.is_empty());
-        let payments: Vec<(MemberId, MemberId, Money)> = settlement
-            .payments()
-            .iter()
-            .map(|payment| (payment.from(), payment.to(), payment.amount()))
-            .collect();
         assert_eq!(
-            payments,
-            vec![
-                (
-                    member(3),
-                    member(1),
-                    Money::from_minor_units(Currency::RON, 500)
-                ),
-                (
-                    member(4),
-                    member(2),
-                    Money::from_minor_units(Currency::RON, 300)
-                ),
+            settlement.payments(),
+            [
+                Payment {
+                    amount: Money::from_minor_units(Currency::RON, 500),
+                    members: MemberPair {
+                        from: member(3),
+                        to: member(1),
+                    },
+                },
+                Payment {
+                    amount: Money::from_minor_units(Currency::RON, 300),
+                    members: MemberPair {
+                        from: member(4),
+                        to: member(2),
+                    },
+                },
             ]
         );
     }

@@ -30,6 +30,8 @@ import eranos.TimeOfDay;
 import eranos.Tip;
 import eranos.TipDistribution;
 import eranos.TipValue;
+import eranos.examples.grandtour.Tables.ItemRow;
+import eranos.examples.grandtour.Tables.ShareRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
 
@@ -70,7 +72,7 @@ final class Expenses {
 
     /** Each expense of {@code expenses}, with every involved member's payment and consumption. */
     static void printShares(Group group, List<ExpenseId> expenses) throws EranosException {
-        List<List<String>> rows = new ArrayList<>();
+        List<ShareRow> rows = new ArrayList<>();
         for (ExpenseId id : expenses) {
             Optional<Expense> expense = group.expense(id);
             Optional<ExpenseShares> shares = group.expenseShares(id);
@@ -84,36 +86,35 @@ final class Expenses {
                     consumed.add(share.share().toString());
                 }
                 rows.add(
-                        List.of(
+                        new ShareRow(
+                                cell(consumed),
                                 expense.orElseThrow().name(),
                                 how(expense.orElseThrow()),
                                 cell(members),
-                                cell(paid),
-                                cell(consumed)));
+                                cell(paid)));
             }
         }
-        printTable(List.of("Expense", "Split", "Member", "Paid", "Consumed"), rows, 3);
+        printTable(ShareRow.HEADERS, rows, 3);
     }
 
     static void printItems(Group group, ExpenseId id) throws EranosException {
         Optional<ExpenseSplit> split = group.expense(id).map(Expense::split);
         if (split.isPresent() && split.orElseThrow() instanceof ExpenseSplit.Itemised itemised) {
-            List<List<String>> rows = new ArrayList<>();
+            List<ItemRow> rows = new ArrayList<>();
             for (Item item : itemised.items()) {
                 Money total =
                         new Money(
                                 item.unitPrice().currency(),
                                 item.unitPrice().minorUnits() * item.quantity());
                 rows.add(
-                        List.of(
+                        new ItemRow(
+                                total,
                                 item.name(),
+                                item.quantity(),
                                 names(group, item.split().members()),
-                                String.valueOf(item.quantity()),
-                                item.unitPrice().toString(),
-                                total.toString()));
+                                item.unitPrice()));
             }
-            printTable(
-                    List.of("Item", "Shared by", "Quantity", "Unit price", "Line total"), rows, 2);
+            printTable(ItemRow.HEADERS, rows, 2);
         }
     }
 
@@ -140,132 +141,153 @@ final class Expenses {
                 new Item("Juice", new Split.Equal(List.of(people.eva())), eur("3.00")));
     }
 
-    /** The first three expenses: equally, by percentage, and by parts. */
-    static List<Expense> dividedExpenses(People people, Categories categories)
-            throws EranosException {
-        return List.of(
-                Expense.builder(
-                                new Cost.Local(eur("10.00")),
-                                october(1),
-                                "Groceries",
-                                new Split.Equal(List.of(people.ana())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Equal(
-                                                List.of(
-                                                        people.ana(),
-                                                        people.bob(),
-                                                        people.carol()))))
-                        .category(categories.food())
-                        .build(),
-                Expense.builder(
-                                new Cost.Local(eur("800.00")),
-                                october(1),
-                                "Apartment",
-                                new Split.Equal(List.of(people.ana())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Percentages(
-                                                List.of(
-                                                        new MemberPercentage(
-                                                                people.ana(),
-                                                                Percentage.parse("25")),
-                                                        new MemberPercentage(
-                                                                people.bob(),
-                                                                Percentage.parse("25")),
-                                                        new MemberPercentage(
-                                                                people.carol(),
-                                                                Percentage.parse("35")),
-                                                        new MemberPercentage(
-                                                                people.dan(),
-                                                                Percentage.parse("15"))))))
-                        .category(categories.lodging())
-                        .build(),
-                Expense.builder(
-                                new Cost.Local(eur("90.00")),
-                                october(2),
-                                "Seafood dinner",
-                                new Split.Equal(List.of(people.carol())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Parts(
-                                                List.of(
-                                                        new MemberParts(
-                                                                people.ana(), Parts.parse("1")),
-                                                        new MemberParts(
-                                                                people.bob(), Parts.parse("1")),
-                                                        new MemberParts(
-                                                                people.carol(), Parts.parse("1")),
-                                                        new MemberParts(
-                                                                people.dan(), Parts.parse("1")),
-                                                        new MemberParts(
-                                                                people.eva(),
-                                                                Parts.parse("0.5"))))))
-                        .category(categories.food())
-                        .build());
+    /** The fado night, item by item, paid by Carol and Dan, with a 10 % tip. */
+    static Expense fadoNight(People people, Categories categories) throws EranosException {
+        return Expense.builder(
+                        new Cost.Local(eur("54.00")),
+                        october(4),
+                        "Fado night",
+                        new Split.Amounts(
+                                List.of(
+                                        new MemberAmount(eur("39.40"), people.carol()),
+                                        new MemberAmount(eur("20.00"), people.dan()))),
+                        new ExpenseSplit.Itemised(fadoItems(people)))
+                .category(categories.food())
+                .description("Tasca do Chico")
+                .time(TimeOfDay.of(22, 15))
+                .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
+                .build();
     }
 
-    /** The last four expenses: by exact amounts, with two payers, item by item, and with a tip. */
-    static List<Expense> paidExpenses(People people, Categories categories) throws EranosException {
-        return List.of(
-                Expense.builder(
-                                new Cost.Local(eur("88.50")),
-                                october(3),
-                                "Train to Porto",
-                                new Split.Equal(List.of(people.bob())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Amounts(
-                                                List.of(
-                                                        new MemberAmount(
-                                                                eur("24.50"), people.ana()),
-                                                        new MemberAmount(
-                                                                eur("24.50"), people.bob()),
-                                                        new MemberAmount(
-                                                                eur("24.50"), people.carol()),
-                                                        new MemberAmount(
-                                                                eur("15.00"), people.eva())))))
-                        .category(categories.transport())
-                        .build(),
-                Expense.builder(
-                                new Cost.Local(eur("60.00")),
-                                october(3),
-                                "Museum",
-                                new Split.Equal(List.of(people.ana(), people.bob())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Equal(
-                                                List.of(
-                                                        people.ana(),
-                                                        people.bob(),
-                                                        people.carol(),
-                                                        people.dan()))))
-                        .build(),
-                Expense.builder(
-                                new Cost.Local(eur("54.00")),
-                                october(4),
-                                "Fado night",
-                                new Split.Amounts(
-                                        List.of(
-                                                new MemberAmount(eur("39.40"), people.carol()),
-                                                new MemberAmount(eur("20.00"), people.dan()))),
-                                new ExpenseSplit.Itemised(fadoItems(people)))
-                        .category(categories.food())
-                        .description("Tasca do Chico")
-                        .time(TimeOfDay.of(22, 15))
-                        .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
-                        .build(),
-                Expense.builder(
-                                new Cost.Local(eur("45.00")),
-                                october(5),
-                                "Tuk-tuk tour",
-                                new Split.Equal(List.of(people.dan())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Equal(
-                                                List.of(
-                                                        people.ana(),
-                                                        people.bob(),
-                                                        people.carol(),
-                                                        people.dan(),
-                                                        people.eva()))))
-                        .category(categories.transport())
-                        .tip(new Tip(new TipValue.Fixed(eur("5.00")), TipDistribution.EQUAL))
-                        .build());
+    /** Adds one expense for every way of dividing one. */
+    static Tour.Expenses addExpenses(Group group, People people, Categories categories)
+            throws EranosException {
+        ExpenseId groceries =
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(eur("10.00")),
+                                        october(1),
+                                        "Groceries",
+                                        new Split.Equal(List.of(people.ana())),
+                                        new ExpenseSplit.Whole(
+                                                new Split.Equal(
+                                                        List.of(
+                                                                people.ana(),
+                                                                people.bob(),
+                                                                people.carol()))))
+                                .category(categories.food())
+                                .build());
+        ExpenseId apartment =
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(eur("800.00")),
+                                        october(1),
+                                        "Apartment",
+                                        new Split.Equal(List.of(people.ana())),
+                                        new ExpenseSplit.Whole(
+                                                new Split.Percentages(
+                                                        List.of(
+                                                                new MemberPercentage(
+                                                                        people.ana(),
+                                                                        Percentage.parse("25")),
+                                                                new MemberPercentage(
+                                                                        people.bob(),
+                                                                        Percentage.parse("25")),
+                                                                new MemberPercentage(
+                                                                        people.carol(),
+                                                                        Percentage.parse("35")),
+                                                                new MemberPercentage(
+                                                                        people.dan(),
+                                                                        Percentage.parse("15"))))))
+                                .category(categories.lodging())
+                                .build());
+        ExpenseId seafood =
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(eur("90.00")),
+                                        october(2),
+                                        "Seafood dinner",
+                                        new Split.Equal(List.of(people.carol())),
+                                        new ExpenseSplit.Whole(
+                                                new Split.Parts(
+                                                        List.of(
+                                                                new MemberParts(
+                                                                        people.ana(),
+                                                                        Parts.parse("1")),
+                                                                new MemberParts(
+                                                                        people.bob(),
+                                                                        Parts.parse("1")),
+                                                                new MemberParts(
+                                                                        people.carol(),
+                                                                        Parts.parse("1")),
+                                                                new MemberParts(
+                                                                        people.dan(),
+                                                                        Parts.parse("1")),
+                                                                new MemberParts(
+                                                                        people.eva(),
+                                                                        Parts.parse("0.5"))))))
+                                .category(categories.food())
+                                .build());
+        ExpenseId train =
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(eur("88.50")),
+                                        october(3),
+                                        "Train to Porto",
+                                        new Split.Equal(List.of(people.bob())),
+                                        new ExpenseSplit.Whole(
+                                                new Split.Amounts(
+                                                        List.of(
+                                                                new MemberAmount(
+                                                                        eur("24.50"), people.ana()),
+                                                                new MemberAmount(
+                                                                        eur("24.50"), people.bob()),
+                                                                new MemberAmount(
+                                                                        eur("24.50"),
+                                                                        people.carol()),
+                                                                new MemberAmount(
+                                                                        eur("15.00"),
+                                                                        people.eva())))))
+                                .category(categories.transport())
+                                .build());
+        ExpenseId museum =
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(eur("60.00")),
+                                        october(3),
+                                        "Museum",
+                                        new Split.Equal(List.of(people.ana(), people.bob())),
+                                        new ExpenseSplit.Whole(
+                                                new Split.Equal(
+                                                        List.of(
+                                                                people.ana(),
+                                                                people.bob(),
+                                                                people.carol(),
+                                                                people.dan()))))
+                                .build());
+        ExpenseId fado = group.addExpense(fadoNight(people, categories));
+        ExpenseId tour =
+                group.addExpense(
+                        Expense.builder(
+                                        new Cost.Local(eur("45.00")),
+                                        october(5),
+                                        "Tuk-tuk tour",
+                                        new Split.Equal(List.of(people.dan())),
+                                        new ExpenseSplit.Whole(
+                                                new Split.Equal(
+                                                        List.of(
+                                                                people.ana(),
+                                                                people.bob(),
+                                                                people.carol(),
+                                                                people.dan(),
+                                                                people.eva()))))
+                                .category(categories.transport())
+                                .tip(
+                                        new Tip(
+                                                new TipValue.Fixed(eur("5.00")),
+                                                TipDistribution.EQUAL))
+                                .build());
+        return new Tour.Expenses(apartment, fado, groceries, museum, seafood, tour, train);
     }
 
     /** The consumption of {@code member} in the expense {@code id}. */
@@ -325,27 +347,21 @@ final class Expenses {
     static ExpenseId expenses(Group group, People people, Categories categories)
             throws EranosException {
         section("4. Expenses, one for every way of dividing");
-        List<ExpenseId> ids = new ArrayList<>();
-        for (Expense expense : dividedExpenses(people, categories)) {
-            ids.add(group.addExpense(expense));
-        }
-        for (Expense expense : paidExpenses(people, categories)) {
-            ids.add(group.addExpense(expense));
-        }
-        ExpenseId groceries = ids.get(0);
-        ExpenseId apartment = ids.get(1);
-        ExpenseId seafood = ids.get(2);
-        ExpenseId train = ids.get(3);
-        ExpenseId museum = ids.get(4);
-        ExpenseId fado = ids.get(5);
-        ExpenseId tour = ids.get(6);
+        Tour.Expenses expenses = addExpenses(group, people, categories);
+        ExpenseId apartment = expenses.apartment();
+        ExpenseId fado = expenses.fado();
+        ExpenseId groceries = expenses.groceries();
+        ExpenseId museum = expenses.museum();
+        ExpenseId seafood = expenses.seafood();
+        ExpenseId tour = expenses.tour();
+        ExpenseId train = expenses.train();
         System.out.print(
                 """
                 Seven expenses cover every way of dividing one: equally, by percentage, by parts
                 (Eva counts as half), by exact amounts, with two payers, item by item, and with a
                 tip. Every member's consumption adds up to the expense's total, to the cent:
                 """);
-        printShares(group, ids);
+        printShares(group, List.of(groceries, apartment, seafood, train, museum, fado, tour));
         Expense fadoExpense = group.expense(fado).orElseThrow();
         printFado(group, fadoExpense);
 

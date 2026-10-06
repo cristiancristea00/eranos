@@ -179,30 +179,61 @@ impl Split {
     ///
     /// Members are sorted before dividing, so the result does not depend on
     /// the order they were listed in.
-    pub(crate) fn divide(&self, total: i64, rotation: u64) -> Vec<(MemberId, i64)> {
-        let mut weighted: Vec<(MemberId, u64)> = match self {
+    pub(crate) fn divide(&self, total: i64, rotation: u64) -> Vec<Share> {
+        let mut entries: Vec<MemberWeight> = match self {
             Self::Amounts(shares) => shares
                 .iter()
-                .map(|share| (share.member, share.amount.minor_units().unsigned_abs()))
+                .map(|share| MemberWeight {
+                    member: share.member,
+                    weight: share.amount.minor_units().unsigned_abs(),
+                })
                 .collect(),
-            Self::Equal(members) => members.iter().map(|&member| (member, 1)).collect(),
+            Self::Equal(members) => members
+                .iter()
+                .map(|&member| MemberWeight { member, weight: 1 })
+                .collect(),
             Self::Parts(shares) => shares
                 .iter()
-                .map(|share| (share.member, u64::from(share.parts.hundredths())))
+                .map(|share| MemberWeight {
+                    member: share.member,
+                    weight: u64::from(share.parts.hundredths()),
+                })
                 .collect(),
             Self::Percentages(shares) => shares
                 .iter()
-                .map(|share| (share.member, u64::from(share.percentage.basis_points())))
+                .map(|share| MemberWeight {
+                    member: share.member,
+                    weight: u64::from(share.percentage.basis_points()),
+                })
                 .collect(),
         };
-        weighted.sort_unstable_by_key(|&(member, _)| member);
-        let weights: Vec<u64> = weighted.iter().map(|&(_, weight)| weight).collect();
-        weighted
+        entries.sort_unstable_by_key(|entry| entry.member);
+        let weights: Vec<u64> = entries.iter().map(|entry| entry.weight).collect();
+        entries
             .into_iter()
-            .map(|(member, _)| member)
             .zip(allocate(total, &weights, rotation))
+            .map(|(entry, amount)| Share {
+                amount,
+                member: entry.member,
+            })
             .collect()
     }
+}
+
+/// A member's share of an amount a split divides, in minor units.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Share {
+    /// The member's part of the amount.
+    pub(crate) amount: i64,
+    /// The member.
+    pub(crate) member: MemberId,
+}
+
+/// A member's weight in a division: what their share is proportional to.
+#[derive(Debug, Clone, Copy)]
+struct MemberWeight {
+    member: MemberId,
+    weight: u64,
 }
 
 /// A member's exact amount in a [`Split::Amounts`].

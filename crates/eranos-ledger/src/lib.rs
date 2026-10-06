@@ -51,7 +51,7 @@ pub struct Summary {
     // reached.
     categories: BTreeMap<CategoryId, i64>,
     currency: Currency,
-    member_categories: BTreeMap<(MemberId, CategoryId), i64>,
+    member_categories: BTreeMap<MemberCategory, i64>,
     members: BTreeMap<MemberId, Totals>,
     total_spent: i64,
 }
@@ -93,7 +93,7 @@ impl Summary {
     pub fn member_category_total(&self, member: MemberId, category: CategoryId) -> Money {
         let total = self
             .member_categories
-            .get(&(member, category))
+            .get(&MemberCategory { category, member })
             .copied()
             .unwrap_or(0);
         Money::from_minor_units(self.currency, total)
@@ -107,11 +107,15 @@ impl Summary {
     ) -> impl Iterator<Item = CategoryTotal> + '_ {
         // The nil UUID of Uncategorised is the smallest identifier, so the
         // member's rows start here.
+        let first = MemberCategory {
+            category: CategoryId::UNCATEGORISED,
+            member,
+        };
         self.member_categories
-            .range((member, CategoryId::UNCATEGORISED)..)
-            .take_while(move |((row_member, _), _)| *row_member == member)
-            .map(|(&(_, category), &total)| CategoryTotal {
-                category,
+            .range(first..)
+            .take_while(move |&(key, _)| key.member == member)
+            .map(|(key, &total)| CategoryTotal {
+                category: key.category,
                 total: Money::from_minor_units(self.currency, total),
             })
     }
@@ -469,13 +473,53 @@ impl Totals {
     }
 }
 
+/// The changes to one member's totals, in minor units.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct TotalsChange {
+    net: i128,
+    paid: i128,
+    received: i128,
+    sent: i128,
+    share: i128,
+}
+
+/// The key of one member's spending in one category.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MemberCategory {
+    category: CategoryId,
+    member: MemberId,
+}
+
+// Written out, so that it does not depend on the order of the fields: by
+// `member`, then `category`, which keeps each member's rows together for
+// `Summary::member_category_totals`.
+impl Ord for MemberCategory {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.member
+            .cmp(&other.member)
+            .then_with(|| self.category.cmp(&other.category))
+    }
+}
+
+impl PartialOrd for MemberCategory {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// A row of one of the ledger's maps: its key and its value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Row<K, V> {
+    key: K,
+    value: V,
+}
+
 /// Changes to apply to a [`Ledger`] at once, in exact 128-bit arithmetic.
 #[derive(Debug, Default)]
 pub struct Delta {
     categories: BTreeMap<CategoryId, i128>,
-    member_categories: BTreeMap<(MemberId, CategoryId), i128>,
-    /// paid, share, sent, received, net
-    members: BTreeMap<MemberId, [i128; 5]>,
+    member_categories: BTreeMap<MemberCategory, i128>,
+    members: BTreeMap<MemberId, TotalsChange>,
     pairs: BTreeMap<MemberPair, i128>,
     total_spent: i128,
 }
@@ -489,14 +533,15 @@ impl Delta {
         for share in &resolved.shares.members {
             let paid = sign * i128::from(share.paid.minor_units());
             let consumed = sign * i128::from(share.share.minor_units());
-            let row = self.members.entry(share.member).or_default();
-            row[0] += paid;
-            row[1] += consumed;
-            row[4] += paid - consumed;
-            *self
-                .member_categories
-                .entry((share.member, category))
-                .or_default() += consumed;
+            let change = self.members.entry(share.member).or_default();
+            change.net += paid - consumed;
+            change.paid += paid;
+            change.share += consumed;
+            let key = MemberCategory {
+                category,
+                member: share.member,
+            };
+            *self.member_categories.entry(key).or_default() += consumed;
         }
         for debt in &resolved.debts {
             self.add_debt(debt.members, sign * i128::from(debt.amount));
@@ -508,11 +553,11 @@ impl Delta {
     pub fn add_transfer(&mut self, pair: MemberPair, amount: i64, sign: i128) {
         let amount = sign * i128::from(amount);
         let sender = self.members.entry(pair.from).or_default();
-        sender[2] += amount;
-        sender[4] += amount;
+        sender.net += amount;
+        sender.sent += amount;
         let recipient = self.members.entry(pair.to).or_default();
-        recipient[3] += amount;
-        recipient[4] -= amount;
+        recipient.net -= amount;
+        recipient.received += amount;
         // Paying someone back is, pairwise, the recipient now owing it back.
         self.add_debt(pair.reversed(), amount);
     }
@@ -579,15 +624,19 @@ impl Ledger {
         if let Some(total) = summary.categories.remove(&from) {
             *summary.categories.entry(to).or_default() += total;
         }
-        let moved: Vec<(MemberId, i64)> = summary
+        let moved: Vec<Row<MemberCategory, i64>> = summary
             .member_categories
             .iter()
-            .filter(|&(&(_, category), _)| category == from)
-            .map(|(&(member, _), &total)| (member, total))
+            .filter(|&(key, _)| key.category == from)
+            .map(|(&key, &value)| Row { key, value })
             .collect();
-        for (member, total) in moved {
-            summary.member_categories.remove(&(member, from));
-            *summary.member_categories.entry((member, to)).or_default() += total;
+        for row in moved {
+            summary.member_categories.remove(&row.key);
+            let key = MemberCategory {
+                category: to,
+                member: row.key.member,
+            };
+            *summary.member_categories.entry(key).or_default() += row.value;
         }
     }
 
@@ -606,14 +655,14 @@ impl Ledger {
             .iter()
             .map(|(&member, change)| {
                 let old = summary.members.get(&member).copied().unwrap_or_default();
-                let totals = Totals {
-                    net: fit(i128::from(old.net) + change[4])?,
-                    paid: fit(i128::from(old.paid) + change[0])?,
-                    received: fit(i128::from(old.received) + change[3])?,
-                    sent: fit(i128::from(old.sent) + change[2])?,
-                    share: fit(i128::from(old.share) + change[1])?,
+                let value = Totals {
+                    net: fit(i128::from(old.net) + change.net)?,
+                    paid: fit(i128::from(old.paid) + change.paid)?,
+                    received: fit(i128::from(old.received) + change.received)?,
+                    sent: fit(i128::from(old.sent) + change.sent)?,
+                    share: fit(i128::from(old.share) + change.share)?,
                 };
-                Ok((member, totals))
+                Ok(Row { key: member, value })
             })
             .collect::<Result<Vec<_>, MoneyError>>()?;
         let categories = updated(&summary.categories, &delta.categories)?;
@@ -621,21 +670,17 @@ impl Ledger {
         let pairs = updated(&self.pairs, &delta.pairs)?;
 
         self.summary.total_spent = total_spent;
-        for (member, totals) in members {
-            store(&mut self.summary.members, member, totals, Totals::is_zero);
+        for row in members {
+            store(&mut self.summary.members, row, Totals::is_zero);
         }
-        for (category, total) in categories {
-            store(&mut self.summary.categories, category, total, |total| {
-                0 == total
-            });
+        for row in categories {
+            store(&mut self.summary.categories, row, |total| 0 == total);
         }
-        for (key, total) in member_categories {
-            store(&mut self.summary.member_categories, key, total, |total| {
-                0 == total
-            });
+        for row in member_categories {
+            store(&mut self.summary.member_categories, row, |total| 0 == total);
         }
-        for (key, amount) in pairs {
-            store(&mut self.pairs, key, amount, |amount| 0 == amount);
+        for row in pairs {
+            store(&mut self.pairs, row, |amount| 0 == amount);
         }
         Ok(())
     }
@@ -645,20 +690,19 @@ impl Ledger {
 fn updated<K: Ord + Copy>(
     current: &BTreeMap<K, i64>,
     changes: &BTreeMap<K, i128>,
-) -> Result<Vec<(K, i64)>, MoneyError> {
+) -> Result<Vec<Row<K, i64>>, MoneyError> {
     changes
         .iter()
         .map(|(&key, &change)| {
-            Ok((
-                key,
-                fit(i128::from(current.get(&key).copied().unwrap_or(0)) + change)?,
-            ))
+            let value = fit(i128::from(current.get(&key).copied().unwrap_or(0)) + change)?;
+            Ok(Row { key, value })
         })
         .collect()
 }
 
 /// Writes a row, or removes it when its value is zero.
-fn store<K: Ord, V: Copy>(map: &mut BTreeMap<K, V>, key: K, value: V, is_zero: impl Fn(V) -> bool) {
+fn store<K: Ord, V: Copy>(map: &mut BTreeMap<K, V>, row: Row<K, V>, is_zero: impl Fn(V) -> bool) {
+    let Row { key, value } = row;
     match map.entry(key) {
         Entry::Occupied(entry) if is_zero(value) => {
             entry.remove();

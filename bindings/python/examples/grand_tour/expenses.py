@@ -1,7 +1,8 @@
 """Print section 4 of the tour: an expense for every way of dividing one, with each member's payment and consumption."""
 
+import dataclasses
 from collections.abc import Sequence
-from typing import assert_never
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
     AmountsSplit,
@@ -32,7 +33,88 @@ from eranos import (
     WholeExpenseSplit,
 )
 from examples.grand_tour.tour import Categories, People, cell, eur, name, october
-from examples.report import names, print_lines, print_table, section
+from examples.report import Row, names, print_lines, print_table, section
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Expenses:
+    """The seven expenses, one for every way of dividing one."""
+
+    apartment: ExpenseId
+    """The apartment, divided by percentage."""
+
+    fado: ExpenseId
+    """The fado night, item by item, with two payers and a tip."""
+
+    groceries: ExpenseId
+    """The groceries, divided equally."""
+
+    museum: ExpenseId
+    """The museum, with two payers."""
+
+    seafood: ExpenseId
+    """The seafood dinner, divided by parts."""
+
+    tour: ExpenseId
+    """The tuk-tuk tour, with a fixed tip."""
+
+    train: ExpenseId
+    """The train to Porto, divided by exact amounts."""
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ShareRow(Row):
+    """A row of the table of shares: an expense, how it divides, and every involved member's payment and consumption."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Expense', 'Split', 'Member', 'Paid', 'Consumed')
+
+    consumed: str
+    """What each member consumed, a line each."""
+
+    expense: str
+    """The expense's name."""
+
+    how: str
+    """How the expense divides, in a few words."""
+
+    members: str
+    """The involved members' first names, a line each."""
+
+    paid: str
+    """What each member paid, a line each, blank for a member who paid nothing."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.expense, self.how, self.members, self.paid, self.consumed
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ItemRow(Row):
+    """A row of the table of an itemised expense's lines."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Item', 'Shared by', 'Quantity', 'Unit price', 'Line total')
+
+    line_total: Money
+    """The unit price times the quantity."""
+
+    name: str
+    """What the line is."""
+
+    quantity: int
+    """How many were ordered."""
+
+    shared_by: str
+    """Who had it."""
+
+    unit_price: Money
+    """What one costs."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.shared_by, str(self.quantity), str(self.unit_price), str(self.line_total)
 
 
 def _divided(split: Split) -> str:
@@ -125,7 +207,7 @@ def _how(expense: Expense) -> str:
     return divided + payers + worth
 
 
-def _share_row(group: Group, expense_id: ExpenseId) -> tuple[str, ...] | None:
+def _share_row(group: Group, expense_id: ExpenseId) -> ShareRow | None:
     """
     Write the row of an expense among the shares: every involved member's payment and consumption.
 
@@ -134,20 +216,19 @@ def _share_row(group: Group, expense_id: ExpenseId) -> tuple[str, ...] | None:
         expense_id: The expense's identifier.
 
     Returns:
-        The expense's name, how it divides, and its members, their payments, and their consumptions, a line each; or none
-        for an expense the group does not hold.
+        The row, or none for an expense the group does not hold.
 
     """
     expense = group.expense(expense_id)
     shares = group.expense_shares(expense_id)
     if expense is None or shares is None:
         return None
-    return (
-        expense.name,
-        _how(expense),
-        cell(name(group, share.member) for share in shares.members),
-        cell('' if share.paid.minor_units == 0 else str(share.paid) for share in shares.members),
-        cell(str(share.share) for share in shares.members),
+    return ShareRow(
+        consumed=cell(str(share.share) for share in shares.members),
+        expense=expense.name,
+        how=_how(expense),
+        members=cell(name(group, share.member) for share in shares.members),
+        paid=cell('' if share.paid.minor_units == 0 else str(share.paid) for share in shares.members),
     )
 
 
@@ -161,7 +242,7 @@ def _print_shares(group: Group, expenses: Sequence[ExpenseId]) -> None:
 
     """
     print_table(
-        ('Expense', 'Split', 'Member', 'Paid', 'Consumed'),
+        ShareRow,
         [row for expense_id in expenses if (row := _share_row(group, expense_id)) is not None],
         3,
     )
@@ -194,8 +275,17 @@ def _print_items(group: Group, expense: Expense) -> None:
     if not isinstance(split, ItemisedExpenseSplit):
         return
     print_table(
-        ('Item', 'Shared by', 'Quantity', 'Unit price', 'Line total'),
-        [(item.name, names(group, item.split.members), str(item.quantity), str(item.unit_price), str(_line_total(item))) for item in split.items],
+        ItemRow,
+        [
+            ItemRow(
+                line_total=_line_total(item),
+                name=item.name,
+                quantity=item.quantity,
+                shared_by=names(group, item.split.members),
+                unit_price=item.unit_price,
+            )
+            for item in split.items
+        ],
         2,
     )
 
@@ -233,21 +323,24 @@ def _fado_items(people: People) -> tuple[Item, ...]:
     )
 
 
-def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
+def _add_expenses(group: Group, people: People, categories: Categories) -> Expenses:
     """
-    Write one expense for every way of dividing one, in order.
+    Add one expense for every way of dividing one.
+
+    The expenses are added in the order the report lists them, which gives each its identifier.
 
     Args:
+        group: The group.
         people: The members of the trip.
         categories: The categories the group adds.
 
     Returns:
-        The expenses, to add.
+        The expenses' identifiers.
 
     """
     ana, bob, carol, dan, eva = people.ana, people.bob, people.carol, people.dan, people.eva
     one = Parts.parse('1')
-    return (
+    groceries = group.add_expense(
         Expense(
             cost=LocalCost(eur('10.00')),
             date=october(1),
@@ -255,7 +348,9 @@ def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
             payers=EqualSplit((ana,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol))),
             category=categories.food,
-        ),
+        )
+    )
+    apartment = group.add_expense(
         Expense(
             cost=LocalCost(eur('800.00')),
             date=october(1),
@@ -272,7 +367,9 @@ def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
                 )
             ),
             category=categories.lodging,
-        ),
+        )
+    )
+    seafood = group.add_expense(
         Expense(
             cost=LocalCost(eur('90.00')),
             date=october(2),
@@ -290,7 +387,9 @@ def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
                 )
             ),
             category=categories.food,
-        ),
+        )
+    )
+    train = group.add_expense(
         Expense(
             cost=LocalCost(eur('88.50')),
             date=october(3),
@@ -307,14 +406,18 @@ def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
                 )
             ),
             category=categories.transport,
-        ),
+        )
+    )
+    museum = group.add_expense(
         Expense(
             cost=LocalCost(eur('60.00')),
             date=october(3),
             name='Museum',
             payers=EqualSplit((ana, bob)),
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol, dan))),
-        ),
+        )
+    )
+    fado = group.add_expense(
         Expense(
             cost=LocalCost(eur('54.00')),
             date=october(4),
@@ -325,7 +428,9 @@ def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
             description='Tasca do Chico',
             time=TimeOfDay(22, 15),
             tip=Tip(TipDistribution.PROPORTIONAL, PercentageTip(Percentage.parse('10'))),
-        ),
+        )
+    )
+    tour = group.add_expense(
         Expense(
             cost=LocalCost(eur('45.00')),
             date=october(5),
@@ -334,8 +439,9 @@ def _every_way(people: People, categories: Categories) -> tuple[Expense, ...]:
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol, dan, eva))),
             category=categories.transport,
             tip=Tip(TipDistribution.EQUAL, FixedTip(eur('5.00'))),
-        ),
+        )
     )
+    return Expenses(apartment=apartment, fado=fado, groceries=groceries, museum=museum, seafood=seafood, tour=tour, train=train)
 
 
 def _share(group: Group, expense_id: ExpenseId, member: MemberId) -> MemberShare | None:
@@ -407,35 +513,34 @@ def expenses(group: Group, people: People, categories: Categories) -> ExpenseId:
 
     """
     section('4. Expenses, one for every way of dividing')
-    ids = [group.add_expense(expense) for expense in _every_way(people, categories)]
-    groceries, apartment, seafood, train, museum, fado, tour = ids
+    added = _add_expenses(group, people, categories)
     print_lines(
         'Seven expenses cover every way of dividing one: equally, by percentage, by parts',
         '(Eva counts as half), by exact amounts, with two payers, item by item, and with a',
         "tip. Every member's consumption adds up to the expense's total, to the cent:",
     )
-    _print_shares(group, ids)
-    fado_expense = group.expense(fado)
+    _print_shares(group, (added.groceries, added.apartment, added.seafood, added.train, added.museum, added.fado, added.tour))
+    fado_expense = group.expense(added.fado)
     assert fado_expense is not None, 'the fado night was added'
     _print_fado(group, fado_expense)
 
     thirds = sorted(
-        share.minor_units for member in (people.ana, people.bob, people.carol) if (share := _consumed(group, groceries, member)) is not None
+        share.minor_units for member in (people.ana, people.bob, people.carol) if (share := _consumed(group, added.groceries, member)) is not None
     )
     assert thirds == [333, 333, 334]
-    assert _consumed(group, apartment, people.carol) == eur('280.00')
-    assert _consumed(group, seafood, people.eva) == eur('10.00')
-    assert _consumed(group, train, people.eva) == eur('15.00')
-    bob_at_the_museum = _share(group, museum, people.bob)
+    assert _consumed(group, added.apartment, people.carol) == eur('280.00')
+    assert _consumed(group, added.seafood, people.eva) == eur('10.00')
+    assert _consumed(group, added.train, people.eva) == eur('15.00')
+    bob_at_the_museum = _share(group, added.museum, people.bob)
     assert bob_at_the_museum is not None
     assert bob_at_the_museum.paid == eur('30.00')
-    assert _consumed(group, museum, people.dan) == eur('15.00')
-    museum_expense = group.expense(museum)
+    assert _consumed(group, added.museum, people.dan) == eur('15.00')
+    museum_expense = group.expense(added.museum)
     assert museum_expense is not None
     assert len(museum_expense.members()) == 4
     assert fado_expense.total() == eur('59.40')
     assert fado_expense.tip_amount() == eur('5.40')
-    assert _consumed(group, fado, people.carol) == eur('21.45')
-    assert _consumed(group, fado, people.eva) == eur('6.60')
-    assert _consumed(group, tour, people.eva) == eur('10.00')
-    return seafood
+    assert _consumed(group, added.fado, people.carol) == eur('21.45')
+    assert _consumed(group, added.fado, people.eva) == eur('6.60')
+    assert _consumed(group, added.tour, people.eva) == eur('10.00')
+    return added.seafood

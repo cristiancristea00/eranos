@@ -108,14 +108,23 @@ fn only_a_doc_of_text_reads_as_documentation() {
             Piece::Token("Debug".to_owned()),
             Piece::Close,
             Piece::Close,
-            Piece::Docs(false, vec!["Yes.".to_owned()]),
+            Piece::Docs {
+                inner: false,
+                texts: vec!["Yes.".to_owned()],
+            },
         ]
     );
     assert_eq!(
         normalised(quote!(#[doc = "One."] #![doc = "Two."])),
         [
-            Piece::Docs(false, vec!["One.".to_owned()]),
-            Piece::Docs(true, vec!["Two.".to_owned()]),
+            Piece::Docs {
+                inner: false,
+                texts: vec!["One.".to_owned()],
+            },
+            Piece::Docs {
+                inner: true,
+                texts: vec!["Two.".to_owned()],
+            },
         ]
     );
 }

@@ -200,6 +200,14 @@ impl Flow {
     }
 }
 
+/// A member's net balance in minor units while it is open: positive when the
+/// member is owed, negative when they owe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OpenBalance {
+    member: MemberId,
+    net: i64,
+}
+
 /// One settlement per strategy, computed on first request and kept until
 /// the balances change.
 ///
@@ -325,12 +333,15 @@ async fn settle_paced(
 }
 
 /// Every non-zero net balance of `ledger`, ordered by member.
-fn balances(ledger: &Ledger) -> Vec<(MemberId, i64)> {
+fn balances(ledger: &Ledger) -> Vec<OpenBalance> {
     ledger
         .summary()
         .members()
-        .map(|member| (member.member(), member.net().minor_units()))
-        .filter(|&(_, net)| 0 != net)
+        .map(|member| OpenBalance {
+            member: member.member(),
+            net: member.net().minor_units(),
+        })
+        .filter(|balance| 0 != balance.net)
         .collect()
 }
 

@@ -5,7 +5,11 @@ The port of the Rust example ``settling_up``, which prints the same report.
 
 """
 
+import dataclasses
+from typing import ClassVar, final, override
+
 from eranos import (
+    Balance,
     CalendarDate,
     Currency,
     EqualSplit,
@@ -21,7 +25,115 @@ from eranos import (
     Transfer,
     WholeExpenseSplit,
 )
-from examples.report import names, participants, print_lines, print_table, section, title, totals
+from examples.report import Row, names, participants, print_lines, print_table, section, title, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ExpenseRow(Row):
+    """A row of the table of expenses."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Expense', 'Paid by', 'Shared by', 'Amount')
+
+    amount: Money
+    """What the expense cost."""
+
+    name: str
+    """What the expense was."""
+
+    participants: str
+    """Who share it."""
+
+    payer: str
+    """Who paid it."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.payer, self.participants, str(self.amount)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BalanceRow(Row):
+    """A row of the table of balances: what a member paid and consumed, and where they stand."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Balance')
+
+    balance: Balance
+    """Where the member stands."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    name: str
+    """The member's first name."""
+
+    paid: Money
+    """What the member paid."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, str(self.paid), str(self.consumed), str(self.balance)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentRow(Row):
+    """A row of the table of a plan's payments."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
+
+    amount: Money
+    """What is paid."""
+
+    from_: str
+    """Who pays."""
+
+    to: str
+    """Who is paid."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.from_, self.to, str(self.amount)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class StrategyRow(Row):
+    """A row of the table of the strategies side by side."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Strategy', 'Guarantee', 'Cost', 'Payments here')
+
+    cost: str
+    """How the strategy's time grows with the open balances."""
+
+    guarantee: str
+    """What the strategy promises."""
+
+    payments: int
+    """The number of payments of the strategy's plan for the group."""
+
+    strategy: str
+    """The strategy's name."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.strategy, self.guarantee, self.cost, str(self.payments)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Counts:
+    """The number of payments of each strategy's plan."""
+
+    direct: int
+    """The payments of the direct plan."""
+
+    greedy: int
+    """The payments of the greedy plan."""
+
+    minimum: int
+    """The payments of the minimum plan."""
 
 
 def spend(group: Group, name: str, amount: str, payer: MemberId, members: tuple[MemberId, ...]) -> None:
@@ -57,9 +169,9 @@ def print_balances(group: Group) -> None:
     """
     summary = group.summary()
     print_table(
-        ('Member', 'Paid', 'Consumed', 'Balance'),
+        BalanceRow,
         [
-            (member.first_name, str(found.paid), str(found.share), str(found.balance))
+            BalanceRow(balance=found.balance, consumed=found.share, name=member.first_name, paid=found.paid)
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],
@@ -77,13 +189,16 @@ def print_payments(group: Group, settlement: Settlement) -> None:
 
     """
     print_table(
-        ('From', 'To', 'Amount'),
-        [(names(group, (payment.sender,)), names(group, (payment.receiver,)), str(payment.amount)) for payment in settlement.payments],
+        PaymentRow,
+        [
+            PaymentRow(amount=payment.amount, from_=names(group, (payment.sender,)), to=names(group, (payment.receiver,)))
+            for payment in settlement.payments
+        ],
         2,
     )
 
 
-def strategies(group: Group) -> tuple[int, int, int]:
+def strategies(group: Group) -> Counts:
     """
     Print each strategy's plan for group with what it promises.
 
@@ -91,7 +206,7 @@ def strategies(group: Group) -> tuple[int, int, int]:
         group: The group.
 
     Returns:
-        The number of payments of each plan, in the order minimum, greedy, direct.
+        The number of payments of each plan.
 
     """
     section('3. Minimum transfers')
@@ -124,16 +239,31 @@ def strategies(group: Group) -> tuple[int, int, int]:
 
     section('6. The strategies side by side')
     print_table(
-        ('Strategy', 'Guarantee', 'Cost', 'Payments here'),
+        StrategyRow,
         [
-            ('MinimumTransfers', 'the fewest payments', 'O(2ⁿ·n) for n open balances', str(len(minimum.payments))),
-            # The minus sign goes by its name: Ruff refuses the character itself, which reads as a hyphen.
-            ('Greedy', 'at most n \N{MINUS SIGN} 1 payments', 'O(n log n)', str(len(greedy.payments))),
-            ('Direct', 'one payment per pair in debt', 'O(pairs)', str(len(direct.payments))),
+            StrategyRow(
+                cost='O(2ⁿ·n) for n open balances',
+                guarantee='the fewest payments',
+                payments=len(minimum.payments),
+                strategy='MinimumTransfers',
+            ),
+            StrategyRow(
+                cost='O(n log n)',
+                # The minus sign goes by its name: Ruff refuses the character itself, which reads as a hyphen.
+                guarantee='at most n \N{MINUS SIGN} 1 payments',
+                payments=len(greedy.payments),
+                strategy='Greedy',
+            ),
+            StrategyRow(
+                cost='O(pairs)',
+                guarantee='one payment per pair in debt',
+                payments=len(direct.payments),
+                strategy='Direct',
+            ),
         ],
         3,
     )
-    return len(minimum.payments), len(greedy.payments), len(direct.payments)
+    return Counts(direct=len(direct.payments), greedy=len(greedy.payments), minimum=len(minimum.payments))
 
 
 def main() -> None:
@@ -159,9 +289,14 @@ def main() -> None:
     spend(group, 'Coffee', '2.00', ana, (dan, eva))
     spend(group, 'Snacks', '1.00', filip, (ana,))
     print_table(
-        ('Expense', 'Paid by', 'Shared by', 'Amount'),
+        ExpenseRow,
         [
-            (expense.name, names(group, expense.payers.members), names(group, participants(expense.split)), str(expense.total()))
+            ExpenseRow(
+                amount=expense.total(),
+                name=expense.name,
+                participants=names(group, participants(expense.split)),
+                payer=names(group, expense.payers.members),
+            )
             for expense in group.expenses()
         ],
         3,
@@ -171,7 +306,7 @@ def main() -> None:
     print_lines('Four members are owed money and two owe it:')
     print_balances(group)
 
-    payments = strategies(group)
+    counts = strategies(group)
 
     section('7. Settling up for real')
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
@@ -187,7 +322,7 @@ def main() -> None:
 
     # {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts first and needs
     # five; the unsimplified debts between pairs need seven.
-    assert payments == (4, 5, 7)
+    assert counts == Counts(direct=7, greedy=5, minimum=4)
     summary = group.summary()
     for member in (ana, bob, carol, dan, eva, filip):
         found = totals(member, summary)

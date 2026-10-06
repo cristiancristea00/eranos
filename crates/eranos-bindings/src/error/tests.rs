@@ -764,28 +764,50 @@ fn the_bindings_own_cases_carry_their_messages() {
     );
 }
 
+/// A reason the library refuses an IBAN for, beside the reason it must
+/// become.
+struct ReasonConversion {
+    error: IbanError,
+    reason: IbanReason,
+}
+
 /// An IBAN refused for another reason than the library's would send the
 /// user to fix the wrong thing.
 #[test]
 fn every_reason_of_a_refused_iban_converts() {
     let reasons = [
-        (IbanError::InvalidCharacter, IbanReason::InvalidCharacter),
-        (IbanError::InvalidChecksum, IbanReason::InvalidChecksum),
-        (IbanError::InvalidFormat, IbanReason::InvalidFormat),
-        (IbanError::InvalidStructure, IbanReason::InvalidStructure),
-        (IbanError::UnknownCountry, IbanReason::UnknownCountry),
-        (
-            IbanError::WrongLength {
+        ReasonConversion {
+            error: IbanError::InvalidCharacter,
+            reason: IbanReason::InvalidCharacter,
+        },
+        ReasonConversion {
+            error: IbanError::InvalidChecksum,
+            reason: IbanReason::InvalidChecksum,
+        },
+        ReasonConversion {
+            error: IbanError::InvalidFormat,
+            reason: IbanReason::InvalidFormat,
+        },
+        ReasonConversion {
+            error: IbanError::InvalidStructure,
+            reason: IbanReason::InvalidStructure,
+        },
+        ReasonConversion {
+            error: IbanError::UnknownCountry,
+            reason: IbanReason::UnknownCountry,
+        },
+        ReasonConversion {
+            error: IbanError::WrongLength {
                 expected: 24,
                 found: 22,
             },
-            IbanReason::WrongLength {
+            reason: IbanReason::WrongLength {
                 expected: 24,
                 found: 22,
             },
-        ),
+        },
     ];
-    for (error, reason) in reasons {
+    for ReasonConversion { error, reason } in reasons {
         assert_eq!(IbanReason::from_iban_error(&error), reason);
     }
 }

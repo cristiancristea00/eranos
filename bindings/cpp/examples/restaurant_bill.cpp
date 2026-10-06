@@ -19,6 +19,52 @@
 namespace eranos::examples {
 namespace {
 
+/// A row of the receipt: a line, who shared it, its quantity, its unit price, and its total.
+struct LineRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
+
+    /// The quantity times the unit price.
+    std::string lineTotal;
+    /// What was ordered.
+    std::string name;
+    /// Who shared it.
+    std::string participants;
+    /// How many were ordered.
+    std::string quantity;
+    /// The price of one.
+    std::string unitPrice;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<5> cells() const noexcept { return {name, participants, quantity, unitPrice, lineTotal}; }
+};
+
+/// A row of the table of tips: what a friend ordered, and what they pay with the tip shared by consumption and equally.
+struct TipRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<6> HEADERS{"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"};
+
+    /// Their part of the tip shared equally.
+    std::string equalTip;
+    /// What they pay with the tip shared equally.
+    std::string equalTotal;
+    /// Their first name.
+    std::string name;
+    /// Their part of the tip shared by consumption.
+    std::string proportionalTip;
+    /// What they pay with the tip shared by consumption.
+    std::string proportionalTotal;
+    /// What they ordered.
+    std::string subtotal;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<6> cells() const noexcept { return {name, subtotal, proportionalTip, proportionalTotal, equalTip, equalTotal}; }
+};
+
 /// The amount @p text of euros.
 [[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
@@ -67,13 +113,18 @@ void run() {
               "every line of the receipt is split among the people who had it.");
 
     section("1. The receipt");
-    Rows lines;
+    std::vector<LineRow> lines;
     for (auto const &item : receipt(ana, bob, carol)) {
         Money const total(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity);
-        lines.push_back(
-            {item.name, names(group, must(participants(item.split))), std::to_string(item.quantity), item.unitPrice.toString(), total.toString()});
+        lines.push_back({
+            .lineTotal = total.toString(),
+            .name = item.name,
+            .participants = names(group, must(participants(item.split))),
+            .quantity = std::to_string(item.quantity),
+            .unitPrice = item.unitPrice.toString(),
+        });
     }
-    printTable({"Item", "Shared by", "Quantity", "Unit price", "Line total"}, lines, 2);
+    printTable(lines, 2);
     printLine("The papanași are split by parts: Carol ate two of the three. The line totals add up\n"
               "to 54.00 EUR, and the expense's amount must match them exactly.");
 
@@ -93,21 +144,21 @@ void run() {
     std::println("Ana paid the bill plus a 10 % tip ({}). A tip can be shared in proportion to what\n"
                  "each person ordered, or equally; both are shown:",
                  byConsumption.tip.toString());
-    Rows tips;
+    std::vector<TipRow> tips;
     for (auto const &member : {ana, bob, carol}) {
         auto const subtotal = consumed(ordered, member);
         auto const proportionalTotal = consumed(byConsumption, member);
         auto const equalTotal = consumed(even, member);
         tips.push_back({
-            firstName(group, member),
-            subtotal.toString(),
-            must(proportionalTotal.minus(subtotal)).toString(),
-            proportionalTotal.toString(),
-            must(equalTotal.minus(subtotal)).toString(),
-            equalTotal.toString(),
+            .equalTip = must(equalTotal.minus(subtotal)).toString(),
+            .equalTotal = equalTotal.toString(),
+            .name = firstName(group, member),
+            .proportionalTip = must(proportionalTotal.minus(subtotal)).toString(),
+            .proportionalTotal = proportionalTotal.toString(),
+            .subtotal = subtotal.toString(),
         });
     }
-    printTable({"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"}, tips, 1);
+    printTable(tips, 1);
     printLine("By consumption, Carol, who ordered the most, adds the largest part of the tip;\n"
               "shared equally, everyone adds the same 1.80.");
 

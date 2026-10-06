@@ -14,6 +14,17 @@ use std::time::Duration;
 
 use super::*;
 
+/// What the other thread of `block_on_sleeps_until_its_future_is_woken`
+/// shares with the future it completes.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Debug, Default)]
+struct Signal {
+    /// Whether the other thread is done.
+    done: bool,
+    /// The waker to call when it is.
+    waker: Option<Waker>,
+}
+
 /// A waker that counts how often it was woken.
 #[derive(Default)]
 struct Counter(AtomicUsize);
@@ -28,9 +39,18 @@ impl Wake for Counter {
     }
 }
 
-/// Polls `future` until it is ready, and returns its output and how many
-/// polls pended; fails when a poll pends without waking the task first.
-fn run<F: Future>(future: F) -> (F::Output, usize) {
+/// What polling a future until it is ready gave.
+#[derive(Debug, PartialEq, Eq)]
+struct Completion<Output> {
+    /// The future's output.
+    output: Output,
+    /// How many polls pended before the one that returned the output.
+    pending: usize,
+}
+
+/// Polls `future` until it is ready; fails when a poll pends without waking
+/// the task first.
+fn run<F: Future>(future: F) -> Completion<F::Output> {
     let counter = Arc::new(Counter::default());
     let waker = Waker::from(Arc::clone(&counter));
     let mut context = Context::from_waker(&waker);
@@ -39,7 +59,7 @@ fn run<F: Future>(future: F) -> (F::Output, usize) {
     loop {
         let woken_before = counter.0.load(Ordering::SeqCst);
         match future.as_mut().poll(&mut context) {
-            Poll::Ready(output) => return (output, pending),
+            Poll::Ready(output) => return Completion { output, pending },
             Poll::Pending => {
                 assert!(
                     counter.0.load(Ordering::SeqCst) > woken_before,
@@ -55,7 +75,13 @@ fn run<F: Future>(future: F) -> (F::Output, usize) {
 /// but one that spins.
 #[test]
 fn a_yield_wakes_its_task_and_pends_once() {
-    assert_eq!(run(yield_now()), ((), 1));
+    assert_eq!(
+        run(yield_now()),
+        Completion {
+            output: (),
+            pending: 1
+        }
+    );
 }
 
 /// A computation would yield more often than its budget says, which slows it
@@ -64,17 +90,17 @@ fn a_yield_wakes_its_task_and_pends_once() {
 fn a_pacer_yields_once_per_budget() {
     let mut pacer = Pacer::new(10);
     // Within the budget, no yield.
-    assert_eq!(run(pacer.advance(3)).1, 0);
-    assert_eq!(run(pacer.advance(6)).1, 0);
+    assert_eq!(run(pacer.advance(3)).pending, 0);
+    assert_eq!(run(pacer.advance(6)).pending, 0);
     // The unit that spends it yields, and the budget starts again in full.
-    assert_eq!(run(pacer.advance(1)).1, 1);
-    assert_eq!(run(pacer.advance(9)).1, 0);
+    assert_eq!(run(pacer.advance(1)).pending, 1);
+    assert_eq!(run(pacer.advance(9)).pending, 0);
     // More than the budget at once yields once.
-    assert_eq!(run(pacer.advance(25)).1, 1);
+    assert_eq!(run(pacer.advance(25)).pending, 1);
     // A budget of nothing yields at every advance.
     let mut eager = Pacer::new(0);
-    assert_eq!(run(eager.advance(0)).1, 1);
-    assert_eq!(run(eager.advance(0)).1, 1);
+    assert_eq!(run(eager.advance(0)).pending, 1);
+    assert_eq!(run(eager.advance(0)).pending, 1);
 }
 
 /// A computation run without an executor would stop at its first yield
@@ -108,7 +134,13 @@ fn a_cooperative_future_awaits_as_the_future_it_marks() {
         })
         .await
     };
-    assert_eq!(run(outer), (42, 1));
+    assert_eq!(
+        run(outer),
+        Completion {
+            output: 42,
+            pending: 1
+        }
+    );
 }
 
 /// The thread of a synchronous call would spin while the call waits for
@@ -116,25 +148,24 @@ fn a_cooperative_future_awaits_as_the_future_it_marks() {
 #[cfg(not(target_family = "wasm"))]
 #[test]
 fn block_on_sleeps_until_its_future_is_woken() {
-    // Whether the other thread is done, and the waker to call when it is.
-    let shared = Arc::new(Mutex::new((false, None::<Waker>)));
+    let shared = Arc::new(Mutex::new(Signal::default()));
     let signal = Arc::clone(&shared);
     let polls = Cell::new(0);
     let waiting = poll_fn(|context| {
         polls.set(polls.get() + 1);
         let mut state = shared.lock().unwrap();
-        if state.0 {
+        if state.done {
             Poll::Ready(42)
         } else {
-            state.1 = Some(context.waker().clone());
+            state.waker = Some(context.waker().clone());
             Poll::Pending
         }
     });
     let other = thread::spawn(move || {
         thread::sleep(Duration::from_millis(50));
         let mut state = signal.lock().unwrap();
-        state.0 = true;
-        if let Some(waker) = state.1.take() {
+        state.done = true;
+        if let Some(waker) = state.waker.take() {
             waker.wake();
         }
     });

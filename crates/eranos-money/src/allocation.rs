@@ -1,7 +1,7 @@
 //! Exact apportionment: splitting an amount by weights so the parts always
 //! add up to the amount, plus the rounding helpers conversions and tips use.
 
-use std::cmp::Reverse;
+use std::cmp::Ordering;
 
 /// Splits `total` into parts proportional to `weights` that add up to exactly
 /// `total`.
@@ -25,45 +25,83 @@ pub fn allocate(total: i64, weights: &[u64], rotation: u64) -> Vec<i64> {
     let total = i128::from(total);
     // |total| ≤ 2^63 and weight < 2^64, so every product fits in i128.
     // Division rounds towards zero, so every part has the sign of `total`.
-    let (mut parts, remainders): (Vec<i128>, Vec<u128>) = weights
+    let mut parts: Vec<Part> = weights
         .iter()
         .map(|&weight| {
             let product = total * weight_of(weight);
-            (product / weight_sum, (product % weight_sum).unsigned_abs())
+            Part {
+                amount: product / weight_sum,
+                remainder: (product % weight_sum).unsigned_abs(),
+            }
         })
-        .unzip();
+        .collect();
     // Σ remainders = weight_sum × leftover, so leftover < weights.len().
-    let leftover = (total - parts.iter().sum::<i128>()).unsigned_abs();
+    let leftover = (total - parts.iter().map(|part| part.amount).sum::<i128>()).unsigned_abs();
     if 0 < leftover {
         // A usize is at most 64 bits wide on every target Rust supports.
         let len = u64::try_from(weights.len()).unwrap_or(u64::MAX);
         let start = rotation % len;
-        // (remainder, position from the rotation start): the largest
-        // remainders sort first and equal ones by rotation; the positions
-        // make every key distinct.
-        let keys: Vec<(Reverse<u128>, u64)> = (0_u64..)
-            .zip(remainders)
-            .map(|(position, remainder)| (Reverse(remainder), (position + len - start) % len))
+        let claims: Vec<LeftoverClaim> = (0_u64..)
+            .zip(&parts)
+            .map(|(position, part)| LeftoverClaim {
+                position: (position + len - start) % len,
+                remainder: part.remainder,
+            })
             .collect();
-        let mut ranked = keys.clone();
+        let mut ranked = claims.clone();
         ranked.sort_unstable();
-        // The key of the last part to receive a leftover unit. At least
+        // The claim of the last part to receive a leftover unit. At least
         // leftover + 1 parts have a positive remainder, so a zero-weight
         // part never receives one.
         let last = (1_u128..)
             .zip(ranked)
-            .find_map(|(rank, key)| (rank == leftover).then_some(key));
-        for (part, key) in parts.iter_mut().zip(keys) {
-            if last.is_some_and(|last_key| key <= last_key) {
-                *part += total.signum();
+            .find_map(|(rank, claim)| (rank == leftover).then_some(claim));
+        for (part, claim) in parts.iter_mut().zip(claims) {
+            if last.is_some_and(|last_claim| claim <= last_claim) {
+                part.amount += total.signum();
             }
         }
     }
     // Every part lies between zero and `total`, so it fits back in i64.
     parts
         .into_iter()
-        .map(|part| i64::try_from(part).unwrap_or_default())
+        .map(|part| i64::try_from(part.amount).unwrap_or_default())
         .collect()
+}
+
+/// One part of an allocation: its exact share rounded towards zero, until it
+/// receives a leftover unit, and the remainder of that rounding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Part {
+    amount: i128,
+    remainder: u128,
+}
+
+/// A part's claim to a leftover unit: its remainder, and its position counted
+/// from the rotation start, which makes every claim of an allocation
+/// distinct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct LeftoverClaim {
+    position: u64,
+    remainder: u128,
+}
+
+// Written out, so that it does not depend on the order of the fields: the
+// largest remainders first, and equal ones by position, so that ties go
+// round from the rotation start.
+impl Ord for LeftoverClaim {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .remainder
+            .cmp(&self.remainder)
+            .then_with(|| self.position.cmp(&other.position))
+    }
+}
+
+impl PartialOrd for LeftoverClaim {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 /// The tie rotation for one allocation pass of an entry: FNV-1a over the

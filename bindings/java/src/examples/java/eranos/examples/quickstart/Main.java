@@ -25,6 +25,7 @@ import eranos.Settlement;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,38 @@ import java.util.Optional;
  */
 public final class Main {
     private Main() {}
+
+    /** An expense with who paid it and who shares it, a row of the expenses' table. */
+    private record ExpenseRow(Money amount, String name, String participants, String payers)
+            implements Row {
+        static final List<String> HEADERS = List.of("Expense", "Paid by", "Shared by", "Amount");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, payers, participants, amount.toString());
+        }
+    }
+
+    /** A member's totals, a row of the members' table. */
+    private record MemberRow(Balance balance, Money consumed, String name, Money paid)
+            implements Row {
+        static final List<String> HEADERS = List.of("Member", "Paid", "Consumed", "Balance");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, paid.toString(), consumed.toString(), balance.toString());
+        }
+    }
+
+    /** A payment of the plan, a row of the payments' table. */
+    private record PaymentRow(Money amount, String from, String to) implements Row {
+        static final List<String> HEADERS = List.of("From", "To", "Amount");
+
+        @Override
+        public List<String> cells() {
+            return List.of(from, to, amount.toString());
+        }
+    }
 
     /**
      * Prints the report of the weekend trip.
@@ -86,16 +119,16 @@ public final class Main {
                                     new Split.Equal(List.of(bob)),
                                     new ExpenseSplit.Whole(everyone))
                             .build());
-            List<List<String>> expenses = new ArrayList<>();
+            List<ExpenseRow> expenses = new ArrayList<>();
             for (Expense expense : group.expenses()) {
                 expenses.add(
-                        List.of(
+                        new ExpenseRow(
+                                expense.total(),
                                 expense.name(),
-                                names(group, expense.payers().members()),
                                 names(group, participants(expense.split())),
-                                expense.total().toString()));
+                                names(group, expense.payers().members())));
             }
-            printTable(List.of("Expense", "Paid by", "Shared by", "Amount"), expenses, 3);
+            printTable(ExpenseRow.HEADERS, expenses, 3);
 
             section("3. Who paid and who consumed");
             Summary summary = group.summary();
@@ -105,19 +138,19 @@ public final class Main {
                     and their balance is what they paid minus what they consumed.
                     """
                             .formatted(summary.totalSpent()));
-            List<List<String>> balances = new ArrayList<>();
+            List<MemberRow> balances = new ArrayList<>();
             for (Member member : group.members()) {
                 Optional<MemberSummary> totals = member.id().flatMap(id -> totals(id, summary));
                 totals.ifPresent(
                         found ->
                                 balances.add(
-                                        List.of(
+                                        new MemberRow(
+                                                found.balance(),
+                                                found.share(),
                                                 member.firstName(),
-                                                found.paid().toString(),
-                                                found.share().toString(),
-                                                found.balance().toString())));
+                                                found.paid())));
             }
-            printTable(List.of("Member", "Paid", "Consumed", "Balance"), balances, 1);
+            printTable(MemberRow.HEADERS, balances, 1);
             Optional<MemberSummary> anaTotals = totals(ana, summary);
             System.out.printf(
                     "Ana paid %s but consumed only %s, so the others owe her the difference.%n",
@@ -129,15 +162,15 @@ public final class Main {
             System.out.printf(
                     "The fewest payments that bring every balance to zero (%d in total):%n",
                     settlement.payments().size());
-            List<List<String>> payments = new ArrayList<>();
+            List<PaymentRow> payments = new ArrayList<>();
             for (Payment payment : settlement.payments()) {
                 payments.add(
-                        List.of(
+                        new PaymentRow(
+                                payment.amount(),
                                 names(group, List.of(payment.from())),
-                                names(group, List.of(payment.to())),
-                                payment.amount().toString()));
+                                names(group, List.of(payment.to()))));
             }
-            printTable(List.of("From", "To", "Amount"), payments, 2);
+            printTable(PaymentRow.HEADERS, payments, 2);
             System.out.println("Once these payments are made, nobody owes anything.");
 
             // Everyone's share is 100.00: Ana gets back 140.00 from Bob (40.00) and Carol (100.00).

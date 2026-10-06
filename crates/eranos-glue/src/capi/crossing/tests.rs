@@ -11,6 +11,26 @@ use syn::Type;
 use super::*;
 use crate::capi::tests::{CALLS, RECORDS, sources};
 
+/// How a crossing takes a parameter named `value`, and the value it owns
+/// from it.
+struct Case {
+    /// The crossing.
+    crossing: Crossing,
+    /// The value it owns.
+    owned: TokenStream,
+    /// The parameter it takes.
+    parameter: TokenStream,
+}
+
+/// A type the plan writes a list or an object of, by name, and whether a
+/// call takes it.
+struct Reached {
+    /// The type's name.
+    name: &'static str,
+    /// Whether a call takes it.
+    taken: bool,
+}
+
 /// The fixture's core.
 fn core() -> Core {
     Core::parse(&sources()).unwrap()
@@ -105,43 +125,48 @@ fn an_option_is_optional_but_a_list_never_is() {
 fn every_crossing_has_its_parameter_and_its_owned_value() {
     let name = format_ident!("value");
     let cases = [
-        (
-            Crossing::Choice(format_ident!("TipDistribution")),
-            quote!(value: EranosTipDistribution),
-            quote!(value.into()),
-        ),
-        (
-            Crossing::Integer(format_ident!("i32")),
-            quote!(value: i32),
-            quote!(value),
-        ),
-        (
-            Crossing::List(format_ident!("Item")),
-            quote!(value: &EranosItemList),
-            quote!(value.0.clone()),
-        ),
-        (
-            Crossing::Object(format_ident!("Expense")),
-            quote!(value: &EranosExpense),
-            quote!(value.0.clone()),
-        ),
-        (
-            Crossing::Plain(format_ident!("CalendarDate")),
-            quote!(value: EranosCalendarDate),
-            quote!(value.into()),
-        ),
-        (
-            Crossing::Text,
-            quote!(value: &DiplomatStr),
-            quote!(crate::text(value)?),
-        ),
-        (
-            Crossing::TextList,
-            quote!(value: &EranosTextList),
-            quote!(value.0.clone()),
-        ),
+        Case {
+            crossing: Crossing::Choice(format_ident!("TipDistribution")),
+            owned: quote!(value.into()),
+            parameter: quote!(value: EranosTipDistribution),
+        },
+        Case {
+            crossing: Crossing::Integer(format_ident!("i32")),
+            owned: quote!(value),
+            parameter: quote!(value: i32),
+        },
+        Case {
+            crossing: Crossing::List(format_ident!("Item")),
+            owned: quote!(value.0.clone()),
+            parameter: quote!(value: &EranosItemList),
+        },
+        Case {
+            crossing: Crossing::Object(format_ident!("Expense")),
+            owned: quote!(value.0.clone()),
+            parameter: quote!(value: &EranosExpense),
+        },
+        Case {
+            crossing: Crossing::Plain(format_ident!("CalendarDate")),
+            owned: quote!(value.into()),
+            parameter: quote!(value: EranosCalendarDate),
+        },
+        Case {
+            crossing: Crossing::Text,
+            owned: quote!(crate::text(value)?),
+            parameter: quote!(value: &DiplomatStr),
+        },
+        Case {
+            crossing: Crossing::TextList,
+            owned: quote!(value.0.clone()),
+            parameter: quote!(value: &EranosTextList),
+        },
     ];
-    for (crossing, parameter, owned) in cases {
+    for Case {
+        crossing,
+        owned,
+        parameter,
+    } in cases
+    {
         assert_eq!(
             crossing.parameter(&name).to_string(),
             parameter.to_string(),
@@ -246,10 +271,10 @@ fn a_call_takes_records_by_reference_and_values_by_value() {
 #[test]
 fn the_plan_holds_what_the_calls_reach() {
     let plan = Plan::of(&core()).unwrap();
-    let names = |names: &[(&str, bool)]| {
+    let names = |names: &[Reached]| {
         names
             .iter()
-            .map(|&(name, taken)| (name.to_owned(), taken))
+            .map(|reached| (reached.name.to_owned(), reached.taken))
             .collect::<BTreeMap<_, _>>()
     };
     assert_eq!(
@@ -257,22 +282,64 @@ fn the_plan_holds_what_the_calls_reach() {
         Plan {
             choices: ["TipDistribution".to_owned()].into(),
             lists: names(&[
-                ("Balance", false),
-                ("CurrencyDetails", false),
-                ("Expense", false),
-                ("Item", true),
-                ("Money", true),
+                Reached {
+                    name: "Balance",
+                    taken: false,
+                },
+                Reached {
+                    name: "CurrencyDetails",
+                    taken: false,
+                },
+                Reached {
+                    name: "Expense",
+                    taken: false,
+                },
+                Reached {
+                    name: "Item",
+                    taken: true,
+                },
+                Reached {
+                    name: "Money",
+                    taken: true,
+                },
             ]),
             objects: names(&[
-                ("Balance", false),
-                ("Cost", true),
-                ("CurrencyDetails", false),
-                ("Expense", true),
-                ("Item", true),
-                ("NewGroup", true),
-                ("Split", true),
-                ("Summary", false),
-                ("Tip", true),
+                Reached {
+                    name: "Balance",
+                    taken: false,
+                },
+                Reached {
+                    name: "Cost",
+                    taken: true,
+                },
+                Reached {
+                    name: "CurrencyDetails",
+                    taken: false,
+                },
+                Reached {
+                    name: "Expense",
+                    taken: true,
+                },
+                Reached {
+                    name: "Item",
+                    taken: true,
+                },
+                Reached {
+                    name: "NewGroup",
+                    taken: true,
+                },
+                Reached {
+                    name: "Split",
+                    taken: true,
+                },
+                Reached {
+                    name: "Summary",
+                    taken: false,
+                },
+                Reached {
+                    name: "Tip",
+                    taken: true,
+                },
             ]),
         }
     );

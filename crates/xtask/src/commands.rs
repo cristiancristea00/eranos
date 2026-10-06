@@ -132,7 +132,10 @@ pub(crate) fn examples(
     example: Option<&str>,
     languages: &[Language],
 ) -> Result<(), Failure> {
-    let (metadata, prepared) = prepared(runner, languages)?;
+    let Prepared {
+        actions: prepared,
+        metadata,
+    } = prepared(runner, languages)?;
     let every: Vec<gates::Example> = gates::examples(&metadata)
         .into_iter()
         .filter(|found| "eranos" == found.package)
@@ -173,13 +176,22 @@ pub(crate) fn examples(
 ///
 /// As [`prepared`] fails, and the failure of the first action that fails.
 fn run(runner: &mut impl Runner, languages: &[Language], phase: Phase) -> Result<(), Failure> {
-    let (_, prepared) = prepared(runner, languages)?;
-    for actions in prepared {
+    for actions in prepared(runner, languages)?.actions {
         plan::execute(runner, actions, &|found| {
             Phase::Prepare == found || phase == found
         })?;
     }
     Ok(())
+}
+
+/// Cargo's metadata, and the actions of each of the languages a command
+/// names.
+struct Prepared {
+    /// The actions that build the host library of eranos-uniffi and its
+    /// sources, none when no language reads them, then each language's.
+    actions: Vec<Vec<Action>>,
+    /// Cargo's metadata.
+    metadata: Metadata,
 }
 
 /// Cargo's metadata, and the actions of each of `languages` that the
@@ -194,10 +206,7 @@ fn run(runner: &mut impl Runner, languages: &[Language], phase: Phase) -> Result
 /// build for Apple platforms, [`Failure::Metadata`] when cargo's metadata
 /// cannot be read, the failure of the step that prints it, and
 /// [`Failure::Variable`] for a variable a package needs that is not set.
-fn prepared(
-    runner: &mut impl Runner,
-    languages: &[Language],
-) -> Result<(Metadata, Vec<Vec<Action>>), Failure> {
+fn prepared(runner: &mut impl Runner, languages: &[Language]) -> Result<Prepared, Failure> {
     let languages = runnable(runner, languages)?;
     let metadata = Metadata::parse(&runner.output(&gates::metadata())?)?;
     let mut prepared = vec![uniffi(&metadata, &languages)];
@@ -213,7 +222,10 @@ fn prepared(
             Language::Web => web::actions(),
         });
     }
-    Ok((metadata, prepared))
+    Ok(Prepared {
+        actions: prepared,
+        metadata,
+    })
 }
 
 /// The actions that build the host library of eranos-uniffi and generate

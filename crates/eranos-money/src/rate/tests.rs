@@ -21,15 +21,15 @@ fn euros(minor_units: i64) -> Money {
 fn parse_reads_positive_decimals() {
     // Decimal rates.
     let typed = rate("4.9765");
-    assert_eq!((typed.mantissa(), typed.scale()), (49_765, 4));
+    assert_eq!(typed.mantissa(), 49_765);
+    assert_eq!(typed.scale(), 4);
     let rate_below_one = rate("0.2011");
-    assert_eq!(
-        (rate_below_one.mantissa(), rate_below_one.scale()),
-        (2_011, 4)
-    );
+    assert_eq!(rate_below_one.mantissa(), 2_011);
+    assert_eq!(rate_below_one.scale(), 4);
     // Whole rates.
     let whole_rate = rate("12");
-    assert_eq!((whole_rate.mantissa(), whole_rate.scale()), (12, 0));
+    assert_eq!(whole_rate.mantissa(), 12);
+    assert_eq!(whole_rate.scale(), 0);
     // Surrounding whitespace.
     assert_eq!(ExchangeRate::parse(" 4.9765\n"), Ok(rate("4.9765")));
     // `FromStr` parses the same way.
@@ -51,19 +51,16 @@ fn one_is_the_rate_typed_as_1() {
 fn trailing_zeros_do_not_change_a_rate() {
     // Trailing fraction zeros.
     assert_eq!(rate("4.9700"), rate("4.97"));
-    assert_eq!(
-        (rate("4.9700").mantissa(), rate("4.9700").scale()),
-        (497, 2)
-    );
+    assert_eq!(rate("4.9700").mantissa(), 497);
+    assert_eq!(rate("4.9700").scale(), 2);
     // A whole number with and without a fraction.
     assert_eq!(rate("1"), rate("1.0"));
     assert_eq!(rate("1"), rate("1.000"));
-    assert_eq!(
-        (rate("100.00").mantissa(), rate("100.00").scale()),
-        (100, 0)
-    );
+    assert_eq!(rate("100.00").mantissa(), 100);
+    assert_eq!(rate("100.00").scale(), 0);
     // Zeros of the whole part stay.
-    assert_eq!((rate("10").mantissa(), rate("10").scale()), (10, 0));
+    assert_eq!(rate("10").mantissa(), 10);
+    assert_eq!(rate("10").scale(), 0);
     assert_ne!(rate("10"), rate("1"));
 }
 
@@ -103,7 +100,8 @@ fn malformed_rates_are_rejected() {
 fn rates_with_more_than_18_decimals_are_rejected() {
     // Exactly 18 decimals.
     let smallest = rate("0.000000000000000001");
-    assert_eq!((smallest.mantissa(), smallest.scale()), (1, 18));
+    assert_eq!(smallest.mantissa(), 1);
+    assert_eq!(smallest.scale(), 18);
     // 19 decimals, even when they are zeros.
     for text in ["0.0000000000000000001", "1.0000000000000000000"] {
         assert_eq!(

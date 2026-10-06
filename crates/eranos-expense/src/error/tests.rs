@@ -5,6 +5,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case {
+    error: ExpenseError,
+    held: String,
+    method: &'static str,
+}
+
 /// An [`ExpenseError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
@@ -140,69 +149,93 @@ fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
     let member = MemberId::from_bytes([5; 16]);
     let total_basis_points = 9005;
     let cases = [
-        (
-            ExpenseError::AmountsDoNotAddUp {
+        Case {
+            error: ExpenseError::AmountsDoNotAddUp {
                 actual,
                 expected: expected_money,
             },
-            "amounts_do_not_add_up",
-            format!("{actual} {expected_money}"),
-        ),
-        (
-            ExpenseError::CurrencyMismatch {
+            held: format!("{actual} {expected_money}"),
+            method: "amounts_do_not_add_up",
+        },
+        Case {
+            error: ExpenseError::CurrencyMismatch {
                 expected: expected_currency,
                 found,
             },
-            "currency_mismatch",
-            format!("{expected_currency} {found}"),
-        ),
-        (
-            ExpenseError::DuplicateMember { member },
-            "duplicate_member",
-            format!("{member}"),
-        ),
-        (
-            ExpenseError::EmptyItemName,
-            "empty_item_name",
-            String::new(),
-        ),
-        (ExpenseError::EmptyName, "empty_name", String::new()),
-        (ExpenseError::EmptySplit, "empty_split", String::new()),
-        (
-            ExpenseError::ItemsDoNotAddUp {
+            held: format!("{expected_currency} {found}"),
+            method: "currency_mismatch",
+        },
+        Case {
+            error: ExpenseError::DuplicateMember { member },
+            held: format!("{member}"),
+            method: "duplicate_member",
+        },
+        Case {
+            error: ExpenseError::EmptyItemName,
+            held: String::new(),
+            method: "empty_item_name",
+        },
+        Case {
+            error: ExpenseError::EmptyName,
+            held: String::new(),
+            method: "empty_name",
+        },
+        Case {
+            error: ExpenseError::EmptySplit,
+            held: String::new(),
+            method: "empty_split",
+        },
+        Case {
+            error: ExpenseError::ItemsDoNotAddUp {
                 actual,
                 expected: expected_money,
             },
-            "items_do_not_add_up",
-            format!("{actual} {expected_money}"),
-        ),
-        (ExpenseError::NegativeTip, "negative_tip", String::new()),
-        (ExpenseError::NoItems, "no_items", String::new()),
-        (
-            ExpenseError::NonPositiveAmount,
-            "non_positive_amount",
-            String::new(),
-        ),
-        (
-            ExpenseError::NonPositiveShare { member },
-            "non_positive_share",
-            format!("{member}"),
-        ),
-        (ExpenseError::Overflow, "overflow", String::new()),
-        (
-            ExpenseError::PercentagesDoNotAddUp { total_basis_points },
-            "percentages_do_not_add_up",
-            format!("{total_basis_points}"),
-        ),
-        (ExpenseError::ZeroQuantity, "zero_quantity", String::new()),
+            held: format!("{actual} {expected_money}"),
+            method: "items_do_not_add_up",
+        },
+        Case {
+            error: ExpenseError::NegativeTip,
+            held: String::new(),
+            method: "negative_tip",
+        },
+        Case {
+            error: ExpenseError::NoItems,
+            held: String::new(),
+            method: "no_items",
+        },
+        Case {
+            error: ExpenseError::NonPositiveAmount,
+            held: String::new(),
+            method: "non_positive_amount",
+        },
+        Case {
+            error: ExpenseError::NonPositiveShare { member },
+            held: format!("{member}"),
+            method: "non_positive_share",
+        },
+        Case {
+            error: ExpenseError::Overflow,
+            held: String::new(),
+            method: "overflow",
+        },
+        Case {
+            error: ExpenseError::PercentagesDoNotAddUp { total_basis_points },
+            held: format!("{total_basis_points}"),
+            method: "percentages_do_not_add_up",
+        },
+        Case {
+            error: ExpenseError::ZeroQuantity,
+            held: String::new(),
+            method: "zero_quantity",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedExpenseError::from_expense_error(&error),
+            ConvertedExpenseError::from_expense_error(&case.error),
             ConvertedExpenseError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }

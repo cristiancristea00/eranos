@@ -19,10 +19,39 @@ import eranos.Money
 import eranos.Parts
 import eranos.Percentage
 import eranos.Split
+import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.totals
+
+private data class ShareRow(
+    val consumed: Money,
+    val name: String,
+    val paid: Money,
+    val rule: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, rule, "$paid", "$consumed")
+
+    companion object {
+        val HEADERS = listOf("Member", "Rule", "Paid", "Consumed")
+    }
+}
+
+private data class TotalRow(
+    val balance: String,
+    val consumed: Money,
+    val name: String,
+    val paid: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, "$paid", "$consumed", balance)
+
+    companion object {
+        val HEADERS = listOf("Member", "Paid", "Consumed", "Balance")
+    }
+}
 
 private fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
 
@@ -36,9 +65,14 @@ private fun report(
     val shares = group.expenseSharesBlocking(id) ?: return
     println("${expense.name}, ${shares.total}:")
     printTable(
-        listOf("Member", "Rule", "Paid", "Consumed"),
+        ShareRow.HEADERS,
         shares.members.map { share ->
-            listOf(names(group, listOf(share.member)), rules[share.member] ?: "(payer only)", "${share.paid}", "${share.share}")
+            ShareRow(
+                consumed = share.share,
+                name = names(group, listOf(share.member)),
+                paid = share.paid,
+                rule = rules[share.member] ?: "(payer only)",
+            )
         },
         numbersFrom = 2,
     )
@@ -233,10 +267,10 @@ private fun printTotals(group: Group) {
     val summary = group.summaryBlocking()
     println("${summary.totalSpent} spent over five expenses:")
     printTable(
-        listOf("Member", "Paid", "Consumed", "Balance"),
+        TotalRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id -> totals(id, summary) }?.let { totals ->
-                listOf(member.firstName, "${totals.paid}", "${totals.share}", "${totals.balance}")
+                TotalRow(balance = "${totals.balance}", consumed = totals.share, name = member.firstName, paid = totals.paid)
             }
         },
         numbersFrom = 1,

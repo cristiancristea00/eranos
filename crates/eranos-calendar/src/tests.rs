@@ -8,20 +8,63 @@ use super::*;
 
 use proptest::prelude::*;
 
+/// A month and its last day.
+#[derive(Debug, Clone, Copy)]
+struct MonthLength {
+    last_day: u8,
+    month: u8,
+}
+
 /// The last day of every month of 2026, a common year.
-const MONTH_LENGTHS: [(u8, u8); 12] = [
-    (1, 31),
-    (2, 28),
-    (3, 31),
-    (4, 30),
-    (5, 31),
-    (6, 30),
-    (7, 31),
-    (8, 31),
-    (9, 30),
-    (10, 31),
-    (11, 30),
-    (12, 31),
+const MONTH_LENGTHS: [MonthLength; 12] = [
+    MonthLength {
+        last_day: 31,
+        month: 1,
+    },
+    MonthLength {
+        last_day: 28,
+        month: 2,
+    },
+    MonthLength {
+        last_day: 31,
+        month: 3,
+    },
+    MonthLength {
+        last_day: 30,
+        month: 4,
+    },
+    MonthLength {
+        last_day: 31,
+        month: 5,
+    },
+    MonthLength {
+        last_day: 30,
+        month: 6,
+    },
+    MonthLength {
+        last_day: 31,
+        month: 7,
+    },
+    MonthLength {
+        last_day: 31,
+        month: 8,
+    },
+    MonthLength {
+        last_day: 30,
+        month: 9,
+    },
+    MonthLength {
+        last_day: 31,
+        month: 10,
+    },
+    MonthLength {
+        last_day: 30,
+        month: 11,
+    },
+    MonthLength {
+        last_day: 31,
+        month: 12,
+    },
 ];
 
 fn date(year: u16, month: u8, day: u8) -> CalendarDate {
@@ -41,7 +84,7 @@ fn any_date() -> impl Strategy<Value = CalendarDate> {
 #[test]
 fn a_day_exists_only_within_its_month() {
     // The last day of every month exists, the day after it does not.
-    for (month, last_day) in MONTH_LENGTHS {
+    for MonthLength { last_day, month } in MONTH_LENGTHS {
         assert!(CalendarDate::new(last_day, month, 2026).is_ok(), "{month}");
         assert_eq!(
             CalendarDate::new(last_day + 1, month, 2026),
@@ -50,14 +93,14 @@ fn a_day_exists_only_within_its_month() {
         );
     }
     // Day zero exists in no month.
-    for (month, _) in MONTH_LENGTHS {
+    for MonthLength { month, .. } in MONTH_LENGTHS {
         assert_eq!(
             CalendarDate::new(0, month, 2026),
             Err(CalendarError::InvalidDate)
         );
     }
     // The first day of every month exists.
-    for (month, _) in MONTH_LENGTHS {
+    for MonthLength { month, .. } in MONTH_LENGTHS {
         assert!(CalendarDate::new(1, month, 2026).is_ok());
     }
 }
@@ -351,7 +394,8 @@ fn a_time_runs_from_midnight_to_23_59() {
 fn time_parse_reads_two_digit_hours_and_minutes() {
     // Exact format.
     let time = TimeOfDay::parse("07:05").unwrap();
-    assert_eq!((time.hour(), time.minute()), (7, 5));
+    assert_eq!(time.hour(), 7);
+    assert_eq!(time.minute(), 5);
     assert_eq!(TimeOfDay::parse("23:59"), TimeOfDay::new(23, 59));
     // Surrounding whitespace is ignored.
     assert_eq!(TimeOfDay::parse(" 18:30\n"), TimeOfDay::new(18, 30));

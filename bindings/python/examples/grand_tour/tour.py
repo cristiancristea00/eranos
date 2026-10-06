@@ -1,15 +1,17 @@
 """
 Hold what the sections of the tour share: the members and categories they name, and the amounts and dates of the trip.
 
-It also holds the tables that several sections print: the balances, the spending per category, and the entries.
+It also holds what several sections print: the rows of the tables they share, and the tables of the balances, the spending
+per category, and the entries.
 
 """
 
 import dataclasses
 from collections.abc import Callable, Iterable
-from typing import assert_never, final
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
+    Balance,
     CalendarDate,
     CategoryId,
     ConvertedCost,
@@ -26,7 +28,7 @@ from eranos import (
     Summary,
     Transfer,
 )
-from examples.report import names, print_table, totals
+from examples.report import Row, names, print_table, totals
 
 
 @final
@@ -50,6 +52,123 @@ class Categories:
     food: CategoryId
     lodging: CategoryId
     transport: CategoryId
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class RefusalRow(Row):
+    """A row of a table of refused changes: the change, and the library's message."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Change', 'Refused with')
+
+    change: str
+    """The change the group refuses."""
+
+    error: str
+    """The library's message."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.change, self.error
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EntryRow(Row):
+    """A row of the table of entries: an expense or a transfer, as entered and in the group currency."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency')
+
+    converted: Money
+    """The entry's amount in the group currency."""
+
+    name: str
+    """What the entry was."""
+
+    original: Money
+    """The entry's amount as entered."""
+
+    payer: str
+    """Who paid it."""
+
+    rate: ExchangeRate
+    """The rate the entry was entered at."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.payer, str(self.original), str(self.rate), str(self.converted)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BalanceRow(Row):
+    """A row of the table of balances: what a member paid, consumed, sent, and received, and where they stand."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance')
+
+    balance: Balance
+    """Where the member stands."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    name: str
+    """The member's first name."""
+
+    paid: Money
+    """What the member paid."""
+
+    received: Money
+    """What the member received in transfers."""
+
+    sent: Money
+    """What the member sent in transfers."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, str(self.paid), str(self.consumed), str(self.sent), str(self.received), str(self.balance)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CategoryRow(Row):
+    """A row of the table of spending per category."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Category', 'Expenses', 'Total')
+
+    expenses: int
+    """The number of expenses in the category."""
+
+    name: str
+    """The category's name."""
+
+    total: Money
+    """What the group spent in the category."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, str(self.expenses), str(self.total)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentRow(Row):
+    """A row of the table of a plan's payments."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('From', 'To', 'Amount')
+
+    amount: Money
+    """What is paid."""
+
+    from_: str
+    """Who pays."""
+
+    to: str
+    """Who is paid."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.from_, self.to, str(self.amount)
 
 
 def eur(text: str) -> Money:
@@ -139,24 +258,24 @@ def built_in_category(group: Group) -> CategoryId:
     return built_in
 
 
-def _balance_row(member: Member, summary: Summary, zero: str) -> tuple[str, ...]:
+def _balance_row(member: Member, summary: Summary, zero: Money) -> BalanceRow:
     """
     Write the row of member among the balances.
 
     Args:
         member: The member.
         summary: The group's summary.
-        zero: Zero in the group currency, as the library writes it.
+        zero: Zero in the group currency.
 
     Returns:
-        The member's first name, what they paid, consumed, sent, and received, and their balance.
+        The row.
 
     """
     found = None if member.id is None else totals(member.id, summary)
     if found is None:
         # The summary lists the members with a total; every total of the others is zero.
-        return member.first_name, zero, zero, zero, zero, str(SettledBalance())
-    return member.first_name, str(found.paid), str(found.share), str(found.sent), str(found.received), str(found.balance)
+        return BalanceRow(balance=SettledBalance(), consumed=zero, name=member.first_name, paid=zero, received=zero, sent=zero)
+    return BalanceRow(balance=found.balance, consumed=found.share, name=member.first_name, paid=found.paid, received=found.received, sent=found.sent)
 
 
 def print_balances(group: Group) -> None:
@@ -168,8 +287,8 @@ def print_balances(group: Group) -> None:
 
     """
     summary = group.summary()
-    zero = str(Money(group.currency(), 0))
-    print_table(('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance'), [_balance_row(member, summary, zero) for member in group.members()], 1)
+    zero = Money(group.currency(), 0)
+    print_table(BalanceRow, [_balance_row(member, summary, zero) for member in group.members()], 1)
 
 
 def print_categories(group: Group) -> None:
@@ -183,13 +302,13 @@ def print_categories(group: Group) -> None:
     expenses = group.expenses()
     built_in = built_in_category(group)
     print_table(
-        ('Category', 'Expenses', 'Total'),
+        CategoryRow,
         [
-            (
-                '?' if (category := group.category(total.category)) is None else category.name,
+            CategoryRow(
                 # An expense in the built-in category names none.
-                str(sum(1 for expense in expenses if (expense.category or built_in) == total.category)),
-                str(total.total),
+                expenses=sum(1 for expense in expenses if (expense.category or built_in) == total.category),
+                name='?' if (category := group.category(total.category)) is None else category.name,
+                total=total.total,
             )
             for total in group.summary().category_totals
         ],
@@ -217,7 +336,7 @@ def _rate(cost: Cost) -> ExchangeRate:
             assert_never(cost)
 
 
-def _expense_row(group: Group, expense: Expense) -> tuple[str, ...]:
+def _expense_row(group: Group, expense: Expense) -> EntryRow:
     """
     Write the row of expense among the entries.
 
@@ -226,15 +345,20 @@ def _expense_row(group: Group, expense: Expense) -> tuple[str, ...]:
         expense: An expense of the group.
 
     Returns:
-        The expense's name, who paid it, its total as entered, its rate, and its total in the group currency.
+        The row: the expense's name, who paid it, its total as entered, its rate, and its total in the group currency.
 
     """
     shares = None if expense.id is None else group.expense_shares(expense.id)
-    converted = Money(group.currency(), 0) if shares is None else shares.total
-    return expense.name, names(group, expense.payers.members), str(expense.total()), str(_rate(expense.cost)), str(converted)
+    return EntryRow(
+        converted=Money(group.currency(), 0) if shares is None else shares.total,
+        name=expense.name,
+        original=expense.total(),
+        payer=names(group, expense.payers.members),
+        rate=_rate(expense.cost),
+    )
 
 
-def _transfer_row(group: Group, transfer: Transfer) -> tuple[str, ...]:
+def _transfer_row(group: Group, transfer: Transfer) -> EntryRow:
     """
     Write the row of transfer among the entries.
 
@@ -243,17 +367,17 @@ def _transfer_row(group: Group, transfer: Transfer) -> tuple[str, ...]:
         transfer: A transfer of the group.
 
     Returns:
-        Whom the transfer went to, who sent it, its amount as entered, its rate, and its amount in the group currency.
+        The row: whom the transfer went to, who sent it, its amount as entered, its rate, and its amount in the group
+        currency.
 
     """
     amount = None if transfer.id is None else group.transfer_amount(transfer.id)
-    converted = Money(group.currency(), 0) if amount is None else amount
-    return (
-        f'Transfer to {name(group, transfer.receiver)}',
-        name(group, transfer.sender),
-        str(transfer.cost.amount),
-        str(_rate(transfer.cost)),
-        str(converted),
+    return EntryRow(
+        converted=Money(group.currency(), 0) if amount is None else amount,
+        name=f'Transfer to {name(group, transfer.receiver)}',
+        original=transfer.cost.amount,
+        payer=name(group, transfer.sender),
+        rate=_rate(transfer.cost),
     )
 
 
@@ -267,7 +391,7 @@ def print_entries(group: Group, shown: Callable[[Currency], bool]) -> None:
 
     """
     print_table(
-        ('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency'),
+        EntryRow,
         [
             *(_expense_row(group, expense) for expense in group.expenses() if shown(expense.cost.amount.currency)),
             *(_transfer_row(group, transfer) for transfer in group.transfers() if shown(transfer.cost.amount.currency)),

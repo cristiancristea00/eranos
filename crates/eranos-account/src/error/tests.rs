@@ -6,6 +6,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case<Failure> {
+    error: Failure,
+    held: String,
+    method: &'static str,
+}
+
 /// An [`AccountError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
@@ -48,21 +57,29 @@ impl FromAccountError for ConvertedAccountError {
 fn every_failure_of_account_error_converts_through_the_method_of_its_variant() {
     let reason = IbanError::InvalidChecksum;
     let cases = [
-        (AccountError::EmptyName, "empty_name", String::new()),
-        (AccountError::EmptyUsername, "empty_username", String::new()),
-        (
-            AccountError::InvalidIban(reason),
-            "invalid_iban",
-            format!("{reason:?}"),
-        ),
+        Case {
+            error: AccountError::EmptyName,
+            held: String::new(),
+            method: "empty_name",
+        },
+        Case {
+            error: AccountError::EmptyUsername,
+            held: String::new(),
+            method: "empty_username",
+        },
+        Case {
+            error: AccountError::InvalidIban(reason),
+            held: format!("{reason:?}"),
+            method: "invalid_iban",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedAccountError::from_account_error(&error),
+            ConvertedAccountError::from_account_error(&case.error),
             ConvertedAccountError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }
@@ -128,33 +145,44 @@ fn every_reason_of_iban_error_converts_through_the_method_of_its_variant() {
     let expected = 20;
     let found = 21;
     let cases = [
-        (
-            IbanError::InvalidCharacter,
-            "invalid_character",
-            String::new(),
-        ),
-        (
-            IbanError::InvalidChecksum,
-            "invalid_checksum",
-            String::new(),
-        ),
-        (IbanError::InvalidFormat, "invalid_format", String::new()),
-        (
-            IbanError::InvalidStructure,
-            "invalid_structure",
-            String::new(),
-        ),
-        (IbanError::UnknownCountry, "unknown_country", String::new()),
-        (
-            IbanError::WrongLength { expected, found },
-            "wrong_length",
-            format!("{expected} {found}"),
-        ),
+        Case {
+            error: IbanError::InvalidCharacter,
+            held: String::new(),
+            method: "invalid_character",
+        },
+        Case {
+            error: IbanError::InvalidChecksum,
+            held: String::new(),
+            method: "invalid_checksum",
+        },
+        Case {
+            error: IbanError::InvalidFormat,
+            held: String::new(),
+            method: "invalid_format",
+        },
+        Case {
+            error: IbanError::InvalidStructure,
+            held: String::new(),
+            method: "invalid_structure",
+        },
+        Case {
+            error: IbanError::UnknownCountry,
+            held: String::new(),
+            method: "unknown_country",
+        },
+        Case {
+            error: IbanError::WrongLength { expected, found },
+            held: format!("{expected} {found}"),
+            method: "wrong_length",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedIbanError::from_iban_error(&error),
-            ConvertedIbanError { held, method }
+            ConvertedIbanError::from_iban_error(&case.error),
+            ConvertedIbanError {
+                held: case.held,
+                method: case.method
+            }
         );
     }
 }

@@ -16,6 +16,46 @@
 namespace eranos::examples {
 namespace {
 
+/// A row of the table of an expense's shares: a member's rule, what they paid, and what they consumed.
+struct ShareRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<4> HEADERS{"Member", "Rule", "Paid", "Consumed"};
+
+    /// What they consumed.
+    std::string consumed;
+    /// Their first name.
+    std::string name;
+    /// What they paid.
+    std::string paid;
+    /// The rule by which they share the expense.
+    std::string rule;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<4> cells() const noexcept { return {name, rule, paid, consumed}; }
+};
+
+/// A row of the table of totals: what a member paid and consumed over the holiday, and their balance.
+struct TotalRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
+
+    /// What is left: what they paid minus what they consumed.
+    std::string balance;
+    /// What they consumed.
+    std::string consumed;
+    /// Their first name.
+    std::string name;
+    /// What they paid.
+    std::string paid;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
+};
+
 /// The amount @p text of euros.
 [[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
@@ -59,13 +99,18 @@ void report(Group const &group, ExpenseId const &id, Rules const &rules) {
         return;
     }
     std::println("{}, {}:", expense->name, shares->total.toString());
-    Rows rows;
+    std::vector<ShareRow> rows;
+    rows.reserve(shares->members.size());
     for (auto const &share : shares->members) {
         auto const rule = rules.find(share.member);
-        rows.push_back(
-            {firstName(group, share.member), rules.end() == rule ? "(payer only)" : rule->second, share.paid.toString(), share.share.toString()});
+        rows.push_back({
+            .consumed = share.share.toString(),
+            .name = firstName(group, share.member),
+            .paid = share.paid.toString(),
+            .rule = rules.end() == rule ? "(payer only)" : rule->second,
+        });
     }
-    printTable({"Member", "Rule", "Paid", "Consumed"}, rows, 2);
+    printTable(rows, 2);
 }
 
 /// Adds the taxi, which the three share equally, the leftover cent going to one of them.
@@ -154,12 +199,17 @@ void totals(Group const &group) {
     section("7. The holiday in total");
     auto const summary = group.summary();
     std::println("{} spent over five expenses:", summary.totalSpent.toString());
-    Rows rows;
+    std::vector<TotalRow> rows;
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
-        rows.push_back({member.firstName, found.paid.toString(), found.share.toString(), toString(found.balance)});
+        rows.push_back({
+            .balance = toString(found.balance),
+            .consumed = found.share.toString(),
+            .name = member.firstName,
+            .paid = found.paid.toString(),
+        });
     }
-    printTable({"Member", "Paid", "Consumed", "Balance"}, rows, 1);
+    printTable(rows, 1);
 }
 
 /// Runs the example.

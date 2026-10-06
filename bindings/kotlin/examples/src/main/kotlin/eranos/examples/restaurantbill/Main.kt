@@ -22,10 +22,42 @@ import eranos.Split
 import eranos.Tip
 import eranos.TipDistribution
 import eranos.TipValue
+import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.title
+
+private data class LineRow(
+    val lineTotal: Money,
+    val name: String,
+    val participants: String,
+    val quantity: Int,
+    val unitPrice: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, participants, "$quantity", "$unitPrice", "$lineTotal")
+
+    companion object {
+        val HEADERS = listOf("Item", "Shared by", "Quantity", "Unit price", "Line total")
+    }
+}
+
+private data class TipRow(
+    val equalTip: Money,
+    val equalTotal: Money,
+    val name: String,
+    val proportionalTip: Money,
+    val proportionalTotal: Money,
+    val subtotal: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, "$subtotal", "$proportionalTip", "$proportionalTotal", "$equalTip", "$equalTotal")
+
+    companion object {
+        val HEADERS = listOf("Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays")
+    }
+}
 
 /** The amount written [text], in euros. */
 private fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
@@ -80,10 +112,15 @@ fun main() {
 
         section("1. The receipt")
         printTable(
-            listOf("Item", "Shared by", "Quantity", "Unit price", "Line total"),
+            LineRow.HEADERS,
             receipt(ana, bob, carol).map { item ->
-                val total = Money(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity)
-                listOf(item.name, names(group, item.split.members), "${item.quantity}", "${item.unitPrice}", "$total")
+                LineRow(
+                    lineTotal = Money(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity),
+                    name = item.name,
+                    participants = names(group, item.split.members),
+                    quantity = item.quantity,
+                    unitPrice = item.unitPrice,
+                )
             },
             numbersFrom = 2,
         )
@@ -118,20 +155,20 @@ fun main() {
             """.trimIndent(),
         )
         val rows =
-            listOf(ana to "Ana", bob to "Bob", carol to "Carol").map { (member, firstName) ->
+            listOf(ana, bob, carol).map { member ->
                 val subtotal = checkNotNull(consumed(ordered, member)) { "every member ordered" }
                 val proportionalTotal = checkNotNull(consumed(byConsumption, member)) { "every member ordered" }
                 val equalTotal = checkNotNull(consumed(even, member)) { "every member ordered" }
-                listOf(
-                    firstName,
-                    "$subtotal",
-                    "${proportionalTotal - subtotal}",
-                    "$proportionalTotal",
-                    "${equalTotal - subtotal}",
-                    "$equalTotal",
+                TipRow(
+                    equalTip = equalTotal - subtotal,
+                    equalTotal = equalTotal,
+                    name = names(group, listOf(member)),
+                    proportionalTip = proportionalTotal - subtotal,
+                    proportionalTotal = proportionalTotal,
+                    subtotal = subtotal,
                 )
             }
-        printTable(listOf("Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"), rows, numbersFrom = 1)
+        printTable(TipRow.HEADERS, rows, numbersFrom = 1)
         println(
             """
             By consumption, Carol, who ordered the most, adds the largest part of the tip;

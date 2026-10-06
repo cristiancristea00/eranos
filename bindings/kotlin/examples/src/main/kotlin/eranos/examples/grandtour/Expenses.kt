@@ -1,27 +1,60 @@
 // Section 4 of the tour: an expense for every way of dividing one, with each member's payment and consumption.
 package eranos.examples.grandtour
 
-import eranos.Cost
 import eranos.Expense
 import eranos.ExpenseId
 import eranos.ExpenseSplit
 import eranos.Group
-import eranos.Item
-import eranos.MemberAmount
 import eranos.MemberId
-import eranos.MemberParts
-import eranos.MemberPercentage
 import eranos.Money
-import eranos.Parts
-import eranos.Percentage
 import eranos.Split
-import eranos.TimeOfDay
-import eranos.Tip
 import eranos.TipDistribution
 import eranos.TipValue
+import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
+
+private data class ShareRow(
+    val consumed: String,
+    val expense: String,
+    val how: String,
+    val members: String,
+    val paid: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(expense, how, members, paid, consumed)
+
+    companion object {
+        val HEADERS = listOf("Expense", "Split", "Member", "Paid", "Consumed")
+    }
+}
+
+private data class ItemRow(
+    val lineTotal: Money,
+    val name: String,
+    val quantity: Int,
+    val sharedBy: String,
+    val unitPrice: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, sharedBy, "$quantity", "$unitPrice", "$lineTotal")
+
+    companion object {
+        val HEADERS = listOf("Item", "Shared by", "Quantity", "Unit price", "Line total")
+    }
+}
+
+/** The seven expenses, one for every way of dividing one. */
+private data class Expenses(
+    val apartment: ExpenseId,
+    val fado: ExpenseId,
+    val groceries: ExpenseId,
+    val museum: ExpenseId,
+    val seafood: ExpenseId,
+    val tour: ExpenseId,
+    val train: ExpenseId,
+)
 
 /** How an expense divides, in a few words. */
 internal fun how(expense: Expense): String {
@@ -67,16 +100,16 @@ internal fun printShares(
             if (null == expense || null == shares) {
                 null
             } else {
-                listOf(
-                    expense.name,
-                    how(expense),
-                    cell(shares.members.map { share -> name(group, share.member) }),
-                    cell(shares.members.map { share -> if (0L == share.paid.minorUnits) "" else "${share.paid}" }),
-                    cell(shares.members.map { share -> "${share.share}" }),
+                ShareRow(
+                    consumed = cell(shares.members.map { share -> "${share.share}" }),
+                    expense = expense.name,
+                    how = how(expense),
+                    members = cell(shares.members.map { share -> name(group, share.member) }),
+                    paid = cell(shares.members.map { share -> if (0L == share.paid.minorUnits) "" else "${share.paid}" }),
                 )
             }
         }
-    printTable(listOf("Expense", "Split", "Member", "Paid", "Consumed"), rows, numbersFrom = 3)
+    printTable(ShareRow.HEADERS, rows, numbersFrom = 3)
 }
 
 internal fun printItems(
@@ -86,140 +119,20 @@ internal fun printItems(
     val split = group.expenseBlocking(id)?.split
     if (split is ExpenseSplit.Itemised) {
         printTable(
-            listOf("Item", "Shared by", "Quantity", "Unit price", "Line total"),
+            ItemRow.HEADERS,
             split.items.map { item ->
-                val total = Money(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity)
-                listOf(item.name, names(group, item.split.members), "${item.quantity}", "${item.unitPrice}", "$total")
+                ItemRow(
+                    lineTotal = Money(item.unitPrice.currency, item.unitPrice.minorUnits * item.quantity),
+                    name = item.name,
+                    quantity = item.quantity,
+                    sharedBy = names(group, item.split.members),
+                    unitPrice = item.unitPrice,
+                )
             },
             numbersFrom = 2,
         )
     }
 }
-
-/** The receipt of the fado night: every line with its own split. */
-internal fun fadoItems(people: People): List<Item> =
-    listOf(
-        Item("Vinho verde", Split.Equal(listOf(people.ana, people.bob, people.dan)), eur("12.00"), quantity = 2),
-        Item("Bacalhau", Split.Equal(listOf(people.carol)), eur("18.00")),
-        Item(
-            "Custard tarts",
-            Split.Parts(
-                listOf(
-                    MemberParts(people.ana, Parts.parse("1")),
-                    MemberParts(people.bob, Parts.parse("1")),
-                    MemberParts(people.carol, Parts.parse("1")),
-                    MemberParts(people.dan, Parts.parse("1")),
-                    MemberParts(people.eva, Parts.parse("2")),
-                ),
-            ),
-            eur("1.50"),
-            quantity = 6,
-        ),
-        Item("Juice", Split.Equal(listOf(people.eva)), eur("3.00")),
-    )
-
-/** The first three expenses: equally, by percentage, and by parts. */
-internal fun dividedExpenses(
-    people: People,
-    categories: Categories,
-): List<Expense> =
-    listOf(
-        Expense(
-            Cost.Local(eur("10.00")),
-            october(1),
-            "Groceries",
-            Split.Equal(listOf(people.ana)),
-            ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol))),
-            category = categories.food,
-        ),
-        Expense(
-            Cost.Local(eur("800.00")),
-            october(1),
-            "Apartment",
-            Split.Equal(listOf(people.ana)),
-            ExpenseSplit.Whole(
-                Split.Percentages(
-                    listOf(
-                        MemberPercentage(people.ana, Percentage.parse("25")),
-                        MemberPercentage(people.bob, Percentage.parse("25")),
-                        MemberPercentage(people.carol, Percentage.parse("35")),
-                        MemberPercentage(people.dan, Percentage.parse("15")),
-                    ),
-                ),
-            ),
-            category = categories.lodging,
-        ),
-        Expense(
-            Cost.Local(eur("90.00")),
-            october(2),
-            "Seafood dinner",
-            Split.Equal(listOf(people.carol)),
-            ExpenseSplit.Whole(
-                Split.Parts(
-                    listOf(
-                        MemberParts(people.ana, Parts.parse("1")),
-                        MemberParts(people.bob, Parts.parse("1")),
-                        MemberParts(people.carol, Parts.parse("1")),
-                        MemberParts(people.dan, Parts.parse("1")),
-                        MemberParts(people.eva, Parts.parse("0.5")),
-                    ),
-                ),
-            ),
-            category = categories.food,
-        ),
-    )
-
-/** The last four expenses: by exact amounts, with two payers, item by item, and with a tip. */
-internal fun paidExpenses(
-    people: People,
-    categories: Categories,
-): List<Expense> =
-    listOf(
-        Expense(
-            Cost.Local(eur("88.50")),
-            october(3),
-            "Train to Porto",
-            Split.Equal(listOf(people.bob)),
-            ExpenseSplit.Whole(
-                Split.Amounts(
-                    listOf(
-                        MemberAmount(eur("24.50"), people.ana),
-                        MemberAmount(eur("24.50"), people.bob),
-                        MemberAmount(eur("24.50"), people.carol),
-                        MemberAmount(eur("15.00"), people.eva),
-                    ),
-                ),
-            ),
-            category = categories.transport,
-        ),
-        Expense(
-            Cost.Local(eur("60.00")),
-            october(3),
-            "Museum",
-            Split.Equal(listOf(people.ana, people.bob)),
-            ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol, people.dan))),
-        ),
-        Expense(
-            Cost.Local(eur("54.00")),
-            october(4),
-            "Fado night",
-            Split.Amounts(listOf(MemberAmount(eur("39.40"), people.carol), MemberAmount(eur("20.00"), people.dan))),
-            ExpenseSplit.Itemised(fadoItems(people)),
-            category = categories.food,
-            description = "Tasca do Chico",
-            time = TimeOfDay.of(hour = 22, minute = 15),
-            tip = Tip(TipValue.Percentage(Percentage.parse("10"))),
-        ),
-        Expense(
-            Cost.Local(eur("45.00")),
-            october(5),
-            "Tuk-tuk tour",
-            Split.Equal(listOf(people.dan)),
-            ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol, people.dan, people.eva))),
-            category = categories.transport,
-            tip = Tip(TipValue.Fixed(eur("5.00")), TipDistribution.EQUAL),
-        ),
-    )
 
 /** The consumption of [member] in the expense [id]. */
 internal fun consumed(
@@ -262,20 +175,29 @@ internal fun printFado(
     println("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.")
 }
 
+/** Adds one expense for every way of dividing one. */
+private fun addExpenses(
+    group: Group,
+    people: People,
+    categories: Categories,
+): Expenses {
+    val groceries = group.addBlocking(groceriesEqually(people, categories))
+    val apartment = group.addBlocking(apartmentByPercentage(people, categories))
+    val seafood = group.addBlocking(seafoodByParts(people, categories))
+    val train = group.addBlocking(trainByAmounts(people, categories))
+    val museum = group.addBlocking(museumWithTwoPayers(people))
+    val fado = group.addBlocking(fadoItemByItem(people, categories))
+    val tour = group.addBlocking(tourWithATip(people, categories))
+    return Expenses(apartment, fado, groceries, museum, seafood, tour, train)
+}
+
 internal fun expenses(
     group: Group,
     people: People,
     categories: Categories,
 ): ExpenseId {
     section("4. Expenses, one for every way of dividing")
-    val ids = (dividedExpenses(people, categories) + paidExpenses(people, categories)).map { expense -> group.addBlocking(expense) }
-    val groceries = ids[0]
-    val apartment = ids[1]
-    val seafood = ids[2]
-    val train = ids[3]
-    val museum = ids[4]
-    val fado = ids[5]
-    val tour = ids[6]
+    val expenses = addExpenses(group, people, categories)
     println(
         """
         Seven expenses cover every way of dividing one: equally, by percentage, by parts
@@ -283,29 +205,32 @@ internal fun expenses(
         tip. Every member's consumption adds up to the expense's total, to the cent:
         """.trimIndent(),
     )
-    printShares(group, ids)
-    val fadoExpense = checkNotNull(group.expenseBlocking(fado)) { "the fado night was added" }
+    printShares(
+        group,
+        listOf(expenses.groceries, expenses.apartment, expenses.seafood, expenses.train, expenses.museum, expenses.fado, expenses.tour),
+    )
+    val fadoExpense = checkNotNull(group.expenseBlocking(expenses.fado)) { "the fado night was added" }
     printFado(group, fadoExpense)
 
-    val thirds = listOf(people.ana, people.bob, people.carol).mapNotNull { member -> consumed(group, groceries, member)?.minorUnits }
+    val thirds = listOf(people.ana, people.bob, people.carol).mapNotNull { member -> consumed(group, expenses.groceries, member)?.minorUnits }
     check(listOf(333L, 333L, 334L) == thirds.sorted())
-    check(eur("280.00") == consumed(group, apartment, people.carol))
-    check(eur("10.00") == consumed(group, seafood, people.eva))
-    check(eur("15.00") == consumed(group, train, people.eva))
+    check(eur("280.00") == consumed(group, expenses.apartment, people.carol))
+    check(eur("10.00") == consumed(group, expenses.seafood, people.eva))
+    check(eur("15.00") == consumed(group, expenses.train, people.eva))
     check(
         eur("30.00") ==
             group
-                .expenseSharesBlocking(museum)
+                .expenseSharesBlocking(expenses.museum)
                 ?.members
                 ?.firstOrNull { share -> share.member == people.bob }
                 ?.paid,
     )
-    check(eur("15.00") == consumed(group, museum, people.dan))
-    check(4 == group.expenseBlocking(museum)?.members()?.size)
+    check(eur("15.00") == consumed(group, expenses.museum, people.dan))
+    check(4 == group.expenseBlocking(expenses.museum)?.members()?.size)
     check(eur("59.40") == fadoExpense.total())
     check(eur("5.40") == fadoExpense.tipAmount())
-    check(eur("21.45") == consumed(group, fado, people.carol))
-    check(eur("6.60") == consumed(group, fado, people.eva))
-    check(eur("10.00") == consumed(group, tour, people.eva))
-    return seafood
+    check(eur("21.45") == consumed(group, expenses.fado, people.carol))
+    check(eur("6.60") == consumed(group, expenses.fado, people.eva))
+    check(eur("10.00") == consumed(group, expenses.tour, people.eva))
+    return expenses.seafood
 }

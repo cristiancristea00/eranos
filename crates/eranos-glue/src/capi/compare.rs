@@ -19,9 +19,14 @@ use crate::docs::paragraphs;
 enum Piece {
     /// A group's closing delimiter.
     Close,
-    /// A run of documentation attributes, inner when `true`: the texts of
-    /// its attributes, until [`normalised`] turns them into paragraphs.
-    Docs(bool, Vec<String>),
+    /// A run of documentation attributes.
+    Docs {
+        /// Whether its attributes are inner ones, `#![doc = …]`.
+        inner: bool,
+        /// The texts of its attributes, until [`normalised`] turns them
+        /// into paragraphs.
+        texts: Vec<String>,
+    },
     /// A group's opening delimiter.
     Open(Delimiter),
     /// Any other token, as it prints.
@@ -44,7 +49,7 @@ fn normalised(tokens: TokenStream) -> Vec<Piece> {
     let mut pieces = Vec::new();
     walk(tokens, &mut pieces);
     for piece in &mut pieces {
-        if let Piece::Docs(_, texts) = piece {
+        if let Piece::Docs { texts, .. } = piece {
             *texts = paragraphs(texts)
                 .iter()
                 .map(|paragraph| paragraph.split_whitespace().collect::<Vec<_>>().join(" "))
@@ -69,12 +74,18 @@ fn walk(tokens: TokenStream, into: &mut Vec<Piece>) {
             if let Some(TokenTree::Group(group)) = trees.get(at)
                 && let Some(text) = doc_text(group)
             {
-                if let Some(Piece::Docs(was_inner, texts)) = into.last_mut()
+                if let Some(Piece::Docs {
+                    inner: was_inner,
+                    texts,
+                }) = into.last_mut()
                     && *was_inner == inner
                 {
                     texts.push(text);
                 } else {
-                    into.push(Piece::Docs(inner, vec![text]));
+                    into.push(Piece::Docs {
+                        inner,
+                        texts: vec![text],
+                    });
                 }
                 index = at + 1;
                 continue;

@@ -5,11 +5,13 @@ The port of the Rust example ``members_and_accounts``, which prints the same rep
 
 """
 
+import dataclasses
 from collections.abc import Callable
-from typing import assert_never
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
     Account,
+    Balance,
     CalendarDate,
     Currency,
     Email,
@@ -30,7 +32,88 @@ from eranos import (
     UsernameAccountDetails,
     WholeExpenseSplit,
 )
-from examples.report import print_lines, print_table, refusal, section, title, totals
+from examples.report import Row, print_lines, print_table, refusal, section, title, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class MemberRow(Row):
+    """A row of the table of members: a member's full name, contact details, and accounts."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Email', 'Phone', 'Accounts')
+
+    accounts: str
+    """The member's accounts, a line each."""
+
+    email: str
+    """The member's email, or nothing."""
+
+    name: str
+    """The member's full name."""
+
+    phone: str
+    """The member's phone number, grouped for reading, or nothing."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.email, self.phone, self.accounts
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CheckRow(Row):
+    """A row of the table of what validation accepts."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Input', 'Checked as', 'Result')
+
+    input: str
+    """The text checked."""
+
+    kind: str
+    """What the text is checked as, such as ``"IBAN"``."""
+
+    result: str
+    """The value as the library writes it, or the library's message."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.input, self.kind, self.result
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BalanceRow(Row):
+    """A row of the table of balances: whether a member is active, what they consumed, and where they stand."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Status', 'Consumed', 'Balance')
+
+    balance: Balance
+    """Where the member stands."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    name: str
+    """The member's first name."""
+
+    status: str
+    """Whether the member is active or archived."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.status, str(self.consumed), str(self.balance)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Flatmates:
+    """The two flatmates: Ana, who gives every detail, and Bob, who moves out."""
+
+    ana: MemberId
+    """Ana, who pays the rent."""
+
+    bob: MemberId
+    """Bob, who moves out."""
 
 
 def describe(account: Account) -> str:
@@ -54,9 +137,9 @@ def describe(account: Account) -> str:
     return f'{account.name}: {details}'
 
 
-def checked(text: str, kind: str, parse: Callable[[str], object]) -> tuple[str, str, str]:
+def checked(text: str, kind: str, parse: Callable[[str], object]) -> CheckRow:
     """
-    Check text as kind with parse: a row of the table of what validation accepts.
+    Check text as kind with parse.
 
     Args:
         text: The text to check.
@@ -64,15 +147,15 @@ def checked(text: str, kind: str, parse: Callable[[str], object]) -> tuple[str, 
         parse: What checks the text, such as ``Iban``.
 
     Returns:
-        The text, the kind, and ``valid:`` with the value as the library writes it, or ``refused:`` with the library's
-        message.
+        The row of the table of what validation accepts, whose result is ``valid:`` with the value as the library writes
+        it, or ``refused:`` with the library's message.
 
     """
     try:
         value = parse(text)
     except EranosError as error:
-        return text, kind, f'refused: {error}'
-    return text, kind, f'valid: {value}'
+        return CheckRow(input=text, kind=kind, result=f'refused: {error}')
+    return CheckRow(input=text, kind=kind, result=f'valid: {value}')
 
 
 def print_members(group: Group) -> None:
@@ -84,13 +167,13 @@ def print_members(group: Group) -> None:
 
     """
     print_table(
-        ('Member', 'Email', 'Phone', 'Accounts'),
+        MemberRow,
         [
-            (
-                ' '.join(name for name in (member.first_name, member.last_name) if name is not None),
-                '' if member.email is None else str(member.email),
-                '' if member.phone is None else member.phone.international(),
-                '\n'.join(describe(account) for account in member.accounts),
+            MemberRow(
+                accounts='\n'.join(describe(account) for account in member.accounts),
+                email='' if member.email is None else str(member.email),
+                name=' '.join(name for name in (member.first_name, member.last_name) if name is not None),
+                phone='' if member.phone is None else member.phone.international(),
             )
             for member in group.members()
         ],
@@ -108,9 +191,14 @@ def print_balances(group: Group) -> None:
     """
     summary = group.summary()
     print_table(
-        ('Member', 'Status', 'Consumed', 'Balance'),
+        BalanceRow,
         [
-            (member.first_name, 'archived' if group.is_archived(member.id) else 'active', str(found.share), str(found.balance))
+            BalanceRow(
+                balance=found.balance,
+                consumed=found.share,
+                name=member.first_name,
+                status='archived' if group.is_archived(member.id) else 'active',
+            )
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],
@@ -118,7 +206,7 @@ def print_balances(group: Group) -> None:
     )
 
 
-def members(group: Group) -> tuple[MemberId, MemberId]:
+def members(group: Group) -> Flatmates:
     """
     Add Ana, with every detail a member can have, and Bob, with a first name only, and print them.
 
@@ -126,7 +214,7 @@ def members(group: Group) -> tuple[MemberId, MemberId]:
         group: The group.
 
     Returns:
-        Ana's and Bob's identifiers.
+        The flatmates.
 
     """
     section('1. Members')
@@ -149,7 +237,7 @@ def members(group: Group) -> tuple[MemberId, MemberId]:
         'grouped for reading; the IBAN was stored in its electronic form, uppercase and',
         'without spaces, the way banking apps accept it.',
     )
-    return ana, bob
+    return Flatmates(ana=ana, bob=bob)
 
 
 def validation() -> None:
@@ -163,7 +251,7 @@ def validation() -> None:
         "phone numbers against their country's numbering plan, stored in E.164 form.",
     )
     print_table(
-        ('Input', 'Checked as', 'Result'),
+        CheckRow,
         [
             checked('ro49 aaaa 1b31 0075 9384 0000', 'IBAN', Iban),
             checked('RO49 AAAA 1B31 0075 9384 0001', 'IBAN', Iban),
@@ -181,17 +269,17 @@ def validation() -> None:
     )
 
 
-def moving_out(group: Group, ana: MemberId, bob: MemberId) -> None:
+def moving_out(group: Group, flatmates: Flatmates) -> None:
     """
     Archive Bob after he shares the rent, print the balances, and print what the group refuses of him.
 
     Args:
         group: The group.
-        ana: The member who pays the rent.
-        bob: The member who moves out.
+        flatmates: Ana, who pays the rent, and Bob, who moves out.
 
     """
     section('3. A flatmate moves out')
+    ana, bob = flatmates.ana, flatmates.bob
     euro = Currency('EUR')
     both = WholeExpenseSplit(EqualSplit((ana, bob)))
     rent = group.add_expense(
@@ -230,9 +318,9 @@ def main() -> None:
         'Ana and Bob share a flat. A member needs only a first name; the last name,',
         'email, phone, and the accounts they can be paid to are optional.',
     )
-    ana, bob = members(group)
+    flatmates = members(group)
     validation()
-    moving_out(group, ana, bob)
+    moving_out(group, flatmates)
 
 
 if __name__ == '__main__':

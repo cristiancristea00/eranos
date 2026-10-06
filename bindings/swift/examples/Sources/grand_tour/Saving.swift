@@ -3,6 +3,12 @@
 import Eranos
 import Report
 
+/// A change made to a saved group, and the text it leaves.
+struct Tampering {
+    let change: String
+    let text: String
+}
+
 /// What loading the saved form `text` refuses: the error the replay of its entries reports.
 func refusal(_ text: String) -> EranosError {
     do {
@@ -40,26 +46,24 @@ func savingAndLoading(_ group: Group, _ people: People, _ categories: Categories
         with into_group reports a refusal as a typed error instead of a message:
         """)
     let tampered = [
-        ("\"format\": 3", saved.replacing("\"format\": 2", with: "\"format\": 3", maxReplacements: 1)),
-        ("a blank group name", saved.replacing("\"name\": \"Lisbon and Porto\"", with: "\"name\": \" \"", maxReplacements: 1)),
-        ("Lodging renamed FOOD", saved.replacing("\"name\": \"Lodging\"", with: "\"name\": \"FOOD\"", maxReplacements: 1))
+        Tampering(change: "\"format\": 3", text: saved.replacing("\"format\": 2", with: "\"format\": 3", maxReplacements: 1)),
+        Tampering(change: "a blank group name", text: saved.replacing("\"name\": \"Lisbon and Porto\"", with: "\"name\": \" \"", maxReplacements: 1)),
+        Tampering(change: "Lodging renamed FOOD", text: saved.replacing("\"name\": \"Lodging\"", with: "\"name\": \"FOOD\"", maxReplacements: 1))
     ]
-    var rows: [[String]] = []
-    var errors: [EranosError] = []
-    for (change, text) in tampered {
-        precondition(text != saved, "\(change) changes the file")
-        let error = refusal(text)
-        rows.append([change, error.detail])
-        errors.append(error)
+    var rows: [LoadRow] = []
+    var failures: [GroupFailure] = []
+    for tampering in tampered {
+        precondition(tampering.text != saved, "\(tampering.change) changes the file")
+        let error = refusal(tampering.text)
+        rows.append(LoadRow(change: tampering.change, message: error.detail))
+        guard case let .group(failure, _) = error else {
+            preconditionFailure("the replay refuses \(tampering.change) with the group's failure")
+        }
+        failures.append(failure)
     }
-    printTable(["Change to the file", "Message"], rows, numbersFrom: 2)
+    printTable(rows, numbersFrom: 2)
 
     expect(saved, try loaded.save(), "the loaded group saves as the saved one")
     expect(try group.summary(), try loaded.summary(), "the loaded group's totals")
-    guard 3 == errors.count,
-          case .group(.unsupportedFormat(format: 3), _) = errors[0],
-          case .group(.emptyName, _) = errors[1],
-          case .group(.duplicateCategoryName(categories.food), _) = errors[2] else {
-        preconditionFailure("the replay refuses every change")
-    }
+    precondition([.unsupportedFormat(format: 3), .emptyName, .duplicateCategoryName(categories.food)] == failures, "the replay refuses every change")
 }

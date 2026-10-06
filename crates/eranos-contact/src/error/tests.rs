@@ -5,6 +5,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case {
+    error: ContactError,
+    held: String,
+    method: &'static str,
+}
+
 /// A [`ContactError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
@@ -38,20 +47,24 @@ impl FromContactError for ConvertedContactError {
 #[test]
 fn every_failure_of_contact_error_converts_through_the_method_of_its_variant() {
     let cases = [
-        (ContactError::InvalidEmail, "invalid_email", String::new()),
-        (
-            ContactError::InvalidPhoneNumber,
-            "invalid_phone_number",
-            String::new(),
-        ),
+        Case {
+            error: ContactError::InvalidEmail,
+            held: String::new(),
+            method: "invalid_email",
+        },
+        Case {
+            error: ContactError::InvalidPhoneNumber,
+            held: String::new(),
+            method: "invalid_phone_number",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedContactError::from_contact_error(error),
+            ConvertedContactError::from_contact_error(case.error),
             ConvertedContactError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }

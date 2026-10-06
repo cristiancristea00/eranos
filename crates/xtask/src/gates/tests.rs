@@ -13,28 +13,44 @@ const AGENTS: &str = include_str!("../../../../AGENTS.md");
 /// DEVELOPMENT.md, whose § 2 times the gates.
 const DEVELOPMENT: &str = include_str!("../../../../docs/DEVELOPMENT.md");
 
-/// Every document of the repository that could cite a gate by number, with
-/// its path.
-const DOCUMENTS: [(&str, &str); 7] = [
-    ("AGENTS.md", AGENTS),
-    ("README.md", include_str!("../../../../README.md")),
-    (
-        "docs/ARCHITECTURE.md",
-        include_str!("../../../../docs/ARCHITECTURE.md"),
-    ),
-    (
-        "docs/BINDINGS.md",
-        include_str!("../../../../docs/BINDINGS.md"),
-    ),
-    ("docs/DEVELOPMENT.md", DEVELOPMENT),
-    (
-        "docs/TESTING.md",
-        include_str!("../../../../docs/TESTING.md"),
-    ),
-    (
-        "docs/VERSIONING.md",
-        include_str!("../../../../docs/VERSIONING.md"),
-    ),
+/// A document of the repository that could cite a gate by number.
+struct Document {
+    /// Its path, from the workspace root.
+    path: &'static str,
+    /// Its text.
+    text: &'static str,
+}
+
+/// Every document of the repository that could cite a gate by number.
+const DOCUMENTS: [Document; 7] = [
+    Document {
+        path: "AGENTS.md",
+        text: AGENTS,
+    },
+    Document {
+        path: "README.md",
+        text: include_str!("../../../../README.md"),
+    },
+    Document {
+        path: "docs/ARCHITECTURE.md",
+        text: include_str!("../../../../docs/ARCHITECTURE.md"),
+    },
+    Document {
+        path: "docs/BINDINGS.md",
+        text: include_str!("../../../../docs/BINDINGS.md"),
+    },
+    Document {
+        path: "docs/DEVELOPMENT.md",
+        text: DEVELOPMENT,
+    },
+    Document {
+        path: "docs/TESTING.md",
+        text: include_str!("../../../../docs/TESTING.md"),
+    },
+    Document {
+        path: "docs/VERSIONING.md",
+        text: include_str!("../../../../docs/VERSIONING.md"),
+    },
 ];
 
 /// The command AGENTS.md lists for the gate that runs the examples.
@@ -81,10 +97,19 @@ fn cited_gates(text: &str) -> Vec<usize> {
         .collect()
 }
 
+/// The gates a row of DEVELOPMENT.md's timing table times.
+#[derive(Debug, PartialEq, Eq)]
+struct TimedGates {
+    /// The first.
+    first: usize,
+    /// The last.
+    last: usize,
+}
+
 /// The first and last gate of each row of the timing table in
 /// `development`, DEVELOPMENT.md, read from the row's first cell, such as
 /// `1–8, the Rust checks` or `11, the Swift package`.
-fn timed_gates(development: &str) -> Vec<(usize, usize)> {
+fn timed_gates(development: &str) -> Vec<TimedGates> {
     development
         .lines()
         .skip_while(|line| !line.starts_with("| Gates "))
@@ -93,7 +118,10 @@ fn timed_gates(development: &str) -> Vec<(usize, usize)> {
         .map(|line| {
             let (numbers, _) = line.trim_start_matches("| ").split_once(',').unwrap();
             let (first, last) = numbers.split_once('–').unwrap_or((numbers, numbers));
-            (first.parse().unwrap(), last.parse().unwrap())
+            TimedGates {
+                first: first.parse().unwrap(),
+                last: last.parse().unwrap(),
+            }
         })
         .collect()
 }
@@ -163,7 +191,7 @@ fn every_gate_the_documents_cite_by_number_is_the_one_they_mean() {
         .position(|command| EXAMPLES == command)
         .unwrap();
     let ports = documented.len();
-    for (path, text) in DOCUMENTS {
+    for Document { path, text } in DOCUMENTS {
         for number in cited_gates(text) {
             assert!(
                 [examples, ports].contains(&number),
@@ -172,7 +200,7 @@ fn every_gate_the_documents_cite_by_number_is_the_one_they_mean() {
         }
     }
     let mut next = 1;
-    for (first, last) in timed_gates(DEVELOPMENT) {
+    for TimedGates { first, last } in timed_gates(DEVELOPMENT) {
         assert_eq!(next, first, "the timing table skips or repeats gate {next}");
         next = last + 1;
     }
@@ -198,7 +226,10 @@ fn a_citation_is_the_word_gate_and_a_number() {
         timed_gates(
             "| Gates | Warm |\n| --- | ---: |\n| 1–3, the checks | 5 s |\n| 4, the lint | 2 s |\n\nafter"
         ),
-        [(1, 3), (4, 4)]
+        [
+            TimedGates { first: 1, last: 3 },
+            TimedGates { first: 4, last: 4 }
+        ]
     );
 }
 

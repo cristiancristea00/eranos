@@ -4,7 +4,20 @@
 import assert from 'node:assert/strict';
 
 import { type MemberId, type Summary, CalendarDate, Currency, Group, Money, Percentage, SettlementStrategy, formatBalance } from '../src/index.js';
-import { load, printLines, printTable, refusal, section, title, totals } from './report.js';
+import { type Columns, load, printLines, printTable, refusal, section, title, totals } from './report.js';
+
+/** A member's balance before saving and after loading, as the table of balances prints it. */
+interface ComparisonRow {
+    readonly after: string;
+    readonly before: string;
+    readonly name: string;
+}
+
+const comparisonColumns: Columns<ComparisonRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Balance before saving', text: (row) => row.before },
+    { header: 'Balance after loading', text: (row) => row.after },
+];
 
 /** The balance of `member` in `summary`, as the library writes it. */
 function balance(member: MemberId, summary: Summary): string {
@@ -62,8 +75,12 @@ printLines(
 const before = group.summarySync();
 const after = loaded.summarySync();
 printTable(
-    ['Member', 'Balance before saving', 'Balance after loading'],
-    [ana, bob].map((member) => [group.memberSync(member)?.firstName ?? '?', balance(member, before), balance(member, after)]),
+    comparisonColumns,
+    [ana, bob].map((member) => ({
+        after: balance(member, after),
+        before: balance(member, before),
+        name: group.memberSync(member)?.firstName ?? '?',
+    })),
     1,
 );
 const plan = loaded.settlementSync(SettlementStrategy.GREEDY);

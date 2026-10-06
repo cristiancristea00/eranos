@@ -17,6 +17,88 @@ typedef struct Counts {
     size_t minimum;
 } Counts;
 
+/// A row of the table of expenses: what was bought, who paid it, who shares it, and its amount.
+typedef struct ExpenseRow {
+    /// What it cost.
+    Line amount;
+    /// What was bought.
+    Line name;
+    /// Who shares it.
+    Line participants;
+    /// Who paid it.
+    Line payer;
+} ExpenseRow;
+
+/// A table of expenses, its columns from @p numbersFrom on aligned to the right.
+static Table *expenseTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Expense", "Paid by", "Shared by", "Amount"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of expenses, its cells in the order of the table's headers.
+static void addExpenseRow(Table *const table, ExpenseRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->payer, row->participants, row->amount});
+}
+
+/// A row of the table of balances: what a member paid and consumed, and their balance.
+typedef struct BalanceRow {
+    /// What is left: what they paid minus what they consumed.
+    Line balance;
+    /// What they consumed.
+    Line consumed;
+    /// Their first name.
+    Line name;
+    /// What they paid.
+    Line paid;
+} BalanceRow;
+
+/// A table of balances, its columns from @p numbersFrom on aligned to the right.
+static Table *balanceTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of balances, its cells in the order of the table's headers.
+static void addBalanceRow(Table *const table, BalanceRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->paid, row->consumed, row->balance});
+}
+
+/// A row of the table of payments: who pays whom, and how much.
+typedef struct PaymentRow {
+    /// How much is paid.
+    Line amount;
+    /// Who pays.
+    Line from;
+    /// Who is paid.
+    Line to;
+} PaymentRow;
+
+/// A table of payments, its columns from @p numbersFrom on aligned to the right.
+static Table *paymentTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"From", "To", "Amount"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of payments, its cells in the order of the table's headers.
+static void addPaymentRow(Table *const table, PaymentRow const *const row) { tableAdd(table, (Line const[]){row->from, row->to, row->amount}); }
+
+/// A row of the table of strategies: what a strategy guarantees, what it costs, and how many payments it plans here.
+typedef struct StrategyRow {
+    /// How long it takes.
+    Line cost;
+    /// What it promises.
+    Line guarantee;
+    /// How many payments it plans for the group.
+    Line payments;
+    /// Its name.
+    Line strategy;
+} StrategyRow;
+
+/// A table of strategies, its columns from @p numbersFrom on aligned to the right.
+static Table *strategyTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Strategy", "Guarantee", "Cost", "Payments here"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of strategies, its cells in the order of the table's headers.
+static void addStrategyRow(Table *const table, StrategyRow const *const row) {
+    tableAdd(table, (Line const[]){row->strategy, row->guarantee, row->cost, row->payments});
+}
+
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the amount, then the name, in the order the library's constructor reads them.
 static void spend(EranosGroup *const group, char const *const amount, char const *const name, Id const payer, Members const members) {
@@ -28,7 +110,7 @@ static void spend(EranosGroup *const group, char const *const amount, char const
 static void printExpenses(EranosGroup const *const group) {
     EranosExpenseList *expenses = nullptr;
     must(eranosGroupExpenses(group, &expenses));
-    Table *const table = tableCreate(4, (char const *const[]){"Expense", "Paid by", "Shared by", "Amount"}, 3);
+    Table *const table = expenseTable(3);
     EranosText *const name = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
@@ -38,7 +120,12 @@ static void printExpenses(EranosGroup const *const group) {
         Members const sharedBy = participants(expense);
         EranosMoney *total = nullptr;
         must(eranosExpenseTotal(expense, &total));
-        tableAdd(table, (Line const[]){textLine(name), names(group, &paidBy), names(group, &sharedBy), moneyLine(total)});
+        addExpenseRow(table, &(ExpenseRow){
+                                 .amount = moneyLine(total),
+                                 .name = textLine(name),
+                                 .participants = names(group, &sharedBy),
+                                 .payer = names(group, &paidBy),
+                             });
         eranosSplitDestroy(payers);
         eranosExpenseDestroy(expense);
     }
@@ -53,7 +140,7 @@ static void printBalances(EranosGroup const *const group) {
     must(eranosGroupSummary(group, &summary));
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, 1);
+    Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -61,12 +148,12 @@ static void printBalances(EranosGroup const *const group) {
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            moneyLine(eranosMemberSummaryPaid(found)),
-                            moneyLine(eranosMemberSummaryShare(found)),
-                            balanceLine(eranosMemberSummaryBalance(found)),
-                        });
+        addBalanceRow(table, &(BalanceRow){
+                                 .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                                 .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                                 .name = textLine(text),
+                                 .paid = moneyLine(eranosMemberSummaryPaid(found)),
+                             });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
     }
@@ -78,18 +165,18 @@ static void printBalances(EranosGroup const *const group) {
 
 /// Prints @p payments: who pays whom, and how much.
 static void printPayments(EranosGroup const *const group, EranosPaymentList const *const payments) {
-    Table *const table = tableCreate(3, (char const *const[]){"From", "To", "Amount"}, 2);
+    Table *const table = paymentTable(2);
     EranosText *const from = eranosTextCreate();
     EranosText *const to = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(payments) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(payments, index);
         eranosPaymentFrom(payment, from);
         eranosPaymentTo(payment, to);
-        tableAdd(table, (Line const[]){
-                            firstName(group, eranosTextData(from)),
-                            firstName(group, eranosTextData(to)),
-                            moneyLine(eranosPaymentAmount(payment)),
-                        });
+        addPaymentRow(table, &(PaymentRow){
+                                 .amount = moneyLine(eranosPaymentAmount(payment)),
+                                 .from = firstName(group, eranosTextData(from)),
+                                 .to = firstName(group, eranosTextData(to)),
+                             });
         eranosPaymentDestroy(payment);
     }
     eranosTextDestroy(to);
@@ -139,20 +226,25 @@ static Counts strategies(EranosGroup const *const group) {
         .greedy = eranosPaymentListLength(greedy),
         .minimum = eranosPaymentListLength(minimum),
     };
-    Table *const table = tableCreate(4, (char const *const[]){"Strategy", "Guarantee", "Cost", "Payments here"}, 3);
-    tableAdd(table, (Line const[]){
-                        lineOf("MinimumTransfers"),
-                        lineOf("the fewest payments"),
-                        lineOf("O(2ⁿ·n) for n open balances"),
-                        lineOf("%zu", counts.minimum),
-                    });
-    tableAdd(table, (Line const[]){lineOf("Greedy"), lineOf("at most n − 1 payments"), lineOf("O(n log n)"), lineOf("%zu", counts.greedy)});
-    tableAdd(table, (Line const[]){
-                        lineOf("Direct"),
-                        lineOf("one payment per pair in debt"),
-                        lineOf("O(pairs)"),
-                        lineOf("%zu", counts.direct),
-                    });
+    Table *const table = strategyTable(3);
+    addStrategyRow(table, &(StrategyRow){
+                              .cost = lineOf("O(2ⁿ·n) for n open balances"),
+                              .guarantee = lineOf("the fewest payments"),
+                              .payments = lineOf("%zu", counts.minimum),
+                              .strategy = lineOf("MinimumTransfers"),
+                          });
+    addStrategyRow(table, &(StrategyRow){
+                              .cost = lineOf("O(n log n)"),
+                              .guarantee = lineOf("at most n − 1 payments"),
+                              .payments = lineOf("%zu", counts.greedy),
+                              .strategy = lineOf("Greedy"),
+                          });
+    addStrategyRow(table, &(StrategyRow){
+                              .cost = lineOf("O(pairs)"),
+                              .guarantee = lineOf("one payment per pair in debt"),
+                              .payments = lineOf("%zu", counts.direct),
+                              .strategy = lineOf("Direct"),
+                          });
     tablePrint(table);
     eranosPaymentListDestroy(direct);
     eranosPaymentListDestroy(greedy);

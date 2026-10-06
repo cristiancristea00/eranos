@@ -5,6 +5,35 @@
 import Eranos
 import Report
 
+struct EntryRow: TableRow {
+    static let headers = ["Entry", "Paid by", "Entered as", "Rate", "In the group currency"]
+
+    let converted: Money
+    let name: String
+    let original: Money
+    let payer: String
+    let rate: ExchangeRate
+
+    var cells: [String] {
+        [name, payer, "\(original)", "\(rate)", "\(converted)"]
+    }
+}
+
+struct BalanceRow: TableRow {
+    static let headers = ["Member", "Paid", "Consumed", "Sent", "Received", "Balance"]
+
+    let balance: Balance
+    let consumed: Money
+    let name: String
+    let paid: Money
+    let received: Money
+    let sent: Money
+
+    var cells: [String] {
+        [name, "\(paid)", "\(consumed)", "\(sent)", "\(received)", "\(balance)"]
+    }
+}
+
 let euro = try Currency(code: "EUR")
 let forint = try Currency(code: "HUF")
 let leu = try Currency(code: "RON")
@@ -18,24 +47,24 @@ func name(_ group: Group, _ member: Member.ID) throws(EranosError) -> String {
 func printEntries(_ group: Group) throws(EranosError) {
     let zero = Money(currency: try group.currency(), minorUnits: 0)
     let expenses = try group.expenses().map { expense throws(EranosError) in
-        [
-            expense.name,
-            try names(group, expense.payers.members),
-            "\(try expense.total())",
-            "\(try rate(of: expense.cost))",
-            "\(try expense.id.flatMap { id throws(EranosError) in try group.shares(of: id) }?.total ?? zero)"
-        ]
+        EntryRow(
+            converted: try expense.id.flatMap { id throws(EranosError) in try group.shares(of: id) }?.total ?? zero,
+            name: expense.name,
+            original: try expense.total(),
+            payer: try names(group, expense.payers.members),
+            rate: try rate(of: expense.cost)
+        )
     }
     let transfers = try group.transfers().map { transfer throws(EranosError) in
-        [
-            "Transfer to \(try name(group, transfer.to))",
-            try name(group, transfer.from),
-            "\(transfer.cost.amount)",
-            "\(try rate(of: transfer.cost))",
-            "\(try transfer.id.flatMap { id throws(EranosError) in try group.amount(of: id) } ?? zero)"
-        ]
+        EntryRow(
+            converted: try transfer.id.flatMap { id throws(EranosError) in try group.amount(of: id) } ?? zero,
+            name: "Transfer to \(try name(group, transfer.to))",
+            original: transfer.cost.amount,
+            payer: try name(group, transfer.from),
+            rate: try rate(of: transfer.cost)
+        )
     }
-    printTable(["Entry", "Paid by", "Entered as", "Rate", "In the group currency"], expenses + transfers, numbersFrom: 2)
+    printTable(expenses + transfers, numbersFrom: 2)
 }
 
 /// The rate `cost` was entered at: 1 for a cost in the group currency.
@@ -51,10 +80,16 @@ func rate(of cost: Cost) throws(EranosError) -> ExchangeRate {
 func printBalances(_ group: Group) throws(EranosError) {
     let summary = try group.summary()
     printTable(
-        ["Member", "Paid", "Consumed", "Sent", "Received", "Balance"],
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                [member.firstName, "\(totals.paid)", "\(totals.share)", "\(totals.sent)", "\(totals.received)", "\(totals.balance)"]
+                BalanceRow(
+                    balance: totals.balance,
+                    consumed: totals.share,
+                    name: member.firstName,
+                    paid: totals.paid,
+                    received: totals.received,
+                    sent: totals.sent
+                )
             }
         },
         numbersFrom: 1

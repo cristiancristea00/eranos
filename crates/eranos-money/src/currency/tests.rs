@@ -127,6 +127,12 @@ fn short_and_long_codes_are_rejected() {
     }
 }
 
+/// Currencies that share a number of decimal places.
+struct DecimalPlaces<'codes> {
+    codes: &'codes [&'static str],
+    places: u8,
+}
+
 /// Amounts would be entered, shown, or converted with the wrong number of
 /// decimals, or a pin bump would change a minor unit, and so the meaning of
 /// stored amounts, unnoticed.
@@ -139,7 +145,21 @@ fn decimal_places_follow_iso_4217() {
     let three = ["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"];
     let four = ["CLF", "UYW"];
     // No, three, and four decimals.
-    for (codes, places) in [(&none[..], 0), (&three[..], 3), (&four[..], 4)] {
+    let tables = [
+        DecimalPlaces {
+            codes: &none,
+            places: 0,
+        },
+        DecimalPlaces {
+            codes: &three,
+            places: 3,
+        },
+        DecimalPlaces {
+            codes: &four,
+            places: 4,
+        },
+    ];
+    for DecimalPlaces { codes, places } in tables {
         for code in codes {
             assert_eq!(
                 Currency::from_code(code).map(Currency::decimal_places),
@@ -214,17 +234,38 @@ fn debug_and_display_print_the_code() {
     assert_eq!(format!("{:?}", Some(Currency::BHD)), "Some(BHD)");
 }
 
+/// A currency and its ISO 4217 name.
+struct CurrencyName {
+    currency: Currency,
+    name: &'static str,
+}
+
 /// Currency pickers would show a name other than ISO 4217's, or with the
 /// space the SIX list has after "Comorian Franc".
 #[test]
 fn names_are_the_trimmed_iso_4217_names() {
     // A few names.
-    for (currency, name) in [
-        (Currency::EUR, "Euro"),
-        (Currency::GBP, "Pound Sterling"),
-        (Currency::USD, "US Dollar"),
-        (Currency::KMF, "Comorian Franc"),
-        (Currency::TOP, "Pa’anga"),
+    for CurrencyName { currency, name } in [
+        CurrencyName {
+            currency: Currency::EUR,
+            name: "Euro",
+        },
+        CurrencyName {
+            currency: Currency::GBP,
+            name: "Pound Sterling",
+        },
+        CurrencyName {
+            currency: Currency::USD,
+            name: "US Dollar",
+        },
+        CurrencyName {
+            currency: Currency::KMF,
+            name: "Comorian Franc",
+        },
+        CurrencyName {
+            currency: Currency::TOP,
+            name: "Pa’anga",
+        },
     ] {
         assert_eq!(currency.name(), name, "{currency}");
     }
@@ -238,16 +279,34 @@ fn names_are_the_trimmed_iso_4217_names() {
     }
 }
 
+/// A currency and its ISO 4217 number.
+struct CurrencyNumber {
+    currency: Currency,
+    number: u16,
+}
+
 /// Exports and bank formats that name currencies by number would name the
 /// wrong one.
 #[test]
 fn numeric_codes_are_the_iso_4217_numbers() {
     // A few numbers, including one ISO writes with leading zeros.
-    for (currency, number) in [
-        (Currency::EUR, 978),
-        (Currency::USD, 840),
-        (Currency::ALL, 8),
-        (Currency::JPY, 392),
+    for CurrencyNumber { currency, number } in [
+        CurrencyNumber {
+            currency: Currency::EUR,
+            number: 978,
+        },
+        CurrencyNumber {
+            currency: Currency::USD,
+            number: 840,
+        },
+        CurrencyNumber {
+            currency: Currency::ALL,
+            number: 8,
+        },
+        CurrencyNumber {
+            currency: Currency::JPY,
+            number: 392,
+        },
     ] {
         assert_eq!(currency.numeric_code(), number, "{currency}");
     }

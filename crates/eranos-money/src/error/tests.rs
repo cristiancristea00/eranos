@@ -5,6 +5,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case {
+    error: MoneyError,
+    held: String,
+    method: &'static str,
+}
+
 /// A [`MoneyError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
@@ -90,42 +99,54 @@ fn every_failure_of_money_error_converts_through_the_method_of_its_variant() {
     let allowed = 4;
     let currency = Currency::EUR;
     let cases = [
-        (
-            MoneyError::CurrencyMismatch { left, right },
-            "currency_mismatch",
-            format!("{left} {right}"),
-        ),
-        (MoneyError::InvalidAmount, "invalid_amount", String::new()),
-        (
-            MoneyError::InvalidExchangeRate,
-            "invalid_exchange_rate",
-            String::new(),
-        ),
-        (MoneyError::InvalidParts, "invalid_parts", String::new()),
-        (
-            MoneyError::InvalidPercentage,
-            "invalid_percentage",
-            String::new(),
-        ),
-        (MoneyError::Overflow, "overflow", String::new()),
-        (
-            MoneyError::TooManyDecimals { allowed, currency },
-            "too_many_decimals",
-            format!("{allowed} {currency}"),
-        ),
-        (
-            MoneyError::UnknownCurrency,
-            "unknown_currency",
-            String::new(),
-        ),
+        Case {
+            error: MoneyError::CurrencyMismatch { left, right },
+            held: format!("{left} {right}"),
+            method: "currency_mismatch",
+        },
+        Case {
+            error: MoneyError::InvalidAmount,
+            held: String::new(),
+            method: "invalid_amount",
+        },
+        Case {
+            error: MoneyError::InvalidExchangeRate,
+            held: String::new(),
+            method: "invalid_exchange_rate",
+        },
+        Case {
+            error: MoneyError::InvalidParts,
+            held: String::new(),
+            method: "invalid_parts",
+        },
+        Case {
+            error: MoneyError::InvalidPercentage,
+            held: String::new(),
+            method: "invalid_percentage",
+        },
+        Case {
+            error: MoneyError::Overflow,
+            held: String::new(),
+            method: "overflow",
+        },
+        Case {
+            error: MoneyError::TooManyDecimals { allowed, currency },
+            held: format!("{allowed} {currency}"),
+            method: "too_many_decimals",
+        },
+        Case {
+            error: MoneyError::UnknownCurrency,
+            held: String::new(),
+            method: "unknown_currency",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedMoneyError::from_money_error(&error),
+            ConvertedMoneyError::from_money_error(&case.error),
             ConvertedMoneyError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }

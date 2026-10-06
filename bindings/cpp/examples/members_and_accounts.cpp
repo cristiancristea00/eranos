@@ -26,6 +26,64 @@ struct Flatmates final {
     MemberId bob;
 };
 
+/// A row of the table of members: a member's name, contact details, and accounts.
+struct MemberRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
+
+    /// Their accounts, one per line.
+    std::string accounts;
+    /// Their email, or nothing.
+    std::string email;
+    /// Their first and last name.
+    std::string name;
+    /// Their phone number, or nothing.
+    std::string phone;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<4> cells() const noexcept { return {name, email, phone, accounts}; }
+};
+
+/// A row of the table of checks: a text, what it was checked as, and what validation made of it.
+struct CheckRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<3> HEADERS{"Input", "Checked as", "Result"};
+
+    /// The text checked.
+    std::string_view input;
+    /// What it was checked as.
+    std::string_view kind;
+    /// The value it makes, or its refusal.
+    std::string result;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<3> cells() const noexcept { return {input, kind, result}; }
+};
+
+/// A row of the table of balances: whether a member is active, what they consumed, and their balance.
+struct BalanceRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<4> HEADERS{"Member", "Status", "Consumed", "Balance"};
+
+    /// What is left: what they paid minus what they consumed.
+    std::string balance;
+    /// What they consumed.
+    std::string consumed;
+    /// Their first name.
+    std::string name;
+    /// Whether they are active or archived.
+    std::string_view status;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<4> cells() const noexcept { return {name, status, consumed, balance}; }
+};
+
 /// An account with its label and its details.
 [[nodiscard]] std::string describe(Account const &account) {
     auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
@@ -33,16 +91,21 @@ struct Flatmates final {
                        (nullptr == iban ? std::get<UsernameAccountDetails>(account.details).username.toString() : iban->iban.toString()));
 }
 
-/// "valid: " and what @p shown writes of the value @p parse makes of @p input, or "refused: " and the library's message.
+/// The row of @p input, checked as @p kind: "valid: " and what @p shown writes of the value @p parse makes of it, or
+/// "refused: " and the library's message.
 template <typename Parse, typename Shown>
-[[nodiscard]] std::vector<std::string> validated(std::string const &input, std::string const &kind, Parse const &parse, Shown const &shown) {
+[[nodiscard]] CheckRow validated(std::string_view const input, std::string_view const kind, Parse const &parse, Shown const &shown) {
     auto const parsed = parse(input);
-    return {input, kind, parsed.has_value() ? std::format("valid: {}", shown(*parsed)) : std::format("refused: {}", parsed.error().message())};
+    return {
+        .input = input,
+        .kind = kind,
+        .result = parsed.has_value() ? std::format("valid: {}", shown(*parsed)) : std::format("refused: {}", parsed.error().message()),
+    };
 }
 
 /// Prints every member of @p group with their contact and account details.
 void printMembers(Group const &group) {
-    Rows rows;
+    std::vector<MemberRow> rows;
     for (auto const &member : group.members()) {
         std::vector<std::string> accounts;
         accounts.reserve(member.accounts.size());
@@ -50,25 +113,29 @@ void printMembers(Group const &group) {
             accounts.push_back(describe(account));
         }
         rows.push_back({
-            member.lastName.has_value() ? std::format("{} {}", member.firstName, *member.lastName) : member.firstName,
-            member.email.has_value() ? member.email->toString() : "",
-            member.phone.has_value() ? member.phone->international() : "",
-            cell(accounts),
+            .accounts = cell(accounts),
+            .email = member.email.has_value() ? member.email->toString() : "",
+            .name = member.lastName.has_value() ? std::format("{} {}", member.firstName, *member.lastName) : member.firstName,
+            .phone = member.phone.has_value() ? member.phone->international() : "",
         });
     }
-    printTable({"Member", "Email", "Phone", "Accounts"}, rows, 4);
+    printTable(rows, 4);
 }
 
 /// Prints whether each member of @p group is active or archived, what they consumed, and their balance.
 void printBalances(Group const &group) {
     auto const summary = group.summary();
-    Rows rows;
+    std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
-        rows.push_back(
-            {member.firstName, must(group.isArchived(member.id.value())) ? "archived" : "active", found.share.toString(), toString(found.balance)});
+        rows.push_back({
+            .balance = toString(found.balance),
+            .consumed = found.share.toString(),
+            .name = member.firstName,
+            .status = must(group.isArchived(member.id.value())) ? "archived" : "active",
+        });
     }
-    printTable({"Member", "Status", "Consumed", "Balance"}, rows, 2);
+    printTable(rows, 2);
 }
 
 /// Adds Ana, with every detail, and Bob, with a first name only, to @p group, and prints them.
@@ -99,34 +166,34 @@ void validation() {
               "any single mistyped character. Emails are checked against the rules of RFC 5321\n"
               "and 5322, which refuse the doubled dots and stray commas of hurried typing, and\n"
               "phone numbers against their country's numbering plan, stored in E.164 form.");
-    auto const iban = [](std::string const &input) {
+    auto const iban = [](std::string_view const input) {
         return validated(
-            input, "IBAN", [](std::string const &text) { return Iban::parse(text); }, [](Iban const &parsed) { return parsed.toString(); });
+            input, "IBAN", [](std::string_view const text) { return Iban::parse(text); }, [](Iban const &parsed) { return parsed.toString(); });
     };
-    auto const email = [](std::string const &input) {
+    auto const email = [](std::string_view const input) {
         return validated(
-            input, "email", [](std::string const &text) { return Email::parse(text); }, [](Email const &parsed) { return parsed.toString(); });
+            input, "email", [](std::string_view const text) { return Email::parse(text); }, [](Email const &parsed) { return parsed.toString(); });
     };
-    auto const phone = [](std::string const &input) {
+    auto const phone = [](std::string_view const input) {
         return validated(
-            input, "phone", [](std::string const &text) { return PhoneNumber::parse(text); },
+            input, "phone", [](std::string_view const text) { return PhoneNumber::parse(text); },
             [](PhoneNumber const &parsed) { return parsed.toString(); });
     };
-    printTable({"Input", "Checked as", "Result"},
-               {
-                   iban("ro49 aaaa 1b31 0075 9384 0000"),
-                   iban("RO49 AAAA 1B31 0075 9384 0001"),
-                   iban("RO49 AAAA 1B31 0075"),
-                   iban("DE46 37O4 0044 0532 0130 00"),
-                   email("ana@example.com"),
-                   email("ana.example.com"),
-                   email("ana..popescu@example.com"),
-                   phone("+40 (712) 345-678"),
-                   phone("0712 345 678"),
-                   phone("+40 612 345 678"),
-                   phone("+44 (0)20 7946 0958"),
-               },
-               3);
+    printTable<CheckRow>(
+        {
+            iban("ro49 aaaa 1b31 0075 9384 0000"),
+            iban("RO49 AAAA 1B31 0075 9384 0001"),
+            iban("RO49 AAAA 1B31 0075"),
+            iban("DE46 37O4 0044 0532 0130 00"),
+            email("ana@example.com"),
+            email("ana.example.com"),
+            email("ana..popescu@example.com"),
+            phone("+40 (712) 345-678"),
+            phone("0712 345 678"),
+            phone("+40 612 345 678"),
+            phone("+44 (0)20 7946 0958"),
+        },
+        3);
 }
 
 /// Adds the rent that Ana and Bob share, archives Bob, and shows what that allows and refuses.

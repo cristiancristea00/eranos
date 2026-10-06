@@ -30,13 +30,26 @@ fn person(name: &str) -> Member {
     Member::builder(name).build().unwrap()
 }
 
+/// A group with three members, and the members in creation order.
+struct Trip {
+    ana: MemberId,
+    bob: MemberId,
+    carol: MemberId,
+    group: Group,
+}
+
 /// A group with three members, in creation order.
-fn trip() -> (Group, MemberId, MemberId, MemberId) {
+fn trip() -> Trip {
     let mut group = Group::builder(Currency::EUR, "Trip").build().unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
     let bob = group.add_member(person("Bob")).unwrap();
     let carol = group.add_member(person("Carol")).unwrap();
-    (group, ana, bob, carol)
+    Trip {
+        ana,
+        bob,
+        carol,
+        group,
+    }
 }
 
 fn shared(amount: &str, payer: MemberId, participants: &[MemberId]) -> Expense {
@@ -143,7 +156,12 @@ fn a_new_group_starts_empty() {
 /// Group details change without touching entries or totals.
 #[test]
 fn details_change_in_place() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
@@ -168,7 +186,12 @@ fn details_change_in_place() {
 /// member's identifier, and the same member is added only once.
 #[test]
 fn members_are_added_replaced_and_listed_in_creation_order() {
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     let ids: Vec<MemberId> = group.members().map(Member::id).collect();
     assert_eq!(ids, vec![ana, bob, carol]);
     assert!(ana < bob && bob < carol);
@@ -203,7 +226,12 @@ fn members_are_added_replaced_and_listed_in_creation_order() {
 /// expenses, while transfers and replacements that keep them still work.
 #[test]
 fn an_archived_member_keeps_history_but_joins_no_new_expense() {
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     let dinner = group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
         .unwrap();
@@ -262,7 +290,12 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
 /// references them; an unreferenced one can.
 #[test]
 fn only_an_unreferenced_member_can_be_removed() {
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     let dinner = group
         .add_expense(shared("20.00", ana, &[ana, bob]))
         .unwrap();
@@ -304,7 +337,7 @@ fn only_an_unreferenced_member_can_be_removed() {
 /// keep that rule, and an unused category is removed.
 #[test]
 fn categories_keep_unique_names() {
-    let (mut group, ..) = trip();
+    let Trip { mut group, .. } = trip();
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
     let fuel = group.add_category(Category::new("Fuel").unwrap()).unwrap();
     assert_unchanged(
@@ -347,7 +380,7 @@ fn categories_keep_unique_names() {
 /// decomposed `Café`, as two categories that users see as one.
 #[test]
 fn category_names_compare_by_canonical_caseless_matching() {
-    let (mut group, ..) = trip();
+    let Trip { mut group, .. } = trip();
     let street = group
         .add_category(Category::new("Straße").unwrap())
         .unwrap();
@@ -368,7 +401,7 @@ fn category_names_compare_by_canonical_caseless_matching() {
 /// leaving expenses with a category the group does not have.
 #[test]
 fn the_built_in_category_stays() {
-    let (mut group, ..) = trip();
+    let Trip { mut group, .. } = trip();
     let built_in = group.category(CategoryId::UNCATEGORISED).unwrap().clone();
     assert_eq!(built_in.name(), "Uncategorised");
     assert_eq!(group.categories().len(), 1);
@@ -398,7 +431,12 @@ fn the_built_in_category_stays() {
 /// drop cached settlements that do not depend on categories.
 #[test]
 fn removing_a_category_moves_its_expenses_to_uncategorised() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     let food = group.add_category(Category::new("Food").unwrap()).unwrap();
     let lunch = Expense::builder(eur("20.00"), day(), "Lunch", ana, Split::equal([ana, bob]))
         .category(food)
@@ -443,7 +481,12 @@ fn removing_a_category_moves_its_expenses_to_uncategorised() {
 /// was.
 #[test]
 fn an_expense_must_fit_the_group() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     let stranger = MemberId::from_bytes([200; 16]);
     assert_unchanged(&mut group, &GroupError::UnknownMember(stranger), |group| {
         group.add_expense(shared("5.00", ana, &[ana, stranger]))
@@ -497,7 +540,12 @@ fn an_expense_must_fit_the_group() {
 /// the difference, and the incremental totals always equal a rebuild.
 #[test]
 fn expenses_move_the_totals_incrementally() {
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     let empty = group.ledger.clone();
     let hotel = group
         .add_expense(shared("90.00", ana, &[ana, bob, carol]))
@@ -554,7 +602,12 @@ fn expenses_move_the_totals_incrementally() {
 /// expenses, and are replaced and removed exactly.
 #[test]
 fn transfers_move_balances_exactly() {
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
         .unwrap();
@@ -617,7 +670,12 @@ fn transfers_move_balances_exactly() {
 /// do not touch balances keep it.
 #[test]
 fn settlements_are_cached_until_a_balance_changes() {
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
         .unwrap();
@@ -695,7 +753,12 @@ fn an_asynchronous_settlement_fills_the_cache_the_synchronous_call_reads() {
 /// missing or repeated rate changes nothing.
 #[test]
 fn a_currency_change_reconverts_every_entry() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     let local = group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
@@ -767,7 +830,12 @@ fn a_currency_change_reconverts_every_entry() {
 #[test]
 fn a_currency_change_changes_nothing_until_it_completes() {
     // 2 100 entries: the change yields after the 1 024th and the 2 048th.
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     for _ in 0..2_000 {
         group.add_expense(shared("1.00", ana, &[ana, bob])).unwrap();
     }
@@ -811,7 +879,12 @@ fn a_currency_change_changes_nothing_until_it_completes() {
 /// the group currency must not carry one, when it is added or replaced.
 #[test]
 fn a_transfer_cost_must_suit_the_group_currency() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     let lei = || {
         Transfer::builder(
             Money::parse("100.00", Currency::RON).unwrap(),
@@ -877,7 +950,12 @@ fn a_pegged_currency_needs_its_rate_even_at_par() {
 /// Groups compare by their details and entries, never by their caches.
 #[test]
 fn equality_ignores_the_caches() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
@@ -897,7 +975,12 @@ fn equality_ignores_the_caches() {
 /// range of an amount, is refused and leaves the group unchanged.
 #[test]
 fn an_overflowing_expense_is_refused() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     let huge = || {
         let amount = Money::from_minor_units(Currency::EUR, i64::MAX);
         Expense::builder(amount, day(), "Huge", ana, Split::equal([bob]))
@@ -926,7 +1009,7 @@ fn an_overflowing_expense_is_refused() {
 /// silent no-op that would hide a stale identifier.
 #[test]
 fn only_members_are_archived_or_unarchived() {
-    let (mut group, ..) = trip();
+    let Trip { mut group, .. } = trip();
     let stranger = MemberId::from_bytes([200; 16]);
     let unknown = GroupError::UnknownMember(stranger);
     assert_unchanged(&mut group, &unknown, |group| group.archive_member(stranger));
@@ -973,7 +1056,12 @@ fn doubled(group: &mut Group) -> Result<(), GroupError> {
 /// well as every expense, or that transfer could not be converted.
 #[test]
 fn a_currency_change_needs_a_rate_for_every_transfer_too() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group
         .add_expense(shared("10.00", ana, &[ana, bob]))
         .unwrap();
@@ -1010,7 +1098,12 @@ fn a_currency_change_needs_a_rate_for_every_transfer_too() {
 /// nothing.
 #[test]
 fn a_currency_change_converting_an_expense_out_of_range_changes_nothing() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group.add_expense(paid_for(cents(HUGE), ana, bob)).unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, doubled);
 }
@@ -1019,7 +1112,12 @@ fn a_currency_change_converting_an_expense_out_of_range_changes_nothing() {
 /// nothing.
 #[test]
 fn a_currency_change_converting_a_transfer_out_of_range_changes_nothing() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group.add_transfer(sent(ana, bob, cents(HUGE))).unwrap();
     assert_unchanged(&mut group, &GroupError::Overflow, doubled);
 }
@@ -1029,7 +1127,12 @@ fn a_currency_change_converting_a_transfer_out_of_range_changes_nothing() {
 #[test]
 fn a_currency_change_with_totals_out_of_range_changes_nothing() {
     // Each doubles to 8e18; together they are past i64::MAX.
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     for _ in 0..2 {
         group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     }
@@ -1040,7 +1143,12 @@ fn a_currency_change_with_totals_out_of_range_changes_nothing() {
 /// leaves the range, is refused and leaves the original in place.
 #[test]
 fn a_replacement_out_of_range_is_refused() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     let second = group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     // LARGE and HUGE together are past i64::MAX.
@@ -1062,7 +1170,12 @@ fn a_replacement_out_of_range_is_refused() {
 fn removing_an_expense_out_of_range_is_refused() {
     // Ana and Bob pay LARGE for each other and Bob sends Ana HUGE: without
     // Ana's payment for Bob, Ana would owe 1.3e19.
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group.add_expense(paid_for(cents(LARGE), bob, ana)).unwrap();
     let for_bob = group.add_expense(paid_for(cents(LARGE), ana, bob)).unwrap();
     group.add_transfer(sent(bob, ana, cents(HUGE))).unwrap();
@@ -1077,7 +1190,12 @@ fn removing_an_expense_out_of_range_is_refused() {
 fn removing_a_transfer_out_of_range_is_refused() {
     // Ana is owed HUGE and passes on to Carol what Bob paid her back:
     // without Bob's repayment, Ana would be owed 1e19.
-    let (mut group, ana, bob, carol) = trip();
+    let Trip {
+        ana,
+        bob,
+        carol,
+        mut group,
+    } = trip();
     group.add_expense(paid_for(cents(HUGE), ana, bob)).unwrap();
     let repayment = group.add_transfer(sent(bob, ana, cents(EXTRA))).unwrap();
     group.add_transfer(sent(ana, carol, cents(EXTRA))).unwrap();
@@ -1091,7 +1209,12 @@ fn removing_a_transfer_out_of_range_is_refused() {
 /// or with a stranger in it.
 #[test]
 fn a_transfer_out_of_range_is_refused() {
-    let (mut group, ana, bob, _) = trip();
+    let Trip {
+        ana,
+        bob,
+        mut group,
+        ..
+    } = trip();
     group.add_expense(paid_for(cents(HUGE), ana, bob)).unwrap();
     // Ana is owed HUGE; sending Bob EXTRA would put her past i64::MAX.
     assert_unchanged(&mut group, &GroupError::Overflow, |group| {
@@ -1121,13 +1244,21 @@ fn a_transfer_out_of_range_is_refused() {
     });
 }
 
+/// A participant drawn for a random expense: the position of the member,
+/// and their parts in hundredths.
+#[derive(Debug, Clone, Copy)]
+struct DrawnParts {
+    hundredths: u32,
+    member: usize,
+}
+
 /// Draws one change to apply to a five-member group.
 #[derive(Debug, Clone)]
 enum Operation {
     AddExpense {
         amount: i64,
         category: usize,
-        participants: Vec<(usize, u32)>,
+        participants: Vec<DrawnParts>,
         payer: usize,
     },
     AddTransfer {
@@ -1157,9 +1288,14 @@ enum Operation {
     },
 }
 
+/// Draws a participant of a random expense.
+fn drawn_parts() -> impl Strategy<Value = DrawnParts> {
+    (0_usize..5, 1_u32..400).prop_map(|(member, hundredths)| DrawnParts { hundredths, member })
+}
+
 fn operation() -> impl Strategy<Value = Operation> {
     prop_oneof![
-        4 => (1_i64..100_000, 0_usize..3, 0_usize..5, proptest::collection::vec((0_usize..5, 1_u32..400), 1..5))
+        4 => (1_i64..100_000, 0_usize..3, 0_usize..5, proptest::collection::vec(drawn_parts(), 1..5))
             .prop_map(|(amount, category, payer, participants)| Operation::AddExpense { amount, category, participants, payer }),
         2 => (0_usize..8, 1_i64..100_000, 0_usize..5)
             .prop_map(|(position, amount, payer)| Operation::ReplaceExpense { position, amount, payer }),
@@ -1193,11 +1329,12 @@ fn apply(
             payer,
         } => {
             let mut chosen: Vec<MemberParts> = Vec::new();
-            for (index, hundredths) in participants {
-                if chosen.iter().all(|share| share.member() != members[index]) {
+            for participant in participants {
+                let member = members[participant.member];
+                if chosen.iter().all(|share| share.member() != member) {
                     chosen.push(MemberParts::new(
-                        members[index],
-                        Parts::from_hundredths(hundredths).unwrap(),
+                        member,
+                        Parts::from_hundredths(participant.hundredths).unwrap(),
                     ));
                 }
             }

@@ -27,6 +27,7 @@ import eranos.Split;
 import eranos.Tip;
 import eranos.TipDistribution;
 import eranos.TipValue;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,54 @@ import java.util.Optional;
  */
 public final class Main {
     private Main() {}
+
+    /** A line of the receipt, a row of the receipt's table. */
+    private record LineRow(
+            Money lineTotal, String name, String participants, int quantity, Money unitPrice)
+            implements Row {
+        static final List<String> HEADERS =
+                List.of("Item", "Shared by", "Quantity", "Unit price", "Line total");
+
+        @Override
+        public List<String> cells() {
+            return List.of(
+                    name,
+                    participants,
+                    String.valueOf(quantity),
+                    unitPrice.toString(),
+                    lineTotal.toString());
+        }
+    }
+
+    /** What a member ordered and pays with each way of sharing the tip, a row of the tips. */
+    private record TipRow(
+            Money equalTip,
+            Money equalTotal,
+            String name,
+            Money proportionalTip,
+            Money proportionalTotal,
+            Money subtotal)
+            implements Row {
+        static final List<String> HEADERS =
+                List.of(
+                        "Member",
+                        "Ordered",
+                        "Tip by consumption",
+                        "Pays",
+                        "Tip shared equally",
+                        "Pays");
+
+        @Override
+        public List<String> cells() {
+            return List.of(
+                    name,
+                    subtotal.toString(),
+                    proportionalTip.toString(),
+                    proportionalTotal.toString(),
+                    equalTip.toString(),
+                    equalTotal.toString());
+        }
+    }
 
     /** The amount written {@code text}, in euros. */
     private static Money eur(String text) throws EranosException {
@@ -121,22 +170,21 @@ public final class Main {
                     """);
 
             section("1. The receipt");
-            List<List<String>> lines = new ArrayList<>();
+            List<LineRow> lines = new ArrayList<>();
             for (Item item : receipt(ana, bob, carol)) {
                 Money total =
                         new Money(
                                 item.unitPrice().currency(),
                                 item.unitPrice().minorUnits() * item.quantity());
                 lines.add(
-                        List.of(
+                        new LineRow(
+                                total,
                                 item.name(),
                                 names(group, item.split().members()),
-                                String.valueOf(item.quantity()),
-                                item.unitPrice().toString(),
-                                total.toString()));
+                                item.quantity(),
+                                item.unitPrice()));
             }
-            printTable(
-                    List.of("Item", "Shared by", "Quantity", "Unit price", "Line total"), lines, 2);
+            printTable(LineRow.HEADERS, lines, 2);
             System.out.print(
                     """
                     The papanași are split by parts: Carol ate two of the three. The line totals add up
@@ -168,30 +216,21 @@ public final class Main {
                                             .map(ExpenseShares::tip)
                                             .map(Money::toString)
                                             .orElse("?")));
-            List<List<String>> rows = new ArrayList<>();
+            List<TipRow> rows = new ArrayList<>();
             for (MemberId member : List.of(ana, bob, carol)) {
                 Money subtotal = consumed(ordered, member).orElseThrow();
                 Money proportionalTotal = consumed(byConsumption, member).orElseThrow();
                 Money equalTotal = consumed(even, member).orElseThrow();
                 rows.add(
-                        List.of(
+                        new TipRow(
+                                equalTotal.minus(subtotal),
+                                equalTotal,
                                 names(group, List.of(member)),
-                                subtotal.toString(),
-                                proportionalTotal.minus(subtotal).toString(),
-                                proportionalTotal.toString(),
-                                equalTotal.minus(subtotal).toString(),
-                                equalTotal.toString()));
+                                proportionalTotal.minus(subtotal),
+                                proportionalTotal,
+                                subtotal));
             }
-            printTable(
-                    List.of(
-                            "Member",
-                            "Ordered",
-                            "Tip by consumption",
-                            "Pays",
-                            "Tip shared equally",
-                            "Pays"),
-                    rows,
-                    1);
+            printTable(TipRow.HEADERS, rows, 1);
             System.out.print(
                     """
                     By consumption, Carol, who ordered the most, adds the largest part of the tip;

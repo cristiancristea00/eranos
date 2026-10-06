@@ -1,8 +1,9 @@
 """Print sections 8 to 11 of the tour: the summary, removing a category, a new group currency, and settling up."""
 
+import dataclasses
 import functools
-from collections.abc import Iterable, Sequence
-from typing import assert_never
+from collections.abc import Iterable
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
     CategoryId,
@@ -24,8 +25,65 @@ from eranos import (
     Summary,
     Transfer,
 )
-from examples.grand_tour.tour import Categories, People, built_in_category, eur, name, october, print_balances, print_categories, print_entries, ron
-from examples.report import message, print_lines, print_table, refusal, section, totals
+from examples.grand_tour.tour import (
+    Categories,
+    PaymentRow,
+    People,
+    built_in_category,
+    eur,
+    name,
+    october,
+    print_balances,
+    print_categories,
+    print_entries,
+    ron,
+)
+from examples.report import Row, message, print_lines, print_table, refusal, section, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class MemberCategoryRow(Row):
+    """A row of the table of each member's consumption per category."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Food', 'Lodging', 'Getting around', 'Uncategorised')
+
+    food: Money
+    """What the member consumed in Food."""
+
+    lodging: Money
+    """What the member consumed in Lodging."""
+
+    name: str
+    """The member's first name."""
+
+    transport: Money
+    """What the member consumed in Getting around, which the group added as Transport."""
+
+    uncategorised: Money
+    """What the member consumed in the built-in category."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, str(self.food), str(self.lodging), str(self.transport), str(self.uncategorised)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class StrategyRow(Row):
+    """A row of the table of the strategies: a strategy, and the number of payments of its plan."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Strategy', 'Payments')
+
+    payments: int
+    """The number of payments of the strategy's plan."""
+
+    strategy: str
+    """The strategy's name."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.strategy, str(self.payments)
 
 
 def _add_up(currency: Currency, amounts: Iterable[Money]) -> Money:
@@ -90,22 +148,29 @@ def _total(category_totals: Iterable[CategoryTotal], category: CategoryId) -> Mo
     return next((entry.total for entry in category_totals if entry.category == category), None)
 
 
-def _consumption_row(member: Member, summary: Summary, columns: Sequence[CategoryId], zero: Money) -> tuple[str, ...]:
+def _consumption_row(member: Member, summary: Summary, categories: Categories, built_in: CategoryId, zero: Money) -> MemberCategoryRow:
     """
     Write the row of member among the consumptions per category.
 
     Args:
         member: The member.
         summary: The group's summary.
-        columns: The categories, a column each.
+        categories: The categories the group adds.
+        built_in: The built-in category.
         zero: Zero in the group currency, for a category the member consumed nothing in.
 
     Returns:
-        The member's first name and what they consumed in each category.
+        The row: the member's first name and what they consumed in each category.
 
     """
     own = () if member.id is None else _by_category(summary, member.id)
-    return member.first_name, *(str(_total(own, category) or zero) for category in columns)
+    return MemberCategoryRow(
+        food=_total(own, categories.food) or zero,
+        lodging=_total(own, categories.lodging) or zero,
+        name=member.first_name,
+        transport=_total(own, categories.transport) or zero,
+        uncategorised=_total(own, built_in) or zero,
+    )
 
 
 def summary(group: Group, people: People, categories: Categories) -> None:
@@ -130,12 +195,7 @@ def summary(group: Group, people: People, categories: Categories) -> None:
     print_lines("And each member's consumption per category:")
     built_in = built_in_category(group)
     zero = Money(group.currency(), 0)
-    columns = (categories.food, categories.lodging, categories.transport, built_in)
-    print_table(
-        ('Member', 'Food', 'Lodging', 'Getting around', 'Uncategorised'),
-        [_consumption_row(member, summary, columns, zero) for member in group.members()],
-        1,
-    )
+    print_table(MemberCategoryRow, [_consumption_row(member, summary, categories, built_in, zero) for member in group.members()], 1)
 
     assert summary.total_spent == eur('1222.90')
     ana = _member_totals(summary, people.ana)
@@ -248,22 +308,22 @@ def settling_up(group: Group) -> None:
 
     """
     section('11. Settling up')
-    counts: list[tuple[str, str]] = []
+    counts: list[StrategyRow] = []
     for strategy in SettlementStrategy:
         settlement = group.settlement(strategy)
         assert settlement.strategy == strategy
-        counts.append((_strategy_name(settlement.strategy), str(len(settlement.payments))))
+        counts.append(StrategyRow(payments=len(settlement.payments), strategy=_strategy_name(settlement.strategy)))
     print_lines(
         'Each strategy turns the balances into payments: the direct one pays back every',
         "pair's own debts, greedy pays the largest amounts first, and the minimum one",
         'finds the fewest payments.',
     )
-    print_table(('Strategy', 'Payments'), counts, 1)
+    print_table(StrategyRow, counts, 1)
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
     print_lines('The group follows the minimum plan:')
     print_table(
-        ('From', 'To', 'Amount'),
-        [(name(group, payment.sender), name(group, payment.receiver), str(payment.amount)) for payment in plan.payments],
+        PaymentRow,
+        [PaymentRow(amount=payment.amount, from_=name(group, payment.sender), to=name(group, payment.receiver)) for payment in plan.payments],
         2,
     )
     for payment in plan.payments:

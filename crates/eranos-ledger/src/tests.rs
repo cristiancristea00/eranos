@@ -15,7 +15,7 @@ fn category(number: u8) -> CategoryId {
     CategoryId::from_bytes([number; 16])
 }
 
-fn eur(minor_units: i64) -> Money {
+const fn eur(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)
 }
 
@@ -24,27 +24,51 @@ const fn pair(from: MemberId, to: MemberId) -> MemberPair {
     MemberPair { from, to }
 }
 
+/// What one participant of an expense consumed, in minor units.
+#[derive(Debug, Clone, Copy)]
+struct Share {
+    amount: i64,
+    member: MemberId,
+}
+
+/// The share of `member`: `amount` minor units.
+const fn share(amount: i64, member: MemberId) -> Share {
+    Share { amount, member }
+}
+
+/// The key of `member`'s spending in `category`.
+const fn member_category(category: CategoryId, member: MemberId) -> MemberCategory {
+    MemberCategory { category, member }
+}
+
+/// The spending of `total` minor units in `category`.
+const fn category_total(category: CategoryId, total: i64) -> CategoryTotal {
+    CategoryTotal {
+        category,
+        total: eur(total),
+    }
+}
+
 /// An expense of `total` paid by `payer` and consumed by `participants`,
 /// with the payer owed every other share.
-fn expense(total: i64, payer: MemberId, participants: &[(MemberId, i64)]) -> ResolvedExpense {
-    let mut members: BTreeMap<MemberId, (i64, i64)> = BTreeMap::new();
-    members.entry(payer).or_default().0 = total;
-    for &(participant, share) in participants {
-        members.entry(participant).or_default().1 = share;
+fn expense(total: i64, payer: MemberId, participants: &[Share]) -> ResolvedExpense {
+    let mut members: BTreeMap<MemberId, MemberShare> = BTreeMap::new();
+    members.insert(payer, MemberShare::new(payer, eur(total), eur(0)));
+    for participant in participants {
+        members
+            .entry(participant.member)
+            .or_insert_with(|| MemberShare::new(participant.member, eur(0), eur(0)))
+            .share = eur(participant.amount);
     }
     let debts = participants
         .iter()
-        .filter(|&&(participant, _)| participant != payer)
-        .map(|&(debtor, amount)| Debt {
-            amount,
-            members: pair(debtor, payer),
+        .filter(|participant| participant.member != payer)
+        .map(|debtor| Debt {
+            amount: debtor.amount,
+            members: pair(debtor.member, payer),
         })
         .collect();
-    let members = members
-        .into_iter()
-        .map(|(member, (paid, share))| MemberShare::new(member, eur(paid), eur(share)))
-        .collect();
-    ResolvedExpense::new(debts, members, eur(0), eur(total))
+    ResolvedExpense::new(debts, members.into_values().collect(), eur(0), eur(total))
 }
 
 fn applied(ledger: &mut Ledger, change: impl FnOnce(&mut Delta)) -> Result<(), MoneyError> {
@@ -60,7 +84,7 @@ fn an_expense_moves_every_total_by_its_shares() {
     let (ana, bob) = (member(1), member(2));
     let food = category(1);
     let mut ledger = Ledger::new(Currency::EUR);
-    let dinner = expense(3000, ana, &[(ana, 1000), (bob, 2000)]);
+    let dinner = expense(3000, ana, &[share(1000, ana), share(2000, bob)]);
     applied(&mut ledger, |delta| delta.add_expense(&dinner, food, 1)).unwrap();
 
     let summary = ledger.summary();
@@ -84,14 +108,14 @@ fn an_expense_moves_every_total_by_its_shares() {
 fn removing_an_entry_restores_the_ledger_exactly() {
     let (ana, bob) = (member(1), member(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let first = expense(3000, ana, &[(ana, 1500), (bob, 1500)]);
+    let first = expense(3000, ana, &[share(1500, ana), share(1500, bob)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&first, CategoryId::UNCATEGORISED, 1);
     })
     .unwrap();
     let before = ledger.clone();
 
-    let second = expense(900, bob, &[(ana, 450), (bob, 450)]);
+    let second = expense(900, bob, &[share(450, ana), share(450, bob)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&second, category(2), 1);
     })
@@ -123,7 +147,7 @@ fn removing_an_entry_restores_the_ledger_exactly() {
 fn a_transfer_moves_balances_but_not_spending() {
     let (ana, bob) = (member(1), member(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let lunch = expense(2000, ana, &[(ana, 1000), (bob, 1000)]);
+    let lunch = expense(2000, ana, &[share(1000, ana), share(1000, bob)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&lunch, CategoryId::UNCATEGORISED, 1);
     })
@@ -149,8 +173,8 @@ fn a_transfer_moves_balances_but_not_spending() {
 fn moving_a_category_equals_filing_its_expenses_there_from_the_start() {
     let (ana, bob) = (member(1), member(2));
     let (food, fuel) = (category(1), category(2));
-    let lunch = expense(1000, ana, &[(ana, 500), (bob, 500)]);
-    let taxi = expense(600, bob, &[(ana, 600)]);
+    let lunch = expense(1000, ana, &[share(500, ana), share(500, bob)]);
+    let taxi = expense(600, bob, &[share(600, ana)]);
     let mut moved = Ledger::new(Currency::EUR);
     applied(&mut moved, |delta| {
         delta.add_expense(&lunch, food, 1);
@@ -180,6 +204,21 @@ fn member_pairs_order_by_the_first_member_then_the_second() {
     assert_eq!(pair(ana, bob).reversed(), pair(bob, ana));
 }
 
+/// A member's spending would be listed with gaps, or with another member's
+/// rows among it: the rows of one member must lie next to each other, in
+/// category order.
+#[test]
+fn member_category_keys_order_by_member_then_category() {
+    let (ana, bob) = (member(1), member(2));
+    let (food, fuel) = (category(1), category(2));
+    assert!(member_category(fuel, ana) < member_category(CategoryId::UNCATEGORISED, bob));
+    assert!(member_category(food, ana) < member_category(fuel, ana));
+    assert_eq!(
+        member_category(food, ana).cmp(&member_category(food, ana)),
+        Ordering::Equal
+    );
+}
+
 /// Pairs are keyed from the lower member whichever way the debt runs, so
 /// debts in both directions net against each other.
 #[test]
@@ -202,7 +241,7 @@ fn pair_debts_net_in_both_directions() {
 fn an_overflowing_change_is_refused_whole() {
     let (ana, bob) = (member(1), member(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    let big = expense(i64::MAX, ana, &[(bob, i64::MAX)]);
+    let big = expense(i64::MAX, ana, &[share(i64::MAX, bob)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&big, CategoryId::UNCATEGORISED, 1);
     })
@@ -210,7 +249,7 @@ fn an_overflowing_change_is_refused_whole() {
     let before = ledger.clone();
 
     // A second one would overflow the spending total.
-    let small = expense(1, bob, &[(ana, 1)]);
+    let small = expense(1, bob, &[share(1, ana)]);
     assert_eq!(
         applied(&mut ledger, |delta| delta.add_expense(
             &small,
@@ -247,15 +286,34 @@ fn an_overflowing_change_is_refused_whole() {
 fn every_value_is_range_checked() {
     let (ana, bob) = (member(1), member(2));
     let beyond = i128::from(i64::MAX) + 1;
-    // Paid, share, sent, received, and net in turn.
-    let mut deltas: Vec<Delta> = (0..5)
-        .map(|field| {
-            let mut change = [0; 5];
-            change[field] = beyond;
-            Delta {
-                members: BTreeMap::from([(ana, change)]),
-                ..Delta::default()
-            }
+    // Net, paid, received, sent, and share in turn.
+    let changes = [
+        TotalsChange {
+            net: beyond,
+            ..TotalsChange::default()
+        },
+        TotalsChange {
+            paid: beyond,
+            ..TotalsChange::default()
+        },
+        TotalsChange {
+            received: beyond,
+            ..TotalsChange::default()
+        },
+        TotalsChange {
+            sent: beyond,
+            ..TotalsChange::default()
+        },
+        TotalsChange {
+            share: beyond,
+            ..TotalsChange::default()
+        },
+    ];
+    let mut deltas: Vec<Delta> = changes
+        .into_iter()
+        .map(|change| Delta {
+            members: BTreeMap::from([(ana, change)]),
+            ..Delta::default()
         })
         .collect();
     deltas.extend([
@@ -268,7 +326,10 @@ fn every_value_is_range_checked() {
             ..Delta::default()
         },
         Delta {
-            member_categories: BTreeMap::from([((ana, CategoryId::UNCATEGORISED), beyond)]),
+            member_categories: BTreeMap::from([(
+                member_category(CategoryId::UNCATEGORISED, ana),
+                beyond,
+            )]),
             ..Delta::default()
         },
         Delta {
@@ -289,7 +350,7 @@ fn every_value_is_range_checked() {
 fn a_balance_reads_the_sign_of_the_net() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let mut ledger = Ledger::new(Currency::EUR);
-    let taxi = expense(1200, ana, &[(bob, 1200)]);
+    let taxi = expense(1200, ana, &[share(1200, bob)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&taxi, CategoryId::UNCATEGORISED, 1);
     })
@@ -317,39 +378,75 @@ fn member_category_totals_list_only_that_member() {
     let (ana, bob) = (member(1), member(2));
     let (food, fuel) = (category(1), category(2));
     let mut ledger = Ledger::new(Currency::EUR);
-    for (shares, category) in [
-        (expense(1000, ana, &[(ana, 500), (bob, 500)]), food),
-        (expense(600, bob, &[(ana, 600)]), fuel),
-        (expense(300, ana, &[(ana, 300)]), CategoryId::UNCATEGORISED),
-    ] {
-        applied(&mut ledger, |delta| delta.add_expense(&shares, category, 1)).unwrap();
-    }
+    let lunch = expense(1000, ana, &[share(500, ana), share(500, bob)]);
+    applied(&mut ledger, |delta| delta.add_expense(&lunch, food, 1)).unwrap();
+    let taxi = expense(600, bob, &[share(600, ana)]);
+    applied(&mut ledger, |delta| delta.add_expense(&taxi, fuel, 1)).unwrap();
+    let snack = expense(300, ana, &[share(300, ana)]);
+    applied(&mut ledger, |delta| {
+        delta.add_expense(&snack, CategoryId::UNCATEGORISED, 1);
+    })
+    .unwrap();
 
     let summary = ledger.summary();
-    let rows = |totals: &mut dyn Iterator<Item = CategoryTotal>| {
-        totals
-            .map(|total| (total.category(), total.total()))
-            .collect::<Vec<_>>()
-    };
-    let ana_rows = rows(&mut summary.member_category_totals(ana));
     assert_eq!(
-        ana_rows,
-        vec![
-            (CategoryId::UNCATEGORISED, eur(300)),
-            (food, eur(500)),
-            (fuel, eur(600))
+        summary.member_category_totals(ana).collect::<Vec<_>>(),
+        [
+            category_total(CategoryId::UNCATEGORISED, 300),
+            category_total(food, 500),
+            category_total(fuel, 600),
         ]
     );
-    let bob_rows = rows(&mut summary.member_category_totals(bob));
-    assert_eq!(bob_rows, vec![(food, eur(500))]);
     assert_eq!(
-        rows(&mut summary.category_totals()),
-        vec![
-            (CategoryId::UNCATEGORISED, eur(300)),
-            (food, eur(1000)),
-            (fuel, eur(600))
+        summary.member_category_totals(bob).collect::<Vec<_>>(),
+        [category_total(food, 500)]
+    );
+    assert_eq!(
+        summary.category_totals().collect::<Vec<_>>(),
+        [
+            category_total(CategoryId::UNCATEGORISED, 300),
+            category_total(food, 1000),
+            category_total(fuel, 600),
         ]
     );
+}
+
+/// A member whose rows lie between other members' would have their list cut
+/// short, or padded with a neighbour's rows.
+#[test]
+fn member_category_totals_list_a_member_between_others_whole() {
+    let (ana, bob, carol) = (member(1), member(2), member(3));
+    let (food, fuel) = (category(1), category(2));
+    let mut ledger = Ledger::new(Currency::EUR);
+    let everyone = [share(200, ana), share(200, bob), share(200, carol)];
+    applied(&mut ledger, |delta| {
+        delta.add_expense(&expense(600, ana, &everyone), CategoryId::UNCATEGORISED, 1);
+        delta.add_expense(&expense(400, bob, &[share(400, bob)]), food, 1);
+        delta.add_expense(&expense(600, carol, &everyone), fuel, 1);
+    })
+    .unwrap();
+
+    let summary = ledger.summary();
+    assert_eq!(
+        summary.member_category_totals(bob).collect::<Vec<_>>(),
+        [
+            category_total(CategoryId::UNCATEGORISED, 200),
+            category_total(food, 400),
+            category_total(fuel, 200),
+        ]
+    );
+    // The members before and after keep their own rows.
+    for neighbour in [ana, carol] {
+        assert_eq!(
+            summary
+                .member_category_totals(neighbour)
+                .collect::<Vec<_>>(),
+            [
+                category_total(CategoryId::UNCATEGORISED, 200),
+                category_total(fuel, 200),
+            ]
+        );
+    }
 }
 
 /// A member's share of one expense is found by member, and an uninvolved
@@ -357,7 +454,7 @@ fn member_category_totals_list_only_that_member() {
 #[test]
 fn expense_shares_look_up_members() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
-    let shares = expense(1000, ana, &[(ana, 400), (bob, 600)]).shares;
+    let shares = expense(1000, ana, &[share(400, ana), share(600, bob)]).shares;
     assert_eq!(shares.member(bob).map(MemberShare::share), Some(eur(600)));
     assert_eq!(shares.member(ana).map(MemberShare::paid), Some(eur(1000)));
     assert_eq!(shares.member(ana).map(MemberShare::member), Some(ana));
@@ -367,13 +464,20 @@ fn expense_shares_look_up_members() {
     assert_eq!(shares.members().len(), 2);
 }
 
+/// A member's net total as a screen listing everyone's totals shows it.
+#[derive(Debug, PartialEq, Eq)]
+struct MemberNet {
+    member: MemberId,
+    net: Money,
+}
+
 /// A screen listing everyone's totals would attribute them to the wrong
 /// member, or a looked-up member's totals would name someone else.
 #[test]
 fn a_member_summary_names_its_member() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let mut ledger = Ledger::new(Currency::EUR);
-    let shares = expense(1000, ana, &[(ana, 500), (bob, 500)]);
+    let shares = expense(1000, ana, &[share(500, ana), share(500, bob)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&shares, CategoryId::UNCATEGORISED, 1);
     })
@@ -383,9 +487,21 @@ fn a_member_summary_names_its_member() {
     assert_eq!(
         summary
             .members()
-            .map(|totals| (totals.member(), totals.net()))
+            .map(|totals| MemberNet {
+                member: totals.member(),
+                net: totals.net(),
+            })
             .collect::<Vec<_>>(),
-        vec![(ana, eur(500)), (bob, eur(-500))]
+        [
+            MemberNet {
+                member: ana,
+                net: eur(500),
+            },
+            MemberNet {
+                member: bob,
+                net: eur(-500),
+            },
+        ]
     );
     // One member looked up, with totals or without.
     assert_eq!(summary.member(bob).member(), bob);

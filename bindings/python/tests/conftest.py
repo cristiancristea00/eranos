@@ -31,26 +31,26 @@ from eranos import (
 class Flat:
     """A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them."""
 
-    euro: Currency
-    """The group currency."""
-
-    day: CalendarDate
-    """The day of every entry."""
-
-    group: Group
-    """The group."""
-
     ana: MemberId
     """Ana, who paid the dinner and received the repayment."""
 
     bob: MemberId
     """Bob, who shared the dinner and sent the repayment."""
 
-    food: CategoryId
-    """The food category, which the dinner is in."""
+    day: CalendarDate
+    """The day of every entry."""
 
     dinner: ExpenseId
     """The dinner of 30.00 EUR that Ana paid for the two of them."""
+
+    euro: Currency
+    """The group currency."""
+
+    food: CategoryId
+    """The food category, which the dinner is in."""
+
+    group: Group
+    """The group."""
 
     repayment: TransferId
     """The 10.00 EUR that Bob sent Ana."""
@@ -112,4 +112,4 @@ def flat() -> Iterator[Flat]:
             )
         )
         repayment = group.add_transfer(Transfer(cost=LocalCost(Money(euro, 1000)), date=day, receiver=ana, sender=bob))
-        yield Flat(euro=euro, day=day, group=group, ana=ana, bob=bob, food=food, dinner=dinner, repayment=repayment)
+        yield Flat(ana=ana, bob=bob, day=day, dinner=dinner, euro=euro, food=food, group=group, repayment=repayment)

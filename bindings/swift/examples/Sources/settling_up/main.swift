@@ -4,6 +4,64 @@
 import Eranos
 import Report
 
+struct ExpenseRow: TableRow {
+    static let headers = ["Expense", "Paid by", "Shared by", "Amount"]
+
+    let amount: Money
+    let name: String
+    let participants: String
+    let payer: String
+
+    var cells: [String] {
+        [name, payer, participants, "\(amount)"]
+    }
+}
+
+struct BalanceRow: TableRow {
+    static let headers = ["Member", "Paid", "Consumed", "Balance"]
+
+    let balance: Balance
+    let consumed: Money
+    let name: String
+    let paid: Money
+
+    var cells: [String] {
+        [name, "\(paid)", "\(consumed)", "\(balance)"]
+    }
+}
+
+struct PaymentRow: TableRow {
+    static let headers = ["From", "To", "Amount"]
+
+    let amount: Money
+    let from: String
+    let to: String
+
+    var cells: [String] {
+        [from, to, "\(amount)"]
+    }
+}
+
+struct StrategyRow: TableRow {
+    static let headers = ["Strategy", "Guarantee", "Cost", "Payments here"]
+
+    let cost: String
+    let guarantee: String
+    let payments: Int
+    let strategy: String
+
+    var cells: [String] {
+        [strategy, guarantee, cost, "\(payments)"]
+    }
+}
+
+/// The number of payments of each strategy's plan.
+struct Counts: Equatable {
+    let direct: Int
+    let greedy: Int
+    let minimum: Int
+}
+
 let euro = try Currency(code: "EUR")
 
 /// Records an expense of `amount` EUR paid by `payer` and split equally.
@@ -22,10 +80,9 @@ func spend(_ group: Group, _ name: String, _ amount: String, _ payer: Member.ID,
 func printBalances(_ group: Group) throws(EranosError) {
     let summary = try group.summary()
     printTable(
-        ["Member", "Paid", "Consumed", "Balance"],
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                [member.firstName, "\(totals.paid)", "\(totals.share)", "\(totals.balance)"]
+                BalanceRow(balance: totals.balance, consumed: totals.share, name: member.firstName, paid: totals.paid)
             }
         },
         numbersFrom: 1
@@ -34,17 +91,15 @@ func printBalances(_ group: Group) throws(EranosError) {
 
 func printPayments(_ group: Group, _ settlement: Settlement) throws(EranosError) {
     printTable(
-        ["From", "To", "Amount"],
         try settlement.payments.map { payment throws(EranosError) in
-            [try names(group, [payment.from]), try names(group, [payment.to]), "\(payment.amount)"]
+            PaymentRow(amount: payment.amount, from: try names(group, [payment.from]), to: try names(group, [payment.to]))
         },
         numbersFrom: 2
     )
 }
 
-/// Prints each strategy's plan with what it promises; returns the number of payments of each, in the order minimum,
-/// greedy, direct.
-func strategies(_ group: Group) throws(EranosError) -> [Int] {
+/// Prints each strategy's plan with what it promises; returns the number of payments of each.
+func strategies(_ group: Group) throws(EranosError) -> Counts {
     section("3. Minimum transfers")
     let minimum = try group.settlement(by: .minimumTransfers)
     print("""
@@ -75,15 +130,14 @@ func strategies(_ group: Group) throws(EranosError) -> [Int] {
 
     section("6. The strategies side by side")
     printTable(
-        ["Strategy", "Guarantee", "Cost", "Payments here"],
         [
-            ["MinimumTransfers", "the fewest payments", "O(2ⁿ·n) for n open balances", "\(minimum.payments.count)"],
-            ["Greedy", "at most n − 1 payments", "O(n log n)", "\(greedy.payments.count)"],
-            ["Direct", "one payment per pair in debt", "O(pairs)", "\(direct.payments.count)"]
+            StrategyRow(cost: "O(2ⁿ·n) for n open balances", guarantee: "the fewest payments", payments: minimum.payments.count, strategy: "MinimumTransfers"),
+            StrategyRow(cost: "O(n log n)", guarantee: "at most n − 1 payments", payments: greedy.payments.count, strategy: "Greedy"),
+            StrategyRow(cost: "O(pairs)", guarantee: "one payment per pair in debt", payments: direct.payments.count, strategy: "Direct")
         ],
         numbersFrom: 3
     )
-    return [minimum.payments.count, greedy.payments.count, direct.payments.count]
+    return Counts(direct: direct.payments.count, greedy: greedy.payments.count, minimum: minimum.payments.count)
 }
 
 func main() throws(EranosError) {
@@ -109,9 +163,13 @@ func main() throws(EranosError) {
     try spend(group, "Coffee", "2.00", ana, [dan, eva])
     try spend(group, "Snacks", "1.00", filip, [ana])
     printTable(
-        ["Expense", "Paid by", "Shared by", "Amount"],
         try group.expenses().map { expense throws(EranosError) in
-            [expense.name, try names(group, expense.payers.members), try names(group, participants(expense.split)), "\(try expense.total())"]
+            ExpenseRow(
+                amount: try expense.total(),
+                name: expense.name,
+                participants: try names(group, participants(expense.split)),
+                payer: try names(group, expense.payers.members)
+            )
         },
         numbersFrom: 3
     )
@@ -120,7 +178,7 @@ func main() throws(EranosError) {
     print("Four members are owed money and two owe it:")
     try printBalances(group)
 
-    let payments = try strategies(group)
+    let counts = try strategies(group)
 
     section("7. Settling up for real")
     let plan = try group.settlement(by: .minimumTransfers)
@@ -136,7 +194,7 @@ func main() throws(EranosError) {
 
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest amounts
     // first and needs five; the unsimplified debts between pairs need seven.
-    precondition([4, 5, 7] == payments)
+    precondition(Counts(direct: 7, greedy: 5, minimum: 4) == counts)
     let summary = try group.summary()
     for member in [ana, bob, carol, dan, eva, filip] {
         precondition(Balance.settled == totals(of: member, in: summary)?.balance)

@@ -1,6 +1,8 @@
 """Print section 13 of the tour: currencies, amounts, percentages, parts, rates, dates, times, identifiers, and language tags, on their own."""
 
 import copy
+import dataclasses
+from typing import ClassVar, final, override
 
 from eranos import (
     CalendarDate,
@@ -16,7 +18,49 @@ from eranos import (
     TimeOfDay,
 )
 from examples.grand_tour.tour import People, eur, ron
-from examples.report import message, print_lines, print_table, refusal, section
+from examples.report import Row, message, print_lines, print_table, refusal, section
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CurrencyRow(Row):
+    """A row of the table of currencies: what the library knows of a currency."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Code', 'Name', 'Numeric code', 'Decimal places')
+
+    code: str
+    """The ISO 4217 code."""
+
+    decimal_places: int
+    """The digits of the minor unit."""
+
+    name: str
+    """The currency's English name."""
+
+    numeric_code: int
+    """The ISO 4217 number."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.code, self.name, str(self.numeric_code), str(self.decimal_places)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ValueRow(Row):
+    """A row of a table of values: an input, and what the library makes of it."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Input', 'Result')
+
+    input: str
+    """What the library reads."""
+
+    result: str
+    """The value as the library writes it, or the library's message."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.input, self.result
 
 
 def _truth(value: bool) -> str:
@@ -42,8 +86,11 @@ def _currencies() -> None:
         f'refused ({message(unknown)}):',
     )
     print_table(
-        ('Code', 'Name', 'Numeric code', 'Decimal places'),
-        [(currency.code, currency.name, str(currency.numeric_code), str(currency.decimal_places)) for currency in listed],
+        CurrencyRow,
+        [
+            CurrencyRow(code=currency.code, decimal_places=currency.decimal_places, name=currency.name, numeric_code=currency.numeric_code)
+            for currency in listed
+        ],
         2,
     )
     assert Currency('BHD').decimal_places == 3
@@ -61,16 +108,16 @@ def _amounts() -> None:
     doubled = copy.replace(cost, amount=eur('20.00'))
     print_lines('Amounts are exact minor units in their currency:')
     print_table(
-        ('Input', 'Result'),
+        ValueRow,
         [
-            ('12.34 EUR + 0.66 EUR', str(total)),
-            ('5.00 EUR \N{MINUS SIGN} 7.50 EUR', f'{change}, negative: {_truth(change.minor_units < 0)}'),
-            ('1.00 EUR + 1.00 RON', message(mixed)),
-            ('1.005 EUR', message(refusal(lambda: eur('1.005')))),
-            ('1500 JPY', f'{yen}, {yen.minor_units} minor units'),
-            ('1234 minor units of BHD', str(dinars)),
-            ('zero RON', f'{nothing}, zero: {_truth(nothing.minor_units == 0)}'),
-            ('10.00 EUR at 4.9765', f'{cost.amount} at {cost.rate}, then {doubled.amount} at the same rate'),
+            ValueRow(input='12.34 EUR + 0.66 EUR', result=str(total)),
+            ValueRow(input='5.00 EUR \N{MINUS SIGN} 7.50 EUR', result=f'{change}, negative: {_truth(change.minor_units < 0)}'),
+            ValueRow(input='1.00 EUR + 1.00 RON', result=message(mixed)),
+            ValueRow(input='1.005 EUR', result=message(refusal(lambda: eur('1.005')))),
+            ValueRow(input='1500 JPY', result=f'{yen}, {yen.minor_units} minor units'),
+            ValueRow(input='1234 minor units of BHD', result=str(dinars)),
+            ValueRow(input='zero RON', result=f'{nothing}, zero: {_truth(nothing.minor_units == 0)}'),
+            ValueRow(input='10.00 EUR at 4.9765', result=f'{cost.amount} at {cost.rate}, then {doubled.amount} at the same rate'),
         ],
         2,
     )
@@ -87,17 +134,17 @@ def _ratios() -> None:
     rate = ExchangeRate('4.97650')
     print_lines('Percentages, parts, and rates are exact decimals:')
     print_table(
-        ('Input', 'Result'),
+        ValueRow,
         [
-            ('12.5%', f'{percentage}, {percentage.basis_points} basis points'),
-            ('333 basis points', str(Percentage(333))),
-            ('33.333%', message(refusal(lambda: Percentage.parse('33.333')))),
-            ('1.5 parts', f'{parts}, {parts.hundredths} hundredths'),
-            ('3 whole parts', str(Parts(300))),
-            ('25 hundredths of a part', str(Parts(25))),
-            ('0 parts', message(refusal(lambda: Parts.parse('0')))),
-            ('a rate of 4.97650', str(rate)),
-            ('a rate of 0', message(refusal(lambda: ExchangeRate('0')))),
+            ValueRow(input='12.5%', result=f'{percentage}, {percentage.basis_points} basis points'),
+            ValueRow(input='333 basis points', result=str(Percentage(333))),
+            ValueRow(input='33.333%', result=message(refusal(lambda: Percentage.parse('33.333')))),
+            ValueRow(input='1.5 parts', result=f'{parts}, {parts.hundredths} hundredths'),
+            ValueRow(input='3 whole parts', result=str(Parts(300))),
+            ValueRow(input='25 hundredths of a part', result=str(Parts(25))),
+            ValueRow(input='0 parts', result=message(refusal(lambda: Parts.parse('0')))),
+            ValueRow(input='a rate of 4.97650', result=str(rate)),
+            ValueRow(input='a rate of 0', result=message(refusal(lambda: ExchangeRate('0')))),
         ],
         2,
     )
@@ -124,21 +171,26 @@ def _dates_and_identifiers(group: Group, people: People) -> None:
     language = Language('pt-pt')
     print_lines('Dates, times, identifiers, and language tags read and print the ISO forms:')
     print_table(
-        ('Input', 'Result'),
+        ValueRow,
         [
-            ('2026-10-01', f'{date}: day {date.day}, month {date.month}, year {date.year}'),
-            ('29 February 2027', message(refusal(lambda: CalendarDate(29, 2, 2027)))),
-            ('22:15', f'{time}: hour {time.hour}, minute {time.minute}'),
-            ('24:00', message(refusal(lambda: TimeOfDay(24, 0)))),
-            ("Ana's identifier", f'{parsed}, the same after a round trip: {_truth(found is not None and found.id == people.ana)}'),
-            ('not-a-uuid', message(refusal(lambda: group.member(MemberId('not-a-uuid'))))),
-            ('pt-pt', str(language)),
-            ('pt_PT', message(refusal(lambda: Language('pt_PT')))),
+            ValueRow(input='2026-10-01', result=f'{date}: day {date.day}, month {date.month}, year {date.year}'),
+            ValueRow(input='29 February 2027', result=message(refusal(lambda: CalendarDate(29, 2, 2027)))),
+            ValueRow(input='22:15', result=f'{time}: hour {time.hour}, minute {time.minute}'),
+            ValueRow(input='24:00', result=message(refusal(lambda: TimeOfDay(24, 0)))),
+            ValueRow(
+                input="Ana's identifier", result=f'{parsed}, the same after a round trip: {_truth(found is not None and found.id == people.ana)}'
+            ),
+            ValueRow(input='not-a-uuid', result=message(refusal(lambda: group.member(MemberId('not-a-uuid'))))),
+            ValueRow(input='pt-pt', result=str(language)),
+            ValueRow(input='pt_PT', result=message(refusal(lambda: Language('pt_PT')))),
         ],
         2,
     )
-    assert (date.day, date.month, date.year) == (1, 10, 2026)
-    assert (time.hour, time.minute) == (22, 15)
+    assert date.day == 1
+    assert date.month == 10
+    assert date.year == 2026
+    assert time.hour == 22
+    assert time.minute == 15
     assert parsed == people.ana
 
 

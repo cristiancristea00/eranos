@@ -123,7 +123,7 @@ fn every_entry_the_doctor_names_is_one_of_brewfile_develop() {
             Source::Elsewhere(_) => None,
         })
         .collect();
-    entries.extend(INSTALLED.iter().map(|(_, entry)| *entry));
+    entries.extend(INSTALLED.iter().map(|installed| installed.entry));
     entries.extend(DIRECTORIES.iter().map(|directory| directory.entry));
     entries.extend(["brew \"node@24\"", "brew \"python@3.14\""]);
     for entry in entries {
@@ -154,7 +154,7 @@ fn every_program_the_gates_run_is_one_the_doctor_checks() {
         .concat()
         .iter()
         .map(|tool| tool.program)
-        .chain(INSTALLED.iter().map(|(name, _)| *name))
+        .chain(INSTALLED.iter().map(|installed| installed.name))
         .chain(["node"])
         .collect();
     // The system's, Xcode's beside xcodebuild, and Node's own npm.

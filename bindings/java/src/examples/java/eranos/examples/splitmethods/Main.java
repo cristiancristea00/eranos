@@ -27,6 +27,7 @@ import eranos.Parts;
 import eranos.Percentage;
 import eranos.Split;
 import eranos.Summary;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +50,27 @@ public final class Main {
         }
     }
 
+    /** A member's rule, payment, and consumption in one expense, a row of its table. */
+    private record ShareRow(Money consumed, String name, Money paid, String rule) implements Row {
+        static final List<String> HEADERS = List.of("Member", "Rule", "Paid", "Consumed");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, rule, paid.toString(), consumed.toString());
+        }
+    }
+
+    /** A member's totals over the holiday, a row of the totals' table. */
+    private record TotalRow(String balance, Money consumed, String name, Money paid)
+            implements Row {
+        static final List<String> HEADERS = List.of("Member", "Paid", "Consumed", "Balance");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, paid.toString(), consumed.toString(), balance);
+        }
+    }
+
     private static Money eur(String text) throws EranosException {
         return Money.parse(text, Currency.of("EUR"));
     }
@@ -65,16 +87,16 @@ public final class Main {
             return;
         }
         System.out.printf("%s, %s:%n", expense.orElseThrow().name(), shares.orElseThrow().total());
-        List<List<String>> rows = new ArrayList<>();
+        List<ShareRow> rows = new ArrayList<>();
         for (MemberShare share : shares.orElseThrow().members()) {
             rows.add(
-                    List.of(
+                    new ShareRow(
+                            share.share(),
                             names(group, List.of(share.member())),
-                            rules.getOrDefault(share.member(), "(payer only)"),
-                            share.paid().toString(),
-                            share.share().toString()));
+                            share.paid(),
+                            rules.getOrDefault(share.member(), "(payer only)")));
         }
-        printTable(List.of("Member", "Rule", "Paid", "Consumed"), rows, 2);
+        printTable(ShareRow.HEADERS, rows, 2);
     }
 
     private static void equally(Group group, Family family) throws EranosException {
@@ -264,19 +286,19 @@ public final class Main {
         section("7. The holiday in total");
         Summary summary = group.summary();
         System.out.printf("%s spent over five expenses:%n", summary.totalSpent());
-        List<List<String>> rows = new ArrayList<>();
+        List<TotalRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             Optional<MemberSummary> found = member.id().flatMap(id -> totals(id, summary));
             found.ifPresent(
                     totals ->
                             rows.add(
-                                    List.of(
+                                    new TotalRow(
+                                            totals.balance().toString(),
+                                            totals.share(),
                                             member.firstName(),
-                                            totals.paid().toString(),
-                                            totals.share().toString(),
-                                            totals.balance().toString())));
+                                            totals.paid())));
         }
-        printTable(List.of("Member", "Paid", "Consumed", "Balance"), rows, 1);
+        printTable(TotalRow.HEADERS, rows, 1);
     }
 
     /**

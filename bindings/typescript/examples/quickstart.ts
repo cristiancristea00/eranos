@@ -3,8 +3,62 @@
 
 import assert from 'node:assert/strict';
 
-import { type Split, CalendarDate, Currency, Group, Money, SettlementStrategy, expenseTotal, formatBalance, splitMembers } from '../src/index.js';
-import { load, names, participants, printLines, printTable, section, title, totals } from './report.js';
+import {
+    type Balance,
+    type Split,
+    CalendarDate,
+    Currency,
+    Group,
+    Money,
+    SettlementStrategy,
+    expenseTotal,
+    formatBalance,
+    splitMembers,
+} from '../src/index.js';
+import { type Columns, load, names, participants, printLines, printTable, section, title, totals } from './report.js';
+
+/** An expense, as the table of expenses prints it. */
+interface ExpenseRow {
+    readonly amount: Money;
+    readonly name: string;
+    readonly participants: string;
+    readonly payers: string;
+}
+
+const expenseColumns: Columns<ExpenseRow> = [
+    { header: 'Expense', text: (row) => row.name },
+    { header: 'Paid by', text: (row) => row.payers },
+    { header: 'Shared by', text: (row) => row.participants },
+    { header: 'Amount', text: (row) => row.amount.toString() },
+];
+
+/** A member's totals, as the table of members prints them. */
+interface MemberRow {
+    readonly balance: Balance;
+    readonly consumed: Money;
+    readonly name: string;
+    readonly paid: Money;
+}
+
+const memberColumns: Columns<MemberRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Paid', text: (row) => row.paid.toString() },
+    { header: 'Consumed', text: (row) => row.consumed.toString() },
+    { header: 'Balance', text: (row) => formatBalance(row.balance) },
+];
+
+/** A payment of the plan, as the table of payments prints it. */
+interface PaymentRow {
+    readonly amount: Money;
+    readonly from: string;
+    readonly to: string;
+}
+
+const paymentColumns: Columns<PaymentRow> = [
+    { header: 'From', text: (row) => row.from },
+    { header: 'To', text: (row) => row.to },
+    { header: 'Amount', text: (row) => row.amount.toString() },
+];
 
 await load();
 const euro = Currency.of('EUR');
@@ -40,15 +94,13 @@ group.addExpenseSync({
     split: { kind: 'whole', split: everyone },
 });
 printTable(
-    ['Expense', 'Paid by', 'Shared by', 'Amount'],
-    group
-        .expensesSync()
-        .map((expense) => [
-            expense.name,
-            names(group, splitMembers(expense.payers)),
-            names(group, participants(expense.split)),
-            expenseTotal(expense).toString(),
-        ]),
+    expenseColumns,
+    group.expensesSync().map((expense) => ({
+        amount: expenseTotal(expense),
+        name: expense.name,
+        participants: names(group, participants(expense.split)),
+        payers: names(group, splitMembers(expense.payers)),
+    })),
     3,
 );
 
@@ -59,10 +111,10 @@ printLines(
     'and their balance is what they paid minus what they consumed.',
 );
 printTable(
-    ['Member', 'Paid', 'Consumed', 'Balance'],
+    memberColumns,
     group.membersSync().flatMap((member) => {
         const found = undefined === member.id ? undefined : totals(member.id, summary);
-        return undefined === found ? [] : [[member.firstName, found.paid.toString(), found.share.toString(), formatBalance(found.balance)]];
+        return undefined === found ? [] : [{ balance: found.balance, consumed: found.share, name: member.firstName, paid: found.paid }];
     }),
     1,
 );
@@ -75,8 +127,8 @@ section('4. Settling up');
 const settlement = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 printLines(`The fewest payments that bring every balance to zero (${String(settlement.payments.length)} in total):`);
 printTable(
-    ['From', 'To', 'Amount'],
-    settlement.payments.map((payment) => [names(group, [payment.from]), names(group, [payment.to]), payment.amount.toString()]),
+    paymentColumns,
+    settlement.payments.map((payment) => ({ amount: payment.amount, from: names(group, [payment.from]), to: names(group, [payment.to]) })),
     2,
 );
 printLines('Once these payments are made, nobody owes anything.');

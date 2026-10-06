@@ -50,7 +50,9 @@ def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
     flat.group.set_name('Home')
     flat.group.set_description('Rent and bills')
     flat.group.set_language(Language('ro-RO'))
-    assert (flat.group.name(), flat.group.description(), flat.group.language()) == ('Home', 'Rent and bills', Language('ro-RO'))
+    assert flat.group.name() == 'Home'
+    assert flat.group.description() == 'Rent and bills'
+    assert flat.group.language() == Language('ro-RO')
     flat.group.set_description('')
     flat.group.set_language(None)
     assert flat.group.description() is None
@@ -72,19 +74,19 @@ def test_the_summary_and_the_shares_add_up(flat: Flat) -> None:
     assert summary.total_spent == flat.euros(3000)
     assert summary.category_totals == (CategoryTotal(flat.food, flat.euros(3000)),)
     ana = next(member for member in summary.members if member.member == flat.ana)
-    assert (ana.paid, ana.share, ana.received, ana.sent, ana.net) == (
-        flat.euros(3000),
-        flat.euros(1500),
-        flat.euros(1000),
-        flat.euros(0),
-        flat.euros(500),
-    )
+    assert ana.paid == flat.euros(3000)
+    assert ana.share == flat.euros(1500)
+    assert ana.received == flat.euros(1000)
+    assert ana.sent == flat.euros(0)
+    assert ana.net == flat.euros(500)
     assert ana.balance == GetsBackBalance(flat.euros(500))
     assert len(summary.member_category_totals) == 2
     assert summary.member_category_totals[0].totals[0].category == flat.food
     shares = flat.group.expense_shares(flat.dinner)
     assert shares is not None
-    assert (shares.total, shares.tip, len(shares.members)) == (flat.euros(3000), flat.euros(0), 2)
+    assert shares.total == flat.euros(3000)
+    assert shares.tip == flat.euros(0)
+    assert len(shares.members) == 2
     assert flat.group.expense_shares(ExpenseId('0199a000-0000-7000-8000-00000000ffff')) is None
 
 
@@ -128,7 +130,8 @@ def test_a_saved_group_loads_as_it_was_saved(flat: Flat) -> None:
         assert loaded.save() == saved
     with pytest.raises(InvalidJsonError) as broken:
         Group.load('{')
-    assert (broken.value.line, broken.value.column) == (1, 1)
+    assert broken.value.line == 1
+    assert broken.value.column == 1
     newer = json.loads(saved) | {'format': 26}
     with pytest.raises(GroupError) as unsupported:
         Group.load(json.dumps(newer))

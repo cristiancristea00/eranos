@@ -1,8 +1,11 @@
 """Print sections 5 to 7 of the tour: entries in another currency, edits and refused changes, and members who come and go."""
 
 import copy
+import dataclasses
+from typing import ClassVar, final, override
 
 from eranos import (
+    Balance,
     ConvertedCost,
     Currency,
     EqualSplit,
@@ -22,8 +25,47 @@ from eranos import (
     TransferError,
     WholeExpenseSplit,
 )
-from examples.grand_tour.tour import Categories, People, eur, name, october, print_balances, print_entries, ron
-from examples.report import message, print_lines, print_table, refusal, section, totals
+from examples.grand_tour.tour import Categories, People, RefusalRow, eur, name, october, print_balances, print_entries, ron
+from examples.report import Row, message, print_lines, print_table, refusal, section, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EditRow(Row):
+    """A row of the table of edits: an entry, and what changed."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Entry', 'Edit')
+
+    edit: str
+    """What changed."""
+
+    entry: str
+    """The entry edited or removed."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.entry, self.edit
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class StatusRow(Row):
+    """A row of the table of members' statuses: whether a member is active or archived, and where they stand."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Status', 'Balance')
+
+    balance: Balance
+    """Where the member stands."""
+
+    name: str
+    """The member's first name."""
+
+    status: str
+    """Whether the member is active or archived."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.status, str(self.balance)
 
 
 def another_currency(group: Group, people: People, categories: Categories) -> None:
@@ -83,7 +125,7 @@ def another_currency(group: Group, people: People, categories: Categories) -> No
     assert isinstance(transfer.cost, ConvertedCost)
 
 
-def _replace_and_remove(group: Group, people: People, categories: Categories, seafood: ExpenseId) -> list[tuple[str, str]]:
+def _replace_and_remove(group: Group, people: People, categories: Categories, seafood: ExpenseId) -> list[EditRow]:
     """
     Replace an expense and a transfer, and remove one of each.
 
@@ -131,13 +173,13 @@ def _replace_and_remove(group: Group, people: People, categories: Categories, se
     apartment = group.transfer(first)
     assert apartment is not None
     return [
-        (previous.name, f'{previous.cost.amount} became {corrected.cost.amount}, at {corrected.description or ""}'),
-        (removed.name, f'entered twice; the copy of {removed.cost.amount} was removed'),
-        (
-            f'{name(group, people.dan)} to {name(group, people.ana)}',
-            f'{replaced.cost.amount} became {apartment.cost.amount}, noted {apartment.note or ""}',
+        EditRow(edit=f'{previous.cost.amount} became {corrected.cost.amount}, at {corrected.description or ""}', entry=previous.name),
+        EditRow(edit=f'entered twice; the copy of {removed.cost.amount} was removed', entry=removed.name),
+        EditRow(
+            edit=f'{replaced.cost.amount} became {apartment.cost.amount}, noted {apartment.note or ""}',
+            entry=f'{name(group, people.dan)} to {name(group, people.ana)}',
         ),
-        (f'{name(group, people.carol)} to {name(group, people.bob)}', f'{undone.cost.amount} sent to the wrong member; removed'),
+        EditRow(edit=f'{undone.cost.amount} sent to the wrong member; removed', entry=f'{name(group, people.carol)} to {name(group, people.bob)}'),
     ]
 
 
@@ -158,7 +200,7 @@ def edits(group: Group, people: People, categories: Categories, seafood: Expense
         'Entries are values: an edit starts from a copy made with to_builder, keeps the',
         'identifier, and replaces the entry; a removal takes it out with its totals.',
     )
-    print_table(('Entry', 'Edit'), changes, 2)
+    print_table(EditRow, changes, 2)
     print_lines('The balances after the edits:')
     print_balances(group)
 
@@ -184,11 +226,11 @@ def edits(group: Group, people: People, categories: Categories, seafood: Expense
     unrated = refusal(lambda: group.add_expense(souvenirs))
     print_lines('A change that does not fit is refused, and the group stays as it was:')
     print_table(
-        ('Change', 'Refused with'),
+        RefusalRow,
         [
-            ('A taxi split 50% and 49.99%', message(unbalanced)),
-            ('Ana paying herself back', message(to_herself)),
-            ('Souvenirs in RON, without a rate', message(unrated)),
+            RefusalRow(change='A taxi split 50% and 49.99%', error=message(unbalanced)),
+            RefusalRow(change='Ana paying herself back', error=message(to_herself)),
+            RefusalRow(change='Souvenirs in RON, without a rate', error=message(unrated)),
         ],
         2,
     )
@@ -232,19 +274,19 @@ def comings_and_goings(group: Group, people: People) -> None:
     )
     summary = group.summary()
     print_table(
-        ('Member', 'Status', 'Balance'),
+        StatusRow,
         [
-            (member.first_name, 'archived' if group.is_archived(found.member) else 'active', str(found.balance))
+            StatusRow(balance=found.balance, name=member.first_name, status='archived' if group.is_archived(found.member) else 'active')
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],
         2,
     )
     print_table(
-        ('Change', 'Refused with'),
+        RefusalRow,
         [
-            ('A farewell dinner with Dan', message(farewell)),
-            ('Removing Dan', message(in_use)),
+            RefusalRow(change='A farewell dinner with Dan', error=message(farewell)),
+            RefusalRow(change='Removing Dan', error=message(in_use)),
         ],
         2,
     )

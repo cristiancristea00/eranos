@@ -22,10 +22,13 @@ fn flow(amount: i64, from: u8, to: u8) -> Flow {
     }
 }
 
-fn balances(nets: &[i64]) -> Vec<(MemberId, i64)> {
+fn balances(nets: &[i64]) -> Vec<OpenBalance> {
     nets.iter()
         .zip(1_u8..)
-        .map(|(&net, number)| (member(number), net))
+        .map(|(&net, number)| OpenBalance {
+            member: member(number),
+            net,
+        })
         .collect()
 }
 
@@ -68,7 +71,7 @@ proptest! {
         let flows = settle(&open);
         let count = nets.iter().filter(|&&net| 0 != net).count();
         prop_assert!(flows.len() <= count.saturating_sub(1));
-        for &(member, net) in &open {
+        for &OpenBalance { member, net } in &open {
             let received: i64 = flows.iter().filter(|flow| flow.members.to == member).map(|flow| flow.amount).sum();
             let sent: i64 = flows.iter().filter(|flow| flow.members.from == member).map(|flow| flow.amount).sum();
             prop_assert_eq!(net - received + sent, 0);

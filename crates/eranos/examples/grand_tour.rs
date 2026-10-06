@@ -17,6 +17,7 @@ use std::task::{Context, Waker};
 
 use eranos::cooperative::block_on;
 use eranos::error::{ExpenseError, GroupError, TransferError};
+use eranos::expense::ExpenseBuilder;
 use eranos::{
     Account, AccountDetails, AccountKind, Balance, CalendarDate, Category, CategoryId,
     CategoryTotal, Cost, Currency, CurrencyRate, Email, ExchangeRate, Expense, ExpenseId,
@@ -47,6 +48,23 @@ struct Categories {
     food: CategoryId,
     lodging: CategoryId,
     transport: CategoryId,
+}
+
+/// The seven expenses, one for every way of dividing one.
+struct Expenses {
+    apartment: ExpenseId,
+    fado: ExpenseId,
+    groceries: ExpenseId,
+    museum: ExpenseId,
+    seafood: ExpenseId,
+    tour: ExpenseId,
+    train: ExpenseId,
+}
+
+/// A change made to a saved group, and the text it leaves.
+struct Tampering {
+    change: &'static str,
+    text: String,
 }
 
 #[derive(Tabled)]
@@ -656,35 +674,34 @@ fn how(expense: &Expense) -> String {
 /// Each expense of `expenses`, with every involved member's payment and
 /// consumption.
 fn print_shares(group: &Group, expenses: &[ExpenseId]) {
-    let rows = expenses
-        .iter()
-        .filter_map(|&id| Some((group.expense(id)?, group.expense_shares(id)?)))
-        .map(|(expense, shares)| {
-            let paid = |share: &MemberShare| {
-                if share.paid().is_zero() {
-                    String::new()
-                } else {
-                    share.paid().to_string()
-                }
-            };
-            ShareRow {
-                consumed: cell(
-                    shares
-                        .members()
-                        .iter()
-                        .map(|share| share.share().to_string()),
-                ),
-                expense: expense.name().to_owned(),
-                how: how(expense),
-                members: cell(
-                    shares
-                        .members()
-                        .iter()
-                        .map(|share| name(group, share.member())),
-                ),
-                paid: cell(shares.members().iter().map(paid)),
+    let rows = expenses.iter().filter_map(|&id| {
+        let expense = group.expense(id)?;
+        let shares = group.expense_shares(id)?;
+        let paid = |share: &MemberShare| {
+            if share.paid().is_zero() {
+                String::new()
+            } else {
+                share.paid().to_string()
             }
-        });
+        };
+        Some(ShareRow {
+            consumed: cell(
+                shares
+                    .members()
+                    .iter()
+                    .map(|share| share.share().to_string()),
+            ),
+            expense: expense.name().to_owned(),
+            how: how(expense),
+            members: cell(
+                shares
+                    .members()
+                    .iter()
+                    .map(|share| name(group, share.member())),
+            ),
+            paid: cell(shares.members().iter().map(paid)),
+        })
+    });
     print_table(rows, 3);
 }
 
@@ -736,12 +753,31 @@ fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
     ])
 }
 
-/// Adds one expense for every way of dividing one; returns them in order.
+/// The fado night, item by item, paid by Carol and Dan, with a 10 % tip; the
+/// caller builds it, which gives it its identifier.
+fn fado_night(people: People, categories: Categories) -> Result<ExpenseBuilder, Box<dyn Error>> {
+    Ok(Expense::itemised_builder_with_payers(
+        eur("54.00")?,
+        october(4)?,
+        fado_items(people)?,
+        "Fado night",
+        Split::amounts([
+            MemberAmount::new(eur("39.40")?, people.carol),
+            MemberAmount::new(eur("20.00")?, people.dan),
+        ]),
+    )
+    .category(categories.food)
+    .description("Tasca do Chico")
+    .time(TimeOfDay::new(22, 15)?)
+    .tip(Tip::percentage(Percentage::parse("10")?)))
+}
+
+/// Adds one expense for every way of dividing one.
 fn add_expenses(
     group: &mut Group,
     people: People,
     categories: Categories,
-) -> Result<[ExpenseId; 7], Box<dyn Error>> {
+) -> Result<Expenses, Box<dyn Error>> {
     let People {
         ana,
         bob,
@@ -806,20 +842,7 @@ fn add_expenses(
         Split::equal([ana, bob]),
         Split::equal([ana, bob, carol, dan]),
     );
-    let fado = Expense::itemised_builder_with_payers(
-        eur("54.00")?,
-        october(4)?,
-        fado_items(people)?,
-        "Fado night",
-        Split::amounts([
-            MemberAmount::new(eur("39.40")?, carol),
-            MemberAmount::new(eur("20.00")?, dan),
-        ]),
-    )
-    .category(categories.food)
-    .description("Tasca do Chico")
-    .time(TimeOfDay::new(22, 15)?)
-    .tip(Tip::percentage(Percentage::parse("10")?));
+    let fado = fado_night(people, categories)?;
     let tour = Expense::builder(
         eur("45.00")?,
         october(5)?,
@@ -829,11 +852,22 @@ fn add_expenses(
     )
     .category(categories.transport)
     .tip(Tip::fixed(eur("5.00")?).distributed(TipDistribution::Equal));
-    let mut ids = Vec::new();
-    for expense in [groceries, apartment, seafood, train, museum, fado, tour] {
-        ids.push(group.add_expense(expense.build()?)?);
-    }
-    Ok(ids.try_into().map_err(|_| "seven expenses were added")?)
+    let groceries = group.add_expense(groceries.build()?)?;
+    let apartment = group.add_expense(apartment.build()?)?;
+    let seafood = group.add_expense(seafood.build()?)?;
+    let train = group.add_expense(train.build()?)?;
+    let museum = group.add_expense(museum.build()?)?;
+    let fado = group.add_expense(fado.build()?)?;
+    let tour = group.add_expense(tour.build()?)?;
+    Ok(Expenses {
+        apartment,
+        fado,
+        groceries,
+        museum,
+        seafood,
+        tour,
+        train,
+    })
 }
 
 /// The consumption of `member` in the expense `id`.
@@ -850,14 +884,24 @@ fn expenses(
     categories: Categories,
 ) -> Result<ExpenseId, Box<dyn Error>> {
     section("4. Expenses, one for every way of dividing");
-    let ids = add_expenses(group, people, categories)?;
-    let [groceries, apartment, seafood, train, museum, fado, tour] = ids;
+    let Expenses {
+        apartment,
+        fado,
+        groceries,
+        museum,
+        seafood,
+        tour,
+        train,
+    } = add_expenses(group, people, categories)?;
     println!(
         "Seven expenses cover every way of dividing one: equally, by percentage, by parts\n\
          (Eva counts as half), by exact amounts, with two payers, item by item, and with a\n\
          tip. Every member's consumption adds up to the expense's total, to the cent:"
     );
-    print_shares(group, &ids);
+    print_shares(
+        group,
+        &[groceries, apartment, seafood, train, museum, fado, tour],
+    );
     let fado_expense = group.expense(fado).ok_or("the fado night was added")?;
     let tip = fado_expense.tip();
     let rule = match tip.value() {
@@ -1440,26 +1484,30 @@ fn saving_and_loading(
          with into_group reports a refusal as a typed error instead of a message:"
     );
     let tampered = [
-        (
-            "\"format\": 3",
-            saved.replacen("\"format\": 2", "\"format\": 3", 1),
-        ),
-        (
-            "a blank group name",
-            saved.replacen("\"name\": \"Lisbon and Porto\"", "\"name\": \" \"", 1),
-        ),
-        (
-            "Lodging renamed FOOD",
-            saved.replacen("\"name\": \"Lodging\"", "\"name\": \"FOOD\"", 1),
-        ),
+        Tampering {
+            change: "\"format\": 3",
+            text: saved.replacen("\"format\": 2", "\"format\": 3", 1),
+        },
+        Tampering {
+            change: "a blank group name",
+            text: saved.replacen("\"name\": \"Lisbon and Porto\"", "\"name\": \" \"", 1),
+        },
+        Tampering {
+            change: "Lodging renamed FOOD",
+            text: saved.replacen("\"name\": \"Lodging\"", "\"name\": \"FOOD\"", 1),
+        },
     ];
     let mut rows = Vec::new();
     let mut errors = Vec::new();
-    for (change, text) in &tampered {
-        assert_ne!(text, &saved, "{change} changes the file");
-        let error = refusal(text)?;
+    for tampering in &tampered {
+        assert_ne!(
+            tampering.text, saved,
+            "{} changes the file",
+            tampering.change
+        );
+        let error = refusal(&tampering.text)?;
         rows.push(LoadRow {
-            change,
+            change: tampering.change,
             message: error.clone(),
         });
         errors.push(error);
@@ -1611,7 +1659,8 @@ fn ratios() -> Result<(), Box<dyn Error>> {
     assert_eq!(parts.hundredths(), 150);
     assert_eq!(Parts::ONE.hundredths(), 100);
     // A rate keeps no trailing zero: 4.97650 is 49765 at scale 4.
-    assert_eq!((rate.mantissa(), rate.scale()), (49_765, 4));
+    assert_eq!(rate.mantissa(), 49_765);
+    assert_eq!(rate.scale(), 4);
     assert_eq!(ExchangeRate::from_decimal(2_011, 4)?.to_string(), "0.2011");
     Ok(())
 }
@@ -1668,8 +1717,11 @@ fn dates_and_identifiers(people: People) -> Result<(), Box<dyn Error>> {
         ],
         2,
     );
-    assert_eq!((date.day(), date.month(), date.year()), (1, 10, 2026));
-    assert_eq!((time.hour(), time.minute()), (22, 15));
+    assert_eq!(date.day(), 1);
+    assert_eq!(date.month(), 10);
+    assert_eq!(date.year(), 2026);
+    assert_eq!(time.hour(), 22);
+    assert_eq!(time.minute(), 15);
     assert_eq!(parsed, people.ana);
     Ok(())
 }

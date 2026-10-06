@@ -22,6 +22,56 @@ typedef struct Friends {
     EranosCalendarDate day;
 } Friends;
 
+/// A row of the receipt: a line, who shared it, its quantity, its unit price, and its total.
+typedef struct LineRow {
+    /// The quantity times the unit price.
+    Line lineTotal;
+    /// What was ordered.
+    Line name;
+    /// Who shared it.
+    Line participants;
+    /// How many were ordered.
+    Line quantity;
+    /// The price of one.
+    Line unitPrice;
+} LineRow;
+
+/// A table of the receipt's lines, its columns from @p numbersFrom on aligned to the right.
+static Table *lineTable(size_t const numbersFrom) {
+    return tableCreate(5, (char const *const[]){"Item", "Shared by", "Quantity", "Unit price", "Line total"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of the receipt's lines, its cells in the order of the table's headers.
+static void addLineRow(Table *const table, LineRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->participants, row->quantity, row->unitPrice, row->lineTotal});
+}
+
+/// A row of the table of tips: what a friend ordered, and what they pay with the tip shared by consumption and equally.
+typedef struct TipRow {
+    /// Their part of the tip shared equally.
+    Line equalTip;
+    /// What they pay with the tip shared equally.
+    Line equalTotal;
+    /// Their first name.
+    Line name;
+    /// Their part of the tip shared by consumption.
+    Line proportionalTip;
+    /// What they pay with the tip shared by consumption.
+    Line proportionalTotal;
+    /// What they ordered.
+    Line subtotal;
+} TipRow;
+
+/// A table of tips, its columns from @p numbersFrom on aligned to the right.
+static Table *tipTable(size_t const numbersFrom) {
+    return tableCreate(6, (char const *const[]){"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of tips, its cells in the order of the table's headers.
+static void addTipRow(Table *const table, TipRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->subtotal, row->proportionalTip, row->proportionalTotal, row->equalTip, row->equalTotal});
+}
+
 /// The amount @p text of euros.
 static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
 
@@ -137,7 +187,7 @@ static bool consumedIs(EranosExpenseShares const *const shares, Id const member,
 /// Prints the receipt's lines: who shared each, its quantity, its unit price, and its total.
 static void printReceipt(EranosGroup const *const group, Friends const *const friends) {
     EranosItemList *const items = receipt(friends);
-    Table *const table = tableCreate(5, (char const *const[]){"Item", "Shared by", "Quantity", "Unit price", "Line total"}, 2);
+    Table *const table = lineTable(2);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
         EranosItem *const item = eranosItemListGet(items, index);
@@ -149,13 +199,13 @@ static void printReceipt(EranosGroup const *const group, Friends const *const fr
         EranosMoney *total = nullptr;
         must(eranosMoneyCreate(eranosTextData(text), eranosMoneyMinorUnits(unitPrice) * quantity, &total));
         eranosItemName(item, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            names(group, &sharedBy),
-                            lineOf("%ld", (long)quantity),
-                            moneyLine(unitPrice),
-                            moneyLine(total),
-                        });
+        addLineRow(table, &(LineRow){
+                              .lineTotal = moneyLine(total),
+                              .name = textLine(text),
+                              .participants = names(group, &sharedBy),
+                              .quantity = lineOf("%ld", (long)quantity),
+                              .unitPrice = moneyLine(unitPrice),
+                          });
         eranosSplitDestroy(split);
         eranosItemDestroy(item);
     }
@@ -168,23 +218,23 @@ static void printReceipt(EranosGroup const *const group, Friends const *const fr
 /// equally, in @p even; @p ordered divides the dinner without a tip.
 static void printTips(EranosGroup const *const group, Friends const *const friends, EranosExpenseShares const *const ordered,
                       EranosExpenseShares const *const byConsumption, EranosExpenseShares const *const even) {
-    Table *const table = tableCreate(6, (char const *const[]){"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"}, 1);
+    Table *const table = tipTable(1);
     Id const members[] = {friends->ana, friends->bob, friends->carol};
     for (size_t index = 0; 3 > index; ++index) {
         EranosMoney *const subtotal = consumed(ordered, members[index]);
         EranosMoney *const proportionalTotal = consumed(byConsumption, members[index]);
         EranosMoney *const equalTotal = consumed(even, members[index]);
-        // The tips first: the cells of a row are made in no set order, and three of them destroy the amounts they write.
+        // The tips first: the fields of a row are made in no set order, and three of them destroy the amounts they write.
         Line const proportionalTip = addedTo(proportionalTotal, subtotal);
         Line const equalTip = addedTo(equalTotal, subtotal);
-        tableAdd(table, (Line const[]){
-                            firstName(group, members[index].text),
-                            moneyLine(subtotal),
-                            proportionalTip,
-                            moneyLine(proportionalTotal),
-                            equalTip,
-                            moneyLine(equalTotal),
-                        });
+        addTipRow(table, &(TipRow){
+                             .equalTip = equalTip,
+                             .equalTotal = moneyLine(equalTotal),
+                             .name = firstName(group, members[index].text),
+                             .proportionalTip = proportionalTip,
+                             .proportionalTotal = moneyLine(proportionalTotal),
+                             .subtotal = moneyLine(subtotal),
+                         });
     }
     tablePrint(table);
 }

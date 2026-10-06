@@ -43,11 +43,21 @@ pub(crate) enum Work {
     Create(PathBuf),
     /// Runs a step and hands its standard output to the continuation, whose
     /// actions run next.
-    Read(Step, Continuation),
+    Read {
+        /// The step it runs.
+        step: Step,
+        /// The continuation its standard output goes to.
+        then: Continuation,
+    },
     /// Runs a step.
     Run(Step),
     /// Writes a file, replacing what it held.
-    Write(PathBuf, String),
+    Write {
+        /// What the file holds after it.
+        contents: String,
+        /// The file it writes.
+        path: PathBuf,
+    },
 }
 
 /// One piece of a package's gates.
@@ -84,7 +94,10 @@ impl Action {
     ) -> Self {
         Self {
             phase,
-            work: Work::Read(step, Box::new(then)),
+            work: Work::Read {
+                step,
+                then: Box::new(then),
+            },
         }
     }
 
@@ -108,7 +121,7 @@ impl Action {
     pub(crate) const fn write(phase: Phase, path: PathBuf, contents: String) -> Self {
         Self {
             phase,
-            work: Work::Write(path, contents),
+            work: Work::Write { contents, path },
         }
     }
 }
@@ -136,14 +149,14 @@ pub(crate) fn execute(
         match action.work {
             Work::Clear(directory) => runner.clear(&directory)?,
             Work::Create(directory) => runner.create(&directory)?,
-            Work::Read(step, then) => {
+            Work::Read { step, then } => {
                 let output = runner.output(&step)?;
                 for next in then(output)?.into_iter().rev() {
                     queue.push_front(next);
                 }
             }
             Work::Run(step) => runner.run(&step)?,
-            Work::Write(path, contents) => runner.write(&path, &contents)?,
+            Work::Write { contents, path } => runner.write(&path, &contents)?,
         }
     }
     Ok(())
@@ -156,8 +169,8 @@ pub(crate) fn steps(actions: &[Action]) -> Vec<Step> {
     actions
         .iter()
         .filter_map(|action| match &action.work {
-            Work::Read(step, _) | Work::Run(step) => Some(step.clone()),
-            Work::Clear(_) | Work::Create(_) | Work::Write(..) => None,
+            Work::Read { step, .. } | Work::Run(step) => Some(step.clone()),
+            Work::Clear(_) | Work::Create(_) | Work::Write { .. } => None,
         })
         .collect()
 }

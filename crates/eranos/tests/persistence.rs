@@ -32,8 +32,17 @@ fn day() -> CalendarDate {
     CalendarDate::new(23, 9, 2026).unwrap()
 }
 
-/// A group using every serialised feature, and its members.
-fn group() -> (Group, MemberId, MemberId, MemberId) {
+/// The group of `trip`, with Ana, who gives every member detail, and Carol,
+/// who is archived.
+struct Trip {
+    ana: MemberId,
+    carol: MemberId,
+    group: Group,
+}
+
+/// A group using every serialised feature, and the two members the tests
+/// look up.
+fn trip() -> Trip {
     let mut group = Group::builder(Currency::EUR, "Lisbon")
         .description("Autumn trip")
         .language(Language::parse("pt-PT").unwrap())
@@ -117,7 +126,7 @@ fn group() -> (Group, MemberId, MemberId, MemberId) {
         )
         .unwrap();
     group.archive_member(carol).unwrap();
-    (group, ana, bob, carol)
+    Trip { ana, carol, group }
 }
 
 fn json_of(group: &Group) -> Value {
@@ -128,7 +137,7 @@ fn json_of(group: &Group) -> Value {
 /// and the same plans; anything else silently changes what people owe.
 #[test]
 fn a_group_round_trips_through_json() {
-    let (group, _, _, carol) = group();
+    let Trip { carol, group, .. } = trip();
     let text = serde_json::to_string(&group).unwrap();
     let loaded: Group = serde_json::from_str(&text).unwrap();
     assert_eq!(loaded, group);
@@ -148,7 +157,7 @@ fn a_group_round_trips_through_json() {
 /// would make every saved group unreadable.
 #[test]
 fn the_json_shape_is_pinned() {
-    let (group, ana, _, carol) = group();
+    let Trip { ana, carol, group } = trip();
     let value = json_of(&group);
     assert_eq!(value["format"], json!(2));
     assert_eq!(value["id"], json!(group.id().to_string()));
@@ -227,7 +236,7 @@ fn the_json_shape_is_pinned() {
 /// or a corrupted file would produce balances that do not add up.
 #[test]
 fn a_tampered_file_is_refused() {
-    let (group, _, _, _) = group();
+    let Trip { group, .. } = trip();
     let tamper = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
@@ -307,7 +316,7 @@ fn a_tampered_file_is_refused() {
 /// group as a whole is not, or loading would merge or drop entries.
 #[test]
 fn an_inconsistent_file_is_refused() {
-    let (group, _, _, _) = group();
+    let Trip { group, .. } = trip();
     let tamper = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
@@ -362,7 +371,7 @@ fn an_inconsistent_file_is_refused() {
 /// one.
 #[test]
 fn a_saved_group_names_why_the_group_refuses_it() {
-    let (group, ana, _, _) = group();
+    let Trip { ana, group, .. } = trip();
     let load = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
@@ -466,7 +475,7 @@ fn a_bare_group_round_trips_through_json() {
 /// and print in full, like every other value.
 #[test]
 fn account_details_serialise_and_print_in_clear_text() {
-    let (group, ana, _, _) = group();
+    let Trip { ana, group, .. } = trip();
     let text = serde_json::to_string(&group).unwrap();
     assert!(text.contains("RO49AAAA1B31007593840000"));
     let debug = format!("{:?}", group.member(ana).unwrap());

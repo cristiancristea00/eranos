@@ -92,10 +92,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Loading replays every entry through the same checks as adding it, then rebuilds\n\
          the totals. The loaded group equals the saved one, and so do its balances:"
     );
-    let rows = [(ana, "Ana"), (bob, "Bob")].map(|(member, name)| ComparisonRow {
+    let rows = [ana, bob].map(|member| ComparisonRow {
         after: loaded.summary().member(member).balance(),
         before: group.summary().member(member).balance(),
-        name: name.to_owned(),
+        name: group
+            .member(member)
+            .map_or("?", Member::first_name)
+            .to_owned(),
     });
     print_table(rows, 1);
     let plan = loaded.settlement(SettlementStrategy::Greedy)?;

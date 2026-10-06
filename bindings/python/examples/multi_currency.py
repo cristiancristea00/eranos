@@ -5,7 +5,8 @@ The port of the Rust example ``multi_currency``, which prints the same report.
 
 """
 
-from typing import assert_never
+import dataclasses
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
     Balance,
@@ -27,7 +28,64 @@ from eranos import (
     Transfer,
     WholeExpenseSplit,
 )
-from examples.report import names, print_lines, print_table, section, title, totals
+from examples.report import Row, names, print_lines, print_table, section, title, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class EntryRow(Row):
+    """A row of the table of entries: an expense or a transfer, as entered and in the group currency."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency')
+
+    converted: Money
+    """The entry's amount in the group currency."""
+
+    name: str
+    """What the entry was."""
+
+    original: Money
+    """The entry's amount as entered."""
+
+    payer: str
+    """Who paid it."""
+
+    rate: ExchangeRate
+    """The rate the entry was entered at."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.payer, str(self.original), str(self.rate), str(self.converted)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class BalanceRow(Row):
+    """A row of the table of balances: what a member paid, consumed, sent, and received, and where they stand."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance')
+
+    balance: Balance
+    """Where the member stands."""
+
+    consumed: Money
+    """What the member consumed."""
+
+    name: str
+    """The member's first name."""
+
+    paid: Money
+    """What the member paid."""
+
+    received: Money
+    """What the member received in transfers."""
+
+    sent: Money
+    """What the member sent in transfers."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, str(self.paid), str(self.consumed), str(self.sent), str(self.received), str(self.balance)
 
 
 def rate(cost: Cost) -> ExchangeRate:
@@ -76,26 +134,26 @@ def print_entries(group: Group) -> None:
     """
     zero = Money(group.currency(), 0)
     expenses = [
-        (
-            expense.name,
-            names(group, expense.payers.members),
-            str(expense.total()),
-            str(rate(expense.cost)),
-            str(shares.total if expense.id is not None and (shares := group.expense_shares(expense.id)) is not None else zero),
+        EntryRow(
+            converted=shares.total if expense.id is not None and (shares := group.expense_shares(expense.id)) is not None else zero,
+            name=expense.name,
+            original=expense.total(),
+            payer=names(group, expense.payers.members),
+            rate=rate(expense.cost),
         )
         for expense in group.expenses()
     ]
     transfers = [
-        (
-            f'Transfer to {names(group, (transfer.receiver,))}',
-            names(group, (transfer.sender,)),
-            str(transfer.cost.amount),
-            str(rate(transfer.cost)),
-            str(amount if transfer.id is not None and (amount := group.transfer_amount(transfer.id)) is not None else zero),
+        EntryRow(
+            converted=amount if transfer.id is not None and (amount := group.transfer_amount(transfer.id)) is not None else zero,
+            name=f'Transfer to {names(group, (transfer.receiver,))}',
+            original=transfer.cost.amount,
+            payer=names(group, (transfer.sender,)),
+            rate=rate(transfer.cost),
         )
         for transfer in group.transfers()
     ]
-    print_table(('Entry', 'Paid by', 'Entered as', 'Rate', 'In the group currency'), [*expenses, *transfers], 2)
+    print_table(EntryRow, [*expenses, *transfers], 2)
 
 
 def print_balances(group: Group) -> None:
@@ -108,9 +166,16 @@ def print_balances(group: Group) -> None:
     """
     summary = group.summary()
     print_table(
-        ('Member', 'Paid', 'Consumed', 'Sent', 'Received', 'Balance'),
+        BalanceRow,
         [
-            (member.first_name, str(found.paid), str(found.share), str(found.sent), str(found.received), str(found.balance))
+            BalanceRow(
+                balance=found.balance,
+                consumed=found.share,
+                name=member.first_name,
+                paid=found.paid,
+                received=found.received,
+                sent=found.sent,
+            )
             for member in group.members()
             if member.id is not None and (found := totals(member.id, summary)) is not None
         ],

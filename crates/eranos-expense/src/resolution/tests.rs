@@ -36,14 +36,32 @@ fn day() -> CalendarDate {
     CalendarDate::new(23, 9, 2026).unwrap()
 }
 
-/// (member, paid, share) in minor units, ordered by member.
-fn rows(resolved: &ResolvedExpense) -> Vec<(MemberId, i64, i64)> {
+/// What one member paid and consumed of a resolved expense, in minor
+/// units.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Row {
+    member: MemberId,
+    paid: i64,
+    share: i64,
+}
+
+/// The row of `member`, who paid `paid` and consumed `share`.
+const fn row(member: MemberId, paid: i64, share: i64) -> Row {
+    Row {
+        member,
+        paid,
+        share,
+    }
+}
+
+/// Every member's row, ordered by member.
+fn rows(resolved: &ResolvedExpense) -> Vec<Row> {
     resolved
         .shares
         .members()
         .iter()
         .map(|share| {
-            (
+            row(
                 share.member(),
                 share.paid().minor_units(),
                 share.share().minor_units(),
@@ -90,14 +108,14 @@ fn a_single_payer_is_owed_every_other_share() {
     let resolved = resolve_expense(&identified(&taxi, entry(1)), Currency::EUR).unwrap();
 
     // 10.00 among three is 3.34 + 3.33 + 3.33.
-    let consumed: Vec<i64> = rows(&resolved).iter().map(|&(_, _, share)| share).collect();
+    let consumed: Vec<i64> = rows(&resolved).iter().map(|row| row.share).collect();
     assert_eq!(consumed.iter().sum::<i64>(), 1000);
     assert_eq!(consumed.iter().filter(|&&share| 334 == share).count(), 1);
     // Ana paid everything and is owed the other two shares.
-    assert_eq!(rows(&resolved)[0].1, 1000);
+    assert_eq!(rows(&resolved)[0].paid, 1000);
     assert_eq!(resolved.debts.len(), 2);
     assert!(resolved.debts.iter().all(|debt| debt.members.to == ana));
-    assert_eq!(debt_nets(&resolved)[&ana], 1000 - rows(&resolved)[0].2);
+    assert_eq!(debt_nets(&resolved)[&ana], 1000 - rows(&resolved)[0].share);
     assert_eq!(resolved.shares.total(), eur(1000));
     assert_eq!(resolved.shares.tip(), eur(0));
 }
@@ -123,7 +141,10 @@ fn a_proportional_tip_follows_the_shares() {
     let resolved = resolve_expense(&identified(&dinner, entry(1)), Currency::EUR).unwrap();
 
     // 60.00 + 6.00 and 30.00 + 3.00; Ana paid the 99.00 total.
-    assert_eq!(rows(&resolved), vec![(ana, 9900, 6600), (bob, 0, 3300)]);
+    assert_eq!(
+        rows(&resolved),
+        vec![row(ana, 9900, 6600), row(bob, 0, 3300)]
+    );
     assert_eq!(resolved.shares.tip(), eur(900));
 }
 
@@ -146,7 +167,10 @@ fn an_equal_tip_ignores_the_shares() {
     .unwrap();
     let resolved = resolve_expense(&identified(&dinner, entry(1)), Currency::EUR).unwrap();
 
-    assert_eq!(rows(&resolved), vec![(ana, 9900, 6450), (bob, 0, 3450)]);
+    assert_eq!(
+        rows(&resolved),
+        vec![row(ana, 9900, 6450), row(bob, 0, 3450)]
+    );
 }
 
 /// Items divide by their own splits and the tip follows the item subtotals,
@@ -167,7 +191,10 @@ fn items_divide_by_their_own_splits() {
 
     // Ana: 12.00 + 4.50 = 16.50 plus 16.50/21 of the 2.10 tip (1.65).
     // Bob: 4.50 plus 0.45 of tip; Bob paid the 23.10 total.
-    assert_eq!(rows(&resolved), vec![(ana, 0, 1815), (bob, 2310, 495)]);
+    assert_eq!(
+        rows(&resolved),
+        vec![row(ana, 0, 1815), row(bob, 2310, 495)]
+    );
     assert_eq!(resolved.debts, vec![debt(1815, ana, bob)]);
 }
 
@@ -204,7 +231,12 @@ fn several_payers_are_each_owed_their_proportion() {
     );
     // Every member's debts net to what they paid minus what they consumed.
     let nets = debt_nets(&resolved);
-    for (member, paid, share) in rows(&resolved) {
+    for Row {
+        member,
+        paid,
+        share,
+    } in rows(&resolved)
+    {
         assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
     }
 }
@@ -230,10 +262,10 @@ fn a_foreign_expense_converts_its_total_once() {
         resolved.shares.total(),
         Money::from_minor_units(Currency::RON, 4977)
     );
-    let consumed: Vec<i64> = rows(&resolved).iter().map(|&(_, _, share)| share).collect();
+    let consumed: Vec<i64> = rows(&resolved).iter().map(|row| row.share).collect();
     assert_eq!(consumed.iter().sum::<i64>(), 4977);
     assert!(consumed.iter().all(|&share| 2488 == share || 2489 == share));
-    assert_eq!(rows(&resolved)[0].1, 4977);
+    assert_eq!(rows(&resolved)[0].paid, 4977);
 }
 
 /// A converted tip is carved out of the converted total, so tip plus amount
@@ -319,11 +351,16 @@ fn a_payer_converted_to_nothing_is_owed_nothing() {
     .unwrap();
     let resolved = resolve_expense(&identified(&sweets, entry(1)), Currency::EUR).unwrap();
     assert_eq!(resolved.shares.total(), eur(1));
-    let paid: Vec<i64> = rows(&resolved).iter().map(|&(_, paid, _)| paid).collect();
+    let paid: Vec<i64> = rows(&resolved).iter().map(|row| row.paid).collect();
     assert_eq!(paid.iter().sum::<i64>(), 1);
     assert!(paid.contains(&0));
     let nets = debt_nets(&resolved);
-    for (member, payment, share) in rows(&resolved) {
+    for Row {
+        member,
+        paid: payment,
+        share,
+    } in rows(&resolved)
+    {
         assert_eq!(nets.get(&member).copied().unwrap_or(0), payment - share);
     }
 }
@@ -341,8 +378,8 @@ fn the_leftover_cent_rotates_with_the_expense_id() {
         let resolved = resolve_expense(&identified(&expense, id), Currency::EUR).unwrap();
         rows(&resolved)
             .iter()
-            .find(|&&(_, _, share)| 34 == share)
-            .map(|&(member, _, _)| member)
+            .find(|row| 34 == row.share)
+            .map(|row| row.member)
             .unwrap()
     };
 
@@ -409,8 +446,8 @@ proptest! {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, equal_tip, foreign);
         let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), Currency::EUR).unwrap();
         let total = resolved.shares.total().minor_units();
-        prop_assert_eq!(rows(&resolved).iter().map(|&(_, paid, _)| paid).sum::<i64>(), total);
-        prop_assert_eq!(rows(&resolved).iter().map(|&(_, _, share)| share).sum::<i64>(), total);
+        prop_assert_eq!(rows(&resolved).iter().map(|row| row.paid).sum::<i64>(), total);
+        prop_assert_eq!(rows(&resolved).iter().map(|row| row.share).sum::<i64>(), total);
         prop_assert!(resolved.shares.tip().minor_units() <= total);
         if foreign.is_none() {
             prop_assert_eq!(resolved.shares.total(), expense.total());
@@ -432,7 +469,7 @@ proptest! {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, false, foreign);
         let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), Currency::EUR).unwrap();
         let nets = debt_nets(&resolved);
-        for (member, paid, share) in rows(&resolved) {
+        for Row { member, paid, share } in rows(&resolved) {
             prop_assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
         }
         prop_assert!(resolved.debts.iter().all(|debt| 0 < debt.amount && debt.members.from != debt.members.to));
@@ -465,7 +502,7 @@ fn the_rotation_of_every_pass_is_pinned() {
     let resolved = resolve_expense(&identified(&itemised, entry(1)), Currency::EUR).unwrap();
     assert_eq!(
         rows(&resolved),
-        vec![(ana, 151, 101), (bob, 152, 100), (carol, 0, 102)]
+        vec![row(ana, 151, 101), row(bob, 152, 100), row(carol, 0, 102)]
     );
     assert_eq!(
         resolved.debts,
@@ -490,7 +527,7 @@ fn the_rotation_of_every_pass_is_pinned() {
     let converted = resolve_expense(&identified(&foreign, entry(2)), Currency::EUR).unwrap();
     assert_eq!(
         rows(&converted),
-        vec![(ana, 202, 67), (bob, 0, 68), (carol, 0, 67)]
+        vec![row(ana, 202, 67), row(bob, 0, 68), row(carol, 0, 67)]
     );
 
     // Pair debts: three payers over four equal shares, so both the first and

@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 
 import {
+    type Balance,
     type Expense,
     type ExpenseId,
     type Group,
@@ -16,8 +17,32 @@ import {
     TransferError,
     formatBalance,
 } from '../../src/index.js';
-import { message, printLines, printTable, refusal, section, totals } from '../report.js';
-import { type Categories, type People, eur, name, october, printBalances, printEntries, ron } from './tour.js';
+import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
+import { type Categories, type People, eur, name, october, printBalances, printEntries, refusalColumns, ron } from './tour.js';
+
+/** An entry and what an edit did to it, as the table of edits prints it. */
+interface EditRow {
+    readonly edit: string;
+    readonly entry: string;
+}
+
+const editColumns: Columns<EditRow> = [
+    { header: 'Entry', text: (row) => row.entry },
+    { header: 'Edit', text: (row) => row.edit },
+];
+
+/** A member's status and balance, as the table of statuses prints them. */
+interface StatusRow {
+    readonly balance: Balance;
+    readonly name: string;
+    readonly status: string;
+}
+
+const statusColumns: Columns<StatusRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Status', text: (row) => row.status },
+    { header: 'Balance', text: (row) => formatBalance(row.balance) },
+];
 
 export function anotherCurrency(group: Group, people: People, categories: Categories): void {
     section('5. Another currency');
@@ -61,7 +86,7 @@ export function anotherCurrency(group: Group, people: People, categories: Catego
 }
 
 /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
-function replaceAndRemove(group: Group, people: People, categories: Categories, seafood: ExpenseId): string[][] {
+function replaceAndRemove(group: Group, people: People, categories: Categories, seafood: ExpenseId): EditRow[] {
     // The dinner's receipt said 99.00.
     const dinner = group.expenseSync(seafood);
     assert.ok(undefined !== dinner, 'the dinner was added');
@@ -95,16 +120,19 @@ function replaceAndRemove(group: Group, people: People, categories: Categories, 
     const corrected = group.expenseSync(seafood);
     const apartment = group.transferSync(first);
     return [
-        [
-            previous.name,
-            `${previous.cost.amount.toString()} became ${(corrected?.cost.amount ?? zero).toString()}, at ${corrected?.description ?? ''}`,
-        ],
-        [removed.name, `entered twice; the copy of ${removed.cost.amount.toString()} was removed`],
-        [
-            `${name(group, people.dan)} to ${name(group, people.ana)}`,
-            `${replaced.cost.amount.toString()} became ${(apartment?.cost.amount ?? zero).toString()}, noted ${apartment?.note ?? ''}`,
-        ],
-        [`${name(group, people.carol)} to ${name(group, people.bob)}`, `${undone.cost.amount.toString()} sent to the wrong member; removed`],
+        {
+            edit: `${previous.cost.amount.toString()} became ${(corrected?.cost.amount ?? zero).toString()}, at ${corrected?.description ?? ''}`,
+            entry: previous.name,
+        },
+        { edit: `entered twice; the copy of ${removed.cost.amount.toString()} was removed`, entry: removed.name },
+        {
+            edit: `${replaced.cost.amount.toString()} became ${(apartment?.cost.amount ?? zero).toString()}, noted ${apartment?.note ?? ''}`,
+            entry: `${name(group, people.dan)} to ${name(group, people.ana)}`,
+        },
+        {
+            edit: `${undone.cost.amount.toString()} sent to the wrong member; removed`,
+            entry: `${name(group, people.carol)} to ${name(group, people.bob)}`,
+        },
     ];
 }
 
@@ -115,7 +143,7 @@ export function edits(group: Group, people: People, categories: Categories, seaf
         'Entries are values: an edit starts from a copy made with to_builder, keeps the',
         'identifier, and replaces the entry; a removal takes it out with its totals.',
     );
-    printTable(['Entry', 'Edit'], changes, 2);
+    printTable(editColumns, changes, 2);
     printLines('The balances after the edits:');
     printBalances(group);
 
@@ -152,11 +180,11 @@ export function edits(group: Group, people: People, categories: Categories, seaf
     );
     printLines('A change that does not fit is refused, and the group stays as it was:');
     printTable(
-        ['Change', 'Refused with'],
+        refusalColumns,
         [
-            ['A taxi split 50% and 49.99%', message(unbalanced)],
-            ['Ana paying herself back', message(toHerself)],
-            ['Souvenirs in RON, without a rate', message(unrated)],
+            { change: 'A taxi split 50% and 49.99%', error: message(unbalanced) },
+            { change: 'Ana paying herself back', error: message(toHerself) },
+            { change: 'Souvenirs in RON, without a rate', error: message(unrated) },
         ],
         2,
     );
@@ -192,20 +220,20 @@ export function comingsAndGoings(group: Group, people: People): void {
     );
     const summary = group.summarySync();
     printTable(
-        ['Member', 'Status', 'Balance'],
+        statusColumns,
         group.membersSync().flatMap((member) => {
             const found = undefined === member.id ? undefined : totals(member.id, summary);
             return undefined === member.id || undefined === found
                 ? []
-                : [[member.firstName, group.isArchivedSync(member.id) ? 'archived' : 'active', formatBalance(found.balance)]];
+                : [{ balance: found.balance, name: member.firstName, status: group.isArchivedSync(member.id) ? 'archived' : 'active' }];
         }),
         2,
     );
     printTable(
-        ['Change', 'Refused with'],
+        refusalColumns,
         [
-            ['A farewell dinner with Dan', message(farewell)],
-            ['Removing Dan', message(inUse)],
+            { change: 'A farewell dinner with Dan', error: message(farewell) },
+            { change: 'Removing Dan', error: message(inUse) },
         ],
         2,
     );

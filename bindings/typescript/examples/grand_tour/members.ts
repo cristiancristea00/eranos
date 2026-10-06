@@ -4,8 +4,47 @@
 import assert from 'node:assert/strict';
 
 import { type Account, Currency, Email, Group, GroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
-import { message, printLines, printTable, refusal, section } from '../report.js';
-import { type Categories, type People, cell, outcome } from './tour.js';
+import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
+import { type Categories, type People, cell, outcome, refusalColumns } from './tour.js';
+
+/** A detail of the group, as the table of details prints it. */
+interface DetailRow {
+    readonly detail: string;
+    readonly value: string;
+}
+
+const detailColumns: Columns<DetailRow> = [
+    { header: 'Detail', text: (row) => row.detail },
+    { header: 'Value', text: (row) => row.value },
+];
+
+/** A member with their contact and account details, as the table of members prints them. */
+interface MemberRow {
+    readonly accounts: string;
+    readonly email: string;
+    readonly name: string;
+    readonly phone: string;
+}
+
+const memberColumns: Columns<MemberRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Email', text: (row) => row.email },
+    { header: 'Phone', text: (row) => row.phone },
+    { header: 'Accounts', text: (row) => row.accounts },
+];
+
+/** An input with what validation makes of it, as the table of checks prints it. */
+interface CheckRow {
+    readonly input: string;
+    readonly kind: string;
+    readonly result: string;
+}
+
+const checkColumns: Columns<CheckRow> = [
+    { header: 'Input', text: (row) => row.input },
+    { header: 'Checked as', text: (row) => row.kind },
+    { header: 'Result', text: (row) => row.result },
+];
 
 export function theGroup(): Group {
     section('1. The group');
@@ -17,12 +56,12 @@ export function theGroup(): Group {
     group.setDescriptionSync('A week by the Atlantic, with a day in Porto');
     const language = group.languageSync()?.toString() ?? '';
     printTable(
-        ['Detail', 'Value'],
+        detailColumns,
         [
-            ['Name', group.nameSync()],
-            ['Currency', group.currencySync().toString()],
-            ['Language', language],
-            ['Description', group.descriptionSync() ?? ''],
+            { detail: 'Name', value: group.nameSync() },
+            { detail: 'Currency', value: group.currencySync().toString() },
+            { detail: 'Language', value: language },
+            { detail: 'Description', value: group.descriptionSync() ?? '' },
         ],
         2,
     );
@@ -49,15 +88,13 @@ function describe(account: Account): string {
 
 function printMembers(group: Group): void {
     printTable(
-        ['Member', 'Email', 'Phone', 'Accounts'],
-        group
-            .membersSync()
-            .map((member) => [
-                [member.firstName, member.lastName].filter((part) => undefined !== part).join(' '),
-                member.email?.toString() ?? '',
-                member.phone?.toString() ?? '',
-                cell((member.accounts ?? []).map(describe)),
-            ]),
+        memberColumns,
+        group.membersSync().map((member) => ({
+            accounts: cell((member.accounts ?? []).map(describe)),
+            email: member.email?.toString() ?? '',
+            name: [member.firstName, member.lastName].filter((part) => undefined !== part).join(' '),
+            phone: member.phone?.toString() ?? '',
+        })),
         4,
     );
 }
@@ -68,32 +105,32 @@ function validation(group: Group): void {
         "emails against RFC 5321 and 5322, and phone numbers against their country's",
         'numbering plan. Required text must not be blank:',
     );
-    const iban = (input: string): string[] => [
-        `"${input}"`,
-        'IBAN',
-        outcome(
+    const iban = (input: string): CheckRow => ({
+        input: `"${input}"`,
+        kind: 'IBAN',
+        result: outcome(
             () => Iban.parse(input),
             (parsed) => `${parsed.toString()}, country ${parsed.countryCode}`,
         ),
-    ];
-    const phone = (input: string): string[] => [
-        `"${input}"`,
-        'phone',
-        outcome(
+    });
+    const phone = (input: string): CheckRow => ({
+        input: `"${input}"`,
+        kind: 'phone',
+        result: outcome(
             () => PhoneNumber.parse(input),
             (parsed) => `${parsed.toString()}, stored as ${parsed.e164}`,
         ),
-    ];
+    });
     printTable(
-        ['Input', 'Checked as', 'Result'],
+        checkColumns,
         [
             iban('ro49 aaaa 1b31 0075 9384 0000'),
             iban('RO49 AAAA 1B31 0075 9384 0001'),
-            ['"ana..popescu@example.com"', 'email', outcome(() => Email.parse('ana..popescu@example.com'), String)],
+            { input: '"ana..popescu@example.com"', kind: 'email', result: outcome(() => Email.parse('ana..popescu@example.com'), String) },
             phone('+351 912 345 678'),
             phone('+40 612 345 678'),
-            ['"   "', 'username', outcome(() => Username.parse('   '), String)],
-            ['"  "', 'first name', outcome(() => group.addMemberSync({ firstName: '  ' }), String)],
+            { input: '"   "', kind: 'username', result: outcome(() => Username.parse('   '), String) },
+            { input: '"  "', kind: 'first name', result: outcome(() => group.addMemberSync({ firstName: '  ' }), String) },
         ],
         3,
     );
@@ -157,10 +194,10 @@ export function addCategories(group: Group): Categories {
         'Names are compared caselessly, and the built-in category keeps its name:',
     );
     printTable(
-        ['Change', 'Refused with'],
+        refusalColumns,
         [
-            ['Add a category named FOOD', message(homonym)],
-            ['Rename Uncategorised to Other', message(builtIn)],
+            { change: 'Add a category named FOOD', error: message(homonym) },
+            { change: 'Rename Uncategorised to Other', error: message(builtIn) },
         ],
         2,
     );

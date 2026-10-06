@@ -53,7 +53,7 @@ func anotherCurrency(_ group: Group, _ people: People, _ categories: Categories)
 }
 
 /// Replaces an expense and a transfer, and removes one of each; returns what changed.
-func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories, _ seafood: Expense.ID) throws(EranosError) -> [[String]] {
+func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories, _ seafood: Expense.ID) throws(EranosError) -> [EditRow] {
     // The dinner's receipt said 99.00.
     guard var corrected = try group.expense(withID: seafood) else {
         preconditionFailure("the dinner was added")
@@ -95,10 +95,13 @@ func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories
     let dinner = try group.expense(withID: seafood)
     let apartment = try group.transfer(withID: first)
     return [
-        [previous.name, "\(previous.cost.amount) became \(dinner?.cost.amount ?? zero), at \(dinner?.description ?? "")"],
-        [removed.name, "entered twice; the copy of \(removed.cost.amount) was removed"],
-        ["\(try name(group, people.dan)) to \(try name(group, people.ana))", "\(replaced.cost.amount) became \(apartment?.cost.amount ?? zero), noted \(apartment?.note ?? "")"],
-        ["\(try name(group, people.carol)) to \(try name(group, people.bob))", "\(undone.cost.amount) sent to the wrong member; removed"]
+        EditRow(edit: "\(previous.cost.amount) became \(dinner?.cost.amount ?? zero), at \(dinner?.description ?? "")", entry: previous.name),
+        EditRow(edit: "entered twice; the copy of \(removed.cost.amount) was removed", entry: removed.name),
+        EditRow(
+            edit: "\(replaced.cost.amount) became \(apartment?.cost.amount ?? zero), noted \(apartment?.note ?? "")",
+            entry: "\(try name(group, people.dan)) to \(try name(group, people.ana))"
+        ),
+        EditRow(edit: "\(undone.cost.amount) sent to the wrong member; removed", entry: "\(try name(group, people.carol)) to \(try name(group, people.bob))")
     ]
 }
 
@@ -109,7 +112,7 @@ func edits(_ group: Group, _ people: People, _ categories: Categories, _ seafood
         Entries are values: an edit starts from a copy made with to_builder, keeps the
         identifier, and replaces the entry; a removal takes it out with its totals.
         """)
-    printTable(["Entry", "Edit"], changes, numbersFrom: 2)
+    printTable(changes, numbersFrom: 2)
     print("The balances after the edits:")
     try printBalances(group)
 
@@ -134,11 +137,10 @@ func edits(_ group: Group, _ people: People, _ categories: Categories, _ seafood
     let unrated = Result { () throws(EranosError) in try group.add(souvenirs) }
     print("A change that does not fit is refused, and the group stays as it was:")
     printTable(
-        ["Change", "Refused with"],
         [
-            ["A taxi split 50% and 49.99%", message(unbalanced)],
-            ["Ana paying herself back", message(toHerself)],
-            ["Souvenirs in RON, without a rate", message(unrated)]
+            RefusalRow(change: "A taxi split 50% and 49.99%", error: message(unbalanced)),
+            RefusalRow(change: "Ana paying herself back", error: message(toHerself)),
+            RefusalRow(change: "Souvenirs in RON, without a rate", error: message(unrated))
         ],
         numbersFrom: 2
     )
@@ -177,19 +179,18 @@ func comingsAndGoings(_ group: Group, _ people: People) throws(EranosError) {
         cannot include him, and he cannot be removed while entries reference him.
         """)
     let summary = try group.summary()
-    var rows: [[String]] = []
+    var rows: [StatusRow] = []
     for member in try group.members() {
         guard let id = member.id, let totals = totals(of: id, in: summary) else {
             continue
         }
-        rows.append([member.firstName, try group.isArchived(id) ? "archived" : "active", "\(totals.balance)"])
+        rows.append(StatusRow(balance: totals.balance, name: member.firstName, status: try group.isArchived(id) ? "archived" : "active"))
     }
-    printTable(["Member", "Status", "Balance"], rows, numbersFrom: 2)
+    printTable(rows, numbersFrom: 2)
     printTable(
-        ["Change", "Refused with"],
         [
-            ["A farewell dinner with Dan", message(farewell)],
-            ["Removing Dan", message(inUse)]
+            RefusalRow(change: "A farewell dinner with Dan", error: message(farewell)),
+            RefusalRow(change: "Removing Dan", error: message(inUse))
         ],
         numbersFrom: 2
     )

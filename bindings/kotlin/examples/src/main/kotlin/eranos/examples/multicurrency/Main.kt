@@ -16,10 +16,42 @@ import eranos.MemberId
 import eranos.Money
 import eranos.Split
 import eranos.Transfer
+import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.totals
+
+private data class EntryRow(
+    val converted: Money,
+    val name: String,
+    val original: Money,
+    val payer: String,
+    val rate: ExchangeRate,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, payer, "$original", "$rate", "$converted")
+
+    companion object {
+        val HEADERS = listOf("Entry", "Paid by", "Entered as", "Rate", "In the group currency")
+    }
+}
+
+private data class BalanceRow(
+    val balance: Balance,
+    val consumed: Money,
+    val name: String,
+    val paid: Money,
+    val received: Money,
+    val sent: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, "$paid", "$consumed", "$sent", "$received", "$balance")
+
+    companion object {
+        val HEADERS = listOf("Member", "Paid", "Consumed", "Sent", "Received", "Balance")
+    }
+}
 
 /** The first name of [member] in [group], or `?` for one the group does not hold. */
 private fun name(
@@ -32,25 +64,25 @@ private fun printEntries(group: Group) {
     val zero = Money(group.currencyBlocking(), 0)
     val expenses =
         group.expensesBlocking().map { expense ->
-            listOf(
-                expense.name,
-                names(group, expense.payers.members),
-                "${expense.total()}",
-                "${rate(expense.cost)}",
-                "${expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero}",
+            EntryRow(
+                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
+                name = expense.name,
+                original = expense.total(),
+                payer = names(group, expense.payers.members),
+                rate = rate(expense.cost),
             )
         }
     val transfers =
         group.transfersBlocking().map { transfer ->
-            listOf(
-                "Transfer to ${name(group, transfer.to)}",
-                name(group, transfer.from),
-                "${transfer.cost.amount}",
-                "${rate(transfer.cost)}",
-                "${transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero}",
+            EntryRow(
+                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
+                name = "Transfer to ${name(group, transfer.to)}",
+                original = transfer.cost.amount,
+                payer = name(group, transfer.from),
+                rate = rate(transfer.cost),
             )
         }
-    printTable(listOf("Entry", "Paid by", "Entered as", "Rate", "In the group currency"), expenses + transfers, numbersFrom = 2)
+    printTable(EntryRow.HEADERS, expenses + transfers, numbersFrom = 2)
 }
 
 /** The rate [cost] was entered at: 1 for a cost in the group currency. */
@@ -63,10 +95,17 @@ private fun rate(cost: Cost): ExchangeRate =
 private fun printBalances(group: Group) {
     val summary = group.summaryBlocking()
     printTable(
-        listOf("Member", "Paid", "Consumed", "Sent", "Received", "Balance"),
+        BalanceRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id -> totals(id, summary) }?.let { totals ->
-                listOf(member.firstName, "${totals.paid}", "${totals.share}", "${totals.sent}", "${totals.received}", "${totals.balance}")
+                BalanceRow(
+                    balance = totals.balance,
+                    consumed = totals.share,
+                    name = member.firstName,
+                    paid = totals.paid,
+                    received = totals.received,
+                    sent = totals.sent,
+                )
             }
         },
         numbersFrom = 1,

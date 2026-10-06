@@ -41,280 +41,400 @@ function euros(minorUnits: bigint): Money {
 /** A module's subclass of {@link EranosError}, whose instances hold the module's failure. */
 type ModuleError = abstract new (...values: never[]) => EranosError & { readonly failure: unknown };
 
+/** A failure the generated code can report, with the class and the failure it becomes. */
+interface Conversion {
+    readonly failure: unknown;
+    readonly generated: unknown;
+    readonly type: ModuleError;
+}
+
 /** Every failure the generated code can report, with every reason of a refused IBAN, beside the class and failure it becomes. */
-const conversions: ReadonlyArray<readonly [unknown, ModuleError, unknown]> = [
-    [new internal.EranosError.Account({ detail: 'detail', failure: new internal.AccountFailure.EmptyName() }), AccountError, { kind: 'emptyName' }],
-    [
-        new internal.EranosError.Account({ detail: 'detail', failure: new internal.AccountFailure.EmptyUsername() }),
-        AccountError,
-        { kind: 'emptyUsername' },
-    ],
-    [
-        new internal.EranosError.Account({
+const conversions: readonly Conversion[] = [
+    {
+        failure: { kind: 'emptyName' },
+        generated: new internal.EranosError.Account({ detail: 'detail', failure: new internal.AccountFailure.EmptyName() }),
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'emptyUsername' },
+        generated: new internal.EranosError.Account({ detail: 'detail', failure: new internal.AccountFailure.EmptyUsername() }),
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidChecksum() }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
-    ],
-    [new internal.EranosError.Calendar({ detail: 'detail', failure: internal.CalendarFailure.InvalidDate }), CalendarError, { kind: 'invalidDate' }],
-    [new internal.EranosError.Calendar({ detail: 'detail', failure: internal.CalendarFailure.InvalidTime }), CalendarError, { kind: 'invalidTime' }],
-    [new internal.EranosError.Category({ detail: 'detail', failure: internal.CategoryFailure.EmptyName }), CategoryError, { kind: 'emptyName' }],
-    [new internal.EranosError.Contact({ detail: 'detail', failure: internal.ContactFailure.InvalidEmail }), ContactError, { kind: 'invalidEmail' }],
-    [
-        new internal.EranosError.Contact({ detail: 'detail', failure: internal.ContactFailure.InvalidPhoneNumber }),
-        ContactError,
-        { kind: 'invalidPhoneNumber' },
-    ],
-    [
-        new internal.EranosError.Expense({
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidDate' },
+        generated: new internal.EranosError.Calendar({ detail: 'detail', failure: internal.CalendarFailure.InvalidDate }),
+        type: CalendarError,
+    },
+    {
+        failure: { kind: 'invalidTime' },
+        generated: new internal.EranosError.Calendar({ detail: 'detail', failure: internal.CalendarFailure.InvalidTime }),
+        type: CalendarError,
+    },
+    {
+        failure: { kind: 'emptyName' },
+        generated: new internal.EranosError.Category({ detail: 'detail', failure: internal.CategoryFailure.EmptyName }),
+        type: CategoryError,
+    },
+    {
+        failure: { kind: 'invalidEmail' },
+        generated: new internal.EranosError.Contact({ detail: 'detail', failure: internal.ContactFailure.InvalidEmail }),
+        type: ContactError,
+    },
+    {
+        failure: { kind: 'invalidPhoneNumber' },
+        generated: new internal.EranosError.Contact({ detail: 'detail', failure: internal.ContactFailure.InvalidPhoneNumber }),
+        type: ContactError,
+    },
+    {
+        failure: { kind: 'amountsDoNotAddUp', actual: euros(2n), expected: euros(3n) },
+        generated: new internal.EranosError.Expense({
             detail: 'detail',
             failure: new internal.ExpenseFailure.AmountsDoNotAddUp({
                 actual: internal.Money.create({ currency: 'EUR', minorUnits: 2n }),
                 expected: internal.Money.create({ currency: 'EUR', minorUnits: 3n }),
             }),
         }),
-        ExpenseError,
-        { kind: 'amountsDoNotAddUp', actual: euros(2n), expected: euros(3n) },
-    ],
-    [
-        new internal.EranosError.Expense({
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'currencyMismatch', expected: Currency.known('USD'), found: Currency.known('GBP') },
+        generated: new internal.EranosError.Expense({
             detail: 'detail',
             failure: new internal.ExpenseFailure.CurrencyMismatch({ expected: 'USD', found: 'GBP' }),
         }),
-        ExpenseError,
-        { kind: 'currencyMismatch', expected: Currency.known('USD'), found: Currency.known('GBP') },
-    ],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.DuplicateMember({ member: 'member-6' }) }),
-        ExpenseError,
-        { kind: 'duplicateMember', member: memberId('member-6') },
-    ],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.EmptyItemName() }),
-        ExpenseError,
-        { kind: 'emptyItemName' },
-    ],
-    [new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.EmptyName() }), ExpenseError, { kind: 'emptyName' }],
-    [new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.EmptySplit() }), ExpenseError, { kind: 'emptySplit' }],
-    [
-        new internal.EranosError.Expense({
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'duplicateMember', member: memberId('member-6') },
+        generated: new internal.EranosError.Expense({
+            detail: 'detail',
+            failure: new internal.ExpenseFailure.DuplicateMember({ member: 'member-6' }),
+        }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'emptyItemName' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.EmptyItemName() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'emptyName' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.EmptyName() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'emptySplit' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.EmptySplit() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'itemsDoNotAddUp', actual: euros(7n), expected: euros(8n) },
+        generated: new internal.EranosError.Expense({
             detail: 'detail',
             failure: new internal.ExpenseFailure.ItemsDoNotAddUp({
                 actual: internal.Money.create({ currency: 'EUR', minorUnits: 7n }),
                 expected: internal.Money.create({ currency: 'EUR', minorUnits: 8n }),
             }),
         }),
-        ExpenseError,
-        { kind: 'itemsDoNotAddUp', actual: euros(7n), expected: euros(8n) },
-    ],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NegativeTip() }),
-        ExpenseError,
-        { kind: 'negativeTip' },
-    ],
-    [new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NoItems() }), ExpenseError, { kind: 'noItems' }],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NonPositiveAmount() }),
-        ExpenseError,
-        { kind: 'nonPositiveAmount' },
-    ],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NonPositiveShare({ member: 'member-9' }) }),
-        ExpenseError,
-        { kind: 'nonPositiveShare', member: memberId('member-9') },
-    ],
-    [new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.Overflow() }), ExpenseError, { kind: 'overflow' }],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.PercentagesDoNotAddUp({ totalBasisPoints: 10n }) }),
-        ExpenseError,
-        { kind: 'percentagesDoNotAddUp', totalBasisPoints: 10 },
-    ],
-    [
-        new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.ZeroQuantity() }),
-        ExpenseError,
-        { kind: 'zeroQuantity' },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.ArchivedMember({ member: 'member-11' }) }),
-        GroupError,
-        { kind: 'archivedMember', member: memberId('member-11') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.BuiltInCategory() }),
-        GroupError,
-        { kind: 'builtInCategory' },
-    ],
-    [new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.Busy() }), GroupError, { kind: 'busy' }],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateCategory({ category: 'category-12' }) }),
-        GroupError,
-        { kind: 'duplicateCategory', category: categoryId('category-12') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateCategoryName({ existing: 'existing-13' }) }),
-        GroupError,
-        { kind: 'duplicateCategoryName', existing: categoryId('existing-13') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateExchangeRate({ currency: 'GBP' }) }),
-        GroupError,
-        { kind: 'duplicateExchangeRate', currency: Currency.known('GBP') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateExpense({ expense: 'expense-15' }) }),
-        GroupError,
-        { kind: 'duplicateExpense', expense: expenseId('expense-15') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateMember({ member: 'member-16' }) }),
-        GroupError,
-        { kind: 'duplicateMember', member: memberId('member-16') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateTransfer({ transfer: 'transfer-17' }) }),
-        GroupError,
-        { kind: 'duplicateTransfer', transfer: transferId('transfer-17') },
-    ],
-    [new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.EmptyName() }), GroupError, { kind: 'emptyName' }],
-    [
-        new internal.EranosError.Group({
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'negativeTip' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NegativeTip() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'noItems' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NoItems() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'nonPositiveAmount' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.NonPositiveAmount() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'nonPositiveShare', member: memberId('member-9') },
+        generated: new internal.EranosError.Expense({
+            detail: 'detail',
+            failure: new internal.ExpenseFailure.NonPositiveShare({ member: 'member-9' }),
+        }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'overflow' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.Overflow() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'percentagesDoNotAddUp', totalBasisPoints: 10 },
+        generated: new internal.EranosError.Expense({
+            detail: 'detail',
+            failure: new internal.ExpenseFailure.PercentagesDoNotAddUp({ totalBasisPoints: 10n }),
+        }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'zeroQuantity' },
+        generated: new internal.EranosError.Expense({ detail: 'detail', failure: new internal.ExpenseFailure.ZeroQuantity() }),
+        type: ExpenseError,
+    },
+    {
+        failure: { kind: 'archivedMember', member: memberId('member-11') },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.ArchivedMember({ member: 'member-11' }) }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'builtInCategory' },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.BuiltInCategory() }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'busy' },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.Busy() }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'duplicateCategory', category: categoryId('category-12') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.DuplicateCategory({ category: 'category-12' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'duplicateCategoryName', existing: categoryId('existing-13') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.DuplicateCategoryName({ existing: 'existing-13' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'duplicateExchangeRate', currency: Currency.known('GBP') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.DuplicateExchangeRate({ currency: 'GBP' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'duplicateExpense', expense: expenseId('expense-15') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.DuplicateExpense({ expense: 'expense-15' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'duplicateMember', member: memberId('member-16') },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.DuplicateMember({ member: 'member-16' }) }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'duplicateTransfer', transfer: transferId('transfer-17') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.DuplicateTransfer({ transfer: 'transfer-17' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'emptyName' },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.EmptyName() }),
+        type: GroupError,
+    },
+    {
+        failure: {
+            kind: 'memberInUse',
+            expenses: [expenseId('expenses-18')],
+            member: memberId('member-19'),
+            transfers: [transferId('transfers-20')],
+        },
+        generated: new internal.EranosError.Group({
             detail: 'detail',
             failure: new internal.GroupFailure.MemberInUse({ expenses: ['expenses-18'], member: 'member-19', transfers: ['transfers-20'] }),
         }),
-        GroupError,
-        { kind: 'memberInUse', expenses: [expenseId('expenses-18')], member: memberId('member-19'), transfers: [transferId('transfers-20')] },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.MissingExchangeRate({ currency: 'RON' }) }),
-        GroupError,
-        { kind: 'missingExchangeRate', currency: Currency.known('RON') },
-    ],
-    [new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.Overflow() }), GroupError, { kind: 'overflow' }],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnexpectedExchangeRate() }),
-        GroupError,
-        { kind: 'unexpectedExchangeRate' },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnknownCategory({ category: 'category-22' }) }),
-        GroupError,
-        { kind: 'unknownCategory', category: categoryId('category-22') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnknownExpense({ expense: 'expense-23' }) }),
-        GroupError,
-        { kind: 'unknownExpense', expense: expenseId('expense-23') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnknownMember({ member: 'member-24' }) }),
-        GroupError,
-        { kind: 'unknownMember', member: memberId('member-24') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnknownTransfer({ transfer: 'transfer-25' }) }),
-        GroupError,
-        { kind: 'unknownTransfer', transfer: transferId('transfer-25') },
-    ],
-    [
-        new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnsupportedFormat({ format: 26n }) }),
-        GroupError,
-        { kind: 'unsupportedFormat', format: 26 },
-    ],
-    [new internal.EranosError.Id({ detail: 'detail', failure: internal.IdFailure.InvalidId }), IdError, { kind: 'invalidId' }],
-    [
-        new internal.EranosError.Language({ detail: 'detail', failure: internal.LanguageFailure.InvalidLanguage }),
-        LanguageError,
-        { kind: 'invalidLanguage' },
-    ],
-    [new internal.EranosError.Member({ detail: 'detail', failure: internal.MemberFailure.EmptyFirstName }), MemberError, { kind: 'emptyFirstName' }],
-    [
-        new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.CurrencyMismatch({ left: 'RON', right: 'USD' }) }),
-        MoneyError,
-        { kind: 'currencyMismatch', left: Currency.known('RON'), right: Currency.known('USD') },
-    ],
-    [new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidAmount() }), MoneyError, { kind: 'invalidAmount' }],
-    [
-        new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidExchangeRate() }),
-        MoneyError,
-        { kind: 'invalidExchangeRate' },
-    ],
-    [new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidParts() }), MoneyError, { kind: 'invalidParts' }],
-    [
-        new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidPercentage() }),
-        MoneyError,
-        { kind: 'invalidPercentage' },
-    ],
-    [new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.Overflow() }), MoneyError, { kind: 'overflow' }],
-    [
-        new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.TooManyDecimals({ allowed: 29n, currency: 'RON' }) }),
-        MoneyError,
-        { kind: 'tooManyDecimals', allowed: 29, currency: Currency.known('RON') },
-    ],
-    [
-        new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.UnknownCurrency() }),
-        MoneyError,
-        { kind: 'unknownCurrency' },
-    ],
-    [
-        new internal.EranosError.Settlement({ detail: 'detail', failure: new internal.SettlementFailure.OutOfMemory({ balances: 31n }) }),
-        SettlementError,
-        { kind: 'outOfMemory', balances: 31 },
-    ],
-    [
-        new internal.EranosError.Transfer({ detail: 'detail', failure: internal.TransferFailure.NonPositiveAmount }),
-        TransferError,
-        { kind: 'nonPositiveAmount' },
-    ],
-    [new internal.EranosError.Transfer({ detail: 'detail', failure: internal.TransferFailure.SameMember }), TransferError, { kind: 'sameMember' }],
-    [
-        new internal.EranosError.Account({
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'missingExchangeRate', currency: Currency.known('RON') },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.MissingExchangeRate({ currency: 'RON' }) }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'overflow' },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.Overflow() }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'unexpectedExchangeRate' },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnexpectedExchangeRate() }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'unknownCategory', category: categoryId('category-22') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.UnknownCategory({ category: 'category-22' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'unknownExpense', expense: expenseId('expense-23') },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnknownExpense({ expense: 'expense-23' }) }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'unknownMember', member: memberId('member-24') },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnknownMember({ member: 'member-24' }) }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'unknownTransfer', transfer: transferId('transfer-25') },
+        generated: new internal.EranosError.Group({
+            detail: 'detail',
+            failure: new internal.GroupFailure.UnknownTransfer({ transfer: 'transfer-25' }),
+        }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'unsupportedFormat', format: 26 },
+        generated: new internal.EranosError.Group({ detail: 'detail', failure: new internal.GroupFailure.UnsupportedFormat({ format: 26n }) }),
+        type: GroupError,
+    },
+    {
+        failure: { kind: 'invalidId' },
+        generated: new internal.EranosError.Id({ detail: 'detail', failure: internal.IdFailure.InvalidId }),
+        type: IdError,
+    },
+    {
+        failure: { kind: 'invalidLanguage' },
+        generated: new internal.EranosError.Language({ detail: 'detail', failure: internal.LanguageFailure.InvalidLanguage }),
+        type: LanguageError,
+    },
+    {
+        failure: { kind: 'emptyFirstName' },
+        generated: new internal.EranosError.Member({ detail: 'detail', failure: internal.MemberFailure.EmptyFirstName }),
+        type: MemberError,
+    },
+    {
+        failure: { kind: 'currencyMismatch', left: Currency.known('RON'), right: Currency.known('USD') },
+        generated: new internal.EranosError.Money({
+            detail: 'detail',
+            failure: new internal.MoneyFailure.CurrencyMismatch({ left: 'RON', right: 'USD' }),
+        }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'invalidAmount' },
+        generated: new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidAmount() }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'invalidExchangeRate' },
+        generated: new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidExchangeRate() }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'invalidParts' },
+        generated: new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidParts() }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'invalidPercentage' },
+        generated: new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.InvalidPercentage() }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'overflow' },
+        generated: new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.Overflow() }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'tooManyDecimals', allowed: 29, currency: Currency.known('RON') },
+        generated: new internal.EranosError.Money({
+            detail: 'detail',
+            failure: new internal.MoneyFailure.TooManyDecimals({ allowed: 29n, currency: 'RON' }),
+        }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'unknownCurrency' },
+        generated: new internal.EranosError.Money({ detail: 'detail', failure: new internal.MoneyFailure.UnknownCurrency() }),
+        type: MoneyError,
+    },
+    {
+        failure: { kind: 'outOfMemory', balances: 31 },
+        generated: new internal.EranosError.Settlement({ detail: 'detail', failure: new internal.SettlementFailure.OutOfMemory({ balances: 31n }) }),
+        type: SettlementError,
+    },
+    {
+        failure: { kind: 'nonPositiveAmount' },
+        generated: new internal.EranosError.Transfer({ detail: 'detail', failure: internal.TransferFailure.NonPositiveAmount }),
+        type: TransferError,
+    },
+    {
+        failure: { kind: 'sameMember' },
+        generated: new internal.EranosError.Transfer({ detail: 'detail', failure: internal.TransferFailure.SameMember }),
+        type: TransferError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'invalidCharacter' } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidCharacter() }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'invalidCharacter' } },
-    ],
-    [
-        new internal.EranosError.Account({
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidChecksum() }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
-    ],
-    [
-        new internal.EranosError.Account({
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'invalidFormat' } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidFormat() }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'invalidFormat' } },
-    ],
-    [
-        new internal.EranosError.Account({
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'invalidStructure' } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidStructure() }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'invalidStructure' } },
-    ],
-    [
-        new internal.EranosError.Account({
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'unknownCountry' } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.UnknownCountry() }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'unknownCountry' } },
-    ],
-    [
-        new internal.EranosError.Account({
+        type: AccountError,
+    },
+    {
+        failure: { kind: 'invalidIban', reason: { kind: 'wrongLength', expected: 24, found: 22 } },
+        generated: new internal.EranosError.Account({
             detail: 'detail',
             failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.WrongLength({ expected: 24n, found: 22n }) }),
         }),
-        AccountError,
-        { kind: 'invalidIban', reason: { kind: 'wrongLength', expected: 24, found: 22 } },
-    ],
+        type: AccountError,
+    },
 ];
 
 void describe('the conversions of every failure the generated code can report', () => {
@@ -324,11 +444,11 @@ void describe('the conversions of every failure the generated code can report', 
      */
     void it('converts every failure of the generated code to its module and failure', () => {
         assert.equal(conversions.length, 61);
-        for (const [generated, type, failure] of conversions) {
-            const converted = convertedError(generated);
-            assert.ok(converted instanceof type);
+        for (const conversion of conversions) {
+            const converted = convertedError(conversion.generated);
+            assert.ok(converted instanceof conversion.type);
             assert.ok(converted instanceof EranosError);
-            assert.deepEqual(converted.failure, failure);
+            assert.deepEqual(converted.failure, conversion.failure);
             assert.equal(converted.message, 'detail');
         }
     });
@@ -340,7 +460,10 @@ void describe('the conversions of every failure the generated code can report', 
     void it("converts the bindings' own failures to their standard errors", () => {
         const json = convertedError(new internal.EranosError.InvalidJson({ column: 2n, detail: 'detail', line: 1n }));
         assert.ok(json instanceof InvalidJsonError);
-        assert.deepEqual([json.column, json.line, json.message, json.name], [2, 1, 'detail', 'InvalidJsonError']);
+        assert.equal(json.column, 2);
+        assert.equal(json.line, 1);
+        assert.equal(json.message, 'detail');
+        assert.equal(json.name, 'InvalidJsonError');
         for (const generated of [
             new internal.EranosError.IdentifierGiven({ detail: 'detail' }),
             new internal.EranosError.IdentifierMissing({ detail: 'detail' }),
@@ -352,7 +475,8 @@ void describe('the conversions of every failure the generated code can report', 
         }
         const cancelled = convertedError(new internal.EranosError.Cancelled({ detail: 'detail' }));
         assert.ok(cancelled instanceof DOMException);
-        assert.deepEqual([cancelled.name, cancelled.message], ['AbortError', 'detail']);
+        assert.equal(cancelled.name, 'AbortError');
+        assert.equal(cancelled.message, 'detail');
         const other = new RangeError('other');
         assert.equal(convertedError(other), other);
     });

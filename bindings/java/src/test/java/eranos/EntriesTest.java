@@ -19,59 +19,53 @@ import java.util.Optional;
 /** The expenses, members, categories, and transfers, and the splits, costs, and tips they hold. */
 class EntriesTest {
     /**
-     * A taxi in lei, itemised, paid by percentages, with a fixed tip shared equally, and a dinner
-     * in euros, split equally, paid by amounts, with a percentage tip: between them, every kind of
-     * cost, split, and tip.
+     * A taxi in lei, itemised, paid by percentages, with a fixed tip shared equally: with {@link
+     * #dinner}, every kind of cost, split, and tip.
      */
-    private static List<Expense> expenses(Flat flat) throws EranosException {
+    private static Expense taxi(Flat flat) throws EranosException {
         Currency lei = Currency.of("RON");
-        Expense taxi =
-                Expense.builder(
-                                new Cost.Converted(
-                                        new Money(lei, 5_000), ExchangeRate.parse("0.2")),
-                                flat.day,
-                                "Taxi",
-                                new Split.Percentages(
-                                        List.of(
-                                                new MemberPercentage(
-                                                        flat.ana,
-                                                        Percentage.ofBasisPoints(10_000)))),
-                                new ExpenseSplit.Itemised(
-                                        List.of(
-                                                new Item(
-                                                        "Fare",
-                                                        new Split.Parts(
-                                                                List.of(
-                                                                        new MemberParts(
-                                                                                flat.ana,
-                                                                                Parts.ofHundredths(
-                                                                                        100)),
-                                                                        new MemberParts(
-                                                                                flat.bob,
-                                                                                Parts.ofHundredths(
-                                                                                        50)))),
-                                                        new Money(lei, 2_500),
-                                                        2))))
-                        .category(flat.food)
-                        .description("To the airport")
-                        .time(TimeOfDay.of(9, 5))
-                        .tip(
-                                new Tip(
-                                        new TipValue.Fixed(new Money(lei, 500)),
-                                        TipDistribution.EQUAL))
-                        .build();
-        Expense dinner =
-                Expense.builder(
-                                new Cost.Local(flat.euros(3_000)),
-                                flat.day,
-                                "Dinner",
-                                new Split.Amounts(
-                                        List.of(new MemberAmount(flat.euros(3_300), flat.ana))),
-                                new ExpenseSplit.Whole(
-                                        new Split.Equal(List.of(flat.ana, flat.bob))))
-                        .tip(new Tip(new TipValue.Percentage(Percentage.ofBasisPoints(1_000))))
-                        .build();
-        return List.of(taxi, dinner);
+        return Expense.builder(
+                        new Cost.Converted(new Money(lei, 5_000), ExchangeRate.parse("0.2")),
+                        flat.day,
+                        "Taxi",
+                        new Split.Percentages(
+                                List.of(
+                                        new MemberPercentage(
+                                                flat.ana, Percentage.ofBasisPoints(10_000)))),
+                        new ExpenseSplit.Itemised(
+                                List.of(
+                                        new Item(
+                                                "Fare",
+                                                new Split.Parts(
+                                                        List.of(
+                                                                new MemberParts(
+                                                                        flat.ana,
+                                                                        Parts.ofHundredths(100)),
+                                                                new MemberParts(
+                                                                        flat.bob,
+                                                                        Parts.ofHundredths(50)))),
+                                                new Money(lei, 2_500),
+                                                2))))
+                .category(flat.food)
+                .description("To the airport")
+                .time(TimeOfDay.of(9, 5))
+                .tip(new Tip(new TipValue.Fixed(new Money(lei, 500)), TipDistribution.EQUAL))
+                .build();
+    }
+
+    /**
+     * A dinner in euros, split equally, paid by amounts, with a percentage tip: with {@link #taxi},
+     * every kind of cost, split, and tip.
+     */
+    private static Expense dinner(Flat flat) throws EranosException {
+        return Expense.builder(
+                        new Cost.Local(flat.euros(3_000)),
+                        flat.day,
+                        "Dinner",
+                        new Split.Amounts(List.of(new MemberAmount(flat.euros(3_300), flat.ana))),
+                        new ExpenseSplit.Whole(new Split.Equal(List.of(flat.ana, flat.bob))))
+                .tip(new Tip(new TipValue.Percentage(Percentage.ofBasisPoints(1_000))))
+                .build();
     }
 
     /**
@@ -81,31 +75,20 @@ class EntriesTest {
     @Test
     void everyKindOfExpenseConvertsAndStoresWhole() throws EranosException {
         Flat flat = new Flat();
-        for (Expense expense : expenses(flat)) {
+        for (Expense expense : List.of(taxi(flat), dinner(flat))) {
             assertEquals(expense, Expense.converted(expense.generated()));
             ExpenseId id = flat.group.addExpense(expense);
             Expense stored = flat.group.expense(id).orElseThrow();
             assertEquals(Optional.of(id), stored.id());
-            assertEquals(
-                    List.of(
-                            expense.cost(),
-                            expense.date(),
-                            expense.name(),
-                            expense.payers(),
-                            expense.split()),
-                    List.of(
-                            stored.cost(),
-                            stored.date(),
-                            stored.name(),
-                            stored.payers(),
-                            stored.split()));
-            assertEquals(
-                    List.of(
-                            expense.category(),
-                            expense.description(),
-                            expense.time(),
-                            expense.tip()),
-                    List.of(stored.category(), stored.description(), stored.time(), stored.tip()));
+            assertEquals(expense.cost(), stored.cost());
+            assertEquals(expense.date(), stored.date());
+            assertEquals(expense.name(), stored.name());
+            assertEquals(expense.payers(), stored.payers());
+            assertEquals(expense.split(), stored.split());
+            assertEquals(expense.category(), stored.category());
+            assertEquals(expense.description(), stored.description());
+            assertEquals(expense.time(), stored.time());
+            assertEquals(expense.tip(), stored.tip());
             assertValue(
                     stored, stored.toBuilder().build(), stored.toBuilder().name("Lunch").build());
         }
@@ -117,9 +100,8 @@ class EntriesTest {
                         .payers(new Split.Equal(List.of(flat.bob)))
                         .split(new ExpenseSplit.Whole(new Split.Equal(List.of(flat.ana))))
                         .build();
-        assertEquals(
-                List.of(new Cost.Local(flat.euros(1)), CalendarDate.of(24, 9, 2026)),
-                List.of(edited.cost(), edited.date()));
+        assertEquals(new Cost.Local(flat.euros(1)), edited.cost());
+        assertEquals(CalendarDate.of(24, 9, 2026), edited.date());
         assertEquals(Optional.empty(), plain.toBuilder().category(null).build().category());
     }
 
@@ -131,12 +113,11 @@ class EntriesTest {
     void anExpenseTellsItsTipTotalAndMembers() throws EranosException {
         Flat flat = new Flat();
         Currency lei = Currency.of("RON");
-        List<Expense> expenses = expenses(flat);
-        Expense taxi = expenses.get(0);
+        Expense taxi = taxi(flat);
         assertEquals(new Money(lei, 500), taxi.tipAmount());
         assertEquals(new Money(lei, 5_500), taxi.total());
         assertEquals(List.of(flat.ana, flat.bob), taxi.members());
-        assertEquals(flat.euros(300), expenses.get(1).tipAmount());
+        assertEquals(flat.euros(300), dinner(flat).tipAmount());
         Expense unreadable =
                 taxi.toBuilder().payers(new Split.Equal(List.of(new MemberId("nobody")))).build();
         assertThrows(EranosException.Id.class, unreadable::members);
@@ -202,7 +183,8 @@ class EntriesTest {
                         new TipValue.Percentage(Percentage.ofBasisPoints(1)))) {
             assertEquals(value, Conversions.converted(Conversions.generated(value)));
         }
-        assertEquals(1, new Item("Bread", splits.get(1), flat.euros(1)).quantity());
+        assertEquals(
+                1, new Item("Bread", new Split.Equal(List.of(flat.bob)), flat.euros(1)).quantity());
         assertEquals(
                 TipDistribution.PROPORTIONAL,
                 new Tip(new TipValue.Fixed(flat.euros(1))).distribution());
@@ -234,17 +216,18 @@ class EntriesTest {
         MemberId id = flat.group.addMember(carol);
         Member stored = flat.group.member(id).orElseThrow();
         assertEquals(Optional.of(id), stored.id());
-        assertEquals(
-                List.of(carol.accounts(), carol.email(), carol.lastName(), carol.phone()),
-                List.of(stored.accounts(), stored.email(), stored.lastName(), stored.phone()));
+        assertEquals(carol.accounts(), stored.accounts());
+        assertEquals(carol.email(), stored.email());
+        assertEquals(carol.lastName(), stored.lastName());
+        assertEquals(carol.phone(), stored.phone());
         assertValue(
                 stored,
                 stored.toBuilder().build(),
                 stored.toBuilder().firstName("Caroline").build());
         Member plain = stored.toBuilder().email(null).lastName(null).phone(null).build();
-        assertEquals(
-                List.of(Optional.empty(), Optional.empty(), Optional.empty()),
-                List.of(plain.email(), plain.lastName(), plain.phone()));
+        assertEquals(Optional.empty(), plain.email());
+        assertEquals(Optional.empty(), plain.lastName());
+        assertEquals(Optional.empty(), plain.phone());
         assertEquals(List.of(), Member.builder("Dan").build().accounts());
 
         Currency lei = Currency.of("RON");
@@ -262,12 +245,12 @@ class EntriesTest {
         TransferId payment = flat.group.addTransfer(cash);
         Transfer storedCash = flat.group.transfer(payment).orElseThrow();
         assertEquals(Optional.of(payment), storedCash.id());
-        assertEquals(
-                List.of(cash.cost(), cash.date(), cash.from(), cash.to()),
-                List.of(storedCash.cost(), storedCash.date(), storedCash.from(), storedCash.to()));
-        assertEquals(
-                List.of(Optional.of("Cash"), Optional.of(TimeOfDay.of(10, 0))),
-                List.of(storedCash.note(), storedCash.time()));
+        assertEquals(cash.cost(), storedCash.cost());
+        assertEquals(cash.date(), storedCash.date());
+        assertEquals(cash.from(), storedCash.from());
+        assertEquals(cash.to(), storedCash.to());
+        assertEquals(Optional.of("Cash"), storedCash.note());
+        assertEquals(Optional.of(TimeOfDay.of(10, 0)), storedCash.time());
         assertEquals(Optional.of(flat.euros(200)), flat.group.transferAmount(payment));
         assertValue(
                 storedCash,
@@ -281,7 +264,8 @@ class EntriesTest {
                         .to(flat.bob)
                         .time(null)
                         .build();
-        assertEquals(List.of(flat.ana, flat.bob), List.of(back.from(), back.to()));
+        assertEquals(flat.ana, back.from());
+        assertEquals(flat.bob, back.to());
 
         Category travel = new Category("Travel");
         assertEquals(travel, Category.converted(travel.generated()));
@@ -296,9 +280,10 @@ class EntriesTest {
         IllegalArgumentException missing =
                 assertThrows(IllegalArgumentException.class, () -> flat.group.replaceMember(carol));
         assertEquals("an entry to replace must carry its identifier", missing.getMessage());
-        for (AccountDetails details :
-                List.of(accounts.get(0).details(), accounts.get(1).details())) {
-            assertEquals(details, Conversions.converted(Conversions.generated(details)));
+        for (Account account : accounts) {
+            assertEquals(
+                    account.details(),
+                    Conversions.converted(Conversions.generated(account.details())));
         }
     }
 

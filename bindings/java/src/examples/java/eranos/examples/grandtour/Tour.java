@@ -6,6 +6,7 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
+import eranos.ExpenseId;
 import eranos.Group;
 import eranos.GroupFailure;
 import eranos.Member;
@@ -17,8 +18,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * What the sections of the tour share: the members and categories they name, the amounts and dates
- * of the trip, and the outcomes of the changes a section tries.
+ * What the sections of the tour share: the members, categories, and expenses they name, the amounts
+ * and dates of the trip, and the outcomes of the changes a section tries.
  */
 final class Tour {
     private Tour() {}
@@ -34,6 +35,16 @@ final class Tour {
 
     /** The categories the group adds to the built-in one. */
     record Categories(CategoryId food, CategoryId lodging, CategoryId transport) {}
+
+    /** The seven expenses, one for every way of dividing one. */
+    record Expenses(
+            ExpenseId apartment,
+            ExpenseId fado,
+            ExpenseId groceries,
+            ExpenseId museum,
+            ExpenseId seafood,
+            ExpenseId tour,
+            ExpenseId train) {}
 
     /** A value the library makes, or refuses to. */
     interface Make<Value> {

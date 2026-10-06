@@ -14,8 +14,49 @@ import {
     Money,
     SettlementStrategy,
 } from '../../src/index.js';
-import { message, printLines, printTable, refusal, section, totals } from '../report.js';
-import { type Categories, type People, builtInCategory, eur, name, october, printBalances, printCategories, printEntries, ron, sum } from './tour.js';
+import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
+import {
+    type Categories,
+    type People,
+    builtInCategory,
+    eur,
+    name,
+    october,
+    paymentColumns,
+    printBalances,
+    printCategories,
+    printEntries,
+    ron,
+    sum,
+} from './tour.js';
+
+/** A member's consumption in each category, as the table of consumption per category prints it. */
+interface MemberCategoryRow {
+    readonly food: Money;
+    readonly lodging: Money;
+    readonly name: string;
+    readonly transport: Money;
+    readonly uncategorised: Money;
+}
+
+const memberCategoryColumns: Columns<MemberCategoryRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Food', text: (row) => row.food.toString() },
+    { header: 'Lodging', text: (row) => row.lodging.toString() },
+    { header: 'Getting around', text: (row) => row.transport.toString() },
+    { header: 'Uncategorised', text: (row) => row.uncategorised.toString() },
+];
+
+/** A strategy and the number of payments of its plan, as the table of strategies prints them. */
+interface StrategyRow {
+    readonly payments: number;
+    readonly strategy: string;
+}
+
+const strategyColumns: Columns<StrategyRow> = [
+    { header: 'Strategy', text: (row) => row.strategy },
+    { header: 'Payments', text: (row) => String(row.payments) },
+];
 
 /** The totals per category of `member` in `summary`. */
 function byCategory(summary: Summary, member: MemberId): readonly CategoryTotal[] {
@@ -46,20 +87,20 @@ export function summary(group: Group, people: People, categories: Categories): v
     const builtIn = builtInCategory(group);
     const zero = new Money(group.currencySync(), 0n);
     printTable(
-        ['Member', 'Food', 'Lodging', 'Getting around', 'Uncategorised'],
+        memberCategoryColumns,
         group.membersSync().flatMap((member) => {
             if (undefined === member.id) {
                 return [];
             }
             const own = byCategory(summary, member.id);
             return [
-                [
-                    member.firstName,
-                    (total(own, categories.food) ?? zero).toString(),
-                    (total(own, categories.lodging) ?? zero).toString(),
-                    (total(own, categories.transport) ?? zero).toString(),
-                    (total(own, builtIn) ?? zero).toString(),
-                ],
+                {
+                    food: total(own, categories.food) ?? zero,
+                    lodging: total(own, categories.lodging) ?? zero,
+                    name: member.firstName,
+                    transport: total(own, categories.transport) ?? zero,
+                    uncategorised: total(own, builtIn) ?? zero,
+                },
             ];
         }),
         1,
@@ -159,22 +200,22 @@ function strategyName(strategy: SettlementStrategy): string {
 
 export function settlingUp(group: Group): void {
     section('11. Settling up');
-    const counts = Object.values(SettlementStrategy).map((strategy) => {
+    const counts = Object.values(SettlementStrategy).map((strategy): StrategyRow => {
         const settlement = group.settlementSync(strategy);
         assert.equal(settlement.strategy, strategy);
-        return [strategyName(settlement.strategy), String(settlement.payments.length)];
+        return { payments: settlement.payments.length, strategy: strategyName(settlement.strategy) };
     });
     printLines(
         'Each strategy turns the balances into payments: the direct one pays back every',
         "pair's own debts, greedy pays the largest amounts first, and the minimum one",
         'finds the fewest payments.',
     );
-    printTable(['Strategy', 'Payments'], counts, 1);
+    printTable(strategyColumns, counts, 1);
     const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
     printLines('The group follows the minimum plan:');
     printTable(
-        ['From', 'To', 'Amount'],
-        plan.payments.map((payment) => [name(group, payment.from), name(group, payment.to), payment.amount.toString()]),
+        paymentColumns,
+        plan.payments.map((payment) => ({ amount: payment.amount, from: name(group, payment.from), to: name(group, payment.to) })),
         2,
     );
     for (const payment of plan.payments) {

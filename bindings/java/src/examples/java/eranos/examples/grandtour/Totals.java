@@ -37,6 +37,9 @@ import eranos.Settlement;
 import eranos.SettlementStrategy;
 import eranos.Summary;
 import eranos.Transfer;
+import eranos.examples.grandtour.Tables.MemberCategoryRow;
+import eranos.examples.grandtour.Tables.PaymentRow;
+import eranos.examples.grandtour.Tables.StrategyRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
 
@@ -85,27 +88,20 @@ final class Totals {
         System.out.println("And each member's consumption per category:");
         Optional<CategoryId> builtIn = builtInCategory(group);
         Money zero = new Money(group.currency(), 0);
-        List<List<String>> rows = new ArrayList<>();
+        List<MemberCategoryRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             if (member.id().isPresent()) {
                 List<CategoryTotal> totals = byCategory(summary, member.id().orElseThrow());
                 rows.add(
-                        List.of(
+                        new MemberCategoryRow(
+                                total(totals, Optional.of(categories.food())).orElse(zero),
+                                total(totals, Optional.of(categories.lodging())).orElse(zero),
                                 member.firstName(),
-                                total(totals, Optional.of(categories.food()))
-                                        .orElse(zero)
-                                        .toString(),
-                                total(totals, Optional.of(categories.lodging()))
-                                        .orElse(zero)
-                                        .toString(),
-                                total(totals, Optional.of(categories.transport()))
-                                        .orElse(zero)
-                                        .toString(),
-                                total(totals, builtIn).orElse(zero).toString()));
+                                total(totals, Optional.of(categories.transport())).orElse(zero),
+                                total(totals, builtIn).orElse(zero)));
             }
         }
-        printTable(
-                List.of("Member", "Food", "Lodging", "Getting around", "Uncategorised"), rows, 1);
+        printTable(MemberCategoryRow.HEADERS, rows, 1);
 
         check(eur("1222.90").equals(summary.totalSpent()));
         check(
@@ -224,14 +220,13 @@ final class Totals {
 
     static void settlingUp(Group group) throws EranosException {
         section("11. Settling up");
-        List<List<String>> counts = new ArrayList<>();
+        List<StrategyRow> counts = new ArrayList<>();
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
             Settlement settlement = group.settlement(strategy);
             check(strategy == settlement.strategy());
             counts.add(
-                    List.of(
-                            strategyName(settlement.strategy()),
-                            String.valueOf(settlement.payments().size())));
+                    new StrategyRow(
+                            settlement.payments().size(), strategyName(settlement.strategy())));
         }
         System.out.print(
                 """
@@ -239,18 +234,18 @@ final class Totals {
                 pair's own debts, greedy pays the largest amounts first, and the minimum one
                 finds the fewest payments.
                 """);
-        printTable(List.of("Strategy", "Payments"), counts, 1);
+        printTable(StrategyRow.HEADERS, counts, 1);
         Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
         System.out.println("The group follows the minimum plan:");
-        List<List<String>> rows = new ArrayList<>();
+        List<PaymentRow> rows = new ArrayList<>();
         for (Payment payment : plan.payments()) {
             rows.add(
-                    List.of(
+                    new PaymentRow(
+                            payment.amount(),
                             name(group, payment.from()),
-                            name(group, payment.to()),
-                            payment.amount().toString()));
+                            name(group, payment.to())));
         }
-        printTable(List.of("From", "To", "Amount"), rows, 2);
+        printTable(PaymentRow.HEADERS, rows, 2);
         for (Payment payment : plan.payments()) {
             group.addTransfer(
                     Transfer.builder(

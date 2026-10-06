@@ -13,7 +13,7 @@ use eranos_core::MemberId;
 use eranos_core::cooperative::Pacer;
 use eranos_ledger::MemberPair;
 
-use super::Flow;
+use super::{Flow, OpenBalance};
 use crate::error::SettlementError;
 
 /// How many subsets the table fill computes between two checks of the
@@ -25,19 +25,26 @@ const SUBSETS_PER_CHECK: usize = 1 << 12;
 /// balances or fewer fills without a yield.
 const UNITS_PER_YIELD: u64 = 1 << 21;
 
-/// Settles `balances` (member, net; positive = is owed, ordered by member)
-/// with the fewest payments, yielding while it fills its table.
+/// Settles `balances`, ordered by member, with the fewest payments, yielding
+/// while it fills its table.
 ///
 /// # Errors
 ///
 /// [`SettlementError::OutOfMemory`] when the 2ⁿ-byte table for the `n`
 /// unpaired balances cannot be allocated.
-pub(super) async fn settle(balances: &[(MemberId, i64)]) -> Result<Vec<Flow>, SettlementError> {
-    let (mut flows, rest) = pair_opposites(balances);
+pub(super) async fn settle(balances: &[OpenBalance]) -> Result<Vec<Flow>, SettlementError> {
+    let Pairing { mut flows, rest } = pair_opposites(balances);
     for group in zero_sum_groups(&rest).await? {
         flows.extend(settle_group(&group));
     }
     Ok(flows)
+}
+
+/// The payments between exact opposites and the balances they leave.
+#[derive(Debug)]
+struct Pairing {
+    flows: Vec<Flow>,
+    rest: Vec<OpenBalance>,
 }
 
 /// Settles every debtor whose debt exactly matches a creditor's credit with
@@ -47,9 +54,9 @@ pub(super) async fn settle(balances: &[(MemberId, i64)]) -> Result<Vec<Flow>, Se
 /// Taking such a pair as its own group is always optimal: if an optimal
 /// partition put the two members in groups G and H, then {x, −x} and
 /// (G ∪ H) ∖ {x, −x} is a partition with as many zero-sum groups.
-fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i64)>) {
+fn pair_opposites(balances: &[OpenBalance]) -> Pairing {
     let mut creditors: BTreeMap<i64, Vec<MemberId>> = BTreeMap::new();
-    for &(member, net) in balances.iter().rev() {
+    for &OpenBalance { member, net } in balances.iter().rev() {
         if 0 < net {
             // Reversed, so popping from the end yields the lowest ID first.
             creditors.entry(net).or_default().push(member);
@@ -57,7 +64,7 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
     }
     let mut paired = Vec::new();
     let mut flows = Vec::new();
-    for &(member, net) in balances {
+    for &OpenBalance { member, net } in balances {
         if 0 > net {
             // The ledger keeps every value above i64::MIN, so negating fits.
             if let Some(creditor) = creditors.get_mut(&-net).and_then(Vec::pop) {
@@ -77,9 +84,9 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
     let rest = balances
         .iter()
         .copied()
-        .filter(|&(member, net)| 0 != net && paired.binary_search(&member).is_err())
+        .filter(|balance| 0 != balance.net && paired.binary_search(&balance.member).is_err())
         .collect();
-    (flows, rest)
+    Pairing { flows, rest }
 }
 
 /// Partitions `balances` into the largest number of groups that each sum to
@@ -91,8 +98,8 @@ fn pair_opposites(balances: &[(MemberId, i64)]) -> (Vec<Flow>, Vec<(MemberId, i6
 /// from the full set along that maximum orders the members so that the
 /// prefix sums hit zero exactly at the group boundaries.
 async fn zero_sum_groups(
-    balances: &[(MemberId, i64)],
-) -> Result<Vec<Vec<(MemberId, i64)>>, SettlementError> {
+    balances: &[OpenBalance],
+) -> Result<Vec<Vec<OpenBalance>>, SettlementError> {
     let count = balances.len();
     if 0 == count {
         return Ok(Vec::new());
@@ -105,7 +112,10 @@ async fn zero_sum_groups(
     let mut table: Vec<u8> = Vec::new();
     table.try_reserve_exact(size).map_err(|_| out_of_memory)?;
 
-    let nets: Vec<i128> = balances.iter().map(|&(_, net)| i128::from(net)).collect();
+    let nets: Vec<i128> = balances
+        .iter()
+        .map(|balance| i128::from(balance.net))
+        .collect();
     // Subsets in increasing order, one chunk at a time between the pacer's
     // checks.
     table.push(0);
@@ -153,7 +163,7 @@ async fn zero_sum_groups(
         .filter_map(|&position| balances.get(position))
     {
         group.push(balance);
-        prefix += i128::from(balance.1);
+        prefix += i128::from(balance.net);
         if 0 == prefix {
             groups.push(std::mem::take(&mut group));
         }
@@ -200,36 +210,39 @@ fn members_of(mut subset: usize) -> impl Iterator<Item = usize> {
 /// A group from a maximum partition has no zero-sum subgroup, so no debt and
 /// credit ever clear together before the last payment, and every payment but
 /// the last clears exactly one member.
-fn settle_group(group: &[(MemberId, i64)]) -> Vec<Flow> {
-    let mut debtors: Vec<(MemberId, i64)> = group
+fn settle_group(group: &[OpenBalance]) -> Vec<Flow> {
+    let mut debtors: Vec<OpenBalance> = group
         .iter()
-        .filter(|&&(_, net)| 0 > net)
-        .map(|&(member, net)| (member, -net))
+        .copied()
+        .filter(|balance| 0 > balance.net)
         .collect();
-    let mut creditors: Vec<(MemberId, i64)> =
-        group.iter().copied().filter(|&(_, net)| 0 < net).collect();
-    debtors.sort_unstable();
-    creditors.sort_unstable();
+    let mut creditors: Vec<OpenBalance> = group
+        .iter()
+        .copied()
+        .filter(|balance| 0 < balance.net)
+        .collect();
+    debtors.sort_unstable_by_key(|balance| balance.member);
+    creditors.sort_unstable_by_key(|balance| balance.member);
     let mut flows = Vec::with_capacity(group.len().saturating_sub(1));
     let mut debtors = debtors.into_iter();
     let mut creditors = creditors.into_iter();
     let (mut debtor, mut creditor) = (debtors.next(), creditors.next());
-    while let (Some((debtor_id, debt)), Some((creditor_id, credit))) = (&mut debtor, &mut creditor)
-    {
-        let amount = (*debt).min(*credit);
+    while let (Some(owing), Some(owed)) = (&mut debtor, &mut creditor) {
+        // A debtor's net is negative and above i64::MIN, so negating fits.
+        let amount = (-owing.net).min(owed.net);
         flows.push(Flow {
             amount,
             members: MemberPair {
-                from: *debtor_id,
-                to: *creditor_id,
+                from: owing.member,
+                to: owed.member,
             },
         });
-        *debt -= amount;
-        *credit -= amount;
-        if 0 == *debt {
+        owing.net += amount;
+        owed.net -= amount;
+        if 0 == owing.net {
             debtor = debtors.next();
         }
-        if 0 == *credit {
+        if 0 == owed.net {
             creditor = creditors.next();
         }
     }

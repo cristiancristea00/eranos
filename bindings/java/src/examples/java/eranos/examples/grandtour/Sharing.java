@@ -22,6 +22,7 @@ import eranos.Settlement;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
+import eranos.examples.grandtour.Tables.PaymentRow;
 import eranos.examples.grandtour.Tour.People;
 
 import java.util.ArrayList;
@@ -59,17 +60,17 @@ final class Sharing {
                 each one on this thread. Bob adds the airport coffee through another handle,
                 and the plan that settles it comes through the first:
                 """);
-        List<List<String>> rows = new ArrayList<>();
+        List<PaymentRow> rows = new ArrayList<>();
         try (GroupReader reader = group.readAsync().join()) {
             for (Payment payment : plan.payments()) {
                 rows.add(
-                        List.of(
+                        new PaymentRow(
+                                payment.amount(),
                                 reader.member(payment.from()).map(Member::firstName).orElse("?"),
-                                reader.member(payment.to()).map(Member::firstName).orElse("?"),
-                                payment.amount().toString()));
+                                reader.member(payment.to()).map(Member::firstName).orElse("?")));
             }
         }
-        printTable(List.of("From", "To", "Amount"), rows, 2);
+        printTable(PaymentRow.HEADERS, rows, 2);
 
         Summary before = group.summaryAsync().join();
         Map<Currency, ExchangeRate> rates = Map.of(Currency.of("RON"), ExchangeRate.parse("0.2"));

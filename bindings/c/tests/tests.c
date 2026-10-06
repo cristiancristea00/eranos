@@ -2203,46 +2203,49 @@ static void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check
 
 /// A test: its name, the claim it makes, and its body.
 typedef struct Test {
-    /// The test's name.
-    char const *name;
     /// The test.
     void (*body)(Check *check);
+    /// The test's name.
+    char const *name;
 } Test;
 
 /// Runs every test and prints each claim that failed.
 int main(void) {
     Test const tests[] = {
-        {"aTextHoldsWhatTheLastCallWrote", aTextHoldsWhatTheLastCallWrote},
-        {"aCurrencyHoldsWhatTheLibraryKnowsOfIt", aCurrencyHoldsWhatTheLibraryKnowsOfIt},
-        {"textThatIsNotUtf8IsRefusedAndNullReadsAsEmpty", textThatIsNotUtf8IsRefusedAndNullReadsAsEmpty},
-        {"anAmountParsesFormatsAndAdds", anAmountParsesFormatsAndAdds},
-        {"ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes", ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes},
-        {"datesAndTimesAreCheckedAndWritten", datesAndTimesAreCheckedAndWritten},
-        {"contactsAndAccountsAreCheckedAndMadeCanonical", contactsAndAccountsAreCheckedAndMadeCanonical},
-        {"aListOfIdentifiersKeepsItsOrder", aListOfIdentifiersKeepsItsOrder},
-        {"everyShareOfASplitReadsBackAsItWasMade", everyShareOfASplitReadsBackAsItWasMade},
-        {"itemsTipsAndCostsReadBackAsTheyWereMade", itemsTipsAndCostsReadBackAsTheyWereMade},
-        {"anExpenseReadsBackEveryFieldItWasGiven", anExpenseReadsBackEveryFieldItWasGiven},
-        {"aTransferReadsBackEveryFieldItWasGiven", aTransferReadsBackEveryFieldItWasGiven},
-        {"aMemberAndTheirAccountsReadBackAsTheyWereGiven", aMemberAndTheirAccountsReadBackAsTheyWereGiven},
-        {"aCategoryReadsBackAsItWasGiven", aCategoryReadsBackAsItWasGiven},
-        {"everyBalanceFormatsAsTheLibraryWritesIt", everyBalanceFormatsAsTheLibraryWritesIt},
-        {"destroyingNullDoesNothing", destroyingNullDoesNothing},
-        {"aGroupHoldsItsDetailsAndChangesThem", aGroupHoldsItsDetailsAndChangesThem},
-        {"entriesComeAndGoThroughTheGroup", entriesComeAndGoThroughTheGroup},
-        {"anIdentifierThatIsNotOneIsRefusedByEveryLookup", anIdentifierThatIsNotOneIsRefusedByEveryLookup},
-        {"theParticipantsOfASplitAndOfAnExpenseAreTheirMembers", theParticipantsOfASplitAndOfAnExpenseAreTheirMembers},
-        {"anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved", anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved},
-        {"theSummaryAndTheSharesAddUp", theSummaryAndTheSharesAddUp},
-        {"eachStrategySettlesEveryBalance", eachStrategySettlesEveryBalance},
-        {"anExactPlanTooLargeToComputeIsRefused", anExactPlanTooLargeToComputeIsRefused},
-        {"aChangeOfCurrencyConvertsEveryEntry", aChangeOfCurrencyConvertsEveryEntry},
-        {"aSavedGroupLoadsAsItWasSaved", aSavedGroupLoadsAsItWasSaved},
-        {"everyErrorHoldsWhatItsFailureHolds", everyErrorHoldsWhatItsFailureHolds},
-        {"everyAsynchronousCallReportsWhatItsSynchronousFormReturns", everyAsynchronousCallReportsWhatItsSynchronousFormReturns},
-        {"aReaderReadsTheGroupUntilItIsReleased", aReaderReadsTheGroupUntilItIsReleased},
-        {"everyReadOfAReleasedReaderFails", everyReadOfAReleasedReaderFails},
-        {"aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas", aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas},
+        {.body = aTextHoldsWhatTheLastCallWrote, .name = "aTextHoldsWhatTheLastCallWrote"},
+        {.body = aCurrencyHoldsWhatTheLibraryKnowsOfIt, .name = "aCurrencyHoldsWhatTheLibraryKnowsOfIt"},
+        {.body = textThatIsNotUtf8IsRefusedAndNullReadsAsEmpty, .name = "textThatIsNotUtf8IsRefusedAndNullReadsAsEmpty"},
+        {.body = anAmountParsesFormatsAndAdds, .name = "anAmountParsesFormatsAndAdds"},
+        {.body = ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes, .name = "ratesPercentagesAndPartsParseAndFormatAsTheLibraryDoes"},
+        {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
+        {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},
+        {.body = aListOfIdentifiersKeepsItsOrder, .name = "aListOfIdentifiersKeepsItsOrder"},
+        {.body = everyShareOfASplitReadsBackAsItWasMade, .name = "everyShareOfASplitReadsBackAsItWasMade"},
+        {.body = itemsTipsAndCostsReadBackAsTheyWereMade, .name = "itemsTipsAndCostsReadBackAsTheyWereMade"},
+        {.body = anExpenseReadsBackEveryFieldItWasGiven, .name = "anExpenseReadsBackEveryFieldItWasGiven"},
+        {.body = aTransferReadsBackEveryFieldItWasGiven, .name = "aTransferReadsBackEveryFieldItWasGiven"},
+        {.body = aMemberAndTheirAccountsReadBackAsTheyWereGiven, .name = "aMemberAndTheirAccountsReadBackAsTheyWereGiven"},
+        {.body = aCategoryReadsBackAsItWasGiven, .name = "aCategoryReadsBackAsItWasGiven"},
+        {.body = everyBalanceFormatsAsTheLibraryWritesIt, .name = "everyBalanceFormatsAsTheLibraryWritesIt"},
+        {.body = destroyingNullDoesNothing, .name = "destroyingNullDoesNothing"},
+        {.body = aGroupHoldsItsDetailsAndChangesThem, .name = "aGroupHoldsItsDetailsAndChangesThem"},
+        {.body = entriesComeAndGoThroughTheGroup, .name = "entriesComeAndGoThroughTheGroup"},
+        {.body = anIdentifierThatIsNotOneIsRefusedByEveryLookup, .name = "anIdentifierThatIsNotOneIsRefusedByEveryLookup"},
+        {.body = theParticipantsOfASplitAndOfAnExpenseAreTheirMembers, .name = "theParticipantsOfASplitAndOfAnExpenseAreTheirMembers"},
+        {.body = anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved, .name = "anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved"},
+        {.body = theSummaryAndTheSharesAddUp, .name = "theSummaryAndTheSharesAddUp"},
+        {.body = eachStrategySettlesEveryBalance, .name = "eachStrategySettlesEveryBalance"},
+        {.body = anExactPlanTooLargeToComputeIsRefused, .name = "anExactPlanTooLargeToComputeIsRefused"},
+        {.body = aChangeOfCurrencyConvertsEveryEntry, .name = "aChangeOfCurrencyConvertsEveryEntry"},
+        {.body = aSavedGroupLoadsAsItWasSaved, .name = "aSavedGroupLoadsAsItWasSaved"},
+        {.body = everyErrorHoldsWhatItsFailureHolds, .name = "everyErrorHoldsWhatItsFailureHolds"},
+        {.body = everyAsynchronousCallReportsWhatItsSynchronousFormReturns, .name = "everyAsynchronousCallReportsWhatItsSynchronousFormReturns"},
+        {.body = aReaderReadsTheGroupUntilItIsReleased, .name = "aReaderReadsTheGroupUntilItIsReleased"},
+        {.body = everyReadOfAReleasedReaderFails, .name = "everyReadOfAReleasedReaderFails"},
+        {
+            .body = aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas,
+            .name = "aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas",
+        },
     };
     size_t const count = sizeof tests / sizeof tests[0];
     size_t failed = 0;

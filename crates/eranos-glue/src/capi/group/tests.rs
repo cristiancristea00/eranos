@@ -53,9 +53,16 @@ fn names(methods: &[ImplItemFn]) -> Vec<String> {
         .collect()
 }
 
-/// The method `name` of `methods`: its documentation, and its code without
-/// it, as it prints.
-fn method(methods: &[ImplItemFn], name: &str) -> (String, String) {
+/// A method of an `impl`, as it prints.
+struct Method {
+    /// Its code without its documentation.
+    code: String,
+    /// Its documentation, its paragraphs a blank line apart.
+    docs: String,
+}
+
+/// The method `name` of `methods`, as it prints.
+fn method(methods: &[ImplItemFn], name: &str) -> Method {
     let mut method = methods
         .iter()
         .find(|method| method.sig.ident == name)
@@ -67,7 +74,10 @@ fn method(methods: &[ImplItemFn], name: &str) -> (String, String) {
     method
         .attrs
         .retain(|attribute| !attribute.path().is_ident("doc"));
-    (docs, method.to_token_stream().to_string())
+    Method {
+        code: method.to_token_stream().to_string(),
+        docs,
+    }
 }
 
 /// `code` as a method prints.
@@ -84,7 +94,7 @@ fn assert_written(methods: &[ImplItemFn], expected: &[TokenStream]) {
     for code in expected {
         let function = syn::parse2::<ImplItemFn>(code.clone()).unwrap();
         assert_eq!(
-            method(methods, &function.sig.ident.to_string()).1,
+            method(methods, &function.sig.ident.to_string()).code,
             function.to_token_stream().to_string()
         );
     }
@@ -403,43 +413,43 @@ fn every_form_says_how_it_fails() {
     let named = named();
     let group = methods(&named["EranosGroup"]);
     assert_eq!(
-        method(&group, "expense").0,
+        method(&group, "expense").docs,
         format!(
             "The expense with the identifier `id`.\n\n# Errors\n\nThe library's refusal. {READ_BUSY} {INVALID_TEXT}"
         )
     );
     assert_eq!(
-        method(&group, "name").0,
+        method(&group, "name").docs,
         format!(
             "The group's name. Writes it into `write`.\n\nIt is never blank.\n\n# Errors\n\n{READ_BUSY}"
         )
     );
     assert_eq!(
-        method(&group, "description").0,
+        method(&group, "description").docs,
         format!(
             "The description. Writes it into `write` when there is one, and nothing otherwise.\n\n# Errors\n\n{READ_BUSY}"
         )
     );
     assert_eq!(
-        method(&group, "add_expense").0,
+        method(&group, "add_expense").docs,
         format!(
             "Adds `expense` and returns its identifier. Writes it into `write`.\n\n# Errors\n\nThe library's refusal. {WRITE_BUSY}"
         )
     );
     assert_eq!(
-        method(&group, "clear_language").0,
+        method(&group, "clear_language").docs,
         format!(
             "The form of `set_language` that passes no `language`.\n\n# Errors\n\nThe library's refusal. {WRITE_BUSY}"
         )
     );
     assert!(
-        method(&group, "expense_async").0.starts_with(
+        method(&group, "expense_async").docs.starts_with(
             "The asynchronous form of `expense`: it runs on the group's worker thread"
         )
     );
     let reader = methods(&named["EranosGroupReader"]);
     assert_eq!(
-        method(&reader, "is_archived").0,
+        method(&reader, "is_archived").docs,
         format!(
             "Whether the member with the identifier `id` is archived.\n\n# Errors\n\nThe library's refusal. {RELEASED} {INVALID_TEXT}"
         )
@@ -465,7 +475,7 @@ fn the_read_handle_reads_through_itself() {
         ]
     );
     assert_eq!(
-        method(&reader, "is_archived").1,
+        method(&reader, "is_archived").code,
         printed(quote! {
             pub fn is_archived(&self, id: &DiplomatStr) -> Result<bool, Box<EranosError>> {
                 self.0.is_archived(&crate::text(id)?).map_err(crate::failed)
@@ -530,7 +540,7 @@ fn each_kind_of_answer_has_its_outcome() {
 #[test]
 fn an_outcome_hands_its_answer_over_as_the_synchronous_form_does() {
     let named = named();
-    let value = |name: &str| method(&methods(&named[name]), "value").1;
+    let value = |name: &str| method(&methods(&named[name]), "value").code;
     assert_eq!(
         value("EranosFlagOutcome"),
         printed(quote! {

@@ -20,10 +20,14 @@ func sharing(_ group: Group, _ people: People) async throws(EranosError) {
         """)
     let rows = try await group.withRead { reader async throws(EranosError) in
         try plan.payments.map { payment throws(EranosError) in
-            [try reader.member(withID: payment.from)?.firstName ?? "?", try reader.member(withID: payment.to)?.firstName ?? "?", "\(payment.amount)"]
+            PaymentRow(
+                amount: payment.amount,
+                from: try reader.member(withID: payment.from)?.firstName ?? "?",
+                to: try reader.member(withID: payment.to)?.firstName ?? "?"
+            )
         }
     }
-    printTable(["From", "To", "Amount"], rows, numbersFrom: 2)
+    printTable(rows, numbersFrom: 2)
 
     let before = try await group.summary()
     let euro = try Currency(code: "EUR")

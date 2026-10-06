@@ -5,11 +5,46 @@
 import Eranos
 import Report
 
+struct LineRow: TableRow {
+    static let headers = ["Item", "Shared by", "Quantity", "Unit price", "Line total"]
+
+    let lineTotal: Money
+    let name: String
+    let participants: String
+    let quantity: Int32
+    let unitPrice: Money
+
+    var cells: [String] {
+        [name, participants, "\(quantity)", "\(unitPrice)", "\(lineTotal)"]
+    }
+}
+
+struct TipRow: TableRow {
+    static let headers = ["Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"]
+
+    let equalTip: Money
+    let equalTotal: Money
+    let name: String
+    let proportionalTip: Money
+    let proportionalTotal: Money
+    let subtotal: Money
+
+    var cells: [String] {
+        [name, "\(subtotal)", "\(proportionalTip)", "\(proportionalTotal)", "\(equalTip)", "\(equalTotal)"]
+    }
+}
+
 let euro = try Currency(code: "EUR")
 
 /// The amount written `text`, in euros.
 func eur(_ text: String) throws(EranosError) -> Money {
     try Money(parsing: text, in: euro)
+}
+
+/// Stops the example unless `found` is the amount written `expected`, in euros.
+func expect(_ expected: String, _ found: Money?) throws(EranosError) {
+    let amount = try eur(expected)
+    precondition(amount == found)
 }
 
 /// The receipt: every line with the members who had it.
@@ -53,10 +88,14 @@ func main() throws(EranosError) {
 
     section("1. The receipt")
     printTable(
-        ["Item", "Shared by", "Quantity", "Unit price", "Line total"],
         try receipt(ana, bob, carol).map { item throws(EranosError) in
-            let total = Money(currency: item.unitPrice.currency, minorUnits: item.unitPrice.minorUnits * Int64(item.quantity))
-            return [item.name, try names(group, item.split.members), "\(item.quantity)", "\(item.unitPrice)", "\(total)"]
+            LineRow(
+                lineTotal: Money(currency: item.unitPrice.currency, minorUnits: item.unitPrice.minorUnits * Int64(item.quantity)),
+                name: item.name,
+                participants: try names(group, item.split.members),
+                quantity: item.quantity,
+                unitPrice: item.unitPrice
+            )
         },
         numbersFrom: 2
     )
@@ -86,23 +125,25 @@ func main() throws(EranosError) {
         Ana paid the bill plus a 10 % tip (\(byConsumption?.tip.description ?? "?")). A tip can be shared in proportion to what
         each person ordered, or equally; both are shown:
         """)
-    var rows: [[String]] = []
-    for (member, firstName) in [(ana, "Ana"), (bob, "Bob"), (carol, "Carol")] {
+    var rows: [TipRow] = []
+    for member in [ana, bob, carol] {
         guard let subtotal = consumed(ordered, member),
               let proportionalTotal = consumed(byConsumption, member),
               let equalTotal = consumed(even, member) else {
             preconditionFailure("every member ordered")
         }
-        rows.append([
-            firstName,
-            "\(subtotal)",
-            "\(try proportionalTotal.subtracting(subtotal))",
-            "\(proportionalTotal)",
-            "\(try equalTotal.subtracting(subtotal))",
-            "\(equalTotal)"
-        ])
+        rows.append(
+            TipRow(
+                equalTip: try equalTotal.subtracting(subtotal),
+                equalTotal: equalTotal,
+                name: try names(group, [member]),
+                proportionalTip: try proportionalTotal.subtracting(subtotal),
+                proportionalTotal: proportionalTotal,
+                subtotal: subtotal
+            )
+        )
     }
-    printTable(["Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"], rows, numbersFrom: 1)
+    printTable(rows, numbersFrom: 1)
     print("""
         By consumption, Carol, who ordered the most, adds the largest part of the tip;
         shared equally, everyone adds the same 1.80.
@@ -121,12 +162,11 @@ func main() throws(EranosError) {
 
     // Subtotals: Ana 8 + 3 + 3 = 14.00, Bob 14 + 3 = 17.00, Carol 14 + 6 + 3 = 23.00. A proportional tip adds 10 % to each;
     // an equal one 1.80 to everyone.
-    let expected = try ["15.40", "18.70", "25.30", "24.80", "59.40"].map { text throws(EranosError) in try eur(text) }
-    precondition(expected[0] == consumed(byConsumption, ana))
-    precondition(expected[1] == consumed(byConsumption, bob))
-    precondition(expected[2] == consumed(byConsumption, carol))
-    precondition(expected[3] == consumed(even, carol))
-    precondition(expected[4] == even?.total)
+    try expect("15.40", consumed(byConsumption, ana))
+    try expect("18.70", consumed(byConsumption, bob))
+    try expect("25.30", consumed(byConsumption, carol))
+    try expect("24.80", consumed(even, carol))
+    try expect("59.40", even?.total)
 }
 
 try main()

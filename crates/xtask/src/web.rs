@@ -114,23 +114,45 @@ pub(crate) fn generator() -> Step {
     .in_directory(PROJECT)
 }
 
+/// A check the gates run as a script of the package's `package.json`.
+struct Check {
+    /// The step's name.
+    name: &'static str,
+    /// The phase it belongs to.
+    phase: Phase,
+    /// The script.
+    script: &'static str,
+}
+
 /// The steps that check the package's format, lint it, type-check the layer
 /// and its tests, and run the tests with their coverage, each with warnings
 /// as errors.
 #[must_use]
 pub(crate) fn checks() -> Vec<Action> {
     [
-        (Phase::Lint, "format:check", "Prettier"),
-        (Phase::Lint, "lint", "ESLint"),
-        (Phase::Lint, "typecheck", "the TypeScript type checks"),
-        (
-            Phase::Test,
-            "coverage",
-            "the TypeScript tests and their coverage",
-        ),
+        Check {
+            name: "Prettier",
+            phase: Phase::Lint,
+            script: "format:check",
+        },
+        Check {
+            name: "ESLint",
+            phase: Phase::Lint,
+            script: "lint",
+        },
+        Check {
+            name: "the TypeScript type checks",
+            phase: Phase::Lint,
+            script: "typecheck",
+        },
+        Check {
+            name: "the TypeScript tests and their coverage",
+            phase: Phase::Test,
+            script: "coverage",
+        },
     ]
     .into_iter()
-    .map(|(phase, script, name)| Action::run(phase, npm(script, name)))
+    .map(|check| Action::run(check.phase, npm(check.script, check.name)))
     .collect()
 }
 

@@ -3,8 +3,25 @@
 import assert from 'node:assert/strict';
 
 import { type GroupFailure, Group, GroupError } from '../../src/index.js';
-import { message, printLines, printTable, refusal, section } from '../report.js';
+import { type Columns, printLines, printTable, refusal, section } from '../report.js';
 import type { Categories, People } from './tour.js';
+
+/** A change made to a saved group, and the text it leaves. */
+interface Tampering {
+    readonly change: string;
+    readonly text: string;
+}
+
+/** A change to the saved group and the refusal of its loading, as the table of refusals prints them. */
+interface LoadRow {
+    readonly change: string;
+    readonly message: GroupError;
+}
+
+const loadColumns: Columns<LoadRow> = [
+    { header: 'Change to the file', text: (row) => row.change },
+    { header: 'Message', text: (row) => row.message.message },
+];
 
 export function savingAndLoading(group: Group, people: People, categories: Categories): void {
     section('12. Saving and loading');
@@ -24,27 +41,24 @@ export function savingAndLoading(group: Group, people: People, categories: Categ
         'totals: the loaded group equals the saved one. Reading a SavedGroup and loading it',
         'with into_group reports a refusal as a typed error instead of a message:',
     );
-    const refusals = [
-        ['"format": 3', saved.replace('"format": 2', '"format": 3')],
-        ['a blank group name', saved.replace('"name": "Lisbon and Porto"', '"name": " "')],
-        ['Lodging renamed FOOD', saved.replace('"name": "Lodging"', '"name": "FOOD"')],
-    ].map(([change = '', text = '']) => {
-        assert.notEqual(text, saved, `${change} changes the file`);
+    const tampered: Tampering[] = [
+        { change: '"format": 3', text: saved.replace('"format": 2', '"format": 3') },
+        { change: 'a blank group name', text: saved.replace('"name": "Lisbon and Porto"', '"name": " "') },
+        { change: 'Lodging renamed FOOD', text: saved.replace('"name": "Lodging"', '"name": "FOOD"') },
+    ];
+    const rows = tampered.map((tampering): LoadRow => {
+        assert.notEqual(tampering.text, saved, `${tampering.change} changes the file`);
         const refused = refusal(() => {
-            Group.loadSync(text).destroy();
+            Group.loadSync(tampering.text).destroy();
         });
-        assert.ok(refused instanceof GroupError, `${change} is refused`);
-        return { change, refused };
+        assert.ok(refused instanceof GroupError, `${tampering.change} is refused`);
+        return { change: tampering.change, message: refused };
     });
-    printTable(
-        ['Change to the file', 'Message'],
-        refusals.map(({ change, refused }) => [change, message(refused)]),
-        2,
-    );
+    printTable(loadColumns, rows, 2);
 
     assert.equal(loaded.saveSync(), saved);
     assert.deepEqual(loaded.summarySync(), group.summarySync());
-    const failures: GroupFailure[] = refusals.map(({ refused }) => refused.failure);
+    const failures: GroupFailure[] = rows.map((row) => row.message.failure);
     assert.deepEqual(failures, [
         { kind: 'unsupportedFormat', format: 3 },
         { kind: 'emptyName' },

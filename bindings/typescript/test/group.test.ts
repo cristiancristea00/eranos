@@ -40,7 +40,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         );
         assert.deepEqual(group.memberSync(flat.ana), members[0]);
         assert.equal(group.isArchivedSync(flat.ana), false);
-        assert.deepEqual([group.nameSync(), group.descriptionSync(), group.languageSync()?.toString()], ['Flat', 'Rent', 'pt-PT']);
+        assert.equal(group.nameSync(), 'Flat');
+        assert.equal(group.descriptionSync(), 'Rent');
+        assert.equal(group.languageSync()?.toString(), 'pt-PT');
         assert.deepEqual(
             group.settlementSync(SettlementStrategy.GREEDY).payments.map((payment) => payment.amount.toString()),
             ['5.00 EUR'],
@@ -93,44 +95,30 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         const flat = new Flat();
         const stranger = new Flat();
         const group = flat.group;
-        assert.deepEqual(
-            [
-                group.memberSync(stranger.ana),
-                group.categorySync(stranger.food),
-                group.expenseSync(stranger.dinner),
-                group.expenseSharesSync(stranger.dinner),
-                group.transferSync(stranger.repayment),
-                group.transferAmountSync(stranger.repayment),
-            ],
-            [undefined, undefined, undefined, undefined, undefined, undefined],
-        );
-        assert.deepEqual(
-            [
-                await group.member(stranger.ana),
-                await group.category(stranger.food),
-                await group.expense(stranger.dinner),
-                await group.expenseShares(stranger.dinner),
-                await group.transfer(stranger.repayment),
-                await group.transferAmount(stranger.repayment),
-            ],
-            [undefined, undefined, undefined, undefined, undefined, undefined],
-        );
+        assert.equal(group.memberSync(stranger.ana), undefined);
+        assert.equal(group.categorySync(stranger.food), undefined);
+        assert.equal(group.expenseSync(stranger.dinner), undefined);
+        assert.equal(group.expenseSharesSync(stranger.dinner), undefined);
+        assert.equal(group.transferSync(stranger.repayment), undefined);
+        assert.equal(group.transferAmountSync(stranger.repayment), undefined);
+        assert.equal(await group.member(stranger.ana), undefined);
+        assert.equal(await group.category(stranger.food), undefined);
+        assert.equal(await group.expense(stranger.dinner), undefined);
+        assert.equal(await group.expenseShares(stranger.dinner), undefined);
+        assert.equal(await group.transfer(stranger.repayment), undefined);
+        assert.equal(await group.transferAmount(stranger.repayment), undefined);
         {
             using reader = group.readSync();
-            assert.deepEqual(
-                [
-                    reader.member(stranger.ana),
-                    reader.category(stranger.food),
-                    reader.expense(stranger.dinner),
-                    reader.expenseShares(stranger.dinner),
-                    reader.transfer(stranger.repayment),
-                    reader.transferAmount(stranger.repayment),
-                ],
-                [undefined, undefined, undefined, undefined, undefined, undefined],
-            );
+            assert.equal(reader.member(stranger.ana), undefined);
+            assert.equal(reader.category(stranger.food), undefined);
+            assert.equal(reader.expense(stranger.dinner), undefined);
+            assert.equal(reader.expenseShares(stranger.dinner), undefined);
+            assert.equal(reader.transfer(stranger.repayment), undefined);
+            assert.equal(reader.transferAmount(stranger.repayment), undefined);
         }
         using plain = Group.create(flat.euro, 'Trip');
-        assert.deepEqual([plain.descriptionSync(), plain.languageSync()], [undefined, undefined]);
+        assert.equal(plain.descriptionSync(), undefined);
+        assert.equal(plain.languageSync(), undefined);
         using reader = plain.readSync();
         assert.equal(reader.language(), undefined);
     });
@@ -176,10 +164,13 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         group.setNameSync('Home');
         group.clearDescriptionSync();
         group.clearLanguageSync();
-        assert.deepEqual([group.nameSync(), group.descriptionSync(), group.languageSync()], ['Home', undefined, undefined]);
+        assert.equal(group.nameSync(), 'Home');
+        assert.equal(group.descriptionSync(), undefined);
+        assert.equal(group.languageSync(), undefined);
         group.setDescriptionSync('Shared flat');
         group.setLanguageSync(Language.parse('ro'));
-        assert.deepEqual([group.descriptionSync(), group.languageSync()?.toString()], ['Shared flat', 'ro']);
+        assert.equal(group.descriptionSync(), 'Shared flat');
+        assert.equal(group.languageSync()?.toString(), 'ro');
         const lei = Currency.of('RON');
         group.changeCurrencySync(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
@@ -230,10 +221,12 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         await group.setName('Home');
         await group.setDescription('Shared flat');
         await group.setLanguage(Language.parse('ro'));
-        assert.deepEqual([group.nameSync(), group.descriptionSync()], ['Home', 'Shared flat']);
+        assert.equal(group.nameSync(), 'Home');
+        assert.equal(group.descriptionSync(), 'Shared flat');
         await group.clearDescription();
         await group.clearLanguage();
-        assert.deepEqual([group.descriptionSync(), group.languageSync()], [undefined, undefined]);
+        assert.equal(group.descriptionSync(), undefined);
+        assert.equal(group.languageSync(), undefined);
         const lei = Currency.of('RON');
         await group.changeCurrency(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
@@ -281,7 +274,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.deepEqual(reader.members(), group.membersSync());
         assert.deepEqual(reader.member(flat.ana), group.memberSync(flat.ana));
         assert.equal(reader.isArchived(flat.ana), false);
-        assert.deepEqual([reader.name(), reader.description(), reader.language()?.toString()], ['Flat', 'Rent', 'pt-PT']);
+        assert.equal(reader.name(), 'Flat');
+        assert.equal(reader.description(), 'Rent');
+        assert.equal(reader.language()?.toString(), 'pt-PT');
         assert.deepEqual(reader.settlement(SettlementStrategy.GREEDY), group.settlementSync(SettlementStrategy.GREEDY));
         assert.deepEqual(reader.transfers(), group.transfersSync());
         assert.deepEqual(reader.transfer(flat.repayment), group.transferSync(flat.repayment));

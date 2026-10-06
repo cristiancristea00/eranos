@@ -68,16 +68,28 @@ fn group(size: usize) -> Group {
     group
 }
 
+/// A strategy and the group sizes it is measured on.
+struct Case {
+    sizes: Vec<usize>,
+    strategy: SettlementStrategy,
+}
+
 fn strategies(criterion: &mut Criterion) {
     let cases = [
-        (
-            SettlementStrategy::MinimumTransfers,
-            vec![4, 8, 12, 16, 20, 24],
-        ),
-        (SettlementStrategy::Greedy, vec![4, 20, 100, 1_000]),
-        (SettlementStrategy::Direct, vec![4, 20, 100]),
+        Case {
+            sizes: vec![4, 8, 12, 16, 20, 24],
+            strategy: SettlementStrategy::MinimumTransfers,
+        },
+        Case {
+            sizes: vec![4, 20, 100, 1_000],
+            strategy: SettlementStrategy::Greedy,
+        },
+        Case {
+            sizes: vec![4, 20, 100],
+            strategy: SettlementStrategy::Direct,
+        },
     ];
-    for (strategy, sizes) in cases {
+    for Case { sizes, strategy } in cases {
         let mut benchmark = criterion.benchmark_group(format!("settlement/{strategy:?}"));
         benchmark.sample_size(10);
         for size in sizes {

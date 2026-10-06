@@ -13,7 +13,7 @@ class EntriesTest {
      * A taxi in lei, itemised, paid by percentages, with a fixed tip shared equally, and a dinner in euros, split equally, paid by
      * amounts, with a percentage tip: between them, every kind of cost, split, and tip.
      */
-    private fun expenses(flat: Flat): List<Expense> {
+    private fun expenses(flat: Flat): Expenses {
         val lei = Currency.of("RON")
         val taxi =
             Expense(
@@ -49,7 +49,7 @@ class EntriesTest {
                 split = ExpenseSplit.Whole(Split.Equal(listOf(flat.ana, flat.bob))),
                 tip = Tip(TipValue.Percentage(Percentage.ofBasisPoints(1_000))),
             )
-        return listOf(taxi, dinner)
+        return Expenses(dinner, taxi)
     }
 
     /**
@@ -59,7 +59,8 @@ class EntriesTest {
     @Test
     fun everyKindOfExpenseConvertsAndStoresWhole() {
         val flat = Flat()
-        for (expense in expenses(flat)) {
+        val expenses = expenses(flat)
+        for (expense in listOf(expenses.taxi, expenses.dinner)) {
             assertEquals(expense, expense.generated.converted())
             val id = flat.group.addBlocking(expense)
             val stored = present(flat.group.expenseBlocking(id))
@@ -76,15 +77,15 @@ class EntriesTest {
     fun anExpenseTellsItsTipTotalAndMembers() {
         val flat = Flat()
         val lei = Currency.of("RON")
-        val (taxi, dinner) = expenses(flat)
-        assertEquals(Money(lei, 500), taxi.tipAmount())
-        assertEquals(Money(lei, 5_500), taxi.total())
-        assertEquals(listOf(flat.ana, flat.bob), taxi.members())
-        assertEquals(flat.euros(300), dinner.tipAmount())
-        val unreadable = taxi.copy(payers = Split.Equal(listOf(MemberId("nobody"))))
+        val expenses = expenses(flat)
+        assertEquals(Money(lei, 500), expenses.taxi.tipAmount())
+        assertEquals(Money(lei, 5_500), expenses.taxi.total())
+        assertEquals(listOf(flat.ana, flat.bob), expenses.taxi.members())
+        assertEquals(flat.euros(300), expenses.dinner.tipAmount())
+        val unreadable = expenses.taxi.copy(payers = Split.Equal(listOf(MemberId("nobody"))))
         assertThrows<EranosException.Id> { unreadable.members() }
-        assertThrows<EranosException.Expense> { taxi.copy(tip = Tip(TipValue.Fixed(flat.euros(1)))).tipAmount() }
-        assertThrows<EranosException.Expense> { taxi.copy(tip = Tip(TipValue.Fixed(Money(lei, -1)))).total() }
+        assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = Tip(TipValue.Fixed(flat.euros(1)))).tipAmount() }
+        assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = Tip(TipValue.Fixed(Money(lei, -1)))).total() }
         assertEquals(listOf(TipDistribution.EQUAL, TipDistribution.PROPORTIONAL), TipDistribution.entries)
         for (distribution in TipDistribution.entries) {
             assertEquals(distribution, distribution.generated.converted())
@@ -97,7 +98,7 @@ class EntriesTest {
     @Test
     fun splitsCostsAndTipsAreValues() {
         val flat = Flat()
-        val (taxi, dinner) = expenses(flat)
+        val expenses = expenses(flat)
         val amounts = Split.Amounts(listOf(MemberAmount(flat.euros(1), flat.bob)))
         assertEquals(listOf(flat.bob), amounts.members)
         assertValue(amounts, Split.Amounts(amounts.shares), Split.Amounts(listOf(MemberAmount(flat.euros(2), flat.bob))))
@@ -125,25 +126,25 @@ class EntriesTest {
             MemberPercentage(flat.bob, Percentage.ofBasisPoints(1)),
         )
 
-        assertEquals(Money(Currency.of("RON"), 5_000), taxi.cost.amount)
+        assertEquals(Money(Currency.of("RON"), 5_000), expenses.taxi.cost.amount)
         assertValue(
-            taxi.cost,
-            Cost.Converted(taxi.cost.amount, ExchangeRate.parse("0.2")),
-            Cost.Converted(taxi.cost.amount, ExchangeRate.parse("0.3")),
+            expenses.taxi.cost,
+            Cost.Converted(expenses.taxi.cost.amount, ExchangeRate.parse("0.2")),
+            Cost.Converted(expenses.taxi.cost.amount, ExchangeRate.parse("0.3")),
         )
-        assertValue(dinner.cost, Cost.Local(flat.euros(3_000)), Cost.Local(flat.euros(1)))
-        val itemised = taxi.split as ExpenseSplit.Itemised
+        assertValue(expenses.dinner.cost, Cost.Local(flat.euros(3_000)), Cost.Local(flat.euros(1)))
+        val itemised = expenses.taxi.split as ExpenseSplit.Itemised
         assertValue(itemised, ExpenseSplit.Itemised(itemised.items), ExpenseSplit.Itemised(emptyList()))
-        assertValue(dinner.split, ExpenseSplit.Whole(Split.Equal(listOf(flat.ana, flat.bob))), ExpenseSplit.Whole(equal))
+        assertValue(expenses.dinner.split, ExpenseSplit.Whole(Split.Equal(listOf(flat.ana, flat.bob))), ExpenseSplit.Whole(equal))
         val item = itemised.items[0]
         assertValue(item, Item(item.name, item.split, item.unitPrice, 2), Item(item.name, item.split, item.unitPrice))
         assertEquals(1, Item("Bread", equal, flat.euros(1)).quantity)
         assertValue(
-            present(taxi.tip),
+            present(expenses.taxi.tip),
             Tip(TipValue.Fixed(Money(Currency.of("RON"), 500)), TipDistribution.EQUAL),
             Tip(TipValue.Fixed(Money(Currency.of("RON"), 500))),
         )
-        assertEquals(TipDistribution.PROPORTIONAL, present(dinner.tip).distribution)
+        assertEquals(TipDistribution.PROPORTIONAL, present(expenses.dinner.tip).distribution)
         assertValue(TipValue.Fixed(flat.euros(1)), TipValue.Fixed(flat.euros(1)), TipValue.Fixed(flat.euros(2)))
         assertValue(
             TipValue.Percentage(Percentage.ofBasisPoints(1)),
@@ -159,15 +160,12 @@ class EntriesTest {
     @Test
     fun membersAndTransfersConvertAndStoreWhole() {
         val flat = Flat()
-        val accounts =
-            listOf(
-                Account(AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")), "Main account"),
-                Account(AccountDetails.Username(Username.parse("carol.pays")), "Payment app"),
-            )
+        val mainAccount = Account(AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")), "Main account")
+        val paymentApp = Account(AccountDetails.Username(Username.parse("carol.pays")), "Payment app")
         val carol =
             Member(
                 firstName = "Carol",
-                accounts = accounts,
+                accounts = listOf(mainAccount, paymentApp),
                 email = Email.parse("carol@example.com"),
                 lastName = "Popa",
                 phone = PhoneNumber.parse("+40712345678"),
@@ -176,19 +174,16 @@ class EntriesTest {
         val id = flat.group.addBlocking(carol)
         val stored = present(flat.group.memberBlocking(id))
         assertEquals(id, stored.id)
-        assertEquals(
-            listOf(carol.accounts, carol.email, carol.lastName, carol.phone),
-            listOf(stored.accounts, stored.email, stored.lastName, stored.phone),
-        )
+        assertEquals(carol, Member(stored.firstName, stored.accounts, stored.email, stored.lastName, stored.phone))
         assertValue(stored, stored.copy(), stored.copy(firstName = "Caroline"))
         assertEquals(emptyList<Account>(), Member("Dan").accounts)
-        assertValue(accounts[0], Account(accounts[0].details, "Main account"), Account(accounts[0].details, "Savings"))
+        assertValue(mainAccount, Account(mainAccount.details, "Main account"), Account(mainAccount.details, "Savings"))
         assertValue(
-            accounts[0].details,
+            mainAccount.details,
             AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")),
             AccountDetails.Iban(Iban.parse("GB82WEST12345698765432")),
         )
-        assertValue(accounts[1].details, AccountDetails.Username(Username.parse("carol.pays")), AccountDetails.Username(Username.parse("dan.pays")))
+        assertValue(paymentApp.details, AccountDetails.Username(Username.parse("carol.pays")), AccountDetails.Username(Username.parse("dan.pays")))
 
         val lei = Currency.of("RON")
         val cash =
@@ -204,7 +199,8 @@ class EntriesTest {
         val payment = flat.group.addBlocking(cash)
         val storedCash = present(flat.group.transferBlocking(payment))
         assertEquals(payment, storedCash.id)
-        assertEquals(listOf("Cash", "10:00"), listOf(storedCash.note, storedCash.time.toString()))
+        assertEquals("Cash", storedCash.note)
+        assertEquals("10:00", storedCash.time.toString())
         assertEquals(flat.euros(200), flat.group.transferAmountBlocking(payment))
         assertValue(storedCash, storedCash.copy(), storedCash.copy(note = null))
 
@@ -234,6 +230,12 @@ class EntriesTest {
         assertEquals(1, member.accounts.size)
     }
 }
+
+/** A taxi and a dinner: between them, every kind of cost, split, and tip. */
+private data class Expenses(
+    val dinner: Expense,
+    val taxi: Expense,
+)
 
 /** This expense as it was before the group gave it an identifier. */
 private fun Expense.withoutId(): Expense = Expense(null, cost, date, name, payers, split, category, description, time, tip)

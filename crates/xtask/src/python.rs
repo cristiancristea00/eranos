@@ -83,36 +83,49 @@ pub(crate) fn documentation() -> PathBuf {
     Path::new(WORKSPACE).join(PROJECT).join("build")
 }
 
+/// A check the gates run through uv, in the package's environment.
+struct Check {
+    /// The tool and its arguments.
+    command: &'static [&'static str],
+    /// The step's name.
+    name: &'static str,
+    /// The phase it belongs to.
+    phase: Phase,
+}
+
 /// The steps that check the package's format, lint it, type-check it, run
 /// its tests with their coverage of every line and branch, and build its
 /// documentation, each with warnings as errors.
 #[must_use]
 pub(crate) fn checks() -> Vec<Action> {
     [
-        (
-            Phase::Lint,
-            &["ruff", "format", "--check"][..],
-            "the Python format",
-        ),
-        (
-            Phase::Lint,
-            &["ruff", "check", "--no-fix"][..],
-            "the Python lint",
-        ),
-        (Phase::Lint, &["ty", "check"][..], "the Python type checks"),
-        (
-            Phase::Test,
-            &["coverage", "run", "-m", "pytest"][..],
-            "the Python tests",
-        ),
-        (
-            Phase::Test,
-            &["coverage", "report"][..],
-            "the Python tests' coverage",
-        ),
-        (
-            Phase::Docs,
-            &[
+        Check {
+            command: &["ruff", "format", "--check"],
+            name: "the Python format",
+            phase: Phase::Lint,
+        },
+        Check {
+            command: &["ruff", "check", "--no-fix"],
+            name: "the Python lint",
+            phase: Phase::Lint,
+        },
+        Check {
+            command: &["ty", "check"],
+            name: "the Python type checks",
+            phase: Phase::Lint,
+        },
+        Check {
+            command: &["coverage", "run", "-m", "pytest"],
+            name: "the Python tests",
+            phase: Phase::Test,
+        },
+        Check {
+            command: &["coverage", "report"],
+            name: "the Python tests' coverage",
+            phase: Phase::Test,
+        },
+        Check {
+            command: &[
                 "sphinx-build",
                 "-W",
                 "--keep-going",
@@ -122,12 +135,13 @@ pub(crate) fn checks() -> Vec<Action> {
                 "html",
                 "docs",
                 "build/docs",
-            ][..],
-            "the Python documentation",
-        ),
+            ],
+            name: "the Python documentation",
+            phase: Phase::Docs,
+        },
     ]
     .into_iter()
-    .map(|(phase, command, name)| Action::run(phase, tool(command, name)))
+    .map(|check| Action::run(check.phase, tool(check.command, check.name)))
     .collect()
 }
 

@@ -13,28 +13,22 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         const flat = new Flat();
         const summary = flat.group.summarySync();
         assert.ok(summary.totalSpent.equals(flat.euros(3_000n)));
-        assert.deepEqual(
-            summary.categoryTotals.map((total) => [total.category, total.total.toString()]),
-            [[flat.food, '30.00 EUR']],
-        );
+        assert.deepEqual(summary.categoryTotals, [{ category: flat.food, total: flat.euros(3_000n) }]);
         const [ana, bob] = summary.members;
         assert.ok(undefined !== ana && undefined !== bob);
-        assert.deepEqual([ana.member, bob.member], [flat.ana, flat.bob]);
-        assert.deepEqual([ana.paid, ana.share, ana.sent, ana.received, ana.net].map(String), [
-            '30.00 EUR',
-            '15.00 EUR',
-            '0.00 EUR',
-            '10.00 EUR',
-            '5.00 EUR',
+        assert.equal(ana.member, flat.ana);
+        assert.equal(bob.member, flat.bob);
+        assert.equal(ana.paid.toString(), '30.00 EUR');
+        assert.equal(ana.share.toString(), '15.00 EUR');
+        assert.equal(ana.sent.toString(), '0.00 EUR');
+        assert.equal(ana.received.toString(), '10.00 EUR');
+        assert.equal(ana.net.toString(), '5.00 EUR');
+        assert.equal(formatBalance(ana.balance), 'gets back 5.00 EUR');
+        assert.equal(formatBalance(bob.balance), 'owes 5.00 EUR');
+        assert.deepEqual(summary.memberCategoryTotals, [
+            { member: flat.ana, totals: [{ category: flat.food, total: flat.euros(1_500n) }] },
+            { member: flat.bob, totals: [{ category: flat.food, total: flat.euros(1_500n) }] },
         ]);
-        assert.deepEqual([formatBalance(ana.balance), formatBalance(bob.balance)], ['gets back 5.00 EUR', 'owes 5.00 EUR']);
-        assert.deepEqual(
-            summary.memberCategoryTotals.map((totals) => [totals.member, totals.totals.map((total) => total.total.toString())]),
-            [
-                [flat.ana, ['15.00 EUR']],
-                [flat.bob, ['15.00 EUR']],
-            ],
-        );
     });
 
     /** A balance that printed on its own would tell a member they owe what they are owed. */
@@ -56,21 +50,16 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         const flat = new Flat();
         const shares = flat.group.expenseSharesSync(flat.dinner);
         assert.ok(undefined !== shares);
-        assert.deepEqual([shares.total.toString(), shares.tip.toString()], ['30.00 EUR', '0.00 EUR']);
-        assert.deepEqual(
-            shares.members.map((share) => [share.member, share.paid.toString(), share.share.toString()]),
-            [
-                [flat.ana, '30.00 EUR', '15.00 EUR'],
-                [flat.bob, '0.00 EUR', '15.00 EUR'],
-            ],
-        );
+        assert.equal(shares.total.toString(), '30.00 EUR');
+        assert.equal(shares.tip.toString(), '0.00 EUR');
+        assert.deepEqual(shares.members, [
+            { member: flat.ana, paid: flat.euros(3_000n), share: flat.euros(1_500n) },
+            { member: flat.bob, paid: flat.euros(0n), share: flat.euros(1_500n) },
+        ]);
         for (const strategy of Object.values(SettlementStrategy)) {
             const settlement = flat.group.settlementSync(strategy);
             assert.equal(settlement.strategy, strategy);
-            assert.deepEqual(
-                settlement.payments.map((payment) => [payment.from, payment.to, payment.amount.toString()]),
-                [[flat.bob, flat.ana, '5.00 EUR']],
-            );
+            assert.deepEqual(settlement.payments, [{ amount: flat.euros(500n), from: flat.bob, to: flat.ana }]);
         }
     });
 });

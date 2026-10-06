@@ -28,6 +28,50 @@ typedef struct Rule {
     char const *text;
 } Rule;
 
+/// A row of the table of an expense's shares: a member's rule, what they paid, and what they consumed.
+typedef struct ShareRow {
+    /// What they consumed.
+    Line consumed;
+    /// Their first name.
+    Line name;
+    /// What they paid.
+    Line paid;
+    /// The rule by which they share the expense.
+    Line rule;
+} ShareRow;
+
+/// A table of an expense's shares, its columns from @p numbersFrom on aligned to the right.
+static Table *shareTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Member", "Rule", "Paid", "Consumed"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of an expense's shares, its cells in the order of the table's headers.
+static void addShareRow(Table *const table, ShareRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->rule, row->paid, row->consumed});
+}
+
+/// A row of the table of totals: what a member paid and consumed over the holiday, and their balance.
+typedef struct TotalRow {
+    /// What is left: what they paid minus what they consumed.
+    Line balance;
+    /// What they consumed.
+    Line consumed;
+    /// Their first name.
+    Line name;
+    /// What they paid.
+    Line paid;
+} TotalRow;
+
+/// A table of totals, its columns from @p numbersFrom on aligned to the right.
+static Table *totalTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of totals, its cells in the order of the table's headers.
+static void addTotalRow(Table *const table, TotalRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->paid, row->consumed, row->balance});
+}
+
 /// The amount @p text of euros.
 static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
 
@@ -60,17 +104,17 @@ static void report(EranosGroup const *const group, Id const id, Rule const *cons
     eranosExpenseName(expense, text);
     Line const total = moneyLine(eranosExpenseSharesTotal(shares));
     printFormatted("%s, %s:", eranosTextData(text), total.text);
-    Table *const table = tableCreate(4, (char const *const[]){"Member", "Rule", "Paid", "Consumed"}, 2);
+    Table *const table = shareTable(2);
     EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
     for (size_t index = 0; eranosMemberShareListLength(members) > index; ++index) {
         EranosMemberShare *const share = eranosMemberShareListGet(members, index);
         eranosMemberShareMember(share, text);
-        tableAdd(table, (Line const[]){
-                            firstName(group, eranosTextData(text)),
-                            lineOf("%s", ruleOf(rules, count, eranosTextData(text))),
-                            moneyLine(eranosMemberSharePaid(share)),
-                            moneyLine(eranosMemberShareShare(share)),
-                        });
+        addShareRow(table, &(ShareRow){
+                               .consumed = moneyLine(eranosMemberShareShare(share)),
+                               .name = firstName(group, eranosTextData(text)),
+                               .paid = moneyLine(eranosMemberSharePaid(share)),
+                               .rule = lineOf("%s", ruleOf(rules, count, eranosTextData(text))),
+                           });
         eranosMemberShareDestroy(share);
     }
     tablePrint(table);
@@ -200,7 +244,7 @@ static void totals(EranosGroup const *const group) {
     printFormatted("%s spent over five expenses:", spent.text);
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, 1);
+    Table *const table = totalTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -208,12 +252,12 @@ static void totals(EranosGroup const *const group) {
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            moneyLine(eranosMemberSummaryPaid(found)),
-                            moneyLine(eranosMemberSummaryShare(found)),
-                            balanceLine(eranosMemberSummaryBalance(found)),
-                        });
+        addTotalRow(table, &(TotalRow){
+                               .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                               .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                               .name = textLine(text),
+                               .paid = moneyLine(eranosMemberSummaryPaid(found)),
+                           });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
     }

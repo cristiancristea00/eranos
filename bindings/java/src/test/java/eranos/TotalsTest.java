@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 /** The summary, the balances, the shares of an expense, and the settlements. */
 class TotalsTest {
@@ -24,17 +25,25 @@ class TotalsTest {
         assertEquals(
                 List.of(flat.euros(3_000)),
                 summary.categoryTotals().stream().map(CategoryTotal::total).toList());
-        MemberSummary ana = summary.members().get(0);
-        MemberSummary bob = summary.members().get(1);
-        assertEquals(List.of(flat.ana, flat.bob), List.of(ana.member(), bob.member()));
         assertEquals(
-                List.of(flat.euros(3_000), flat.euros(1_500), flat.euros(0), flat.euros(1_000)),
-                List.of(ana.paid(), ana.share(), ana.sent(), ana.received()));
-        assertEquals(flat.euros(500), ana.net());
-        assertEquals(new Balance.GetsBack(flat.euros(500)), ana.balance());
-        assertEquals(new Balance.Owes(flat.euros(500)), bob.balance());
-        assertEquals(
-                List.of(flat.euros(1_000), flat.euros(0)), List.of(bob.sent(), bob.received()));
+                List.of(
+                        new MemberSummary(
+                                new Balance.GetsBack(flat.euros(500)),
+                                flat.ana,
+                                flat.euros(500),
+                                flat.euros(3_000),
+                                flat.euros(1_000),
+                                flat.euros(0),
+                                flat.euros(1_500)),
+                        new MemberSummary(
+                                new Balance.Owes(flat.euros(500)),
+                                flat.bob,
+                                flat.euros(-500),
+                                flat.euros(0),
+                                flat.euros(0),
+                                flat.euros(1_000),
+                                flat.euros(1_500))),
+                summary.members());
         MemberCategoryTotals anaTotals = summary.memberCategoryTotals().get(0);
         assertEquals(flat.ana, anaTotals.member());
         assertEquals(
@@ -67,13 +76,17 @@ class TotalsTest {
     @Test
     void sharesAndSettlementsHoldTheGroupsAmounts() throws EranosException {
         Flat flat = new Flat();
-        ExpenseShares shares = flat.group.expenseShares(flat.dinner).orElseThrow();
         assertEquals(
-                List.of(flat.euros(3_000), flat.euros(0)), List.of(shares.total(), shares.tip()));
-        MemberShare ana = shares.members().get(0);
-        assertEquals(
-                List.of(flat.ana, flat.euros(3_000), flat.euros(1_500)),
-                List.of(ana.member(), ana.paid(), ana.share()));
+                Optional.of(
+                        new ExpenseShares(
+                                List.of(
+                                        new MemberShare(
+                                                flat.ana, flat.euros(3_000), flat.euros(1_500)),
+                                        new MemberShare(
+                                                flat.bob, flat.euros(0), flat.euros(1_500))),
+                                flat.euros(0),
+                                flat.euros(3_000))),
+                flat.group.expenseShares(flat.dinner));
         assertEquals(
                 List.of(
                         SettlementStrategy.DIRECT,
@@ -81,13 +94,11 @@ class TotalsTest {
                         SettlementStrategy.MINIMUM_TRANSFERS),
                 List.of(SettlementStrategy.values()));
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
-            Settlement settlement = flat.group.settlement(strategy);
-            assertEquals(strategy, settlement.strategy());
-            assertEquals(strategy, SettlementStrategy.converted(strategy.generated()));
-            Payment payment = settlement.payments().get(0);
             assertEquals(
-                    List.of(flat.bob, flat.ana, flat.euros(500)),
-                    List.of(payment.from(), payment.to(), payment.amount()));
+                    new Settlement(
+                            List.of(new Payment(flat.euros(500), flat.bob, flat.ana)), strategy),
+                    flat.group.settlement(strategy));
+            assertEquals(strategy, SettlementStrategy.converted(strategy.generated()));
         }
     }
 }

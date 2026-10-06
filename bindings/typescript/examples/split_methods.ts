@@ -4,7 +4,37 @@
 import assert from 'node:assert/strict';
 
 import { type ExpenseId, type MemberId, CalendarDate, Currency, Group, Money, Parts, Percentage, formatBalance } from '../src/index.js';
-import { load, names, printLines, printTable, refusal, section, totals } from './report.js';
+import { type Columns, load, names, printLines, printTable, refusal, section, totals } from './report.js';
+
+/** A member's rule, payment, and consumption in one expense, as the table of shares prints them. */
+interface ShareRow {
+    readonly consumed: Money;
+    readonly name: string;
+    readonly paid: Money;
+    readonly rule: string;
+}
+
+const shareColumns: Columns<ShareRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Rule', text: (row) => row.rule },
+    { header: 'Paid', text: (row) => row.paid.toString() },
+    { header: 'Consumed', text: (row) => row.consumed.toString() },
+];
+
+/** A member's totals over the holiday, as the table of totals prints them. */
+interface TotalRow {
+    readonly balance: string;
+    readonly consumed: Money;
+    readonly name: string;
+    readonly paid: Money;
+}
+
+const totalColumns: Columns<TotalRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Paid', text: (row) => row.paid.toString() },
+    { header: 'Consumed', text: (row) => row.consumed.toString() },
+    { header: 'Balance', text: (row) => row.balance },
+];
 
 function eur(text: string): Money {
     return Money.parse(text, Currency.of('EUR'));
@@ -36,13 +66,13 @@ function report(group: Group, id: ExpenseId, rules: ReadonlyMap<MemberId, string
     }
     printLines(`${expense.name}, ${shares.total.toString()}:`);
     printTable(
-        ['Member', 'Rule', 'Paid', 'Consumed'],
-        shares.members.map((share) => [
-            names(group, [share.member]),
-            rules.get(share.member) ?? '(payer only)',
-            share.paid.toString(),
-            share.share.toString(),
-        ]),
+        shareColumns,
+        shares.members.map((share) => ({
+            consumed: share.share,
+            name: names(group, [share.member]),
+            paid: share.paid,
+            rule: rules.get(share.member) ?? '(payer only)',
+        })),
         2,
     );
 }
@@ -216,10 +246,12 @@ function printTotals(group: Group): void {
     const summary = group.summarySync();
     printLines(`${summary.totalSpent.toString()} spent over five expenses:`);
     printTable(
-        ['Member', 'Paid', 'Consumed', 'Balance'],
+        totalColumns,
         group.membersSync().flatMap((member) => {
             const found = undefined === member.id ? undefined : totals(member.id, summary);
-            return undefined === found ? [] : [[member.firstName, found.paid.toString(), found.share.toString(), formatBalance(found.balance)]];
+            return undefined === found
+                ? []
+                : [{ balance: formatBalance(found.balance), consumed: found.share, name: member.firstName, paid: found.paid }];
         }),
         1,
     );

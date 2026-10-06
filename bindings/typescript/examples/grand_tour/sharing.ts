@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 
 import { type Group, Currency, ExchangeRate, SettlementStrategy } from '../../src/index.js';
 import { printLines, printTable, section } from '../report.js';
-import { type People, october, ron } from './tour.js';
+import { type People, october, paymentColumns, ron } from './tour.js';
 
 export async function sharing(group: Group, people: People): Promise<void> {
     section('14. Sharing the group');
@@ -29,12 +29,12 @@ export async function sharing(group: Group, people: People): Promise<void> {
     {
         using reader = await group.read();
         printTable(
-            ['From', 'To', 'Amount'],
-            plan.payments.map((payment) => [
-                reader.member(payment.from)?.firstName ?? '?',
-                reader.member(payment.to)?.firstName ?? '?',
-                payment.amount.toString(),
-            ]),
+            paymentColumns,
+            plan.payments.map((payment) => ({
+                amount: payment.amount,
+                from: reader.member(payment.from)?.firstName ?? '?',
+                to: reader.member(payment.to)?.firstName ?? '?',
+            })),
             2,
         );
     }

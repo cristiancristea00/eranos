@@ -14,6 +14,7 @@ use eranos_ledger::{Debt, MemberPair, MemberShare, ResolvedExpense};
 use eranos_money::allocation::{allocate, rotation};
 use eranos_money::{Currency, ExchangeRate, Money, MoneyError};
 
+use crate::split::Share;
 use crate::{Expense, ExpenseSplit, TipDistribution};
 
 /// Allocation passes; each gets its own tie rotation.
@@ -54,12 +55,18 @@ pub fn resolve_expense(
                 let line = item
                     .split()
                     .divide(item.line_total().minor_units(), pass(PASS_ITEMS + position));
-                for (member, share) in line {
+                for share in line {
                     // The line totals add up to the amount, so no sum overflows.
-                    *totals.entry(member).or_default() += share;
+                    *totals.entry(share.member).or_default() += share.amount;
                 }
             }
-            totals.into_iter().collect()
+            totals
+                .into_iter()
+                .map(|(member, summed)| Share {
+                    amount: summed,
+                    member,
+                })
+                .collect()
         }
         ExpenseSplit::Whole(split) => split.divide(amount, pass(PASS_SPLIT)),
     };
@@ -70,13 +77,13 @@ pub fn resolve_expense(
             TipDistribution::Equal => vec![1; base.len()],
             TipDistribution::Proportional => base
                 .iter()
-                .map(|&(_, share)| share.unsigned_abs())
+                .map(|share| share.amount.unsigned_abs())
                 .collect(),
         };
         let tips = allocate(tip, &weights, pass(PASS_TIP));
-        for ((_, share), portion) in shares.iter_mut().zip(tips) {
+        for (share, portion) in shares.iter_mut().zip(tips) {
             // Shares and tips add up to the total, so no sum overflows.
-            *share += portion;
+            share.amount += portion;
         }
     }
     let paid = expense.payers().divide(total, pass(PASS_PAYERS));
@@ -85,13 +92,18 @@ pub fn resolve_expense(
         match convert(expense.total(), expense.cost().conversion(), currency)? {
             None => (total, tip, shares, paid),
             Some(converted) => {
-                let reallocate = |parts: &[(MemberId, i64)], number: u64| {
-                    let weights: Vec<u64> =
-                        parts.iter().map(|&(_, part)| part.unsigned_abs()).collect();
+                let reallocate = |parts: &[Share], number: u64| {
+                    let weights: Vec<u64> = parts
+                        .iter()
+                        .map(|part| part.amount.unsigned_abs())
+                        .collect();
                     parts
                         .iter()
-                        .map(|&(member, _)| member)
                         .zip(allocate(converted, &weights, pass(number)))
+                        .map(|(part, reallocated)| Share {
+                            amount: reallocated,
+                            member: part.member,
+                        })
                         .collect::<Vec<_>>()
                 };
                 // The converted total split back into amount and tip; the
@@ -111,18 +123,18 @@ pub fn resolve_expense(
         };
 
     let debts = debts(&shares, &paid, |position| pass(PASS_DEBTS + position));
-    let mut members: BTreeMap<MemberId, (i64, i64)> = BTreeMap::new();
-    for &(member, payment) in &paid {
-        members.entry(member).or_default().0 = payment;
+    let mut members: BTreeMap<MemberId, PaidAndConsumed> = BTreeMap::new();
+    for payment in &paid {
+        members.entry(payment.member).or_default().paid = payment.amount;
     }
-    for &(member, consumed) in &shares {
-        members.entry(member).or_default().1 = consumed;
+    for share in &shares {
+        members.entry(share.member).or_default().consumed = share.amount;
     }
     let money = |minor_units| Money::from_minor_units(currency, minor_units);
     let members = members
         .into_iter()
-        .map(|(member, (payment, consumed))| {
-            MemberShare::new(member, money(payment), money(consumed))
+        .map(|(member, totals)| {
+            MemberShare::new(member, money(totals.paid), money(totals.consumed))
         })
         .collect();
     Ok(ResolvedExpense::new(
@@ -131,6 +143,13 @@ pub fn resolve_expense(
         money(tip),
         money(total),
     ))
+}
+
+/// What one member paid and consumed of an expense, in minor units.
+#[derive(Debug, Clone, Copy, Default)]
+struct PaidAndConsumed {
+    consumed: i64,
+    paid: i64,
 }
 
 /// Converts `amount` at `rate` into `currency`: `None` for an amount without
@@ -150,28 +169,24 @@ fn convert(
 /// what they have left to cover, payer by payer in member order. Every
 /// participant's debts then add up to their share and every payer's credits
 /// to what they paid, exactly: the last payer receives exactly what is left.
-fn debts(
-    shares: &[(MemberId, i64)],
-    paid: &[(MemberId, i64)],
-    rotation: impl Fn(u64) -> u64,
-) -> Vec<Debt> {
-    let mut remaining: Vec<i64> = shares.iter().map(|&(_, share)| share).collect();
+fn debts(shares: &[Share], paid: &[Share], rotation: impl Fn(u64) -> u64) -> Vec<Debt> {
+    let mut remaining: Vec<i64> = shares.iter().map(|share| share.amount).collect();
     let mut debts = Vec::new();
-    for (position, &(creditor, amount)) in (0_u64..).zip(paid) {
-        if 0 == amount {
+    for (position, payment) in (0_u64..).zip(paid) {
+        if 0 == payment.amount {
             continue;
         }
-        let weights: Vec<u64> = remaining.iter().map(|share| share.unsigned_abs()).collect();
-        let portions = allocate(amount, &weights, rotation(position));
-        for ((&(debtor, _), left), portion) in shares.iter().zip(&mut remaining).zip(portions) {
+        let weights: Vec<u64> = remaining.iter().map(|left| left.unsigned_abs()).collect();
+        let portions = allocate(payment.amount, &weights, rotation(position));
+        for ((share, left), portion) in shares.iter().zip(&mut remaining).zip(portions) {
             // A portion never exceeds what is left, so `left` stays ≥ 0.
             *left -= portion;
-            if debtor != creditor && 0 < portion {
+            if share.member != payment.member && 0 < portion {
                 debts.push(Debt {
                     amount: portion,
                     members: MemberPair {
-                        from: debtor,
-                        to: creditor,
+                        from: share.member,
+                        to: payment.member,
                     },
                 });
             }

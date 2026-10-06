@@ -46,18 +46,21 @@ fn flow(amount: i64, from: u8, to: u8) -> Flow {
 }
 
 /// Balances for members 1, 2, 3, … in order.
-fn balances(nets: &[i64]) -> Vec<(MemberId, i64)> {
+fn balances(nets: &[i64]) -> Vec<OpenBalance> {
     nets.iter()
         .zip(1_u8..)
-        .map(|(&net, number)| (member(number), net))
+        .map(|(&net, number)| OpenBalance {
+            member: member(number),
+            net,
+        })
         .collect()
 }
 
 /// Each member's balance after the flows are paid.
-fn after(balances: &[(MemberId, i64)], flows: &[Flow]) -> Vec<i64> {
+fn after(balances: &[OpenBalance], flows: &[Flow]) -> Vec<i64> {
     balances
         .iter()
-        .map(|&(member, net)| {
+        .map(|&OpenBalance { member, net }| {
             let received: i64 = flows
                 .iter()
                 .filter(|flow| flow.members.to == member)
@@ -133,7 +136,7 @@ fn it_finds_zero_sum_groups_greedy_misses() {
 fn exact_opposites_pay_each_other_directly() {
     // Members 3 and 4 owe 5.00 each; 1 and 2 are owed 5.00 each.
     let open = balances(&[500, 500, -500, -500]);
-    let (flows, rest) = pair_opposites(&open);
+    let Pairing { flows, rest } = pair_opposites(&open);
     assert_eq!(flows, vec![flow(500, 3, 1), flow(500, 4, 2)]);
     assert!(rest.is_empty());
     assert_eq!(completed(settle(&open)).unwrap().len(), 2);
@@ -161,7 +164,7 @@ fn nothing_to_settle_needs_no_payment() {
 /// `count` balances with no exact opposites, so all of them reach the
 /// dynamic program: creditors owed 1 … count − 1 and one debtor owing their
 /// sum.
-fn unpaired(count: i64) -> Vec<(MemberId, i64)> {
+fn unpaired(count: i64) -> Vec<OpenBalance> {
     let mut nets: Vec<i64> = (1..count).collect();
     nets.push(-nets.iter().sum::<i64>());
     balances(&nets)
@@ -212,13 +215,19 @@ fn the_groups_partition_the_balances() {
     assert!(
         groups
             .iter()
-            .all(|group| 0 == group.iter().map(|&(_, net)| net).sum::<i64>())
+            .all(|group| 0 == group.iter().map(|balance| balance.net).sum::<i64>())
     );
-    let mut members: Vec<MemberId> = groups.iter().flatten().map(|&(member, _)| member).collect();
+    let mut members: Vec<MemberId> = groups
+        .iter()
+        .flatten()
+        .map(|balance| balance.member)
+        .collect();
     members.sort_unstable();
     assert_eq!(
         members,
-        open.iter().map(|&(member, _)| member).collect::<Vec<_>>()
+        open.iter()
+            .map(|balance| balance.member)
+            .collect::<Vec<_>>()
     );
 }
 
@@ -241,7 +250,7 @@ proptest! {
         prop_assert!(after(&open, &flows).iter().all(|&net| 0 == net));
         prop_assert!(flows.len() <= greedy::settle(&open).len());
         for &Flow { amount, members: MemberPair { from, to } } in &flows {
-            let net = |member: MemberId| open.iter().find(|entry| entry.0 == member).map_or(0, |entry| entry.1);
+            let net = |member: MemberId| open.iter().find(|balance| balance.member == member).map_or(0, |balance| balance.net);
             prop_assert!(0 < amount);
             prop_assert!(0 > net(from) && 0 < net(to));
             prop_assert!(amount <= -net(from) && amount <= net(to));

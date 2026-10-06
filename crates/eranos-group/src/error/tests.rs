@@ -7,6 +7,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case<Failure> {
+    error: Failure,
+    held: String,
+    method: &'static str,
+}
+
 /// A count in an error message agrees with its noun: "1 expense", never
 /// "1 expenses", however many of each kind of entry there are.
 #[test]
@@ -46,18 +55,18 @@ impl FromLanguageError for ConvertedLanguageError {
 /// library's.
 #[test]
 fn every_failure_of_language_error_converts_through_the_method_of_its_variant() {
-    let cases = [(
-        LanguageError::InvalidLanguage,
-        "invalid_language",
-        String::new(),
-    )];
-    for (error, method, held) in cases {
+    let cases = [Case {
+        error: LanguageError::InvalidLanguage,
+        held: String::new(),
+        method: "invalid_language",
+    }];
+    for case in cases {
         assert_eq!(
-            ConvertedLanguageError::from_language_error(error),
+            ConvertedLanguageError::from_language_error(case.error),
             ConvertedLanguageError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }
@@ -250,101 +259,113 @@ fn every_failure_of_group_error_converts_through_the_method_of_its_variant() {
     let transfers = vec![TransferId::from_bytes([14; 16])];
     let format = 11;
     let cases = [
-        (
-            GroupError::ArchivedMember(member),
-            "archived_member",
-            format!("{member}"),
-        ),
-        (
-            GroupError::BuiltInCategory,
-            "built_in_category",
-            String::new(),
-        ),
-        (GroupError::Busy, "busy", String::new()),
-        (
-            GroupError::DuplicateCategory(category),
-            "duplicate_category",
-            format!("{category}"),
-        ),
-        (
-            GroupError::DuplicateCategoryName { existing },
-            "duplicate_category_name",
-            format!("{existing}"),
-        ),
-        (
-            GroupError::DuplicateExchangeRate { currency },
-            "duplicate_exchange_rate",
-            format!("{currency}"),
-        ),
-        (
-            GroupError::DuplicateExpense(expense),
-            "duplicate_expense",
-            format!("{expense}"),
-        ),
-        (
-            GroupError::DuplicateMember(member),
-            "duplicate_member",
-            format!("{member}"),
-        ),
-        (
-            GroupError::DuplicateTransfer(transfer),
-            "duplicate_transfer",
-            format!("{transfer}"),
-        ),
-        (GroupError::EmptyName, "empty_name", String::new()),
-        (
-            GroupError::MemberInUse {
+        Case {
+            error: GroupError::ArchivedMember(member),
+            held: format!("{member}"),
+            method: "archived_member",
+        },
+        Case {
+            error: GroupError::BuiltInCategory,
+            held: String::new(),
+            method: "built_in_category",
+        },
+        Case {
+            error: GroupError::Busy,
+            held: String::new(),
+            method: "busy",
+        },
+        Case {
+            error: GroupError::DuplicateCategory(category),
+            held: format!("{category}"),
+            method: "duplicate_category",
+        },
+        Case {
+            error: GroupError::DuplicateCategoryName { existing },
+            held: format!("{existing}"),
+            method: "duplicate_category_name",
+        },
+        Case {
+            error: GroupError::DuplicateExchangeRate { currency },
+            held: format!("{currency}"),
+            method: "duplicate_exchange_rate",
+        },
+        Case {
+            error: GroupError::DuplicateExpense(expense),
+            held: format!("{expense}"),
+            method: "duplicate_expense",
+        },
+        Case {
+            error: GroupError::DuplicateMember(member),
+            held: format!("{member}"),
+            method: "duplicate_member",
+        },
+        Case {
+            error: GroupError::DuplicateTransfer(transfer),
+            held: format!("{transfer}"),
+            method: "duplicate_transfer",
+        },
+        Case {
+            error: GroupError::EmptyName,
+            held: String::new(),
+            method: "empty_name",
+        },
+        Case {
+            error: GroupError::MemberInUse {
                 expenses: expenses.clone(),
                 member,
                 transfers: transfers.clone(),
             },
-            "member_in_use",
-            format!("{expenses:?} {member} {transfers:?}"),
-        ),
-        (
-            GroupError::MissingExchangeRate { currency },
-            "missing_exchange_rate",
-            format!("{currency}"),
-        ),
-        (GroupError::Overflow, "overflow", String::new()),
-        (
-            GroupError::UnexpectedExchangeRate,
-            "unexpected_exchange_rate",
-            String::new(),
-        ),
-        (
-            GroupError::UnknownCategory(category),
-            "unknown_category",
-            format!("{category}"),
-        ),
-        (
-            GroupError::UnknownExpense(expense),
-            "unknown_expense",
-            format!("{expense}"),
-        ),
-        (
-            GroupError::UnknownMember(member),
-            "unknown_member",
-            format!("{member}"),
-        ),
-        (
-            GroupError::UnknownTransfer(transfer),
-            "unknown_transfer",
-            format!("{transfer}"),
-        ),
-        (
-            GroupError::UnsupportedFormat { format },
-            "unsupported_format",
-            format!("{format}"),
-        ),
+            held: format!("{expenses:?} {member} {transfers:?}"),
+            method: "member_in_use",
+        },
+        Case {
+            error: GroupError::MissingExchangeRate { currency },
+            held: format!("{currency}"),
+            method: "missing_exchange_rate",
+        },
+        Case {
+            error: GroupError::Overflow,
+            held: String::new(),
+            method: "overflow",
+        },
+        Case {
+            error: GroupError::UnexpectedExchangeRate,
+            held: String::new(),
+            method: "unexpected_exchange_rate",
+        },
+        Case {
+            error: GroupError::UnknownCategory(category),
+            held: format!("{category}"),
+            method: "unknown_category",
+        },
+        Case {
+            error: GroupError::UnknownExpense(expense),
+            held: format!("{expense}"),
+            method: "unknown_expense",
+        },
+        Case {
+            error: GroupError::UnknownMember(member),
+            held: format!("{member}"),
+            method: "unknown_member",
+        },
+        Case {
+            error: GroupError::UnknownTransfer(transfer),
+            held: format!("{transfer}"),
+            method: "unknown_transfer",
+        },
+        Case {
+            error: GroupError::UnsupportedFormat { format },
+            held: format!("{format}"),
+            method: "unsupported_format",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedGroupError::from_group_error(&error),
+            ConvertedGroupError::from_group_error(&case.error),
             ConvertedGroupError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }

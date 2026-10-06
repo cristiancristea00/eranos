@@ -197,6 +197,25 @@ fn words(line: &[&str]) -> Vec<String> {
     line.iter().map(|&word| word.to_owned()).collect()
 }
 
+/// A `clean` command line, and the clean it names.
+struct CleanLine {
+    /// The command line's words.
+    line: &'static [&'static str],
+    /// Whether the clean removes or only prints.
+    mode: Mode,
+    /// What the clean reaches.
+    scope: Scope,
+}
+
+/// What a clean did: whether it passed, and the steps it ran.
+#[derive(Debug, PartialEq, Eq)]
+struct CleanOutcome {
+    /// Whether it passed.
+    passed: bool,
+    /// The steps it ran.
+    steps: Vec<Step>,
+}
+
 /// The ports' steps: of the two examples of eranos that [`METADATA`] lists,
 /// the Swift ports only where `apple`, the Kotlin ports over each package's
 /// bindings, the Java ports, the TypeScript ports in their copy of the
@@ -505,22 +524,37 @@ fn every_clean_command_line_runs_the_clean_it_names() {
             recorder.variables.push("HOME");
         }
         let passed = clean(&mut recorder).is_ok();
-        (passed, recorder.steps)
+        CleanOutcome {
+            passed,
+            steps: recorder.steps,
+        }
     };
-    for (line, scope, mode) in [
-        (&["clean"][..], Scope::Repository, Mode::Remove),
-        (&["clean", "--caches"], Scope::WithCaches, Mode::Remove),
-        (
-            &["clean", "--caches", "--dry-run"],
-            Scope::WithCaches,
-            Mode::DryRun,
-        ),
-        (
-            &["clean", "--dry-run", "--caches"],
-            Scope::WithCaches,
-            Mode::DryRun,
-        ),
-        (&["clean", "--dry-run"], Scope::Repository, Mode::DryRun),
+    for CleanLine { line, mode, scope } in [
+        CleanLine {
+            line: &["clean"],
+            mode: Mode::Remove,
+            scope: Scope::Repository,
+        },
+        CleanLine {
+            line: &["clean", "--caches"],
+            mode: Mode::Remove,
+            scope: Scope::WithCaches,
+        },
+        CleanLine {
+            line: &["clean", "--caches", "--dry-run"],
+            mode: Mode::DryRun,
+            scope: Scope::WithCaches,
+        },
+        CleanLine {
+            line: &["clean", "--dry-run", "--caches"],
+            mode: Mode::DryRun,
+            scope: Scope::WithCaches,
+        },
+        CleanLine {
+            line: &["clean", "--dry-run"],
+            mode: Mode::DryRun,
+            scope: Scope::Repository,
+        },
     ] {
         for home in [true, false] {
             assert_eq!(

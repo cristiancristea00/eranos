@@ -79,26 +79,26 @@ func everyAsynchronousReadAnswersAsItsSynchronousTwin() async throws {
 
 /// What the synchronous reads answer, to compare the asynchronous ones with.
 private struct Snapshot {
+    let id: Group.ID
     let categories: [Category]
     let expenses: [Expense]
-    let id: Group.ID
     let json: String
     let members: [Member]
     let settlement: Settlement
-    let shares: ExpenseShares?
     let summary: Summary
     let transfers: [Transfer]
+    let shares: ExpenseShares?
 
     init(of flat: Flat) throws {
+        id = try flat.group.id()
         categories = try flat.group.categories()
         expenses = try flat.group.expenses()
-        id = try flat.group.id()
         json = try flat.group.save()
         members = try flat.group.members()
         settlement = try flat.group.settlement(by: .greedy)
-        shares = try flat.group.shares(of: flat.dinner)
         summary = try flat.group.summary()
         transfers = try flat.group.transfers()
+        shares = try flat.group.shares(of: flat.dinner)
     }
 }
 
@@ -195,7 +195,9 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     try await group.rename(to: "Home")
     try await group.changeDescription(to: "Bills")
     try await group.changeLanguage(to: Language("ro"))
-    #expect(try await [group.name(), group.description(), group.language()?.description] == ["Home", "Bills", "ro"])
+    #expect(try await "Home" == group.name())
+    #expect(try await "Bills" == group.description())
+    #expect(try await "ro" == group.language()?.description)
     try await group.changeDescription(to: nil)
     #expect(try await nil == group.description())
     let lei = try Currency(code: "RON")

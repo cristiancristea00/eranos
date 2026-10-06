@@ -9,6 +9,14 @@ use quote::quote;
 
 use super::*;
 
+/// An item `#[mirrored]` is given, with the attribute's arguments.
+struct Marked {
+    /// The attribute's arguments.
+    attribute: TokenStream,
+    /// The item.
+    item: TokenStream,
+}
+
 /// The code `#[mirrored]` writes for `item` with `attribute`.
 fn mirror(attribute: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     mirrored(attribute, item)
@@ -94,27 +102,27 @@ fn only_records_enums_and_errors_without_generics_are_mirrored() {
         ),
         "a mirrored item is a record or an enum, or an error with `#[mirrored(error)]`"
     );
-    for (attribute, item) in [
-        (
-            quote!(),
-            quote!(
+    for Marked { attribute, item } in [
+        Marked {
+            attribute: quote!(),
+            item: quote!(
                 pub struct Money(pub i64);
             ),
-        ),
-        (
-            quote!(),
-            quote!(
+        },
+        Marked {
+            attribute: quote!(),
+            item: quote!(
                 pub struct Unit;
             ),
-        ),
-        (
-            quote!(error),
-            quote!(
+        },
+        Marked {
+            attribute: quote!(error),
+            item: quote!(
                 pub struct Failure {
                     pub detail: String,
                 }
             ),
-        ),
+        },
     ] {
         assert_eq!(
             refusal(attribute, item.clone()),

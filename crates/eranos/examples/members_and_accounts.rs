@@ -30,11 +30,11 @@ struct MemberRow {
 
 #[derive(Tabled)]
 struct CheckRow {
-    #[tabled(rename = "Input")]
+    #[tabled(rename = "Input", order = 0)]
     input: &'static str,
-    #[tabled(rename = "Checked as")]
+    #[tabled(rename = "Checked as", order = 1)]
     kind: &'static str,
-    #[tabled(rename = "Result")]
+    #[tabled(rename = "Result", order = 2)]
     result: String,
 }
 
@@ -48,6 +48,13 @@ struct BalanceRow {
     name: String,
     #[tabled(rename = "Status", order = 1)]
     status: &'static str,
+}
+
+/// The two flatmates: Ana, who gives every detail, and Bob, who moves out.
+#[derive(Clone, Copy)]
+struct Flatmates {
+    ana: MemberId,
+    bob: MemberId,
 }
 
 /// Prints a section heading with a line under it.
@@ -125,7 +132,7 @@ fn print_balances(group: &Group) {
     );
 }
 
-fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
+fn members(group: &mut Group) -> Result<Flatmates, Box<dyn Error>> {
     section("1. Members");
     let ana = group.add_member(
         Member::builder("Ana")
@@ -146,7 +153,7 @@ fn members(group: &mut Group) -> Result<(MemberId, MemberId), Box<dyn Error>> {
          grouped for reading; the IBAN was stored in its electronic form, uppercase and\n\
          without spaces, the way banking apps accept it."
     );
-    Ok((ana, bob))
+    Ok(Flatmates { ana, bob })
 }
 
 fn validation() {
@@ -191,8 +198,9 @@ fn validation() {
     );
 }
 
-fn moving_out(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
+fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Error>> {
     section("3. A flatmate moves out");
+    let Flatmates { ana, bob } = flatmates;
     let rent = Expense::builder(
         Money::parse("900.00", Currency::EUR)?,
         CalendarDate::new(1, 9, 2026)?,
@@ -252,7 +260,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "Ana and Bob share a flat. A member needs only a first name; the last name,\n\
          email, phone, and the accounts they can be paid to are optional."
     );
-    let (ana, bob) = members(&mut group)?;
+    let flatmates = members(&mut group)?;
     validation();
-    moving_out(&mut group, ana, bob)
+    moving_out(&mut group, flatmates)
 }

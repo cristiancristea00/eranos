@@ -8,6 +8,8 @@ The port of the Rust example ``restaurant_bill``, which prints the same report.
 """
 
 import copy
+import dataclasses
+from typing import ClassVar, final, override
 
 from eranos import (
     CalendarDate,
@@ -30,7 +32,71 @@ from eranos import (
     Tip,
     TipDistribution,
 )
-from examples.report import names, print_lines, print_table, refusal, section, title
+from examples.report import Row, names, print_lines, print_table, refusal, section, title
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class LineRow(Row):
+    """A row of the table of the receipt: a line, who had it, and what it costs."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Item', 'Shared by', 'Quantity', 'Unit price', 'Line total')
+
+    line_total: Money
+    """The unit price times the quantity."""
+
+    name: str
+    """What the line is."""
+
+    participants: str
+    """Who had it."""
+
+    quantity: int
+    """How many were ordered."""
+
+    unit_price: Money
+    """What one costs."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.participants, str(self.quantity), str(self.unit_price), str(self.line_total)
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class TipRow(Row):
+    """A row of the table of the tip: what a member ordered, and the tip and the total of each way of sharing it."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Ordered', 'Tip by consumption', 'Pays', 'Tip shared equally', 'Pays')
+
+    equal_tip: Money
+    """The member's part of the tip, shared equally."""
+
+    equal_total: Money
+    """What the member pays with the tip shared equally."""
+
+    name: str
+    """The member's first name."""
+
+    proportional_tip: Money
+    """The member's part of the tip, shared in proportion to what each person ordered."""
+
+    proportional_total: Money
+    """What the member pays with the tip shared in proportion to what each person ordered."""
+
+    subtotal: Money
+    """What the member ordered."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return (
+            self.name,
+            str(self.subtotal),
+            str(self.proportional_tip),
+            str(self.proportional_total),
+            str(self.equal_tip),
+            str(self.equal_total),
+        )
 
 
 def euros(text: str) -> Money:
@@ -136,7 +202,7 @@ def bill(untipped: Expense, distribution: TipDistribution) -> Expense:
     return copy.replace(untipped, tip=Tip(distribution, PercentageTip(Percentage.parse('10'))))
 
 
-def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> tuple[str, ...]:
+def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> TipRow:
     """
     Write the row of member in the table of the tip: what they ordered, then the tip and the total of each way of sharing it.
 
@@ -148,19 +214,19 @@ def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumpti
         even: How it divides with the tip shared equally.
 
     Returns:
-        The row's cells.
+        The row.
 
     """
     subtotal = consumed(ordered, member)
     proportional_total = consumed(by_consumption, member)
     equal_total = consumed(even, member)
-    return (
-        names(group, (member,)),
-        str(subtotal),
-        str(proportional_total.minus(subtotal)),
-        str(proportional_total),
-        str(equal_total.minus(subtotal)),
-        str(equal_total),
+    return TipRow(
+        equal_tip=equal_total.minus(subtotal),
+        equal_total=equal_total,
+        name=names(group, (member,)),
+        proportional_tip=proportional_total.minus(subtotal),
+        proportional_total=proportional_total,
+        subtotal=subtotal,
     )
 
 
@@ -181,8 +247,17 @@ def main() -> None:
     section('1. The receipt')
     lines = receipt(ana, bob, carol)
     print_table(
-        ('Item', 'Shared by', 'Quantity', 'Unit price', 'Line total'),
-        [(item.name, names(group, item.split.members), str(item.quantity), str(item.unit_price), str(line_total(item))) for item in lines],
+        LineRow,
+        [
+            LineRow(
+                line_total=line_total(item),
+                name=item.name,
+                participants=names(group, item.split.members),
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+            )
+            for item in lines
+        ],
         2,
     )
     print_lines(
@@ -202,7 +277,7 @@ def main() -> None:
         'each person ordered, or equally; both are shown:',
     )
     print_table(
-        ('Member', 'Ordered', 'Tip by consumption', 'Pays', 'Tip shared equally', 'Pays'),
+        TipRow,
         [tip_row(group, member, ordered, by_consumption, even) for member in (ana, bob, carol)],
         1,
     )

@@ -13,11 +13,23 @@ public func section(_ title: String) {
     print("\n\(title)\n\(String(repeating: "─", count: title.count))")
 }
 
-/// Prints `rows` under `headers` with rounded borders, as the Rust examples' tables are printed, right-aligning the
-/// columns from `numbersFrom` on. A cell of several lines makes its row as tall as its tallest cell.
-public func printTable(_ headers: [String], _ rows: [[String]], numbersFrom: Int) {
-    let table = ([headers] + rows).map { row in row.map { cell in cell.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) } }
-    let widths = headers.indices.map { column in table.map { row in row[column].map(\.count).max() ?? 0 }.max() ?? 0 }
+/// A row of a report's table, as a Rust example's `#[derive(Tabled)]` struct describes one: the headings of the
+/// table's columns and the row's cells, both in the order the table prints its columns.
+public protocol TableRow {
+    /// The headings of the columns, in the order the table prints them.
+    static var headers: [String] { get }
+
+    /// The row's cells, in the order of ``headers``.
+    var cells: [String] { get }
+}
+
+/// Prints `rows` under their type's headings with rounded borders, as the Rust examples' tables are printed,
+/// right-aligning the columns from `numbersFrom` on. A cell of several lines makes its row as tall as its tallest cell.
+public func printTable<Row: TableRow>(_ rows: [Row], numbersFrom: Int) {
+    let split = { (row: [String]) in row.map { cell in cell.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) } }
+    let headings = split(Row.headers)
+    let body = rows.map { row in split(row.cells) }
+    let widths = Row.headers.indices.map { column in ([headings] + body).map { row in row[column].map(\.count).max() ?? 0 }.max() ?? 0 }
     let border = { (left: String, middle: String, right: String) in
         left + widths.map { width in String(repeating: "─", count: width + 2) }.joined(separator: middle) + right
     }
@@ -31,8 +43,8 @@ public func printTable(_ headers: [String], _ rows: [[String]], numbersFrom: Int
             .joined(separator: "│") + "│"
         }
     }
-    var output = [border("╭", "┬", "╮")] + lines(table[0]) + [border("├", "┼", "┤")]
-    for row in table.dropFirst() {
+    var output = [border("╭", "┬", "╮")] + lines(headings) + [border("├", "┼", "┤")]
+    for row in body {
         output += lines(row)
     }
     output.append(border("╰", "┴", "╯"))

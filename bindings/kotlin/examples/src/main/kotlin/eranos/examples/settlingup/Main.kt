@@ -16,11 +16,74 @@ import eranos.Settlement
 import eranos.SettlementStrategy
 import eranos.Split
 import eranos.Transfer
+import eranos.examples.Row
 import eranos.examples.names
 import eranos.examples.participants
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.totals
+
+private data class ExpenseRow(
+    val amount: Money,
+    val name: String,
+    val participants: String,
+    val payer: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, payer, participants, "$amount")
+
+    companion object {
+        val HEADERS = listOf("Expense", "Paid by", "Shared by", "Amount")
+    }
+}
+
+private data class BalanceRow(
+    val balance: Balance,
+    val consumed: Money,
+    val name: String,
+    val paid: Money,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, "$paid", "$consumed", "$balance")
+
+    companion object {
+        val HEADERS = listOf("Member", "Paid", "Consumed", "Balance")
+    }
+}
+
+private data class PaymentRow(
+    val amount: Money,
+    val from: String,
+    val to: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(from, to, "$amount")
+
+    companion object {
+        val HEADERS = listOf("From", "To", "Amount")
+    }
+}
+
+private data class StrategyRow(
+    val cost: String,
+    val guarantee: String,
+    val payments: Int,
+    val strategy: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(strategy, guarantee, cost, "$payments")
+
+    companion object {
+        val HEADERS = listOf("Strategy", "Guarantee", "Cost", "Payments here")
+    }
+}
+
+/** The number of payments of each strategy's plan. */
+private data class Counts(
+    val direct: Int,
+    val greedy: Int,
+    val minimum: Int,
+)
 
 /** Records an expense of [amount] EUR paid by [payer] and split equally. */
 private fun spend(
@@ -44,10 +107,10 @@ private fun spend(
 private fun printBalances(group: Group) {
     val summary = group.summaryBlocking()
     printTable(
-        listOf("Member", "Paid", "Consumed", "Balance"),
+        BalanceRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id -> totals(id, summary) }?.let { totals ->
-                listOf(member.firstName, "${totals.paid}", "${totals.share}", "${totals.balance}")
+                BalanceRow(balance = totals.balance, consumed = totals.share, name = member.firstName, paid = totals.paid)
             }
         },
         numbersFrom = 1,
@@ -59,16 +122,16 @@ private fun printPayments(
     settlement: Settlement,
 ) {
     printTable(
-        listOf("From", "To", "Amount"),
+        PaymentRow.HEADERS,
         settlement.payments.map { payment ->
-            listOf(names(group, listOf(payment.from)), names(group, listOf(payment.to)), "${payment.amount}")
+            PaymentRow(amount = payment.amount, from = names(group, listOf(payment.from)), to = names(group, listOf(payment.to)))
         },
         numbersFrom = 2,
     )
 }
 
-/** Prints each strategy's plan with what it promises; returns the number of payments of each, in the order minimum, greedy, direct. */
-private fun strategies(group: Group): List<Int> {
+/** Prints each strategy's plan with what it promises; returns the number of payments of each. */
+private fun strategies(group: Group): Counts {
     section("3. Minimum transfers")
     val minimum = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
     println(
@@ -105,15 +168,20 @@ private fun strategies(group: Group): List<Int> {
 
     section("6. The strategies side by side")
     printTable(
-        listOf("Strategy", "Guarantee", "Cost", "Payments here"),
+        StrategyRow.HEADERS,
         listOf(
-            listOf("MinimumTransfers", "the fewest payments", "O(2ⁿ·n) for n open balances", "${minimum.payments.size}"),
-            listOf("Greedy", "at most n − 1 payments", "O(n log n)", "${greedy.payments.size}"),
-            listOf("Direct", "one payment per pair in debt", "O(pairs)", "${direct.payments.size}"),
+            StrategyRow(
+                cost = "O(2ⁿ·n) for n open balances",
+                guarantee = "the fewest payments",
+                payments = minimum.payments.size,
+                strategy = "MinimumTransfers",
+            ),
+            StrategyRow(cost = "O(n log n)", guarantee = "at most n − 1 payments", payments = greedy.payments.size, strategy = "Greedy"),
+            StrategyRow(cost = "O(pairs)", guarantee = "one payment per pair in debt", payments = direct.payments.size, strategy = "Direct"),
         ),
         numbersFrom = 3,
     )
-    return listOf(minimum.payments.size, greedy.payments.size, direct.payments.size)
+    return Counts(direct = direct.payments.size, greedy = greedy.payments.size, minimum = minimum.payments.size)
 }
 
 /** Prints the report of the ski week. */
@@ -142,9 +210,14 @@ fun main() {
         spend(group, "Coffee", "2.00", ana, listOf(dan, eva))
         spend(group, "Snacks", "1.00", filip, listOf(ana))
         printTable(
-            listOf("Expense", "Paid by", "Shared by", "Amount"),
+            ExpenseRow.HEADERS,
             group.expensesBlocking().map { expense ->
-                listOf(expense.name, names(group, expense.payers.members), names(group, participants(expense.split)), "${expense.total()}")
+                ExpenseRow(
+                    amount = expense.total(),
+                    name = expense.name,
+                    participants = names(group, participants(expense.split)),
+                    payer = names(group, expense.payers.members),
+                )
             },
             numbersFrom = 3,
         )
@@ -153,7 +226,7 @@ fun main() {
         println("Four members are owed money and two owe it:")
         printBalances(group)
 
-        val payments = strategies(group)
+        val counts = strategies(group)
 
         section("7. Settling up for real")
         val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
@@ -171,7 +244,7 @@ fun main() {
 
         // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice; greedy pays the largest
         // amounts first and needs five; the unsimplified debts between pairs need seven.
-        check(listOf(4, 5, 7) == payments)
+        check(Counts(direct = 7, greedy = 5, minimum = 4) == counts)
         val summary = group.summaryBlocking()
         for (member in listOf(ana, bob, carol, dan, eva, filip)) {
             check(Balance.Settled == totals(member, summary)?.balance)

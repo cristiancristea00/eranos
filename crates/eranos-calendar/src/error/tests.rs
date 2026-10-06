@@ -5,6 +5,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case {
+    error: CalendarError,
+    held: String,
+    method: &'static str,
+}
+
 /// A [`CalendarError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
@@ -38,16 +47,24 @@ impl FromCalendarError for ConvertedCalendarError {
 #[test]
 fn every_failure_of_calendar_error_converts_through_the_method_of_its_variant() {
     let cases = [
-        (CalendarError::InvalidDate, "invalid_date", String::new()),
-        (CalendarError::InvalidTime, "invalid_time", String::new()),
+        Case {
+            error: CalendarError::InvalidDate,
+            held: String::new(),
+            method: "invalid_date",
+        },
+        Case {
+            error: CalendarError::InvalidTime,
+            held: String::new(),
+            method: "invalid_time",
+        },
     ];
-    for (error, method, held) in cases {
+    for case in cases {
         assert_eq!(
-            ConvertedCalendarError::from_calendar_error(error),
+            ConvertedCalendarError::from_calendar_error(case.error),
             ConvertedCalendarError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }

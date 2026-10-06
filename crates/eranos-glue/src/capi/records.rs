@@ -22,9 +22,32 @@ use crate::capi::{
     INVALID_TEXT, Named, article, capitalised, doc, doc_with_errors, eranos, inside, list, words,
 };
 
+/// A field of a record that starts at a value of its own when the record is
+/// created without it.
+struct FieldDefault {
+    /// The field's name.
+    field: &'static str,
+    /// The record's name.
+    record: &'static str,
+    /// What the field starts at.
+    value: i32,
+}
+
 /// The fields of a record that start at a value of their own when the
 /// record is created without them: a line of a bill is of one unit.
-const DEFAULTS: [(&str, &str, i32); 1] = [("Item", "quantity", 1)];
+const DEFAULTS: [FieldDefault; 1] = [FieldDefault {
+    field: "quantity",
+    record: "Item",
+    value: 1,
+}];
+
+/// A field of a record and how it crosses.
+struct Typed<'item> {
+    /// The field.
+    field: &'item Field,
+    /// How it crosses.
+    value: &'item Value,
+}
 
 /// The items of every record, list, and enum that `plan` names, of the
 /// core's `core`.
@@ -70,7 +93,11 @@ fn record(item: &Mirrored, fields: &[Field], taken: bool, core: &Core) -> syn::R
         .iter()
         .map(|field| Value::of(&field.written, core))
         .collect::<syn::Result<Vec<_>>>()?;
-    let fields = fields.iter().zip(&values).collect::<Vec<_>>();
+    let fields = fields
+        .iter()
+        .zip(&values)
+        .map(|(field, value)| Typed { field, value })
+        .collect::<Vec<_>>();
     let (opaque, create) = if taken {
         (quote!(#[diplomat::opaque_mut]), Some(create(item, &fields)))
     } else {
@@ -78,7 +105,7 @@ fn record(item: &Mirrored, fields: &[Field], taken: bool, core: &Core) -> syn::R
     };
     let accessors = fields
         .iter()
-        .map(|(field, value)| accessors(field, value, taken));
+        .map(|typed| accessors(typed.field, typed.value, taken));
     let summary = doc(&[&item.doc]);
     let extras = extras(&object);
     Ok(Named {
@@ -100,25 +127,25 @@ fn record(item: &Mirrored, fields: &[Field], taken: bool, core: &Core) -> syn::R
 
 /// The constructor of the record `item` of `fields`, which takes every
 /// required field in order and starts every other one at its default.
-fn create(item: &Mirrored, fields: &[(&Field, &Value)]) -> TokenStream {
+fn create(item: &Mirrored, fields: &[Typed<'_>]) -> TokenStream {
     let name = &item.name;
     let required = fields
         .iter()
-        .filter(|(field, value)| default(item, field, value).is_none())
+        .filter(|typed| default(item, typed.field, typed.value).is_none())
         .collect::<Vec<_>>();
     let parameters = required
         .iter()
-        .map(|(field, value)| value.crossing.parameter(&field.name));
-    let initialisers = fields.iter().map(|(field, value)| {
-        let field_name = &field.name;
-        default(item, field, value).map_or_else(
-            || initialiser(field_name, &value.crossing),
+        .map(|typed| typed.value.crossing.parameter(&typed.field.name));
+    let initialisers = fields.iter().map(|typed| {
+        let field_name = &typed.field.name;
+        default(item, typed.field, typed.value).map_or_else(
+            || initialiser(field_name, &typed.value.crossing),
             |default| quote!(#field_name: #default),
         )
     });
     let fallible = required
         .iter()
-        .any(|(_, value)| Crossing::Text == value.crossing);
+        .any(|typed| Crossing::Text == typed.value.crossing);
     let summary = format!(
         "{} of its required fields; every other field starts absent, empty, or at its default.",
         capitalised(&article(&words(name)))
@@ -144,8 +171,8 @@ fn default(item: &Mirrored, field: &Field, value: &Value) -> Option<TokenStream>
     }
     DEFAULTS
         .iter()
-        .find(|(record, name, _)| item.name == *record && field.name == *name)
-        .map(|(_, _, default)| Literal::i32_unsuffixed(*default).into_token_stream())
+        .find(|default| item.name == default.record && field.name == default.field)
+        .map(|default| Literal::i32_unsuffixed(default.value).into_token_stream())
 }
 
 /// The field `name` of a struct literal, from the parameter of the same
@@ -516,22 +543,36 @@ fn pattern(name: &Ident, variant: &Variant, field: Option<&Ident>) -> TokenStrea
     }
 }
 
+/// A field that a variant of an enum with data holds.
+#[derive(Clone, Copy)]
+struct Held<'item> {
+    /// How the field crosses.
+    crossing: &'item Crossing,
+    /// The field, as the variant declares it.
+    field: &'item Field,
+    /// The variant.
+    variant: &'item Variant,
+}
+
 /// A getter of an enum with data: of a field name its variants hold with
 /// one type, or of one variant's field when they hold it with several.
 struct Getter<'item> {
-    /// The getter's name: the field's, or the variant's and the field's.
-    name: Ident,
-    /// The field as the first variant that holds it declares it.
-    field: &'item Field,
     /// How the field crosses.
     crossing: Crossing,
+    /// The field as the first variant that holds it declares it.
+    field: &'item Field,
     /// Every variant that holds it, with its own declaration.
-    holders: Vec<(&'item Variant, &'item Field)>,
+    holders: Vec<Held<'item>>,
+    /// The getter's name: the field's, or the variant's and the field's.
+    name: Ident,
 }
 
 /// The getters of the enum with data of `variants`, whose fields cross as
 /// `crossings`, by name.
-fn getters<'item>(variants: &'item [Variant], crossings: &[Vec<Crossing>]) -> Vec<Getter<'item>> {
+fn getters<'item>(
+    variants: &'item [Variant],
+    crossings: &'item [Vec<Crossing>],
+) -> Vec<Getter<'item>> {
     let held = variants
         .iter()
         .zip(crossings)
@@ -540,48 +581,65 @@ fn getters<'item>(variants: &'item [Variant], crossings: &[Vec<Crossing>]) -> Ve
                 .fields
                 .iter()
                 .zip(crossings)
-                .map(move |(field, crossing)| (variant, field, crossing))
+                .map(move |(field, crossing)| Held {
+                    crossing,
+                    field,
+                    variant,
+                })
         })
         .collect::<Vec<_>>();
     let mut seen = BTreeSet::new();
     let mut getters = Vec::new();
-    for &(_, field, crossing) in &held {
-        if !seen.insert(field.name.to_string()) {
+    for first in &held {
+        if !seen.insert(first.field.name.to_string()) {
             continue;
         }
         let holders = held
             .iter()
-            .filter(|(_, other, _)| other.name == field.name)
+            .filter(|other| other.field.name == first.field.name)
+            .copied()
             .collect::<Vec<_>>();
         let types = holders
             .iter()
-            .map(|(_, other, _)| other.written.to_token_stream().to_string())
+            .map(|other| other.field.written.to_token_stream().to_string())
             .collect::<BTreeSet<_>>();
         if 1 == types.len() {
             getters.push(Getter {
-                name: field.name.clone(),
-                field,
-                crossing: crossing.clone(),
-                holders: holders
-                    .iter()
-                    .map(|&&(variant, other, _)| (variant, other))
-                    .collect(),
+                crossing: first.crossing.clone(),
+                field: first.field,
+                holders,
+                name: first.field.name.clone(),
             });
         } else {
-            getters.extend(holders.iter().map(|&&(variant, other, own)| Getter {
+            getters.extend(holders.iter().map(|&holder| Getter {
+                crossing: holder.crossing.clone(),
+                field: holder.field,
+                holders: vec![holder],
                 name: format_ident!(
                     "{}_{}",
-                    crate::snake_case(&variant.name.to_string()),
-                    other.name
+                    crate::snake_case(&holder.variant.name.to_string()),
+                    holder.field.name
                 ),
-                field: other,
-                crossing: own.clone(),
-                holders: vec![(variant, other)],
             }));
         }
     }
     getters.sort_by_key(|getter| getter.name.to_string());
     getters
+}
+
+/// The parts of an enum's getter that the crossing of its field decides.
+struct GetterParts {
+    /// Whether the getter is a constant function.
+    constant: bool,
+    /// The expression it evaluates in a variant that holds the field.
+    found: TokenStream,
+    /// Whether the getter is `#[must_use]`.
+    must_use: bool,
+    /// The getter's parameters, in their parentheses.
+    receiver: TokenStream,
+    /// The type the getter answers, inside the `Option` of a field some
+    /// variants lack: none for text every variant holds, which it writes.
+    answered: Option<TokenStream>,
 }
 
 /// The getter `getter` of the enum with data `item` of `variants`: absent
@@ -593,14 +651,14 @@ fn variant_getter(item: &Mirrored, variants: &[Variant], getter: &Getter<'_>) ->
     let holding = getter
         .holders
         .iter()
-        .map(|(variant, _)| pattern(&item.name, variant, Some(field)));
+        .map(|holder| pattern(&item.name, holder.variant, Some(field)));
     let others = variants
         .iter()
         .filter(|variant| {
             !getter
                 .holders
                 .iter()
-                .any(|(holder, _)| holder.name == variant.name)
+                .any(|holder| holder.variant.name == variant.name)
         })
         .map(|variant| pattern(&item.name, variant, None))
         .collect::<Vec<_>>();
@@ -618,7 +676,13 @@ fn variant_getter(item: &Mirrored, variants: &[Variant], getter: &Getter<'_>) ->
             found
         }
     };
-    let (constant, must_use, receiver, answered, found) = match &getter.crossing {
+    let GetterParts {
+        constant,
+        found,
+        must_use,
+        receiver,
+        answered,
+    } = match &getter.crossing {
         Crossing::Text => {
             let found = if optional {
                 text.push_str(" Writes it, if present; absent otherwise.");
@@ -626,40 +690,40 @@ fn variant_getter(item: &Mirrored, variants: &[Variant], getter: &Getter<'_>) ->
             } else {
                 quote!(crate::write_text(write, #field))
             };
-            (
-                false,
-                false,
-                quote!((&self, write: &mut DiplomatWrite)),
-                optional.then(|| quote!(())),
+            GetterParts {
+                constant: false,
                 found,
-            )
+                must_use: false,
+                receiver: quote!((&self, write: &mut DiplomatWrite)),
+                answered: optional.then(|| quote!(())),
+            }
         }
-        Crossing::Integer(integer) => (
-            true,
-            true,
-            quote!((&self)),
-            Some(quote!(#integer)),
-            wrap(quote!(*#field)),
-        ),
+        Crossing::Integer(integer) => GetterParts {
+            constant: true,
+            found: wrap(quote!(*#field)),
+            must_use: true,
+            receiver: quote!((&self)),
+            answered: Some(quote!(#integer)),
+        },
         Crossing::Choice(converted) | Crossing::Plain(converted) => {
             let bridge = eranos(converted);
-            (
-                false,
-                true,
-                quote!((&self)),
-                Some(quote!(#bridge)),
-                wrap(quote!((*#field).into())),
-            )
+            GetterParts {
+                constant: false,
+                found: wrap(quote!((*#field).into())),
+                must_use: true,
+                receiver: quote!((&self)),
+                answered: Some(quote!(#bridge)),
+            }
         }
         Crossing::List(_) | Crossing::Object(_) | Crossing::TextList => {
             let opaque = getter.crossing.opaque();
-            (
-                false,
-                true,
-                quote!((&self)),
-                Some(quote!(Box<#opaque>)),
-                wrap(quote!(Box::new(#opaque(#field.clone())))),
-            )
+            GetterParts {
+                constant: false,
+                found: wrap(quote!(Box::new(#opaque(#field.clone())))),
+                must_use: true,
+                receiver: quote!((&self)),
+                answered: Some(quote!(Box<#opaque>)),
+            }
         }
     };
     let answer = answered.map(|answered| {
@@ -688,17 +752,21 @@ fn variant_getter(item: &Mirrored, variants: &[Variant], getter: &Getter<'_>) ->
 /// document it apart, each variant's.
 fn described(getter: &Getter<'_>) -> String {
     let first = &getter.field.doc;
-    if getter.holders.iter().all(|(_, held)| held.doc == *first) {
+    if getter
+        .holders
+        .iter()
+        .all(|holder| holder.field.doc == *first)
+    {
         return first.clone();
     }
     let parts = getter
         .holders
         .iter()
-        .map(|(variant, held)| {
+        .map(|holder| {
             format!(
                 "in `{}`, {}",
-                variant.name,
-                inside(held.doc.trim_end_matches('.'))
+                holder.variant.name,
+                inside(holder.field.doc.trim_end_matches('.'))
             )
         })
         .collect::<Vec<_>>();
@@ -710,7 +778,7 @@ fn presence(getter: &Getter<'_>) -> String {
     let kinds = getter
         .holders
         .iter()
-        .map(|(variant, _)| format!("`{}`", variant.name))
+        .map(|holder| format!("`{}`", holder.variant.name))
         .collect::<Vec<_>>();
     let noun = if 1 == kinds.len() { "kind" } else { "kinds" };
     format!("Present in the {noun} {} alone.", listed(&kinds))

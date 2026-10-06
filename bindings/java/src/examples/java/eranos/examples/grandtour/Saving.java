@@ -12,6 +12,7 @@ import eranos.AccountDetails;
 import eranos.EranosException;
 import eranos.Group;
 import eranos.GroupFailure;
+import eranos.examples.grandtour.Tables.LoadRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
 
@@ -75,17 +76,17 @@ final class Saving {
                                     "Lodging renamed FOOD",
                                     replaceFirst(
                                             saved, "\"name\": \"Lodging\"", "\"name\": \"FOOD\"")));
-            List<List<String>> rows = new ArrayList<>();
+            List<LoadRow> rows = new ArrayList<>();
             List<Optional<GroupFailure>> failures = new ArrayList<>();
             for (Tampering tampering : tampered) {
                 check(!saved.equals(tampering.text()));
                 Optional<EranosException> refused =
                         refusal(() -> Group.load(tampering.text()).close());
                 check(refused.isPresent());
-                rows.add(List.of(tampering.change(), message(refused)));
+                rows.add(new LoadRow(tampering.change(), message(refused)));
                 failures.add(groupFailure(refused));
             }
-            printTable(List.of("Change to the file", "Message"), rows, 2);
+            printTable(LoadRow.HEADERS, rows, 2);
 
             check(saved.equals(loaded.save()));
             check(group.summary().equals(loaded.summary()));

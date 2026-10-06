@@ -97,16 +97,26 @@ const APPLE_TOOLS: [Tool; 3] = [
     },
 ];
 
+/// A tool that cargo installed from the release tag Brewfile.develop names.
+struct Installed {
+    /// Its entry of Brewfile.develop.
+    entry: &'static str,
+    /// Its crate's name.
+    name: &'static str,
+}
+
 /// The tools that cargo installed from the release tags Brewfile.develop
 /// names, and that print no version of their own: `cargo install --list`
-/// names each with its version. Each is its crate's name and its entry of
-/// Brewfile.develop.
-const INSTALLED: [(&str, &str); 2] = [
-    ("diplomat-tool", "cargo \"diplomat-tool\""),
-    (
-        "uniffi-bindgen-react-native",
-        "cargo \"uniffi-bindgen-react-native\"",
-    ),
+/// names each with its version.
+const INSTALLED: [Installed; 2] = [
+    Installed {
+        entry: "cargo \"diplomat-tool\"",
+        name: "diplomat-tool",
+    },
+    Installed {
+        entry: "cargo \"uniffi-bindgen-react-native\"",
+        name: "uniffi-bindgen-react-native",
+    },
 ];
 
 /// A variable the gates read, the program under it that prints its
@@ -172,7 +182,7 @@ pub(crate) fn run(runner: &mut impl Runner) -> Result<(), Failure> {
         report(tool.name, found);
     }
     let installed = runner.probe(&installed()).unwrap_or_default();
-    for (name, entry) in INSTALLED {
+    for Installed { entry, name } in INSTALLED {
         let found = installed
             .lines()
             .find(|line| line.starts_with(&format!("{name} v")))

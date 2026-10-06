@@ -1,10 +1,41 @@
 """Print section 12 of the tour: the group saved as JSON, loaded again, and refused when its file was changed."""
 
-from typing import assert_never
+import dataclasses
+from typing import ClassVar, assert_never, final, override
 
 from eranos import Account, Group, GroupError, IbanAccountDetails, UsernameAccountDetails
 from examples.grand_tour.tour import Categories, People
-from examples.report import message, print_lines, print_table, refusal, section
+from examples.report import Row, print_lines, print_table, refusal, section
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Tampering:
+    """A change made to a saved group, and the text it leaves."""
+
+    change: str
+    """What was changed, as the report names it."""
+
+    text: str
+    """The saved group with the change."""
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class LoadRow(Row):
+    """A row of the table of changed files: the change, and the error the library refuses the file with."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Change to the file', 'Message')
+
+    change: str
+    """What was changed."""
+
+    message: GroupError
+    """The library's error."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.change, str(self.message)
 
 
 def _details(account: Account) -> str:
@@ -73,19 +104,19 @@ def saving_and_loading(group: Group, people: People, categories: Categories) -> 
             'with into_group reports a refusal as a typed error instead of a message:',
         )
         tampered = (
-            ('"format": 3', saved.replace('"format": 2', '"format": 3', 1)),
-            ('a blank group name', saved.replace('"name": "Lisbon and Porto"', '"name": " "', 1)),
-            ('Lodging renamed FOOD', saved.replace('"name": "Lodging"', '"name": "FOOD"', 1)),
+            Tampering(change='"format": 3', text=saved.replace('"format": 2', '"format": 3', 1)),
+            Tampering(change='a blank group name', text=saved.replace('"name": "Lisbon and Porto"', '"name": " "', 1)),
+            Tampering(change='Lodging renamed FOOD', text=saved.replace('"name": "Lodging"', '"name": "FOOD"', 1)),
         )
-        refusals: list[tuple[str, GroupError]] = []
-        for change, text in tampered:
-            assert text != saved, f'{change} changes the file'
-            refusals.append((change, _refused(text)))
-        print_table(('Change to the file', 'Message'), [(change, message(refused)) for change, refused in refusals], 2)
+        rows: list[LoadRow] = []
+        for tampering in tampered:
+            assert tampering.text != saved, f'{tampering.change} changes the file'
+            rows.append(LoadRow(change=tampering.change, message=_refused(tampering.text)))
+        print_table(LoadRow, rows, 2)
 
         assert loaded.save() == saved
         assert loaded.summary() == group.summary()
-        assert [refused.failure for _, refused in refusals] == [
+        assert [row.message.failure for row in rows] == [
             GroupError.UnsupportedFormat(format=3),
             GroupError.EmptyName(),
             GroupError.DuplicateCategoryName(existing=categories.food),

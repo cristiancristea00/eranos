@@ -46,9 +46,15 @@ fn member() -> Member {
         .unwrap_or_else(|error| panic!("{error}"))
 }
 
+/// A group and its members, in the order they joined.
+struct Household {
+    group: Group,
+    members: Vec<MemberId>,
+}
+
 /// A household of six with `EXISTING` expenses, each paid by the next member
 /// in turn.
-fn household() -> (Group, Vec<MemberId>) {
+fn household() -> Household {
     let mut group = Group::builder(Currency::EUR, "Benchmark")
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
@@ -65,11 +71,11 @@ fn household() -> (Group, Vec<MemberId>) {
             .add_expense(expense(minor_units, payer, &members))
             .unwrap_or_else(|error| panic!("{error}"));
     }
-    (group, members)
+    Household { group, members }
 }
 
 fn mutations(criterion: &mut Criterion) {
-    let (mut group, members) = household();
+    let Household { mut group, members } = household();
     let (Some(&first), Some(&second), Some(&reader)) =
         (members.first(), members.get(1), members.get(2))
     else {

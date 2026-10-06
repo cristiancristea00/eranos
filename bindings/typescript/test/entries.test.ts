@@ -40,12 +40,18 @@ import {
 } from '../src/index.js';
 import { Flat } from './flat.js';
 
+/** The two expenses of {@link expenses}. */
+interface Expenses {
+    readonly dinner: Expense;
+    readonly taxi: Expense;
+}
+
 /**
  * A taxi in lei, itemised (a fare of two units and a toll of one, left implicit), paid by percentages, with a fixed tip
  * shared equally, and a dinner in euros, split equally, paid by amounts, with a percentage tip: between them, every kind of
  * cost, split, and tip.
  */
-function expenses(flat: Flat): readonly [Expense, Expense] {
+function expenses(flat: Flat): Expenses {
     const lei = Currency.of('RON');
     const taxi: Expense = {
         cost: { kind: 'converted', amount: new Money(lei, 5_000n), rate: ExchangeRate.parse('0.2') },
@@ -83,7 +89,7 @@ function expenses(flat: Flat): readonly [Expense, Expense] {
         split: { kind: 'whole', split: { kind: 'equal', members: [flat.ana, flat.bob] } },
         tip: { value: { kind: 'percentage', percentage: Percentage.ofBasisPoints(1_000) } },
     };
-    return [taxi, dinner];
+    return { dinner, taxi };
 }
 
 void describe('the expenses, members, categories, and transfers', () => {
@@ -93,7 +99,7 @@ void describe('the expenses, members, categories, and transfers', () => {
      */
     void it('converts and stores every kind of expense whole', () => {
         const flat = new Flat();
-        const [taxi, dinner] = expenses(flat);
+        const { dinner, taxi } = expenses(flat);
         assert.ok('itemised' === taxi.split.kind);
         const [fare, toll] = taxi.split.items;
         assert.ok(undefined !== fare && undefined !== toll);
@@ -107,8 +113,13 @@ void describe('the expenses, members, categories, and transfers', () => {
             const stored = flat.group.expenseSync(id);
             assert.ok(undefined !== stored);
             assert.equal(stored.id, id);
-            assert.deepEqual([stored.cost, stored.date, stored.name, stored.payers], [expense.cost, expense.date, expense.name, expense.payers]);
-            assert.deepEqual([stored.category, stored.description, stored.time], [expense.category, expense.description, expense.time]);
+            assert.deepEqual(stored.cost, expense.cost);
+            assert.deepEqual(stored.date, expense.date);
+            assert.equal(stored.name, expense.name);
+            assert.deepEqual(stored.payers, expense.payers);
+            assert.equal(stored.category, expense.category);
+            assert.equal(stored.description, expense.description);
+            assert.deepEqual(stored.time, expense.time);
         }
     });
 
@@ -116,7 +127,7 @@ void describe('the expenses, members, categories, and transfers', () => {
     void it("tells an expense's tip, total, and members", () => {
         const flat = new Flat();
         const lei = Currency.of('RON');
-        const [taxi, dinner] = expenses(flat);
+        const { dinner, taxi } = expenses(flat);
         assert.ok(expenseTipAmount(taxi).equals(new Money(lei, 500n)));
         assert.ok(expenseTotal(taxi).equals(new Money(lei, 5_500n)));
         assert.deepEqual(expenseMembers(taxi), [flat.ana, flat.bob]);

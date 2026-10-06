@@ -11,12 +11,11 @@ func theGroup() throws(EranosError) -> Group {
     try group.rename(to: "Lisbon and Porto")
     try group.changeDescription(to: "A week by the Atlantic, with a day in Porto")
     printTable(
-        ["Detail", "Value"],
         [
-            ["Name", try group.name()],
-            ["Currency", "\(try group.currency())"],
-            ["Language", try group.language()?.description ?? ""],
-            ["Description", try group.description() ?? ""]
+            DetailRow(detail: "Name", value: try group.name()),
+            DetailRow(detail: "Currency", value: "\(try group.currency())"),
+            DetailRow(detail: "Language", value: try group.language()?.description ?? ""),
+            DetailRow(detail: "Description", value: try group.description() ?? "")
         ],
         numbersFrom: 2
     )
@@ -48,14 +47,13 @@ func describe(_ account: Account) -> String {
 
 func printMembers(_ group: Group) throws(EranosError) {
     printTable(
-        ["Member", "Email", "Phone", "Accounts"],
         try group.members().map { member in
-            [
-                [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
-                member.email?.description ?? "",
-                member.phone?.description ?? "",
-                cell(member.accounts.map(describe))
-            ]
+            MemberRow(
+                accounts: cell(member.accounts.map(describe)),
+                email: member.email?.description ?? "",
+                name: [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
+                phone: member.phone?.description ?? ""
+            )
         },
         numbersFrom: 4
     )
@@ -68,24 +66,23 @@ func validation(_ group: Group) {
         numbering plan. Required text must not be blank:
         """)
     let iban = { (input: String) in
-        ["\"\(input)\"", "IBAN", outcome({ () throws(EranosError) in try IBAN(input) }, { iban in "\(iban), country \(iban.countryCode)" })]
+        CheckRow(input: "\"\(input)\"", kind: "IBAN", result: outcome({ () throws(EranosError) in try IBAN(input) }, { iban in "\(iban), country \(iban.countryCode)" }))
     }
     let email = { (input: String) in
-        ["\"\(input)\"", "email", outcome({ () throws(EranosError) in try Email(input) }, \.description)]
+        CheckRow(input: "\"\(input)\"", kind: "email", result: outcome({ () throws(EranosError) in try Email(input) }, \.description))
     }
     let phone = { (input: String) in
-        ["\"\(input)\"", "phone", outcome({ () throws(EranosError) in try PhoneNumber(input) }, { phone in "\(phone), stored as \(phone.e164)" })]
+        CheckRow(input: "\"\(input)\"", kind: "phone", result: outcome({ () throws(EranosError) in try PhoneNumber(input) }, { phone in "\(phone), stored as \(phone.e164)" }))
     }
     printTable(
-        ["Input", "Checked as", "Result"],
         [
             iban("ro49 aaaa 1b31 0075 9384 0000"),
             iban("RO49 AAAA 1B31 0075 9384 0001"),
             email("ana..popescu@example.com"),
             phone("+351 912 345 678"),
             phone("+40 612 345 678"),
-            ["\"   \"", "username", outcome({ () throws(EranosError) in try Username("   ") }, \.description)],
-            ["\"  \"", "first name", outcome({ () throws(EranosError) in try group.add(Member(firstName: "  ")) }, \.rawValue)]
+            CheckRow(input: "\"   \"", kind: "username", result: outcome({ () throws(EranosError) in try Username("   ") }, \.description)),
+            CheckRow(input: "\"  \"", kind: "first name", result: outcome({ () throws(EranosError) in try group.add(Member(firstName: "  ")) }, \.rawValue))
         ],
         numbersFrom: 3
     )
@@ -155,10 +152,9 @@ func addCategories(_ group: Group) throws(EranosError) -> Categories {
         Names are compared caselessly, and the built-in category keeps its name:
         """)
     printTable(
-        ["Change", "Refused with"],
         [
-            ["Add a category named FOOD", message(homonym)],
-            ["Rename Uncategorised to Other", message(builtIn)]
+            RefusalRow(change: "Add a category named FOOD", error: message(homonym)),
+            RefusalRow(change: "Rename Uncategorised to Other", error: message(builtIn))
         ],
         numbersFrom: 2
     )

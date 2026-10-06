@@ -200,6 +200,14 @@ pub(crate) fn host_lints() -> Vec<Step> {
     ]
 }
 
+/// A set of features that clippy lints a target's libraries with.
+struct FeatureSet {
+    /// The flag that selects it.
+    flag: &'static str,
+    /// The words that name it in a step's name.
+    words: &'static str,
+}
+
 /// The gate that lints the libraries for the mobile and wasm targets, with
 /// every feature and without the default ones, as CI's job of that name
 /// does: clippy type-checks each target's code against its standard library
@@ -213,18 +221,24 @@ pub(crate) fn host_lints() -> Vec<Step> {
 pub(crate) fn target_lints() -> Vec<Step> {
     let clippy = |scope: &[&str], targets: &[&str], name: &str| {
         [
-            ("--all-features", "with every feature"),
-            ("--no-default-features", "without the default features"),
+            FeatureSet {
+                flag: "--all-features",
+                words: "with every feature",
+            },
+            FeatureSet {
+                flag: "--no-default-features",
+                words: "without the default features",
+            },
         ]
-        .map(|(features, set)| {
+        .map(|set| {
             let mut arguments = vec!["clippy"];
             arguments.extend(scope);
-            arguments.extend(["--lib", features]);
+            arguments.extend(["--lib", set.flag]);
             for target in targets {
                 arguments.extend(["--target", target]);
             }
             arguments.extend(["--", "-D", "warnings"]);
-            Step::cargo(&arguments, &format!("clippy for {name} {set}"))
+            Step::cargo(&arguments, &format!("clippy for {name} {}", set.words))
         })
     };
     let mut add = vec!["target", "add"];

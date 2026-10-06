@@ -4,6 +4,50 @@
 import Eranos
 import Report
 
+struct MemberRow: TableRow {
+    static let headers = ["Member", "Email", "Phone", "Accounts"]
+
+    let accounts: String
+    let email: String
+    let name: String
+    let phone: String
+
+    var cells: [String] {
+        [name, email, phone, accounts]
+    }
+}
+
+struct CheckRow: TableRow {
+    static let headers = ["Input", "Checked as", "Result"]
+
+    let input: String
+    let kind: String
+    let result: String
+
+    var cells: [String] {
+        [input, kind, result]
+    }
+}
+
+struct BalanceRow: TableRow {
+    static let headers = ["Member", "Status", "Consumed", "Balance"]
+
+    let balance: Balance
+    let consumed: Money
+    let name: String
+    let status: String
+
+    var cells: [String] {
+        [name, status, "\(consumed)", "\(balance)"]
+    }
+}
+
+/// The two flatmates: Ana, who gives every detail, and Bob, who moves out.
+struct Flatmates {
+    let ana: Member.ID
+    let bob: Member.ID
+}
+
 let euro = try Currency(code: "EUR")
 
 /// An account with its label and its details.
@@ -28,14 +72,13 @@ func outcome<Value>(_ make: () throws(EranosError) -> Value, _ shown: (Value) ->
 
 func printMembers(_ group: Group) throws(EranosError) {
     printTable(
-        ["Member", "Email", "Phone", "Accounts"],
         try group.members().map { member in
-            [
-                [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
-                member.email?.description ?? "",
-                member.phone?.description ?? "",
-                member.accounts.map(describe).joined(separator: "\n")
-            ]
+            MemberRow(
+                accounts: member.accounts.map(describe).joined(separator: "\n"),
+                email: member.email?.description ?? "",
+                name: [member.firstName, member.lastName].compactMap(\.self).joined(separator: " "),
+                phone: member.phone?.description ?? ""
+            )
         },
         numbersFrom: 4
     )
@@ -43,17 +86,17 @@ func printMembers(_ group: Group) throws(EranosError) {
 
 func printBalances(_ group: Group) throws(EranosError) {
     let summary = try group.summary()
-    var rows: [[String]] = []
+    var rows: [BalanceRow] = []
     for member in try group.members() {
         guard let id = member.id, let totals = totals(of: id, in: summary) else {
             continue
         }
-        rows.append([member.firstName, try group.isArchived(id) ? "archived" : "active", "\(totals.share)", "\(totals.balance)"])
+        rows.append(BalanceRow(balance: totals.balance, consumed: totals.share, name: member.firstName, status: try group.isArchived(id) ? "archived" : "active"))
     }
-    printTable(["Member", "Status", "Consumed", "Balance"], rows, numbersFrom: 2)
+    printTable(rows, numbersFrom: 2)
 }
 
-func members(_ group: Group) throws(EranosError) -> (ana: Member.ID, bob: Member.ID) {
+func members(_ group: Group) throws(EranosError) -> Flatmates {
     section("1. Members")
     let ana = try group.add(
         Member(
@@ -74,7 +117,7 @@ func members(_ group: Group) throws(EranosError) -> (ana: Member.ID, bob: Member
         grouped for reading; the IBAN was stored in its electronic form, uppercase and
         without spaces, the way banking apps accept it.
         """)
-    return (ana, bob)
+    return Flatmates(ana: ana, bob: bob)
 }
 
 func validation() {
@@ -86,11 +129,10 @@ func validation() {
         and 5322, which refuse the doubled dots and stray commas of hurried typing, and
         phone numbers against their country's numbering plan, stored in E.164 form.
         """)
-    let iban = { (input: String) in [input, "IBAN", outcome({ () throws(EranosError) in try IBAN(input) }, \.description)] }
-    let email = { (input: String) in [input, "email", outcome({ () throws(EranosError) in try Email(input) }, \.description)] }
-    let phone = { (input: String) in [input, "phone", outcome({ () throws(EranosError) in try PhoneNumber(input) }, \.e164)] }
+    let iban = { (input: String) in CheckRow(input: input, kind: "IBAN", result: outcome({ () throws(EranosError) in try IBAN(input) }, \.description)) }
+    let email = { (input: String) in CheckRow(input: input, kind: "email", result: outcome({ () throws(EranosError) in try Email(input) }, \.description)) }
+    let phone = { (input: String) in CheckRow(input: input, kind: "phone", result: outcome({ () throws(EranosError) in try PhoneNumber(input) }, \.e164)) }
     printTable(
-        ["Input", "Checked as", "Result"],
         [
             iban("ro49 aaaa 1b31 0075 9384 0000"),
             iban("RO49 AAAA 1B31 0075 9384 0001"),
@@ -108,8 +150,10 @@ func validation() {
     )
 }
 
-func movingOut(_ group: Group, _ ana: Member.ID, _ bob: Member.ID) throws(EranosError) {
+func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
     section("3. A flatmate moves out")
+    let ana = flatmates.ana
+    let bob = flatmates.bob
     let rent = try group.add(
         Expense(
             cost: .local(try Money(parsing: "900.00", in: euro)),
@@ -169,9 +213,9 @@ func main() throws(EranosError) {
         Ana and Bob share a flat. A member needs only a first name; the last name,
         email, phone, and the accounts they can be paid to are optional.
         """)
-    let (ana, bob) = try members(group)
+    let flatmates = try members(group)
     validation()
-    try movingOut(group, ana, bob)
+    try movingOut(group, flatmates)
 }
 
 try main()

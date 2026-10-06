@@ -3,6 +3,17 @@
 import Eranos
 import Report
 
+/// The seven expenses, one for every way of dividing one.
+struct Expenses {
+    let apartment: Expense.ID
+    let fado: Expense.ID
+    let groceries: Expense.ID
+    let museum: Expense.ID
+    let seafood: Expense.ID
+    let tour: Expense.ID
+    let train: Expense.ID
+}
+
 /// How an expense divides, in a few words.
 func how(_ expense: Expense) throws(EranosError) -> String {
     let split = switch expense.split {
@@ -33,20 +44,22 @@ func how(_ expense: Expense) throws(EranosError) -> String {
 
 /// Each expense of `expenses`, with every involved member's payment and consumption.
 func printShares(_ group: Group, _ expenses: [Expense.ID]) throws(EranosError) {
-    var rows: [[String]] = []
+    var rows: [ShareRow] = []
     for id in expenses {
         guard let expense = try group.expense(withID: id), let shares = try group.shares(of: id) else {
             continue
         }
-        rows.append([
-            expense.name,
-            try how(expense),
-            cell(try shares.members.map { share throws(EranosError) in try name(group, share.member) }),
-            cell(shares.members.map { share in 0 == share.paid.minorUnits ? "" : "\(share.paid)" }),
-            cell(shares.members.map { share in "\(share.share)" })
-        ])
+        rows.append(
+            ShareRow(
+                consumed: cell(shares.members.map { share in "\(share.share)" }),
+                expense: expense.name,
+                how: try how(expense),
+                members: cell(try shares.members.map { share throws(EranosError) in try name(group, share.member) }),
+                paid: cell(shares.members.map { share in 0 == share.paid.minorUnits ? "" : "\(share.paid)" })
+            )
+        )
     }
-    printTable(["Expense", "Split", "Member", "Paid", "Consumed"], rows, numbersFrom: 3)
+    printTable(rows, numbersFrom: 3)
 }
 
 func printItems(_ group: Group, _ id: Expense.ID) throws(EranosError) {
@@ -54,10 +67,14 @@ func printItems(_ group: Group, _ id: Expense.ID) throws(EranosError) {
         return
     }
     printTable(
-        ["Item", "Shared by", "Quantity", "Unit price", "Line total"],
         try items.map { item throws(EranosError) in
-            let total = Money(currency: item.unitPrice.currency, minorUnits: item.unitPrice.minorUnits * Int64(item.quantity))
-            return [item.name, try names(group, item.split.members), "\(item.quantity)", "\(item.unitPrice)", "\(total)"]
+            ItemRow(
+                lineTotal: Money(currency: item.unitPrice.currency, minorUnits: item.unitPrice.minorUnits * Int64(item.quantity)),
+                name: item.name,
+                quantity: item.quantity,
+                sharedBy: try names(group, item.split.members),
+                unitPrice: item.unitPrice
+            )
         },
         numbersFrom: 2
     )
@@ -84,9 +101,24 @@ func fadoItems(_ people: People) throws(EranosError) -> [Item] {
     ]
 }
 
-/// The first three expenses: equally, by percentage, and by parts.
-func dividedExpenses(_ people: People, _ categories: Categories) throws(EranosError) -> [Expense] {
-    [
+/// The fado night, item by item, paid by Carol and Dan, with a 10 % tip.
+func fadoNight(_ people: People, _ categories: Categories) throws(EranosError) -> Expense {
+    Expense(
+        cost: .local(try eur("54.00")),
+        date: try october(4),
+        name: "Fado night",
+        payers: .amounts([MemberAmount(amount: try eur("39.40"), member: people.carol), MemberAmount(amount: try eur("20.00"), member: people.dan)]),
+        split: .itemised(try fadoItems(people)),
+        category: categories.food,
+        description: "Tasca do Chico",
+        time: try TimeOfDay(hour: 22, minute: 15),
+        tip: Tip(value: .percentage(try Percentage(parsing: "10")))
+    )
+}
+
+/// Adds one expense for every way of dividing one.
+func addExpenses(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) -> Expenses {
+    let groceries = try group.add(
         Expense(
             cost: .local(try eur("10.00")),
             date: try october(1),
@@ -94,7 +126,9 @@ func dividedExpenses(_ people: People, _ categories: Categories) throws(EranosEr
             payers: .equal([people.ana]),
             split: .whole(.equal([people.ana, people.bob, people.carol])),
             category: categories.food
-        ),
+        )
+    )
+    let apartment = try group.add(
         Expense(
             cost: .local(try eur("800.00")),
             date: try october(1),
@@ -109,7 +143,9 @@ func dividedExpenses(_ people: People, _ categories: Categories) throws(EranosEr
                 ])
             ),
             category: categories.lodging
-        ),
+        )
+    )
+    let seafood = try group.add(
         Expense(
             cost: .local(try eur("90.00")),
             date: try october(2),
@@ -126,12 +162,8 @@ func dividedExpenses(_ people: People, _ categories: Categories) throws(EranosEr
             ),
             category: categories.food
         )
-    ]
-}
-
-/// The last four expenses: by exact amounts, with two payers, item by item, and with a tip.
-func paidExpenses(_ people: People, _ categories: Categories) throws(EranosError) -> [Expense] {
-    [
+    )
+    let train = try group.add(
         Expense(
             cost: .local(try eur("88.50")),
             date: try october(3),
@@ -146,25 +178,19 @@ func paidExpenses(_ people: People, _ categories: Categories) throws(EranosError
                 ])
             ),
             category: categories.transport
-        ),
+        )
+    )
+    let museum = try group.add(
         Expense(
             cost: .local(try eur("60.00")),
             date: try october(3),
             name: "Museum",
             payers: .equal([people.ana, people.bob]),
             split: .whole(.equal([people.ana, people.bob, people.carol, people.dan]))
-        ),
-        Expense(
-            cost: .local(try eur("54.00")),
-            date: try october(4),
-            name: "Fado night",
-            payers: .amounts([MemberAmount(amount: try eur("39.40"), member: people.carol), MemberAmount(amount: try eur("20.00"), member: people.dan)]),
-            split: .itemised(try fadoItems(people)),
-            category: categories.food,
-            description: "Tasca do Chico",
-            time: try TimeOfDay(hour: 22, minute: 15),
-            tip: Tip(value: .percentage(try Percentage(parsing: "10")))
-        ),
+        )
+    )
+    let fado = try group.add(try fadoNight(people, categories))
+    let tour = try group.add(
         Expense(
             cost: .local(try eur("45.00")),
             date: try october(5),
@@ -174,7 +200,8 @@ func paidExpenses(_ people: People, _ categories: Categories) throws(EranosError
             category: categories.transport,
             tip: Tip(value: .fixed(try eur("5.00")), distribution: .equal)
         )
-    ]
+    )
+    return Expenses(apartment: apartment, fado: fado, groceries: groceries, museum: museum, seafood: seafood, tour: tour, train: train)
 }
 
 /// The consumption of `member` in the expense `id`.
@@ -214,40 +241,30 @@ func printFado(_ group: Group, _ fado: Expense) throws(EranosError) {
 
 func expenses(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) -> Expense.ID {
     section("4. Expenses, one for every way of dividing")
-    var ids: [Expense.ID] = []
-    for expense in try dividedExpenses(people, categories) + paidExpenses(people, categories) {
-        ids.append(try group.add(expense))
-    }
-    let groceries = ids[0]
-    let apartment = ids[1]
-    let seafood = ids[2]
-    let train = ids[3]
-    let museum = ids[4]
-    let fado = ids[5]
-    let tour = ids[6]
+    let added = try addExpenses(group, people, categories)
     print("""
         Seven expenses cover every way of dividing one: equally, by percentage, by parts
         (Eva counts as half), by exact amounts, with two payers, item by item, and with a
         tip. Every member's consumption adds up to the expense's total, to the cent:
         """)
-    try printShares(group, ids)
-    guard let fadoExpense = try group.expense(withID: fado) else {
+    try printShares(group, [added.groceries, added.apartment, added.seafood, added.train, added.museum, added.fado, added.tour])
+    guard let fadoExpense = try group.expense(withID: added.fado) else {
         preconditionFailure("the fado night was added")
     }
     try printFado(group, fadoExpense)
 
-    let thirds = try [people.ana, people.bob, people.carol].map { member throws(EranosError) in try consumed(group, groceries, member)?.minorUnits }
+    let thirds = try [people.ana, people.bob, people.carol].map { member throws(EranosError) in try consumed(group, added.groceries, member)?.minorUnits }
     precondition([333, 333, 334] == thirds.compactMap(\.self).sorted())
-    expect(try eur("280.00"), try consumed(group, apartment, people.carol), "Carol's part of the apartment")
-    expect(try eur("10.00"), try consumed(group, seafood, people.eva), "Eva's half part of the dinner")
-    expect(try eur("15.00"), try consumed(group, train, people.eva), "Eva's ticket")
-    expect(try eur("30.00"), try group.shares(of: museum)?.members.first { share in share.member == people.bob }?.paid, "Bob's half of the museum")
-    expect(try eur("15.00"), try consumed(group, museum, people.dan), "Dan's museum ticket")
-    expect(4, try group.expense(withID: museum)?.members().count, "the museum's members")
+    expect(try eur("280.00"), try consumed(group, added.apartment, people.carol), "Carol's part of the apartment")
+    expect(try eur("10.00"), try consumed(group, added.seafood, people.eva), "Eva's half part of the dinner")
+    expect(try eur("15.00"), try consumed(group, added.train, people.eva), "Eva's ticket")
+    expect(try eur("30.00"), try group.shares(of: added.museum)?.members.first { share in share.member == people.bob }?.paid, "Bob's half of the museum")
+    expect(try eur("15.00"), try consumed(group, added.museum, people.dan), "Dan's museum ticket")
+    expect(4, try group.expense(withID: added.museum)?.members().count, "the museum's members")
     expect(try eur("59.40"), try fadoExpense.total(), "the fado night with its tip")
     expect(try eur("5.40"), try fadoExpense.tipAmount(), "the fado night's tip")
-    expect(try eur("21.45"), try consumed(group, fado, people.carol), "Carol's fado night")
-    expect(try eur("6.60"), try consumed(group, fado, people.eva), "Eva's fado night")
-    expect(try eur("10.00"), try consumed(group, tour, people.eva), "Eva's tour")
-    return seafood
+    expect(try eur("21.45"), try consumed(group, added.fado, people.carol), "Carol's fado night")
+    expect(try eur("6.60"), try consumed(group, added.fado, people.eva), "Eva's fado night")
+    expect(try eur("10.00"), try consumed(group, added.tour, people.eva), "Eva's tour")
+    return added.seafood
 }

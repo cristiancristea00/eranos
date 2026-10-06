@@ -7,6 +7,15 @@ use super::*;
 use crate::plan;
 use crate::tests::Recorder;
 
+/// The variables removed from the recorder's, and the one the failure
+/// names.
+struct Removed {
+    /// The variables removed.
+    missing: &'static [&'static str],
+    /// The variable the failure names.
+    reported: &'static str,
+}
+
 /// Runs the package's gates with `runner`, as the gates run them.
 fn run(runner: &mut Recorder) -> Result<(), Failure> {
     let actions = actions(runner)?;
@@ -57,9 +66,15 @@ fn the_apple_libraries_build_only_where_the_machine_builds_for_apple_platforms()
 /// naming the variable, the SDK's before the JDK's.
 #[test]
 fn a_missing_variable_stops_the_kotlin_multiplatform_gates_before_any_step() {
-    for (missing, reported) in [
-        (&VARIABLES[..], "ANDROID_HOME"),
-        (&["JAVA_HOME_21"][..], "JAVA_HOME_21"),
+    for Removed { missing, reported } in [
+        Removed {
+            missing: &VARIABLES,
+            reported: "ANDROID_HOME",
+        },
+        Removed {
+            missing: &["JAVA_HOME_21"],
+            reported: "JAVA_HOME_21",
+        },
     ] {
         let mut recorder = Recorder::new();
         recorder.variables.retain(|name| !missing.contains(name));

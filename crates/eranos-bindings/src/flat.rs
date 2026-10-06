@@ -39,84 +39,134 @@ impl FlatError {
 }
 
 impl From<&EranosError> for FlatError {
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one arm per case of the error, of which there are 17"
+    )]
     fn from(error: &EranosError) -> Self {
-        let (kind, failure, payload) = match error {
+        let message = error.to_string();
+        match error {
             EranosError::Account { failure, .. } => {
-                let (failure, payload) = account(*failure);
-                (ErrorKind::Account, Some(failure), payload)
+                let FlatFailure { failure, payload } = account(*failure);
+                Self {
+                    kind: ErrorKind::Account,
+                    message,
+                    failure: Some(failure),
+                    payload,
+                }
             }
-            EranosError::Calendar { failure, .. } => (
-                ErrorKind::Calendar,
-                Some(calendar(*failure)),
-                Payload::default(),
-            ),
-            EranosError::Cancelled { .. } => (ErrorKind::Cancelled, None, Payload::default()),
-            EranosError::Category { failure, .. } => (
-                ErrorKind::Category,
-                Some(category(*failure)),
-                Payload::default(),
-            ),
-            EranosError::Contact { failure, .. } => (
-                ErrorKind::Contact,
-                Some(contact(*failure)),
-                Payload::default(),
-            ),
+            EranosError::Calendar { failure, .. } => Self {
+                kind: ErrorKind::Calendar,
+                message,
+                failure: Some(calendar(*failure)),
+                payload: Payload::default(),
+            },
+            EranosError::Cancelled { .. } => Self {
+                kind: ErrorKind::Cancelled,
+                message,
+                failure: None,
+                payload: Payload::default(),
+            },
+            EranosError::Category { failure, .. } => Self {
+                kind: ErrorKind::Category,
+                message,
+                failure: Some(category(*failure)),
+                payload: Payload::default(),
+            },
+            EranosError::Contact { failure, .. } => Self {
+                kind: ErrorKind::Contact,
+                message,
+                failure: Some(contact(*failure)),
+                payload: Payload::default(),
+            },
             EranosError::Expense { failure, .. } => {
-                let (failure, payload) = expense(failure);
-                (ErrorKind::Expense, Some(failure), payload)
+                let FlatFailure { failure, payload } = expense(failure);
+                Self {
+                    kind: ErrorKind::Expense,
+                    message,
+                    failure: Some(failure),
+                    payload,
+                }
             }
             EranosError::Group { failure, .. } => {
-                let (failure, payload) = group(failure);
-                (ErrorKind::Group, Some(failure), payload)
+                let FlatFailure { failure, payload } = group(failure);
+                Self {
+                    kind: ErrorKind::Group,
+                    message,
+                    failure: Some(failure),
+                    payload,
+                }
             }
-            EranosError::Id { failure, .. } => {
-                (ErrorKind::Id, Some(id(*failure)), Payload::default())
-            }
-            EranosError::IdentifierGiven { .. } => {
-                (ErrorKind::IdentifierGiven, None, Payload::default())
-            }
-            EranosError::IdentifierMissing { .. } => {
-                (ErrorKind::IdentifierMissing, None, Payload::default())
-            }
-            EranosError::InvalidJson { column, line, .. } => (
-                ErrorKind::InvalidJson,
-                None,
-                Payload {
+            EranosError::Id { failure, .. } => Self {
+                kind: ErrorKind::Id,
+                message,
+                failure: Some(id(*failure)),
+                payload: Payload::default(),
+            },
+            EranosError::IdentifierGiven { .. } => Self {
+                kind: ErrorKind::IdentifierGiven,
+                message,
+                failure: None,
+                payload: Payload::default(),
+            },
+            EranosError::IdentifierMissing { .. } => Self {
+                kind: ErrorKind::IdentifierMissing,
+                message,
+                failure: None,
+                payload: Payload::default(),
+            },
+            EranosError::InvalidJson { column, line, .. } => Self {
+                kind: ErrorKind::InvalidJson,
+                message,
+                failure: None,
+                payload: Payload {
                     column: Some(*column),
                     line: Some(*line),
                     ..Payload::default()
                 },
-            ),
-            EranosError::Language { failure, .. } => (
-                ErrorKind::Language,
-                Some(language(*failure)),
-                Payload::default(),
-            ),
-            EranosError::Member { failure, .. } => (
-                ErrorKind::Member,
-                Some(member(*failure)),
-                Payload::default(),
-            ),
+            },
+            EranosError::Language { failure, .. } => Self {
+                kind: ErrorKind::Language,
+                message,
+                failure: Some(language(*failure)),
+                payload: Payload::default(),
+            },
+            EranosError::Member { failure, .. } => Self {
+                kind: ErrorKind::Member,
+                message,
+                failure: Some(member(*failure)),
+                payload: Payload::default(),
+            },
             EranosError::Money { failure, .. } => {
-                let (failure, payload) = money(failure);
-                (ErrorKind::Money, Some(failure), payload)
+                let FlatFailure { failure, payload } = money(failure);
+                Self {
+                    kind: ErrorKind::Money,
+                    message,
+                    failure: Some(failure),
+                    payload,
+                }
             }
-            EranosError::Released { .. } => (ErrorKind::Released, None, Payload::default()),
+            EranosError::Released { .. } => Self {
+                kind: ErrorKind::Released,
+                message,
+                failure: None,
+                payload: Payload::default(),
+            },
             EranosError::Settlement { failure, .. } => {
-                let (failure, payload) = settlement(*failure);
-                (ErrorKind::Settlement, Some(failure), payload)
+                let FlatFailure { failure, payload } = settlement(*failure);
+                Self {
+                    kind: ErrorKind::Settlement,
+                    message,
+                    failure: Some(failure),
+                    payload,
+                }
             }
-            EranosError::Transfer { failure, .. } => (
-                ErrorKind::Transfer,
-                Some(transfer(*failure)),
-                Payload::default(),
-            ),
-        };
-        Self {
-            kind,
-            message: error.to_string(),
-            failure,
-            payload,
+            EranosError::Transfer { failure, .. } => Self {
+                kind: ErrorKind::Transfer,
+                message,
+                failure: Some(transfer(*failure)),
+                payload: Payload::default(),
+            },
         }
     }
 }
@@ -371,12 +421,32 @@ pub struct Payload {
     pub transfers: Option<Vec<String>>,
 }
 
+/// A module's failure as a [`FlatError`] holds it: the failure, and what it
+/// holds.
+struct FlatFailure {
+    failure: FailureKind,
+    payload: Payload,
+}
+
+impl FlatFailure {
+    /// Returns `failure`, which holds nothing.
+    fn new(failure: FailureKind) -> Self {
+        Self {
+            failure,
+            payload: Payload::default(),
+        }
+    }
+}
+
 /// The account module's `failure`, with what it holds.
-fn account(failure: AccountFailure) -> (FailureKind, Payload) {
+fn account(failure: AccountFailure) -> FlatFailure {
     match failure {
-        AccountFailure::EmptyName => (FailureKind::AccountEmptyName, Payload::default()),
-        AccountFailure::EmptyUsername => (FailureKind::AccountEmptyUsername, Payload::default()),
-        AccountFailure::InvalidIban { reason } => (FailureKind::AccountInvalidIban, iban(reason)),
+        AccountFailure::EmptyName => FlatFailure::new(FailureKind::AccountEmptyName),
+        AccountFailure::EmptyUsername => FlatFailure::new(FailureKind::AccountEmptyUsername),
+        AccountFailure::InvalidIban { reason } => FlatFailure {
+            failure: FailureKind::AccountInvalidIban,
+            payload: iban(reason),
+        },
     }
 }
 
@@ -404,63 +474,63 @@ const fn contact(failure: ContactFailure) -> FailureKind {
 }
 
 /// The expense module's `failure`, with what it holds.
-fn expense(failure: &ExpenseFailure) -> (FailureKind, Payload) {
+fn expense(failure: &ExpenseFailure) -> FlatFailure {
     match failure {
-        ExpenseFailure::AmountsDoNotAddUp { actual, expected } => (
-            FailureKind::ExpenseAmountsDoNotAddUp,
-            Payload {
+        ExpenseFailure::AmountsDoNotAddUp { actual, expected } => FlatFailure {
+            failure: FailureKind::ExpenseAmountsDoNotAddUp,
+            payload: Payload {
                 actual: Some(actual.clone()),
                 expected_amount: Some(expected.clone()),
                 ..Payload::default()
             },
-        ),
-        ExpenseFailure::CurrencyMismatch { expected, found } => (
-            FailureKind::ExpenseCurrencyMismatch,
-            Payload {
+        },
+        ExpenseFailure::CurrencyMismatch { expected, found } => FlatFailure {
+            failure: FailureKind::ExpenseCurrencyMismatch,
+            payload: Payload {
                 expected_currency: Some(expected.clone()),
                 found_currency: Some(found.clone()),
                 ..Payload::default()
             },
-        ),
-        ExpenseFailure::DuplicateMember { member } => (
-            FailureKind::ExpenseDuplicateMember,
-            Payload {
+        },
+        ExpenseFailure::DuplicateMember { member } => FlatFailure {
+            failure: FailureKind::ExpenseDuplicateMember,
+            payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
-        ),
-        ExpenseFailure::EmptyItemName => (FailureKind::ExpenseEmptyItemName, Payload::default()),
-        ExpenseFailure::EmptyName => (FailureKind::ExpenseEmptyName, Payload::default()),
-        ExpenseFailure::EmptySplit => (FailureKind::ExpenseEmptySplit, Payload::default()),
-        ExpenseFailure::ItemsDoNotAddUp { actual, expected } => (
-            FailureKind::ExpenseItemsDoNotAddUp,
-            Payload {
+        },
+        ExpenseFailure::EmptyItemName => FlatFailure::new(FailureKind::ExpenseEmptyItemName),
+        ExpenseFailure::EmptyName => FlatFailure::new(FailureKind::ExpenseEmptyName),
+        ExpenseFailure::EmptySplit => FlatFailure::new(FailureKind::ExpenseEmptySplit),
+        ExpenseFailure::ItemsDoNotAddUp { actual, expected } => FlatFailure {
+            failure: FailureKind::ExpenseItemsDoNotAddUp,
+            payload: Payload {
                 actual: Some(actual.clone()),
                 expected_amount: Some(expected.clone()),
                 ..Payload::default()
             },
-        ),
-        ExpenseFailure::NegativeTip => (FailureKind::ExpenseNegativeTip, Payload::default()),
-        ExpenseFailure::NoItems => (FailureKind::ExpenseNoItems, Payload::default()),
+        },
+        ExpenseFailure::NegativeTip => FlatFailure::new(FailureKind::ExpenseNegativeTip),
+        ExpenseFailure::NoItems => FlatFailure::new(FailureKind::ExpenseNoItems),
         ExpenseFailure::NonPositiveAmount => {
-            (FailureKind::ExpenseNonPositiveAmount, Payload::default())
+            FlatFailure::new(FailureKind::ExpenseNonPositiveAmount)
         }
-        ExpenseFailure::NonPositiveShare { member } => (
-            FailureKind::ExpenseNonPositiveShare,
-            Payload {
+        ExpenseFailure::NonPositiveShare { member } => FlatFailure {
+            failure: FailureKind::ExpenseNonPositiveShare,
+            payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
-        ),
-        ExpenseFailure::Overflow => (FailureKind::ExpenseOverflow, Payload::default()),
-        ExpenseFailure::PercentagesDoNotAddUp { total_basis_points } => (
-            FailureKind::ExpensePercentagesDoNotAddUp,
-            Payload {
+        },
+        ExpenseFailure::Overflow => FlatFailure::new(FailureKind::ExpenseOverflow),
+        ExpenseFailure::PercentagesDoNotAddUp { total_basis_points } => FlatFailure {
+            failure: FailureKind::ExpensePercentagesDoNotAddUp,
+            payload: Payload {
                 total_basis_points: Some(*total_basis_points),
                 ..Payload::default()
             },
-        ),
-        ExpenseFailure::ZeroQuantity => (FailureKind::ExpenseZeroQuantity, Payload::default()),
+        },
+        ExpenseFailure::ZeroQuantity => FlatFailure::new(FailureKind::ExpenseZeroQuantity),
     }
 }
 
@@ -469,119 +539,119 @@ fn expense(failure: &ExpenseFailure) -> (FailureKind, Payload) {
     clippy::too_many_lines,
     reason = "one arm per failure of the group module, of which there are 19"
 )]
-fn group(failure: &GroupFailure) -> (FailureKind, Payload) {
+fn group(failure: &GroupFailure) -> FlatFailure {
     match failure {
-        GroupFailure::ArchivedMember { member } => (
-            FailureKind::GroupArchivedMember,
-            Payload {
+        GroupFailure::ArchivedMember { member } => FlatFailure {
+            failure: FailureKind::GroupArchivedMember,
+            payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::BuiltInCategory => (FailureKind::GroupBuiltInCategory, Payload::default()),
-        GroupFailure::Busy => (FailureKind::GroupBusy, Payload::default()),
-        GroupFailure::DuplicateCategory { category } => (
-            FailureKind::GroupDuplicateCategory,
-            Payload {
+        },
+        GroupFailure::BuiltInCategory => FlatFailure::new(FailureKind::GroupBuiltInCategory),
+        GroupFailure::Busy => FlatFailure::new(FailureKind::GroupBusy),
+        GroupFailure::DuplicateCategory { category } => FlatFailure {
+            failure: FailureKind::GroupDuplicateCategory,
+            payload: Payload {
                 category: Some(category.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::DuplicateCategoryName { existing } => (
-            FailureKind::GroupDuplicateCategoryName,
-            Payload {
+        },
+        GroupFailure::DuplicateCategoryName { existing } => FlatFailure {
+            failure: FailureKind::GroupDuplicateCategoryName,
+            payload: Payload {
                 existing: Some(existing.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::DuplicateExchangeRate { currency } => (
-            FailureKind::GroupDuplicateExchangeRate,
-            Payload {
+        },
+        GroupFailure::DuplicateExchangeRate { currency } => FlatFailure {
+            failure: FailureKind::GroupDuplicateExchangeRate,
+            payload: Payload {
                 currency: Some(currency.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::DuplicateExpense { expense } => (
-            FailureKind::GroupDuplicateExpense,
-            Payload {
+        },
+        GroupFailure::DuplicateExpense { expense } => FlatFailure {
+            failure: FailureKind::GroupDuplicateExpense,
+            payload: Payload {
                 expense: Some(expense.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::DuplicateMember { member } => (
-            FailureKind::GroupDuplicateMember,
-            Payload {
+        },
+        GroupFailure::DuplicateMember { member } => FlatFailure {
+            failure: FailureKind::GroupDuplicateMember,
+            payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::DuplicateTransfer { transfer } => (
-            FailureKind::GroupDuplicateTransfer,
-            Payload {
+        },
+        GroupFailure::DuplicateTransfer { transfer } => FlatFailure {
+            failure: FailureKind::GroupDuplicateTransfer,
+            payload: Payload {
                 transfer: Some(transfer.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::EmptyName => (FailureKind::GroupEmptyName, Payload::default()),
+        },
+        GroupFailure::EmptyName => FlatFailure::new(FailureKind::GroupEmptyName),
         GroupFailure::MemberInUse {
             expenses,
             member,
             transfers,
-        } => (
-            FailureKind::GroupMemberInUse,
-            Payload {
+        } => FlatFailure {
+            failure: FailureKind::GroupMemberInUse,
+            payload: Payload {
                 expenses: Some(expenses.clone()),
                 member: Some(member.clone()),
                 transfers: Some(transfers.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::MissingExchangeRate { currency } => (
-            FailureKind::GroupMissingExchangeRate,
-            Payload {
+        },
+        GroupFailure::MissingExchangeRate { currency } => FlatFailure {
+            failure: FailureKind::GroupMissingExchangeRate,
+            payload: Payload {
                 currency: Some(currency.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::Overflow => (FailureKind::GroupOverflow, Payload::default()),
+        },
+        GroupFailure::Overflow => FlatFailure::new(FailureKind::GroupOverflow),
         GroupFailure::UnexpectedExchangeRate => {
-            (FailureKind::GroupUnexpectedExchangeRate, Payload::default())
+            FlatFailure::new(FailureKind::GroupUnexpectedExchangeRate)
         }
-        GroupFailure::UnknownCategory { category } => (
-            FailureKind::GroupUnknownCategory,
-            Payload {
+        GroupFailure::UnknownCategory { category } => FlatFailure {
+            failure: FailureKind::GroupUnknownCategory,
+            payload: Payload {
                 category: Some(category.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::UnknownExpense { expense } => (
-            FailureKind::GroupUnknownExpense,
-            Payload {
+        },
+        GroupFailure::UnknownExpense { expense } => FlatFailure {
+            failure: FailureKind::GroupUnknownExpense,
+            payload: Payload {
                 expense: Some(expense.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::UnknownMember { member } => (
-            FailureKind::GroupUnknownMember,
-            Payload {
+        },
+        GroupFailure::UnknownMember { member } => FlatFailure {
+            failure: FailureKind::GroupUnknownMember,
+            payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::UnknownTransfer { transfer } => (
-            FailureKind::GroupUnknownTransfer,
-            Payload {
+        },
+        GroupFailure::UnknownTransfer { transfer } => FlatFailure {
+            failure: FailureKind::GroupUnknownTransfer,
+            payload: Payload {
                 transfer: Some(transfer.clone()),
                 ..Payload::default()
             },
-        ),
-        GroupFailure::UnsupportedFormat { format } => (
-            FailureKind::GroupUnsupportedFormat,
-            Payload {
+        },
+        GroupFailure::UnsupportedFormat { format } => FlatFailure {
+            failure: FailureKind::GroupUnsupportedFormat,
+            payload: Payload {
                 format: Some(*format),
                 ..Payload::default()
             },
-        ),
+        },
     }
 }
 
@@ -607,47 +677,45 @@ const fn member(failure: MemberFailure) -> FailureKind {
 }
 
 /// The money module's `failure`, with what it holds.
-fn money(failure: &MoneyFailure) -> (FailureKind, Payload) {
+fn money(failure: &MoneyFailure) -> FlatFailure {
     match failure {
-        MoneyFailure::CurrencyMismatch { left, right } => (
-            FailureKind::MoneyCurrencyMismatch,
-            Payload {
+        MoneyFailure::CurrencyMismatch { left, right } => FlatFailure {
+            failure: FailureKind::MoneyCurrencyMismatch,
+            payload: Payload {
                 left: Some(left.clone()),
                 right: Some(right.clone()),
                 ..Payload::default()
             },
-        ),
-        MoneyFailure::InvalidAmount => (FailureKind::MoneyInvalidAmount, Payload::default()),
+        },
+        MoneyFailure::InvalidAmount => FlatFailure::new(FailureKind::MoneyInvalidAmount),
         MoneyFailure::InvalidExchangeRate => {
-            (FailureKind::MoneyInvalidExchangeRate, Payload::default())
+            FlatFailure::new(FailureKind::MoneyInvalidExchangeRate)
         }
-        MoneyFailure::InvalidParts => (FailureKind::MoneyInvalidParts, Payload::default()),
-        MoneyFailure::InvalidPercentage => {
-            (FailureKind::MoneyInvalidPercentage, Payload::default())
-        }
-        MoneyFailure::Overflow => (FailureKind::MoneyOverflow, Payload::default()),
-        MoneyFailure::TooManyDecimals { allowed, currency } => (
-            FailureKind::MoneyTooManyDecimals,
-            Payload {
+        MoneyFailure::InvalidParts => FlatFailure::new(FailureKind::MoneyInvalidParts),
+        MoneyFailure::InvalidPercentage => FlatFailure::new(FailureKind::MoneyInvalidPercentage),
+        MoneyFailure::Overflow => FlatFailure::new(FailureKind::MoneyOverflow),
+        MoneyFailure::TooManyDecimals { allowed, currency } => FlatFailure {
+            failure: FailureKind::MoneyTooManyDecimals,
+            payload: Payload {
                 allowed: Some(*allowed),
                 currency: Some(currency.clone()),
                 ..Payload::default()
             },
-        ),
-        MoneyFailure::UnknownCurrency => (FailureKind::MoneyUnknownCurrency, Payload::default()),
+        },
+        MoneyFailure::UnknownCurrency => FlatFailure::new(FailureKind::MoneyUnknownCurrency),
     }
 }
 
 /// The settlement module's `failure`, with what it holds.
-fn settlement(failure: SettlementFailure) -> (FailureKind, Payload) {
+fn settlement(failure: SettlementFailure) -> FlatFailure {
     match failure {
-        SettlementFailure::OutOfMemory { balances } => (
-            FailureKind::SettlementOutOfMemory,
-            Payload {
+        SettlementFailure::OutOfMemory { balances } => FlatFailure {
+            failure: FailureKind::SettlementOutOfMemory,
+            payload: Payload {
                 balances: Some(balances),
                 ..Payload::default()
             },
-        ),
+        },
     }
 }
 

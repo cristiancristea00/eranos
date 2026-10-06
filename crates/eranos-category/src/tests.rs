@@ -69,25 +69,56 @@ fn folded_names_ignore_case() {
     );
 }
 
+/// Two names whose folded forms a test compares.
+#[derive(Debug, Clone, Copy)]
+struct NamePair {
+    first: &'static str,
+    second: &'static str,
+}
+
 /// Names that differ only by full case folding or by how an accent is
 /// encoded would be accepted as two categories that users see as one.
 #[test]
 fn folded_names_follow_canonical_caseless_matching() {
-    for (first, second) in [
+    for NamePair { first, second } in [
         // `ß` uppercases to `SS`, and Swiss German writes `ss`.
-        ("Straße", "STRASSE"),
-        ("Straße", "Strasse"),
+        NamePair {
+            first: "Straße",
+            second: "STRASSE",
+        },
+        NamePair {
+            first: "Straße",
+            second: "Strasse",
+        },
         // A final sigma typed as a medial one.
-        ("ΟΔΟΣ", "οδοσ"),
+        NamePair {
+            first: "ΟΔΟΣ",
+            second: "οδοσ",
+        },
         // A ligature and a long s.
-        ("\u{fb01}nance", "FINANCE"),
-        ("\u{17f}tate", "STATE"),
+        NamePair {
+            first: "\u{fb01}nance",
+            second: "FINANCE",
+        },
+        NamePair {
+            first: "\u{17f}tate",
+            second: "STATE",
+        },
         // A composed and a decomposed accent, which look identical.
-        ("Café", "Cafe\u{301}"),
-        ("\u{390}", "\u{1fd3}"),
+        NamePair {
+            first: "Café",
+            second: "Cafe\u{301}",
+        },
+        NamePair {
+            first: "\u{390}",
+            second: "\u{1fd3}",
+        },
         // Two German words that full folding makes one: the price of
         // catching `Straße` and `STRASSE`.
-        ("Maße", "Masse"),
+        NamePair {
+            first: "Maße",
+            second: "Masse",
+        },
     ] {
         assert_eq!(
             category(first).folded_name(),
@@ -114,11 +145,23 @@ fn different_names_fold_differently() {
     // The dotted and the dotless i stay distinct without Turkic folding, and
     // full-width letters and superscript digits without compatibility
     // folding.
-    for (first, second) in [
-        ("İstanbul", "istanbul"),
-        ("ısparta", "ISPARTA"),
-        ("ＦＯＯＤ", "food"),
-        ("Food²", "Food2"),
+    for NamePair { first, second } in [
+        NamePair {
+            first: "İstanbul",
+            second: "istanbul",
+        },
+        NamePair {
+            first: "ısparta",
+            second: "ISPARTA",
+        },
+        NamePair {
+            first: "ＦＯＯＤ",
+            second: "food",
+        },
+        NamePair {
+            first: "Food²",
+            second: "Food2",
+        },
     ] {
         assert_ne!(
             category(first).folded_name(),

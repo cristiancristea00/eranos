@@ -25,333 +25,366 @@ const EXPENSE: ExpenseId = ExpenseId::from_bytes([0x33; 16]);
 /// The transfer every example message names.
 const TRANSFER: TransferId = TransferId::from_bytes([0x44; 16]);
 
+/// An error and the exact message it prints.
+struct Expected<Error> {
+    error: Error,
+    message: &'static str,
+}
+
 const fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(Currency::EUR, minor_units)
 }
 
 /// Every `IdError` variant, with its exact message.
-fn id_errors() -> Vec<(IdError, &'static str)> {
-    vec![(IdError::InvalidId, "invalid identifier: expected a UUID")]
+fn id_errors() -> Vec<Expected<IdError>> {
+    vec![Expected {
+        error: IdError::InvalidId,
+        message: "invalid identifier: expected a UUID",
+    }]
 }
 
 /// Every `CalendarError` variant, with its exact message.
-fn calendar_errors() -> Vec<(CalendarError, &'static str)> {
+fn calendar_errors() -> Vec<Expected<CalendarError>> {
     vec![
-        (
-            CalendarError::InvalidDate,
-            "invalid date: expected an existing ISO 8601 date between years 1 and 9999",
-        ),
-        (
-            CalendarError::InvalidTime,
-            "invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds",
-        ),
+        Expected {
+            error: CalendarError::InvalidDate,
+            message: "invalid date: expected an existing ISO 8601 date between years 1 and 9999",
+        },
+        Expected {
+            error: CalendarError::InvalidTime,
+            message: "invalid time: expected an ISO 8601 time between 00:00 and 23:59 with zero seconds",
+        },
     ]
 }
 
 /// One example of every `MoneyError` variant, with its exact message.
-fn money_errors() -> Vec<(MoneyError, &'static str)> {
+fn money_errors() -> Vec<Expected<MoneyError>> {
     vec![
-        (
-            MoneyError::CurrencyMismatch {
+        Expected {
+            error: MoneyError::CurrencyMismatch {
                 left: Currency::EUR,
                 right: Currency::USD,
             },
-            "cannot combine EUR and USD amounts",
-        ),
-        (
-            MoneyError::InvalidAmount,
-            "invalid amount: expected digits with an optional `.` and sign",
-        ),
-        (
-            MoneyError::InvalidExchangeRate,
-            "invalid exchange rate: expected a positive number with at most 18 decimal places",
-        ),
-        (
-            MoneyError::InvalidParts,
-            "invalid parts: expected a positive number with at most 2 decimal places",
-        ),
-        (
-            MoneyError::InvalidPercentage,
-            "invalid percentage: expected a number with at most 2 decimal places",
-        ),
-        (MoneyError::Overflow, "value out of range"),
-        (
-            MoneyError::TooManyDecimals {
+            message: "cannot combine EUR and USD amounts",
+        },
+        Expected {
+            error: MoneyError::InvalidAmount,
+            message: "invalid amount: expected digits with an optional `.` and sign",
+        },
+        Expected {
+            error: MoneyError::InvalidExchangeRate,
+            message: "invalid exchange rate: expected a positive number with at most 18 decimal places",
+        },
+        Expected {
+            error: MoneyError::InvalidParts,
+            message: "invalid parts: expected a positive number with at most 2 decimal places",
+        },
+        Expected {
+            error: MoneyError::InvalidPercentage,
+            message: "invalid percentage: expected a number with at most 2 decimal places",
+        },
+        Expected {
+            error: MoneyError::Overflow,
+            message: "value out of range",
+        },
+        Expected {
+            error: MoneyError::TooManyDecimals {
                 allowed: 0,
                 currency: Currency::JPY,
             },
-            "JPY amounts have at most 0 decimal places",
-        ),
-        (MoneyError::UnknownCurrency, "unknown currency code"),
+            message: "JPY amounts have at most 0 decimal places",
+        },
+        Expected {
+            error: MoneyError::UnknownCurrency,
+            message: "unknown currency code",
+        },
     ]
 }
 
 /// One example of every `AccountError` variant, with its exact message.
-fn account_errors() -> Vec<(AccountError, &'static str)> {
+fn account_errors() -> Vec<Expected<AccountError>> {
     vec![
-        (
-            AccountError::EmptyName,
-            "the account name must not be empty",
-        ),
-        (
-            AccountError::EmptyUsername,
-            "the username must not be empty",
-        ),
-        (
-            AccountError::InvalidIban(IbanError::InvalidChecksum),
-            "invalid IBAN: the check digits do not match",
-        ),
+        Expected {
+            error: AccountError::EmptyName,
+            message: "the account name must not be empty",
+        },
+        Expected {
+            error: AccountError::EmptyUsername,
+            message: "the username must not be empty",
+        },
+        Expected {
+            error: AccountError::InvalidIban(IbanError::InvalidChecksum),
+            message: "invalid IBAN: the check digits do not match",
+        },
     ]
 }
 
 /// One example of every `IbanError` variant, with its exact message.
-fn iban_errors() -> Vec<(IbanError, &'static str)> {
+fn iban_errors() -> Vec<Expected<IbanError>> {
     vec![
-        (
-            IbanError::InvalidCharacter,
-            "only letters, digits, and spaces are allowed",
-        ),
-        (IbanError::InvalidChecksum, "the check digits do not match"),
-        (
-            IbanError::InvalidFormat,
-            "expected a two-letter country code followed by two check digits",
-        ),
-        (
-            IbanError::InvalidStructure,
-            "the account number does not match this country's format",
-        ),
-        (
-            IbanError::UnknownCountry,
-            "the country code is not in the IBAN registry",
-        ),
-        (
-            IbanError::WrongLength {
+        Expected {
+            error: IbanError::InvalidCharacter,
+            message: "only letters, digits, and spaces are allowed",
+        },
+        Expected {
+            error: IbanError::InvalidChecksum,
+            message: "the check digits do not match",
+        },
+        Expected {
+            error: IbanError::InvalidFormat,
+            message: "expected a two-letter country code followed by two check digits",
+        },
+        Expected {
+            error: IbanError::InvalidStructure,
+            message: "the account number does not match this country's format",
+        },
+        Expected {
+            error: IbanError::UnknownCountry,
+            message: "the country code is not in the IBAN registry",
+        },
+        Expected {
+            error: IbanError::WrongLength {
                 expected: 22,
                 found: 21,
             },
-            "expected 22 characters for this country, found 21",
-        ),
+            message: "expected 22 characters for this country, found 21",
+        },
     ]
 }
 
 /// Every `ContactError` variant, with its exact message.
-fn contact_errors() -> Vec<(ContactError, &'static str)> {
+fn contact_errors() -> Vec<Expected<ContactError>> {
     vec![
-        (ContactError::InvalidEmail, "invalid email address"),
-        (
-            ContactError::InvalidPhoneNumber,
-            "invalid phone number: expected `+` and a number valid in its country",
-        ),
+        Expected {
+            error: ContactError::InvalidEmail,
+            message: "invalid email address",
+        },
+        Expected {
+            error: ContactError::InvalidPhoneNumber,
+            message: "invalid phone number: expected `+` and a number valid in its country",
+        },
     ]
 }
 
 /// Every `MemberError` variant, with its exact message.
-fn member_errors() -> Vec<(MemberError, &'static str)> {
-    vec![(
-        MemberError::EmptyFirstName,
-        "the first name must not be empty",
-    )]
+fn member_errors() -> Vec<Expected<MemberError>> {
+    vec![Expected {
+        error: MemberError::EmptyFirstName,
+        message: "the first name must not be empty",
+    }]
 }
 
 /// Every `CategoryError` variant, with its exact message.
-fn category_errors() -> Vec<(CategoryError, &'static str)> {
-    vec![(
-        CategoryError::EmptyName,
-        "the category name must not be empty",
-    )]
+fn category_errors() -> Vec<Expected<CategoryError>> {
+    vec![Expected {
+        error: CategoryError::EmptyName,
+        message: "the category name must not be empty",
+    }]
 }
 
 /// Every `LanguageError` variant, with its exact message.
-fn language_errors() -> Vec<(LanguageError, &'static str)> {
-    vec![(
-        LanguageError::InvalidLanguage,
-        "invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`",
-    )]
+fn language_errors() -> Vec<Expected<LanguageError>> {
+    vec![Expected {
+        error: LanguageError::InvalidLanguage,
+        message: "invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`",
+    }]
 }
 
 /// One example of every `ExpenseError` variant, with its exact message.
-fn expense_errors() -> Vec<(ExpenseError, &'static str)> {
+fn expense_errors() -> Vec<Expected<ExpenseError>> {
     vec![
-        (
-            ExpenseError::AmountsDoNotAddUp {
+        Expected {
+            error: ExpenseError::AmountsDoNotAddUp {
                 actual: euros(999),
                 expected: euros(1_000),
             },
-            "the amounts add up to 9.99 EUR instead of 10.00 EUR",
-        ),
-        (
-            ExpenseError::CurrencyMismatch {
+            message: "the amounts add up to 9.99 EUR instead of 10.00 EUR",
+        },
+        Expected {
+            error: ExpenseError::CurrencyMismatch {
                 expected: Currency::EUR,
                 found: Currency::USD,
             },
-            "expected an amount in EUR, found one in USD",
-        ),
-        (
-            ExpenseError::DuplicateMember { member: MEMBER },
-            "member 11111111-1111-1111-1111-111111111111 appears more than once in a split",
-        ),
-        (
-            ExpenseError::EmptyItemName,
-            "the item name must not be empty",
-        ),
-        (
-            ExpenseError::EmptyName,
-            "the expense name must not be empty",
-        ),
-        (
-            ExpenseError::EmptySplit,
-            "a split needs at least one member",
-        ),
-        (
-            ExpenseError::ItemsDoNotAddUp {
+            message: "expected an amount in EUR, found one in USD",
+        },
+        Expected {
+            error: ExpenseError::DuplicateMember { member: MEMBER },
+            message: "member 11111111-1111-1111-1111-111111111111 appears more than once in a split",
+        },
+        Expected {
+            error: ExpenseError::EmptyItemName,
+            message: "the item name must not be empty",
+        },
+        Expected {
+            error: ExpenseError::EmptyName,
+            message: "the expense name must not be empty",
+        },
+        Expected {
+            error: ExpenseError::EmptySplit,
+            message: "a split needs at least one member",
+        },
+        Expected {
+            error: ExpenseError::ItemsDoNotAddUp {
                 actual: euros(8_000),
                 expected: euros(9_000),
             },
-            "the items add up to 80.00 EUR instead of 90.00 EUR",
-        ),
-        (ExpenseError::NegativeTip, "a tip cannot be negative"),
-        (
-            ExpenseError::NoItems,
-            "an itemised expense needs at least one item",
-        ),
-        (
-            ExpenseError::NonPositiveAmount,
-            "the amount must be positive",
-        ),
-        (
-            ExpenseError::NonPositiveShare { member: MEMBER },
-            "member 11111111-1111-1111-1111-111111111111 has a share that is not positive",
-        ),
-        (ExpenseError::Overflow, "the amounts are out of range"),
-        (
-            ExpenseError::PercentagesDoNotAddUp {
+            message: "the items add up to 80.00 EUR instead of 90.00 EUR",
+        },
+        Expected {
+            error: ExpenseError::NegativeTip,
+            message: "a tip cannot be negative",
+        },
+        Expected {
+            error: ExpenseError::NoItems,
+            message: "an itemised expense needs at least one item",
+        },
+        Expected {
+            error: ExpenseError::NonPositiveAmount,
+            message: "the amount must be positive",
+        },
+        Expected {
+            error: ExpenseError::NonPositiveShare { member: MEMBER },
+            message: "member 11111111-1111-1111-1111-111111111111 has a share that is not positive",
+        },
+        Expected {
+            error: ExpenseError::Overflow,
+            message: "the amounts are out of range",
+        },
+        Expected {
+            error: ExpenseError::PercentagesDoNotAddUp {
                 total_basis_points: 9_999,
             },
-            "the percentages add up to 9999 basis points instead of 10000 (100%)",
-        ),
-        (
-            ExpenseError::ZeroQuantity,
-            "an item quantity must be at least 1",
-        ),
+            message: "the percentages add up to 9999 basis points instead of 10000 (100%)",
+        },
+        Expected {
+            error: ExpenseError::ZeroQuantity,
+            message: "an item quantity must be at least 1",
+        },
     ]
 }
 
 /// Every `TransferError` variant, with its exact message.
-fn transfer_errors() -> Vec<(TransferError, &'static str)> {
+fn transfer_errors() -> Vec<Expected<TransferError>> {
     vec![
-        (
-            TransferError::NonPositiveAmount,
-            "the amount must be positive",
-        ),
-        (
-            TransferError::SameMember,
-            "a transfer needs two different members",
-        ),
+        Expected {
+            error: TransferError::NonPositiveAmount,
+            message: "the amount must be positive",
+        },
+        Expected {
+            error: TransferError::SameMember,
+            message: "a transfer needs two different members",
+        },
     ]
 }
 
 /// One example of every `GroupError` variant, with its exact message.
-fn group_errors() -> Vec<(GroupError, &'static str)> {
+fn group_errors() -> Vec<Expected<GroupError>> {
     vec![
-        (
-            GroupError::ArchivedMember(MEMBER),
-            "member 11111111-1111-1111-1111-111111111111 is archived",
-        ),
-        (
-            GroupError::BuiltInCategory,
-            "the built-in category cannot be renamed or removed",
-        ),
-        (GroupError::Busy, "the group is locked by another call"),
-        (
-            GroupError::DuplicateCategory(CATEGORY),
-            "category 22222222-2222-2222-2222-222222222222 already exists",
-        ),
-        (
-            GroupError::DuplicateCategoryName { existing: CATEGORY },
-            "category 22222222-2222-2222-2222-222222222222 already has this name",
-        ),
-        (
-            GroupError::DuplicateExchangeRate {
+        Expected {
+            error: GroupError::ArchivedMember(MEMBER),
+            message: "member 11111111-1111-1111-1111-111111111111 is archived",
+        },
+        Expected {
+            error: GroupError::BuiltInCategory,
+            message: "the built-in category cannot be renamed or removed",
+        },
+        Expected {
+            error: GroupError::Busy,
+            message: "the group is locked by another call",
+        },
+        Expected {
+            error: GroupError::DuplicateCategory(CATEGORY),
+            message: "category 22222222-2222-2222-2222-222222222222 already exists",
+        },
+        Expected {
+            error: GroupError::DuplicateCategoryName { existing: CATEGORY },
+            message: "category 22222222-2222-2222-2222-222222222222 already has this name",
+        },
+        Expected {
+            error: GroupError::DuplicateExchangeRate {
                 currency: Currency::USD,
             },
-            "two exchange rates were given for USD",
-        ),
-        (
-            GroupError::DuplicateExpense(EXPENSE),
-            "expense 33333333-3333-3333-3333-333333333333 already exists",
-        ),
-        (
-            GroupError::DuplicateMember(MEMBER),
-            "member 11111111-1111-1111-1111-111111111111 already exists",
-        ),
-        (
-            GroupError::DuplicateTransfer(TRANSFER),
-            "transfer 44444444-4444-4444-4444-444444444444 already exists",
-        ),
-        (GroupError::EmptyName, "the group name must not be empty"),
-        (
-            GroupError::MemberInUse {
+            message: "two exchange rates were given for USD",
+        },
+        Expected {
+            error: GroupError::DuplicateExpense(EXPENSE),
+            message: "expense 33333333-3333-3333-3333-333333333333 already exists",
+        },
+        Expected {
+            error: GroupError::DuplicateMember(MEMBER),
+            message: "member 11111111-1111-1111-1111-111111111111 already exists",
+        },
+        Expected {
+            error: GroupError::DuplicateTransfer(TRANSFER),
+            message: "transfer 44444444-4444-4444-4444-444444444444 already exists",
+        },
+        Expected {
+            error: GroupError::EmptyName,
+            message: "the group name must not be empty",
+        },
+        Expected {
+            error: GroupError::MemberInUse {
                 expenses: vec![EXPENSE, ExpenseId::from_bytes([0x55; 16])],
                 member: MEMBER,
                 transfers: vec![TRANSFER],
             },
-            "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",
-        ),
-        (
-            GroupError::MissingExchangeRate {
+            message: "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",
+        },
+        Expected {
+            error: GroupError::MissingExchangeRate {
                 currency: Currency::USD,
             },
-            "an exchange rate from USD into the group currency is required",
-        ),
-        (
-            GroupError::Overflow,
-            "the group totals would be out of range",
-        ),
-        (
-            GroupError::UnexpectedExchangeRate,
-            "an entry in the group currency cannot have an exchange rate",
-        ),
-        (
-            GroupError::UnknownCategory(CATEGORY),
-            "unknown category 22222222-2222-2222-2222-222222222222",
-        ),
-        (
-            GroupError::UnknownExpense(EXPENSE),
-            "unknown expense 33333333-3333-3333-3333-333333333333",
-        ),
-        (
-            GroupError::UnknownMember(MEMBER),
-            "unknown member 11111111-1111-1111-1111-111111111111",
-        ),
-        (
-            GroupError::UnknownTransfer(TRANSFER),
-            "unknown transfer 44444444-4444-4444-4444-444444444444",
-        ),
-        (
-            GroupError::UnsupportedFormat { format: 3 },
-            "unsupported group format 3: this version reads format 2",
-        ),
+            message: "an exchange rate from USD into the group currency is required",
+        },
+        Expected {
+            error: GroupError::Overflow,
+            message: "the group totals would be out of range",
+        },
+        Expected {
+            error: GroupError::UnexpectedExchangeRate,
+            message: "an entry in the group currency cannot have an exchange rate",
+        },
+        Expected {
+            error: GroupError::UnknownCategory(CATEGORY),
+            message: "unknown category 22222222-2222-2222-2222-222222222222",
+        },
+        Expected {
+            error: GroupError::UnknownExpense(EXPENSE),
+            message: "unknown expense 33333333-3333-3333-3333-333333333333",
+        },
+        Expected {
+            error: GroupError::UnknownMember(MEMBER),
+            message: "unknown member 11111111-1111-1111-1111-111111111111",
+        },
+        Expected {
+            error: GroupError::UnknownTransfer(TRANSFER),
+            message: "unknown transfer 44444444-4444-4444-4444-444444444444",
+        },
+        Expected {
+            error: GroupError::UnsupportedFormat { format: 3 },
+            message: "unsupported group format 3: this version reads format 2",
+        },
     ]
 }
 
 /// Every `SettlementError` variant, with its exact message.
-fn settlement_errors() -> Vec<(SettlementError, &'static str)> {
-    vec![(
-        SettlementError::OutOfMemory { balances: 40 },
-        "not enough memory to find the minimum transfers between 40 members",
-    )]
+fn settlement_errors() -> Vec<Expected<SettlementError>> {
+    vec![Expected {
+        error: SettlementError::OutOfMemory { balances: 40 },
+        message: "not enough memory to find the minimum transfers between 40 members",
+    }]
 }
 
 /// Fails unless every error of `errors` prints its expected message.
-fn assert_messages<Error: Display>(errors: Vec<(Error, &'static str)>) {
-    for (error, message) in errors {
+fn assert_messages<Error: Display>(errors: Vec<Expected<Error>>) {
+    for Expected { error, message } in errors {
         assert_eq!(error.to_string(), message);
     }
 }
 
 /// The expected messages of `errors`.
-fn messages<Error>(errors: Vec<(Error, &'static str)>) -> impl Iterator<Item = &'static str> {
-    errors.into_iter().map(|(_, message)| message)
+fn messages<Error>(errors: Vec<Expected<Error>>) -> impl Iterator<Item = &'static str> {
+    errors.into_iter().map(|expected| expected.message)
 }
 
 /// Every expected message above.

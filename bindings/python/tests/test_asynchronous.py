@@ -94,7 +94,9 @@ def test_every_asynchronous_change_of_the_details_does_what_its_synchronous_form
         await group.set_name_async('Home')
         await group.set_description_async('Bills')
         await group.set_language_async(Language('ro-RO'))
-        assert (group.name(), group.description(), group.language()) == ('Home', 'Bills', Language('ro-RO'))
+        assert group.name() == 'Home'
+        assert group.description() == 'Bills'
+        assert group.language() == Language('ro-RO')
         await group.set_description_async('')
         await group.set_language_async(None)
         assert group.description() is None
@@ -128,8 +130,12 @@ def test_a_reader_reads_the_group_until_it_is_released(flat: Flat) -> None:
     """A read handle that let a change in, or read after its release, would show a report two states of one group."""
     group = flat.group
     with group.read() as reader:
-        assert (reader.id(), reader.name(), reader.currency()) == (group.id(), 'Flat', flat.euro)
-        assert (reader.description(), reader.language(), reader.save()) == ('Rent', Language('pt-PT'), group.save())
+        assert reader.id() == group.id()
+        assert reader.name() == 'Flat'
+        assert reader.currency() == flat.euro
+        assert reader.description() == 'Rent'
+        assert reader.language() == Language('pt-PT')
+        assert reader.save() == group.save()
         assert reader.categories() == group.categories()
         assert reader.category(flat.food) == group.category(flat.food)
         assert reader.expenses() == group.expenses()

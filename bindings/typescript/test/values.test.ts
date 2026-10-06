@@ -53,7 +53,11 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
     /** A currency, an amount, or a check that read or wrote another way than the library's would show an app another amount than the group holds. */
     void it('reads and writes currencies and amounts as the library does', () => {
         const euro = Currency.of('EUR');
-        assert.deepEqual([euro.code, euro.name, euro.toString(), euro.numericCode, euro.decimalPlaces], ['EUR', 'Euro', 'EUR', 978, 2]);
+        assert.equal(euro.code, 'EUR');
+        assert.equal(euro.name, 'Euro');
+        assert.equal(euro.toString(), 'EUR');
+        assert.equal(euro.numericCode, 978);
+        assert.equal(euro.decimalPlaces, 2);
         assert.ok(Currency.all().includes(euro));
         assert.equal(Currency.of('EUR'), euro);
         assert.equal(Currency.known('EUR'), euro);
@@ -86,14 +90,16 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assertRefused(() => ExchangeRate.parse('2').convert(new Money(lei, 9_223_372_036_854_775_807n), euro), MoneyError);
 
         const percentage = Percentage.parse('12.5 %');
-        assert.deepEqual([percentage.basisPoints, percentage.toString()], [1_250, '12.5%']);
+        assert.equal(percentage.basisPoints, 1_250);
+        assert.equal(percentage.toString(), '12.5%');
         assert.ok(percentage.equals(Percentage.ofBasisPoints(1_250)));
         assert.ok(!percentage.equals(Percentage.ofBasisPoints(1)));
         assertRefused(() => Percentage.ofBasisPoints(-1), MoneyError);
         assertRefused(() => Percentage.parse('half'), MoneyError);
 
         const parts = Parts.parse('0.5');
-        assert.deepEqual([parts.hundredths, parts.toString()], [50, '0.5']);
+        assert.equal(parts.hundredths, 50);
+        assert.equal(parts.toString(), '0.5');
         assert.ok(parts.equals(Parts.ofHundredths(50)));
         assert.ok(!parts.equals(Parts.ofHundredths(1)));
         assertRefused(() => Parts.ofHundredths(0), MoneyError);
@@ -103,7 +109,10 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
     /** A date or a time read or written another way than the library's, or one that does not exist, would put an entry on another day. */
     void it('reads and writes dates and times as the library does', () => {
         const date = CalendarDate.of(23, 9, 2026);
-        assert.deepEqual([date.toString(), date.day, date.month, date.year], ['2026-09-23', 23, 9, 2026]);
+        assert.equal(date.toString(), '2026-09-23');
+        assert.equal(date.day, 23);
+        assert.equal(date.month, 9);
+        assert.equal(date.year, 2026);
         assert.ok(date.equals(CalendarDate.parse('2026-09-23')));
         assert.ok(!date.equals(CalendarDate.of(24, 9, 2026)));
         assertRefused(
@@ -115,7 +124,9 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assertRefused(() => CalendarDate.parse('2026-02-30'), CalendarError);
 
         const time = TimeOfDay.of(18, 30);
-        assert.deepEqual([time.toString(), time.hour, time.minute], ['18:30', 18, 30]);
+        assert.equal(time.toString(), '18:30');
+        assert.equal(time.hour, 18);
+        assert.equal(time.minute, 30);
         assert.ok(time.equals(TimeOfDay.parse('18:30')));
         assert.ok(!time.equals(TimeOfDay.of(18, 31)));
         assertRefused(() => TimeOfDay.of(24, 0), CalendarError);
@@ -131,13 +142,15 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assertRefused(() => Email.parse('ana'), ContactError);
 
         const phone = PhoneNumber.parse('+40 712 345 678');
-        assert.deepEqual([phone.e164, phone.toString()], ['+40712345678', '+40 712 345 678']);
+        assert.equal(phone.e164, '+40712345678');
+        assert.equal(phone.toString(), '+40 712 345 678');
         assert.ok(phone.equals(PhoneNumber.parse('+40712345678')));
         assert.ok(!phone.equals(PhoneNumber.parse('+40712345679')));
         assertRefused(() => PhoneNumber.parse('0712345678'), ContactError);
 
         const iban = Iban.parse('ro49 aaaa 1b31 0075 9384 0000');
-        assert.deepEqual([iban.toString(), iban.countryCode], ['RO49AAAA1B31007593840000', 'RO']);
+        assert.equal(iban.toString(), 'RO49AAAA1B31007593840000');
+        assert.equal(iban.countryCode, 'RO');
         assert.ok(iban.equals(Iban.parse('RO49AAAA1B31007593840000')));
         assert.ok(!iban.equals(Iban.parse('GB82WEST12345698765432')));
         assertRefused(
@@ -168,13 +181,20 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
     /** Identifiers of different entities that printed as another text would let an app store one and read back another. */
     void it('keeps an identifier as its text', () => {
         const text = '0192f1c3-0000-7000-8000-000000000001';
-        assert.deepEqual([groupId(text), memberId(text), categoryId(text), expenseId(text), transferId(text)], [text, text, text, text, text]);
+        assert.equal(groupId(text), text);
+        assert.equal(memberId(text), text);
+        assert.equal(categoryId(text), text);
+        assert.equal(expenseId(text), text);
+        assert.equal(transferId(text), text);
     });
 
     /** A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of printing. */
     void it('prints a value the library never sends', () => {
         const unlisted = Currency.known('XYZ');
-        assert.deepEqual([unlisted.code, unlisted.name, unlisted.decimalPlaces, unlisted.numericCode], ['XYZ', 'XYZ', 0, 0]);
+        assert.equal(unlisted.code, 'XYZ');
+        assert.equal(unlisted.name, 'XYZ');
+        assert.equal(unlisted.decimalPlaces, 0);
+        assert.equal(unlisted.numericCode, 0);
         assert.equal(new Money(unlisted, 5n).toString(), '5 XYZ');
         assert.equal(Percentage.known(-1).toString(), '-1 bp');
         assert.equal(Parts.known(0).toString(), '0/100');

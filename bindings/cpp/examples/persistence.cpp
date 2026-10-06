@@ -13,6 +13,24 @@
 namespace eranos::examples {
 namespace {
 
+/// A row of the table of balances: a member's balance before saving and after loading.
+struct ComparisonRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<3> HEADERS{"Member", "Balance before saving", "Balance after loading"};
+
+    /// The balance after loading.
+    std::string after;
+    /// The balance before saving.
+    std::string before;
+    /// The member's first name.
+    std::string name;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<3> cells() const noexcept { return {name, before, after}; }
+};
+
 /// The amount @p text of euros.
 [[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
@@ -63,11 +81,11 @@ void run() {
               "the totals. The loaded group equals the saved one, and so do its balances:");
     auto const before = group.summary();
     auto const after = loaded.summary();
-    Rows rows;
+    std::vector<ComparisonRow> rows;
     for (auto const &member : {ana, bob}) {
-        rows.push_back({firstName(group, member), balanceOf(before, member), balanceOf(after, member)});
+        rows.push_back({.after = balanceOf(after, member), .before = balanceOf(before, member), .name = firstName(group, member)});
     }
-    printTable({"Member", "Balance before saving", "Balance after loading"}, rows, 1);
+    printTable(rows, 1);
     auto const plan = must(loaded.settlement(SettlementStrategy::GREEDY));
     std::println("Payments needed to settle the loaded group: {}.", plan.payments.size());
 

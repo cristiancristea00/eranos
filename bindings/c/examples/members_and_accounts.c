@@ -16,6 +16,66 @@ typedef struct Flatmates {
     Id bob;
 } Flatmates;
 
+/// A row of the table of members: a member's name, contact details, and accounts.
+typedef struct MemberRow {
+    /// Their accounts, one per line.
+    Line accounts;
+    /// Their email, or nothing.
+    Line email;
+    /// Their first and last name.
+    Line name;
+    /// Their phone number, or nothing.
+    Line phone;
+} MemberRow;
+
+/// A table of members, its columns from @p numbersFrom on aligned to the right.
+static Table *memberTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Member", "Email", "Phone", "Accounts"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of members, its cells in the order of the table's headers.
+static void addMemberRow(Table *const table, MemberRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->email, row->phone, row->accounts});
+}
+
+/// A row of the table of checks: a text, what it was checked as, and what validation made of it.
+typedef struct CheckRow {
+    /// The text checked.
+    Line input;
+    /// What it was checked as.
+    Line kind;
+    /// The value it makes, or its refusal.
+    Line result;
+} CheckRow;
+
+/// A table of checks, its columns from @p numbersFrom on aligned to the right.
+static Table *checkTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"Input", "Checked as", "Result"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of checks, its cells in the order of the table's headers.
+static void addCheckRow(Table *const table, CheckRow const *const row) { tableAdd(table, (Line const[]){row->input, row->kind, row->result}); }
+
+/// A row of the table of balances: whether a member is active, what they consumed, and their balance.
+typedef struct BalanceRow {
+    /// What is left: what they paid minus what they consumed.
+    Line balance;
+    /// What they consumed.
+    Line consumed;
+    /// Their first name.
+    Line name;
+    /// Whether they are active or archived.
+    Line status;
+} BalanceRow;
+
+/// A table of balances, its columns from @p numbersFrom on aligned to the right.
+static Table *balanceTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Member", "Status", "Consumed", "Balance"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of balances, its cells in the order of the table's headers.
+static void addBalanceRow(Table *const table, BalanceRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->status, row->consumed, row->balance});
+}
+
 /// A check of the library that writes the value it makes of a text, or refuses it.
 typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
@@ -88,10 +148,15 @@ static Line emailOf(EranosMember const *const member) {
 static void printMembers(EranosGroup const *const group) {
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(4, (char const *const[]){"Member", "Email", "Phone", "Accounts"}, 4);
+    Table *const table = memberTable(4);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        tableAdd(table, (Line const[]){fullName(member), emailOf(member), phoneOf(member), accountsOf(member)});
+        addMemberRow(table, &(MemberRow){
+                                .accounts = accountsOf(member),
+                                .email = emailOf(member),
+                                .name = fullName(member),
+                                .phone = phoneOf(member),
+                            });
         eranosMemberDestroy(member);
     }
     tablePrint(table);
@@ -104,7 +169,7 @@ static void printBalances(EranosGroup const *const group) {
     must(eranosGroupSummary(group, &summary));
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(4, (char const *const[]){"Member", "Status", "Consumed", "Balance"}, 2);
+    Table *const table = balanceTable(2);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -114,12 +179,12 @@ static void printBalances(EranosGroup const *const group) {
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            lineOf("%s", archived ? "archived" : "active"),
-                            moneyLine(eranosMemberSummaryShare(found)),
-                            balanceLine(eranosMemberSummaryBalance(found)),
-                        });
+        addBalanceRow(table, &(BalanceRow){
+                                 .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                                 .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                                 .name = textLine(text),
+                                 .status = lineOf("%s", archived ? "archived" : "active"),
+                             });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
     }
@@ -171,7 +236,7 @@ static void addValidated(Table *const table, char const *const kind, Validation 
     Line const message = messageLine(refused);
     Line const result = valid ? lineOf("valid: %s", eranosTextData(text)) : lineOf("refused: %s", message.text);
     eranosTextDestroy(text);
-    tableAdd(table, (Line const[]){lineOf("%s", input), lineOf("%s", kind), result});
+    addCheckRow(table, &(CheckRow){.input = lineOf("%s", input), .kind = lineOf("%s", kind), .result = result});
 }
 
 /// Prints what validation makes of valid and mistyped IBANs, emails, and phone numbers.
@@ -182,7 +247,7 @@ static void validation(void) {
               "any single mistyped character. Emails are checked against the rules of RFC 5321\n"
               "and 5322, which refuse the doubled dots and stray commas of hurried typing, and\n"
               "phone numbers against their country's numbering plan, stored in E.164 form.");
-    Table *const table = tableCreate(3, (char const *const[]){"Input", "Checked as", "Result"}, 3);
+    Table *const table = checkTable(3);
     addValidated(table, "IBAN", eranosIbanParse, "ro49 aaaa 1b31 0075 9384 0000");
     addValidated(table, "IBAN", eranosIbanParse, "RO49 AAAA 1B31 0075 9384 0001");
     addValidated(table, "IBAN", eranosIbanParse, "RO49 AAAA 1B31 0075");

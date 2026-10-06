@@ -17,6 +17,53 @@
 namespace eranos::examples {
 namespace {
 
+/// A row of the table of entries: an expense or a transfer, who paid it, and its amount as entered and in the group
+/// currency.
+struct EntryRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
+
+    /// Its amount in the group currency.
+    std::string converted;
+    /// What it was.
+    std::string name;
+    /// Its amount as entered.
+    std::string original;
+    /// Who paid it.
+    std::string payer;
+    /// The rate it was entered at.
+    std::string rate;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<5> cells() const noexcept { return {name, payer, original, rate, converted}; }
+};
+
+/// A row of the table of balances: what a member paid, consumed, sent, and received, and their balance.
+struct BalanceRow final {
+    /// The headers of the table's columns, in the order it prints them.
+    static constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
+
+    /// What is left.
+    std::string balance;
+    /// What they consumed.
+    std::string consumed;
+    /// Their first name.
+    std::string name;
+    /// What they paid.
+    std::string paid;
+    /// What they received.
+    std::string received;
+    /// What they sent.
+    std::string sent;
+
+    /// The row's cells, in the order of the table's headers.
+    ///
+    /// @return The cells
+    [[nodiscard]] Cells<6> cells() const noexcept { return {name, paid, consumed, sent, received, balance}; }
+};
+
 /// The amount @p text of @p code.
 [[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) { return must(Money::parse(text, must(Currency::of(code)))); }
 
@@ -34,46 +81,46 @@ namespace {
 /// Prints every expense and transfer, as entered and in the group currency.
 void printEntries(Group const &group) {
     Money const zero(group.currency(), 0);
-    Rows rows;
+    std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
         auto const shares = must(group.expenseShares(expense.id.value()));
         rows.push_back({
-            expense.name,
-            names(group, must(participants(expense.payers))),
-            must(total(expense)).toString(),
-            rateOf(expense.cost).toString(),
-            shares.has_value() ? shares->total.toString() : zero.toString(),
+            .converted = shares.has_value() ? shares->total.toString() : zero.toString(),
+            .name = expense.name,
+            .original = must(total(expense)).toString(),
+            .payer = names(group, must(participants(expense.payers))),
+            .rate = rateOf(expense.cost).toString(),
         });
     }
     for (auto const &transfer : group.transfers()) {
         auto const converted = must(group.transferAmount(transfer.id.value()));
         rows.push_back({
-            std::format("Transfer to {}", firstName(group, transfer.to)),
-            firstName(group, transfer.from),
-            amountOf(transfer.cost).toString(),
-            rateOf(transfer.cost).toString(),
-            converted.has_value() ? converted->toString() : zero.toString(),
+            .converted = converted.has_value() ? converted->toString() : zero.toString(),
+            .name = std::format("Transfer to {}", firstName(group, transfer.to)),
+            .original = amountOf(transfer.cost).toString(),
+            .payer = firstName(group, transfer.from),
+            .rate = rateOf(transfer.cost).toString(),
         });
     }
-    printTable({"Entry", "Paid by", "Entered as", "Rate", "In the group currency"}, rows, 2);
+    printTable(rows, 2);
 }
 
 /// Prints what each member paid, consumed, sent, and received, and their balance.
 void printBalances(Group const &group) {
     auto const summary = group.summary();
-    Rows rows;
+    std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
         auto const found = totalsOf(summary, member.id.value()).value();
         rows.push_back({
-            member.firstName,
-            found.paid.toString(),
-            found.share.toString(),
-            found.sent.toString(),
-            found.received.toString(),
-            toString(found.balance),
+            .balance = toString(found.balance),
+            .consumed = found.share.toString(),
+            .name = member.firstName,
+            .paid = found.paid.toString(),
+            .received = found.received.toString(),
+            .sent = found.sent.toString(),
         });
     }
-    printTable({"Member", "Paid", "Consumed", "Sent", "Received", "Balance"}, rows, 1);
+    printTable(rows, 1);
 }
 
 /// Adds the fuel in RON, the dinner in HUF, and the ferry in EUR, which Ana and Bob share.

@@ -6,11 +6,15 @@
 
 #include "eranos.hpp"
 
+#include <array>
+#include <concepts>
 #include <cstddef>
 #include <expected>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -58,16 +62,39 @@ void title(std::string_view const text);
 /// @param text The heading
 void section(std::string_view const text);
 
-/// The rows of a table, a cell per column; a cell of several lines makes its row as tall as its tallest cell.
-using Rows = std::vector<std::vector<std::string>>;
+/// The text of a table's columns, one per column: the headers of its columns, or the cells of one of its rows.
+template <std::size_t Columns> using Cells = std::array<std::string_view, Columns>;
+
+/// A row of a table: its type names the headers of the table's columns in HEADERS, in the order the table prints them,
+/// and its cells() gives its cells in that order, as many as there are headers.
+template <typename Row>
+concept TableRow = requires(Row const &row) {
+    { row.cells() } -> std::same_as<std::remove_cvref_t<decltype(Row::HEADERS)>>;
+};
 
 /// Prints @p rows under @p headers with rounded borders, as the Rust examples' tables are printed, right-aligning the
-/// columns from @p numbersFrom on.
+/// columns from @p numbersFrom on; a cell of several lines makes its row as tall as its tallest cell.
 ///
 /// @param headers The columns' headers
+/// @param rows The rows, a cell per column
+/// @param numbersFrom The first column aligned to the right
+void printCells(std::span<std::string_view const> const headers, std::vector<std::vector<std::string_view>> const &rows,
+                std::size_t const numbersFrom);
+
+/// Prints @p rows under the headers of their type with rounded borders, as the Rust examples' tables are printed,
+/// right-aligning the columns from @p numbersFrom on.
+///
 /// @param rows The rows
 /// @param numbersFrom The first column aligned to the right
-void printTable(std::vector<std::string> const &headers, Rows const &rows, std::size_t const numbersFrom);
+template <TableRow Row> void printTable(std::vector<Row> const &rows, std::size_t const numbersFrom) {
+    std::vector<std::vector<std::string_view>> cells;
+    cells.reserve(rows.size());
+    for (auto const &row : rows) {
+        auto const own = row.cells();
+        cells.emplace_back(own.begin(), own.end());
+    }
+    printCells(Row::HEADERS, cells, numbersFrom);
+}
 
 /// @p lines, one below the other in a table cell.
 ///

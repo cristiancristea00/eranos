@@ -1,6 +1,7 @@
 // Sections 5 to 7 of the tour: entries in another currency, edits and refused changes, and members who come and go.
 package eranos.examples.grandtour
 
+import eranos.Balance
 import eranos.Cost
 import eranos.Currency
 import eranos.EranosException
@@ -18,9 +19,35 @@ import eranos.Split
 import eranos.TimeOfDay
 import eranos.Transfer
 import eranos.TransferFailure
+import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.totals
+
+private data class EditRow(
+    val edit: String,
+    val entry: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(entry, edit)
+
+    companion object {
+        val HEADERS = listOf("Entry", "Edit")
+    }
+}
+
+private data class StatusRow(
+    val balance: Balance,
+    val name: String,
+    val status: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, status, "$balance")
+
+    companion object {
+        val HEADERS = listOf("Member", "Status", "Balance")
+    }
+}
 
 internal fun anotherCurrency(
     group: Group,
@@ -78,12 +105,12 @@ internal fun anotherCurrency(
 }
 
 /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
-internal fun replaceAndRemove(
+private fun replaceAndRemove(
     group: Group,
     people: People,
     categories: Categories,
     seafood: ExpenseId,
-): List<List<String>> {
+): List<EditRow> {
     // The dinner's receipt said 99.00.
     val corrected =
         checkNotNull(group.expenseBlocking(seafood)) { "the dinner was added" }
@@ -118,13 +145,16 @@ internal fun replaceAndRemove(
     val dinner = group.expenseBlocking(seafood)
     val apartment = group.transferBlocking(first)
     return listOf(
-        listOf(previous.name, "${previous.cost.amount} became ${dinner?.cost?.amount ?: zero}, at ${dinner?.description.orEmpty()}"),
-        listOf(removed.name, "entered twice; the copy of ${removed.cost.amount} was removed"),
-        listOf(
-            "${name(group, people.dan)} to ${name(group, people.ana)}",
-            "${replaced.cost.amount} became ${apartment?.cost?.amount ?: zero}, noted ${apartment?.note.orEmpty()}",
+        EditRow(edit = "${previous.cost.amount} became ${dinner?.cost?.amount ?: zero}, at ${dinner?.description.orEmpty()}", entry = previous.name),
+        EditRow(edit = "entered twice; the copy of ${removed.cost.amount} was removed", entry = removed.name),
+        EditRow(
+            edit = "${replaced.cost.amount} became ${apartment?.cost?.amount ?: zero}, noted ${apartment?.note.orEmpty()}",
+            entry = "${name(group, people.dan)} to ${name(group, people.ana)}",
         ),
-        listOf("${name(group, people.carol)} to ${name(group, people.bob)}", "${undone.cost.amount} sent to the wrong member; removed"),
+        EditRow(
+            edit = "${undone.cost.amount} sent to the wrong member; removed",
+            entry = "${name(group, people.carol)} to ${name(group, people.bob)}",
+        ),
     )
 }
 
@@ -142,7 +172,7 @@ internal fun edits(
         identifier, and replaces the entry; a removal takes it out with its totals.
         """.trimIndent(),
     )
-    printTable(listOf("Entry", "Edit"), changes, numbersFrom = 2)
+    printTable(EditRow.HEADERS, changes, numbersFrom = 2)
     println("The balances after the edits:")
     printBalances(group)
 
@@ -172,11 +202,11 @@ internal fun edits(
     val unrated = refusal { group.addBlocking(souvenirs) }
     println("A change that does not fit is refused, and the group stays as it was:")
     printTable(
-        listOf("Change", "Refused with"),
+        RefusalRow.HEADERS,
         listOf(
-            listOf("A taxi split 50% and 49.99%", message(unbalanced)),
-            listOf("Ana paying herself back", message(toHerself)),
-            listOf("Souvenirs in RON, without a rate", message(unrated)),
+            RefusalRow("A taxi split 50% and 49.99%", message(unbalanced)),
+            RefusalRow("Ana paying herself back", message(toHerself)),
+            RefusalRow("Souvenirs in RON, without a rate", message(unrated)),
         ),
         numbersFrom = 2,
     )
@@ -218,16 +248,16 @@ internal fun comingsAndGoings(
         group.membersBlocking().mapNotNull { member ->
             member.id?.let { id ->
                 totals(id, summary)?.let { totals ->
-                    listOf(member.firstName, if (group.isArchivedBlocking(id)) "archived" else "active", "${totals.balance}")
+                    StatusRow(balance = totals.balance, name = member.firstName, status = if (group.isArchivedBlocking(id)) "archived" else "active")
                 }
             }
         }
-    printTable(listOf("Member", "Status", "Balance"), rows, numbersFrom = 2)
+    printTable(StatusRow.HEADERS, rows, numbersFrom = 2)
     printTable(
-        listOf("Change", "Refused with"),
+        RefusalRow.HEADERS,
         listOf(
-            listOf("A farewell dinner with Dan", message(farewell)),
-            listOf("Removing Dan", message(inUse)),
+            RefusalRow("A farewell dinner with Dan", message(farewell)),
+            RefusalRow("Removing Dan", message(inUse)),
         ),
         numbersFrom = 2,
     )

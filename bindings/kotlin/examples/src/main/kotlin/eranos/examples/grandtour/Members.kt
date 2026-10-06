@@ -15,8 +15,48 @@ import eranos.Language
 import eranos.Member
 import eranos.PhoneNumber
 import eranos.Username
+import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
+
+private data class DetailRow(
+    val detail: String,
+    val value: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(detail, value)
+
+    companion object {
+        val HEADERS = listOf("Detail", "Value")
+    }
+}
+
+private data class MemberRow(
+    val accounts: String,
+    val email: String,
+    val name: String,
+    val phone: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, email, phone, accounts)
+
+    companion object {
+        val HEADERS = listOf("Member", "Email", "Phone", "Accounts")
+    }
+}
+
+private data class CheckRow(
+    val input: String,
+    val kind: String,
+    val result: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(input, kind, result)
+
+    companion object {
+        val HEADERS = listOf("Input", "Checked as", "Result")
+    }
+}
 
 internal fun theGroup(): Group {
     section("1. The group")
@@ -25,12 +65,12 @@ internal fun theGroup(): Group {
     group.renameBlocking("Lisbon and Porto")
     group.setDescriptionBlocking("A week by the Atlantic, with a day in Porto")
     printTable(
-        listOf("Detail", "Value"),
+        DetailRow.HEADERS,
         listOf(
-            listOf("Name", group.nameBlocking()),
-            listOf("Currency", "${group.currencyBlocking()}"),
-            listOf("Language", group.languageBlocking()?.toString().orEmpty()),
-            listOf("Description", group.descriptionBlocking().orEmpty()),
+            DetailRow("Name", group.nameBlocking()),
+            DetailRow("Currency", "${group.currencyBlocking()}"),
+            DetailRow("Language", group.languageBlocking()?.toString().orEmpty()),
+            DetailRow("Description", group.descriptionBlocking().orEmpty()),
         ),
         numbersFrom = 2,
     )
@@ -59,13 +99,13 @@ internal fun describe(account: Account): String =
 
 internal fun printMembers(group: Group) {
     printTable(
-        listOf("Member", "Email", "Phone", "Accounts"),
+        MemberRow.HEADERS,
         group.membersBlocking().map { member ->
-            listOf(
-                listOfNotNull(member.firstName, member.lastName).joinToString(" "),
-                member.email?.toString().orEmpty(),
-                member.phone?.toString().orEmpty(),
-                cell(member.accounts.map(::describe)),
+            MemberRow(
+                accounts = cell(member.accounts.map(::describe)),
+                email = member.email?.toString().orEmpty(),
+                name = listOfNotNull(member.firstName, member.lastName).joinToString(" "),
+                phone = member.phone?.toString().orEmpty(),
             )
         },
         numbersFrom = 4,
@@ -81,22 +121,22 @@ internal fun validation(group: Group) {
         """.trimIndent(),
     )
     val iban = { input: String ->
-        listOf("\"$input\"", "IBAN", outcome({ Iban.parse(input) }, { iban -> "$iban, country ${iban.countryCode}" }))
+        CheckRow("\"$input\"", "IBAN", outcome({ Iban.parse(input) }, { iban -> "$iban, country ${iban.countryCode}" }))
     }
-    val email = { input: String -> listOf("\"$input\"", "email", outcome({ Email.parse(input) }, Email::toString)) }
+    val email = { input: String -> CheckRow("\"$input\"", "email", outcome({ Email.parse(input) }, Email::toString)) }
     val phone = { input: String ->
-        listOf("\"$input\"", "phone", outcome({ PhoneNumber.parse(input) }, { phone -> "$phone, stored as ${phone.e164}" }))
+        CheckRow("\"$input\"", "phone", outcome({ PhoneNumber.parse(input) }, { phone -> "$phone, stored as ${phone.e164}" }))
     }
     printTable(
-        listOf("Input", "Checked as", "Result"),
+        CheckRow.HEADERS,
         listOf(
             iban("ro49 aaaa 1b31 0075 9384 0000"),
             iban("RO49 AAAA 1B31 0075 9384 0001"),
             email("ana..popescu@example.com"),
             phone("+351 912 345 678"),
             phone("+40 612 345 678"),
-            listOf("\"   \"", "username", outcome({ Username.parse("   ") }, Username::toString)),
-            listOf("\"  \"", "first name", outcome({ group.addBlocking(Member("  ")) }, { id -> id.value })),
+            CheckRow("\"   \"", "username", outcome({ Username.parse("   ") }, Username::toString)),
+            CheckRow("\"  \"", "first name", outcome({ group.addBlocking(Member("  ")) }, { id -> id.value })),
         ),
         numbersFrom = 3,
     )
@@ -162,10 +202,10 @@ internal fun addCategories(group: Group): Categories {
         """.trimIndent(),
     )
     printTable(
-        listOf("Change", "Refused with"),
+        RefusalRow.HEADERS,
         listOf(
-            listOf("Add a category named FOOD", message(homonym)),
-            listOf("Rename Uncategorised to Other", message(builtIn)),
+            RefusalRow("Add a category named FOOD", message(homonym)),
+            RefusalRow("Rename Uncategorised to Other", message(builtIn)),
         ),
         numbersFrom = 2,
     )

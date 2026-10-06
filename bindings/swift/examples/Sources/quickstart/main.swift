@@ -4,6 +4,44 @@
 import Eranos
 import Report
 
+struct ExpenseRow: TableRow {
+    static let headers = ["Expense", "Paid by", "Shared by", "Amount"]
+
+    let amount: Money
+    let name: String
+    let participants: String
+    let payers: String
+
+    var cells: [String] {
+        [name, payers, participants, "\(amount)"]
+    }
+}
+
+struct MemberRow: TableRow {
+    static let headers = ["Member", "Paid", "Consumed", "Balance"]
+
+    let balance: Balance
+    let consumed: Money
+    let name: String
+    let paid: Money
+
+    var cells: [String] {
+        [name, "\(paid)", "\(consumed)", "\(balance)"]
+    }
+}
+
+struct PaymentRow: TableRow {
+    static let headers = ["From", "To", "Amount"]
+
+    let amount: Money
+    let from: String
+    let to: String
+
+    var cells: [String] {
+        [from, to, "\(amount)"]
+    }
+}
+
 func main() throws(EranosError) {
     let euro = try Currency(code: "EUR")
     let group = try Group(currency: euro, name: "Weekend in Sinaia")
@@ -29,9 +67,13 @@ func main() throws(EranosError) {
     _ = try group.add(Expense(cost: .local(Money(parsing: "240.00", in: euro)), date: friday, name: "Cabin", payers: .equal([ana]), split: .whole(everyone)))
     _ = try group.add(Expense(cost: .local(Money(parsing: "60.00", in: euro)), date: friday, name: "Groceries", payers: .equal([bob]), split: .whole(everyone)))
     printTable(
-        ["Expense", "Paid by", "Shared by", "Amount"],
         try group.expenses().map { expense throws(EranosError) in
-            [expense.name, try names(group, expense.payers.members), try names(group, participants(expense.split)), "\(try expense.total())"]
+            ExpenseRow(
+                amount: try expense.total(),
+                name: expense.name,
+                participants: try names(group, participants(expense.split)),
+                payers: try names(group, expense.payers.members)
+            )
         },
         numbersFrom: 3
     )
@@ -43,10 +85,9 @@ func main() throws(EranosError) {
         and their balance is what they paid minus what they consumed.
         """)
     printTable(
-        ["Member", "Paid", "Consumed", "Balance"],
         try group.members().compactMap { member in
             member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
-                [member.firstName, "\(totals.paid)", "\(totals.share)", "\(totals.balance)"]
+                MemberRow(balance: totals.balance, consumed: totals.share, name: member.firstName, paid: totals.paid)
             }
         },
         numbersFrom: 1
@@ -58,9 +99,8 @@ func main() throws(EranosError) {
     let settlement = try group.settlement(by: .minimumTransfers)
     print("The fewest payments that bring every balance to zero (\(settlement.payments.count) in total):")
     printTable(
-        ["From", "To", "Amount"],
         try settlement.payments.map { payment throws(EranosError) in
-            [try names(group, [payment.from]), try names(group, [payment.to]), "\(payment.amount)"]
+            PaymentRow(amount: payment.amount, from: try names(group, [payment.from]), to: try names(group, [payment.to]))
         },
         numbersFrom: 2
     )

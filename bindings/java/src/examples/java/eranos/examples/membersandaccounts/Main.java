@@ -27,6 +27,7 @@ import eranos.PhoneNumber;
 import eranos.Split;
 import eranos.Summary;
 import eranos.Username;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,38 @@ public final class Main {
     /** The two flatmates. */
     private record Flatmates(MemberId ana, MemberId bob) {}
 
+    /** A member with their contact details and accounts, a row of the members' table. */
+    private record MemberRow(String accounts, String email, String name, String phone)
+            implements Row {
+        static final List<String> HEADERS = List.of("Member", "Email", "Phone", "Accounts");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, email, phone, accounts);
+        }
+    }
+
+    /** An input with what it was checked as and the outcome, a row of the checks' table. */
+    private record CheckRow(String input, String kind, String result) implements Row {
+        static final List<String> HEADERS = List.of("Input", "Checked as", "Result");
+
+        @Override
+        public List<String> cells() {
+            return List.of(input, kind, result);
+        }
+    }
+
+    /** A member's status and totals, a row of the balances' table. */
+    private record BalanceRow(Balance balance, Money consumed, String name, String status)
+            implements Row {
+        static final List<String> HEADERS = List.of("Member", "Status", "Consumed", "Balance");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, status, consumed.toString(), balance.toString());
+        }
+    }
+
     /** An account with its label and its details. */
     private static String describe(Account account) {
         String details =
@@ -69,10 +102,10 @@ public final class Main {
     }
 
     /**
-     * {@code valid: } and what {@code shown} writes of the value {@code parse} makes of {@code
-     * input}, or {@code refused: } and the library's message.
+     * The check of {@code input} as a {@code kind}: {@code valid: } and what {@code shown} writes
+     * of the value {@code parse} makes of it, or {@code refused: } and the library's message.
      */
-    private static <Value> List<String> validated(
+    private static <Value> CheckRow validated(
             String input, String kind, Parse<Value> parse, Function<Value, String> shown) {
         String result;
         try {
@@ -80,7 +113,7 @@ public final class Main {
         } catch (EranosException refusal) {
             result = "refused: " + refusal.getMessage();
         }
-        return List.of(input, kind, result);
+        return new CheckRow(input, kind, result);
     }
 
     /** What the library refuses {@code change} with. */
@@ -94,37 +127,37 @@ public final class Main {
     }
 
     private static void printMembers(Group group) {
-        List<List<String>> rows = new ArrayList<>();
+        List<MemberRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             rows.add(
-                    List.of(
-                            Stream.concat(Stream.of(member.firstName()), member.lastName().stream())
-                                    .collect(Collectors.joining(" ")),
-                            member.email().map(Email::toString).orElse(""),
-                            member.phone().map(PhoneNumber::toString).orElse(""),
+                    new MemberRow(
                             member.accounts().stream()
                                     .map(Main::describe)
-                                    .collect(Collectors.joining("\n"))));
+                                    .collect(Collectors.joining("\n")),
+                            member.email().map(Email::toString).orElse(""),
+                            Stream.concat(Stream.of(member.firstName()), member.lastName().stream())
+                                    .collect(Collectors.joining(" ")),
+                            member.phone().map(PhoneNumber::toString).orElse("")));
         }
-        printTable(List.of("Member", "Email", "Phone", "Accounts"), rows, 4);
+        printTable(MemberRow.HEADERS, rows, 4);
     }
 
     private static void printBalances(Group group) throws EranosException {
         Summary summary = group.summary();
-        List<List<String>> rows = new ArrayList<>();
+        List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             Optional<MemberId> id = member.id();
             Optional<MemberSummary> found = id.flatMap(known -> totals(known, summary));
             if (id.isPresent() && found.isPresent()) {
                 rows.add(
-                        List.of(
+                        new BalanceRow(
+                                found.orElseThrow().balance(),
+                                found.orElseThrow().share(),
                                 member.firstName(),
-                                group.isArchived(id.orElseThrow()) ? "archived" : "active",
-                                found.orElseThrow().share().toString(),
-                                found.orElseThrow().balance().toString()));
+                                group.isArchived(id.orElseThrow()) ? "archived" : "active"));
             }
         }
-        printTable(List.of("Member", "Status", "Consumed", "Balance"), rows, 2);
+        printTable(BalanceRow.HEADERS, rows, 2);
     }
 
     private static Flatmates members(Group group) throws EranosException {
@@ -163,7 +196,7 @@ public final class Main {
                 and 5322, which refuse the doubled dots and stray commas of hurried typing, and
                 phone numbers against their country's numbering plan, stored in E.164 form.
                 """);
-        List<List<String>> rows = new ArrayList<>();
+        List<CheckRow> rows = new ArrayList<>();
         for (String input :
                 List.of(
                         "ro49 aaaa 1b31 0075 9384 0000",
@@ -184,7 +217,7 @@ public final class Main {
                         "+44 (0)20 7946 0958")) {
             rows.add(validated(input, "phone", PhoneNumber::parse, PhoneNumber::e164));
         }
-        printTable(List.of("Input", "Checked as", "Result"), rows, 3);
+        printTable(CheckRow.HEADERS, rows, 3);
     }
 
     private static void movingOut(Group group, Flatmates flatmates) throws EranosException {

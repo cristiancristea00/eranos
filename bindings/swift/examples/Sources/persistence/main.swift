@@ -4,6 +4,18 @@
 import Eranos
 import Report
 
+struct ComparisonRow: TableRow {
+    static let headers = ["Member", "Balance before saving", "Balance after loading"]
+
+    let after: String
+    let before: String
+    let name: String
+
+    var cells: [String] {
+        [name, before, after]
+    }
+}
+
 func main() throws(EranosError) {
     let euro = try Currency(code: "EUR")
     let day = try CalendarDate(day: 23, month: 9, year: 2026)
@@ -50,9 +62,12 @@ func main() throws(EranosError) {
     let before = try group.summary()
     let after = try loaded.summary()
     printTable(
-        ["Member", "Balance before saving", "Balance after loading"],
-        [(ana, "Ana"), (bob, "Bob")].map { member, name in
-            [name, totals(of: member, in: before)?.balance.description ?? "?", totals(of: member, in: after)?.balance.description ?? "?"]
+        try [ana, bob].map { member throws(EranosError) in
+            ComparisonRow(
+                after: totals(of: member, in: after)?.balance.description ?? "?",
+                before: totals(of: member, in: before)?.balance.description ?? "?",
+                name: try names(group, [member])
+            )
         },
         numbersFrom: 1
     )

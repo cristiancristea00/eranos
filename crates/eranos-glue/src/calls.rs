@@ -244,7 +244,7 @@ impl Call {
             ));
         }
         let parameters = inputs.map(parameter).collect::<syn::Result<Vec<_>>>()?;
-        let (answer, error) = outcome(&signature.output)?;
+        let Outcome { answer, error } = outcome(&signature.output)?;
         Ok(Self {
             access,
             answer,
@@ -308,12 +308,20 @@ fn parameter(input: &FnArg) -> syn::Result<Parameter> {
     Parameter::parse(pattern.ident.clone(), (*typed.ty).clone())
 }
 
+/// What a call answers with: the two types of its `Result`.
+struct Outcome {
+    /// What it answers when it succeeds.
+    answer: Type,
+    /// The error it fails with.
+    error: Type,
+}
+
 /// The answer and the error of `output`, a `Result<T, E>`.
 ///
 /// # Errors
 ///
 /// For any other return type.
-fn outcome(output: &ReturnType) -> syn::Result<(Type, Type)> {
+fn outcome(output: &ReturnType) -> syn::Result<Outcome> {
     let refused = || {
         syn::Error::new(
             output.span(),
@@ -343,7 +351,10 @@ fn outcome(output: &ReturnType) -> syn::Result<(Type, Type)> {
         .collect::<Option<Vec<_>>>()
         .ok_or_else(refused)?;
     match (segment.ident.to_string().as_str(), types.as_slice()) {
-        ("Result", [answer, error]) => Ok(((*answer).clone(), (*error).clone())),
+        ("Result", [answer, error]) => Ok(Outcome {
+            answer: (*answer).clone(),
+            error: (*error).clone(),
+        }),
         _ => Err(refused()),
     }
 }

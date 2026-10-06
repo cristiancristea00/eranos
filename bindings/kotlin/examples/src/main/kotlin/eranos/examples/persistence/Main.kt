@@ -16,10 +16,25 @@ import eranos.SettlementStrategy
 import eranos.Split
 import eranos.Tip
 import eranos.TipValue
+import eranos.examples.Row
+import eranos.examples.names
 import eranos.examples.printTable
 import eranos.examples.section
 import eranos.examples.title
 import eranos.examples.totals
+
+private data class ComparisonRow(
+    val after: String,
+    val before: String,
+    val name: String,
+) : Row {
+    override val cells: List<String>
+        get() = listOf(name, before, after)
+
+    companion object {
+        val HEADERS = listOf("Member", "Balance before saving", "Balance after loading")
+    }
+}
 
 /** Prints the report of the road trip saved and loaded. */
 fun main() {
@@ -75,9 +90,13 @@ fun main() {
             val before = group.summaryBlocking()
             val after = loaded.summaryBlocking()
             printTable(
-                listOf("Member", "Balance before saving", "Balance after loading"),
-                listOf(ana to "Ana", bob to "Bob").map { (member, name) ->
-                    listOf(name, totals(member, before)?.balance?.toString() ?: "?", totals(member, after)?.balance?.toString() ?: "?")
+                ComparisonRow.HEADERS,
+                listOf(ana, bob).map { member ->
+                    ComparisonRow(
+                        after = totals(member, after)?.balance?.toString() ?: "?",
+                        before = totals(member, before)?.balance?.toString() ?: "?",
+                        name = names(group, listOf(member)),
+                    )
                 },
                 numbersFrom = 1,
             )

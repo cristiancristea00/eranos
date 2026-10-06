@@ -5,17 +5,17 @@ import Eranos
 import Report
 
 func currencies() throws(EranosError) {
-    var rows: [[String]] = []
+    var rows: [CurrencyRow] = []
     for code in ["EUR", "RON", "JPY", "BHD"] {
         let currency = try Currency(code: code)
-        rows.append([currency.code, currency.name, "\(currency.numericCode)", "\(currency.decimalPlaces)"])
+        rows.append(CurrencyRow(code: currency.code, decimalPlaces: currency.decimalPlaces, name: currency.name, numericCode: currency.numericCode))
     }
     let unknown = Result { () throws(EranosError) in try Currency(code: "XYZ") }
     print("""
         Currencies are the \(Currency.all.count) active ISO 4217 codes with a minor unit; an unknown code is
         refused (\(message(unknown))):
         """)
-    printTable(["Code", "Name", "Numeric code", "Decimal places"], rows, numbersFrom: 2)
+    printTable(rows, numbersFrom: 2)
     expect(3, try Currency(code: "BHD").decimalPlaces, "the dinar's decimal places")
 }
 
@@ -30,16 +30,15 @@ func amounts() throws(EranosError) {
     let doubled = Cost.converted(try eur("20.00"), rate: try rate(of: cost))
     print("Amounts are exact minor units in their currency:")
     printTable(
-        ["Input", "Result"],
         [
-            ["12.34 EUR + 0.66 EUR", "\(total)"],
-            ["5.00 EUR − 7.50 EUR", "\(change), negative: \(0 > change.minorUnits)"],
-            ["1.00 EUR + 1.00 RON", message(mixed)],
-            ["1.005 EUR", message(Result { () throws(EranosError) in try eur("1.005") })],
-            ["1500 JPY", "\(yen), \(yen.minorUnits) minor units"],
-            ["1234 minor units of BHD", "\(dinars)"],
-            ["zero RON", "\(nothing), zero: \(0 == nothing.minorUnits)"],
-            ["10.00 EUR at 4.9765", "\(cost.amount) at \(try rate(of: cost)), then \(doubled.amount) at the same rate"]
+            ValueRow(input: "12.34 EUR + 0.66 EUR", result: "\(total)"),
+            ValueRow(input: "5.00 EUR − 7.50 EUR", result: "\(change), negative: \(0 > change.minorUnits)"),
+            ValueRow(input: "1.00 EUR + 1.00 RON", result: message(mixed)),
+            ValueRow(input: "1.005 EUR", result: message(Result { () throws(EranosError) in try eur("1.005") })),
+            ValueRow(input: "1500 JPY", result: "\(yen), \(yen.minorUnits) minor units"),
+            ValueRow(input: "1234 minor units of BHD", result: "\(dinars)"),
+            ValueRow(input: "zero RON", result: "\(nothing), zero: \(0 == nothing.minorUnits)"),
+            ValueRow(input: "10.00 EUR at 4.9765", result: "\(cost.amount) at \(try rate(of: cost)), then \(doubled.amount) at the same rate")
         ],
         numbersFrom: 2
     )
@@ -57,17 +56,16 @@ func ratios() throws(EranosError) {
     let rate = try ExchangeRate(parsing: "4.97650")
     print("Percentages, parts, and rates are exact decimals:")
     printTable(
-        ["Input", "Result"],
         [
-            ["12.5%", "\(percentage), \(percentage.basisPoints) basis points"],
-            ["333 basis points", "\(try Percentage(basisPoints: 333))"],
-            ["33.333%", message(Result { () throws(EranosError) in try Percentage(parsing: "33.333") })],
-            ["1.5 parts", "\(parts), \(parts.hundredths) hundredths"],
-            ["3 whole parts", "\(try Parts(hundredths: 300))"],
-            ["25 hundredths of a part", "\(try Parts(hundredths: 25))"],
-            ["0 parts", message(Result { () throws(EranosError) in try Parts(parsing: "0") })],
-            ["a rate of 4.97650", "\(rate)"],
-            ["a rate of 0", message(Result { () throws(EranosError) in try ExchangeRate(parsing: "0") })]
+            ValueRow(input: "12.5%", result: "\(percentage), \(percentage.basisPoints) basis points"),
+            ValueRow(input: "333 basis points", result: "\(try Percentage(basisPoints: 333))"),
+            ValueRow(input: "33.333%", result: message(Result { () throws(EranosError) in try Percentage(parsing: "33.333") })),
+            ValueRow(input: "1.5 parts", result: "\(parts), \(parts.hundredths) hundredths"),
+            ValueRow(input: "3 whole parts", result: "\(try Parts(hundredths: 300))"),
+            ValueRow(input: "25 hundredths of a part", result: "\(try Parts(hundredths: 25))"),
+            ValueRow(input: "0 parts", result: message(Result { () throws(EranosError) in try Parts(parsing: "0") })),
+            ValueRow(input: "a rate of 4.97650", result: "\(rate)"),
+            ValueRow(input: "a rate of 0", result: message(Result { () throws(EranosError) in try ExchangeRate(parsing: "0") }))
         ],
         numbersFrom: 2
     )
@@ -83,16 +81,15 @@ func datesAndIdentifiers(_ group: Group, _ people: People) throws(EranosError) {
     let language = try Language("pt-pt")
     print("Dates, times, identifiers, and language tags read and print the ISO forms:")
     printTable(
-        ["Input", "Result"],
         [
-            ["2026-10-01", "\(date): day \(date.day), month \(date.month), year \(date.year)"],
-            ["29 February 2027", message(Result { () throws(EranosError) in try CalendarDate(day: 29, month: 2, year: 2027) })],
-            ["22:15", "\(time): hour \(time.hour), minute \(time.minute)"],
-            ["24:00", message(Result { () throws(EranosError) in try TimeOfDay(hour: 24, minute: 0) })],
-            ["Ana's identifier", "\(parsed), the same after a round trip: \(people.ana == found)"],
-            ["not-a-uuid", message(Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: "not-a-uuid")) })],
-            ["pt-pt", "\(language)"],
-            ["pt_PT", message(Result { () throws(EranosError) in try Language("pt_PT") })]
+            ValueRow(input: "2026-10-01", result: "\(date): day \(date.day), month \(date.month), year \(date.year)"),
+            ValueRow(input: "29 February 2027", result: message(Result { () throws(EranosError) in try CalendarDate(day: 29, month: 2, year: 2027) })),
+            ValueRow(input: "22:15", result: "\(time): hour \(time.hour), minute \(time.minute)"),
+            ValueRow(input: "24:00", result: message(Result { () throws(EranosError) in try TimeOfDay(hour: 24, minute: 0) })),
+            ValueRow(input: "Ana's identifier", result: "\(parsed), the same after a round trip: \(people.ana == found)"),
+            ValueRow(input: "not-a-uuid", result: message(Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: "not-a-uuid")) })),
+            ValueRow(input: "pt-pt", result: "\(language)"),
+            ValueRow(input: "pt_PT", result: message(Result { () throws(EranosError) in try Language("pt_PT") }))
         ],
         numbersFrom: 2
     )

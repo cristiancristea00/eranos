@@ -109,52 +109,34 @@ class GroupTest {
         Flat flat = new Flat();
         Flat stranger = new Flat();
         Group group = flat.group;
-        assertEquals(
-                List.of(
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty()),
+        List<Optional<?>> lookups =
                 List.of(
                         group.member(stranger.ana),
                         group.category(stranger.food),
                         group.expense(stranger.dinner),
                         group.expenseShares(stranger.dinner),
                         group.transfer(stranger.repayment),
-                        group.transferAmount(stranger.repayment)));
-        assertEquals(
-                List.of(
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty(),
-                        Optional.empty()),
-                List.of(
+                        group.transferAmount(stranger.repayment),
                         group.memberAsync(stranger.ana).join(),
                         group.categoryAsync(stranger.food).join(),
                         group.expenseAsync(stranger.dinner).join(),
                         group.expenseSharesAsync(stranger.dinner).join(),
                         group.transferAsync(stranger.repayment).join(),
-                        group.transferAmountAsync(stranger.repayment).join()));
+                        group.transferAmountAsync(stranger.repayment).join());
+        for (Optional<?> lookup : lookups) {
+            assertEquals(Optional.empty(), lookup);
+        }
         try (GroupReader reader = group.read()) {
-            assertEquals(
-                    List.of(
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty(),
-                            Optional.empty()),
+            for (Optional<?> lookup :
                     List.of(
                             reader.member(stranger.ana),
                             reader.category(stranger.food),
                             reader.expense(stranger.dinner),
                             reader.expenseShares(stranger.dinner),
                             reader.transfer(stranger.repayment),
-                            reader.transferAmount(stranger.repayment)));
+                            reader.transferAmount(stranger.repayment))) {
+                assertEquals(Optional.empty(), lookup);
+            }
         }
         try (GroupReader reader = Group.builder(flat.euro, "Trip").build().read()) {
             assertEquals(Optional.empty(), reader.language());
@@ -221,14 +203,13 @@ class GroupTest {
         group.setName("Home");
         group.clearDescription();
         group.clearLanguage();
-        assertEquals(
-                List.of("Home", Optional.empty(), Optional.empty()),
-                List.of(group.name(), group.description(), group.language()));
+        assertEquals("Home", group.name());
+        assertEquals(Optional.empty(), group.description());
+        assertEquals(Optional.empty(), group.language());
         group.setDescription("Shared flat");
         group.setLanguage(Language.parse("ro"));
-        assertEquals(
-                List.of(Optional.of("Shared flat"), Optional.of(Language.parse("ro"))),
-                List.of(group.description(), group.language()));
+        assertEquals(Optional.of("Shared flat"), group.description());
+        assertEquals(Optional.of(Language.parse("ro")), group.language());
         Currency lei = Currency.of("RON");
         group.changeCurrency(lei, Map.of(flat.euro, ExchangeRate.parse("5")));
         assertEquals(lei, group.currency());
@@ -294,14 +275,12 @@ class GroupTest {
         group.setNameAsync("Home").join();
         group.setDescriptionAsync("Shared flat").join();
         group.setLanguageAsync(Language.parse("ro")).join();
-        assertEquals(
-                List.of("Home", Optional.of("Shared flat")),
-                List.of(group.name(), group.description()));
+        assertEquals("Home", group.name());
+        assertEquals(Optional.of("Shared flat"), group.description());
         group.clearDescriptionAsync().join();
         group.clearLanguageAsync().join();
-        assertEquals(
-                List.of(Optional.empty(), Optional.empty()),
-                List.of(group.description(), group.language()));
+        assertEquals(Optional.empty(), group.description());
+        assertEquals(Optional.empty(), group.language());
         Currency lei = Currency.of("RON");
         group.changeCurrencyAsync(lei, Map.of(flat.euro, ExchangeRate.parse("5"))).join();
         assertEquals(lei, group.currency());
@@ -319,16 +298,16 @@ class GroupTest {
     void aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() throws EranosException {
         Currency euro = Currency.of("EUR");
         Group plain = Group.builder(euro, "Trip").build();
-        assertEquals(
-                List.of(Optional.empty(), Optional.empty()),
-                List.of(plain.description(), plain.language()));
+        assertEquals(Optional.empty(), plain.description());
+        assertEquals(Optional.empty(), plain.language());
         EranosException.Group blank =
                 assertThrows(EranosException.Group.class, () -> Group.builder(euro, " ").build());
         assertEquals(new GroupFailure.EmptyName(), blank.failure());
         assertEquals("the group name must not be empty", blank.getMessage());
         EranosException.InvalidJson json =
                 assertThrows(EranosException.InvalidJson.class, () -> Group.load("{"));
-        assertEquals(List.of(1L, 1L), List.of(json.line(), json.column()));
+        assertEquals(1L, json.column());
+        assertEquals(1L, json.line());
         assertEquals("the saved group ends early, at line 1, column 1", json.getMessage());
         CompletionException loading =
                 assertThrows(CompletionException.class, () -> Group.loadAsync("{").join());
@@ -355,8 +334,8 @@ class GroupTest {
         assertEquals(group.members(), reader.members());
         assertEquals(group.member(flat.ana), reader.member(flat.ana));
         assertFalse(reader.isArchived(flat.ana));
-        assertEquals(
-                List.of("Flat", Optional.of("Rent")), List.of(reader.name(), reader.description()));
+        assertEquals("Flat", reader.name());
+        assertEquals(Optional.of("Rent"), reader.description());
         assertEquals(group.language(), reader.language());
         assertEquals(
                 group.settlement(SettlementStrategy.GREEDY),

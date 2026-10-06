@@ -39,6 +39,324 @@ typedef struct Categories {
     Id transport;
 } Categories;
 
+/// A row of the table of the group's details: a detail and its value.
+typedef struct DetailRow {
+    /// What the detail is.
+    Line detail;
+    /// Its value.
+    Line value;
+} DetailRow;
+
+/// A table of the group's details, its columns from @p numbersFrom on aligned to the right.
+static Table *detailTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Detail", "Value"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of the group's details, its cells in the order of the table's headers.
+static void addDetailRow(Table *const table, DetailRow const *const row) { tableAdd(table, (Line const[]){row->detail, row->value}); }
+
+/// A row of the table of members: a member's name, contact details, and accounts.
+typedef struct MemberRow {
+    /// Their accounts, one per line.
+    Line accounts;
+    /// Their email, or nothing.
+    Line email;
+    /// Their first and last name.
+    Line name;
+    /// Their phone number, or nothing.
+    Line phone;
+} MemberRow;
+
+/// A table of members, its columns from @p numbersFrom on aligned to the right.
+static Table *memberTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Member", "Email", "Phone", "Accounts"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of members, its cells in the order of the table's headers.
+static void addMemberRow(Table *const table, MemberRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->email, row->phone, row->accounts});
+}
+
+/// A row of the table of checks: a text, what it was checked as, and what validation made of it.
+typedef struct CheckRow {
+    /// The text checked, quoted.
+    Line input;
+    /// What it was checked as.
+    Line kind;
+    /// The value it makes, or its refusal.
+    Line result;
+} CheckRow;
+
+/// A table of checks, its columns from @p numbersFrom on aligned to the right.
+static Table *checkTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"Input", "Checked as", "Result"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of checks, its cells in the order of the table's headers.
+static void addCheckRow(Table *const table, CheckRow const *const row) { tableAdd(table, (Line const[]){row->input, row->kind, row->result}); }
+
+/// A row of the table of refusals: a change and the message the library refused it with.
+typedef struct RefusalRow {
+    /// The change.
+    Line change;
+    /// The library's message.
+    Line error;
+} RefusalRow;
+
+/// A table of refusals, its columns from @p numbersFrom on aligned to the right.
+static Table *refusalTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Change", "Refused with"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of refusals, its cells in the order of the table's headers.
+static void addRefusalRow(Table *const table, RefusalRow const *const row) { tableAdd(table, (Line const[]){row->change, row->error}); }
+
+/// A row of the table of shares: an expense, how it divides, and every involved member's payment and consumption.
+typedef struct ShareRow {
+    /// What each member consumed, one per line.
+    Line consumed;
+    /// The expense's name.
+    Line expense;
+    /// How it divides, in a few words.
+    Line how;
+    /// The involved members, one per line.
+    Line members;
+    /// What each member paid, one per line, or nothing for one who paid nothing.
+    Line paid;
+} ShareRow;
+
+/// A table of shares, its columns from @p numbersFrom on aligned to the right.
+static Table *shareTable(size_t const numbersFrom) {
+    return tableCreate(5, (char const *const[]){"Expense", "Split", "Member", "Paid", "Consumed"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of shares, its cells in the order of the table's headers.
+static void addShareRow(Table *const table, ShareRow const *const row) {
+    tableAdd(table, (Line const[]){row->expense, row->how, row->members, row->paid, row->consumed});
+}
+
+/// A row of a receipt: a line, who shared it, its quantity, its unit price, and its total.
+typedef struct ItemRow {
+    /// The quantity times the unit price.
+    Line lineTotal;
+    /// What was ordered.
+    Line name;
+    /// How many were ordered.
+    Line quantity;
+    /// Who shared it.
+    Line sharedBy;
+    /// The price of one.
+    Line unitPrice;
+} ItemRow;
+
+/// A table of a receipt's lines, its columns from @p numbersFrom on aligned to the right.
+static Table *itemTable(size_t const numbersFrom) {
+    return tableCreate(5, (char const *const[]){"Item", "Shared by", "Quantity", "Unit price", "Line total"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of a receipt's lines, its cells in the order of the table's headers.
+static void addItemRow(Table *const table, ItemRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->sharedBy, row->quantity, row->unitPrice, row->lineTotal});
+}
+
+/// A row of the table of entries: an expense or a transfer, who paid it, and its amount as entered and in the group
+/// currency.
+typedef struct EntryRow {
+    /// Its amount in the group currency.
+    Line converted;
+    /// What it was.
+    Line name;
+    /// Its amount as entered.
+    Line original;
+    /// Who paid it.
+    Line payer;
+    /// The rate it was entered at.
+    Line rate;
+} EntryRow;
+
+/// A table of entries, its columns from @p numbersFrom on aligned to the right.
+static Table *entryTable(size_t const numbersFrom) {
+    return tableCreate(5, (char const *const[]){"Entry", "Paid by", "Entered as", "Rate", "In the group currency"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of entries, its cells in the order of the table's headers.
+static void addEntryRow(Table *const table, EntryRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->payer, row->original, row->rate, row->converted});
+}
+
+/// A row of the table of edits: an entry and what happened to it.
+typedef struct EditRow {
+    /// What happened to it.
+    Line edit;
+    /// The entry.
+    Line entry;
+} EditRow;
+
+/// A table of edits, its columns from @p numbersFrom on aligned to the right.
+static Table *editTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Entry", "Edit"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of edits, its cells in the order of the table's headers.
+static void addEditRow(Table *const table, EditRow const *const row) { tableAdd(table, (Line const[]){row->entry, row->edit}); }
+
+/// A row of the table of balances: what a member paid, consumed, sent, and received, and their balance.
+typedef struct BalanceRow {
+    /// What is left.
+    Line balance;
+    /// What they consumed.
+    Line consumed;
+    /// Their first name.
+    Line name;
+    /// What they paid.
+    Line paid;
+    /// What they received.
+    Line received;
+    /// What they sent.
+    Line sent;
+} BalanceRow;
+
+/// A table of balances, its columns from @p numbersFrom on aligned to the right.
+static Table *balanceTable(size_t const numbersFrom) {
+    return tableCreate(6, (char const *const[]){"Member", "Paid", "Consumed", "Sent", "Received", "Balance"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of balances, its cells in the order of the table's headers.
+static void addBalanceRow(Table *const table, BalanceRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->paid, row->consumed, row->sent, row->received, row->balance});
+}
+
+/// A row of the table of statuses: whether a member is active or archived, and their balance.
+typedef struct StatusRow {
+    /// Their balance.
+    Line balance;
+    /// Their first name.
+    Line name;
+    /// Whether they are active or archived.
+    Line status;
+} StatusRow;
+
+/// A table of statuses, its columns from @p numbersFrom on aligned to the right.
+static Table *statusTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"Member", "Status", "Balance"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of statuses, its cells in the order of the table's headers.
+static void addStatusRow(Table *const table, StatusRow const *const row) { tableAdd(table, (Line const[]){row->name, row->status, row->balance}); }
+
+/// A row of the table of categories: a category, how many expenses it holds, and their total.
+typedef struct CategoryRow {
+    /// How many expenses it holds.
+    Line expenses;
+    /// Its name.
+    Line name;
+    /// What its expenses came to.
+    Line total;
+} CategoryRow;
+
+/// A table of categories, its columns from @p numbersFrom on aligned to the right.
+static Table *categoryTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"Category", "Expenses", "Total"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of categories, its cells in the order of the table's headers.
+static void addCategoryRow(Table *const table, CategoryRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->expenses, row->total});
+}
+
+/// A row of the table of each member's consumption per category.
+typedef struct MemberCategoryRow {
+    /// What they consumed of Food.
+    Line food;
+    /// What they consumed of Lodging.
+    Line lodging;
+    /// Their first name.
+    Line name;
+    /// What they consumed of Getting around.
+    Line transport;
+    /// What they consumed of Uncategorised.
+    Line uncategorised;
+} MemberCategoryRow;
+
+/// A table of each member's consumption per category, its columns from @p numbersFrom on aligned to the right.
+static Table *memberCategoryTable(size_t const numbersFrom) {
+    return tableCreate(5, (char const *const[]){"Member", "Food", "Lodging", "Getting around", "Uncategorised"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of each member's consumption per category, its cells in the order of the table's
+/// headers.
+static void addMemberCategoryRow(Table *const table, MemberCategoryRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->food, row->lodging, row->transport, row->uncategorised});
+}
+
+/// A row of the table of strategies: a strategy and how many payments it plans.
+typedef struct StrategyRow {
+    /// How many payments it plans.
+    Line payments;
+    /// Its name.
+    Line strategy;
+} StrategyRow;
+
+/// A table of strategies, its columns from @p numbersFrom on aligned to the right.
+static Table *strategyTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Strategy", "Payments"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of strategies, its cells in the order of the table's headers.
+static void addStrategyRow(Table *const table, StrategyRow const *const row) { tableAdd(table, (Line const[]){row->strategy, row->payments}); }
+
+/// A row of the table of payments: who pays whom, and how much.
+typedef struct PaymentRow {
+    /// How much is paid.
+    Line amount;
+    /// Who pays.
+    Line from;
+    /// Who is paid.
+    Line to;
+} PaymentRow;
+
+/// A table of payments, its columns from @p numbersFrom on aligned to the right.
+static Table *paymentTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"From", "To", "Amount"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of payments, its cells in the order of the table's headers.
+static void addPaymentRow(Table *const table, PaymentRow const *const row) { tableAdd(table, (Line const[]){row->from, row->to, row->amount}); }
+
+/// A row of the table of loads: a change to a saved group, and the message its load is refused with.
+typedef struct LoadRow {
+    /// The change to the file.
+    Line change;
+    /// The library's message.
+    Line message;
+} LoadRow;
+
+/// A table of loads, its columns from @p numbersFrom on aligned to the right.
+static Table *loadTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Change to the file", "Message"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of loads, its cells in the order of the table's headers.
+static void addLoadRow(Table *const table, LoadRow const *const row) { tableAdd(table, (Line const[]){row->change, row->message}); }
+
+/// A row of the table of currencies: a currency's code, name, numeric code, and decimal places.
+typedef struct CurrencyRow {
+    /// Its ISO 4217 code.
+    Line code;
+    /// How many decimal places its minor unit has.
+    Line decimalPlaces;
+    /// Its name.
+    Line name;
+    /// Its ISO 4217 number.
+    Line numericCode;
+} CurrencyRow;
+
+/// A table of currencies, its columns from @p numbersFrom on aligned to the right.
+static Table *currencyTable(size_t const numbersFrom) {
+    return tableCreate(4, (char const *const[]){"Code", "Name", "Numeric code", "Decimal places"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of currencies, its cells in the order of the table's headers.
+static void addCurrencyRow(Table *const table, CurrencyRow const *const row) {
+    tableAdd(table, (Line const[]){row->code, row->name, row->numericCode, row->decimalPlaces});
+}
+
+/// A row of the table of values: an input and what the library makes of it.
+typedef struct ValueRow {
+    /// The input.
+    Line input;
+    /// What the library makes of it, or its refusal.
+    Line result;
+} ValueRow;
+
+/// A table of values, its columns from @p numbersFrom on aligned to the right.
+static Table *valueTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Input", "Result"}, numbersFrom); }
+
+/// Adds @p row to @p table, a table of values, its cells in the order of the table's headers.
+static void addValueRow(Table *const table, ValueRow const *const row) { tableAdd(table, (Line const[]){row->input, row->result}); }
+
 /// The amount @p text of euros.
 static EranosMoney *eur(char const *const text) { return amountOf(text, "EUR"); }
 
@@ -224,7 +542,7 @@ static void printBalances(EranosGroup const *const group) {
     Line const settledLine = balanceLine(settled);
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(6, (char const *const[]){"Member", "Paid", "Consumed", "Sent", "Received", "Balance"}, 1);
+    Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -233,16 +551,23 @@ static void printBalances(EranosGroup const *const group) {
         eranosMemberFirstName(member, text);
         // The summary lists the members with a total; every total of the others is zero.
         if (nullptr == found) {
-            tableAdd(table, (Line const[]){textLine(text), zero, zero, zero, zero, settledLine});
+            addBalanceRow(table, &(BalanceRow){
+                                     .balance = settledLine,
+                                     .consumed = zero,
+                                     .name = textLine(text),
+                                     .paid = zero,
+                                     .received = zero,
+                                     .sent = zero,
+                                 });
         } else {
-            tableAdd(table, (Line const[]){
-                                textLine(text),
-                                moneyLine(eranosMemberSummaryPaid(found)),
-                                moneyLine(eranosMemberSummaryShare(found)),
-                                moneyLine(eranosMemberSummarySent(found)),
-                                moneyLine(eranosMemberSummaryReceived(found)),
-                                balanceLine(eranosMemberSummaryBalance(found)),
-                            });
+            addBalanceRow(table, &(BalanceRow){
+                                     .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                                     .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                                     .name = textLine(text),
+                                     .paid = moneyLine(eranosMemberSummaryPaid(found)),
+                                     .received = moneyLine(eranosMemberSummaryReceived(found)),
+                                     .sent = moneyLine(eranosMemberSummarySent(found)),
+                                 });
         }
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
@@ -292,16 +617,16 @@ static void printCategories(EranosGroup const *const group) {
     Id const builtIn = builtInCategory(group);
     EranosSummary *const summary = summaryOf(group);
     EranosCategoryTotalList *const totals = eranosSummaryCategoryTotals(summary);
-    Table *const table = tableCreate(3, (char const *const[]){"Category", "Expenses", "Total"}, 1);
+    Table *const table = categoryTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosCategoryTotalListLength(totals) > index; ++index) {
         EranosCategoryTotal *const total = eranosCategoryTotalListGet(totals, index);
         eranosCategoryTotalCategory(total, text);
-        tableAdd(table, (Line const[]){
-                            categoryName(group, eranosTextData(text)),
-                            lineOf("%zu", expensesIn(group, eranosTextData(text), builtIn)),
-                            moneyLine(eranosCategoryTotalTotal(total)),
-                        });
+        addCategoryRow(table, &(CategoryRow){
+                                  .expenses = lineOf("%zu", expensesIn(group, eranosTextData(text), builtIn)),
+                                  .name = categoryName(group, eranosTextData(text)),
+                                  .total = moneyLine(eranosCategoryTotalTotal(total)),
+                              });
         eranosCategoryTotalDestroy(total);
     }
     tablePrint(table);
@@ -343,7 +668,13 @@ static void addExpenseEntries(EranosGroup const *const group, char const *const 
             Members const paidBy = splitMembers(payers);
             EranosMoney *total = nullptr;
             must(eranosExpenseTotal(expense, &total));
-            tableAdd(table, (Line const[]){textLine(text), names(group, &paidBy), moneyLine(total), rateLine(eranosExpenseCost(expense)), converted});
+            addEntryRow(table, &(EntryRow){
+                                   .converted = converted,
+                                   .name = textLine(text),
+                                   .original = moneyLine(total),
+                                   .payer = names(group, &paidBy),
+                                   .rate = rateLine(eranosExpenseCost(expense)),
+                               });
             eranosSplitDestroy(payers);
             eranosExpenseSharesDestroy(shares);
         }
@@ -371,13 +702,13 @@ static void addTransferEntries(EranosGroup const *const group, char const *const
             eranosTransferTo(transfer, text);
             Line const to = firstName(group, eranosTextData(text));
             eranosTransferFrom(transfer, text);
-            tableAdd(table, (Line const[]){
-                                lineOf("Transfer to %s", to.text),
-                                firstName(group, eranosTextData(text)),
-                                costAmount(eranosTransferCost(transfer)),
-                                rateLine(eranosTransferCost(transfer)),
-                                converted,
-                            });
+            addEntryRow(table, &(EntryRow){
+                                   .converted = converted,
+                                   .name = lineOf("Transfer to %s", to.text),
+                                   .original = costAmount(eranosTransferCost(transfer)),
+                                   .payer = firstName(group, eranosTextData(text)),
+                                   .rate = rateLine(eranosTransferCost(transfer)),
+                               });
         }
         eranosCostDestroy(cost);
         eranosTransferDestroy(transfer);
@@ -388,7 +719,7 @@ static void addTransferEntries(EranosGroup const *const group, char const *const
 
 /// Prints every expense and transfer of @p group but those in @p hidden, as entered and in the group currency.
 static void printEntries(EranosGroup const *const group, char const *const hidden) {
-    Table *const table = tableCreate(5, (char const *const[]){"Entry", "Paid by", "Entered as", "Rate", "In the group currency"}, 2);
+    Table *const table = entryTable(2);
     addExpenseEntries(group, hidden, table);
     addTransferEntries(group, hidden, table);
     tablePrint(table);
@@ -419,11 +750,11 @@ static EranosGroup *theGroup(void) {
     must(eranosGroupDescription(group, text));
     Line const description = textLine(text);
     eranosTextDestroy(text);
-    Table *const table = tableCreate(2, (char const *const[]){"Detail", "Value"}, 2);
-    tableAdd(table, (Line const[]){lineOf("Name"), name});
-    tableAdd(table, (Line const[]){lineOf("Currency"), currency});
-    tableAdd(table, (Line const[]){lineOf("Language"), language});
-    tableAdd(table, (Line const[]){lineOf("Description"), description});
+    Table *const table = detailTable(2);
+    addDetailRow(table, &(DetailRow){.detail = lineOf("Name"), .value = name});
+    addDetailRow(table, &(DetailRow){.detail = lineOf("Currency"), .value = currency});
+    addDetailRow(table, &(DetailRow){.detail = lineOf("Language"), .value = language});
+    addDetailRow(table, &(DetailRow){.detail = lineOf("Description"), .value = description});
     tablePrint(table);
     Line const message = messageLine(blank);
     printFormatted("The group started as Lisbon and was renamed when a day in Porto joined the plan.\n"
@@ -510,10 +841,15 @@ static Line phoneOf(EranosMember const *const member) {
 static void printMembers(EranosGroup const *const group) {
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(4, (char const *const[]){"Member", "Email", "Phone", "Accounts"}, 4);
+    Table *const table = memberTable(4);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        tableAdd(table, (Line const[]){fullName(member), emailOf(member), phoneOf(member), accountsOf(member)});
+        addMemberRow(table, &(MemberRow){
+                                .accounts = accountsOf(member),
+                                .email = emailOf(member),
+                                .name = fullName(member),
+                                .phone = phoneOf(member),
+                            });
         eranosMemberDestroy(member);
     }
     tablePrint(table);
@@ -537,7 +873,7 @@ static void addIban(Table *const table, char const *const input) {
         must(eranosIbanCountryCode(input, country));
         value = lineOf("%s, country %s", eranosTextData(iban), eranosTextData(country));
     }
-    tableAdd(table, (Line const[]){lineOf("\"%s\"", input), lineOf("IBAN"), outcomeOf(refused, value.text)});
+    addCheckRow(table, &(CheckRow){.input = lineOf("\"%s\"", input), .kind = lineOf("IBAN"), .result = outcomeOf(refused, value.text)});
     eranosTextDestroy(country);
     eranosTextDestroy(iban);
 }
@@ -552,7 +888,7 @@ static void addPhone(Table *const table, char const *const input) {
         must(eranosPhoneNumberParse(input, stored));
         value = lineOf("%s, stored as %s", eranosTextData(international), eranosTextData(stored));
     }
-    tableAdd(table, (Line const[]){lineOf("\"%s\"", input), lineOf("phone"), outcomeOf(refused, value.text)});
+    addCheckRow(table, &(CheckRow){.input = lineOf("\"%s\"", input), .kind = lineOf("phone"), .result = outcomeOf(refused, value.text)});
     eranosTextDestroy(stored);
     eranosTextDestroy(international);
 }
@@ -562,20 +898,24 @@ static void validation(EranosGroup *const group) {
     printLine("IBANs are checked against the SWIFT registry and their mod-97 check digits,\n"
               "emails against RFC 5321 and 5322, and phone numbers against their country's\n"
               "numbering plan. Required text must not be blank:");
-    Table *const table = tableCreate(3, (char const *const[]){"Input", "Checked as", "Result"}, 3);
+    Table *const table = checkTable(3);
     addIban(table, "ro49 aaaa 1b31 0075 9384 0000");
     addIban(table, "RO49 AAAA 1B31 0075 9384 0001");
     EranosText *const text = eranosTextCreate();
     EranosError *const email = eranosEmailParse("ana..popescu@example.com", text);
-    tableAdd(table, (Line const[]){lineOf("\"ana..popescu@example.com\""), lineOf("email"), outcomeOf(email, eranosTextData(text))});
+    addCheckRow(table, &(CheckRow){
+                           .input = lineOf("\"ana..popescu@example.com\""),
+                           .kind = lineOf("email"),
+                           .result = outcomeOf(email, eranosTextData(text)),
+                       });
     addPhone(table, "+351 912 345 678");
     addPhone(table, "+40 612 345 678");
     EranosError *const username = eranosUsernameParse("   ", text);
-    tableAdd(table, (Line const[]){lineOf("\"   \""), lineOf("username"), outcomeOf(username, eranosTextData(text))});
+    addCheckRow(table, &(CheckRow){.input = lineOf("\"   \""), .kind = lineOf("username"), .result = outcomeOf(username, eranosTextData(text))});
     EranosMember *member = nullptr;
     must(eranosMemberCreate("  ", &member));
     EranosError *const firstName = eranosGroupAddMember(group, member, text);
-    tableAdd(table, (Line const[]){lineOf("\"  \""), lineOf("first name"), outcomeOf(firstName, eranosTextData(text))});
+    addCheckRow(table, &(CheckRow){.input = lineOf("\"  \""), .kind = lineOf("first name"), .result = outcomeOf(firstName, eranosTextData(text))});
     eranosMemberDestroy(member);
     eranosTextDestroy(text);
     tablePrint(table);
@@ -742,9 +1082,9 @@ static Categories addCategories(EranosGroup *const group) {
     check(isFailure(homonym, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_DUPLICATE_CATEGORY_NAME) && namesExisting(homonym, food),
           "a caseless homonym is refused");
     check(isFailure(builtIn, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_BUILT_IN_CATEGORY), "the built-in category keeps its name");
-    Table *const table = tableCreate(2, (char const *const[]){"Change", "Refused with"}, 2);
-    tableAdd(table, (Line const[]){lineOf("Add a category named FOOD"), messageLine(homonym)});
-    tableAdd(table, (Line const[]){lineOf("Rename Uncategorised to Other"), messageLine(builtIn)});
+    Table *const table = refusalTable(2);
+    addRefusalRow(table, &(RefusalRow){.change = lineOf("Add a category named FOOD"), .error = messageLine(homonym)});
+    addRefusalRow(table, &(RefusalRow){.change = lineOf("Rename Uncategorised to Other"), .error = messageLine(builtIn)});
     tablePrint(table);
 
     Line const name = categoryName(group, transport.text);
@@ -837,7 +1177,13 @@ static void addShares(EranosGroup const *const group, Table *const table, Id con
         eranosMemberShareDestroy(share);
     }
     eranosExpenseName(expense, text);
-    tableAdd(table, (Line const[]){textLine(text), how(expense), names.text, paid.text, consumed.text});
+    addShareRow(table, &(ShareRow){
+                           .consumed = consumed.text,
+                           .expense = textLine(text),
+                           .how = how(expense),
+                           .members = names.text,
+                           .paid = paid.text,
+                       });
     eranosTextDestroy(text);
     eranosMemberShareListDestroy(members);
     eranosExpenseSharesDestroy(shares);
@@ -852,7 +1198,7 @@ static void printItems(EranosGroup const *const group, Id const id) {
     EranosExpenseSplit *const split = eranosExpenseSplit(expense);
     EranosItemList *const items = eranosExpenseSplitItems(split);
     check(nullptr != items, "the expense is itemised");
-    Table *const table = tableCreate(5, (char const *const[]){"Item", "Shared by", "Quantity", "Unit price", "Line total"}, 2);
+    Table *const table = itemTable(2);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
         EranosItem *const item = eranosItemListGet(items, index);
@@ -864,13 +1210,13 @@ static void printItems(EranosGroup const *const group, Id const id) {
         EranosMoney *total = nullptr;
         must(eranosMoneyCreate(eranosTextData(text), eranosMoneyMinorUnits(unitPrice) * quantity, &total));
         eranosItemName(item, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            names(group, &sharedBy),
-                            lineOf("%ld", (long)quantity),
-                            moneyLine(unitPrice),
-                            moneyLine(total),
-                        });
+        addItemRow(table, &(ItemRow){
+                              .lineTotal = moneyLine(total),
+                              .name = textLine(text),
+                              .quantity = lineOf("%ld", (long)quantity),
+                              .sharedBy = names(group, &sharedBy),
+                              .unitPrice = moneyLine(unitPrice),
+                          });
         eranosSplitDestroy(itemSplit);
         eranosItemDestroy(item);
     }
@@ -1146,7 +1492,7 @@ static Id expenses(EranosGroup *const group, People const *const people, Categor
     printLine("Seven expenses cover every way of dividing one: equally, by percentage, by parts\n"
               "(Eva counts as half), by exact amounts, with two payers, item by item, and with a\n"
               "tip. Every member's consumption adds up to the expense's total, to the cent:");
-    Table *const table = tableCreate(5, (char const *const[]){"Expense", "Split", "Member", "Paid", "Consumed"}, 3);
+    Table *const table = shareTable(3);
     Id const ids[] = {added.groceries, added.apartment, added.seafood, added.train, added.museum, added.fado, added.tour};
     for (size_t index = 0; 7 > index; ++index) {
         addShares(group, table, ids[index]);
@@ -1216,34 +1562,14 @@ static void anotherCurrency(EranosGroup *const group, People const *const people
 
 // 6. Edits.
 
-/// The edits of section 6, each an entry and what happened to it.
-typedef struct Changes {
-    /// The coffee, entered twice.
-    Line coffee;
-    /// What the coffee's edit did.
-    Line coffeeEdit;
-    /// The seafood dinner.
-    Line dinner;
-    /// What the dinner's edit did.
-    Line dinnerEdit;
-    /// Carol's transfer to the wrong member.
-    Line mistake;
-    /// What undoing it did.
-    Line mistakeEdit;
-    /// Dan's transfer for the apartment.
-    Line rent;
-    /// What its edit did.
-    Line rentEdit;
-} Changes;
-
 /// The coffee that Bob entered twice.
 static EranosExpense *coffeeOf(People const *const people, Categories const *const categories) {
     Members const drinkers = {.count = 3, .ids = {people->ana, people->bob, people->carol}};
     return inCategory(expenseOf(localCost(eur("6.00")), october(5), "Coffee", soleSplit(people->bob), equalSplit(&drinkers)), categories->food);
 }
 
-/// The dinner's receipt said 99.00: replaces its amount and gives its place.
-static void correctDinner(EranosGroup *const group, Id const seafood, Changes *const changes) {
+/// The dinner's receipt said 99.00: replaces its amount and gives its place; returns the edit.
+static EditRow correctDinner(EranosGroup *const group, Id const seafood) {
     EranosExpense *dinner = nullptr;
     must(eranosGroupExpense(group, seafood.text, &dinner));
     check(nullptr != dinner, "the dinner was added");
@@ -1257,11 +1583,11 @@ static void correctDinner(EranosGroup *const group, Id const seafood, Changes *c
     must(eranosGroupExpense(group, seafood.text, &corrected));
     EranosText *const text = eranosTextCreate();
     eranosExpenseName(previous, text);
-    changes->dinner = textLine(text);
+    Line const entry = textLine(text);
     Line const place = eranosExpenseDescription(corrected, text) ? textLine(text) : lineOf("%s", "");
     Line const before = costAmount(eranosExpenseCost(previous));
     Line const after = costAmount(eranosExpenseCost(corrected));
-    changes->dinnerEdit = lineOf("%s became %s, at %s", before.text, after.text, place.text);
+    EditRow const edit = {.edit = lineOf("%s became %s, at %s", before.text, after.text, place.text), .entry = entry};
     EranosCost *const previousCost = eranosExpenseCost(previous);
     check(isMinorUnits(eranosCostAmount(previousCost), 9'000), "the dinner was 90.00 EUR");
     eranosCostDestroy(previousCost);
@@ -1269,28 +1595,31 @@ static void correctDinner(EranosGroup *const group, Id const seafood, Changes *c
     eranosExpenseDestroy(corrected);
     eranosExpenseDestroy(previous);
     eranosExpenseDestroy(dinner);
+    return edit;
 }
 
-/// Bob entered the coffee twice: removes the copy.
-static void removeCopy(EranosGroup *const group, People const *const people, Categories const *const categories, Changes *const changes) {
+/// Bob entered the coffee twice: removes the copy; returns the edit.
+static EditRow removeCopy(EranosGroup *const group, People const *const people, Categories const *const categories) {
     addExpense(group, coffeeOf(people, categories));
     Id const copy = addExpense(group, coffeeOf(people, categories));
     EranosExpense *removed = nullptr;
     must(eranosGroupRemoveExpense(group, copy.text, &removed));
     EranosText *const text = eranosTextCreate();
     eranosExpenseName(removed, text);
-    changes->coffee = textLine(text);
+    Line const entry = textLine(text);
     Line const amount = costAmount(eranosExpenseCost(removed));
-    changes->coffeeEdit = lineOf("entered twice; the copy of %s was removed", amount.text);
+    EditRow const edit = {.edit = lineOf("entered twice; the copy of %s was removed", amount.text), .entry = entry};
     EranosExpense *gone = nullptr;
     must(eranosGroupExpense(group, copy.text, &gone));
     check(nullptr == gone, "the copy is gone");
     eranosTextDestroy(text);
     eranosExpenseDestroy(removed);
+    return edit;
 }
 
-/// Dan's part of the apartment was 120.00, not 100.00: replaces his transfer's amount and notes what it was for.
-static void correctTransfer(EranosGroup *const group, People const *const people, Changes *const changes) {
+/// Dan's part of the apartment was 120.00, not 100.00: replaces his transfer's amount and notes what it was for; returns
+/// the edit.
+static EditRow correctTransfer(EranosGroup *const group, People const *const people) {
     Id const first = addTransfer(group, transferOf(localCost(eur("100.00")), october(5), people->dan, people->ana));
     EranosTransfer *stored = nullptr;
     must(eranosGroupTransfer(group, first.text, &stored));
@@ -1305,12 +1634,14 @@ static void correctTransfer(EranosGroup *const group, People const *const people
     must(eranosGroupTransfer(group, first.text, &apartment));
     Line const dan = firstName(group, people->dan.text);
     Line const ana = firstName(group, people->ana.text);
-    changes->rent = lineOf("%s to %s", dan.text, ana.text);
     EranosText *const text = eranosTextCreate();
     Line const note = eranosTransferNote(apartment, text) ? textLine(text) : lineOf("%s", "");
     Line const before = costAmount(eranosTransferCost(replaced));
     Line const after = costAmount(eranosTransferCost(apartment));
-    changes->rentEdit = lineOf("%s became %s, noted %s", before.text, after.text, note.text);
+    EditRow const edit = {
+        .edit = lineOf("%s became %s, noted %s", before.text, after.text, note.text),
+        .entry = lineOf("%s to %s", dan.text, ana.text),
+    };
     EranosMoney *amount = nullptr;
     must(eranosGroupTransferAmount(group, first.text, &amount));
     check(isMinorUnits(amount, 12'000), "Dan's transfer is 120.00 EUR");
@@ -1318,22 +1649,23 @@ static void correctTransfer(EranosGroup *const group, People const *const people
     eranosTransferDestroy(apartment);
     eranosTransferDestroy(replaced);
     eranosTransferDestroy(stored);
+    return edit;
 }
 
-/// Carol sent 10.00 to the wrong member: removes the transfer.
-static void undoMistake(EranosGroup *const group, People const *const people, Changes *const changes) {
+/// Carol sent 10.00 to the wrong member: removes the transfer; returns the edit.
+static EditRow undoMistake(EranosGroup *const group, People const *const people) {
     Id const mistake = addTransfer(group, transferOf(localCost(eur("10.00")), october(5), people->carol, people->bob));
     EranosTransfer *undone = nullptr;
     must(eranosGroupRemoveTransfer(group, mistake.text, &undone));
     Line const carol = firstName(group, people->carol.text);
     Line const bob = firstName(group, people->bob.text);
-    changes->mistake = lineOf("%s to %s", carol.text, bob.text);
     Line const amount = costAmount(eranosTransferCost(undone));
-    changes->mistakeEdit = lineOf("%s sent to the wrong member; removed", amount.text);
+    EditRow const edit = {.edit = lineOf("%s sent to the wrong member; removed", amount.text), .entry = lineOf("%s to %s", carol.text, bob.text)};
     EranosTransfer *gone = nullptr;
     must(eranosGroupTransfer(group, mistake.text, &gone));
     check(nullptr == gone, "the mistake is gone");
     eranosTransferDestroy(undone);
+    return edit;
 }
 
 /// Whether @p error is the currency @p currency, as the currency it names.
@@ -1347,18 +1679,17 @@ static bool namesCurrency(EranosError const *const error, char const *const curr
 /// Replaces an expense and a transfer and removes one of each, then shows that a change that does not fit is refused.
 static void edits(EranosGroup *const group, People const *const people, Categories const *const categories, Id const seafood) {
     section("6. Edits");
-    Changes changes;
-    correctDinner(group, seafood, &changes);
-    removeCopy(group, people, categories, &changes);
-    correctTransfer(group, people, &changes);
-    undoMistake(group, people, &changes);
+    EditRow const dinner = correctDinner(group, seafood);
+    EditRow const coffee = removeCopy(group, people, categories);
+    EditRow const rent = correctTransfer(group, people);
+    EditRow const mistake = undoMistake(group, people);
     printLine("Entries are values: an edit starts from a copy made with to_builder, keeps the\n"
               "identifier, and replaces the entry; a removal takes it out with its totals.");
-    Table *const table = tableCreate(2, (char const *const[]){"Entry", "Edit"}, 2);
-    tableAdd(table, (Line const[]){changes.dinner, changes.dinnerEdit});
-    tableAdd(table, (Line const[]){changes.coffee, changes.coffeeEdit});
-    tableAdd(table, (Line const[]){changes.rent, changes.rentEdit});
-    tableAdd(table, (Line const[]){changes.mistake, changes.mistakeEdit});
+    Table *const table = editTable(2);
+    addEditRow(table, &dinner);
+    addEditRow(table, &coffee);
+    addEditRow(table, &rent);
+    addEditRow(table, &mistake);
     tablePrint(table);
     printLine("The balances after the edits:");
     printBalances(group);
@@ -1384,10 +1715,10 @@ static void edits(EranosGroup *const group, People const *const people, Categori
     check(isFailure(sameMember, ERANOS_ERROR_KIND_TRANSFER, ERANOS_FAILURE_TRANSFER_SAME_MEMBER), "a transfer to oneself is refused");
     check(isFailure(unrated, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_MISSING_EXCHANGE_RATE) && namesCurrency(unrated, "RON"),
           "an amount in RON without a rate is refused");
-    Table *const refusals = tableCreate(2, (char const *const[]){"Change", "Refused with"}, 2);
-    tableAdd(refusals, (Line const[]){lineOf("A taxi split 50%% and 49.99%%"), messageLine(unbalanced)});
-    tableAdd(refusals, (Line const[]){lineOf("Ana paying herself back"), messageLine(sameMember)});
-    tableAdd(refusals, (Line const[]){lineOf("Souvenirs in RON, without a rate"), messageLine(unrated)});
+    Table *const refusals = refusalTable(2);
+    addRefusalRow(refusals, &(RefusalRow){.change = lineOf("A taxi split 50%% and 49.99%%"), .error = messageLine(unbalanced)});
+    addRefusalRow(refusals, &(RefusalRow){.change = lineOf("Ana paying herself back"), .error = messageLine(sameMember)});
+    addRefusalRow(refusals, &(RefusalRow){.change = lineOf("Souvenirs in RON, without a rate"), .error = messageLine(unrated)});
     tablePrint(refusals);
     printLine("The balances again, unchanged:");
     printBalances(group);
@@ -1422,7 +1753,7 @@ static void comingsAndGoings(EranosGroup *const group, People const *const peopl
     EranosSummary *const summary = summaryOf(group);
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(3, (char const *const[]){"Member", "Status", "Balance"}, 2);
+    Table *const table = statusTable(2);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
         (void)eranosMemberId(member, text);
@@ -1431,8 +1762,11 @@ static void comingsAndGoings(EranosGroup *const group, People const *const peopl
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         if (nullptr != found) {
             eranosMemberFirstName(member, text);
-            tableAdd(table,
-                     (Line const[]){textLine(text), lineOf("%s", archived ? "archived" : "active"), balanceLine(eranosMemberSummaryBalance(found))});
+            addStatusRow(table, &(StatusRow){
+                                    .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                                    .name = textLine(text),
+                                    .status = lineOf("%s", archived ? "archived" : "active"),
+                                });
         }
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
@@ -1443,9 +1777,9 @@ static void comingsAndGoings(EranosGroup *const group, People const *const peopl
     bool const namesDan = eranosErrorMember(farewell, text) && 0 == strcmp(eranosTextData(text), people->dan.text);
     check(isFailure(farewell, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_ARCHIVED_MEMBER) && namesDan, "an archived member joins no expense");
     check(isFailure(inUse, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_MEMBER_IN_USE) && nullptr == kept, "a referenced member stays");
-    Table *const refusals = tableCreate(2, (char const *const[]){"Change", "Refused with"}, 2);
-    tableAdd(refusals, (Line const[]){lineOf("A farewell dinner with Dan"), messageLine(farewell)});
-    tableAdd(refusals, (Line const[]){lineOf("Removing Dan"), messageLine(inUse)});
+    Table *const refusals = refusalTable(2);
+    addRefusalRow(refusals, &(RefusalRow){.change = lineOf("A farewell dinner with Dan"), .error = messageLine(farewell)});
+    addRefusalRow(refusals, &(RefusalRow){.change = lineOf("Removing Dan"), .error = messageLine(inUse)});
     tablePrint(refusals);
     must(eranosGroupUnarchiveMember(group, people->dan.text));
     printLine("When Dan joins the next trip, unarchiving him makes him active again.");
@@ -1510,20 +1844,20 @@ static void printMemberCategories(EranosGroup const *const group, Categories con
     EranosSummary *const summary = summaryOf(group);
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(5, (char const *const[]){"Member", "Food", "Lodging", "Getting around", "Uncategorised"}, 1);
+    Table *const table = memberCategoryTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
         (void)eranosMemberId(member, text);
         EranosCategoryTotalList *const own = byCategory(summary, eranosTextData(text));
         eranosMemberFirstName(member, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            categoryLine(own, categories->food, zero),
-                            categoryLine(own, categories->lodging, zero),
-                            categoryLine(own, categories->transport, zero),
-                            categoryLine(own, builtIn, zero),
-                        });
+        addMemberCategoryRow(table, &(MemberCategoryRow){
+                                        .food = categoryLine(own, categories->food, zero),
+                                        .lodging = categoryLine(own, categories->lodging, zero),
+                                        .name = textLine(text),
+                                        .transport = categoryLine(own, categories->transport, zero),
+                                        .uncategorised = categoryLine(own, builtIn, zero),
+                                    });
         eranosCategoryTotalListDestroy(own);
         eranosMemberDestroy(member);
     }
@@ -1749,27 +2083,30 @@ static void settlingUp(EranosGroup *const group) {
     printLine("Each strategy turns the balances into payments: the direct one pays back every\n"
               "pair's own debts, greedy pays the largest amounts first, and the minimum one\n"
               "finds the fewest payments.");
-    Table *const counts = tableCreate(2, (char const *const[]){"Strategy", "Payments"}, 1);
+    Table *const counts = strategyTable(1);
     for (size_t index = 0; 3 > index; ++index) {
         EranosPaymentList *const payments = planOf(group, strategies[index]);
-        tableAdd(counts, (Line const[]){lineOf("%s", strategyName(strategies[index])), lineOf("%zu", eranosPaymentListLength(payments))});
+        addStrategyRow(counts, &(StrategyRow){
+                                   .payments = lineOf("%zu", eranosPaymentListLength(payments)),
+                                   .strategy = lineOf("%s", strategyName(strategies[index])),
+                               });
         eranosPaymentListDestroy(payments);
     }
     tablePrint(counts);
     EranosPaymentList *const plan = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
     printLine("The group follows the minimum plan:");
-    Table *const table = tableCreate(3, (char const *const[]){"From", "To", "Amount"}, 2);
+    Table *const table = paymentTable(2);
     EranosText *const from = eranosTextCreate();
     EranosText *const to = eranosTextCreate();
     for (size_t index = 0; eranosPaymentListLength(plan) > index; ++index) {
         EranosPayment *const payment = eranosPaymentListGet(plan, index);
         eranosPaymentFrom(payment, from);
         eranosPaymentTo(payment, to);
-        tableAdd(table, (Line const[]){
-                            firstName(group, eranosTextData(from)),
-                            firstName(group, eranosTextData(to)),
-                            moneyLine(eranosPaymentAmount(payment)),
-                        });
+        addPaymentRow(table, &(PaymentRow){
+                                 .amount = moneyLine(eranosPaymentAmount(payment)),
+                                 .from = firstName(group, eranosTextData(from)),
+                                 .to = firstName(group, eranosTextData(to)),
+                             });
         eranosPaymentDestroy(payment);
     }
     tablePrint(table);
@@ -1859,10 +2196,10 @@ static void savingAndLoading(EranosGroup const *const group, People const *const
     check(isFailure(blank, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_EMPTY_NAME), "a blank name is refused");
     check(isFailure(homonym, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_DUPLICATE_CATEGORY_NAME) && namesExisting(homonym, categories->food),
           "a caseless homonym is refused");
-    Table *const table = tableCreate(2, (char const *const[]){"Change to the file", "Message"}, 2);
-    tableAdd(table, (Line const[]){lineOf("\"format\": 3"), messageLine(format)});
-    tableAdd(table, (Line const[]){lineOf("a blank group name"), messageLine(blank)});
-    tableAdd(table, (Line const[]){lineOf("Lodging renamed FOOD"), messageLine(homonym)});
+    Table *const table = loadTable(2);
+    addLoadRow(table, &(LoadRow){.change = lineOf("\"format\": 3"), .message = messageLine(format)});
+    addLoadRow(table, &(LoadRow){.change = lineOf("a blank group name"), .message = messageLine(blank)});
+    addLoadRow(table, &(LoadRow){.change = lineOf("Lodging renamed FOOD"), .message = messageLine(homonym)});
     tablePrint(table);
 
     EranosText *const resaved = eranosTextCreate();
@@ -1883,7 +2220,7 @@ static void savingAndLoading(EranosGroup const *const group, People const *const
 /// Prints four currencies, and that an unknown code is refused.
 static void currencies(void) {
     char const *const codes[] = {"EUR", "RON", "JPY", "BHD"};
-    Table *const table = tableCreate(4, (char const *const[]){"Code", "Name", "Numeric code", "Decimal places"}, 2);
+    Table *const table = currencyTable(2);
     EranosText *const code = eranosTextCreate();
     EranosText *const name = eranosTextCreate();
     for (size_t index = 0; 4 > index; ++index) {
@@ -1891,12 +2228,12 @@ static void currencies(void) {
         must(eranosCurrencyDetailsOf(codes[index], &details));
         eranosCurrencyDetailsCode(details, code);
         eranosCurrencyDetailsName(details, name);
-        tableAdd(table, (Line const[]){
-                            textLine(code),
-                            textLine(name),
-                            lineOf("%ld", (long)eranosCurrencyDetailsNumericCode(details)),
-                            lineOf("%ld", (long)eranosCurrencyDetailsDecimalPlaces(details)),
-                        });
+        addCurrencyRow(table, &(CurrencyRow){
+                                  .code = textLine(code),
+                                  .decimalPlaces = lineOf("%ld", (long)eranosCurrencyDetailsDecimalPlaces(details)),
+                                  .name = textLine(name),
+                                  .numericCode = lineOf("%ld", (long)eranosCurrencyDetailsNumericCode(details)),
+                              });
         eranosCurrencyDetailsDestroy(details);
     }
     eranosTextDestroy(name);
@@ -1970,18 +2307,21 @@ static void amounts(void) {
     Line const costLine = moneyLine(eranosCostAmount(cost));
     Line const doubledLine = moneyLine(eranosCostAmount(doubled));
     printLine("Amounts are exact minor units in their currency:");
-    Table *const table = tableCreate(2, (char const *const[]){"Input", "Result"}, 2);
-    tableAdd(table, (Line const[]){lineOf("12.34 EUR + 0.66 EUR"), sum});
-    tableAdd(table, (Line const[]){lineOf("5.00 EUR − 7.50 EUR"), lineOf("%s, negative: %s", changeLine.text, 0 > changeUnits ? "true" : "false")});
-    tableAdd(table, (Line const[]){lineOf("1.00 EUR + 1.00 RON"), mixed});
-    tableAdd(table, (Line const[]){lineOf("1.005 EUR"), decimals});
-    tableAdd(table, (Line const[]){lineOf("1500 JPY"), lineOf("%s, %lld minor units", yenLine.text, (long long)yenUnits)});
-    tableAdd(table, (Line const[]){lineOf("1234 minor units of BHD"), dinarsLine});
-    tableAdd(table, (Line const[]){lineOf("zero RON"), lineOf("%s, zero: %s", nothingLine.text, zero ? "true" : "false")});
-    tableAdd(table, (Line const[]){
-                        lineOf("10.00 EUR at 4.9765"),
-                        lineOf("%s at %s, then %s at the same rate", costLine.text, eranosTextData(rate), doubledLine.text),
-                    });
+    Table *const table = valueTable(2);
+    addValueRow(table, &(ValueRow){.input = lineOf("12.34 EUR + 0.66 EUR"), .result = sum});
+    addValueRow(table, &(ValueRow){
+                           .input = lineOf("5.00 EUR − 7.50 EUR"),
+                           .result = lineOf("%s, negative: %s", changeLine.text, 0 > changeUnits ? "true" : "false"),
+                       });
+    addValueRow(table, &(ValueRow){.input = lineOf("1.00 EUR + 1.00 RON"), .result = mixed});
+    addValueRow(table, &(ValueRow){.input = lineOf("1.005 EUR"), .result = decimals});
+    addValueRow(table, &(ValueRow){.input = lineOf("1500 JPY"), .result = lineOf("%s, %lld minor units", yenLine.text, (long long)yenUnits)});
+    addValueRow(table, &(ValueRow){.input = lineOf("1234 minor units of BHD"), .result = dinarsLine});
+    addValueRow(table, &(ValueRow){.input = lineOf("zero RON"), .result = lineOf("%s, zero: %s", nothingLine.text, zero ? "true" : "false")});
+    addValueRow(table, &(ValueRow){
+                           .input = lineOf("10.00 EUR at 4.9765"),
+                           .result = lineOf("%s at %s, then %s at the same rate", costLine.text, eranosTextData(rate), doubledLine.text),
+                       });
     tablePrint(table);
     check(1'300 == total, "12.34 EUR and 0.66 EUR make 13.00 EUR");
     check(-250 == changeUnits, "5.00 EUR less 7.50 EUR is -2.50 EUR");
@@ -2027,16 +2367,16 @@ static void ratios(void) {
     Line const percentage = percentageLine(basisPoints);
     Line const parts = partsLine(hundredths);
     printLine("Percentages, parts, and rates are exact decimals:");
-    Table *const table = tableCreate(2, (char const *const[]){"Input", "Result"}, 2);
-    tableAdd(table, (Line const[]){lineOf("12.5%%"), lineOf("%s, %ld basis points", percentage.text, (long)basisPoints)});
-    tableAdd(table, (Line const[]){lineOf("333 basis points"), percentageLine(333)});
-    tableAdd(table, (Line const[]){lineOf("33.333%%"), tooPrecise});
-    tableAdd(table, (Line const[]){lineOf("1.5 parts"), lineOf("%s, %ld hundredths", parts.text, (long)hundredths)});
-    tableAdd(table, (Line const[]){lineOf("3 whole parts"), partsLine(300)});
-    tableAdd(table, (Line const[]){lineOf("25 hundredths of a part"), partsLine(25)});
-    tableAdd(table, (Line const[]){lineOf("0 parts"), noParts});
-    tableAdd(table, (Line const[]){lineOf("a rate of 4.97650"), exchange});
-    tableAdd(table, (Line const[]){lineOf("a rate of 0"), noRate});
+    Table *const table = valueTable(2);
+    addValueRow(table, &(ValueRow){.input = lineOf("12.5%%"), .result = lineOf("%s, %ld basis points", percentage.text, (long)basisPoints)});
+    addValueRow(table, &(ValueRow){.input = lineOf("333 basis points"), .result = percentageLine(333)});
+    addValueRow(table, &(ValueRow){.input = lineOf("33.333%%"), .result = tooPrecise});
+    addValueRow(table, &(ValueRow){.input = lineOf("1.5 parts"), .result = lineOf("%s, %ld hundredths", parts.text, (long)hundredths)});
+    addValueRow(table, &(ValueRow){.input = lineOf("3 whole parts"), .result = partsLine(300)});
+    addValueRow(table, &(ValueRow){.input = lineOf("25 hundredths of a part"), .result = partsLine(25)});
+    addValueRow(table, &(ValueRow){.input = lineOf("0 parts"), .result = noParts});
+    addValueRow(table, &(ValueRow){.input = lineOf("a rate of 4.97650"), .result = exchange});
+    addValueRow(table, &(ValueRow){.input = lineOf("a rate of 0"), .result = noRate});
     tablePrint(table);
     check(1'250 == basisPoints, "12.5 % is 1250 basis points");
     check(150 == hundredths, "1.5 parts are 150 hundredths");
@@ -2066,18 +2406,18 @@ static void datesAndIdentifiers(EranosGroup const *const group, People const *co
     Line const underscore = messageLine(eranosLanguageParse("pt_PT", text));
     eranosTextDestroy(text);
     printLine("Dates, times, identifiers, and language tags read and print the ISO forms:");
-    Table *const table = tableCreate(2, (char const *const[]){"Input", "Result"}, 2);
-    tableAdd(table, (Line const[]){lineOf("2026-10-01"), dateLine});
-    tableAdd(table, (Line const[]){lineOf("29 February 2027"), leapDay});
-    tableAdd(table, (Line const[]){lineOf("22:15"), timeLine});
-    tableAdd(table, (Line const[]){lineOf("24:00"), midnight});
-    tableAdd(table, (Line const[]){
-                        lineOf("Ana's identifier"),
-                        lineOf("%s, the same after a round trip: %s", people->ana.text, found ? "true" : "false"),
-                    });
-    tableAdd(table, (Line const[]){lineOf("not-a-uuid"), notAnId});
-    tableAdd(table, (Line const[]){lineOf("pt-pt"), language});
-    tableAdd(table, (Line const[]){lineOf("pt_PT"), underscore});
+    Table *const table = valueTable(2);
+    addValueRow(table, &(ValueRow){.input = lineOf("2026-10-01"), .result = dateLine});
+    addValueRow(table, &(ValueRow){.input = lineOf("29 February 2027"), .result = leapDay});
+    addValueRow(table, &(ValueRow){.input = lineOf("22:15"), .result = timeLine});
+    addValueRow(table, &(ValueRow){.input = lineOf("24:00"), .result = midnight});
+    addValueRow(table, &(ValueRow){
+                           .input = lineOf("Ana's identifier"),
+                           .result = lineOf("%s, the same after a round trip: %s", people->ana.text, found ? "true" : "false"),
+                       });
+    addValueRow(table, &(ValueRow){.input = lineOf("not-a-uuid"), .result = notAnId});
+    addValueRow(table, &(ValueRow){.input = lineOf("pt-pt"), .result = language});
+    addValueRow(table, &(ValueRow){.input = lineOf("pt_PT"), .result = underscore});
     tablePrint(table);
     check(1 == date.day && 10 == date.month && 2026 == date.year, "the date reads as 1 October 2026");
     check(22 == time.hour && 15 == time.minute, "the time reads as 22:15");
@@ -2221,7 +2561,7 @@ static void settleCoffee(EranosGroup *const other, EranosGroup const *const grou
               "each one on this thread. Bob adds the airport coffee through another handle,\n"
               "and the plan that settles it comes through the first:");
     EranosGroupReader *const reader = readAsync(group);
-    Table *const table = tableCreate(3, (char const *const[]){"From", "To", "Amount"}, 2);
+    Table *const table = paymentTable(2);
     EranosText *const from = eranosTextCreate();
     EranosText *const to = eranosTextCreate();
     bool toBob = true;
@@ -2231,7 +2571,11 @@ static void settleCoffee(EranosGroup *const other, EranosGroup const *const grou
         eranosPaymentTo(payment, to);
         EranosMoney *const amount = eranosPaymentAmount(payment);
         toBob = toBob && 0 == strcmp(eranosTextData(to), people->bob.text) && 1'500 == eranosMoneyMinorUnits(amount);
-        tableAdd(table, (Line const[]){readerName(reader, eranosTextData(from)), readerName(reader, eranosTextData(to)), moneyLine(amount)});
+        addPaymentRow(table, &(PaymentRow){
+                                 .amount = moneyLine(amount),
+                                 .from = readerName(reader, eranosTextData(from)),
+                                 .to = readerName(reader, eranosTextData(to)),
+                             });
         eranosPaymentDestroy(payment);
     }
     tablePrint(table);

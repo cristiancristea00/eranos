@@ -19,6 +19,9 @@ class ErrorTest {
     /** A failure of the generated code, beside the failure it must become. */
     private record Conversion(eranos.internal.EranosException generated, Object failure) {}
 
+    /** Where a saved group that is not JSON stops being JSON. */
+    private record Position(long column, long line) {}
+
     /**
      * A conversion that reached another module or failure, dropped what the failure holds, or lost
      * the message would show an app another failure than the library's.
@@ -48,7 +51,7 @@ class ErrorTest {
                         EranosException.InvalidJson.class,
                         Converting.converted(
                                 new eranos.internal.EranosException.InvalidJson(2L, "detail", 1L)));
-        assertEquals(List.of(2L, 1L), List.of(json.column(), json.line()));
+        assertEquals(new Position(2L, 1L), failure(json));
         assertEquals("detail", json.getMessage());
         assertStandard(
                 new eranos.internal.EranosException.Cancelled("detail"),
@@ -101,7 +104,7 @@ class ErrorTest {
             case EranosException.Money money -> money.failure();
             case EranosException.Settlement settlement -> settlement.failure();
             case EranosException.Transfer transfer -> transfer.failure();
-            case EranosException.InvalidJson json -> List.of(json.column(), json.line());
+            case EranosException.InvalidJson json -> new Position(json.column(), json.line());
         };
     }
 

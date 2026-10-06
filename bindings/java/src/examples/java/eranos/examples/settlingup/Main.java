@@ -25,6 +25,7 @@ import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
 import eranos.Transfer;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,53 @@ import java.util.Optional;
  */
 public final class Main {
     private Main() {}
+
+    /** An expense with who paid it and who shares it, a row of the expenses' table. */
+    private record ExpenseRow(Money amount, String name, String participants, String payer)
+            implements Row {
+        static final List<String> HEADERS = List.of("Expense", "Paid by", "Shared by", "Amount");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, payer, participants, amount.toString());
+        }
+    }
+
+    /** A member's totals, a row of the balances' table. */
+    private record BalanceRow(Balance balance, Money consumed, String name, Money paid)
+            implements Row {
+        static final List<String> HEADERS = List.of("Member", "Paid", "Consumed", "Balance");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, paid.toString(), consumed.toString(), balance.toString());
+        }
+    }
+
+    /** A payment of a plan, a row of the payments' table. */
+    private record PaymentRow(Money amount, String from, String to) implements Row {
+        static final List<String> HEADERS = List.of("From", "To", "Amount");
+
+        @Override
+        public List<String> cells() {
+            return List.of(from, to, amount.toString());
+        }
+    }
+
+    /** A strategy with what it promises and what it costs, a row of the strategies' table. */
+    private record StrategyRow(String cost, String guarantee, int payments, String strategy)
+            implements Row {
+        static final List<String> HEADERS =
+                List.of("Strategy", "Guarantee", "Cost", "Payments here");
+
+        @Override
+        public List<String> cells() {
+            return List.of(strategy, guarantee, cost, String.valueOf(payments));
+        }
+    }
+
+    /** The number of payments of each strategy's plan. */
+    private record Counts(int direct, int greedy, int minimum) {}
 
     /** Records an expense of {@code amount} EUR paid by {@code payer} and split equally. */
     private static void spend(
@@ -54,38 +102,37 @@ public final class Main {
 
     private static void printBalances(Group group) {
         Summary summary = group.summary();
-        List<List<String>> rows = new ArrayList<>();
+        List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             Optional<MemberSummary> found = member.id().flatMap(id -> totals(id, summary));
             found.ifPresent(
                     totals ->
                             rows.add(
-                                    List.of(
+                                    new BalanceRow(
+                                            totals.balance(),
+                                            totals.share(),
                                             member.firstName(),
-                                            totals.paid().toString(),
-                                            totals.share().toString(),
-                                            totals.balance().toString())));
+                                            totals.paid())));
         }
-        printTable(List.of("Member", "Paid", "Consumed", "Balance"), rows, 1);
+        printTable(BalanceRow.HEADERS, rows, 1);
     }
 
     private static void printPayments(Group group, Settlement settlement) throws EranosException {
-        List<List<String>> rows = new ArrayList<>();
+        List<PaymentRow> rows = new ArrayList<>();
         for (Payment payment : settlement.payments()) {
             rows.add(
-                    List.of(
+                    new PaymentRow(
+                            payment.amount(),
                             names(group, List.of(payment.from())),
-                            names(group, List.of(payment.to())),
-                            payment.amount().toString()));
+                            names(group, List.of(payment.to()))));
         }
-        printTable(List.of("From", "To", "Amount"), rows, 2);
+        printTable(PaymentRow.HEADERS, rows, 2);
     }
 
     /**
-     * Prints each strategy's plan with what it promises; returns the number of payments of each, in
-     * the order minimum, greedy, direct.
+     * Prints each strategy's plan with what it promises; returns the number of payments of each.
      */
-    private static List<Integer> strategies(Group group) throws EranosException {
+    private static Counts strategies(Group group) throws EranosException {
         section("3. Minimum transfers");
         Settlement minimum = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
         System.out.print(
@@ -122,26 +169,26 @@ public final class Main {
 
         section("6. The strategies side by side");
         printTable(
-                List.of("Strategy", "Guarantee", "Cost", "Payments here"),
+                StrategyRow.HEADERS,
                 List.of(
-                        List.of(
-                                "MinimumTransfers",
-                                "the fewest payments",
+                        new StrategyRow(
                                 "O(2ⁿ·n) for n open balances",
-                                String.valueOf(minimum.payments().size())),
-                        List.of(
-                                "Greedy",
-                                "at most n − 1 payments",
+                                "the fewest payments",
+                                minimum.payments().size(),
+                                "MinimumTransfers"),
+                        new StrategyRow(
                                 "O(n log n)",
-                                String.valueOf(greedy.payments().size())),
-                        List.of(
-                                "Direct",
-                                "one payment per pair in debt",
+                                "at most n − 1 payments",
+                                greedy.payments().size(),
+                                "Greedy"),
+                        new StrategyRow(
                                 "O(pairs)",
-                                String.valueOf(direct.payments().size()))),
+                                "one payment per pair in debt",
+                                direct.payments().size(),
+                                "Direct")),
                 3);
-        return List.of(
-                minimum.payments().size(), greedy.payments().size(), direct.payments().size());
+        return new Counts(
+                direct.payments().size(), greedy.payments().size(), minimum.payments().size());
     }
 
     /**
@@ -173,22 +220,22 @@ public final class Main {
             spend(group, "Groceries", "6.00", carol, List.of(bob, dan));
             spend(group, "Coffee", "2.00", ana, List.of(dan, eva));
             spend(group, "Snacks", "1.00", filip, List.of(ana));
-            List<List<String>> expenses = new ArrayList<>();
+            List<ExpenseRow> expenses = new ArrayList<>();
             for (Expense expense : group.expenses()) {
                 expenses.add(
-                        List.of(
+                        new ExpenseRow(
+                                expense.total(),
                                 expense.name(),
-                                names(group, expense.payers().members()),
                                 names(group, participants(expense.split())),
-                                expense.total().toString()));
+                                names(group, expense.payers().members())));
             }
-            printTable(List.of("Expense", "Paid by", "Shared by", "Amount"), expenses, 3);
+            printTable(ExpenseRow.HEADERS, expenses, 3);
 
             section("2. Balances");
             System.out.println("Four members are owed money and two owe it:");
             printBalances(group);
 
-            List<Integer> payments = strategies(group);
+            Counts payments = strategies(group);
 
             section("7. Settling up for real");
             Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
@@ -214,7 +261,7 @@ public final class Main {
             // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four payments suffice;
             // greedy pays the largest amounts first and needs five; the unsimplified debts between
             // pairs need seven.
-            check(List.of(4, 5, 7).equals(payments));
+            check(new Counts(7, 5, 4).equals(payments));
             Summary summary = group.summary();
             for (MemberId member : List.of(ana, bob, carol, dan, eva, filip)) {
                 check(

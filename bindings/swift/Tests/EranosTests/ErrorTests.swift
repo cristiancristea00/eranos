@@ -9,8 +9,8 @@ import Testing
 
 /// A failure of the generated code, beside the error it must become.
 private struct Conversion {
-    let generated: EranosGenerated.EranosError
     let expected: Eranos.EranosError
+    let generated: EranosGenerated.EranosError
 }
 
 /// `minorUnits` cents, as the generated code holds them.
@@ -36,268 +36,268 @@ private func known(_ code: String) -> Eranos.Currency {
 /// Every failure the generated code can report, with every reason of a refused IBAN.
 private let conversions: [Conversion] = [
     Conversion(
-        generated: .Account(detail: "detail", failure: .emptyName),
-        expected: .account(.emptyName, detail: "detail")
+        expected: .account(.emptyName, detail: "detail"),
+        generated: .Account(detail: "detail", failure: .emptyName)
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .emptyUsername),
-        expected: .account(.emptyUsername, detail: "detail")
+        expected: .account(.emptyUsername, detail: "detail"),
+        generated: .Account(detail: "detail", failure: .emptyUsername)
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidChecksum)),
-        expected: .account(.invalidIBAN(.invalidChecksum), detail: "detail")
+        expected: .account(.invalidIBAN(.invalidChecksum), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidChecksum))
     ),
     Conversion(
-        generated: .Calendar(detail: "detail", failure: .invalidDate),
-        expected: .calendar(.invalidDate, detail: "detail")
+        expected: .calendar(.invalidDate, detail: "detail"),
+        generated: .Calendar(detail: "detail", failure: .invalidDate)
     ),
     Conversion(
-        generated: .Calendar(detail: "detail", failure: .invalidTime),
-        expected: .calendar(.invalidTime, detail: "detail")
+        expected: .calendar(.invalidTime, detail: "detail"),
+        generated: .Calendar(detail: "detail", failure: .invalidTime)
     ),
     Conversion(
-        generated: .Category(detail: "detail", failure: .emptyName),
-        expected: .category(.emptyName, detail: "detail")
+        expected: .category(.emptyName, detail: "detail"),
+        generated: .Category(detail: "detail", failure: .emptyName)
     ),
     Conversion(
-        generated: .Contact(detail: "detail", failure: .invalidEmail),
-        expected: .contact(.invalidEmail, detail: "detail")
+        expected: .contact(.invalidEmail, detail: "detail"),
+        generated: .Contact(detail: "detail", failure: .invalidEmail)
     ),
     Conversion(
-        generated: .Contact(detail: "detail", failure: .invalidPhoneNumber),
-        expected: .contact(.invalidPhoneNumber, detail: "detail")
+        expected: .contact(.invalidPhoneNumber, detail: "detail"),
+        generated: .Contact(detail: "detail", failure: .invalidPhoneNumber)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .amountsDoNotAddUp(actual: generatedEuros(2), expected: generatedEuros(3))),
-        expected: .expense(.amountsDoNotAddUp(actual: euros(2), expected: euros(3)), detail: "detail")
+        expected: .expense(.amountsDoNotAddUp(actual: euros(2), expected: euros(3)), detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .amountsDoNotAddUp(actual: generatedEuros(2), expected: generatedEuros(3)))
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .currencyMismatch(expected: "USD", found: "GBP")),
-        expected: .expense(.currencyMismatch(expected: known("USD"), found: known("GBP")), detail: "detail")
+        expected: .expense(.currencyMismatch(expected: known("USD"), found: known("GBP")), detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .currencyMismatch(expected: "USD", found: "GBP"))
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .duplicateMember(member: "member-6")),
-        expected: .expense(.duplicateMember(id("member-6")), detail: "detail")
+        expected: .expense(.duplicateMember(id("member-6")), detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .duplicateMember(member: "member-6"))
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .emptyItemName),
-        expected: .expense(.emptyItemName, detail: "detail")
+        expected: .expense(.emptyItemName, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .emptyItemName)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .emptyName),
-        expected: .expense(.emptyName, detail: "detail")
+        expected: .expense(.emptyName, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .emptyName)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .emptySplit),
-        expected: .expense(.emptySplit, detail: "detail")
+        expected: .expense(.emptySplit, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .emptySplit)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .itemsDoNotAddUp(actual: generatedEuros(7), expected: generatedEuros(8))),
-        expected: .expense(.itemsDoNotAddUp(actual: euros(7), expected: euros(8)), detail: "detail")
+        expected: .expense(.itemsDoNotAddUp(actual: euros(7), expected: euros(8)), detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .itemsDoNotAddUp(actual: generatedEuros(7), expected: generatedEuros(8)))
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .negativeTip),
-        expected: .expense(.negativeTip, detail: "detail")
+        expected: .expense(.negativeTip, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .negativeTip)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .noItems),
-        expected: .expense(.noItems, detail: "detail")
+        expected: .expense(.noItems, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .noItems)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .nonPositiveAmount),
-        expected: .expense(.nonPositiveAmount, detail: "detail")
+        expected: .expense(.nonPositiveAmount, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .nonPositiveAmount)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .nonPositiveShare(member: "member-9")),
-        expected: .expense(.nonPositiveShare(id("member-9")), detail: "detail")
+        expected: .expense(.nonPositiveShare(id("member-9")), detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .nonPositiveShare(member: "member-9"))
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .overflow),
-        expected: .expense(.overflow, detail: "detail")
+        expected: .expense(.overflow, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .overflow)
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .percentagesDoNotAddUp(totalBasisPoints: 10)),
-        expected: .expense(.percentagesDoNotAddUp(totalBasisPoints: 10), detail: "detail")
+        expected: .expense(.percentagesDoNotAddUp(totalBasisPoints: 10), detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .percentagesDoNotAddUp(totalBasisPoints: 10))
     ),
     Conversion(
-        generated: .Expense(detail: "detail", failure: .zeroQuantity),
-        expected: .expense(.zeroQuantity, detail: "detail")
+        expected: .expense(.zeroQuantity, detail: "detail"),
+        generated: .Expense(detail: "detail", failure: .zeroQuantity)
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .archivedMember(member: "member-11")),
-        expected: .group(.archivedMember(id("member-11")), detail: "detail")
+        expected: .group(.archivedMember(id("member-11")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .archivedMember(member: "member-11"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .builtInCategory),
-        expected: .group(.builtInCategory, detail: "detail")
+        expected: .group(.builtInCategory, detail: "detail"),
+        generated: .Group(detail: "detail", failure: .builtInCategory)
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .busy),
-        expected: .group(.busy, detail: "detail")
+        expected: .group(.busy, detail: "detail"),
+        generated: .Group(detail: "detail", failure: .busy)
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .duplicateCategory(category: "category-12")),
-        expected: .group(.duplicateCategory(id("category-12")), detail: "detail")
+        expected: .group(.duplicateCategory(id("category-12")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .duplicateCategory(category: "category-12"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .duplicateCategoryName(existing: "existing-13")),
-        expected: .group(.duplicateCategoryName(id("existing-13")), detail: "detail")
+        expected: .group(.duplicateCategoryName(id("existing-13")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .duplicateCategoryName(existing: "existing-13"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .duplicateExchangeRate(currency: "GBP")),
-        expected: .group(.duplicateExchangeRate(known("GBP")), detail: "detail")
+        expected: .group(.duplicateExchangeRate(known("GBP")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .duplicateExchangeRate(currency: "GBP"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .duplicateExpense(expense: "expense-15")),
-        expected: .group(.duplicateExpense(id("expense-15")), detail: "detail")
+        expected: .group(.duplicateExpense(id("expense-15")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .duplicateExpense(expense: "expense-15"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .duplicateMember(member: "member-16")),
-        expected: .group(.duplicateMember(id("member-16")), detail: "detail")
+        expected: .group(.duplicateMember(id("member-16")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .duplicateMember(member: "member-16"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .duplicateTransfer(transfer: "transfer-17")),
-        expected: .group(.duplicateTransfer(id("transfer-17")), detail: "detail")
+        expected: .group(.duplicateTransfer(id("transfer-17")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .duplicateTransfer(transfer: "transfer-17"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .emptyName),
-        expected: .group(.emptyName, detail: "detail")
+        expected: .group(.emptyName, detail: "detail"),
+        generated: .Group(detail: "detail", failure: .emptyName)
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .memberInUse(expenses: ["expenses-18"], member: "member-19", transfers: ["transfers-20"])),
-        expected: .group(.memberInUse(expenses: [id("expenses-18")], member: id("member-19"), transfers: [id("transfers-20")]), detail: "detail")
+        expected: .group(.memberInUse(expenses: [id("expenses-18")], member: id("member-19"), transfers: [id("transfers-20")]), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .memberInUse(expenses: ["expenses-18"], member: "member-19", transfers: ["transfers-20"]))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .missingExchangeRate(currency: "RON")),
-        expected: .group(.missingExchangeRate(known("RON")), detail: "detail")
+        expected: .group(.missingExchangeRate(known("RON")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .missingExchangeRate(currency: "RON"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .overflow),
-        expected: .group(.overflow, detail: "detail")
+        expected: .group(.overflow, detail: "detail"),
+        generated: .Group(detail: "detail", failure: .overflow)
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .unexpectedExchangeRate),
-        expected: .group(.unexpectedExchangeRate, detail: "detail")
+        expected: .group(.unexpectedExchangeRate, detail: "detail"),
+        generated: .Group(detail: "detail", failure: .unexpectedExchangeRate)
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .unknownCategory(category: "category-22")),
-        expected: .group(.unknownCategory(id("category-22")), detail: "detail")
+        expected: .group(.unknownCategory(id("category-22")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .unknownCategory(category: "category-22"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .unknownExpense(expense: "expense-23")),
-        expected: .group(.unknownExpense(id("expense-23")), detail: "detail")
+        expected: .group(.unknownExpense(id("expense-23")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .unknownExpense(expense: "expense-23"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .unknownMember(member: "member-24")),
-        expected: .group(.unknownMember(id("member-24")), detail: "detail")
+        expected: .group(.unknownMember(id("member-24")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .unknownMember(member: "member-24"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .unknownTransfer(transfer: "transfer-25")),
-        expected: .group(.unknownTransfer(id("transfer-25")), detail: "detail")
+        expected: .group(.unknownTransfer(id("transfer-25")), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .unknownTransfer(transfer: "transfer-25"))
     ),
     Conversion(
-        generated: .Group(detail: "detail", failure: .unsupportedFormat(format: 26)),
-        expected: .group(.unsupportedFormat(format: 26), detail: "detail")
+        expected: .group(.unsupportedFormat(format: 26), detail: "detail"),
+        generated: .Group(detail: "detail", failure: .unsupportedFormat(format: 26))
     ),
     Conversion(
-        generated: .Id(detail: "detail", failure: .invalidId),
-        expected: .id(.invalidID, detail: "detail")
+        expected: .id(.invalidID, detail: "detail"),
+        generated: .Id(detail: "detail", failure: .invalidId)
     ),
     Conversion(
-        generated: .Language(detail: "detail", failure: .invalidLanguage),
-        expected: .language(.invalidLanguage, detail: "detail")
+        expected: .language(.invalidLanguage, detail: "detail"),
+        generated: .Language(detail: "detail", failure: .invalidLanguage)
     ),
     Conversion(
-        generated: .Member(detail: "detail", failure: .emptyFirstName),
-        expected: .member(.emptyFirstName, detail: "detail")
+        expected: .member(.emptyFirstName, detail: "detail"),
+        generated: .Member(detail: "detail", failure: .emptyFirstName)
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .currencyMismatch(left: "RON", right: "USD")),
-        expected: .money(.currencyMismatch(left: known("RON"), right: known("USD")), detail: "detail")
+        expected: .money(.currencyMismatch(left: known("RON"), right: known("USD")), detail: "detail"),
+        generated: .Money(detail: "detail", failure: .currencyMismatch(left: "RON", right: "USD"))
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .invalidAmount),
-        expected: .money(.invalidAmount, detail: "detail")
+        expected: .money(.invalidAmount, detail: "detail"),
+        generated: .Money(detail: "detail", failure: .invalidAmount)
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .invalidExchangeRate),
-        expected: .money(.invalidExchangeRate, detail: "detail")
+        expected: .money(.invalidExchangeRate, detail: "detail"),
+        generated: .Money(detail: "detail", failure: .invalidExchangeRate)
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .invalidParts),
-        expected: .money(.invalidParts, detail: "detail")
+        expected: .money(.invalidParts, detail: "detail"),
+        generated: .Money(detail: "detail", failure: .invalidParts)
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .invalidPercentage),
-        expected: .money(.invalidPercentage, detail: "detail")
+        expected: .money(.invalidPercentage, detail: "detail"),
+        generated: .Money(detail: "detail", failure: .invalidPercentage)
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .overflow),
-        expected: .money(.overflow, detail: "detail")
+        expected: .money(.overflow, detail: "detail"),
+        generated: .Money(detail: "detail", failure: .overflow)
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .tooManyDecimals(allowed: 29, currency: "RON")),
-        expected: .money(.tooManyDecimals(allowed: 29, currency: known("RON")), detail: "detail")
+        expected: .money(.tooManyDecimals(allowed: 29, currency: known("RON")), detail: "detail"),
+        generated: .Money(detail: "detail", failure: .tooManyDecimals(allowed: 29, currency: "RON"))
     ),
     Conversion(
-        generated: .Money(detail: "detail", failure: .unknownCurrency),
-        expected: .money(.unknownCurrency, detail: "detail")
+        expected: .money(.unknownCurrency, detail: "detail"),
+        generated: .Money(detail: "detail", failure: .unknownCurrency)
     ),
     Conversion(
-        generated: .Settlement(detail: "detail", failure: .outOfMemory(balances: 31)),
-        expected: .settlement(.outOfMemory(balances: 31), detail: "detail")
+        expected: .settlement(.outOfMemory(balances: 31), detail: "detail"),
+        generated: .Settlement(detail: "detail", failure: .outOfMemory(balances: 31))
     ),
     Conversion(
-        generated: .Transfer(detail: "detail", failure: .nonPositiveAmount),
-        expected: .transfer(.nonPositiveAmount, detail: "detail")
+        expected: .transfer(.nonPositiveAmount, detail: "detail"),
+        generated: .Transfer(detail: "detail", failure: .nonPositiveAmount)
     ),
     Conversion(
-        generated: .Transfer(detail: "detail", failure: .sameMember),
-        expected: .transfer(.sameMember, detail: "detail")
+        expected: .transfer(.sameMember, detail: "detail"),
+        generated: .Transfer(detail: "detail", failure: .sameMember)
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidCharacter)),
-        expected: .account(.invalidIBAN(.invalidCharacter), detail: "detail")
+        expected: .account(.invalidIBAN(.invalidCharacter), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidCharacter))
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidChecksum)),
-        expected: .account(.invalidIBAN(.invalidChecksum), detail: "detail")
+        expected: .account(.invalidIBAN(.invalidChecksum), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidChecksum))
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidFormat)),
-        expected: .account(.invalidIBAN(.invalidFormat), detail: "detail")
+        expected: .account(.invalidIBAN(.invalidFormat), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidFormat))
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidStructure)),
-        expected: .account(.invalidIBAN(.invalidStructure), detail: "detail")
+        expected: .account(.invalidIBAN(.invalidStructure), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .invalidStructure))
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .unknownCountry)),
-        expected: .account(.invalidIBAN(.unknownCountry), detail: "detail")
+        expected: .account(.invalidIBAN(.unknownCountry), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .unknownCountry))
     ),
     Conversion(
-        generated: .Account(detail: "detail", failure: .invalidIban(reason: .wrongLength(expected: 24, found: 22))),
-        expected: .account(.invalidIBAN(.wrongLength(expected: 24, found: 22)), detail: "detail")
+        expected: .account(.invalidIBAN(.wrongLength(expected: 24, found: 22)), detail: "detail"),
+        generated: .Account(detail: "detail", failure: .invalidIban(reason: .wrongLength(expected: 24, found: 22)))
     ),
     Conversion(
-        generated: .Cancelled(detail: "detail"),
-        expected: .cancelled(detail: "detail")
+        expected: .cancelled(detail: "detail"),
+        generated: .Cancelled(detail: "detail")
     ),
     Conversion(
-        generated: .IdentifierGiven(detail: "detail"),
-        expected: .identifierGiven(detail: "detail")
+        expected: .identifierGiven(detail: "detail"),
+        generated: .IdentifierGiven(detail: "detail")
     ),
     Conversion(
-        generated: .IdentifierMissing(detail: "detail"),
-        expected: .identifierMissing(detail: "detail")
+        expected: .identifierMissing(detail: "detail"),
+        generated: .IdentifierMissing(detail: "detail")
     ),
     Conversion(
-        generated: .Released(detail: "detail"),
-        expected: .released(detail: "detail")
+        expected: .released(detail: "detail"),
+        generated: .Released(detail: "detail")
     ),
     Conversion(
-        generated: .InvalidJson(column: 2, detail: "detail", line: 1),
-        expected: .invalidJSON(line: 1, column: 2, detail: "detail")
+        expected: .invalidJSON(line: 1, column: 2, detail: "detail"),
+        generated: .InvalidJson(column: 2, detail: "detail", line: 1)
     )
 ]
 

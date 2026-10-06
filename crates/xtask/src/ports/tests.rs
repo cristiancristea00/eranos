@@ -9,6 +9,46 @@ use super::*;
 use crate::process::WORKSPACE;
 use crate::tests::{FileOperation, METADATA, Recorder};
 
+/// The language of the first port that runs on a machine, and the last
+/// step a report of it that differs lets run.
+struct FirstPort {
+    /// Whether the machine builds for Apple platforms.
+    apple: bool,
+    /// The language, as the failure names it.
+    language: &'static str,
+    /// The step that runs the port.
+    last: Step,
+}
+
+/// A report that differs from the Rust example's, and the failure's account
+/// of the first line that differs.
+struct Difference {
+    /// What the Rust example prints there, as the failure writes it.
+    expected: &'static str,
+    /// What the port prints there, as the failure writes it.
+    found: &'static str,
+    /// The line's number.
+    line: usize,
+    /// The port's report.
+    report: &'static str,
+}
+
+/// The variables set, and the one the failure names as missing.
+struct Unset {
+    /// The variable the failure names.
+    missing: &'static str,
+    /// The variables set.
+    variables: &'static [&'static str],
+}
+
+/// The directory of a C or C++ package's ports, and their files' extension.
+struct NativePorts {
+    /// The directory, from the workspace root.
+    directory: &'static str,
+    /// The extension, the language's.
+    language: &'static str,
+}
+
 /// The metadata of the target directory of the glue whose identifiers count
 /// up, in [`METADATA`]'s.
 fn sequential() -> Metadata {
@@ -149,13 +189,21 @@ fn the_ports_run_on_a_glue_whose_identifiers_count_up() {
 #[test]
 fn a_report_that_differs_stops_the_ports_at_its_port() {
     let metadata = Metadata::parse(METADATA).unwrap();
-    for (apple, language, last) in [
-        (true, "Swift", port("Swift", "quickstart", "/programs")),
-        (
-            false,
-            "Kotlin",
-            kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
-        ),
+    for FirstPort {
+        apple,
+        language,
+        last,
+    } in [
+        FirstPort {
+            apple: true,
+            language: "Swift",
+            last: port("Swift", "quickstart", "/programs"),
+        },
+        FirstPort {
+            apple: false,
+            language: "Kotlin",
+            last: kotlin::port("quickstart", "/JAVA_HOME", &sequential()),
+        },
     ] {
         let mut recorder = Recorder::new();
         recorder.apple = apple;
@@ -180,10 +228,30 @@ fn a_report_that_differs_stops_the_ports_at_its_port() {
 fn a_report_passes_only_byte_for_byte() {
     let example = reference("quickstart", "Weekend\n══\ntotal\n");
     assert!(compare("Swift", &example, "Weekend\n══\ntotal\n").is_ok());
-    for (report, line, expected, found) in [
-        ("Weekend\n══\nTotal\n", 3, "\"total\"", "\"Total\""),
-        ("Weekend\n══\ntotal", 4, "\"\"", "the end of the report"),
-        ("Weekend\n══\ntotal\n\n", 5, "the end of the report", "\"\""),
+    for Difference {
+        expected,
+        found,
+        line,
+        report,
+    } in [
+        Difference {
+            expected: "\"total\"",
+            found: "\"Total\"",
+            line: 3,
+            report: "Weekend\n══\nTotal\n",
+        },
+        Difference {
+            expected: "\"\"",
+            found: "the end of the report",
+            line: 4,
+            report: "Weekend\n══\ntotal",
+        },
+        Difference {
+            expected: "the end of the report",
+            found: "\"\"",
+            line: 5,
+            report: "Weekend\n══\ntotal\n\n",
+        },
     ] {
         let failure = compare("Swift", &example, report).unwrap_err();
         assert_eq!(
@@ -273,14 +341,23 @@ fn a_failure_stops_the_ports_where_it_happens() {
         Err(Failure::Usage)
     ));
     assert_eq!(unwritten.steps.last(), web::copy(&sequential()).last());
-    for (variables, missing) in [
-        (&[][..], "JAVA_HOME"),
-        (&["JAVA_HOME"][..], "ANDROID_HOME"),
-        (&["JAVA_HOME", "ANDROID_HOME"][..], "JAVA_HOME_21"),
-        (
-            &["JAVA_HOME", "ANDROID_HOME", "JAVA_HOME_21"][..],
-            "LLVM_HOME",
-        ),
+    for Unset { missing, variables } in [
+        Unset {
+            missing: "JAVA_HOME",
+            variables: &[],
+        },
+        Unset {
+            missing: "ANDROID_HOME",
+            variables: &["JAVA_HOME"],
+        },
+        Unset {
+            missing: "JAVA_HOME_21",
+            variables: &["JAVA_HOME", "ANDROID_HOME"],
+        },
+        Unset {
+            missing: "LLVM_HOME",
+            variables: &["JAVA_HOME", "ANDROID_HOME", "JAVA_HOME_21"],
+        },
     ] {
         let mut unnamed = Recorder::new();
         unnamed.variables = variables.to_vec();
@@ -390,9 +467,18 @@ fn every_example_has_a_port_in_every_language() {
             .filter(|name| "report" != name)
     });
     assert_eq!(typescript, examples);
-    for (directory, language) in [
-        ("bindings/c/examples", "c"),
-        ("bindings/cpp/examples", "cpp"),
+    for NativePorts {
+        directory,
+        language,
+    } in [
+        NativePorts {
+            directory: "bindings/c/examples",
+            language: "c",
+        },
+        NativePorts {
+            directory: "bindings/cpp/examples",
+            language: "cpp",
+        },
     ] {
         let sources = fs::read_dir(Path::new(WORKSPACE).join(directory))
             .unwrap()

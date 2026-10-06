@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 import {
     type Account,
+    type Balance,
     type MemberId,
     type Split,
     CalendarDate,
@@ -18,7 +19,56 @@ import {
     Username,
     formatBalance,
 } from '../src/index.js';
-import { load, printLines, printTable, refusal, section, totals } from './report.js';
+import { type Columns, load, printLines, printTable, refusal, section, totals } from './report.js';
+
+/** A member with their contact and account details, as the table of members prints them. */
+interface MemberRow {
+    readonly accounts: string;
+    readonly email: string;
+    readonly name: string;
+    readonly phone: string;
+}
+
+const memberColumns: Columns<MemberRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Email', text: (row) => row.email },
+    { header: 'Phone', text: (row) => row.phone },
+    { header: 'Accounts', text: (row) => row.accounts },
+];
+
+/** An input with what validation makes of it, as the table of checks prints it. */
+interface CheckRow {
+    readonly input: string;
+    readonly kind: string;
+    readonly result: string;
+}
+
+const checkColumns: Columns<CheckRow> = [
+    { header: 'Input', text: (row) => row.input },
+    { header: 'Checked as', text: (row) => row.kind },
+    { header: 'Result', text: (row) => row.result },
+];
+
+/** A member's status and totals, as the table of balances prints them. */
+interface BalanceRow {
+    readonly balance: Balance;
+    readonly consumed: Money;
+    readonly name: string;
+    readonly status: string;
+}
+
+const balanceColumns: Columns<BalanceRow> = [
+    { header: 'Member', text: (row) => row.name },
+    { header: 'Status', text: (row) => row.status },
+    { header: 'Consumed', text: (row) => row.consumed.toString() },
+    { header: 'Balance', text: (row) => formatBalance(row.balance) },
+];
+
+/** The two flatmates: Ana, who gives every detail, and Bob, who moves out. */
+interface Flatmates {
+    readonly ana: MemberId;
+    readonly bob: MemberId;
+}
 
 /** An account with its label and its details. */
 function describe(account: Account): string {
@@ -27,25 +77,23 @@ function describe(account: Account): string {
 }
 
 /** `valid: ` and what `shown` writes of the value `parse` makes of `input`, or `refused: ` and the library's message. */
-function validated<Value>(input: string, kind: string, parse: (text: string) => Value, shown: (value: Value) => string): string[] {
+function validated<Value>(input: string, kind: string, parse: (text: string) => Value, shown: (value: Value) => string): CheckRow {
     let result = '';
     const refused = refusal(() => {
         result = `valid: ${shown(parse(input))}`;
     });
-    return [input, kind, undefined === refused ? result : `refused: ${refused.message}`];
+    return { input, kind, result: undefined === refused ? result : `refused: ${refused.message}` };
 }
 
 function printMembers(group: Group): void {
     printTable(
-        ['Member', 'Email', 'Phone', 'Accounts'],
-        group
-            .membersSync()
-            .map((member) => [
-                [member.firstName, member.lastName].filter((name) => undefined !== name).join(' '),
-                member.email?.toString() ?? '',
-                member.phone?.toString() ?? '',
-                (member.accounts ?? []).map(describe).join('\n'),
-            ]),
+        memberColumns,
+        group.membersSync().map((member) => ({
+            accounts: (member.accounts ?? []).map(describe).join('\n'),
+            email: member.email?.toString() ?? '',
+            name: [member.firstName, member.lastName].filter((name) => undefined !== name).join(' '),
+            phone: member.phone?.toString() ?? '',
+        })),
         4,
     );
 }
@@ -53,18 +101,25 @@ function printMembers(group: Group): void {
 function printBalances(group: Group): void {
     const summary = group.summarySync();
     printTable(
-        ['Member', 'Status', 'Consumed', 'Balance'],
+        balanceColumns,
         group.membersSync().flatMap((member) => {
             const found = undefined === member.id ? undefined : totals(member.id, summary);
             return undefined === member.id || undefined === found
                 ? []
-                : [[member.firstName, group.isArchivedSync(member.id) ? 'archived' : 'active', found.share.toString(), formatBalance(found.balance)]];
+                : [
+                      {
+                          balance: found.balance,
+                          consumed: found.share,
+                          name: member.firstName,
+                          status: group.isArchivedSync(member.id) ? 'archived' : 'active',
+                      },
+                  ];
         }),
         2,
     );
 }
 
-function members(group: Group): [MemberId, MemberId] {
+function members(group: Group): Flatmates {
     section('1. Members');
     const ana = group.addMemberSync({
         firstName: 'Ana',
@@ -83,7 +138,7 @@ function members(group: Group): [MemberId, MemberId] {
         'grouped for reading; the IBAN was stored in its electronic form, uppercase and',
         'without spaces, the way banking apps accept it.',
     );
-    return [ana, bob];
+    return { ana, bob };
 }
 
 function validation(): void {
@@ -95,9 +150,9 @@ function validation(): void {
         'and 5322, which refuse the doubled dots and stray commas of hurried typing, and',
         "phone numbers against their country's numbering plan, stored in E.164 form.",
     );
-    const iban = (input: string): string[] => validated(input, 'IBAN', (text) => Iban.parse(text), String);
-    const email = (input: string): string[] => validated(input, 'email', (text) => Email.parse(text), String);
-    const phone = (input: string): string[] =>
+    const iban = (input: string): CheckRow => validated(input, 'IBAN', (text) => Iban.parse(text), String);
+    const email = (input: string): CheckRow => validated(input, 'email', (text) => Email.parse(text), String);
+    const phone = (input: string): CheckRow =>
         validated(
             input,
             'phone',
@@ -105,7 +160,7 @@ function validation(): void {
             (number) => number.e164,
         );
     printTable(
-        ['Input', 'Checked as', 'Result'],
+        checkColumns,
         [
             iban('ro49 aaaa 1b31 0075 9384 0000'),
             iban('RO49 AAAA 1B31 0075 9384 0001'),
@@ -123,8 +178,9 @@ function validation(): void {
     );
 }
 
-function movingOut(group: Group, ana: MemberId, bob: MemberId): void {
+function movingOut(group: Group, flatmates: Flatmates): void {
     section('3. A flatmate moves out');
+    const { ana, bob } = flatmates;
     const euro = Currency.of('EUR');
     const both: Split = { kind: 'equal', members: [ana, bob] };
     const rent = group.addExpenseSync({
@@ -169,6 +225,6 @@ printLines(
     'Ana and Bob share a flat. A member needs only a first name; the last name,',
     'email, phone, and the accounts they can be paid to are optional.',
 );
-const [ana, bob] = members(group);
+const flatmates = members(group);
 validation();
-movingOut(group, ana, bob);
+movingOut(group, flatmates);

@@ -1028,7 +1028,9 @@ fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
         .iter()
         .filter_map(|flattening| flattening.flat.payload.reason)
         .collect();
-    assert_eq!((kinds.len(), failures.len(), reasons.len()), (17, 55, 6));
+    assert_eq!(kinds.len(), 17);
+    assert_eq!(failures.len(), 55);
+    assert_eq!(reasons.len(), 6);
 }
 
 /// Text that is not UTF-8 would read as a failure of the library, whose

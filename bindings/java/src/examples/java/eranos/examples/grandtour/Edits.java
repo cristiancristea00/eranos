@@ -36,6 +36,9 @@ import eranos.TimeOfDay;
 import eranos.Transfer;
 import eranos.TransferFailure;
 import eranos.TransferId;
+import eranos.examples.grandtour.Tables.EditRow;
+import eranos.examples.grandtour.Tables.RefusalRow;
+import eranos.examples.grandtour.Tables.StatusRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
 
@@ -107,7 +110,7 @@ final class Edits {
     }
 
     /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
-    static List<List<String>> replaceAndRemove(
+    static List<EditRow> replaceAndRemove(
             Group group, People people, Categories categories, ExpenseId seafood)
             throws EranosException {
         // The dinner's receipt said 99.00.
@@ -169,41 +172,41 @@ final class Edits {
         Optional<Expense> dinner = group.expense(seafood);
         Optional<Transfer> apartment = group.transfer(first);
         return List.of(
-                List.of(
-                        previous.name(),
+                new EditRow(
                         "%s became %s, at %s"
                                 .formatted(
                                         previous.cost().amount(),
                                         dinner.map(expense -> expense.cost().amount()).orElse(zero),
-                                        dinner.flatMap(Expense::description).orElse(""))),
-                List.of(
-                        removed.name(),
+                                        dinner.flatMap(Expense::description).orElse("")),
+                        previous.name()),
+                new EditRow(
                         "entered twice; the copy of %s was removed"
-                                .formatted(removed.cost().amount())),
-                List.of(
-                        name(group, people.dan()) + " to " + name(group, people.ana()),
+                                .formatted(removed.cost().amount()),
+                        removed.name()),
+                new EditRow(
                         "%s became %s, noted %s"
                                 .formatted(
                                         replaced.cost().amount(),
                                         apartment
                                                 .map(transfer -> transfer.cost().amount())
                                                 .orElse(zero),
-                                        apartment.flatMap(Transfer::note).orElse(""))),
-                List.of(
-                        name(group, people.carol()) + " to " + name(group, people.bob()),
-                        "%s sent to the wrong member; removed".formatted(undone.cost().amount())));
+                                        apartment.flatMap(Transfer::note).orElse("")),
+                        name(group, people.dan()) + " to " + name(group, people.ana())),
+                new EditRow(
+                        "%s sent to the wrong member; removed".formatted(undone.cost().amount()),
+                        name(group, people.carol()) + " to " + name(group, people.bob())));
     }
 
     static void edits(Group group, People people, Categories categories, ExpenseId seafood)
             throws EranosException {
         section("6. Edits");
-        List<List<String>> changes = replaceAndRemove(group, people, categories, seafood);
+        List<EditRow> changes = replaceAndRemove(group, people, categories, seafood);
         System.out.print(
                 """
                 Entries are values: an edit starts from a copy made with to_builder, keeps the
                 identifier, and replaces the entry; a removal takes it out with its totals.
                 """);
-        printTable(List.of("Entry", "Edit"), changes, 2);
+        printTable(EditRow.HEADERS, changes, 2);
         System.out.println("The balances after the edits:");
         printBalances(group);
 
@@ -241,11 +244,11 @@ final class Edits {
         Optional<EranosException> unrated = refusal(() -> group.addExpense(souvenirs));
         System.out.println("A change that does not fit is refused, and the group stays as it was:");
         printTable(
-                List.of("Change", "Refused with"),
+                RefusalRow.HEADERS,
                 List.of(
-                        List.of("A taxi split 50% and 49.99%", message(unbalanced)),
-                        List.of("Ana paying herself back", message(herself)),
-                        List.of("Souvenirs in RON, without a rate", message(unrated))),
+                        new RefusalRow("A taxi split 50% and 49.99%", message(unbalanced)),
+                        new RefusalRow("Ana paying herself back", message(herself)),
+                        new RefusalRow("Souvenirs in RON, without a rate", message(unrated))),
                 2);
         System.out.println("The balances again, unchanged:");
         printBalances(group);
@@ -297,27 +300,27 @@ final class Edits {
                 """
                         .formatted(removed.firstName()));
         Summary summary = group.summary();
-        List<List<String>> rows = new ArrayList<>();
+        List<StatusRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             if (member.id().isPresent()) {
                 Optional<MemberSummary> found = totals(member.id().orElseThrow(), summary);
                 if (found.isPresent()) {
                     rows.add(
-                            List.of(
+                            new StatusRow(
+                                    found.orElseThrow().balance(),
                                     member.firstName(),
                                     group.isArchived(member.id().orElseThrow())
                                             ? "archived"
-                                            : "active",
-                                    found.orElseThrow().balance().toString()));
+                                            : "active"));
                 }
             }
         }
-        printTable(List.of("Member", "Status", "Balance"), rows, 2);
+        printTable(StatusRow.HEADERS, rows, 2);
         printTable(
-                List.of("Change", "Refused with"),
+                RefusalRow.HEADERS,
                 List.of(
-                        List.of("A farewell dinner with Dan", message(farewell)),
-                        List.of("Removing Dan", message(inUse))),
+                        new RefusalRow("A farewell dinner with Dan", message(farewell)),
+                        new RefusalRow("Removing Dan", message(inUse))),
                 2);
         group.unarchiveMember(people.dan());
         System.out.println("When Dan joins the next trip, unarchiving him makes him active again.");

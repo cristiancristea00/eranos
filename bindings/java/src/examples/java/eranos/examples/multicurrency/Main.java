@@ -23,6 +23,7 @@ import eranos.Money;
 import eranos.Split;
 import eranos.Summary;
 import eranos.Transfer;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,22 +38,54 @@ import java.util.Optional;
 public final class Main {
     private Main() {}
 
+    /** An expense or a transfer as entered and in the group currency, a row of the entries. */
+    private record EntryRow(
+            Money converted, String name, Money original, String payer, ExchangeRate rate)
+            implements Row {
+        static final List<String> HEADERS =
+                List.of("Entry", "Paid by", "Entered as", "Rate", "In the group currency");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, payer, original.toString(), rate.toString(), converted.toString());
+        }
+    }
+
+    /** A member's totals, a row of the balances' table. */
+    private record BalanceRow(
+            Balance balance, Money consumed, String name, Money paid, Money received, Money sent)
+            implements Row {
+        static final List<String> HEADERS =
+                List.of("Member", "Paid", "Consumed", "Sent", "Received", "Balance");
+
+        @Override
+        public List<String> cells() {
+            return List.of(
+                    name,
+                    paid.toString(),
+                    consumed.toString(),
+                    sent.toString(),
+                    received.toString(),
+                    balance.toString());
+        }
+    }
+
     /** Every expense and transfer, as entered and in the group currency. */
     private static void printEntries(Group group) throws EranosException {
         Money zero = new Money(group.currency(), 0);
-        List<List<String>> rows = new ArrayList<>();
+        List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
             Optional<ExpenseShares> shares =
                     expense.id().isPresent()
                             ? group.expenseShares(expense.id().orElseThrow())
                             : Optional.empty();
             rows.add(
-                    List.of(
+                    new EntryRow(
+                            shares.map(ExpenseShares::total).orElse(zero),
                             expense.name(),
+                            expense.total(),
                             names(group, expense.payers().members()),
-                            expense.total().toString(),
-                            rate(expense.cost()).toString(),
-                            shares.map(ExpenseShares::total).orElse(zero).toString()));
+                            rate(expense.cost())));
         }
         for (Transfer transfer : group.transfers()) {
             Optional<Money> amount =
@@ -60,17 +93,14 @@ public final class Main {
                             ? group.transferAmount(transfer.id().orElseThrow())
                             : Optional.empty();
             rows.add(
-                    List.of(
+                    new EntryRow(
+                            amount.orElse(zero),
                             "Transfer to " + names(group, List.of(transfer.to())),
+                            transfer.cost().amount(),
                             names(group, List.of(transfer.from())),
-                            transfer.cost().amount().toString(),
-                            rate(transfer.cost()).toString(),
-                            amount.orElse(zero).toString()));
+                            rate(transfer.cost())));
         }
-        printTable(
-                List.of("Entry", "Paid by", "Entered as", "Rate", "In the group currency"),
-                rows,
-                2);
+        printTable(EntryRow.HEADERS, rows, 2);
     }
 
     /** The rate {@code cost} was entered at: 1 for a cost in the group currency. */
@@ -83,21 +113,21 @@ public final class Main {
 
     private static void printBalances(Group group) {
         Summary summary = group.summary();
-        List<List<String>> rows = new ArrayList<>();
+        List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             Optional<MemberSummary> found = member.id().flatMap(id -> totals(id, summary));
             found.ifPresent(
                     totals ->
                             rows.add(
-                                    List.of(
+                                    new BalanceRow(
+                                            totals.balance(),
+                                            totals.share(),
                                             member.firstName(),
-                                            totals.paid().toString(),
-                                            totals.share().toString(),
-                                            totals.sent().toString(),
-                                            totals.received().toString(),
-                                            totals.balance().toString())));
+                                            totals.paid(),
+                                            totals.received(),
+                                            totals.sent())));
         }
-        printTable(List.of("Member", "Paid", "Consumed", "Sent", "Received", "Balance"), rows, 1);
+        printTable(BalanceRow.HEADERS, rows, 1);
     }
 
     private static void expenses(Group group, MemberId ana, MemberId bob) throws EranosException {

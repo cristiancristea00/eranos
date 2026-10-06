@@ -1,7 +1,7 @@
 """Print what every port prints its report with: the headings and the tables of the Rust examples, and the helpers the ports share."""
 
-from collections.abc import Callable, Iterable, Sequence
-from typing import assert_never
+from collections.abc import Callable, Iterable
+from typing import ClassVar, Protocol, assert_never
 
 from eranos import EranosError, ExpenseSplit, Group, ItemisedExpenseSplit, MemberId, MemberSummary, Summary, WholeExpenseSplit
 
@@ -39,21 +39,46 @@ def section(text: str) -> None:
     print_lines('', text, '─' * len(text))
 
 
-def print_table(headers: Sequence[str], rows: Iterable[Sequence[str]], numbers_from: int) -> None:
+class Row(Protocol):
     """
-    Print rows under headers with rounded borders, as the Rust examples' tables are printed.
+    A row of a report's table, as the Rust example's row type derives it with tabled.
+
+    A row type names its columns once: HEADERS holds the headings the Rust type renames its fields to, in the order of their
+    ``order`` attributes, and cells writes the fields in that order.
+
+    """
+
+    __slots__ = ()
+
+    HEADERS: ClassVar[tuple[str, ...]]
+    """The heading of each column, in the order the columns are printed."""
+
+    def cells(self) -> tuple[str, ...]:
+        """
+        Write the row's cells, as the Rust example writes its fields.
+
+        Returns:
+            The text of each column, in the order of HEADERS.
+
+        """
+        ...
+
+
+def print_table[R: Row](kind: type[R], rows: Iterable[R], numbers_from: int) -> None:
+    """
+    Print rows under the headings of kind with rounded borders, as the Rust examples' tables are printed.
 
     The columns from numbers_from on are right-aligned, and a cell of several lines makes its row as tall as its tallest
     cell. A width counts code points, since the reports keep to characters one column wide.
 
     Args:
-        headers: The heading of each column.
-        rows: The rows, a text per column.
+        kind: The type of the rows, which names the columns; a table without rows still prints them.
+        rows: The rows.
         numbers_from: The first column whose cells are right-aligned.
 
     """
-    table = [[cell.split('\n') for cell in row] for row in (headers, *rows)]
-    widths = [max(len(line) for row in table for line in row[column]) for column in range(len(headers))]
+    table = [[cell.split('\n') for cell in row] for row in (kind.HEADERS, *(row.cells() for row in rows))]
+    widths = [max(len(line) for row in table for line in row[column]) for column in range(len(kind.HEADERS))]
 
     def border(left: str, middle: str, right: str) -> str:
         return left + middle.join('─' * (width + 2) for width in widths) + right

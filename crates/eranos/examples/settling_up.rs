@@ -60,6 +60,14 @@ struct StrategyRow {
     strategy: &'static str,
 }
 
+/// The number of payments of each strategy's plan.
+#[derive(Debug, PartialEq, Eq)]
+struct Counts {
+    direct: usize,
+    greedy: usize,
+    minimum: usize,
+}
+
 /// Prints a section heading with a line under it.
 fn section(title: &str) {
     println!("\n{title}\n{}", "─".repeat(title.chars().count()));
@@ -132,8 +140,8 @@ fn print_payments(group: &Group, settlement: &Settlement) {
 }
 
 /// Prints each strategy's plan with what it promises; returns the number of
-/// payments of each, in the order minimum, greedy, direct.
-fn strategies(group: &Group) -> Result<[usize; 3], Box<dyn Error>> {
+/// payments of each.
+fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
     section("3. Minimum transfers");
     let minimum = group.settlement(SettlementStrategy::MinimumTransfers)?;
     println!(
@@ -189,7 +197,11 @@ fn strategies(group: &Group) -> Result<[usize; 3], Box<dyn Error>> {
         ],
         3,
     );
-    Ok([minimum.len(), greedy.len(), direct.len()])
+    Ok(Counts {
+        direct: direct.len(),
+        greedy: greedy.len(),
+        minimum: minimum.len(),
+    })
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -227,7 +239,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Four members are owed money and two owe it:");
     print_balances(&group);
 
-    let payments = strategies(&group)?;
+    let counts = strategies(&group)?;
 
     section("7. Settling up for real");
     let plan = group
@@ -254,7 +266,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // {Ana, Dan, Eva} and {Bob, Carol, Filip} each sum to zero, so four
     // payments suffice; greedy pays the largest amounts first and needs
     // five; the unsimplified debts between pairs need seven.
-    assert_eq!(payments, [4, 5, 7]);
+    assert_eq!(
+        counts,
+        Counts {
+            direct: 7,
+            greedy: 5,
+            minimum: 4,
+        }
+    );
     for member in [ana, bob, carol, dan, eva, filip] {
         assert_eq!(group.summary().member(member).balance(), Balance::Settled);
     }

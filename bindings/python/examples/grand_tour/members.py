@@ -1,8 +1,9 @@
 """Print sections 1 to 3 of the tour: the group and its details, the members with their contact details and accounts, and the categories."""
 
 import copy
+import dataclasses
 from collections.abc import Callable
-from typing import assert_never
+from typing import ClassVar, assert_never, final, override
 
 from eranos import (
     Account,
@@ -20,8 +21,71 @@ from eranos import (
     Username,
     UsernameAccountDetails,
 )
-from examples.grand_tour.tour import Categories, People, cell
-from examples.report import message, print_lines, print_table, refusal, section
+from examples.grand_tour.tour import Categories, People, RefusalRow, cell
+from examples.report import Row, message, print_lines, print_table, refusal, section
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class DetailRow(Row):
+    """A row of the table of the group's details."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Detail', 'Value')
+
+    detail: str
+    """Which detail it is."""
+
+    value: str
+    """The detail's value."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.detail, self.value
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class MemberRow(Row):
+    """A row of the table of members: a member's full name, contact details, and accounts."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Email', 'Phone', 'Accounts')
+
+    accounts: str
+    """The member's accounts, a line each."""
+
+    email: str
+    """The member's email, or nothing."""
+
+    name: str
+    """The member's full name."""
+
+    phone: str
+    """The member's phone number, grouped for reading, or nothing."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.email, self.phone, self.accounts
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class CheckRow(Row):
+    """A row of the table of what the library checks in a member's details."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Input', 'Checked as', 'Result')
+
+    input: str
+    """The text checked, in quotes."""
+
+    kind: str
+    """What the text is checked as, such as ``"IBAN"``."""
+
+    result: str
+    """The value as the library writes it, or the library's message."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.input, self.kind, self.result
 
 
 def the_group() -> Group:
@@ -40,12 +104,12 @@ def the_group() -> Group:
     language = group.language()
     tag = '' if language is None else str(language)
     print_table(
-        ('Detail', 'Value'),
+        DetailRow,
         [
-            ('Name', group.name()),
-            ('Currency', str(group.currency())),
-            ('Language', tag),
-            ('Description', group.description() or ''),
+            DetailRow(detail='Name', value=group.name()),
+            DetailRow(detail='Currency', value=str(group.currency())),
+            DetailRow(detail='Language', value=tag),
+            DetailRow(detail='Description', value=group.description() or ''),
         ],
         2,
     )
@@ -94,13 +158,13 @@ def _print_members(group: Group) -> None:
 
     """
     print_table(
-        ('Member', 'Email', 'Phone', 'Accounts'),
+        MemberRow,
         [
-            (
-                ' '.join(part for part in (member.first_name, member.last_name) if part is not None),
-                '' if member.email is None else str(member.email),
-                '' if member.phone is None else member.phone.international(),
-                cell(_describe(account) for account in member.accounts),
+            MemberRow(
+                accounts=cell(_describe(account) for account in member.accounts),
+                email='' if member.email is None else str(member.email),
+                name=' '.join(part for part in (member.first_name, member.last_name) if part is not None),
+                phone='' if member.phone is None else member.phone.international(),
             )
             for member in group.members()
         ],
@@ -127,7 +191,7 @@ def _outcome[Value](make: Callable[[], Value], shown: Callable[[Value], str]) ->
     return f'valid: {shown(value)}'
 
 
-def _iban(text: str) -> tuple[str, str, str]:
+def _iban(text: str) -> CheckRow:
     """
     Check text as an IBAN.
 
@@ -135,13 +199,13 @@ def _iban(text: str) -> tuple[str, str, str]:
         text: The IBAN as entered.
 
     Returns:
-        The row of the check: the input, what it is checked as, and the outcome.
+        The row of the check.
 
     """
-    return f'"{text}"', 'IBAN', _outcome(lambda: Iban(text), lambda iban: f'{iban}, country {iban.country_code()}')
+    return CheckRow(input=f'"{text}"', kind='IBAN', result=_outcome(lambda: Iban(text), lambda iban: f'{iban}, country {iban.country_code()}'))
 
 
-def _phone(text: str) -> tuple[str, str, str]:
+def _phone(text: str) -> CheckRow:
     """
     Check text as a phone number.
 
@@ -149,10 +213,12 @@ def _phone(text: str) -> tuple[str, str, str]:
         text: The number as entered.
 
     Returns:
-        The row of the check: the input, what it is checked as, and the outcome.
+        The row of the check.
 
     """
-    return f'"{text}"', 'phone', _outcome(lambda: PhoneNumber(text), lambda phone: f'{phone.international()}, stored as {phone}')
+    return CheckRow(
+        input=f'"{text}"', kind='phone', result=_outcome(lambda: PhoneNumber(text), lambda phone: f'{phone.international()}, stored as {phone}')
+    )
 
 
 def _validation(group: Group) -> None:
@@ -169,15 +235,15 @@ def _validation(group: Group) -> None:
         'numbering plan. Required text must not be blank:',
     )
     print_table(
-        ('Input', 'Checked as', 'Result'),
+        CheckRow,
         [
             _iban('ro49 aaaa 1b31 0075 9384 0000'),
             _iban('RO49 AAAA 1B31 0075 9384 0001'),
-            ('"ana..popescu@example.com"', 'email', _outcome(lambda: Email('ana..popescu@example.com'), str)),
+            CheckRow(input='"ana..popescu@example.com"', kind='email', result=_outcome(lambda: Email('ana..popescu@example.com'), str)),
             _phone('+351 912 345 678'),
             _phone('+40 612 345 678'),
-            ('"   "', 'username', _outcome(lambda: Username('   '), str)),
-            ('"  "', 'first name', _outcome(lambda: group.add_member(Member(first_name='  ')), str)),
+            CheckRow(input='"   "', kind='username', result=_outcome(lambda: Username('   '), str)),
+            CheckRow(input='"  "', kind='first name', result=_outcome(lambda: group.add_member(Member(first_name='  ')), str)),
         ],
         3,
     )
@@ -263,10 +329,10 @@ def add_categories(group: Group) -> Categories:
         'Names are compared caselessly, and the built-in category keeps its name:',
     )
     print_table(
-        ('Change', 'Refused with'),
+        RefusalRow,
         [
-            ('Add a category named FOOD', message(homonym)),
-            ('Rename Uncategorised to Other', message(built_in)),
+            RefusalRow(change='Add a category named FOOD', error=message(homonym)),
+            RefusalRow(change='Rename Uncategorised to Other', error=message(built_in)),
         ],
         2,
     )

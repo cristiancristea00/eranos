@@ -22,6 +22,8 @@ import eranos.Money;
 import eranos.Parts;
 import eranos.Percentage;
 import eranos.TimeOfDay;
+import eranos.examples.grandtour.Tables.CurrencyRow;
+import eranos.examples.grandtour.Tables.ValueRow;
 import eranos.examples.grandtour.Tour.People;
 
 import java.util.ArrayList;
@@ -36,15 +38,15 @@ final class Values {
     private Values() {}
 
     static void currencies() throws EranosException {
-        List<List<String>> rows = new ArrayList<>();
+        List<CurrencyRow> rows = new ArrayList<>();
         for (String code : List.of("EUR", "RON", "JPY", "BHD")) {
             Currency currency = Currency.of(code);
             rows.add(
-                    List.of(
+                    new CurrencyRow(
                             currency.code(),
+                            currency.decimalPlaces(),
                             currency.name(),
-                            String.valueOf(currency.numericCode()),
-                            String.valueOf(currency.decimalPlaces())));
+                            currency.numericCode()));
         }
         Optional<EranosException> unknown = refusal(() -> Currency.of("XYZ"));
         System.out.print(
@@ -53,7 +55,7 @@ final class Values {
                 refused (%s):
                 """
                         .formatted(Currency.all().size(), message(unknown)));
-        printTable(List.of("Code", "Name", "Numeric code", "Decimal places"), rows, 2);
+        printTable(CurrencyRow.HEADERS, rows, 2);
         check(3 == Currency.of("BHD").decimalPlaces());
     }
 
@@ -68,18 +70,19 @@ final class Values {
         Cost doubled = new Cost.Converted(eur("20.00"), rate(cost));
         System.out.println("Amounts are exact minor units in their currency:");
         printTable(
-                List.of("Input", "Result"),
+                ValueRow.HEADERS,
                 List.of(
-                        List.of("12.34 EUR + 0.66 EUR", total.toString()),
-                        List.of(
+                        new ValueRow("12.34 EUR + 0.66 EUR", total.toString()),
+                        new ValueRow(
                                 "5.00 EUR − 7.50 EUR",
                                 change + ", negative: " + (0 > change.minorUnits())),
-                        List.of("1.00 EUR + 1.00 RON", message(mixed)),
-                        List.of("1.005 EUR", message(refusal(() -> eur("1.005")))),
-                        List.of("1500 JPY", yen + ", " + yen.minorUnits() + " minor units"),
-                        List.of("1234 minor units of BHD", dinars.toString()),
-                        List.of("zero RON", nothing + ", zero: " + (0 == nothing.minorUnits())),
-                        List.of(
+                        new ValueRow("1.00 EUR + 1.00 RON", message(mixed)),
+                        new ValueRow("1.005 EUR", message(refusal(() -> eur("1.005")))),
+                        new ValueRow("1500 JPY", yen + ", " + yen.minorUnits() + " minor units"),
+                        new ValueRow("1234 minor units of BHD", dinars.toString()),
+                        new ValueRow(
+                                "zero RON", nothing + ", zero: " + (0 == nothing.minorUnits())),
+                        new ValueRow(
                                 "10.00 EUR at 4.9765",
                                 "%s at %s, then %s at the same rate"
                                         .formatted(cost.amount(), rate(cost), doubled.amount()))),
@@ -96,19 +99,21 @@ final class Values {
         ExchangeRate rate = ExchangeRate.parse("4.97650");
         System.out.println("Percentages, parts, and rates are exact decimals:");
         printTable(
-                List.of("Input", "Result"),
+                ValueRow.HEADERS,
                 List.of(
-                        List.of(
+                        new ValueRow(
                                 "12.5%",
                                 percentage + ", " + percentage.basisPoints() + " basis points"),
-                        List.of("333 basis points", Percentage.ofBasisPoints(333).toString()),
-                        List.of("33.333%", message(refusal(() -> Percentage.parse("33.333")))),
-                        List.of("1.5 parts", parts + ", " + parts.hundredths() + " hundredths"),
-                        List.of("3 whole parts", Parts.ofHundredths(300).toString()),
-                        List.of("25 hundredths of a part", Parts.ofHundredths(25).toString()),
-                        List.of("0 parts", message(refusal(() -> Parts.parse("0")))),
-                        List.of("a rate of 4.97650", rate.toString()),
-                        List.of("a rate of 0", message(refusal(() -> ExchangeRate.parse("0"))))),
+                        new ValueRow("333 basis points", Percentage.ofBasisPoints(333).toString()),
+                        new ValueRow("33.333%", message(refusal(() -> Percentage.parse("33.333")))),
+                        new ValueRow(
+                                "1.5 parts", parts + ", " + parts.hundredths() + " hundredths"),
+                        new ValueRow("3 whole parts", Parts.ofHundredths(300).toString()),
+                        new ValueRow("25 hundredths of a part", Parts.ofHundredths(25).toString()),
+                        new ValueRow("0 parts", message(refusal(() -> Parts.parse("0")))),
+                        new ValueRow("a rate of 4.97650", rate.toString()),
+                        new ValueRow(
+                                "a rate of 0", message(refusal(() -> ExchangeRate.parse("0"))))),
                 2);
         check(1_250 == percentage.basisPoints());
         check(150 == parts.hundredths());
@@ -123,30 +128,30 @@ final class Values {
         System.out.println(
                 "Dates, times, identifiers, and language tags read and print the ISO forms:");
         printTable(
-                List.of("Input", "Result"),
+                ValueRow.HEADERS,
                 List.of(
-                        List.of(
+                        new ValueRow(
                                 "2026-10-01",
                                 "%s: day %d, month %d, year %d"
                                         .formatted(date, date.day(), date.month(), date.year())),
-                        List.of(
+                        new ValueRow(
                                 "29 February 2027",
                                 message(refusal(() -> CalendarDate.of(29, 2, 2027)))),
-                        List.of(
+                        new ValueRow(
                                 "22:15",
                                 "%s: hour %d, minute %d"
                                         .formatted(time, time.hour(), time.minute())),
-                        List.of("24:00", message(refusal(() -> TimeOfDay.of(24, 0)))),
-                        List.of(
+                        new ValueRow("24:00", message(refusal(() -> TimeOfDay.of(24, 0)))),
+                        new ValueRow(
                                 "Ana's identifier",
                                 parsed
                                         + ", the same after a round trip: "
                                         + Optional.of(people.ana()).equals(found)),
-                        List.of(
+                        new ValueRow(
                                 "not-a-uuid",
                                 message(refusal(() -> group.member(new MemberId("not-a-uuid"))))),
-                        List.of("pt-pt", language.toString()),
-                        List.of("pt_PT", message(refusal(() -> Language.parse("pt_PT"))))),
+                        new ValueRow("pt-pt", language.toString()),
+                        new ValueRow("pt_PT", message(refusal(() -> Language.parse("pt_PT"))))),
                 2);
         check(1 == date.day() && 10 == date.month() && 2026 == date.year());
         check(22 == time.hour() && 15 == time.minute());

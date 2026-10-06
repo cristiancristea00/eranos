@@ -137,7 +137,8 @@ fn a_call_polled_by_another_task_is_woken_there() {
     }
     assert_eq!(waiting(&cancellation), 1);
     cancellation.cancel();
-    assert_eq!((first.wakes(), second.wakes()), (0, 1));
+    assert_eq!(first.wakes(), 0);
+    assert_eq!(second.wakes(), 1);
 }
 
 /// A cancellation serving many calls would keep the task of every call that
@@ -182,13 +183,15 @@ fn a_cancellation_keeps_only_the_calls_in_progress_and_stops_them_all() {
     assert_eq!(other.as_mut().poll(&mut alone_context), Poll::Pending);
     assert_eq!(waiting(&cancellation), 2);
     cancellation.cancel();
-    assert_eq!((joined.wakes(), alone.wakes()), (1, 1));
+    assert_eq!(joined.wakes(), 1);
+    assert_eq!(alone.wakes(), 1);
     let cancelled = Poll::Ready(Err(EranosError::cancelled()));
     assert_eq!(waits.poll(&mut joined_context), cancelled);
     assert_eq!(other.poll(&mut alone_context), cancelled);
 
     // Cancelling again wakes no one.
     cancellation.cancel();
-    assert_eq!((joined.wakes(), alone.wakes()), (1, 1));
+    assert_eq!(joined.wakes(), 1);
+    assert_eq!(alone.wakes(), 1);
     assert_eq!(waiting(&cancellation), 0);
 }

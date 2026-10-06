@@ -40,7 +40,9 @@ class GroupTest {
         assertEquals(listOf("Ana", "Bob"), members.map { it.firstName })
         assertEquals(members[0], group.memberBlocking(flat.ana))
         assertFalse(group.isArchivedBlocking(flat.ana))
-        assertEquals(listOf("Flat", "Rent", "pt-PT"), listOf(group.nameBlocking(), group.descriptionBlocking(), group.languageBlocking().toString()))
+        assertEquals("Flat", group.nameBlocking())
+        assertEquals("Rent", group.descriptionBlocking())
+        assertEquals("pt-PT", group.languageBlocking().toString())
         assertEquals(listOf(flat.euros(500)), group.settlementBlocking(SettlementStrategy.GREEDY).payments.map { it.amount })
         val transfers = group.transfersBlocking()
         assertEquals(1, transfers.size)
@@ -96,40 +98,25 @@ class GroupTest {
             val flat = Flat()
             val stranger = Flat()
             val group = flat.group
-            assertEquals(
-                listOf(null, null, null, null, null, null),
-                listOf(
-                    group.memberBlocking(stranger.ana),
-                    group.categoryBlocking(stranger.food),
-                    group.expenseBlocking(stranger.dinner),
-                    group.expenseSharesBlocking(stranger.dinner),
-                    group.transferBlocking(stranger.repayment),
-                    group.transferAmountBlocking(stranger.repayment),
-                ),
-            )
-            assertEquals(
-                listOf(null, null, null, null, null, null),
-                listOf(
-                    group.member(stranger.ana),
-                    group.category(stranger.food),
-                    group.expense(stranger.dinner),
-                    group.expenseShares(stranger.dinner),
-                    group.transfer(stranger.repayment),
-                    group.transferAmount(stranger.repayment),
-                ),
-            )
+            assertNull(group.memberBlocking(stranger.ana))
+            assertNull(group.categoryBlocking(stranger.food))
+            assertNull(group.expenseBlocking(stranger.dinner))
+            assertNull(group.expenseSharesBlocking(stranger.dinner))
+            assertNull(group.transferBlocking(stranger.repayment))
+            assertNull(group.transferAmountBlocking(stranger.repayment))
+            assertNull(group.member(stranger.ana))
+            assertNull(group.category(stranger.food))
+            assertNull(group.expense(stranger.dinner))
+            assertNull(group.expenseShares(stranger.dinner))
+            assertNull(group.transfer(stranger.repayment))
+            assertNull(group.transferAmount(stranger.repayment))
             group.withReadBlocking { reader ->
-                assertEquals(
-                    listOf(null, null, null, null, null, null),
-                    listOf(
-                        reader.member(stranger.ana),
-                        reader.category(stranger.food),
-                        reader.expense(stranger.dinner),
-                        reader.expenseShares(stranger.dinner),
-                        reader.transfer(stranger.repayment),
-                        reader.transferAmount(stranger.repayment),
-                    ),
-                )
+                assertNull(reader.member(stranger.ana))
+                assertNull(reader.category(stranger.food))
+                assertNull(reader.expense(stranger.dinner))
+                assertNull(reader.expenseShares(stranger.dinner))
+                assertNull(reader.transfer(stranger.repayment))
+                assertNull(reader.transferAmount(stranger.repayment))
             }
             assertNull(Group(flat.euro, "Trip").withRead { it.language() })
         }
@@ -170,7 +157,9 @@ class GroupTest {
         group.renameBlocking("Home")
         group.setDescriptionBlocking(null)
         group.setLanguageBlocking(null)
-        assertEquals(listOf("Home", null, null), listOf(group.nameBlocking(), group.descriptionBlocking(), group.languageBlocking()))
+        assertEquals("Home", group.nameBlocking())
+        assertNull(group.descriptionBlocking())
+        assertNull(group.languageBlocking())
         val lei = Currency.of("RON")
         group.changeCurrencyBlocking(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
         assertEquals(lei, group.currencyBlocking())
@@ -210,7 +199,9 @@ class GroupTest {
             group.rename("Home")
             group.setDescription("Shared flat")
             group.setLanguage(Language.parse("ro"))
-            assertEquals(listOf("Home", "Shared flat", "ro"), listOf(group.name(), group.description(), group.language().toString()))
+            assertEquals("Home", group.name())
+            assertEquals("Shared flat", group.description())
+            assertEquals("ro", group.language().toString())
             val lei = Currency.of("RON")
             group.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
             assertEquals(lei, group.currency())
@@ -225,12 +216,14 @@ class GroupTest {
         runTest {
             val euro = Currency.of("EUR")
             val plain = Group(euro, "Trip")
-            assertEquals(listOf(null, null), listOf(plain.description(), plain.language()))
+            assertNull(plain.description())
+            assertNull(plain.language())
             val blank = assertThrows<EranosException.Group> { Group(euro, " ") }
             assertEquals(GroupFailure.EmptyName, blank.failure)
             assertEquals("the group name must not be empty", blank.message)
             val json = assertThrows<EranosException.InvalidJson> { Group.loadBlocking("{") }
-            assertEquals(listOf(1L, 1L), listOf(json.line, json.column))
+            assertEquals(1L, json.line)
+            assertEquals(1L, json.column)
             assertEquals("the saved group ends early, at line 1, column 1", json.message)
             assertThrows<EranosException.InvalidJson> { Group.load("{") }
         }
@@ -255,7 +248,9 @@ class GroupTest {
         assertEquals(group.membersBlocking(), reader.members())
         assertEquals(group.memberBlocking(flat.ana), reader.member(flat.ana))
         assertFalse(reader.isArchived(flat.ana))
-        assertEquals(listOf("Flat", "Rent", "pt-PT"), listOf(reader.name(), reader.description(), reader.language().toString()))
+        assertEquals("Flat", reader.name())
+        assertEquals("Rent", reader.description())
+        assertEquals("pt-PT", reader.language().toString())
         assertEquals(group.settlementBlocking(SettlementStrategy.GREEDY), reader.settlement(SettlementStrategy.GREEDY))
         assertEquals(group.transfersBlocking(), reader.transfers())
         assertEquals(group.transferBlocking(flat.repayment), reader.transfer(flat.repayment))

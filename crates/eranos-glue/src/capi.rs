@@ -117,6 +117,15 @@ pub(crate) struct Named {
     pub(crate) tokens: TokenStream,
 }
 
+/// The `use` declaration of a bridge module for the names it takes from one
+/// module.
+struct Import {
+    /// The names it imports, none when the module uses none of them.
+    names: Vec<Ident>,
+    /// The module's path.
+    path: TokenStream,
+}
+
 /// The file of a bridge module holding `items`, in the order of their names,
 /// with an import of every type it names from the C glue's other modules:
 /// `records`, the names of the generated module `records`, and the
@@ -140,23 +149,29 @@ fn module(mut items: Vec<Named>, records: &BTreeSet<String>) -> syn::File {
             .collect::<Vec<_>>()
     };
     let imports = [
-        (
-            quote!(crate::error::ffi),
-            imported(&["EranosError".to_owned()].into()),
-        ),
-        (quote!(crate::generated::records::ffi), imported(records)),
-        (quote!(crate::values::ffi), imported(&values)),
-        (
-            quote!(diplomat_runtime),
-            imported(&["DiplomatStr".to_owned(), "DiplomatWrite".to_owned()].into()),
-        ),
-        (
-            quote!(std::sync),
-            imported(&["Arc".to_owned(), "OnceLock".to_owned(), "mpsc".to_owned()].into()),
-        ),
+        Import {
+            names: imported(&["EranosError".to_owned()].into()),
+            path: quote!(crate::error::ffi),
+        },
+        Import {
+            names: imported(records),
+            path: quote!(crate::generated::records::ffi),
+        },
+        Import {
+            names: imported(&values),
+            path: quote!(crate::values::ffi),
+        },
+        Import {
+            names: imported(&["DiplomatStr".to_owned(), "DiplomatWrite".to_owned()].into()),
+            path: quote!(diplomat_runtime),
+        },
+        Import {
+            names: imported(&["Arc".to_owned(), "OnceLock".to_owned(), "mpsc".to_owned()].into()),
+            path: quote!(std::sync),
+        },
     ]
     .into_iter()
-    .filter_map(|(path, names)| match names.as_slice() {
+    .filter_map(|Import { names, path }| match names.as_slice() {
         [] => None,
         [name] => Some(quote!(use #path::#name;)),
         _ => Some(quote!(use #path::{#(#names),*};)),

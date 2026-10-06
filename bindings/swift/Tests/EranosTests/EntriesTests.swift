@@ -8,38 +8,42 @@ import Testing
 /// A taxi in lei, itemised, paid by percentages, with a fixed tip shared equally, and a dinner in
 /// euros, split equally, paid by amounts, with a percentage tip: between them, every kind of
 /// cost, split, and tip.
-private func expenses(of flat: Flat) throws -> [Expense] {
-    let lei = try Currency(code: "RON")
-    let taxi = try Expense(
-        cost: .converted(Money(currency: lei, minorUnits: 5_000), rate: ExchangeRate(parsing: "0.2")),
-        date: flat.day,
-        name: "Taxi",
-        payers: .percentages([MemberPercentage(member: flat.ana, percentage: Percentage(basisPoints: 10_000))]),
-        split: .itemised([
-            Item(
-                name: "Fare",
-                split: .parts([
-                    MemberParts(member: flat.ana, parts: Parts(hundredths: 100)),
-                    MemberParts(member: flat.bob, parts: Parts(hundredths: 50))
-                ]),
-                unitPrice: Money(currency: lei, minorUnits: 2_500),
-                quantity: 2
-            )
-        ]),
-        category: flat.food,
-        description: "To the airport",
-        time: TimeOfDay(hour: 9, minute: 5),
-        tip: Tip(value: .fixed(Money(currency: lei, minorUnits: 500)), distribution: .equal)
-    )
-    let dinner = try Expense(
-        cost: .local(flat.euros(3_000)),
-        date: flat.day,
-        name: "Dinner",
-        payers: .amounts([MemberAmount(amount: flat.euros(3_300), member: flat.ana)]),
-        split: .whole(.equal([flat.ana, flat.bob])),
-        tip: Tip(value: .percentage(Percentage(basisPoints: 1_000)))
-    )
-    return [taxi, dinner]
+private struct Expenses {
+    let dinner: Expense
+    let taxi: Expense
+
+    init(of flat: Flat) throws {
+        let lei = try Currency(code: "RON")
+        taxi = try Expense(
+            cost: .converted(Money(currency: lei, minorUnits: 5_000), rate: ExchangeRate(parsing: "0.2")),
+            date: flat.day,
+            name: "Taxi",
+            payers: .percentages([MemberPercentage(member: flat.ana, percentage: Percentage(basisPoints: 10_000))]),
+            split: .itemised([
+                Item(
+                    name: "Fare",
+                    split: .parts([
+                        MemberParts(member: flat.ana, parts: Parts(hundredths: 100)),
+                        MemberParts(member: flat.bob, parts: Parts(hundredths: 50))
+                    ]),
+                    unitPrice: Money(currency: lei, minorUnits: 2_500),
+                    quantity: 2
+                )
+            ]),
+            category: flat.food,
+            description: "To the airport",
+            time: TimeOfDay(hour: 9, minute: 5),
+            tip: Tip(value: .fixed(Money(currency: lei, minorUnits: 500)), distribution: .equal)
+        )
+        dinner = try Expense(
+            cost: .local(flat.euros(3_000)),
+            date: flat.day,
+            name: "Dinner",
+            payers: .amounts([MemberAmount(amount: flat.euros(3_300), member: flat.ana)]),
+            split: .whole(.equal([flat.ana, flat.bob])),
+            tip: Tip(value: .percentage(Percentage(basisPoints: 1_000)))
+        )
+    }
 }
 
 /// An expense that converted with a field changed or dropped, or that the group stored another
@@ -47,7 +51,8 @@ private func expenses(of flat: Flat) throws -> [Expense] {
 @Test
 func everyKindOfExpenseConvertsAndStoresWhole() throws {
     let flat = try Flat()
-    for expense in try expenses(of: flat) {
+    let expenses = try Expenses(of: flat)
+    for expense in [expenses.taxi, expenses.dinner] {
         #expect(Expense(expense.generated) == expense)
         let id = try flat.group.add(expense)
         let stored = try #require(try flat.group.expense(withID: id))
@@ -55,7 +60,9 @@ func everyKindOfExpenseConvertsAndStoresWhole() throws {
         #expect(stored.cost == expense.cost)
         #expect(stored.payers == expense.payers)
         #expect(stored.split == expense.split)
-        #expect([stored.category, stored.time, stored.tip] as [AnyHashable?] == [expense.category, expense.time, expense.tip])
+        #expect(stored.category == expense.category)
+        #expect(stored.time == expense.time)
+        #expect(stored.tip == expense.tip)
         #expect(stored.description == expense.description)
     }
 }
@@ -66,7 +73,7 @@ func everyKindOfExpenseConvertsAndStoresWhole() throws {
 func anExpenseTellsItsTipTotalAndMembers() throws {
     let flat = try Flat()
     let lei = try Currency(code: "RON")
-    let taxi = try expenses(of: flat)[0]
+    let taxi = try Expenses(of: flat).taxi
     #expect(try taxi.tipAmount() == Money(currency: lei, minorUnits: 500))
     #expect(try taxi.total() == Money(currency: lei, minorUnits: 5_500))
     #expect(try taxi.members() == [flat.ana, flat.bob])
@@ -104,7 +111,9 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     let stored = try #require(try flat.group.member(withID: id))
     #expect(stored.id == id)
     #expect(stored.accounts == carol.accounts)
-    #expect([stored.email?.description, stored.lastName, stored.phone?.e164] == ["carol@example.com", "Popa", "+40712345678"])
+    #expect("carol@example.com" == stored.email?.description)
+    #expect("Popa" == stored.lastName)
+    #expect("+40712345678" == stored.phone?.e164)
 
     let lei = try Currency(code: "RON")
     let cash = try Transfer(
@@ -119,7 +128,8 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     let payment = try flat.group.add(cash)
     let storedCash = try #require(try flat.group.transfer(withID: payment))
     #expect(storedCash.id == payment)
-    #expect([storedCash.note, storedCash.time?.description] == ["Cash", "10:00"])
+    #expect("Cash" == storedCash.note)
+    #expect("10:00" == storedCash.time?.description)
     #expect(try flat.group.amount(of: payment) == flat.euros(200))
 
     let category = Category(name: "Travel")

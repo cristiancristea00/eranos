@@ -7,6 +7,9 @@ The port of the Rust example ``persistence``, which prints the same report.
 
 """
 
+import dataclasses
+from typing import ClassVar, final, override
+
 from eranos import (
     CalendarDate,
     Currency,
@@ -25,7 +28,28 @@ from eranos import (
     TipDistribution,
     WholeExpenseSplit,
 )
-from examples.report import names, print_lines, print_table, refusal, section, title, totals
+from examples.report import Row, names, print_lines, print_table, refusal, section, title, totals
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class ComparisonRow(Row):
+    """A row of the table that compares a member's balance before saving and after loading."""
+
+    HEADERS: ClassVar[tuple[str, ...]] = ('Member', 'Balance before saving', 'Balance after loading')
+
+    after: str
+    """The member's balance in the loaded group."""
+
+    before: str
+    """The member's balance in the saved group."""
+
+    name: str
+    """The member's first name."""
+
+    @override
+    def cells(self) -> tuple[str, ...]:
+        return self.name, self.before, self.after
 
 
 def balance(member: MemberId, summary: Summary) -> str:
@@ -98,8 +122,8 @@ def main() -> None:
     before = group.summary()
     after = loaded.summary()
     print_table(
-        ('Member', 'Balance before saving', 'Balance after loading'),
-        [(names(group, (member,)), balance(member, before), balance(member, after)) for member in (ana, bob)],
+        ComparisonRow,
+        [ComparisonRow(after=balance(member, after), before=balance(member, before), name=names(group, (member,))) for member in (ana, bob)],
         1,
     )
     plan = loaded.settlement(SettlementStrategy.GREEDY)

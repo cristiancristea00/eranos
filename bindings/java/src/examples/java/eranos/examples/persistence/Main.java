@@ -24,6 +24,7 @@ import eranos.Split;
 import eranos.Summary;
 import eranos.Tip;
 import eranos.TipValue;
+import eranos.examples.Report.Row;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,17 @@ import java.util.regex.Pattern;
  */
 public final class Main {
     private Main() {}
+
+    /** A member's balance before saving and after loading, a row of the comparison's table. */
+    private record ComparisonRow(String after, String before, String name) implements Row {
+        static final List<String> HEADERS =
+                List.of("Member", "Balance before saving", "Balance after loading");
+
+        @Override
+        public List<String> cells() {
+            return List.of(name, before, after);
+        }
+    }
 
     /** The balance of {@code member} in {@code summary}, as the library writes it. */
     private static String balance(MemberId member, Summary summary) {
@@ -106,18 +118,15 @@ public final class Main {
                         """);
                 Summary before = group.summary();
                 Summary after = loaded.summary();
-                List<List<String>> rows = new ArrayList<>();
+                List<ComparisonRow> rows = new ArrayList<>();
                 for (MemberId member : List.of(ana, bob)) {
                     rows.add(
-                            List.of(
-                                    group.member(member).map(Member::firstName).orElse("?"),
+                            new ComparisonRow(
+                                    balance(member, after),
                                     balance(member, before),
-                                    balance(member, after)));
+                                    group.member(member).map(Member::firstName).orElse("?")));
                 }
-                printTable(
-                        List.of("Member", "Balance before saving", "Balance after loading"),
-                        rows,
-                        1);
+                printTable(ComparisonRow.HEADERS, rows, 1);
                 Settlement plan = loaded.settlement(SettlementStrategy.GREEDY);
                 System.out.printf(
                         "Payments needed to settle the loaded group: %d.%n",

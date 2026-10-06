@@ -91,7 +91,9 @@ func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
     let date = try CalendarDate(day: 23, month: 9, year: 2026)
     #expect("2026-09-23" == date.description)
     #expect(try CalendarDate(parsing: "2026-09-23") == date)
-    #expect([date.day, date.month, date.year] == [23, 9, 2026])
+    #expect(23 == date.day)
+    #expect(9 == date.month)
+    #expect(2026 == date.year)
     #expect(throws: EranosError.calendar(.invalidDate, detail: "invalid date: expected an existing ISO 8601 date between years 1 and 9999")) {
         try CalendarDate(day: 30, month: 2, year: 2026)
     }
@@ -102,7 +104,8 @@ func datesAndTimesReadAndWriteAsTheLibraryDoes() throws {
     let time = try TimeOfDay(hour: 18, minute: 30)
     #expect("18:30" == time.description)
     #expect(try TimeOfDay(parsing: "18:30") == time)
-    #expect([time.hour, time.minute] == [18, 30])
+    #expect(18 == time.hour)
+    #expect(30 == time.minute)
     #expect(throws: EranosError.self) {
         try TimeOfDay(hour: 24, minute: 0)
     }

@@ -293,6 +293,17 @@ test in `crates/xtask` checks every root.
   Every required value is a constructor argument, so `build` never reports
   a missing one, and every setter replaces what was set before: the last
   call wins.
+- **A value with meaning is a named struct.** Two or more values that
+  travel together, such as a member and an amount, the members of a debt,
+  or a row of a report's table, get a struct with named fields, in every
+  language, its tests and examples, and the tools: never a tuple, a tuple
+  variant, a positional array, a Kotlin `Pair`, or a Python tuple used as
+  a record. Tuples stay only where a standard API hands them out and the
+  code takes them apart on the spot (`zip`, `enumerate`, a map's entries,
+  `split_once`), where one `let` binds several names at once, and in
+  single-field newtypes. A struct used as a sort or
+  map key gets a hand-written `Ord`, since its fields are in alphabetical
+  order rather than the order it sorts by.
 - **Fields follow one order.** Named fields, in structs and in enum
   variants, start with `format` (the saved group's version) and `id`, then
   list the required fields, then the optional ones, each alphabetically. A

@@ -5,6 +5,15 @@
 
 use super::*;
 
+/// One variant in a table of conversions: the error, what the conversion
+/// finds it holding, and the method it converts through.
+#[derive(Debug)]
+struct Case {
+    error: SettlementError,
+    held: String,
+    method: &'static str,
+}
+
 /// A [`SettlementError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
@@ -30,18 +39,18 @@ impl FromSettlementError for ConvertedSettlementError {
 #[test]
 fn every_failure_of_settlement_error_converts_through_the_method_of_its_variant() {
     let balances = 20;
-    let cases = [(
-        SettlementError::OutOfMemory { balances },
-        "out_of_memory",
-        format!("{balances}"),
-    )];
-    for (error, method, held) in cases {
+    let cases = [Case {
+        error: SettlementError::OutOfMemory { balances },
+        held: format!("{balances}"),
+        method: "out_of_memory",
+    }];
+    for case in cases {
         assert_eq!(
-            ConvertedSettlementError::from_settlement_error(&error),
+            ConvertedSettlementError::from_settlement_error(&case.error),
             ConvertedSettlementError {
-                held,
-                message: error.to_string(),
-                method,
+                held: case.held,
+                message: case.error.to_string(),
+                method: case.method,
             }
         );
     }

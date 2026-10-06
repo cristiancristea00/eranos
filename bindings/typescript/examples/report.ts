@@ -25,12 +25,26 @@ export function section(text: string): void {
     printLines('', text, '─'.repeat(width(text)));
 }
 
+/** A column of a table of `Row`s: its header, and the text of a row's cell in it. */
+export interface Column<Row> {
+    readonly header: string;
+    readonly text: (row: Row) => string;
+}
+
 /**
- * Prints `rows` under `headers` with rounded borders, as the Rust examples' tables are printed, right-aligning the
- * columns from `numbersFrom` on. A cell of several lines makes its row as tall as its tallest cell.
+ * The columns of a table of `Row`s, in the order they are printed: the headers and the order that the Rust example's
+ * `#[tabled(rename = …, order = …)]` gives the fields of its row.
  */
-export function printTable(headers: readonly string[], rows: ReadonlyArray<readonly string[]>, numbersFrom: number): void {
-    const table = [headers, ...rows].map((row) => row.map((cell) => cell.split('\n')));
+export type Columns<Row> = ReadonlyArray<Column<Row>>;
+
+/**
+ * Prints `rows` in `columns` with rounded borders, as the Rust examples' tables are printed, right-aligning the columns
+ * from `numbersFrom` on. A cell of several lines makes its row as tall as its tallest cell.
+ */
+export function printTable<Row>(columns: Columns<Row>, rows: readonly Row[], numbersFrom: number): void {
+    const headers = columns.map((column) => column.header);
+    const cells = rows.map((row) => columns.map((column) => column.text(row)));
+    const table = [headers, ...cells].map((row) => row.map((cell) => cell.split('\n')));
     const widths = Array.from(headers.keys(), (column) => Math.max(...table.map((row) => Math.max(...(row[column] ?? []).map(width)))));
     const border = (left: string, middle: string, right: string): string => left + widths.map((size) => '─'.repeat(size + 2)).join(middle) + right;
     const lines = (row: ReadonlyArray<readonly string[]>): string[] =>

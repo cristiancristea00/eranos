@@ -9,6 +9,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+/// A row of the table of balances: a member's balance before saving and after loading.
+typedef struct ComparisonRow {
+    /// The balance after loading.
+    Line after;
+    /// The balance before saving.
+    Line before;
+    /// The member's first name.
+    Line name;
+} ComparisonRow;
+
+/// A table of balances before and after, its columns from @p numbersFrom on aligned to the right.
+static Table *comparisonTable(size_t const numbersFrom) {
+    return tableCreate(3, (char const *const[]){"Member", "Balance before saving", "Balance after loading"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of balances before and after, its cells in the order of the table's headers.
+static void addComparisonRow(Table *const table, ComparisonRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->before, row->after});
+}
+
 /// The balance of @p member in @p group, as the library writes it, or ? for a member without totals.
 static Line balanceOf(EranosGroup const *const group, Id const member) {
     EranosSummary *summary = nullptr;
@@ -67,13 +87,13 @@ int main(void) {
     must(eranosGroupLoad(eranosTextData(saved), &loaded));
     printLine("Loading replays every entry through the same checks as adding it, then rebuilds\n"
               "the totals. The loaded group equals the saved one, and so do its balances:");
-    Table *const table = tableCreate(3, (char const *const[]){"Member", "Balance before saving", "Balance after loading"}, 1);
+    Table *const table = comparisonTable(1);
     Id const members[] = {ana, bob};
     for (size_t index = 0; 2 > index; ++index) {
         Line const before = balanceOf(group, members[index]);
         Line const after = balanceOf(loaded, members[index]);
         check(0 == strcmp(before.text, after.text), "the loaded group has the saved one's balances");
-        tableAdd(table, (Line const[]){firstName(group, members[index].text), before, after});
+        addComparisonRow(table, &(ComparisonRow){.after = after, .before = before, .name = firstName(group, members[index].text)});
     }
     tablePrint(table);
     EranosSettlement *plan = nullptr;

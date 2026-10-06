@@ -18,8 +18,11 @@ class ValuesTest {
     @Test
     fun currenciesAndAmountsReadAndWriteAsTheLibraryDoes() {
         val euro = Currency.of("EUR")
-        assertEquals(listOf("EUR", "Euro", "EUR"), listOf(euro.code, euro.name, euro.toString()))
-        assertEquals(listOf(978, 2), listOf(euro.numericCode, euro.decimalPlaces))
+        assertEquals("EUR", euro.code)
+        assertEquals("Euro", euro.name)
+        assertEquals("EUR", euro.toString())
+        assertEquals(978, euro.numericCode)
+        assertEquals(2, euro.decimalPlaces)
         assertTrue(euro in Currency.all)
         val lei = Currency.of("RON")
         assertValue(euro, Currency.known("EUR"), lei)
@@ -77,7 +80,9 @@ class ValuesTest {
     fun datesAndTimesReadAndWriteAsTheLibraryDoes() {
         val date = CalendarDate.of(23, 9, 2026)
         assertEquals("2026-09-23", date.toString())
-        assertEquals(listOf(23, 9, 2026), listOf(date.day, date.month, date.year))
+        assertEquals(23, date.day)
+        assertEquals(9, date.month)
+        assertEquals(2026, date.year)
         assertValue(date, CalendarDate.parse("2026-09-23"), CalendarDate.of(24, 9, 2026))
         val invalid = assertThrows<EranosException.Calendar> { CalendarDate.of(30, 2, 2026) }
         assertEquals(CalendarFailure.InvalidDate, invalid.failure)
@@ -86,7 +91,8 @@ class ValuesTest {
 
         val time = TimeOfDay.of(18, 30)
         assertEquals("18:30", time.toString())
-        assertEquals(listOf(18, 30), listOf(time.hour, time.minute))
+        assertEquals(18, time.hour)
+        assertEquals(30, time.minute)
         assertValue(time, TimeOfDay.parse("18:30"), TimeOfDay.of(18, 31))
         assertThrows<EranosException.Calendar> { TimeOfDay.of(24, 0) }
         assertThrows<EranosException.Calendar> { TimeOfDay.parse("25:00") }
@@ -137,11 +143,16 @@ class ValuesTest {
     @Test
     fun anIdentifierIsItsText() {
         val text = "0192f1c3-0000-7000-8000-000000000001"
-        assertEquals(listOf(text, text), listOf(GroupId(text).value, GroupId(text).toString()))
-        assertEquals(listOf(text, text), listOf(MemberId(text).value, MemberId(text).toString()))
-        assertEquals(listOf(text, text), listOf(CategoryId(text).value, CategoryId(text).toString()))
-        assertEquals(listOf(text, text), listOf(ExpenseId(text).value, ExpenseId(text).toString()))
-        assertEquals(listOf(text, text), listOf(TransferId(text).value, TransferId(text).toString()))
+        assertEquals(text, GroupId(text).value)
+        assertEquals(text, GroupId(text).toString())
+        assertEquals(text, MemberId(text).value)
+        assertEquals(text, MemberId(text).toString())
+        assertEquals(text, CategoryId(text).value)
+        assertEquals(text, CategoryId(text).toString())
+        assertEquals(text, ExpenseId(text).value)
+        assertEquals(text, ExpenseId(text).toString())
+        assertEquals(text, TransferId(text).value)
+        assertEquals(text, TransferId(text).toString())
         assertValue(MemberId(text), MemberId(text), MemberId("other"))
     }
 
@@ -152,7 +163,10 @@ class ValuesTest {
     @Test
     fun aValueTheLibraryNeverSendsStillPrints() {
         val unlisted = Currency.known("XYZ")
-        assertEquals(listOf("XYZ", "XYZ", 0, 0), listOf(unlisted.code, unlisted.name, unlisted.decimalPlaces, unlisted.numericCode))
+        assertEquals("XYZ", unlisted.code)
+        assertEquals("XYZ", unlisted.name)
+        assertEquals(0, unlisted.decimalPlaces)
+        assertEquals(0, unlisted.numericCode)
         assertEquals("5 XYZ", Money(unlisted, 5).toString())
         assertEquals("-1 bp", Percentage(-1).toString())
         assertEquals("0/100", Parts(0).toString())

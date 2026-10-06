@@ -26,7 +26,10 @@ from eranos import (
 def test_a_currency_holds_what_the_library_knows_of_it() -> None:
     """A currency whose details came out wrong would format every amount in it wrongly."""
     euro = Currency('EUR')
-    assert (euro.code, euro.decimal_places, euro.name, euro.numeric_code) == ('EUR', 2, 'Euro', 978)
+    assert euro.code == 'EUR'
+    assert euro.decimal_places == 2
+    assert euro.name == 'Euro'
+    assert euro.numeric_code == 978
     assert Currency('JPY').decimal_places == 0
     assert euro == Currency('EUR')
     assert euro != Currency('JPY')
@@ -134,7 +137,10 @@ def test_percentages_and_parts_parse_and_format_as_the_library_does() -> None:
 def test_dates_and_times_are_checked_when_made() -> None:
     """A date or a time the calendar does not have, taken, would date an expense on a day that never was."""
     date = CalendarDate(23, 9, 2026)
-    assert (date.day, date.month, date.year, str(date)) == (23, 9, 2026, '2026-09-23')
+    assert date.day == 23
+    assert date.month == 9
+    assert date.year == 2026
+    assert str(date) == '2026-09-23'
     assert CalendarDate.parse('2026-09-23') == date
     assert CalendarDate(24, 8, 2026) < date < CalendarDate(1, 1, 2027)
     with pytest.raises(CalendarError) as february:
@@ -144,7 +150,9 @@ def test_dates_and_times_are_checked_when_made() -> None:
         CalendarDate.parse('2026-02-30')
     assert parsed.value.failure == CalendarError.InvalidDate()
     time = TimeOfDay(18, 30)
-    assert (time.hour, time.minute, str(time)) == (18, 30, '18:30')
+    assert time.hour == 18
+    assert time.minute == 30
+    assert str(time) == '18:30'
     assert TimeOfDay.parse('18:30') == time
     assert TimeOfDay(9, 45) < time < TimeOfDay(18, 31)
     with pytest.raises(CalendarError) as hour:
@@ -163,12 +171,14 @@ def test_contacts_and_accounts_are_checked_and_made_canonical() -> None:
         Email('ana')
     assert email.value.failure == ContactError.InvalidEmail()
     phone = PhoneNumber('+40 712 345 678')
-    assert (str(phone), phone.international()) == ('+40712345678', '+40 712 345 678')
+    assert str(phone) == '+40712345678'
+    assert phone.international() == '+40 712 345 678'
     with pytest.raises(ContactError) as local:
         PhoneNumber('0712345678')
     assert local.value.failure == ContactError.InvalidPhoneNumber()
     iban = Iban('ro49 aaaa 1b31 0075 9384 0000')
-    assert (str(iban), iban.country_code()) == ('RO49AAAA1B31007593840000', 'RO')
+    assert str(iban) == 'RO49AAAA1B31007593840000'
+    assert iban.country_code() == 'RO'
     with pytest.raises(AccountError) as checksum:
         Iban('RO49AAAA1B31007593840001')
     assert checksum.value.failure == AccountError.InvalidIban(AccountError.InvalidIban.InvalidChecksum())

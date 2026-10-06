@@ -28,9 +28,18 @@ fn parsed(tokens: &TokenStream) -> Vec<Item> {
     syn::parse2::<syn::File>(tokens.clone()).unwrap().items
 }
 
-/// The methods of the `impl` among `tokens`, in order: each one's name, its
-/// documentation, and its code without the documentation, as it prints.
-fn methods(tokens: &TokenStream) -> Vec<(String, String, String)> {
+/// A method of an `impl`, as it prints.
+struct Method {
+    /// Its code without its documentation.
+    code: String,
+    /// Its documentation, its paragraphs a blank line apart.
+    docs: String,
+    /// Its name.
+    name: String,
+}
+
+/// The methods of the `impl` among `tokens`, in order.
+fn methods(tokens: &TokenStream) -> Vec<Method> {
     parsed(tokens)
         .iter()
         .filter_map(|item| {
@@ -51,36 +60,36 @@ fn methods(tokens: &TokenStream) -> Vec<(String, String, String)> {
             function
                 .attrs
                 .retain(|attribute| !attribute.path().is_ident("doc"));
-            (
-                function.sig.ident.to_string(),
+            Method {
+                code: function.to_token_stream().to_string(),
                 docs,
-                function.to_token_stream().to_string(),
-            )
+                name: function.sig.ident.to_string(),
+            }
         })
         .collect()
 }
 
 /// The code of `method` among `methods`.
-fn code<'methods>(methods: &'methods [(String, String, String)], method: &str) -> &'methods str {
+fn code<'methods>(methods: &'methods [Method], method: &str) -> &'methods str {
     &methods
         .iter()
-        .find(|(name, _, _)| name == method)
+        .find(|found| found.name == method)
         .unwrap_or_else(|| panic!("no method {method}"))
-        .2
+        .code
 }
 
 /// The documentation of `method` among `methods`.
-fn docs<'methods>(methods: &'methods [(String, String, String)], method: &str) -> &'methods str {
+fn docs<'methods>(methods: &'methods [Method], method: &str) -> &'methods str {
     &methods
         .iter()
-        .find(|(name, _, _)| name == method)
+        .find(|found| found.name == method)
         .unwrap_or_else(|| panic!("no method {method}"))
-        .1
+        .docs
 }
 
 /// Asserts that every method of `expected` is among `methods`, written as it
 /// is there.
-fn assert_written(methods: &[(String, String, String)], expected: &[TokenStream]) {
+fn assert_written(methods: &[Method], expected: &[TokenStream]) {
     for method in expected {
         let function: syn::ImplItemFn = syn::parse2(method.clone()).unwrap();
         assert_eq!(
@@ -91,8 +100,8 @@ fn assert_written(methods: &[(String, String, String)], expected: &[TokenStream]
 }
 
 /// The names of `methods`, in order.
-fn names(methods: &[(String, String, String)]) -> Vec<&str> {
-    methods.iter().map(|(name, _, _)| name.as_str()).collect()
+fn names(methods: &[Method]) -> Vec<&str> {
+    methods.iter().map(|method| method.name.as_str()).collect()
 }
 
 /// A record a call takes is mutable: its constructor comes first, then a

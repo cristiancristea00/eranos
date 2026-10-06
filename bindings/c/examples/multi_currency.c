@@ -9,6 +9,57 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/// A row of the table of entries: an expense or a transfer, who paid it, and its amount as entered and in the group
+/// currency.
+typedef struct EntryRow {
+    /// Its amount in the group currency.
+    Line converted;
+    /// What it was.
+    Line name;
+    /// Its amount as entered.
+    Line original;
+    /// Who paid it.
+    Line payer;
+    /// The rate it was entered at.
+    Line rate;
+} EntryRow;
+
+/// A table of entries, its columns from @p numbersFrom on aligned to the right.
+static Table *entryTable(size_t const numbersFrom) {
+    return tableCreate(5, (char const *const[]){"Entry", "Paid by", "Entered as", "Rate", "In the group currency"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of entries, its cells in the order of the table's headers.
+static void addEntryRow(Table *const table, EntryRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->payer, row->original, row->rate, row->converted});
+}
+
+/// A row of the table of balances: what a member paid, consumed, sent, and received, and their balance.
+typedef struct BalanceRow {
+    /// What is left.
+    Line balance;
+    /// What they consumed.
+    Line consumed;
+    /// Their first name.
+    Line name;
+    /// What they paid.
+    Line paid;
+    /// What they received.
+    Line received;
+    /// What they sent.
+    Line sent;
+} BalanceRow;
+
+/// A table of balances, its columns from @p numbersFrom on aligned to the right.
+static Table *balanceTable(size_t const numbersFrom) {
+    return tableCreate(6, (char const *const[]){"Member", "Paid", "Consumed", "Sent", "Received", "Balance"}, numbersFrom);
+}
+
+/// Adds @p row to @p table, a table of balances, its cells in the order of the table's headers.
+static void addBalanceRow(Table *const table, BalanceRow const *const row) {
+    tableAdd(table, (Line const[]){row->name, row->paid, row->consumed, row->sent, row->received, row->balance});
+}
+
 /// The rate @p cost was entered at: 1 for a cost in the group currency; destroys @p cost.
 static Line rateLine(EranosCost *const cost) {
     EranosText *const text = eranosTextCreate();
@@ -49,13 +100,13 @@ static void addExpenses(EranosGroup const *const group, Table *const table) {
         Members const paidBy = splitMembers(payers);
         EranosMoney *total = nullptr;
         must(eranosExpenseTotal(expense, &total));
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            names(group, &paidBy),
-                            moneyLine(total),
-                            rateLine(eranosExpenseCost(expense)),
-                            amountOrZero(group, nullptr == shares ? nullptr : eranosExpenseSharesTotal(shares)),
-                        });
+        addEntryRow(table, &(EntryRow){
+                               .converted = amountOrZero(group, nullptr == shares ? nullptr : eranosExpenseSharesTotal(shares)),
+                               .name = textLine(text),
+                               .original = moneyLine(total),
+                               .payer = names(group, &paidBy),
+                               .rate = rateLine(eranosExpenseCost(expense)),
+                           });
         eranosSplitDestroy(payers);
         eranosExpenseSharesDestroy(shares);
         eranosExpenseDestroy(expense);
@@ -78,13 +129,13 @@ static void addTransfers(EranosGroup const *const group, Table *const table) {
         Line const to = firstName(group, eranosTextData(text));
         eranosTransferFrom(transfer, text);
         EranosCost *const cost = eranosTransferCost(transfer);
-        tableAdd(table, (Line const[]){
-                            lineOf("Transfer to %s", to.text),
-                            firstName(group, eranosTextData(text)),
-                            moneyLine(eranosCostAmount(cost)),
-                            rateLine(eranosTransferCost(transfer)),
-                            amountOrZero(group, converted),
-                        });
+        addEntryRow(table, &(EntryRow){
+                               .converted = amountOrZero(group, converted),
+                               .name = lineOf("Transfer to %s", to.text),
+                               .original = moneyLine(eranosCostAmount(cost)),
+                               .payer = firstName(group, eranosTextData(text)),
+                               .rate = rateLine(eranosTransferCost(transfer)),
+                           });
         eranosCostDestroy(cost);
         eranosTransferDestroy(transfer);
     }
@@ -94,7 +145,7 @@ static void addTransfers(EranosGroup const *const group, Table *const table) {
 
 /// Prints every expense and transfer of @p group, as entered and in the group currency.
 static void printEntries(EranosGroup const *const group) {
-    Table *const table = tableCreate(5, (char const *const[]){"Entry", "Paid by", "Entered as", "Rate", "In the group currency"}, 2);
+    Table *const table = entryTable(2);
     addExpenses(group, table);
     addTransfers(group, table);
     tablePrint(table);
@@ -106,7 +157,7 @@ static void printBalances(EranosGroup const *const group) {
     must(eranosGroupSummary(group, &summary));
     EranosMemberList *members = nullptr;
     must(eranosGroupMembers(group, &members));
-    Table *const table = tableCreate(6, (char const *const[]){"Member", "Paid", "Consumed", "Sent", "Received", "Balance"}, 1);
+    Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
@@ -114,14 +165,14 @@ static void printBalances(EranosGroup const *const group) {
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);
-        tableAdd(table, (Line const[]){
-                            textLine(text),
-                            moneyLine(eranosMemberSummaryPaid(found)),
-                            moneyLine(eranosMemberSummaryShare(found)),
-                            moneyLine(eranosMemberSummarySent(found)),
-                            moneyLine(eranosMemberSummaryReceived(found)),
-                            balanceLine(eranosMemberSummaryBalance(found)),
-                        });
+        addBalanceRow(table, &(BalanceRow){
+                                 .balance = balanceLine(eranosMemberSummaryBalance(found)),
+                                 .consumed = moneyLine(eranosMemberSummaryShare(found)),
+                                 .name = textLine(text),
+                                 .paid = moneyLine(eranosMemberSummaryPaid(found)),
+                                 .received = moneyLine(eranosMemberSummaryReceived(found)),
+                                 .sent = moneyLine(eranosMemberSummarySent(found)),
+                             });
         eranosMemberSummaryDestroy(found);
         eranosMemberDestroy(member);
     }

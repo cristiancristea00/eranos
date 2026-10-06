@@ -29,20 +29,38 @@ fn member(name: &str) -> Member {
     Member::builder(name).build().unwrap()
 }
 
-/// (payer, recipient, amount) of a settlement.
-fn payments(group: &Group, strategy: SettlementStrategy) -> Vec<(MemberId, MemberId, Money)> {
+/// A payment as a test writes it: `Payment` has no public constructor, so a
+/// settlement's payments are compared through their getters.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ExpectedPayment {
+    amount: Money,
+    from: MemberId,
+    to: MemberId,
+}
+
+/// The payments of a settlement.
+fn payments(group: &Group, strategy: SettlementStrategy) -> Vec<ExpectedPayment> {
     group
         .settlement(strategy)
         .unwrap()
         .payments()
         .iter()
-        .map(|payment| (payment.from(), payment.to(), payment.amount()))
+        .map(|payment| ExpectedPayment {
+            amount: payment.amount(),
+            from: payment.from(),
+            to: payment.to(),
+        })
         .collect()
 }
 
-/// Sorts expected payments the way settlements are sorted.
-fn sorted(mut payments: Vec<(MemberId, MemberId, Money)>) -> Vec<(MemberId, MemberId, Money)> {
-    payments.sort_by_key(|&(from, to, _)| (from, to));
+/// Sorts expected payments the way settlements are sorted: by payer, then
+/// by recipient.
+fn sorted(mut payments: Vec<ExpectedPayment>) -> Vec<ExpectedPayment> {
+    payments.sort_by(|left, right| {
+        left.from
+            .cmp(&right.from)
+            .then_with(|| left.to.cmp(&right.to))
+    });
     payments
 }
 
@@ -196,9 +214,21 @@ fn every_strategy_settles_the_weekend_its_own_way() {
 
     // One creditor: the simplified strategies pay Ana directly.
     let direct_to_ana = sorted(vec![
-        (bob, ana, eur("72.00")),
-        (carol, ana, eur("102.00")),
-        (dan, ana, eur("42.00")),
+        ExpectedPayment {
+            amount: eur("72.00"),
+            from: bob,
+            to: ana,
+        },
+        ExpectedPayment {
+            amount: eur("102.00"),
+            from: carol,
+            to: ana,
+        },
+        ExpectedPayment {
+            amount: eur("42.00"),
+            from: dan,
+            to: ana,
+        },
     ]);
     assert_eq!(
         payments(&group, SettlementStrategy::MinimumTransfers),
@@ -211,12 +241,36 @@ fn every_strategy_settles_the_weekend_its_own_way() {
     assert_eq!(
         payments(&group, SettlementStrategy::Direct),
         sorted(vec![
-            (bob, ana, eur("70.00")),
-            (carol, ana, eur("90.00")),
-            (dan, ana, eur("56.00")),
-            (carol, bob, eur("20.00")),
-            (bob, dan, eur("22.00")),
-            (dan, carol, eur("8.00")),
+            ExpectedPayment {
+                amount: eur("70.00"),
+                from: bob,
+                to: ana,
+            },
+            ExpectedPayment {
+                amount: eur("90.00"),
+                from: carol,
+                to: ana,
+            },
+            ExpectedPayment {
+                amount: eur("56.00"),
+                from: dan,
+                to: ana,
+            },
+            ExpectedPayment {
+                amount: eur("20.00"),
+                from: carol,
+                to: bob,
+            },
+            ExpectedPayment {
+                amount: eur("22.00"),
+                from: bob,
+                to: dan,
+            },
+            ExpectedPayment {
+                amount: eur("8.00"),
+                from: dan,
+                to: carol,
+            },
         ])
     );
 }

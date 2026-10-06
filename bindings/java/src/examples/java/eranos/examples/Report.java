@@ -39,42 +39,59 @@ public final class Report {
     }
 
     /**
+     * A row of a report's table, as the Rust examples' row structs are: a record whose components
+     * are in alphabetical order, with a constant {@code HEADERS} that lists its columns' headers in
+     * the order the report prints them.
+     */
+    public interface Row {
+        /**
+         * The text of every cell, in the order of the row's {@code HEADERS}.
+         *
+         * @return the cells
+         */
+        List<String> cells();
+    }
+
+    /**
      * Prints {@code rows} under {@code headers} with rounded borders, as the Rust examples' tables
      * are printed, right-aligning the columns from {@code numbersFrom} on. A cell of several lines
      * makes its row as tall as its tallest cell.
      *
-     * @param headers the columns' headers
-     * @param rows the rows, a cell per column
+     * @param headers the columns' headers, the {@code HEADERS} of the rows' type
+     * @param rows the rows
      * @param numbersFrom the first column aligned to the right
      */
-    public static void printTable(List<String> headers, List<List<String>> rows, int numbersFrom) {
-        List<List<List<String>>> table = new ArrayList<>();
-        table.add(cells(headers));
-        for (List<String> row : rows) {
-            table.add(cells(row));
-        }
+    public static void printTable(List<String> headers, List<? extends Row> rows, int numbersFrom) {
+        List<List<String>> heading = lines(headers);
+        List<List<List<String>>> body = rows.stream().map(row -> lines(row.cells())).toList();
         int[] widths = new int[headers.size()];
-        for (List<List<String>> row : table) {
-            for (int column = 0; column < widths.length; column++) {
-                for (String line : row.get(column)) {
-                    widths[column] = Math.max(widths[column], width(line));
-                }
-            }
+        widen(widths, heading);
+        for (List<List<String>> row : body) {
+            widen(widths, row);
         }
         StringBuilder output = new StringBuilder();
         output.append(border(widths, "╭", "┬", "╮"));
-        append(output, table.get(0), widths, numbersFrom);
+        append(output, heading, widths, numbersFrom);
         output.append(border(widths, "├", "┼", "┤"));
-        for (List<List<String>> row : table.subList(1, table.size())) {
+        for (List<List<String>> row : body) {
             append(output, row, widths, numbersFrom);
         }
         output.append(border(widths, "╰", "┴", "╯"));
         System.out.print(output);
     }
 
-    /** The lines of every cell of {@code row}. */
-    private static List<List<String>> cells(List<String> row) {
-        return row.stream().map(cell -> List.of(cell.split("\n", -1))).toList();
+    /** The lines of every cell of {@code cells}. */
+    private static List<List<String>> lines(List<String> cells) {
+        return cells.stream().map(cell -> List.of(cell.split("\n", -1))).toList();
+    }
+
+    /** Widens each of {@code widths} to the widest line of its column in {@code row}. */
+    private static void widen(int[] widths, List<List<String>> row) {
+        for (int column = 0; column < widths.length; column++) {
+            for (String line : row.get(column)) {
+                widths[column] = Math.max(widths[column], width(line));
+            }
+        }
     }
 
     /** A border line of the table whose columns are {@code widths} wide. */

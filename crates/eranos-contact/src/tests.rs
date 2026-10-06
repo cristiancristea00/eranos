@@ -363,20 +363,51 @@ fn a_phone_number_needs_a_leading_plus() {
     );
 }
 
+/// A phone number as typed, and the E.164 form it is stored in.
+#[derive(Debug, Clone, Copy)]
+struct TypedNumber {
+    stored: &'static str,
+    text: &'static str,
+}
+
 /// A number no plan assigns would be stored, and a call would reach no one or
 /// someone else.
 #[test]
 fn a_phone_number_must_be_valid_in_its_countrys_plan() {
     // Numbers of several plans, with their E.164 forms.
-    for (text, stored) in [
-        ("+40 712 345 678", "+40712345678"),
-        ("+44 20 7946 0958", "+442079460958"),
-        ("+1 (201) 555-0123", "+12015550123"),
-        ("+33 6 12 34 56 78", "+33612345678"),
-        ("+49 30 901820", "+4930901820"),
-        ("+86 138 0013 8000", "+8613800138000"),
-        ("+7 912 345 67 89", "+79123456789"),
-        ("+800 1234 5678", "+80012345678"),
+    for TypedNumber { stored, text } in [
+        TypedNumber {
+            stored: "+40712345678",
+            text: "+40 712 345 678",
+        },
+        TypedNumber {
+            stored: "+442079460958",
+            text: "+44 20 7946 0958",
+        },
+        TypedNumber {
+            stored: "+12015550123",
+            text: "+1 (201) 555-0123",
+        },
+        TypedNumber {
+            stored: "+33612345678",
+            text: "+33 6 12 34 56 78",
+        },
+        TypedNumber {
+            stored: "+4930901820",
+            text: "+49 30 901820",
+        },
+        TypedNumber {
+            stored: "+8613800138000",
+            text: "+86 138 0013 8000",
+        },
+        TypedNumber {
+            stored: "+79123456789",
+            text: "+7 912 345 67 89",
+        },
+        TypedNumber {
+            stored: "+80012345678",
+            text: "+800 1234 5678",
+        },
     ] {
         assert_eq!(PhoneNumber::parse(text).unwrap().as_str(), stored, "{text}");
     }
@@ -469,12 +500,24 @@ fn other_digit_forms_are_read_as_digits() {
 #[test]
 fn a_trunk_zero_after_the_country_code_is_dropped() {
     // In parentheses or written out.
-    for (text, stored) in [
-        ("+44 (0)20 7946 0958", "+442079460958"),
-        ("+40 (0) 721 234 567", "+40721234567"),
-        ("+40 0721 234 567", "+40721234567"),
+    for TypedNumber { stored, text } in [
+        TypedNumber {
+            stored: "+442079460958",
+            text: "+44 (0)20 7946 0958",
+        },
+        TypedNumber {
+            stored: "+40721234567",
+            text: "+40 (0) 721 234 567",
+        },
+        TypedNumber {
+            stored: "+40721234567",
+            text: "+40 0721 234 567",
+        },
         // Italy's leading 0 is part of the number, and stays.
-        ("+39 02 1234 5678", "+390212345678"),
+        TypedNumber {
+            stored: "+390212345678",
+            text: "+39 02 1234 5678",
+        },
     ] {
         assert_eq!(PhoneNumber::parse(text).unwrap().as_str(), stored, "{text}");
     }
@@ -511,18 +554,43 @@ fn every_regions_example_numbers_are_accepted() {
     assert!(checked >= plans.get_supported_regions().len(), "{checked}");
 }
 
+/// A stored phone number and its international form.
+#[derive(Debug, Clone, Copy)]
+struct GroupedNumber {
+    grouped: &'static str,
+    stored: &'static str,
+}
+
 /// Screens would show the number as one run of digits, which people misread
 /// when they dial or check it.
 #[test]
 fn the_international_form_groups_the_digits() {
     // The grouping of several plans.
-    for (stored, grouped) in [
-        ("+40712345678", "+40 712 345 678"),
-        ("+442079460958", "+44 20 7946 0958"),
-        ("+12015550123", "+1 201-555-0123"),
-        ("+79123456789", "+7 912 345-67-89"),
-        ("+33612345678", "+33 6 12 34 56 78"),
-        ("+80012345678", "+800 1234 5678"),
+    for GroupedNumber { grouped, stored } in [
+        GroupedNumber {
+            grouped: "+40 712 345 678",
+            stored: "+40712345678",
+        },
+        GroupedNumber {
+            grouped: "+44 20 7946 0958",
+            stored: "+442079460958",
+        },
+        GroupedNumber {
+            grouped: "+1 201-555-0123",
+            stored: "+12015550123",
+        },
+        GroupedNumber {
+            grouped: "+7 912 345-67-89",
+            stored: "+79123456789",
+        },
+        GroupedNumber {
+            grouped: "+33 6 12 34 56 78",
+            stored: "+33612345678",
+        },
+        GroupedNumber {
+            grouped: "+800 1234 5678",
+            stored: "+80012345678",
+        },
     ] {
         let phone = PhoneNumber::parse(stored).unwrap();
         assert_eq!(phone.international(), grouped, "{stored}");

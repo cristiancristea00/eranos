@@ -9,6 +9,15 @@ use super::*;
 use crate::plan;
 use crate::tests::{FileOperation, METADATA, Recorder};
 
+/// A package, and the arguments of its builds' dialect that its lint passes
+/// the compiler.
+struct Dialect {
+    /// The arguments.
+    dialect: &'static str,
+    /// The package.
+    package: Package,
+}
+
 /// Runs the packages' gates with `runner`, as the gates run them.
 fn run(runner: &mut Recorder, metadata: &Metadata) -> Result<(), Failure> {
     let actions = actions(runner, metadata)?;
@@ -143,9 +152,15 @@ fn the_ports_build_as_the_tests_do_on_the_library_whose_identifiers_count_up() {
 /// language; the linter reads each package in its builds' dialect.
 #[test]
 fn the_lint_reads_each_package_in_its_builds_dialect() {
-    for (package, dialect) in [
-        (C_PACKAGE, " -- -std=c23 -Iinclude "),
-        (CPP_PACKAGE, " -- -std=c++23 -fno-exceptions -Iinclude "),
+    for Dialect { dialect, package } in [
+        Dialect {
+            dialect: " -- -std=c23 -Iinclude ",
+            package: C_PACKAGE,
+        },
+        Dialect {
+            dialect: " -- -std=c++23 -fno-exceptions -Iinclude ",
+            package: CPP_PACKAGE,
+        },
     ] {
         let lint = plan::steps(&checks(package, "/LLVM_HOME"))[1].command_line();
         assert!(lint.contains(dialect), "{lint}");
