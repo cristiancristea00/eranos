@@ -268,6 +268,30 @@ fn a_foreign_expense_converts_its_total_once() {
     assert_eq!(rows(&resolved)[0].paid, 4977);
 }
 
+/// A currency change resolves each expense at its new rate before the
+/// expense takes it: the shares at a rate would otherwise differ from the
+/// shares of the expense at that rate, and a group's totals from a rebuild.
+#[test]
+fn resolving_at_a_rate_resolves_the_expense_at_that_rate() {
+    let (ana, bob) = (member(1), member(2));
+    let rate = ExchangeRate::parse("4.9765").unwrap();
+    let local = identified(
+        &Expense::builder(eur(1000), day(), "Museum", ana, Split::equal([ana, bob]))
+            .build()
+            .unwrap(),
+        entry(1),
+    );
+    let converted = local.clone().with_exchange_rate(Some(rate));
+    assert_eq!(
+        resolve_expense_at(&local, Some(rate), Currency::RON),
+        resolve_expense(&converted, Currency::RON)
+    );
+    assert_eq!(
+        resolve_expense_at(&converted, None, Currency::EUR),
+        resolve_expense(&local, Currency::EUR)
+    );
+}
+
 /// A converted tip is carved out of the converted total, so tip plus amount
 /// still equals the total in the group currency.
 #[test]

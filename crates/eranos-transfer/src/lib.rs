@@ -1,9 +1,10 @@
 //! Transfers: money one member paid another, such as a repayment.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use. [`resolve_transfer`], which converts a transfer into
-//! the group currency for the ledger, is the group's, and the facade does not
-//! re-export it; nor does it re-export [`FromTransferError`], through which a
+//! types callers use. [`resolve_transfer`] and [`resolve_transfer_at`], which
+//! convert a transfer into the group currency for the ledger, are the group's,
+//! and the facade does not re-export them; nor does it re-export
+//! [`FromTransferError`], through which a
 //! crate that tells every failure apart converts one without the wildcard arm
 //! a `match` outside this crate would need.
 #![forbid(unsafe_code)]
@@ -341,7 +342,29 @@ impl<'de> serde::Deserialize<'de> for Transfer {
 /// [`MoneyError::Overflow`] when the conversion leaves the range of an
 /// amount.
 pub fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
-    match transfer.cost().conversion() {
+    resolve_transfer_at(transfer, transfer.cost().conversion(), currency)
+}
+
+/// A transfer's amount in the group currency, as [`resolve_transfer`] gives
+/// it, at the rate `conversion`.
+///
+/// The rate replaces the transfer's own, and `None` makes it a local cost:
+/// a currency change resolves each transfer at its new rate before it gives
+/// the transfer that rate.
+///
+/// The caller has checked the kind of cost that `conversion` makes against
+/// `currency`, as a currency change does with its rates.
+///
+/// # Errors
+///
+/// [`MoneyError::Overflow`] when the conversion leaves the range of an
+/// amount.
+pub fn resolve_transfer_at(
+    transfer: &Transfer,
+    conversion: Option<ExchangeRate>,
+    currency: Currency,
+) -> Result<i64, MoneyError> {
+    match conversion {
         None => Ok(transfer.amount().minor_units()),
         Some(rate) => Ok(rate.convert(transfer.amount(), currency)?.minor_units()),
     }

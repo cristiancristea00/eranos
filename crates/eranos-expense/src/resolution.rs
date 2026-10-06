@@ -42,6 +42,27 @@ pub fn resolve_expense(
     expense: &Expense,
     currency: Currency,
 ) -> Result<ResolvedExpense, MoneyError> {
+    resolve_expense_at(expense, expense.cost().conversion(), currency)
+}
+
+/// Divides one expense as [`resolve_expense`] does, at the rate `conversion`.
+///
+/// The rate replaces the expense's own, and `None` makes it a local cost:
+/// a currency change resolves each expense at its new rate before it gives
+/// the expense that rate.
+///
+/// The caller has checked the kind of cost that `conversion` makes against
+/// `currency`, as a currency change does with its rates.
+///
+/// # Errors
+///
+/// [`MoneyError::Overflow`] when the conversion leaves the range of an
+/// amount.
+pub fn resolve_expense_at(
+    expense: &Expense,
+    conversion: Option<ExchangeRate>,
+    currency: Currency,
+) -> Result<ResolvedExpense, MoneyError> {
     let seed = expense.id().to_bytes();
     let pass = |number: u64| rotation(seed, number);
     let amount = expense.amount().minor_units();
@@ -88,39 +109,38 @@ pub fn resolve_expense(
     }
     let paid = expense.payers().divide(total, pass(PASS_PAYERS));
 
-    let (total, tip, shares, paid) =
-        match convert(expense.total(), expense.cost().conversion(), currency)? {
-            None => (total, tip, shares, paid),
-            Some(converted) => {
-                let reallocate = |parts: &[Share], number: u64| {
-                    let weights: Vec<u64> = parts
-                        .iter()
-                        .map(|part| part.amount.unsigned_abs())
-                        .collect();
-                    parts
-                        .iter()
-                        .zip(allocate(converted, &weights, pass(number)))
-                        .map(|(part, reallocated)| Share {
-                            amount: reallocated,
-                            member: part.member,
-                        })
-                        .collect::<Vec<_>>()
-                };
-                // The converted total split back into amount and tip; the
-                // tip is the second of the two parts.
-                let tip_weights = [amount.unsigned_abs(), tip.unsigned_abs()];
-                let converted_tip = allocate(converted, &tip_weights, pass(PASS_CONVERTED_TIP))
-                    .last()
-                    .copied()
-                    .unwrap_or_default();
-                (
-                    converted,
-                    converted_tip,
-                    reallocate(&shares, PASS_CONVERTED_SHARES),
-                    reallocate(&paid, PASS_CONVERTED_PAYERS),
-                )
-            }
-        };
+    let (total, tip, shares, paid) = match convert(expense.total(), conversion, currency)? {
+        None => (total, tip, shares, paid),
+        Some(converted) => {
+            let reallocate = |parts: &[Share], number: u64| {
+                let weights: Vec<u64> = parts
+                    .iter()
+                    .map(|part| part.amount.unsigned_abs())
+                    .collect();
+                parts
+                    .iter()
+                    .zip(allocate(converted, &weights, pass(number)))
+                    .map(|(part, reallocated)| Share {
+                        amount: reallocated,
+                        member: part.member,
+                    })
+                    .collect::<Vec<_>>()
+            };
+            // The converted total split back into amount and tip; the
+            // tip is the second of the two parts.
+            let tip_weights = [amount.unsigned_abs(), tip.unsigned_abs()];
+            let converted_tip = allocate(converted, &tip_weights, pass(PASS_CONVERTED_TIP))
+                .last()
+                .copied()
+                .unwrap_or_default();
+            (
+                converted,
+                converted_tip,
+                reallocate(&shares, PASS_CONVERTED_SHARES),
+                reallocate(&paid, PASS_CONVERTED_PAYERS),
+            )
+        }
+    };
 
     let debts = debts(&shares, &paid, |position| pass(PASS_DEBTS + position));
     let mut members: BTreeMap<MemberId, PaidAndConsumed> = BTreeMap::new();

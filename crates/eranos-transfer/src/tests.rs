@@ -219,6 +219,27 @@ fn a_transfer_converts_into_the_group_currency() {
     assert_eq!(resolve_transfer(&cash, Currency::EUR), Ok(2_011));
 }
 
+/// A currency change converts each transfer at its new rate before the
+/// transfer takes it, so converting at a rate must give what the transfer at
+/// that rate gives.
+#[test]
+fn converting_at_a_rate_converts_the_transfer_at_that_rate() {
+    let rate = ExchangeRate::parse("0.2011").unwrap();
+    let local = repayment()
+        .cost(Money::from_minor_units(Currency::RON, 10_000))
+        .build()
+        .unwrap();
+    let converted = local.clone().with_exchange_rate(Some(rate));
+    assert_eq!(
+        resolve_transfer_at(&local, Some(rate), Currency::EUR),
+        resolve_transfer(&converted, Currency::EUR)
+    );
+    assert_eq!(
+        resolve_transfer_at(&converted, None, Currency::RON),
+        resolve_transfer(&local, Currency::RON)
+    );
+}
+
 /// Two transfers would share an identifier, or an edited transfer would
 /// become another entry.
 #[test]

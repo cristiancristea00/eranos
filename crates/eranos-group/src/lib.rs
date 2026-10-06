@@ -30,12 +30,12 @@ pub use shared::{GroupReadGuard, GroupWriteGuard, SharedGroup};
 use eranos_category::Category;
 use eranos_core::cooperative::{Cooperative, Pacer};
 use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId, text};
-use eranos_expense::{Expense, resolve_expense};
+use eranos_expense::{Expense, resolve_expense, resolve_expense_at};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
 use eranos_member::Member;
 use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
 use eranos_settlement::{Settlement, SettlementError, SettlementStrategy, Settlements};
-use eranos_transfer::{Transfer, resolve_transfer};
+use eranos_transfer::{Transfer, resolve_transfer, resolve_transfer_at};
 
 /// The version of the saved form. Every other version is refused: a newer
 /// one would be read with fields silently dropped, and no earlier one is
@@ -103,6 +103,14 @@ struct MemberRecord {
 struct ExpenseRecord {
     expense: Expense,
     resolved: ResolvedExpense,
+}
+
+/// An entry's rate into the new currency and its resolution at that rate,
+/// kept until a currency change's last yield.
+#[derive(Debug)]
+struct Rerated<Resolution> {
+    rate: Option<ExchangeRate>,
+    resolution: Resolution,
 }
 
 #[derive(Debug, Clone)]
@@ -351,9 +359,14 @@ impl Group {
         if currency == self.currency {
             return Ok(());
         }
-        let mut table = BTreeMap::new();
-        for rate in rates {
-            if table.insert(rate.currency(), rate.rate()).is_some() {
+        // A change names a rate for each of a few currencies, so scanning the
+        // list finds one sooner than a map keyed by currency would.
+        for (position, rate) in rates.iter().enumerate() {
+            if rates
+                .iter()
+                .take(position)
+                .any(|earlier| earlier.currency() == rate.currency())
+            {
                 return Err(GroupError::DuplicateExchangeRate {
                     currency: rate.currency(),
                 });
@@ -363,10 +376,10 @@ impl Group {
             if source == currency {
                 Ok(None)
             } else {
-                table
-                    .get(&source)
-                    .copied()
-                    .map(Some)
+                rates
+                    .iter()
+                    .find(|rate| rate.currency() == source)
+                    .map(|rate| Some(rate.rate()))
                     .ok_or(GroupError::MissingExchangeRate { currency: source })
             }
         };
@@ -375,22 +388,22 @@ impl Group {
         // so every cost has the kind `check_cost` asks for.
         let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
         let mut delta = Delta::default();
-        let mut expenses = BTreeMap::new();
-        for (&id, record) in &self.expenses {
+        let mut expenses = Vec::with_capacity(self.expenses.len());
+        for record in self.expenses.values() {
             let rate = rate_for(record.expense.amount().currency())?;
-            let expense = record.expense.clone().with_exchange_rate(rate);
-            let resolved = resolve_expense(&expense, currency).map_err(|_| GroupError::Overflow)?;
-            delta.add_expense(&resolved, expense.category(), 1);
-            expenses.insert(id, ExpenseRecord { expense, resolved });
+            let resolution = resolve_expense_at(&record.expense, rate, currency)
+                .map_err(|_| GroupError::Overflow)?;
+            delta.add_expense(&resolution, record.expense.category(), 1);
+            expenses.push(Rerated { rate, resolution });
             pacer.advance(1).await;
         }
-        let mut transfers = BTreeMap::new();
-        for (&id, record) in &self.transfers {
+        let mut transfers = Vec::with_capacity(self.transfers.len());
+        for record in self.transfers.values() {
             let rate = rate_for(record.transfer.amount().currency())?;
-            let transfer = record.transfer.clone().with_exchange_rate(rate);
-            let amount = resolve_transfer(&transfer, currency).map_err(|_| GroupError::Overflow)?;
-            delta.add_transfer(pair(&transfer), amount, 1);
-            transfers.insert(id, TransferRecord { amount, transfer });
+            let resolution = resolve_transfer_at(&record.transfer, rate, currency)
+                .map_err(|_| GroupError::Overflow)?;
+            delta.add_transfer(pair(&record.transfer), resolution, 1);
+            transfers.push(Rerated { rate, resolution });
             pacer.advance(1).await;
         }
         // Nothing is written before the last yield, so a call dropped at
@@ -398,9 +411,27 @@ impl Group {
         let mut ledger = Ledger::new(currency);
         ledger.apply(&delta).map_err(|_| GroupError::Overflow)?;
 
+        // Each entry is moved into its new record, in the same order as its
+        // resolution, rather than copied.
+        self.expenses = std::mem::take(&mut self.expenses)
+            .into_iter()
+            .zip(expenses)
+            .map(|((id, record), rerated)| {
+                let expense = record.expense.with_exchange_rate(rerated.rate);
+                let resolved = rerated.resolution;
+                (id, ExpenseRecord { expense, resolved })
+            })
+            .collect();
+        self.transfers = std::mem::take(&mut self.transfers)
+            .into_iter()
+            .zip(transfers)
+            .map(|((id, record), rerated)| {
+                let amount = rerated.resolution;
+                let transfer = record.transfer.with_exchange_rate(rerated.rate);
+                (id, TransferRecord { amount, transfer })
+            })
+            .collect();
         self.currency = currency;
-        self.expenses = expenses;
-        self.transfers = transfers;
         self.ledger = ledger;
         self.invalidate_settlements();
         Ok(())

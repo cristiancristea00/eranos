@@ -1,9 +1,10 @@
 //! Expenses: what was bought, who paid, and how the cost is shared.
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
-//! types callers use. [`resolve_expense`], which divides an expense into
-//! group-currency shares for the ledger, is the group's, and the facade does
-//! not re-export it; nor does it re-export the conversion traits
+//! types callers use. [`resolve_expense`] and [`resolve_expense_at`], which
+//! divide an expense into group-currency shares for the ledger, are the
+//! group's, and the facade does not re-export them; nor does it re-export
+//! the conversion traits
 //! ([`FromExpenseError`], [`FromExpenseSplit`], [`FromSplit`],
 //! [`FromTipDistribution`], and [`FromTipValue`]), through which a crate that
 //! tells every variant of an enum apart converts it without the wildcard arm
@@ -21,7 +22,7 @@ use std::collections::BTreeSet;
 
 pub use error::{ExpenseError, FromExpenseError};
 pub use item::{Item, ItemBuilder};
-pub use resolution::resolve_expense;
+pub use resolution::{resolve_expense, resolve_expense_at};
 pub use split::{FromSplit, MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{FromTipDistribution, FromTipValue, Tip, TipDistribution, TipValue};
 
