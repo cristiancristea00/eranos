@@ -23,6 +23,9 @@ namespace eranos {
 
 /// How a settlement plans its payments.
 enum class SettlementStrategy : std::uint8_t {
+    /// The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond; the settlement names the
+    /// strategy whose plan it is.
+    ADAPTIVE,
     /// Every debt between two members, unsimplified.
     DIRECT,
     /// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
@@ -273,13 +276,13 @@ struct Settlement final {
     /// The record of its fields.
     ///
     /// @param payments The payments.
-    /// @param strategy The strategy that made the plan.
+    /// @param strategy The strategy that made the plan: the one asked for, or, for the adaptive strategy, the one whose plan it chose.
     Settlement(std::vector<Payment> payments, SettlementStrategy const strategy) noexcept : payments(std::move(payments)), strategy(strategy) {}
 
     /// The payments.
     std::vector<Payment> payments;
 
-    /// The strategy that made the plan.
+    /// The strategy that made the plan: the one asked for, or, for the adaptive strategy, the one whose plan it chose.
     SettlementStrategy strategy;
 
     /// Whether every field of two records is equal.

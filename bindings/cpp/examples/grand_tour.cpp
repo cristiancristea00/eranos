@@ -305,12 +305,14 @@ struct MemberCategoryRow final {
     [[nodiscard]] Cells<5> cells() const noexcept { return {name, food, lodging, transport, uncategorised}; }
 };
 
-/// A row of the table of strategies: a strategy and how many payments it plans.
+/// A row of the table of strategies: a strategy, the strategy whose plan it chose, and how many payments that plan makes.
 struct StrategyRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<2> HEADERS{"Strategy", "Payments"};
+    static constexpr Cells<3> HEADERS{"Strategy", "Computed by", "Payments"};
 
-    /// How many payments it plans.
+    /// The name of the strategy whose plan it chose.
+    std::string_view computedBy;
+    /// How many payments the plan makes.
     std::string payments;
     /// Its name.
     std::string_view strategy;
@@ -318,7 +320,7 @@ struct StrategyRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<2> cells() const noexcept { return {strategy, payments}; }
+    [[nodiscard]] Cells<3> cells() const noexcept { return {strategy, computedBy, payments}; }
 };
 
 /// A row of the table of payments: who pays whom, and how much.
@@ -1203,6 +1205,8 @@ void newCurrency(Group &group, People const &people) {
 /// The name of @p strategy as the apps show it.
 [[nodiscard]] std::string_view strategyName(SettlementStrategy const strategy) {
     switch (strategy) {
+    case SettlementStrategy::ADAPTIVE:
+        return "Adaptive";
     case SettlementStrategy::DIRECT:
         return "Direct";
     case SettlementStrategy::GREEDY:
@@ -1217,15 +1221,23 @@ void newCurrency(Group &group, People const &people) {
 void settlingUp(Group &group) {
     section("11. Settling up");
     std::vector<StrategyRow> counts;
-    for (auto const strategy : {SettlementStrategy::DIRECT, SettlementStrategy::GREEDY, SettlementStrategy::MINIMUM_TRANSFERS}) {
+    for (auto const strategy :
+         {SettlementStrategy::ADAPTIVE, SettlementStrategy::DIRECT, SettlementStrategy::GREEDY, SettlementStrategy::MINIMUM_TRANSFERS}) {
         auto const settlement = must(group.settlement(strategy));
-        check(strategy == settlement.strategy, "the plan is the strategy's");
-        counts.push_back({.payments = std::to_string(settlement.payments.size()), .strategy = strategyName(settlement.strategy)});
+        // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
+        auto const computedBy = SettlementStrategy::ADAPTIVE == strategy ? SettlementStrategy::MINIMUM_TRANSFERS : strategy;
+        check(computedBy == settlement.strategy, "the settlement names the strategy whose plan it is");
+        counts.push_back({
+            .computedBy = strategyName(settlement.strategy),
+            .payments = std::to_string(settlement.payments.size()),
+            .strategy = strategyName(strategy),
+        });
     }
     printLine("Each strategy turns the balances into payments: the direct one pays back every\n"
-              "pair's own debts, greedy pays the largest amounts first, and the minimum one\n"
-              "finds the fewest payments.");
-    printTable(counts, 1);
+              "pair's own debts, greedy pays the largest amounts first, the minimum one finds\n"
+              "the fewest payments, and the adaptive one finds the fewest while that is quick\n"
+              "and greedy's beyond, naming the strategy whose plan it chose.");
+    printTable(counts, 2);
     auto const plan = must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS));
     printLine("The group follows the minimum plan:");
     std::vector<PaymentRow> payments;

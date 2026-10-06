@@ -669,7 +669,8 @@ impl Group {
     ///
     /// [`SettlementError::OutOfMemory`] when
     /// [`SettlementStrategy::MinimumTransfers`] cannot allocate its table;
-    /// the other strategies never fail.
+    /// the other strategies never fail, [`SettlementStrategy::Adaptive`]
+    /// settling greedily instead.
     pub fn settlement(&self, strategy: SettlementStrategy) -> Result<&Settlement, SettlementError> {
         self.settlements.get(strategy, &self.ledger)
     }
@@ -678,8 +679,10 @@ impl Group {
     /// [`settlement`](Self::settlement) computes and caches them, yielding
     /// while the exact solver fills its table.
     ///
-    /// Only [`SettlementStrategy::MinimumTransfers`] yields, while it fills
-    /// its table, and never for 16 open balances or fewer. The plan is
+    /// Only the exact solver yields, while it fills its table, and never for
+    /// 16 open balances or fewer: [`SettlementStrategy::MinimumTransfers`]
+    /// always, and [`SettlementStrategy::Adaptive`] when it settles exactly.
+    /// The plan is
     /// cached once it is complete, and [`settlement`](Self::settlement)
     /// reads it; a call dropped before then caches nothing.
     ///

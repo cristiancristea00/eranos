@@ -385,18 +385,20 @@ proptest! {
         }
     }
 
-    /// Every strategy's plan clears every balance when recorded, and the
+    /// Every strategy's plan clears every balance when recorded, the
     /// fewest-payments plan never needs more payments than greedy, which
-    /// never needs more than one fewer than the open balances.
+    /// never needs more than one fewer than the open balances, and the
+    /// adaptive plan of these six members is the fewest-payments plan.
     #[test]
     fn every_plan_clears_every_balance(recipe in group_recipe()) {
         let Entries { expenses, members, transfers } = entries(&recipe);
         let group = group(&base(&members), &expenses, &transfers);
         let open = group.summary().members().filter(|member| !member.net().is_zero()).count();
-        let minimum = group.settlement(SettlementStrategy::MinimumTransfers).unwrap().len();
+        let minimum = group.settlement(SettlementStrategy::MinimumTransfers).unwrap();
         let greedy = group.settlement(SettlementStrategy::Greedy).unwrap().len();
-        prop_assert!(minimum <= greedy);
+        prop_assert!(minimum.len() <= greedy);
         prop_assert!(greedy <= open.saturating_sub(1));
+        prop_assert_eq!(group.settlement(SettlementStrategy::Adaptive).unwrap(), minimum);
         for strategy in SettlementStrategy::all() {
             let mut settled = group.clone();
             let plan = settled.settlement(strategy).unwrap().clone();

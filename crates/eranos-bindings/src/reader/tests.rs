@@ -76,6 +76,7 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
     assert_eq!(reader.is_archived(ana), handle.is_archived(ana));
     assert_eq!(reader.name(), handle.name());
     for strategy in [
+        SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
         SettlementStrategy::Greedy,
         SettlementStrategy::MinimumTransfers,

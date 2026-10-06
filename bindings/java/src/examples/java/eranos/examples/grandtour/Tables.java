@@ -186,13 +186,16 @@ final class Tables {
         }
     }
 
-    /** A strategy and the payments of its plan, a row of the strategies' table. */
-    record StrategyRow(int payments, String strategy) implements Row {
-        static final List<String> HEADERS = List.of("Strategy", "Payments");
+    /**
+     * A strategy asked for, the strategy whose plan it chose, and the plan's payments, a row of the
+     * strategies' table.
+     */
+    record StrategyRow(String computedBy, int payments, String strategy) implements Row {
+        static final List<String> HEADERS = List.of("Strategy", "Computed by", "Payments");
 
         @Override
         public List<String> cells() {
-            return List.of(strategy, String.valueOf(payments));
+            return List.of(strategy, computedBy, String.valueOf(payments));
         }
     }
 

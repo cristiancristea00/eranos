@@ -33,7 +33,9 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     #expect(try "pt-PT" == group.language()?.description)
     for strategy in SettlementStrategy.allCases {
         let settlement = try group.settlement(by: strategy)
-        #expect(settlement.strategy == strategy)
+        // Two balances are well within the adaptive strategy's limit, so it settles them exactly.
+        let computedBy: SettlementStrategy = .adaptive == strategy ? .minimumTransfers : strategy
+        #expect(settlement.strategy == computedBy)
         #expect(settlement.payments.map(\.amount) == [flat.euros(500)])
     }
     let transfers = try group.transfers()

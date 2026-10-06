@@ -5,7 +5,8 @@
 import Testing
 
 /// The summary and a settlement would reach an app with another member's or another category's
-/// numbers, or a balance that prints another way than the library writes it.
+/// numbers, a balance that prints another way than the library writes it, or a strategy that
+/// reached the library, or came back from it, as another.
 @Test
 func theSummaryAndTheSettlementKeepEveryNumber() throws {
     let flat = try Flat()
@@ -27,6 +28,10 @@ func theSummaryAndTheSettlementKeepEveryNumber() throws {
     let anaInFood = try #require(summary.memberCategoryTotals.first { $0.member == flat.ana })
     #expect(anaInFood.totals.map(\.total) == [flat.euros(1_500)])
 
+    #expect(SettlementStrategy.allCases == [.adaptive, .direct, .greedy, .minimumTransfers])
+    for strategy in SettlementStrategy.allCases {
+        #expect(SettlementStrategy(strategy.generated) == strategy)
+    }
     let settlement = try flat.group.settlement(by: .minimumTransfers)
     let payment = try #require(settlement.payments.first)
     #expect(payment.from == flat.bob)

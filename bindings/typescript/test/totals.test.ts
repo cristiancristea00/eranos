@@ -1,10 +1,12 @@
 // The totals. A summary, a balance, a share, or a settlement that converted with an amount changed or dropped would show an app
-// other totals than the group holds; one that printed on its own would show it other words than the library's.
+// other totals than the group holds; one that printed on its own would show it other words than the library's. A strategy that
+// converted to another would settle by a plan the app did not ask for.
 
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { SettlementStrategy, formatBalance } from '../src/index.js';
+import { convertedStrategy, generatedStrategy } from '../src/totals.js';
 import { Flat } from './flat.js';
 
 void describe('the summary, the balances, the shares of an expense, and the settlements', () => {
@@ -58,8 +60,19 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         ]);
         for (const strategy of Object.values(SettlementStrategy)) {
             const settlement = flat.group.settlementSync(strategy);
-            assert.equal(settlement.strategy, strategy);
+            // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
+            assert.equal(settlement.strategy, SettlementStrategy.ADAPTIVE === strategy ? SettlementStrategy.MINIMUM_TRANSFERS : strategy);
             assert.deepEqual(settlement.payments, [{ amount: flat.euros(500n), from: flat.bob, to: flat.ana }]);
+        }
+    });
+
+    /**
+     * A strategy that converted to another would settle by a plan the app did not ask for, or name another than the one that
+     * produced it. No settlement holds the adaptive strategy, so only this round trip converts it back from the generated code.
+     */
+    void it('converts every strategy to the generated code and back', () => {
+        for (const strategy of Object.values(SettlementStrategy)) {
+            assert.equal(convertedStrategy(generatedStrategy(strategy)), strategy);
         }
     });
 });

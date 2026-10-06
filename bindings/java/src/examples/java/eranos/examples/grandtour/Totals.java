@@ -212,6 +212,7 @@ final class Totals {
     /** The name of {@code strategy} as the apps show it. */
     static String strategyName(SettlementStrategy strategy) {
         return switch (strategy) {
+            case ADAPTIVE -> "Adaptive";
             case DIRECT -> "Direct";
             case GREEDY -> "Greedy";
             case MINIMUM_TRANSFERS -> "MinimumTransfers";
@@ -223,18 +224,27 @@ final class Totals {
         List<StrategyRow> counts = new ArrayList<>();
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
             Settlement settlement = group.settlement(strategy);
-            check(strategy == settlement.strategy());
+            // The group's open balances are well within the adaptive strategy's limit, so it
+            // settles them exactly.
+            SettlementStrategy computedBy =
+                    SettlementStrategy.ADAPTIVE == strategy
+                            ? SettlementStrategy.MINIMUM_TRANSFERS
+                            : strategy;
+            check(computedBy == settlement.strategy());
             counts.add(
                     new StrategyRow(
-                            settlement.payments().size(), strategyName(settlement.strategy())));
+                            strategyName(settlement.strategy()),
+                            settlement.payments().size(),
+                            strategyName(strategy)));
         }
         System.out.print(
                 """
                 Each strategy turns the balances into payments: the direct one pays back every
-                pair's own debts, greedy pays the largest amounts first, and the minimum one
-                finds the fewest payments.
+                pair's own debts, greedy pays the largest amounts first, the minimum one finds
+                the fewest payments, and the adaptive one finds the fewest while that is quick
+                and greedy's beyond, naming the strategy whose plan it chose.
                 """);
-        printTable(StrategyRow.HEADERS, counts, 1);
+        printTable(StrategyRow.HEADERS, counts, 2);
         Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
         System.out.println("The group follows the minimum plan:");
         List<PaymentRow> rows = new ArrayList<>();

@@ -221,6 +221,13 @@ class Payment:
 class SettlementStrategy(enum.Enum):
     """How balances turn into payments."""
 
+    ADAPTIVE = enum.auto()
+    """
+    The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond.
+
+    The settlement names the strategy whose plan it is.
+    """
+
     DIRECT = enum.auto()
     """Everyone pays back the people who paid for them."""
 
@@ -240,7 +247,7 @@ class Settlement:
     """The payments."""
 
     strategy: SettlementStrategy
-    """The strategy that planned them."""
+    """The strategy that planned them, which is the one asked for or, for the adaptive strategy, the one whose plan it chose."""
 
 
 def summary_of(value: generated.Summary) -> Summary:

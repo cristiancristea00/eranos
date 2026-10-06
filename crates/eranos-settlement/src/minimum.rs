@@ -33,7 +33,20 @@ const UNITS_PER_YIELD: u64 = 1 << 21;
 /// unpaired balances cannot be allocated.
 pub(super) async fn settle(balances: &[OpenBalance]) -> Result<Vec<Flow>, SettlementError> {
     let Pairing { mut flows, rest } = pair_opposites(balances);
-    for group in zero_sum_groups(&rest).await? {
+    flows.extend(settle_rest(&rest).await?);
+    Ok(flows)
+}
+
+/// Settles `rest`, balances among which no two are exact opposites, with the
+/// fewest payments, yielding while it fills its table.
+///
+/// # Errors
+///
+/// [`SettlementError::OutOfMemory`] when the 2ⁿ-byte table for the `n`
+/// balances cannot be allocated.
+pub(super) async fn settle_rest(rest: &[OpenBalance]) -> Result<Vec<Flow>, SettlementError> {
+    let mut flows = Vec::new();
+    for group in zero_sum_groups(rest).await? {
         flows.extend(settle_group(&group));
     }
     Ok(flows)

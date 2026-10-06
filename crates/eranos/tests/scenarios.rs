@@ -235,6 +235,10 @@ fn every_strategy_settles_the_weekend_its_own_way() {
         direct_to_ana
     );
     assert_eq!(payments(&group, SettlementStrategy::Greedy), direct_to_ana);
+    assert_eq!(
+        payments(&group, SettlementStrategy::Adaptive),
+        direct_to_ana
+    );
     // Unsimplified, every pair nets its own debts: Bob owes Ana 100 − 30,
     // Carol owes Ana 100 − 10 and Bob 30 − 10, Dan owes Ana 100 − 44 and
     // Carol 30 − 22, and Bob owes Dan 22.

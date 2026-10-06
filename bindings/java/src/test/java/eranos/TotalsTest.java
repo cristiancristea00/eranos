@@ -89,14 +89,21 @@ class TotalsTest {
                 flat.group.expenseShares(flat.dinner));
         assertEquals(
                 List.of(
+                        SettlementStrategy.ADAPTIVE,
                         SettlementStrategy.DIRECT,
                         SettlementStrategy.GREEDY,
                         SettlementStrategy.MINIMUM_TRANSFERS),
                 List.of(SettlementStrategy.values()));
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
+            // Two balances are within the adaptive strategy's limit, so its plan is the minimum
+            // one's, and the settlement names that strategy.
+            SettlementStrategy computedBy =
+                    SettlementStrategy.ADAPTIVE == strategy
+                            ? SettlementStrategy.MINIMUM_TRANSFERS
+                            : strategy;
             assertEquals(
                     new Settlement(
-                            List.of(new Payment(flat.euros(500), flat.bob, flat.ana)), strategy),
+                            List.of(new Payment(flat.euros(500), flat.bob, flat.ana)), computedBy),
                     flat.group.settlement(strategy));
             assertEquals(strategy, SettlementStrategy.converted(strategy.generated()));
         }

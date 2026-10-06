@@ -9,6 +9,10 @@ use crate::money::Money;
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SettlementStrategy {
+    /// The fewest payments while at most 20 balances are left after exact
+    /// opposites pay each other, the greedy plan beyond; the settlement names
+    /// the strategy whose plan it is.
+    Adaptive,
     /// Everyone pays back the people who paid for them.
     Direct,
     /// The largest debtor pays the largest creditor, repeatedly, after exact
@@ -22,6 +26,7 @@ impl SettlementStrategy {
     /// The library's strategy.
     pub(crate) const fn to_library(self) -> library::SettlementStrategy {
         match self {
+            Self::Adaptive => library::SettlementStrategy::Adaptive,
             Self::Direct => library::SettlementStrategy::Direct,
             Self::Greedy => library::SettlementStrategy::Greedy,
             Self::MinimumTransfers => library::SettlementStrategy::MinimumTransfers,
@@ -30,6 +35,10 @@ impl SettlementStrategy {
 }
 
 impl FromSettlementStrategy for SettlementStrategy {
+    fn adaptive() -> Self {
+        Self::Adaptive
+    }
+
     fn direct() -> Self {
         Self::Direct
     }
@@ -61,7 +70,8 @@ pub struct Payment {
 pub struct Settlement {
     /// The payments, ordered by payer and then by recipient.
     pub payments: Vec<Payment>,
-    /// The strategy that produced them.
+    /// The strategy that produced them: the one asked for, or, for the
+    /// adaptive strategy, the one whose plan it chose.
     pub strategy: SettlementStrategy,
 }
 

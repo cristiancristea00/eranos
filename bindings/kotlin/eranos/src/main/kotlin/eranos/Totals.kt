@@ -250,7 +250,7 @@ internal fun eranos.internal.MemberShare.converted(): MemberShare = MemberShare(
 public class Settlement internal constructor(
     /** The payments, ordered by payer and then by recipient. */
     public val payments: List<Payment>,
-    /** The strategy that produced them. */
+    /** The strategy that produced them: the one asked for, or, for [SettlementStrategy.ADAPTIVE], the one whose plan it chose. */
     public val strategy: SettlementStrategy,
 ) {
     /** Whether [other] is of the same class, with the same [payments] and [strategy]. */
@@ -290,6 +290,12 @@ internal fun eranos.internal.Payment.converted(): Payment = Payment(amount.conve
 
 /** How balances turn into payments. */
 public enum class SettlementStrategy {
+    /**
+     * The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond;
+     * the settlement names the strategy whose plan it is: [MINIMUM_TRANSFERS] or [GREEDY].
+     */
+    ADAPTIVE,
+
     /** Everyone pays back the people who paid for them. */
     DIRECT,
 
@@ -304,6 +310,7 @@ public enum class SettlementStrategy {
 internal val SettlementStrategy.generated: eranos.internal.SettlementStrategy
     get() =
         when (this) {
+            SettlementStrategy.ADAPTIVE -> eranos.internal.SettlementStrategy.ADAPTIVE
             SettlementStrategy.DIRECT -> eranos.internal.SettlementStrategy.DIRECT
             SettlementStrategy.GREEDY -> eranos.internal.SettlementStrategy.GREEDY
             SettlementStrategy.MINIMUM_TRANSFERS -> eranos.internal.SettlementStrategy.MINIMUM_TRANSFERS
@@ -312,6 +319,7 @@ internal val SettlementStrategy.generated: eranos.internal.SettlementStrategy
 /** The strategy the generated code holds as [this]. */
 internal fun eranos.internal.SettlementStrategy.converted(): SettlementStrategy =
     when (this) {
+        eranos.internal.SettlementStrategy.ADAPTIVE -> SettlementStrategy.ADAPTIVE
         eranos.internal.SettlementStrategy.DIRECT -> SettlementStrategy.DIRECT
         eranos.internal.SettlementStrategy.GREEDY -> SettlementStrategy.GREEDY
         eranos.internal.SettlementStrategy.MINIMUM_TRANSFERS -> SettlementStrategy.MINIMUM_TRANSFERS

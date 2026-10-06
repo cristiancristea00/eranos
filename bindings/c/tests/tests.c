@@ -1514,19 +1514,23 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
     EranosSettlementStrategy const strategies[] = {
+        ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE,
         ERANOS_SETTLEMENT_STRATEGY_DIRECT,
         ERANOS_SETTLEMENT_STRATEGY_GREEDY,
         ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS,
     };
     for (size_t index = 0; index < sizeof strategies / sizeof strategies[0]; ++index) {
+        // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
+        EranosSettlementStrategy const computedBy =
+            ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == strategies[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : strategies[index];
         EranosSettlement *settlement = nullptr;
         checkSucceeded(check, eranosGroupSettlement(flat.group, strategies[index], &settlement), "a settlement");
         EranosPaymentList *const payments = eranosSettlementPayments(settlement);
         EranosPayment *const payment = eranosPaymentListGet(payments, 0);
         checkThat(check,
-                  eranosSettlementStrategy(settlement) == strategies[index] && 1 == eranosPaymentListLength(payments) &&
+                  eranosSettlementStrategy(settlement) == computedBy && 1 == eranosPaymentListLength(payments) &&
                       !eranosPaymentListIsEmpty(payments) && nullptr == eranosPaymentListGet(payments, 1),
-                  "one payment, by the strategy asked for");
+                  "one payment, by the strategy whose plan it is");
         eranosPaymentFrom(payment, text);
         checkThat(check, isText(text, eranosTextData(flat.bob)), "from Bob");
         eranosPaymentTo(payment, text);

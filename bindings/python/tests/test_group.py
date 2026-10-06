@@ -94,7 +94,8 @@ def test_each_strategy_settles_every_balance(flat: Flat) -> None:
     """A strategy that settled otherwise than the library would ask a member to pay twice."""
     for strategy in SettlementStrategy:
         settlement = flat.group.settlement(strategy)
-        assert settlement.strategy == strategy
+        # The flat's two open balances are well within the adaptive strategy's limit, so it settles them exactly.
+        assert settlement.strategy == (SettlementStrategy.MINIMUM_TRANSFERS if strategy is SettlementStrategy.ADAPTIVE else strategy)
         assert settlement.payments == (Payment(amount=flat.euros(500), receiver=flat.ana, sender=flat.bob),)
     flat.group.add_transfer(Transfer(cost=LocalCost(flat.euros(500)), date=flat.day, receiver=flat.ana, sender=flat.bob))
     settled: Balance = SettledBalance()

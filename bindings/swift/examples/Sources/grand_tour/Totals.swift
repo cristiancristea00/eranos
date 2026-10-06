@@ -110,6 +110,8 @@ func newCurrency(_ group: Group, _ people: People) throws(EranosError) {
 /// The name of `strategy` as the apps show it.
 func strategyName(_ strategy: SettlementStrategy) -> String {
     switch strategy {
+    case .adaptive:
+        "Adaptive"
     case .direct:
         "Direct"
     case .greedy:
@@ -124,15 +126,25 @@ func settlingUp(_ group: Group) throws(EranosError) {
     var counts: [StrategyRow] = []
     for strategy in SettlementStrategy.allCases {
         let settlement = try group.settlement(by: strategy)
-        precondition(strategy == settlement.strategy, "a settlement follows its strategy")
-        counts.append(StrategyRow(payments: settlement.payments.count, strategy: strategyName(settlement.strategy)))
+        // The group's open balances are well within the adaptive strategy's limit, so it settles
+        // them exactly.
+        let computedBy: SettlementStrategy = .adaptive == strategy ? .minimumTransfers : strategy
+        precondition(computedBy == settlement.strategy, "a settlement names the strategy whose plan it is")
+        counts.append(
+            StrategyRow(
+                computedBy: strategyName(settlement.strategy),
+                payments: settlement.payments.count,
+                strategy: strategyName(strategy)
+            )
+        )
     }
     print("""
         Each strategy turns the balances into payments: the direct one pays back every
-        pair's own debts, greedy pays the largest amounts first, and the minimum one
-        finds the fewest payments.
+        pair's own debts, greedy pays the largest amounts first, the minimum one finds
+        the fewest payments, and the adaptive one finds the fewest while that is quick
+        and greedy's beyond, naming the strategy whose plan it chose.
         """)
-    printTable(counts, numbersFrom: 1)
+    printTable(counts, numbersFrom: 2)
     let plan = try group.settlement(by: .minimumTransfers)
     print("The group follows the minimum plan:")
     printTable(

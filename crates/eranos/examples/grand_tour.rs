@@ -207,7 +207,9 @@ struct MemberCategoryRow {
 
 #[derive(Tabled)]
 struct StrategyRow {
-    #[tabled(rename = "Payments", order = 1)]
+    #[tabled(rename = "Computed by", order = 1)]
+    computed_by: &'static str,
+    #[tabled(rename = "Payments", order = 2)]
     payments: usize,
     #[tabled(rename = "Strategy", order = 0)]
     strategy: &'static str,
@@ -1391,6 +1393,7 @@ fn new_currency(group: &mut Group, people: People) -> Result<(), Box<dyn Error>>
 /// The name of `strategy` as the apps show it.
 const fn strategy_name(strategy: SettlementStrategy) -> &'static str {
     match strategy {
+        SettlementStrategy::Adaptive => "Adaptive",
         SettlementStrategy::Direct => "Direct",
         SettlementStrategy::Greedy => "Greedy",
         SettlementStrategy::MinimumTransfers => "MinimumTransfers",
@@ -1403,18 +1406,27 @@ fn settling_up(group: &mut Group) -> Result<(), Box<dyn Error>> {
     let mut counts = Vec::new();
     for strategy in SettlementStrategy::all() {
         let settlement = group.settlement(strategy)?;
-        assert_eq!(settlement.strategy(), strategy);
+        // The group's open balances are well within the adaptive strategy's
+        // limit, so it settles them exactly.
+        let computed_by = if SettlementStrategy::Adaptive == strategy {
+            SettlementStrategy::MinimumTransfers
+        } else {
+            strategy
+        };
+        assert_eq!(settlement.strategy(), computed_by);
         counts.push(StrategyRow {
+            computed_by: strategy_name(settlement.strategy()),
             payments: settlement.len(),
-            strategy: strategy_name(settlement.strategy()),
+            strategy: strategy_name(strategy),
         });
     }
     println!(
         "Each strategy turns the balances into payments: the direct one pays back every\n\
-         pair's own debts, greedy pays the largest amounts first, and the minimum one\n\
-         finds the fewest payments."
+         pair's own debts, greedy pays the largest amounts first, the minimum one finds\n\
+         the fewest payments, and the adaptive one finds the fewest while that is quick\n\
+         and greedy's beyond, naming the strategy whose plan it chose."
     );
-    print_table(counts, 1);
+    print_table(counts, 2);
     let plan = group
         .settlement(SettlementStrategy::MinimumTransfers)?
         .clone();

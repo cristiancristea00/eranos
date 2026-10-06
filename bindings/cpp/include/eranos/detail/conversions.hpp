@@ -966,6 +966,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The value of @p value.
 [[nodiscard]] constexpr SettlementStrategy fromDetail(EranosSettlementStrategy const value) noexcept {
     switch (value) {
+    case EranosSettlementStrategy::Adaptive:
+        return SettlementStrategy::ADAPTIVE;
     case EranosSettlementStrategy::Direct:
         return SettlementStrategy::DIRECT;
     case EranosSettlementStrategy::Greedy:
@@ -979,6 +981,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The generated value of @p value.
 [[nodiscard]] constexpr EranosSettlementStrategy toDetail(SettlementStrategy const value) noexcept {
     switch (value) {
+    case SettlementStrategy::ADAPTIVE:
+        return EranosSettlementStrategy::Adaptive;
     case SettlementStrategy::DIRECT:
         return EranosSettlementStrategy::Direct;
     case SettlementStrategy::GREEDY:

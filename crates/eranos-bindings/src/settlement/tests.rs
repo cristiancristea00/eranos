@@ -10,6 +10,7 @@ use super::*;
 #[test]
 fn every_strategy_converts_both_ways() {
     for strategy in [
+        SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
         SettlementStrategy::Greedy,
         SettlementStrategy::MinimumTransfers,

@@ -47,14 +47,16 @@ const memberCategoryColumns: Columns<MemberCategoryRow> = [
     { header: 'Uncategorised', text: (row) => row.uncategorised.toString() },
 ];
 
-/** A strategy and the number of payments of its plan, as the table of strategies prints them. */
+/** A strategy, the strategy whose plan it chose, and the number of payments of that plan, as the table of strategies prints them. */
 interface StrategyRow {
+    readonly computedBy: string;
     readonly payments: number;
     readonly strategy: string;
 }
 
 const strategyColumns: Columns<StrategyRow> = [
     { header: 'Strategy', text: (row) => row.strategy },
+    { header: 'Computed by', text: (row) => row.computedBy },
     { header: 'Payments', text: (row) => String(row.payments) },
 ];
 
@@ -189,6 +191,8 @@ export function newCurrency(group: Group, people: People): void {
 /** The name of `strategy` as the apps show it. */
 function strategyName(strategy: SettlementStrategy): string {
     switch (strategy) {
+        case SettlementStrategy.ADAPTIVE:
+            return 'Adaptive';
         case SettlementStrategy.DIRECT:
             return 'Direct';
         case SettlementStrategy.GREEDY:
@@ -202,15 +206,17 @@ export function settlingUp(group: Group): void {
     section('11. Settling up');
     const counts = Object.values(SettlementStrategy).map((strategy): StrategyRow => {
         const settlement = group.settlementSync(strategy);
-        assert.equal(settlement.strategy, strategy);
-        return { payments: settlement.payments.length, strategy: strategyName(settlement.strategy) };
+        // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
+        assert.equal(settlement.strategy, SettlementStrategy.ADAPTIVE === strategy ? SettlementStrategy.MINIMUM_TRANSFERS : strategy);
+        return { computedBy: strategyName(settlement.strategy), payments: settlement.payments.length, strategy: strategyName(strategy) };
     });
     printLines(
         'Each strategy turns the balances into payments: the direct one pays back every',
-        "pair's own debts, greedy pays the largest amounts first, and the minimum one",
-        'finds the fewest payments.',
+        "pair's own debts, greedy pays the largest amounts first, the minimum one finds",
+        'the fewest payments, and the adaptive one finds the fewest while that is quick',
+        "and greedy's beyond, naming the strategy whose plan it chose.",
     );
-    printTable(strategyColumns, counts, 1);
+    printTable(strategyColumns, counts, 2);
     const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
     printLines('The group follows the minimum plan:');
     printTable(

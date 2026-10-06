@@ -165,7 +165,8 @@ public struct Settlement: Hashable, Sendable {
     /// The payments, ordered by payer and then by recipient.
     public let payments: [Payment]
 
-    /// The strategy that produced them.
+    /// The strategy that produced them: the one asked for, or, for the adaptive strategy, the one
+    /// whose plan it chose.
     public let strategy: SettlementStrategy
 
     init(_ settlement: EranosGenerated.Settlement) {
@@ -194,6 +195,11 @@ public struct Payment: Hashable, Sendable {
 
 /// How balances turn into payments.
 public enum SettlementStrategy: Hashable, Sendable, CaseIterable {
+    /// The fewest payments while at most 20 balances are left after exact opposites pay each other,
+    /// the greedy plan beyond; the settlement's ``Settlement/strategy`` names the strategy whose plan
+    /// it is.
+    case adaptive
+
     /// Everyone pays back the people who paid for them.
     case direct
 
@@ -205,6 +211,8 @@ public enum SettlementStrategy: Hashable, Sendable, CaseIterable {
 
     var generated: EranosGenerated.SettlementStrategy {
         switch self {
+        case .adaptive:
+            .adaptive
         case .direct:
             .direct
         case .greedy:
@@ -216,6 +224,8 @@ public enum SettlementStrategy: Hashable, Sendable, CaseIterable {
 
     init(_ strategy: EranosGenerated.SettlementStrategy) {
         switch strategy {
+        case .adaptive:
+            self = .adaptive
         case .direct:
             self = .direct
         case .greedy:

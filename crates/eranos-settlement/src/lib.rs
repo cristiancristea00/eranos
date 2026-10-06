@@ -15,6 +15,7 @@
 #![forbid(unsafe_code)]
 #![doc(test(attr(deny(warnings))))]
 
+mod adaptive;
 mod direct;
 mod error;
 mod greedy;
@@ -34,8 +35,10 @@ pub use error::{FromSettlementError, SettlementError};
 /// How `Group::settlement` turns balances into payments.
 ///
 /// There is no default: the strategies trade the number of payments against
-/// computation time, and the caller chooses. `n` below is the number of
-/// members with a non-zero balance.
+/// computation time, and the caller chooses; an app that wants the fewest
+/// payments without risking a long computation chooses
+/// [`Adaptive`](Self::Adaptive). `n` below is the number of members with a
+/// non-zero balance.
 ///
 /// # Examples
 ///
@@ -59,6 +62,25 @@ pub use error::{FromSettlementError, SettlementError};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SettlementStrategy {
+    /// The fewest payments while they are quick to find, Greedy's beyond.
+    ///
+    /// Exact opposite balances are paired first. When at most 20 balances are
+    /// left, the exact solver settles them and the plan is the one
+    /// [`MinimumTransfers`](Self::MinimumTransfers) gives; when more are left,
+    /// or when the solver's table of 2ⁿ bytes cannot be allocated, the plan is
+    /// the one [`Greedy`](Self::Greedy) gives. [`Settlement::strategy`] names
+    /// the strategy whose plan it is. It never fails, and it yields only while
+    /// the exact solver fills its table.
+    ///
+    /// Within the limit it takes the time of
+    /// [`MinimumTransfers`](Self::MinimumTransfers) for at most 20 balances
+    /// and a table of at most 1 MiB, and beyond it the time of
+    /// [`Greedy`](Self::Greedy).
+    ///
+    /// The limit is part of the numbers the library promises: another limit
+    /// would give some groups other payments, so it changes only in a
+    /// breaking release.
+    Adaptive,
     /// No simplification: everyone pays back the people who paid for them.
     ///
     /// Every participant owes every payer of each expense their share of what
@@ -91,20 +113,29 @@ pub enum SettlementStrategy {
     /// both: on an Apple M4 Pro, 12 balances take 18 µs, 16 take 0.36 ms,
     /// and 20 take 7 ms and 1 MiB; 30 would take seconds and 1 GiB. The
     /// operating system may end the process before an allocation fails, so
-    /// prefer [`Greedy`](Self::Greedy) for large groups.
+    /// prefer [`Adaptive`](Self::Adaptive), which settles large groups
+    /// greedily.
     MinimumTransfers,
 }
 
 impl SettlementStrategy {
     /// Every strategy, in the order they are declared.
     #[must_use]
-    pub const fn all() -> [Self; 3] {
-        [Self::Direct, Self::Greedy, Self::MinimumTransfers]
+    pub const fn all() -> [Self; 4] {
+        [
+            Self::Adaptive,
+            Self::Direct,
+            Self::Greedy,
+            Self::MinimumTransfers,
+        ]
     }
 }
 
 /// Builds a value from a [`SettlementStrategy`], one method per strategy.
 pub trait FromSettlementStrategy: Sized {
+    /// The value for the adaptive strategy.
+    fn adaptive() -> Self;
+
     /// The value for the direct strategy.
     fn direct() -> Self;
 
@@ -118,6 +149,7 @@ pub trait FromSettlementStrategy: Sized {
     #[must_use]
     fn from_settlement_strategy(strategy: SettlementStrategy) -> Self {
         match strategy {
+            SettlementStrategy::Adaptive => Self::adaptive(),
             SettlementStrategy::Direct => Self::direct(),
             SettlementStrategy::Greedy => Self::greedy(),
             SettlementStrategy::MinimumTransfers => Self::minimum_transfers(),
@@ -154,7 +186,10 @@ impl Settlement {
         self.payments.is_empty()
     }
 
-    /// The strategy that produced the payments.
+    /// The strategy that produced the payments: the one asked for, or, when
+    /// [`SettlementStrategy::Adaptive`] was, the one whose plan it chose,
+    /// [`SettlementStrategy::MinimumTransfers`] or
+    /// [`SettlementStrategy::Greedy`].
     #[must_use]
     pub const fn strategy(&self) -> SettlementStrategy {
         self.strategy
@@ -206,6 +241,14 @@ impl Flow {
     }
 }
 
+/// The payments of one strategy, in minor units, and the strategy whose
+/// plan they are.
+#[derive(Debug)]
+struct Plan {
+    flows: Vec<Flow>,
+    strategy: SettlementStrategy,
+}
+
 /// A member's net balance in minor units while it is open: positive when the
 /// member is owed, negative when they owe.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -224,6 +267,7 @@ struct OpenBalance {
 /// nothing.
 #[derive(Debug, Clone, Default)]
 pub struct Settlements {
+    adaptive: OnceLock<Result<Settlement, SettlementError>>,
     direct: OnceLock<Result<Settlement, SettlementError>>,
     greedy: OnceLock<Result<Settlement, SettlementError>>,
     minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
@@ -271,6 +315,7 @@ impl Settlements {
 
     /// Drops every kept settlement.
     pub fn clear(&mut self) {
+        self.adaptive.take();
         self.direct.take();
         self.greedy.take();
         self.minimum_transfers.take();
@@ -281,6 +326,7 @@ impl Settlements {
         strategy: SettlementStrategy,
     ) -> &OnceLock<Result<Settlement, SettlementError>> {
         match strategy {
+            SettlementStrategy::Adaptive => &self.adaptive,
             SettlementStrategy::Direct => &self.direct,
             SettlementStrategy::Greedy => &self.greedy,
             SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
@@ -293,7 +339,8 @@ impl Settlements {
 /// # Errors
 ///
 /// [`SettlementError::OutOfMemory`] when the exact solver's table does not
-/// fit in memory, for [`SettlementStrategy::MinimumTransfers`] only.
+/// fit in memory, for [`SettlementStrategy::MinimumTransfers`] only:
+/// [`SettlementStrategy::Adaptive`] settles greedily instead.
 pub fn settle(
     strategy: SettlementStrategy,
     ledger: &Ledger,
@@ -301,9 +348,11 @@ pub fn settle(
     settle_async(strategy, ledger).complete()
 }
 
-/// Settles the balances of `ledger` with `strategy`, yielding while the
-/// exact solver fills its table; the direct and greedy strategies never
-/// yield.
+/// Settles the balances of `ledger` with `strategy`, yielding as it works.
+///
+/// The exact solver yields while it fills its table, for the fewest payments
+/// and for the adaptive strategy's exact plans; the direct and greedy
+/// strategies never yield.
 ///
 /// # Errors
 ///
@@ -320,10 +369,23 @@ async fn settle_paced(
     strategy: SettlementStrategy,
     ledger: &Ledger,
 ) -> Result<Settlement, SettlementError> {
-    let mut flows = match strategy {
-        SettlementStrategy::Direct => direct::settle(ledger.pairs()),
-        SettlementStrategy::Greedy => greedy::settle(&balances(ledger)),
-        SettlementStrategy::MinimumTransfers => minimum::settle(&balances(ledger)).await?,
+    let Plan {
+        mut flows,
+        strategy: computed_by,
+    } = match strategy {
+        SettlementStrategy::Adaptive => adaptive::settle(&balances(ledger)).await,
+        SettlementStrategy::Direct => Plan {
+            flows: direct::settle(ledger.pairs()),
+            strategy,
+        },
+        SettlementStrategy::Greedy => Plan {
+            flows: greedy::settle(&balances(ledger)),
+            strategy,
+        },
+        SettlementStrategy::MinimumTransfers => Plan {
+            flows: minimum::settle(&balances(ledger)).await?,
+            strategy,
+        },
     };
     // By payer, then recipient, as `Settlement::payments` promises. Every
     // strategy pays each pair of members at most once (the direct one pays
@@ -335,7 +397,10 @@ async fn settle_paced(
         .into_iter()
         .map(|flow| flow.into_payment(currency))
         .collect();
-    Ok(Settlement { payments, strategy })
+    Ok(Settlement {
+        payments,
+        strategy: computed_by,
+    })
 }
 
 /// Every non-zero net balance of `ledger`, ordered by member.

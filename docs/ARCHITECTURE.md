@@ -412,13 +412,16 @@ nothing ([§ 12](#12-async-and-concurrency)).
 Every strategy pays out exactly the net balances: each debtor pays what
 they owe and each creditor receives what they are owed, so nobody pays more
 than their debt. Payments are sorted by payer, then recipient. The caller
-always names the strategy; there is no default and no automatic fallback.
+always names the strategy; there is no default. `Adaptive` is the one that
+chooses an algorithm by the group's size, and the settlement names the
+strategy whose plan it is.
 
-| Strategy           | Algorithm                                                                                                                                         | Cost                   | Payments                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------------------------------------- |
-| `MinimumTransfers` | pair exact opposites; subset dynamic program for the largest partition into zero-sum groups; settle each group in member order                    | O(2ⁿ·n) time, 2ⁿ bytes | the minimum: n − (number of groups)           |
-| `Greedy`           | largest debtor pays largest creditor, ties to the lower ID, with and without exact opposites paired first; the fewer payments, the first on a tie | O(n log n)             | at most n − 1, within 3/2 of the minimum      |
-| `Direct`           | every netted pair debt becomes a payment                                                                                                          | O(pairs)               | the most; each traces back to shared expenses |
+| Strategy           | Algorithm                                                                                                                                         | Cost                                              | Payments                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| `Adaptive`         | pair exact opposites; the exact solver below when at most 20 balances are left and its table can be allocated, greedy otherwise                   | at most O(2²⁰·20) time and 1 MiB, else O(n log n) | the minimum within the limit, greedy's beyond |
+| `MinimumTransfers` | pair exact opposites; subset dynamic program for the largest partition into zero-sum groups; settle each group in member order                    | O(2ⁿ·n) time, 2ⁿ bytes                            | the minimum: n − (number of groups)           |
+| `Greedy`           | largest debtor pays largest creditor, ties to the lower ID, with and without exact opposites paired first; the fewer payments, the first on a tie | O(n log n)                                        | at most n − 1, within 3/2 of the minimum      |
+| `Direct`           | every netted pair debt becomes a payment                                                                                                          | O(pairs)                                          | the most; each traces back to shared expenses |
 
 Minimising the number of payments is NP-hard (Verhoeff, "Settling multiple
 debts efficiently", 2004): n balances need n − g payments, where g is the
@@ -442,7 +445,25 @@ There is no size limit. The table must fit in the address space (n ≤ 63 on
 refuses, the solver returns `SettlementError::OutOfMemory`. Operating systems
 that overcommit memory (Linux) or end memory-hungry apps (iOS) may stop the
 process before an allocation fails, which is why the documentation of
-`MinimumTransfers` recommends `Greedy` for large groups.
+`MinimumTransfers` recommends `Adaptive`.
+
+`Adaptive` bounds that cost. It pairs exact opposites once and, when at
+most 20 balances are left, settles them with the exact solver, so its plan
+is the one `MinimumTransfers` gives; when more are left, it computes the
+plan `Greedy` gives from the same pairing. `Settlement::strategy` names the
+strategy whose plan it is, never `Adaptive`, and the plan is cached under
+`Adaptive`. Twenty balances take a 1 MiB table and about 7 ms on the
+reference machine; phones run from about its speed (flagships) to about a
+ninth of it (budget Android, by single-core Geekbench 6 scores), and
+WebAssembly takes 2.5 to 3 times as long as native code (measured side by
+side on Node 24), so even a budget phone in a browser settles twenty
+balances within about a fifth of a second, and every extra balance would
+double that. The limit is part of the numbers ([VERSIONING §
+1](VERSIONING.md#1-the-public-contract)): another limit would settle some
+groups with other payments, so it changes only in a breaking release. One
+device can still settle a group differently from another: one whose
+allocator refuses the 1 MiB table settles greedily instead of failing,
+where another settles exactly.
 
 Greedy computes two plans: the largest debtor paying the largest creditor
 throughout, ties to the lower ID, and the same after exact opposites have
@@ -586,16 +607,17 @@ amount of time, so it yields at the same points on every device.
 | `Group::change_currency_async` | after each re-resolved entry           | 1 024 entries, about 1 ms                                                        |
 | `SavedGroup::into_group_async` | after each replayed step               | 1 024 members, categories, expenses, transfers, or archivings                    |
 
-Each returns a `Cooperative`, which an executor awaits like any future
-and `Cooperative::complete` runs to its end on the calling thread;
+Each returns a `Cooperative`, which an executor awaits like any future and
+`Cooperative::complete` runs to its end on the calling thread;
 `settlement`, `change_currency`, and `into_group` are those completions, so
-the synchronous and asynchronous calls run the same code. The greedy and
-direct strategies never yield: their largest benchmarked cases take about
-0.1 ms each. A call writes nothing before its last yield, so one dropped at
-a yield changes nothing: a currency change swaps in its new entries and
-ledger after its last yield, a load builds a group of its own, and a
-settlement enters the cache only once it is complete
-([§ 6](#6-the-ledger-and-its-caches)).
+the synchronous and asynchronous calls run the same code. The exact solver
+fills its table for `MinimumTransfers` and for `Adaptive` within its limit;
+the greedy and direct strategies, and `Adaptive` beyond its limit, never
+yield: their largest benchmarked cases take about 0.1 ms each. A call
+writes nothing before its last yield, so one dropped at a yield changes
+nothing: a currency change swaps in its new entries and ledger after its
+last yield, a load builds a group of its own, and a settlement enters the
+cache only once it is complete ([§ 6](#6-the-ledger-and-its-caches)).
 
 Against the same computations without yield points, measured in
 alternating runs on the reference machine, the yield points cost the exact
@@ -688,12 +710,15 @@ tries the lock with `try_read` or `try_write`, which fail with
 
 Release build on an Apple M4 Pro (`cargo bench -p eranos --features serde --bench '*'`):
 
-| Operation                               | Size                                            | Time                              |
-| --------------------------------------- | ----------------------------------------------- | --------------------------------- |
-| `MinimumTransfers`                      | 12 / 16 / 20 / 24 open balances                 | 18 µs / 0.36 ms / 7.2 ms / 0.14 s |
-| `Greedy`                                | 100 / 1 000 members                             | 4.6 µs / 66–103 µs                |
-| `Direct`                                | 100 members sharing every expense (4 950 pairs) | 110 µs                            |
-| add or remove an expense of six members | group of 10 000 expenses                        | ≈ 1 µs                            |
-| read a member's totals                  | any                                             | ≈ 3 ns                            |
-| change the currency                     | group of 10 000 expenses                        | 9.8 ms                            |
-| load a saved group from JSON            | group of 10 000 expenses                        | 20 ms                             |
+| Operation                                                      | Size                                            | Time                                     |
+| -------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
+| `Adaptive`                                                     | 18 / 20 / 21 / 100 open balances                | 1.6 ms / 7.2 ms / 1.1 µs / 4.6 µs        |
+| the exact solver in WebAssembly (Node 24), against native code | 16 / 18 / 20 open balances                      | 2.9 / 2.7 / 2.5 times as long            |
+| `Greedy` through the TypeScript package (Node 24)              | 100 members                                     | 0.12 ms, mostly crossing into JavaScript |
+| `MinimumTransfers`                                             | 12 / 16 / 20 / 24 open balances                 | 18 µs / 0.36 ms / 7.2 ms / 0.14 s        |
+| `Greedy`                                                       | 100 / 1 000 members                             | 4.6 µs / 66–103 µs                       |
+| `Direct`                                                       | 100 members sharing every expense (4 950 pairs) | 110 µs                                   |
+| add or remove an expense of six members                        | group of 10 000 expenses                        | ≈ 1 µs                                   |
+| read a member's totals                                         | any                                             | ≈ 3 ns                                   |
+| change the currency                                            | group of 10 000 expenses                        | 9.8 ms                                   |
+| load a saved group from JSON                                   | group of 10 000 expenses                        | 20 ms                                    |

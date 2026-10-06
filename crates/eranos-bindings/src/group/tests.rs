@@ -302,6 +302,7 @@ fn every_read_answers_alike_in_both_forms() {
     );
     assert_eq!(block_on(handle.name_async(None)), handle.name());
     for strategy in [
+        SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
         SettlementStrategy::Greedy,
         SettlementStrategy::MinimumTransfers,

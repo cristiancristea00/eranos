@@ -2,6 +2,12 @@ package eranos;
 
 /** How balances turn into payments. */
 public enum SettlementStrategy {
+    /**
+     * The fewest payments while at most 20 balances are left after exact opposites pay each other,
+     * the greedy plan beyond; the settlement names the strategy whose plan it is.
+     */
+    ADAPTIVE,
+
     /** Everyone pays back the people who paid for them. */
     DIRECT,
 
@@ -22,6 +28,7 @@ public enum SettlementStrategy {
      */
     static SettlementStrategy converted(eranos.internal.SettlementStrategy strategy) {
         return switch (strategy) {
+            case ADAPTIVE -> ADAPTIVE;
             case DIRECT -> DIRECT;
             case GREEDY -> GREEDY;
             case MINIMUM_TRANSFERS -> MINIMUM_TRANSFERS;
@@ -35,6 +42,7 @@ public enum SettlementStrategy {
      */
     eranos.internal.SettlementStrategy generated() {
         return switch (this) {
+            case ADAPTIVE -> eranos.internal.SettlementStrategy.ADAPTIVE;
             case DIRECT -> eranos.internal.SettlementStrategy.DIRECT;
             case GREEDY -> eranos.internal.SettlementStrategy.GREEDY;
             case MINIMUM_TRANSFERS -> eranos.internal.SettlementStrategy.MINIMUM_TRANSFERS;

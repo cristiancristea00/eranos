@@ -277,19 +277,25 @@ static void addMemberCategoryRow(Table *const table, MemberCategoryRow const *co
     tableAdd(table, (Line const[]){row->name, row->food, row->lodging, row->transport, row->uncategorised});
 }
 
-/// A row of the table of strategies: a strategy and how many payments it plans.
+/// A row of the table of strategies: a strategy, the strategy whose plan it chose, and how many payments that plan makes.
 typedef struct StrategyRow {
-    /// How many payments it plans.
+    /// The name of the strategy whose plan it chose.
+    Line computedBy;
+    /// How many payments the plan makes.
     Line payments;
     /// Its name.
     Line strategy;
 } StrategyRow;
 
 /// A table of strategies, its columns from @p numbersFrom on aligned to the right.
-static Table *strategyTable(size_t const numbersFrom) { return tableCreate(2, (char const *const[]){"Strategy", "Payments"}, numbersFrom); }
+static Table *strategyTable(size_t const numbersFrom) {
+    return tableCreate(3, (char const *const[]){"Strategy", "Computed by", "Payments"}, numbersFrom);
+}
 
 /// Adds @p row to @p table, a table of strategies, its cells in the order of the table's headers.
-static void addStrategyRow(Table *const table, StrategyRow const *const row) { tableAdd(table, (Line const[]){row->strategy, row->payments}); }
+static void addStrategyRow(Table *const table, StrategyRow const *const row) {
+    tableAdd(table, (Line const[]){row->strategy, row->computedBy, row->payments});
+}
 
 /// A row of the table of payments: who pays whom, and how much.
 typedef struct PaymentRow {
@@ -2037,6 +2043,8 @@ static void newCurrency(EranosGroup *const group, People const *const people) {
 /// The name of @p strategy as the apps show it.
 static char const *strategyName(EranosSettlementStrategy const strategy) {
     switch (strategy) {
+    case ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE:
+        return "Adaptive";
     case ERANOS_SETTLEMENT_STRATEGY_DIRECT:
         return "Direct";
     case ERANOS_SETTLEMENT_STRATEGY_GREEDY:
@@ -2076,21 +2084,31 @@ static bool everyoneSettled(EranosGroup const *const group) {
 static void settlingUp(EranosGroup *const group) {
     section("11. Settling up");
     EranosSettlementStrategy const strategies[] = {
+        ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE,
         ERANOS_SETTLEMENT_STRATEGY_DIRECT,
         ERANOS_SETTLEMENT_STRATEGY_GREEDY,
         ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS,
     };
     printLine("Each strategy turns the balances into payments: the direct one pays back every\n"
-              "pair's own debts, greedy pays the largest amounts first, and the minimum one\n"
-              "finds the fewest payments.");
-    Table *const counts = strategyTable(1);
-    for (size_t index = 0; 3 > index; ++index) {
-        EranosPaymentList *const payments = planOf(group, strategies[index]);
+              "pair's own debts, greedy pays the largest amounts first, the minimum one finds\n"
+              "the fewest payments, and the adaptive one finds the fewest while that is quick\n"
+              "and greedy's beyond, naming the strategy whose plan it chose.");
+    Table *const counts = strategyTable(2);
+    for (size_t index = 0; 4 > index; ++index) {
+        EranosSettlement *settlement = nullptr;
+        must(eranosGroupSettlement(group, strategies[index], &settlement));
+        // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
+        EranosSettlementStrategy const computedBy =
+            ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == strategies[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : strategies[index];
+        check(computedBy == eranosSettlementStrategy(settlement), "the settlement names the strategy whose plan it is");
+        EranosPaymentList *const payments = eranosSettlementPayments(settlement);
         addStrategyRow(counts, &(StrategyRow){
+                                   .computedBy = lineOf("%s", strategyName(eranosSettlementStrategy(settlement))),
                                    .payments = lineOf("%zu", eranosPaymentListLength(payments)),
                                    .strategy = lineOf("%s", strategyName(strategies[index])),
                                });
         eranosPaymentListDestroy(payments);
+        eranosSettlementDestroy(settlement);
     }
     tablePrint(counts);
     EranosPaymentList *const plan = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);

@@ -34,14 +34,15 @@ private data class MemberCategoryRow(
 }
 
 private data class StrategyRow(
+    val computedBy: String,
     val payments: Int,
     val strategy: String,
 ) : Row {
     override val cells: List<String>
-        get() = listOf(strategy, "$payments")
+        get() = listOf(strategy, computedBy, "$payments")
 
     companion object {
-        val HEADERS = listOf("Strategy", "Payments")
+        val HEADERS = listOf("Strategy", "Computed by", "Payments")
     }
 }
 
@@ -177,6 +178,7 @@ internal fun newCurrency(
 /** The name of [strategy] as the apps show it. */
 internal fun strategyName(strategy: SettlementStrategy): String =
     when (strategy) {
+        SettlementStrategy.ADAPTIVE -> "Adaptive"
         SettlementStrategy.DIRECT -> "Direct"
         SettlementStrategy.GREEDY -> "Greedy"
         SettlementStrategy.MINIMUM_TRANSFERS -> "MinimumTransfers"
@@ -187,17 +189,20 @@ internal fun settlingUp(group: Group) {
     val counts =
         SettlementStrategy.entries.map { strategy ->
             val settlement = group.settlementBlocking(strategy)
-            check(strategy == settlement.strategy)
-            StrategyRow(payments = settlement.payments.size, strategy = strategyName(settlement.strategy))
+            // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
+            val computedBy = if (SettlementStrategy.ADAPTIVE == strategy) SettlementStrategy.MINIMUM_TRANSFERS else strategy
+            check(computedBy == settlement.strategy)
+            StrategyRow(computedBy = strategyName(settlement.strategy), payments = settlement.payments.size, strategy = strategyName(strategy))
         }
     println(
         """
         Each strategy turns the balances into payments: the direct one pays back every
-        pair's own debts, greedy pays the largest amounts first, and the minimum one
-        finds the fewest payments.
+        pair's own debts, greedy pays the largest amounts first, the minimum one finds
+        the fewest payments, and the adaptive one finds the fewest while that is quick
+        and greedy's beyond, naming the strategy whose plan it chose.
         """.trimIndent(),
     )
-    printTable(StrategyRow.HEADERS, counts, numbersFrom = 1)
+    printTable(StrategyRow.HEADERS, counts, numbersFrom = 2)
     val plan = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
     println("The group follows the minimum plan:")
     printTable(

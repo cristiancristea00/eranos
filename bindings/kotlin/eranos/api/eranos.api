@@ -1098,6 +1098,7 @@ public final class eranos/SettlementFailure$OutOfMemory : eranos/SettlementFailu
 }
 
 public final class eranos/SettlementStrategy : java/lang/Enum {
+	public static final field ADAPTIVE Leranos/SettlementStrategy;
 	public static final field DIRECT Leranos/SettlementStrategy;
 	public static final field GREEDY Leranos/SettlementStrategy;
 	public static final field MINIMUM_TRANSFERS Leranos/SettlementStrategy;

@@ -175,6 +175,7 @@ fn every_read_converts_what_the_group_holds() {
     assert_eq!(operations::is_archived(group, &flat.ana), Ok(false));
     assert_eq!(operations::name(group), "Flat");
     for strategy in [
+        SettlementStrategy::Adaptive,
         SettlementStrategy::Direct,
         SettlementStrategy::Greedy,
         SettlementStrategy::MinimumTransfers,

@@ -76,18 +76,24 @@ class TotalsTest {
         assertValue(ana, again.members[0], bob)
 
         assertEquals(
-            listOf(SettlementStrategy.DIRECT, SettlementStrategy.GREEDY, SettlementStrategy.MINIMUM_TRANSFERS),
+            listOf(
+                SettlementStrategy.ADAPTIVE,
+                SettlementStrategy.DIRECT,
+                SettlementStrategy.GREEDY,
+                SettlementStrategy.MINIMUM_TRANSFERS,
+            ),
             SettlementStrategy.entries,
         )
         for (strategy in SettlementStrategy.entries) {
             val settlement = flat.group.settlementBlocking(strategy)
-            assertEquals(strategy, settlement.strategy)
+            // Two members' balances are well within the adaptive strategy's limit, so it settles them exactly.
+            assertEquals(if (SettlementStrategy.ADAPTIVE == strategy) SettlementStrategy.MINIMUM_TRANSFERS else strategy, settlement.strategy)
             assertEquals(strategy, strategy.generated.converted())
             val (payment) = settlement.payments
             assertEquals(flat.bob, payment.from)
             assertEquals(flat.ana, payment.to)
             assertEquals(flat.euros(500), payment.amount)
-            assertValue(settlement, flat.group.settlementBlocking(strategy), Settlement(emptyList(), strategy))
+            assertValue(settlement, flat.group.settlementBlocking(strategy), Settlement(emptyList(), settlement.strategy))
             assertValue(payment, Payment(flat.euros(500), flat.bob, flat.ana), Payment(flat.euros(500), flat.ana, flat.bob))
         }
     }

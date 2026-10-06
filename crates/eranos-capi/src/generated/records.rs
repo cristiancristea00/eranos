@@ -1827,7 +1827,8 @@ pub mod ffi {
             Box::new(EranosPaymentList(self.0.payments.clone()))
         }
 
-        /// The strategy that produced them.
+        /// The strategy that produced them: the one asked for, or, for the adaptive strategy, the
+        /// one whose plan it chose.
         #[must_use]
         pub fn strategy(&self) -> EranosSettlementStrategy {
             self.0.strategy.into()
@@ -1838,6 +1839,9 @@ pub mod ffi {
     #[derive(Debug)]
     #[diplomat::enum_convert(eranos_bindings::SettlementStrategy)]
     pub enum EranosSettlementStrategy {
+        /// The fewest payments while at most 20 balances are left after exact opposites pay each
+        /// other, the greedy plan beyond; the settlement names the strategy whose plan it is.
+        Adaptive,
         /// Everyone pays back the people who paid for them.
         Direct,
         /// The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each

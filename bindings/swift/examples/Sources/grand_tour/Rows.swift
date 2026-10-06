@@ -157,13 +157,14 @@ struct MemberCategoryRow: TableRow {
 }
 
 struct StrategyRow: TableRow {
-    static let headers = ["Strategy", "Payments"]
+    static let headers = ["Strategy", "Computed by", "Payments"]
 
+    let computedBy: String
     let payments: Int
     let strategy: String
 
     var cells: [String] {
-        [strategy, "\(payments)"]
+        [strategy, computedBy, "\(payments)"]
     }
 }
 

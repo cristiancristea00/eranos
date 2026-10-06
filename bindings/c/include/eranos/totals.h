@@ -29,6 +29,9 @@
 /// How a settlement plans its payments. The values of EranosSettlementStrategy, by the names of the C layer.
 typedef enum EranosSettlementStrategy EranosSettlementStrategy;
 
+/// The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond; the settlement names the
+/// strategy whose plan it is.
+static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE = EranosSettlementStrategy_Adaptive;
 /// Every debt between two members, unsimplified.
 static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_DIRECT = EranosSettlementStrategy_Direct;
 /// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
@@ -536,7 +539,7 @@ typedef struct EranosSettlement EranosSettlement;
     return EranosSettlement_payments(settlement);
 }
 
-/// The strategy that made the plan.
+/// The strategy that made the plan: the one asked for, or, for the adaptive strategy, the one whose plan it chose.
 ///
 /// @param settlement The settlement
 /// @return The strategy that made the plan

@@ -71,19 +71,22 @@ class MemberCategoryRow(Row):
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class StrategyRow(Row):
-    """A row of the table of the strategies: a strategy, and the number of payments of its plan."""
+    """A row of the table of the strategies: a strategy, the strategy the settlement names, and the number of payments of its plan."""
 
-    HEADERS: ClassVar[tuple[str, ...]] = ('Strategy', 'Payments')
+    HEADERS: ClassVar[tuple[str, ...]] = ('Strategy', 'Computed by', 'Payments')
+
+    computed_by: str
+    """The name of the strategy the settlement names: the one asked for, or the one whose plan the adaptive strategy chose."""
 
     payments: int
-    """The number of payments of the strategy's plan."""
+    """The number of payments of the settlement's plan."""
 
     strategy: str
-    """The strategy's name."""
+    """The name of the strategy asked for."""
 
     @override
     def cells(self) -> tuple[str, ...]:
-        return self.strategy, str(self.payments)
+        return self.strategy, self.computed_by, str(self.payments)
 
 
 def _add_up(currency: Currency, amounts: Iterable[Money]) -> Money:
@@ -289,6 +292,8 @@ def _strategy_name(strategy: SettlementStrategy) -> str:
 
     """
     match strategy:
+        case SettlementStrategy.ADAPTIVE:
+            return 'Adaptive'
         case SettlementStrategy.DIRECT:
             return 'Direct'
         case SettlementStrategy.GREEDY:
@@ -311,14 +316,23 @@ def settling_up(group: Group) -> None:
     counts: list[StrategyRow] = []
     for strategy in SettlementStrategy:
         settlement = group.settlement(strategy)
-        assert settlement.strategy == strategy
-        counts.append(StrategyRow(payments=len(settlement.payments), strategy=_strategy_name(settlement.strategy)))
+        # The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
+        computed_by = SettlementStrategy.MINIMUM_TRANSFERS if strategy is SettlementStrategy.ADAPTIVE else strategy
+        assert settlement.strategy == computed_by
+        counts.append(
+            StrategyRow(
+                computed_by=_strategy_name(settlement.strategy),
+                payments=len(settlement.payments),
+                strategy=_strategy_name(strategy),
+            )
+        )
     print_lines(
         'Each strategy turns the balances into payments: the direct one pays back every',
-        "pair's own debts, greedy pays the largest amounts first, and the minimum one",
-        'finds the fewest payments.',
+        "pair's own debts, greedy pays the largest amounts first, the minimum one finds",
+        'the fewest payments, and the adaptive one finds the fewest while that is quick',
+        "and greedy's beyond, naming the strategy whose plan it chose.",
     )
-    print_table(StrategyRow, counts, 1)
+    print_table(StrategyRow, counts, 2)
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
     print_lines('The group follows the minimum plan:')
     print_table(

@@ -95,6 +95,11 @@ export interface ExpenseShares {
 
 /** How balances turn into payments. */
 export enum SettlementStrategy {
+    /**
+     * The fewest payments while at most 20 balances are left after exact opposites pay each other, the greedy plan beyond; the
+     * settlement names the strategy whose plan it is.
+     */
+    ADAPTIVE = 'ADAPTIVE',
     /** Everyone pays back the people who paid for them. */
     DIRECT = 'DIRECT',
     /** The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each other where that saves a payment. */
@@ -117,7 +122,7 @@ export interface Payment {
 export interface Settlement {
     /** The payments, ordered by payer and then by recipient. */
     readonly payments: readonly Payment[];
-    /** The strategy that produced them. */
+    /** The strategy that produced them: the one asked for, or, for the adaptive strategy, the one whose plan it chose. */
     readonly strategy: SettlementStrategy;
 }
 
@@ -218,6 +223,8 @@ export function convertedExpenseShares(shares: internal.ExpenseShares): ExpenseS
  */
 export function generatedStrategy(strategy: SettlementStrategy): internal.SettlementStrategy {
     switch (strategy) {
+        case SettlementStrategy.ADAPTIVE:
+            return internal.SettlementStrategy.Adaptive;
         case SettlementStrategy.DIRECT:
             return internal.SettlementStrategy.Direct;
         case SettlementStrategy.GREEDY:
@@ -227,9 +234,15 @@ export function generatedStrategy(strategy: SettlementStrategy): internal.Settle
     }
 }
 
-/** The strategy the generated code holds as `strategy`. */
-function convertedStrategy(strategy: internal.SettlementStrategy): SettlementStrategy {
+/**
+ * The strategy the generated code holds as `strategy`.
+ *
+ * @internal
+ */
+export function convertedStrategy(strategy: internal.SettlementStrategy): SettlementStrategy {
     switch (strategy) {
+        case internal.SettlementStrategy.Adaptive:
+            return SettlementStrategy.ADAPTIVE;
         case internal.SettlementStrategy.Direct:
             return SettlementStrategy.DIRECT;
         case internal.SettlementStrategy.Greedy:

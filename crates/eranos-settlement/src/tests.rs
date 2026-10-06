@@ -62,13 +62,19 @@ fn owed_by_a_hub(creditors: u8) -> Ledger {
     ledger
 }
 
-/// Every strategy records itself, pays in the group currency, and sorts its
-/// payments by payer and recipient.
+/// Every strategy names the strategy whose plan it is (the adaptive one the
+/// exact solver's, for these four balances), pays in the group currency, and
+/// sorts its payments by payer and recipient.
 #[test]
 fn every_strategy_pays_in_the_group_currency_in_order() {
     for strategy in SettlementStrategy::all() {
         let settlement = settle(strategy, &ledger()).unwrap();
-        assert_eq!(settlement.strategy(), strategy);
+        let computed_by = if SettlementStrategy::Adaptive == strategy {
+            SettlementStrategy::MinimumTransfers
+        } else {
+            strategy
+        };
+        assert_eq!(settlement.strategy(), computed_by);
         assert_eq!(settlement.len(), 2);
         assert!(!settlement.is_empty());
         assert_eq!(
@@ -116,23 +122,25 @@ fn a_kept_settlement_lasts_until_it_is_cleared() {
 /// A request dropped at a yield would keep a plan it never finished, or
 /// leave the next request nothing to compute: it keeps nothing, and the
 /// next request computes the plan in full. Seventeen open balances make the
-/// exact solver yield once.
+/// exact solver yield once, for the fewest payments and for the adaptive
+/// strategy alike.
 #[test]
 fn a_dropped_request_keeps_no_plan() {
-    let kept = Settlements::default();
     let ledger = owed_by_a_hub(16);
     let mut context = Context::from_waker(Waker::noop());
-    {
-        let request = kept.get_async(SettlementStrategy::MinimumTransfers, &ledger);
-        let mut request = pin!(request.into_future());
-        assert!(request.as_mut().poll(&mut context).is_pending());
+    for strategy in [
+        SettlementStrategy::Adaptive,
+        SettlementStrategy::MinimumTransfers,
+    ] {
+        let kept = Settlements::default();
+        {
+            let request = kept.get_async(strategy, &ledger);
+            let mut request = pin!(request.into_future());
+            assert!(request.as_mut().poll(&mut context).is_pending());
+        }
+        assert!(kept.slot(strategy).get().is_none());
+        assert_eq!(kept.get(strategy, &ledger).map(Settlement::len), Ok(16));
     }
-    assert!(kept.minimum_transfers.get().is_none());
-    assert_eq!(
-        kept.get(SettlementStrategy::MinimumTransfers, &ledger)
-            .map(Settlement::len),
-        Ok(16)
-    );
 }
 
 /// Two requests computing at once would each keep a plan of their own: the
@@ -164,6 +172,7 @@ fn all_lists_every_strategy_in_declaration_order() {
     assert_eq!(
         SettlementStrategy::all(),
         [
+            SettlementStrategy::Adaptive,
             SettlementStrategy::Direct,
             SettlementStrategy::Greedy,
             SettlementStrategy::MinimumTransfers
@@ -197,10 +206,37 @@ fn an_exact_plan_too_large_to_compute_is_an_error() {
     }
 }
 
+/// The adaptive strategy settles a group too large for the exact solver
+/// greedily, and says so, instead of failing as the fewest payments do.
+#[test]
+fn the_adaptive_strategy_settles_what_the_exact_solver_cannot() {
+    let settlement = settle(SettlementStrategy::Adaptive, &owed_by_a_hub(63)).unwrap();
+    assert_eq!(settlement.strategy(), SettlementStrategy::Greedy);
+    assert_eq!(settlement.len(), 63);
+}
+
+/// An adaptive plan is kept under the adaptive strategy, named by the
+/// strategy that computed it, without filling that strategy's own slot.
+#[test]
+fn a_kept_adaptive_plan_names_the_strategy_that_computed_it() {
+    let kept = Settlements::default();
+    let plan = kept.get(SettlementStrategy::Adaptive, &ledger()).unwrap();
+    assert_eq!(plan.strategy(), SettlementStrategy::MinimumTransfers);
+    assert!(std::ptr::eq(
+        plan,
+        kept.get(SettlementStrategy::Adaptive, &ledger()).unwrap()
+    ));
+    assert!(kept.minimum_transfers.get().is_none());
+}
+
 /// A strategy as a crate outside this one converts it: to its name.
 struct StrategyName(&'static str);
 
 impl FromSettlementStrategy for StrategyName {
+    fn adaptive() -> Self {
+        Self("adaptive")
+    }
+
     fn direct() -> Self {
         Self("direct")
     }
@@ -222,5 +258,5 @@ fn a_strategy_converts_through_the_method_of_its_variant() {
         .into_iter()
         .map(|strategy| StrategyName::from_settlement_strategy(strategy).0)
         .collect();
-    assert_eq!(names, ["direct", "greedy", "minimum transfers"]);
+    assert_eq!(names, ["adaptive", "direct", "greedy", "minimum transfers"]);
 }

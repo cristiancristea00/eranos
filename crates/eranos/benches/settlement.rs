@@ -1,4 +1,4 @@
-//! Benchmarks of the three settlement strategies against groups of growing
+//! Benchmarks of the four settlement strategies against groups of growing
 //! size. The timings documented on `SettlementStrategy` come from here; run
 //! on an idle machine with `cargo bench -p eranos --bench settlement`.
 #![forbid(unsafe_code)]
@@ -77,6 +77,10 @@ struct Case {
 fn strategies(criterion: &mut Criterion) {
     let cases = [
         Case {
+            sizes: vec![18, 20, 21, 100],
+            strategy: SettlementStrategy::Adaptive,
+        },
+        Case {
             sizes: vec![4, 8, 12, 16, 20, 24],
             strategy: SettlementStrategy::MinimumTransfers,
         },
@@ -94,6 +98,22 @@ fn strategies(criterion: &mut Criterion) {
         benchmark.sample_size(10);
         for size in sizes {
             let template = group(size);
+            if SettlementStrategy::Adaptive == strategy {
+                // Every member's balance reaches the limit, none paired away,
+                // so the adaptive plans of 20 members and fewer are exact and
+                // the larger ones greedy. Asked of a clone, so the template's
+                // cache stays empty.
+                let computed_by = template
+                    .clone()
+                    .settlement(strategy)
+                    .map_or_else(|error| panic!("{error}"), Settlement::strategy);
+                let expected = if 20 >= size {
+                    SettlementStrategy::MinimumTransfers
+                } else {
+                    SettlementStrategy::Greedy
+                };
+                assert_eq!(computed_by, expected);
+            }
             benchmark.bench_with_input(
                 BenchmarkId::from_parameter(size),
                 &template,

@@ -516,18 +516,36 @@ void theSummaryAndTheSharesAddUp(Check &check) {
                "the dinner's shares");
 }
 
+/// Every strategy, in the order they are declared.
+constexpr std::array STRATEGIES = {
+    SettlementStrategy::ADAPTIVE,
+    SettlementStrategy::DIRECT,
+    SettlementStrategy::GREEDY,
+    SettlementStrategy::MINIMUM_TRANSFERS,
+};
+
 /// A strategy that settled otherwise than the library would ask a member to pay twice.
 void eachStrategySettlesEveryBalance(Check &check) {
     Flat flat;
-    for (auto const strategy : {SettlementStrategy::DIRECT, SettlementStrategy::GREEDY, SettlementStrategy::MINIMUM_TRANSFERS}) {
+    for (auto const strategy : STRATEGIES) {
         auto const settlement = flat.group.settlement(strategy).value();
-        check.that(settlement.strategy == strategy, "the plan names its strategy");
+        // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
+        auto const computedBy = SettlementStrategy::ADAPTIVE == strategy ? SettlementStrategy::MINIMUM_TRANSFERS : strategy;
+        check.that(settlement.strategy == computedBy, "the plan names the strategy whose plan it is");
         check.that(settlement.payments == std::vector<Payment>{Payment(flat.euros(500), flat.bob, flat.ana)}, "Bob pays Ana 5.00");
     }
     static_cast<void>(flat.group.addTransfer(Transfer(LocalCost{flat.euros(500)}, flat.day, flat.bob, flat.ana)).value());
     auto const members = flat.group.summary().members;
     check.that(std::ranges::all_of(members, [](MemberSummary const &member) { return member.balance == Balance{SettledBalance{}}; }),
                "once Bob pays, every balance is settled");
+}
+
+/// A strategy that converted to another would settle by a plan the app did not ask for, or name another than the one that made it. No
+/// settlement holds the adaptive strategy, so only this round trip converts it back from the generated value.
+void everyStrategyConvertsToTheGeneratedOneAndBack(Check &check) {
+    for (auto const strategy : STRATEGIES) {
+        check.that(detail::fromDetail(detail::toDetail(strategy)) == strategy, "the strategy converts to the generated one and back");
+    }
 }
 
 /// A change of currency that left an entry unconverted, or took a rate it was not given, would mix currencies in the totals.
@@ -787,6 +805,7 @@ constexpr std::array TESTS = {
     Test{.name = "aGroupHoldsItsDetailsAndChangesThem", .body = aGroupHoldsItsDetailsAndChangesThem},
     Test{.name = "theSummaryAndTheSharesAddUp", .body = theSummaryAndTheSharesAddUp},
     Test{.name = "eachStrategySettlesEveryBalance", .body = eachStrategySettlesEveryBalance},
+    Test{.name = "everyStrategyConvertsToTheGeneratedOneAndBack", .body = everyStrategyConvertsToTheGeneratedOneAndBack},
     Test{.name = "aChangeOfCurrencyConvertsEveryEntry", .body = aChangeOfCurrencyConvertsEveryEntry},
     Test{.name = "aSavedGroupLoadsAsItWasSaved", .body = aSavedGroupLoadsAsItWasSaved},
     Test{.name = "everyErrorHoldsWhatItsFailureHolds", .body = everyErrorHoldsWhatItsFailureHolds},

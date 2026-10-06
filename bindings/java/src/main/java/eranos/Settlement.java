@@ -7,14 +7,16 @@ import java.util.Objects;
  * The payments that settle every balance.
  *
  * @param payments the payments, ordered by payer and then by recipient
- * @param strategy the strategy that produced them
+ * @param strategy the strategy that produced them: the one asked for, or, for the adaptive
+ *     strategy, the one whose plan it chose
  */
 public record Settlement(List<Payment> payments, SettlementStrategy strategy) {
     /**
      * The settlement of these components; the lists are copied.
      *
      * @param payments the payments, ordered by payer and then by recipient
-     * @param strategy the strategy that produced them
+     * @param strategy the strategy that produced them: the one asked for, or, for the adaptive
+     *     strategy, the one whose plan it chose
      */
     public Settlement {
         payments = List.copyOf(payments);

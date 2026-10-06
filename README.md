@@ -7,7 +7,8 @@ together — a trip, a day out, a household — and for settling up afterwards.
 It records who paid for what and how each expense is shared, keeps every
 total and balance current as entries change, and turns the balances into
 payments with the strategy the app chooses: the fewest payments possible,
-a fast greedy plan, or the unsimplified debts between each pair of people.
+the fewest while they are quick to find and a greedy plan beyond, a fast
+greedy plan, or the unsimplified debts between each pair of people.
 
 It is the shared core of the eranos apps for iOS, Android, and the web,
 which reach it through its [bindings](#bindings) for eight languages; the
@@ -110,13 +111,14 @@ flowchart LR
   work, for any executor or none, and a `SharedGroup` shares a group
   between tasks and threads behind a read-write lock
   ([docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency)).
-- **Three settlement strategies**, chosen by the caller:
+- **Four settlement strategies**, chosen by the caller:
 
-  | Strategy           | Payments                                      | Cost                                       |
-  | ------------------ | --------------------------------------------- | ------------------------------------------ |
-  | `MinimumTransfers` | the provable minimum (the problem is NP-hard) | O(2ⁿ·n) time, 2ⁿ bytes for n open balances |
-  | `Greedy`           | at most n − 1, within 3/2 of the minimum      | O(n log n)                                 |
-  | `Direct`           | one per pair of members with a netted debt    | O(pairs)                                   |
+  | Strategy           | Payments                                                        | Cost                                                    |
+  | ------------------ | --------------------------------------------------------------- | ------------------------------------------------------- |
+  | `Adaptive`         | the minimum while at most 20 balances are open, greedy's beyond | at most `MinimumTransfers`' cost at 20 balances (1 MiB) |
+  | `MinimumTransfers` | the provable minimum (the problem is NP-hard)                   | O(2ⁿ·n) time, 2ⁿ bytes for n open balances              |
+  | `Greedy`           | at most n − 1, within 3/2 of the minimum                        | O(n log n)                                              |
+  | `Direct`           | one per pair of members with a netted debt                      | O(pairs)                                                |
 
 The design, with its trade-offs, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
