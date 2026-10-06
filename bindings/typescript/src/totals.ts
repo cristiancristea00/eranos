@@ -97,7 +97,7 @@ export interface ExpenseShares {
 export enum SettlementStrategy {
     /** Everyone pays back the people who paid for them. */
     DIRECT = 'DIRECT',
-    /** The largest debtor pays the largest creditor, repeatedly. */
+    /** The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each other where that saves a payment. */
     GREEDY = 'GREEDY',
     /** The fewest payments possible. */
     MINIMUM_TRANSFERS = 'MINIMUM_TRANSFERS',

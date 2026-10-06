@@ -414,11 +414,11 @@ they owe and each creditor receives what they are owed, so nobody pays more
 than their debt. Payments are sorted by payer, then recipient. The caller
 always names the strategy; there is no default and no automatic fallback.
 
-| Strategy           | Algorithm                                                                                                                      | Cost                   | Payments                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | --------------------------------------------- |
-| `MinimumTransfers` | pair exact opposites; subset dynamic program for the largest partition into zero-sum groups; settle each group in member order | O(2ⁿ·n) time, 2ⁿ bytes | the minimum: n − (number of groups)           |
-| `Greedy`           | largest debtor pays largest creditor, ties to the lower ID                                                                     | O(n log n)             | at most n − 1                                 |
-| `Direct`           | every netted pair debt becomes a payment                                                                                       | O(pairs)               | the most; each traces back to shared expenses |
+| Strategy           | Algorithm                                                                                                                                         | Cost                   | Payments                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | --------------------------------------------- |
+| `MinimumTransfers` | pair exact opposites; subset dynamic program for the largest partition into zero-sum groups; settle each group in member order                    | O(2ⁿ·n) time, 2ⁿ bytes | the minimum: n − (number of groups)           |
+| `Greedy`           | largest debtor pays largest creditor, ties to the lower ID, with and without exact opposites paired first; the fewer payments, the first on a tie | O(n log n)             | at most n − 1, within 3/2 of the minimum      |
+| `Direct`           | every netted pair debt becomes a payment                                                                                                          | O(pairs)               | the most; each traces back to shared expenses |
 
 Minimising the number of payments is NP-hard (Verhoeff, "Settling multiple
 debts efficiently", 2004): n balances need n − g payments, where g is the
@@ -443,6 +443,19 @@ refuses, the solver returns `SettlementError::OutOfMemory`. Operating systems
 that overcommit memory (Linux) or end memory-hungry apps (iOS) may stop the
 process before an allocation fails, which is why the documentation of
 `MinimumTransfers` recommends `Greedy` for large groups.
+
+Greedy computes two plans: the largest debtor paying the largest creditor
+throughout, ties to the lower ID, and the same after exact opposites have
+paid each other as in step 1. It keeps the one with fewer payments, the first
+on a tie, so pairing changes a plan only where it saves a payment. Every
+payment clears at least one member, so n balances take at most n − 1
+payments, and the plan kept is within 3/2 of the minimum: the pairs belong to
+a minimal plan, and the m balances they leave hold no opposite pair, so every
+zero-sum group among them has at least three members and they need at least
+2m/3 payments, where the second plan makes at most m − 1. Neither plan always
+wins: for −3, −3, −5, +6, and +5 the first takes four payments and the second
+three, and for −14, −4, −16, −9, +20, +16, +18, −7, and −4 the first takes six,
+the minimum, and the second seven.
 
 ## 8. Validation and errors
 
@@ -577,8 +590,8 @@ Each returns a `Cooperative`, which an executor awaits like any future
 and `Cooperative::complete` runs to its end on the calling thread;
 `settlement`, `change_currency`, and `into_group` are those completions, so
 the synchronous and asynchronous calls run the same code. The greedy and
-direct strategies never yield: their largest benchmarked cases take 55 µs
-and 110 µs. A call writes nothing before its last yield, so one dropped at
+direct strategies never yield: their largest benchmarked cases take about
+0.1 ms each. A call writes nothing before its last yield, so one dropped at
 a yield changes nothing: a currency change swaps in its new entries and
 ledger after its last yield, a load builds a group of its own, and a
 settlement enters the cache only once it is complete
@@ -678,7 +691,7 @@ Release build on an Apple M4 Pro (`cargo bench -p eranos --features serde --benc
 | Operation                               | Size                                            | Time                              |
 | --------------------------------------- | ----------------------------------------------- | --------------------------------- |
 | `MinimumTransfers`                      | 12 / 16 / 20 / 24 open balances                 | 18 µs / 0.36 ms / 7.2 ms / 0.14 s |
-| `Greedy`                                | 100 / 1 000 members                             | 3.5 µs / 55 µs                    |
+| `Greedy`                                | 100 / 1 000 members                             | 4.6 µs / 66–103 µs                |
 | `Direct`                                | 100 members sharing every expense (4 950 pairs) | 110 µs                            |
 | add or remove an expense of six members | group of 10 000 expenses                        | ≈ 1 µs                            |
 | read a member's totals                  | any                                             | ≈ 3 ns                            |

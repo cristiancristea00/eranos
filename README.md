@@ -115,7 +115,7 @@ flowchart LR
   | Strategy           | Payments                                      | Cost                                       |
   | ------------------ | --------------------------------------------- | ------------------------------------------ |
   | `MinimumTransfers` | the provable minimum (the problem is NP-hard) | O(2ⁿ·n) time, 2ⁿ bytes for n open balances |
-  | `Greedy`           | at most n − 1                                 | O(n log n)                                 |
+  | `Greedy`           | at most n − 1, within 3/2 of the minimum      | O(n log n)                                 |
   | `Direct`           | one per pair of members with a netted debt    | O(pairs)                                   |
 
 The design, with its trade-offs, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

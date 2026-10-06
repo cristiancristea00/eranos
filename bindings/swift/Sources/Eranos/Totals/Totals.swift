@@ -197,7 +197,7 @@ public enum SettlementStrategy: Hashable, Sendable, CaseIterable {
     /// Everyone pays back the people who paid for them.
     case direct
 
-    /// The largest debtor pays the largest creditor, repeatedly.
+    /// The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each other where that saves a payment.
     case greedy
 
     /// The fewest payments possible.

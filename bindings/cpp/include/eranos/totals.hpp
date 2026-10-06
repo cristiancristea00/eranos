@@ -25,7 +25,7 @@ namespace eranos {
 enum class SettlementStrategy : std::uint8_t {
     /// Every debt between two members, unsimplified.
     DIRECT,
-    /// A fast plan that pairs the largest debtor with the largest creditor.
+    /// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
     GREEDY,
     /// The fewest payments possible.
     MINIMUM_TRANSFERS,

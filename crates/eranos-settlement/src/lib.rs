@@ -19,6 +19,7 @@ mod direct;
 mod error;
 mod greedy;
 mod minimum;
+mod opposites;
 
 use std::future::Future;
 use std::sync::OnceLock;
@@ -68,11 +69,16 @@ pub enum SettlementStrategy {
     /// members who all share every expense, 4 950 pairs, on an Apple M4
     /// Pro).
     Direct,
-    /// The largest debtor pays the largest creditor, repeatedly.
+    /// The largest debtor pays the largest creditor, repeatedly, after exact
+    /// opposites pay each other where that saves a payment.
     ///
-    /// O(n log n) time and at most n − 1 payments (55 µs for 1 000 members
-    /// on an Apple M4 Pro); usually as few as
-    /// [`MinimumTransfers`](Self::MinimumTransfers), but not always.
+    /// Two plans are computed: the largest debtor paying the largest creditor
+    /// throughout, and the same after every debtor who owes exactly what a
+    /// creditor is owed has paid them; the one with fewer payments is kept,
+    /// the first on a tie. O(n log n) time and at most n − 1 payments (about
+    /// 0.1 ms for 1 000 members on an Apple M4 Pro), within 3/2 of
+    /// [`MinimumTransfers`](Self::MinimumTransfers) and usually as few, but
+    /// not always.
     Greedy,
     /// The fewest payments possible.
     ///

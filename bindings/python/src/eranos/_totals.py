@@ -225,7 +225,7 @@ class SettlementStrategy(enum.Enum):
     """Everyone pays back the people who paid for them."""
 
     GREEDY = enum.auto()
-    """The largest debtor pays the largest creditor, repeatedly."""
+    """The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each other where that saves a payment."""
 
     MINIMUM_TRANSFERS = enum.auto()
     """The fewest payments possible."""

@@ -5,7 +5,10 @@ public enum SettlementStrategy {
     /** Everyone pays back the people who paid for them. */
     DIRECT,
 
-    /** The largest debtor pays the largest creditor, repeatedly. */
+    /**
+     * The largest debtor pays the largest creditor, repeatedly, after exact opposites pay each
+     * other where that saves a payment.
+     */
     GREEDY,
 
     /** The fewest payments possible. */

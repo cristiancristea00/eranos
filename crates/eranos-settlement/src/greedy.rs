@@ -1,4 +1,5 @@
-//! Largest debtor pays largest creditor.
+//! Largest debtor pays largest creditor, after exact opposites where they
+//! save a payment.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -7,6 +8,7 @@ use eranos_core::MemberId;
 use eranos_ledger::MemberPair;
 
 use super::{Flow, OpenBalance};
+use crate::opposites::{Pairing, pair_opposites};
 
 /// What a debtor still owes or a creditor is still owed.
 ///
@@ -32,13 +34,40 @@ impl PartialOrd for Outstanding {
     }
 }
 
+/// Settles `balances`, ordered by member, with the fewer payments of two
+/// plans: the largest debtor paying the largest creditor throughout, and the
+/// same after exact opposites have paid each other; the first on a tie.
+///
+/// Every payment clears at least one member, so at most n − 1 payments
+/// settle n balances. The plan kept is within 3/2 of the fewest payments:
+/// the pairs belong to a minimal plan, and the m balances they leave split
+/// into zero-sum groups of at least three members, so they need at least
+/// 2m/3 payments where the second plan makes at most m − 1.
+pub(super) fn settle(balances: &[OpenBalance]) -> Vec<Flow> {
+    settle_paired(balances, pair_opposites(balances))
+}
+
+/// The plan of [`settle`], given the pairing of the exact opposites among
+/// `balances`.
+fn settle_paired(balances: &[OpenBalance], pairing: Pairing) -> Vec<Flow> {
+    let largest = largest_first(balances);
+    if pairing.flows.is_empty() {
+        // Nothing was paired, so the second plan would be the first.
+        return largest;
+    }
+    let Pairing { mut flows, rest } = pairing;
+    flows.extend(largest_first(&rest));
+    if flows.len() < largest.len() {
+        flows
+    } else {
+        largest
+    }
+}
+
 /// Settles `balances` by repeatedly having the largest debtor pay the
 /// largest creditor the smaller of the two amounts; ties go to the lower
 /// member ID.
-///
-/// Every payment clears at least one of the two, so at most n − 1 payments
-/// settle n balances.
-pub(super) fn settle(balances: &[OpenBalance]) -> Vec<Flow> {
+fn largest_first(balances: &[OpenBalance]) -> Vec<Flow> {
     let mut creditors: BinaryHeap<Outstanding> = BinaryHeap::new();
     let mut debtors: BinaryHeap<Outstanding> = BinaryHeap::new();
     for &OpenBalance { member, net } in balances {

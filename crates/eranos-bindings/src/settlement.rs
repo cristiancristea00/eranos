@@ -11,7 +11,8 @@ use crate::money::Money;
 pub enum SettlementStrategy {
     /// Everyone pays back the people who paid for them.
     Direct,
-    /// The largest debtor pays the largest creditor, repeatedly.
+    /// The largest debtor pays the largest creditor, repeatedly, after exact
+    /// opposites pay each other where that saves a payment.
     Greedy,
     /// The fewest payments possible.
     MinimumTransfers,

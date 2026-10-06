@@ -6,15 +6,14 @@
 //! exact opposites, then finds g for the rest with a dynamic program over
 //! subsets, and settles each group with one payment fewer than its size.
 
-use std::collections::BTreeMap;
 use std::ops::Range;
 
-use eranos_core::MemberId;
 use eranos_core::cooperative::Pacer;
 use eranos_ledger::MemberPair;
 
 use super::{Flow, OpenBalance};
 use crate::error::SettlementError;
+use crate::opposites::{Pairing, pair_opposites};
 
 /// How many subsets the table fill computes between two checks of the
 /// pacer.
@@ -38,55 +37,6 @@ pub(super) async fn settle(balances: &[OpenBalance]) -> Result<Vec<Flow>, Settle
         flows.extend(settle_group(&group));
     }
     Ok(flows)
-}
-
-/// The payments between exact opposites and the balances they leave.
-#[derive(Debug)]
-struct Pairing {
-    flows: Vec<Flow>,
-    rest: Vec<OpenBalance>,
-}
-
-/// Settles every debtor whose debt exactly matches a creditor's credit with
-/// one payment, lowest member IDs first; returns those payments and the
-/// balances left.
-///
-/// Taking such a pair as its own group is always optimal: if an optimal
-/// partition put the two members in groups G and H, then {x, −x} and
-/// (G ∪ H) ∖ {x, −x} is a partition with as many zero-sum groups.
-fn pair_opposites(balances: &[OpenBalance]) -> Pairing {
-    let mut creditors: BTreeMap<i64, Vec<MemberId>> = BTreeMap::new();
-    for &OpenBalance { member, net } in balances.iter().rev() {
-        if 0 < net {
-            // Reversed, so popping from the end yields the lowest ID first.
-            creditors.entry(net).or_default().push(member);
-        }
-    }
-    let mut paired = Vec::new();
-    let mut flows = Vec::new();
-    for &OpenBalance { member, net } in balances {
-        if 0 > net {
-            // The ledger keeps every value above i64::MIN, so negating fits.
-            if let Some(creditor) = creditors.get_mut(&-net).and_then(Vec::pop) {
-                flows.push(Flow {
-                    amount: -net,
-                    members: MemberPair {
-                        from: member,
-                        to: creditor,
-                    },
-                });
-                paired.push(member);
-                paired.push(creditor);
-            }
-        }
-    }
-    paired.sort_unstable();
-    let rest = balances
-        .iter()
-        .copied()
-        .filter(|balance| 0 != balance.net && paired.binary_search(&balance.member).is_err())
-        .collect();
-    Pairing { flows, rest }
 }
 
 /// Partitions `balances` into the largest number of groups that each sum to

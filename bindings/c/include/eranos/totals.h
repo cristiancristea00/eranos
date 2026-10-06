@@ -31,7 +31,7 @@ typedef enum EranosSettlementStrategy EranosSettlementStrategy;
 
 /// Every debt between two members, unsimplified.
 static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_DIRECT = EranosSettlementStrategy_Direct;
-/// A fast plan that pairs the largest debtor with the largest creditor.
+/// A fast plan that pairs the largest debtor with the largest creditor, after exact opposites where that saves a payment.
 static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_GREEDY = EranosSettlementStrategy_Greedy;
 /// The fewest payments possible.
 static constexpr EranosSettlementStrategy ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS = EranosSettlementStrategy_MinimumTransfers;

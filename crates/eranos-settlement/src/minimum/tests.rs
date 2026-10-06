@@ -8,6 +8,7 @@ use std::future::Future;
 use std::pin::pin;
 use std::task::{Context, Waker};
 
+use eranos_core::MemberId;
 use eranos_core::cooperative::Cooperative;
 use proptest::prelude::*;
 
@@ -136,10 +137,10 @@ fn it_finds_zero_sum_groups_greedy_misses() {
 fn exact_opposites_pay_each_other_directly() {
     // Members 3 and 4 owe 5.00 each; 1 and 2 are owed 5.00 each.
     let open = balances(&[500, 500, -500, -500]);
-    let Pairing { flows, rest } = pair_opposites(&open);
-    assert_eq!(flows, vec![flow(500, 3, 1), flow(500, 4, 2)]);
-    assert!(rest.is_empty());
-    assert_eq!(completed(settle(&open)).unwrap().len(), 2);
+    assert_eq!(
+        completed(settle(&open)),
+        Ok(vec![flow(500, 3, 1), flow(500, 4, 2)])
+    );
 }
 
 /// Every zero-sum group settles with one payment fewer than its size, each
