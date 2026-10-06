@@ -49,7 +49,7 @@ pub(super) fn settle(balances: &[OpenBalance]) -> Vec<Flow> {
 
 /// The plan of [`settle`], given the pairing of the exact opposites among
 /// `balances`.
-pub(super) fn settle_paired(balances: &[OpenBalance], pairing: Pairing) -> Vec<Flow> {
+pub(super) fn settle_paired(balances: &[OpenBalance], pairing: Pairing<'_>) -> Vec<Flow> {
     let largest = largest_first(balances);
     if pairing.flows.is_empty() {
         // Nothing was paired, so the second plan would be the first.

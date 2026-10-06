@@ -44,9 +44,20 @@ fn balances(nets: &[i64]) -> Vec<OpenBalance> {
 #[test]
 fn exact_opposites_pay_each_other_directly() {
     // Members 3 and 4 owe 5.00 each; 1 and 2 are owed 5.00 each.
-    let Pairing { flows, rest } = pair_opposites(&balances(&[500, 500, -500, -500]));
+    let open = balances(&[500, 500, -500, -500]);
+    let Pairing { flows, rest } = pair_opposites(&open);
     assert_eq!(flows, vec![flow(500, 3, 1), flow(500, 4, 2)]);
     assert!(rest.is_empty());
+}
+
+/// Balances with nothing to pair and nothing settled are left as they were
+/// handed in, without a copy, which most groups' are.
+#[test]
+fn balances_without_a_pair_are_left_without_a_copy() {
+    let open = balances(&[1, 2, -3]);
+    let Pairing { flows, rest } = pair_opposites(&open);
+    assert!(flows.is_empty());
+    assert!(matches!(rest, Cow::Borrowed(left) if std::ptr::eq(left, open.as_slice())));
 }
 
 /// A creditor or a debtor whose amount has no opposite left stays open, a
@@ -54,7 +65,8 @@ fn exact_opposites_pay_each_other_directly() {
 /// out.
 #[test]
 fn a_surplus_of_one_amount_stays_unpaired() {
-    let Pairing { flows, rest } = pair_opposites(&balances(&[5, 5, 0, -5, 3, -8, -3, -3]));
+    let open = balances(&[5, 5, 0, -5, 3, -8, -3, -3]);
+    let Pairing { flows, rest } = pair_opposites(&open);
     assert_eq!(flows, vec![flow(5, 4, 1), flow(3, 7, 5)]);
     assert_eq!(rest, vec![balance(2, 5), balance(6, -8), balance(8, -3)]);
 }
@@ -82,7 +94,7 @@ proptest! {
             2 * flows.len() + rest.len(),
             nets.iter().filter(|&&net| 0 != net).count()
         );
-        for left in &rest {
+        for left in rest.iter() {
             prop_assert!(0 != left.net);
             prop_assert!(rest.iter().all(|other| -left.net != other.net));
         }

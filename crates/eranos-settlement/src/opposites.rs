@@ -1,16 +1,20 @@
 //! Exact opposites: a debtor who owes exactly what a creditor is owed.
 
+use std::borrow::Cow;
+
 use eranos_ledger::MemberPair;
 
 use super::{Flow, OpenBalance};
 
 /// The payments between exact opposites and the balances they leave.
 #[derive(Debug)]
-pub(super) struct Pairing {
+pub(super) struct Pairing<'balances> {
     /// One payment for each pair of exact opposites.
     pub(super) flows: Vec<Flow>,
-    /// The non-zero balances left, in their order among those paired.
-    pub(super) rest: Vec<OpenBalance>,
+    /// The non-zero balances left, in their order among those paired: the
+    /// balances paired themselves when none was paired and none is zero, as
+    /// in most groups.
+    pub(super) rest: Cow<'balances, [OpenBalance]>,
 }
 
 /// Settles every debtor whose debt exactly matches a creditor's credit with
@@ -21,7 +25,7 @@ pub(super) struct Pairing {
 /// (G ∪ H) ∖ {x, −x} is a partition with as many zero-sum groups. No two
 /// balances left are exact opposites, so every zero-sum group among them has
 /// at least three members.
-pub(super) fn pair_opposites(balances: &[OpenBalance]) -> Pairing {
+pub(super) fn pair_opposites(balances: &[OpenBalance]) -> Pairing<'_> {
     // Creditors by amount, then by member, so the first of each amount has
     // the lowest ID.
     let mut creditors: Vec<OpenBalance> = balances
@@ -61,13 +65,22 @@ pub(super) fn pair_opposites(balances: &[OpenBalance]) -> Pairing {
             paired.push(creditor.member);
         }
     }
+    if paired.is_empty() && balances.iter().all(|balance| 0 != balance.net) {
+        return Pairing {
+            flows,
+            rest: Cow::Borrowed(balances),
+        };
+    }
     paired.sort_unstable();
     let rest = balances
         .iter()
         .copied()
         .filter(|balance| 0 != balance.net && paired.binary_search(&balance.member).is_err())
         .collect();
-    Pairing { flows, rest }
+    Pairing {
+        flows,
+        rest: Cow::Owned(rest),
+    }
 }
 
 #[cfg(test)]
