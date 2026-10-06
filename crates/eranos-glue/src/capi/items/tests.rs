@@ -151,7 +151,7 @@ fn a_core_the_rules_refuse_is_refused() {
         refusal(&[RECORDS, CALLS, CALLS]),
         "the core holds one trait of group calls, marked `#[calls]`"
     );
-    assert!(!refusal(&["fn ("]).is_empty());
+    assert_ne!(refusal(&["fn ("]), "");
     for refused in [
         "#[mirrored] pub struct Pair(i32, i32);",
         "#[mirrored] pub enum Pair { Both(i32, i32) }",
@@ -168,5 +168,8 @@ fn a_core_the_rules_refuse_is_refused() {
     ] {
         assert_eq!(refusal(&[refused, CALLS]), "documentation is text");
     }
-    assert!(!refusal(&[RECORDS, "#[calls] trait GroupCalls { const LIMIT: usize; }"]).is_empty());
+    assert_ne!(
+        refusal(&[RECORDS, "#[calls] trait GroupCalls { const LIMIT: usize; }"]),
+        ""
+    );
 }

@@ -65,9 +65,9 @@ fn a_clean_removes_cargo_s_target_then_every_ignored_path() {
 fn no_path_is_the_workspace_root_cargo_s_target_or_inside_one_removed_before() {
     assert_eq!(entries(LISTING), REMOVED);
     assert_eq!(entries("a/\0\0b\0"), ["a/", "b"]);
-    assert!(entries("\0").is_empty());
-    assert!(entries("").is_empty());
-    assert!(entries("target/\0target/debug/\0").is_empty());
+    assert_eq!(entries("\0"), Vec::<&str>::new());
+    assert_eq!(entries(""), Vec::<&str>::new());
+    assert_eq!(entries("target/\0target/debug/\0"), Vec::<&str>::new());
     assert_eq!(
         entries("x/src/\0x/src/main/\0x/src/main/jniLibs/\0x/srcs\0x\0xy\0"),
         ["x/src/", "x/srcs", "x", "xy"]

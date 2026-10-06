@@ -93,7 +93,7 @@ fn a_missing_variable_stops_the_kotlin_gates_before_any_step() {
             run(&mut recorder, &metadata()),
             Err(Failure::Variable(name)) if name == missing
         ));
-        assert!(recorder.steps.is_empty());
+        assert_eq!(recorder.steps, Vec::<Step>::new());
     }
 }
 

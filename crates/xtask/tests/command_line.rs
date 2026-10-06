@@ -31,7 +31,7 @@ fn help_prints_the_commands_and_succeeds() {
 fn an_unknown_command_fails_and_prints_the_usage() {
     let output = xtask(&["gate"]);
     assert!(!output.status.success());
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.stdout, b"");
     let text = String::from_utf8(output.stderr).unwrap();
     assert!(
         text.starts_with("error: unknown command\n\nusage: cargo xtask <command>"),

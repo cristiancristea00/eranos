@@ -301,7 +301,7 @@ fn a_missing_llvm_stops_the_gates_before_any_step() {
         run(&mut recorder, &metadata),
         Err(Failure::Variable("LLVM_HOME"))
     ));
-    assert!(recorder.steps.is_empty());
+    assert_eq!(recorder.steps, Vec::<Step>::new());
 }
 
 /// A failure at any point stops the gates there, so no check reads what a

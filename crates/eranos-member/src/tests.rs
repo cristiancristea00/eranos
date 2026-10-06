@@ -69,7 +69,7 @@ fn a_member_starts_with_only_a_first_name() {
     assert_eq!(member.last_name(), None);
     assert_eq!(member.email(), None);
     assert_eq!(member.phone(), None);
-    assert!(member.accounts().is_empty());
+    assert_eq!(member.accounts(), []);
 }
 
 /// A last name left blank would be stored as an empty string and shown as
@@ -127,7 +127,7 @@ fn account_appends_and_accounts_replaces() {
     assert_eq!(member.accounts(), [app_account()]);
     // Replacing with nothing removes every account.
     let member = member.to_builder().accounts(Vec::new()).build().unwrap();
-    assert!(member.accounts().is_empty());
+    assert_eq!(member.accounts(), []);
 }
 
 /// Editing a member would silently drop details that were not edited.
@@ -167,7 +167,7 @@ fn edits_through_to_builder_leave_the_original_unchanged() {
     assert_eq!(edited.last_name(), None);
     assert_eq!(edited.email(), None);
     assert_eq!(edited.phone(), None);
-    assert!(edited.accounts().is_empty());
+    assert_eq!(edited.accounts(), []);
     // The original keeps its values.
     assert_eq!(original, snapshot);
     assert_eq!(original.first_name(), "Ana");

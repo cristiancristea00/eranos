@@ -55,8 +55,8 @@ fn ties_go_to_the_lower_member() {
 /// Settled members are ignored and an all-settled group needs nothing.
 #[test]
 fn settled_balances_need_no_payment() {
-    assert!(settle(&[]).is_empty());
-    assert!(settle(&balances(&[0, 0])).is_empty());
+    assert_eq!(settle(&[]), Vec::<Flow>::new());
+    assert_eq!(settle(&balances(&[0, 0])), Vec::<Flow>::new());
     assert_eq!(settle(&balances(&[0, 5, -5])), vec![flow(5, 3, 2)]);
 }
 

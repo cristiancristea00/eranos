@@ -392,7 +392,7 @@ fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
         package(&mut elsewhere, &[Language::Swift]),
         Err(Failure::Apple)
     ));
-    assert!(elsewhere.steps.is_empty());
+    assert_eq!(elsewhere.steps, Vec::<Step>::new());
     let mut unset = Recorder::new();
     unset.variables.retain(|&name| "ANDROID_HOME" != name);
     assert!(matches!(
@@ -417,7 +417,7 @@ fn a_command_that_cannot_run_stops_before_its_package_s_actions() {
             matches!(failure, Err(Failure::Variable(name)) if missing == name),
             "{failure:?}"
         );
-        assert!(unformatted.steps.is_empty());
+        assert_eq!(unformatted.steps, Vec::<Step>::new());
     }
 }
 

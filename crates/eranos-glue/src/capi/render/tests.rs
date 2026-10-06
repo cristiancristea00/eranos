@@ -100,7 +100,7 @@ fn a_paragraph_wraps_at_the_last_word_that_fits() {
     assert_eq!(wrap("one two three", 7), ["one two", "three"]);
     assert_eq!(wrap("one two", 7), ["one two"]);
     assert_eq!(wrap("extraordinary no", 7), ["extraordinary", "no"]);
-    assert!(wrap("", 7).is_empty());
+    assert_eq!(wrap("", 7), Vec::<String>::new());
 }
 
 /// Only a documentation attribute of text reads as a doc comment.

@@ -30,7 +30,7 @@ fn the_package_is_tested_built_for_every_target_and_linted_in_order() {
     let mut recorder = Recorder::new();
     run(&mut recorder).unwrap();
     assert_eq!(recorder.steps, plan::steps(&checks("/JAVA_HOME_21", true)));
-    assert!(recorder.cleared.is_empty());
+    assert_eq!(recorder.cleared, Vec::<std::path::PathBuf>::new());
     let gradle = "cd bindings/kmp && JAVA_HOME='/JAVA_HOME_21' sh gradlew --warning-mode=fail";
     let apple = APPLE_TARGETS
         .map(|target| format!(":eranos:compileKotlin{target}"))
@@ -83,7 +83,7 @@ fn a_missing_variable_stops_the_kotlin_multiplatform_gates_before_any_step() {
             matches!(failure, Failure::Variable(name) if name == reported),
             "{missing:?}"
         );
-        assert!(recorder.steps.is_empty());
+        assert_eq!(recorder.steps, Vec::<Step>::new());
     }
 }
 

@@ -56,7 +56,7 @@ fn exact_opposites_pay_each_other_directly() {
 fn balances_without_a_pair_are_left_without_a_copy() {
     let open = balances(&[1, 2, -3]);
     let Pairing { flows, rest } = pair_opposites(&open);
-    assert!(flows.is_empty());
+    assert_eq!(flows, Vec::<Flow>::new());
     assert!(matches!(rest, Cow::Borrowed(left) if std::ptr::eq(left, open.as_slice())));
 }
 

@@ -72,7 +72,7 @@ fn another_node_stops_the_web_gates_before_any_other_step() {
             "{version}"
         );
         assert_eq!(recorder.steps, [node()]);
-        assert!(recorder.cleared.is_empty());
+        assert_eq!(recorder.cleared, Vec::<PathBuf>::new());
     }
 }
 

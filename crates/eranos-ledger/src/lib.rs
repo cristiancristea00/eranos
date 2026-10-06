@@ -78,7 +78,6 @@ impl Summary {
 
     /// The spending of every category with expenses, ordered by category,
     /// so Uncategorised comes first.
-    #[must_use]
     pub fn category_totals(&self) -> impl ExactSizeIterator<Item = CategoryTotal> + '_ {
         self.categories
             .iter()
@@ -122,7 +121,6 @@ impl Summary {
 
     /// The totals of every member with a non-zero total, ordered by member;
     /// each names its member.
-    #[must_use]
     pub fn members(&self) -> impl ExactSizeIterator<Item = MemberSummary> + '_ {
         self.members.iter().map(|(&member, &totals)| MemberSummary {
             currency: self.currency,

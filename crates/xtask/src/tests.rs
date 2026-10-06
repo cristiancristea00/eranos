@@ -571,7 +571,7 @@ fn every_clean_command_line_runs_the_clean_it_names() {
 fn help_runs_nothing_and_succeeds() {
     let mut recorder = Recorder::new();
     run(&words(&["help"]), &mut recorder).unwrap();
-    assert!(recorder.steps.is_empty());
+    assert_eq!(recorder.steps, Vec::<Step>::new());
 }
 
 /// No command, an unknown one, or a known one with more words is a usage

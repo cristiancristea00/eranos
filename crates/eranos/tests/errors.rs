@@ -541,7 +541,7 @@ fn settlement_error_messages_are_pinned() {
 fn no_message_starts_like_a_sentence_or_ends_with_a_period() {
     // Lowercase start, or a currency code.
     for message in every_message() {
-        assert!(!message.is_empty());
+        assert_ne!(message, "");
         assert!(starts_in_lowercase_or_with_a_code(message), "{message:?}");
     }
     // No trailing full stop.

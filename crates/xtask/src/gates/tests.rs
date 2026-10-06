@@ -221,7 +221,10 @@ fn a_citation_is_the_word_gate_and_a_number() {
         cited_gates("keeps the reports for gate 18, and (Gate 9) keeps them;\ngate\n4's steps"),
         [18, 9, 4]
     );
-    assert!(cited_gates("the gates 3 and 4, a gateway 5, a gate that").is_empty());
+    assert_eq!(
+        cited_gates("the gates 3 and 4, a gateway 5, a gate that"),
+        Vec::<usize>::new()
+    );
     assert_eq!(
         timed_gates(
             "| Gates | Warm |\n| --- | ---: |\n| 1–3, the checks | 5 s |\n| 4, the lint | 2 s |\n\nafter"
@@ -414,7 +417,7 @@ fn the_rust_part_ends_with_the_examples() {
     expected.push(super::metadata());
     expected.extend(examples(&metadata).into_iter().map(|example| example.step));
     assert_eq!(recorder.steps, expected);
-    assert!(recorder.cleared.is_empty());
+    assert_eq!(recorder.cleared, Vec::<PathBuf>::new());
     let failing = examples(&metadata).remove(0).step;
     let mut stopped = Recorder::new();
     stopped.failing = Some(failing.clone());
@@ -647,7 +650,7 @@ fn a_failing_example_stops_the_examples_after_it() {
     ));
     assert_eq!(recorder.steps.last(), examples.first());
     assert!(!recorder.steps.contains(&examples[1]));
-    assert!(recorder.cleared.is_empty());
+    assert_eq!(recorder.cleared, Vec::<PathBuf>::new());
 }
 
 /// When the host library does not build, or the directory of the generated
@@ -664,7 +667,7 @@ fn a_failure_to_build_clear_or_generate_stops_the_generators() {
         Err(Failure::Usage)
     ));
     assert_eq!(unbuilt.steps.last(), Some(&host_library()));
-    assert!(unbuilt.cleared.is_empty());
+    assert_eq!(unbuilt.cleared, Vec::<PathBuf>::new());
 
     let mut blocked = Recorder::new();
     blocked.failing_files = Some(FileOperation::Clear);

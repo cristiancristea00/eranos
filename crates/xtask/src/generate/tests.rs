@@ -91,7 +91,7 @@ fn unreadable_or_incomplete_sources_name_what_failed() {
     let mut recorder = Recorder::new();
     let unwritten = write_bridge(&mut recorder, &missing).unwrap_err();
     assert!(matches!(unwritten, Failure::Read { .. }), "{unwritten}");
-    assert!(recorder.written.is_empty());
+    assert_eq!(recorder.written, Vec::<PathBuf>::new());
     let unreadable = bridge(&missing).unwrap_err();
     assert!(matches!(unreadable, Failure::Read { .. }), "{unreadable}");
     assert!(

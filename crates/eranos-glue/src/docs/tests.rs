@@ -140,7 +140,7 @@ fn a_call_is_documented_and_its_summary_ends_with_a_full_stop() {
             "{attributes}"
         );
     }
-    assert!(!refusal(quote!(#[doc(hidden)])).is_empty());
+    assert_ne!(refusal(quote!(#[doc(hidden)])), "");
     assert!(Docs::parse(&[], &format_ident!("call")).is_err());
 }
 

@@ -71,8 +71,8 @@ fn a_missing_jdk_stops_the_java_gates_before_any_step() {
         run(&mut recorder, &metadata()),
         Err(Failure::Variable("JAVA_HOME"))
     ));
-    assert!(recorder.steps.is_empty());
-    assert!(recorder.cleared.is_empty());
+    assert_eq!(recorder.steps, Vec::<Step>::new());
+    assert_eq!(recorder.cleared, Vec::<PathBuf>::new());
 }
 
 /// A failure at any point stops the gates there: generated sources that
@@ -85,7 +85,7 @@ fn a_failure_stops_the_java_gates_where_it_happens() {
         run(&mut unclear, &metadata()),
         Err(Failure::Usage)
     ));
-    assert!(unclear.steps.is_empty());
+    assert_eq!(unclear.steps, Vec::<Step>::new());
 
     for failing in [
         sources(&metadata())[0].clone(),

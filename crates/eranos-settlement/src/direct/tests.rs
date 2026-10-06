@@ -43,5 +43,5 @@ fn the_sign_of_a_pair_decides_who_pays() {
 /// No netted debt means no payment.
 #[test]
 fn no_pairs_need_no_payment() {
-    assert!(settle(&BTreeMap::new()).is_empty());
+    assert_eq!(settle(&BTreeMap::new()), Vec::<Flow>::new());
 }

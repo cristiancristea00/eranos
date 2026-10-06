@@ -175,14 +175,14 @@ fn only_records_enums_and_errors_without_generics_are_mirrored() {
         ),
         "a mirrored item is a struct or an enum"
     );
-    assert!(
-        !refusal(
+    assert_ne!(
+        refusal(
             quote!(error, twice),
             quote!(
                 pub enum Failure {}
             )
-        )
-        .is_empty()
+        ),
+        ""
     );
-    assert!(!refusal(quote!(), quote!(not an item)).is_empty());
+    assert_ne!(refusal(quote!(), quote!(not an item)), "");
 }

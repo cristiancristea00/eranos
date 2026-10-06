@@ -366,7 +366,7 @@ fn a_failure_stops_the_ports_where_it_happens() {
             matches!(failure, Err(Failure::Variable(name)) if missing == name),
             "{failure:?}"
         );
-        assert!(unnamed.steps.is_empty());
+        assert_eq!(unnamed.steps, Vec::<Step>::new());
     }
 }
 
@@ -385,7 +385,7 @@ fn the_ports_of_one_language_read_its_variables_and_build_its_libraries() {
         matches!(failure, Err(Failure::Variable("JAVA_HOME"))),
         "{failure:?}"
     );
-    assert!(unset.steps.is_empty());
+    assert_eq!(unset.steps, Vec::<Step>::new());
     let mut python = Recorder::new();
     python.variables.clear();
     run(&mut python, &metadata, &references, &[Language::Python]).unwrap();

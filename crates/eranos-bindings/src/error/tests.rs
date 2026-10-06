@@ -741,7 +741,7 @@ fn every_failure_of_the_library_converts_to_its_case() {
     } in conversions
     {
         assert_eq!(converted, expected);
-        assert!(!converted.detail().is_empty());
+        assert_ne!(converted.detail(), "");
         assert_eq!(converted.to_string(), converted.detail());
     }
 }
