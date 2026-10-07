@@ -27,11 +27,11 @@ import {
     categoryId,
     expenseId,
     formatBalance,
-    groupId,
+    expenseGroupId,
     memberId,
     parseCategoryId,
     parseExpenseId,
-    parseGroupId,
+    parseExpenseGroupId,
     parseMemberId,
     parseTransferId,
     transferId,
@@ -190,7 +190,7 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
      */
     void it('checks an identifier by the rules every kind shares and keeps its text', () => {
         const text = 'Ana Popa, café ☕ 🍰';
-        for (const parse of [parseGroupId, parseMemberId, parseCategoryId, parseExpenseId, parseTransferId]) {
+        for (const parse of [parseExpenseGroupId, parseMemberId, parseCategoryId, parseExpenseId, parseTransferId]) {
             assert.equal(parse(text), text);
             for (const refused of refusedIdentifiers) {
                 assertRefused(() => parse(refused.text), IdError, refused.failure, refused.message);
@@ -204,7 +204,7 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
     /** Identifiers of different entities that printed as another text would let an app store one and read back another. */
     void it('keeps an identifier as its text', () => {
         const text = '0192f1c3-0000-7000-8000-000000000001';
-        assert.equal(groupId(text), text);
+        assert.equal(expenseGroupId(text), text);
         assert.equal(memberId(text), text);
         assert.equal(categoryId(text), text);
         assert.equal(expenseId(text), text);

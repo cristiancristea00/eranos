@@ -15,9 +15,9 @@ import {
     Language,
     Money,
     SettlementStrategy,
-    groupId,
+    expenseGroupId,
     memberId,
-    parseGroupId,
+    parseExpenseGroupId,
 } from '../src/index.js';
 import { Flat, refusedIdentifiers } from './flat.js';
 
@@ -254,12 +254,12 @@ void describe('every call of the group, synchronous and asynchronous, and every 
      */
     void it('starts a group with what it is given and loads only its saved form', async () => {
         const euro = CurrencyCode.of('EUR');
-        using trip = ExpenseGroup.create('Trip', euro, { id: parseGroupId('trip-2026'), description: 'Alps' });
+        using trip = ExpenseGroup.create('Trip', euro, { id: parseExpenseGroupId('trip-2026'), description: 'Alps' });
         assert.equal(trip.idSync(), 'trip-2026');
         assert.equal(trip.descriptionSync(), 'Alps');
         assert.equal(ExpenseGroup.loadSync(trip.saveSync()).idSync(), 'trip-2026');
         assert.throws(
-            () => ExpenseGroup.create('Trip', euro, { id: groupId(' trip') }),
+            () => ExpenseGroup.create('Trip', euro, { id: expenseGroupId(' trip') }),
             (error: unknown) => error instanceof IdError && 'surroundingWhitespace' === error.failure.kind,
         );
         assert.throws(

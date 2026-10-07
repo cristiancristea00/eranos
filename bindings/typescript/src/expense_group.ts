@@ -30,7 +30,7 @@ import {
     type TransferId,
     categoryId,
     expenseId,
-    groupId,
+    expenseGroupId,
     memberId,
     transferId,
 } from './identifiers.js';
@@ -187,7 +187,7 @@ export class ExpenseGroup implements Disposable {
      * @returns A promise of the identifier
      */
     async id(options?: CallOptions): Promise<ExpenseGroupId> {
-        return groupId(await awaiting((signal) => this.handle.idAsync(undefined, signal), options));
+        return expenseGroupId(await awaiting((signal) => this.handle.idAsync(undefined, signal), options));
     }
 
     /**
@@ -199,7 +199,7 @@ export class ExpenseGroup implements Disposable {
      * @returns The identifier
      */
     idSync(): ExpenseGroupId {
-        return groupId(calling(() => this.handle.id()));
+        return expenseGroupId(calling(() => this.handle.id()));
     }
 
     /**

@@ -17,7 +17,7 @@ import {
     convertedMember,
     convertedTransfer,
 } from './entries.js';
-import { type CategoryId, type ExpenseId, type ExpenseGroupId, type MemberId, type TransferId, groupId } from './identifiers.js';
+import { type CategoryId, type ExpenseId, type ExpenseGroupId, type MemberId, type TransferId, expenseGroupId } from './identifiers.js';
 import type * as internal from './internal/eranos.js';
 import { Money } from './money.js';
 import {
@@ -70,7 +70,7 @@ export class ExpenseGroupReader implements Disposable {
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
      */
     id(): ExpenseGroupId {
-        return groupId(calling(() => this.handle.id()));
+        return expenseGroupId(calling(() => this.handle.id()));
     }
 
     /**

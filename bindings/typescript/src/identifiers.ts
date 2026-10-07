@@ -49,13 +49,13 @@ export type TransferId = string & {
 };
 
 /**
- * The group identifier written `text`, unchecked: a call that carries it checks it, and {@link parseGroupId} checks it
+ * The group identifier written `text`, unchecked: a call that carries it checks it, and {@link parseExpenseGroupId} checks it
  * at once.
  *
  * @param text - The identifier's text
  * @returns The identifier
  */
-export function groupId(text: string): ExpenseGroupId {
+export function expenseGroupId(text: string): ExpenseGroupId {
     return text as ExpenseGroupId;
 }
 
@@ -68,8 +68,8 @@ export function groupId(text: string): ExpenseGroupId {
  * @throws {@link IdError} with the failure `empty`, `tooLong` for more than 64 bytes of UTF-8, `controlCharacter`, or
  *   `surroundingWhitespace`: the first rule the text breaks
  */
-export function parseGroupId(text: string): ExpenseGroupId {
-    return groupId(calling(() => internal.identifierParse(text)));
+export function parseExpenseGroupId(text: string): ExpenseGroupId {
+    return expenseGroupId(calling(() => internal.identifierParse(text)));
 }
 
 /**
