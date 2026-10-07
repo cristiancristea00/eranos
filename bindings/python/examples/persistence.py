@@ -15,7 +15,7 @@ from eranos import (
     Currency,
     EqualSplit,
     Expense,
-    Group,
+    ExpenseGroup,
     LocalCost,
     Member,
     MemberId,
@@ -71,7 +71,7 @@ def main() -> None:
     """Print the report, checking its key numbers."""
     euro = Currency('EUR')
     day = CalendarDate(2026, 9, 23)
-    group = Group.create('Road trip', euro)
+    group = ExpenseGroup.create('Road trip', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     group.add_expense(
@@ -113,7 +113,7 @@ def main() -> None:
     )
 
     section('2. Loading it back')
-    loaded = Group.load(saved)
+    loaded = ExpenseGroup.load(saved)
     print_lines(
         'Loading replays every entry through the same checks as adding it, then rebuilds',
         'the totals. The loaded group equals the saved one, and so do its balances:',
@@ -131,14 +131,14 @@ def main() -> None:
     section('3. A corrupted file is refused')
     print_lines(
         "Here Ana's identifier was edited in her member entry, so the fuel's payer is an",
-        'identifier no member has. Reading the file as a SavedGroup and loading it with',
-        'into_group replays every entry through the same checks as adding it, and refuses',
-        'the file instead of producing balances that do not add up:',
+        'identifier no member has. Reading the file as a SavedExpenseGroup and loading it',
+        'with into_expense_group replays every entry through the same checks as adding it,',
+        'and refuses the file instead of producing balances that do not add up:',
     )
     # Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel
     # she paid is left naming an identifier no member has.
     corrupted = saved.replace(ana, '0199a000-0000-7000-8000-00000000ffff', count=1)
-    refused = refusal(lambda: Group.load(corrupted))
+    refused = refusal(lambda: ExpenseGroup.load(corrupted))
     assert refused is not None, 'the file must be refused'
     print_lines(f'  error: {refused}')
 

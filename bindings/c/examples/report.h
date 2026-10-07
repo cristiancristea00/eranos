@@ -111,7 +111,7 @@ Id idOf(EranosText const *text);
 /// @param group The group
 /// @param firstName The member's first name
 /// @return The member's identifier
-Id addMember(EranosGroup *group, char const *firstName);
+Id addMember(EranosExpenseGroup *group, char const *firstName);
 
 /// A member's share of a split: an amount, a number of parts, or a percentage, as text.
 typedef struct Share {
@@ -190,14 +190,14 @@ EranosExpense *expenseOf(char const *name, EranosCost *cost, EranosSplit *payers
 /// @param group The group
 /// @param expense The expense
 /// @return The identifier the group gave it
-Id addExpense(EranosGroup *group, EranosExpense *expense);
+Id addExpense(EranosExpenseGroup *group, EranosExpense *expense);
 
 /// What @p group refuses @p expense with, or nullptr when it adds it; destroys @p expense.
 ///
 /// @param group The group
 /// @param expense The expense
 /// @return The refusal, which the caller destroys, or nullptr
-EranosError *expenseRefusal(EranosGroup *group, EranosExpense *expense);
+EranosError *expenseRefusal(EranosExpenseGroup *group, EranosExpense *expense);
 
 /// A transfer from @p from to @p to of @p cost; destroys @p cost.
 ///
@@ -213,21 +213,21 @@ EranosTransfer *transferOf(Id from, Id to, EranosCost *cost, EranosCalendarDate 
 /// @param group The group
 /// @param transfer The transfer
 /// @return The identifier the group gave it
-Id addTransfer(EranosGroup *group, EranosTransfer *transfer);
+Id addTransfer(EranosExpenseGroup *group, EranosTransfer *transfer);
 
 /// The first name of @p member in @p group, or ? for one the group does not hold.
 ///
 /// @param group The group
 /// @param member The member's identifier
 /// @return The first name
-Line firstName(EranosGroup const *group, char const *member);
+Line firstName(EranosExpenseGroup const *group, char const *member);
 
 /// The first names of @p members in @p group, joined by commas.
 ///
 /// @param group The group
 /// @param members The members
 /// @return The names
-Line names(EranosGroup const *group, Members const *members);
+Line names(EranosExpenseGroup const *group, Members const *members);
 
 /// The members that @p split names, in its order.
 ///

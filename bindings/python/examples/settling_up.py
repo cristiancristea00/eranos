@@ -14,7 +14,7 @@ from eranos import (
     Currency,
     EqualSplit,
     Expense,
-    Group,
+    ExpenseGroup,
     LocalCost,
     Member,
     MemberId,
@@ -163,7 +163,7 @@ def strategy_name(strategy: SettlementStrategy) -> str:
             assert_never(strategy)
 
 
-def spend(group: Group, name: str, amount: str, payer: MemberId, members: tuple[MemberId, ...]) -> None:
+def spend(group: ExpenseGroup, name: str, amount: str, payer: MemberId, members: tuple[MemberId, ...]) -> None:
     """
     Record an expense of amount EUR in group, called name, that payer paid and members share equally.
 
@@ -186,7 +186,7 @@ def spend(group: Group, name: str, amount: str, payer: MemberId, members: tuple[
     )
 
 
-def print_balances(group: Group) -> None:
+def print_balances(group: ExpenseGroup) -> None:
     """
     Print what each member of group paid and consumed, and their balance.
 
@@ -206,7 +206,7 @@ def print_balances(group: Group) -> None:
     )
 
 
-def print_payments(group: Group, settlement: Settlement) -> None:
+def print_payments(group: ExpenseGroup, settlement: Settlement) -> None:
     """
     Print who pays whom in settlement, and how much, by the first names of the members of group.
 
@@ -225,7 +225,7 @@ def print_payments(group: Group, settlement: Settlement) -> None:
     )
 
 
-def strategies(group: Group) -> Counts:
+def strategies(group: ExpenseGroup) -> Counts:
     """
     Print each strategy's plan for group with what it promises.
 
@@ -318,7 +318,7 @@ def festival() -> int:
     """
     section('8. A larger group')
     euro = Currency('EUR')
-    group = Group.create('Festival', euro)
+    group = ExpenseGroup.create('Festival', euro)
     friends = tuple(group.add_member(Member(first_name=f'Friend {number}')) for number in range(1, 22))
     # Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's balance is 21·i² - 3311
     # cents: never zero, and never the opposite of another's.
@@ -349,7 +349,7 @@ def festival() -> int:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create('Ski week', Currency('EUR'))
+    group = ExpenseGroup.create('Ski week', Currency('EUR'))
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     carol = group.add_member(Member(first_name='Carol'))

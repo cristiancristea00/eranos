@@ -26,7 +26,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::error::CategoryError>();
         assert_send_and_sync::<eranos::error::ContactError>();
         assert_send_and_sync::<eranos::error::ExpenseError>();
-        assert_send_and_sync::<eranos::error::GroupError>();
+        assert_send_and_sync::<eranos::error::ExpenseGroupError>();
         assert_send_and_sync::<eranos::error::IbanError>();
         assert_send_and_sync::<eranos::error::IdError>();
         assert_send_and_sync::<eranos::error::LanguageError>();
@@ -48,18 +48,18 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::expense::TipDistribution>();
         assert_send_and_sync::<eranos::expense::TipValue>();
         // Groups, and how they are built and loaded.
-        assert_send_and_sync::<eranos::group::Group>();
-        assert_send_and_sync::<eranos::group::GroupBuilder>();
-        assert_send_and_sync::<eranos::group::Language>();
+        assert_send_and_sync::<eranos::expense_group::ExpenseGroup>();
+        assert_send_and_sync::<eranos::expense_group::ExpenseGroupBuilder>();
+        assert_send_and_sync::<eranos::expense_group::Language>();
         #[cfg(feature = "serde")]
-        assert_send_and_sync::<eranos::group::SavedGroup>();
-        assert_send_and_sync::<eranos::group::GroupReadGuard>();
-        assert_send_and_sync::<eranos::group::GroupWriteGuard>();
-        assert_send_and_sync::<eranos::group::SharedGroup>();
+        assert_send_and_sync::<eranos::expense_group::SavedExpenseGroup>();
+        assert_send_and_sync::<eranos::expense_group::ExpenseGroupReadGuard>();
+        assert_send_and_sync::<eranos::expense_group::ExpenseGroupWriteGuard>();
+        assert_send_and_sync::<eranos::expense_group::SharedExpenseGroup>();
         // Identifiers.
         assert_send_and_sync::<eranos::id::CategoryId>();
         assert_send_and_sync::<eranos::id::ExpenseId>();
-        assert_send_and_sync::<eranos::id::GroupId>();
+        assert_send_and_sync::<eranos::id::ExpenseGroupId>();
         assert_send_and_sync::<eranos::id::MemberId>();
         assert_send_and_sync::<eranos::id::TransferId>();
         // Totals.

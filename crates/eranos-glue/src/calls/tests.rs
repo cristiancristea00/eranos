@@ -30,7 +30,7 @@ fn text(tokens: impl ToTokens) -> String {
 #[test]
 fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
     let calls = calls(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// Takes one parameter of each kind.
             #[write]
             fn change(
@@ -44,7 +44,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
         }
     })
     .unwrap();
-    assert_eq!(text(&calls.name), "GroupCalls");
+    assert_eq!(text(&calls.name), "ExpenseGroupCalls");
     let [call] = calls.calls.as_slice() else {
         panic!("one call");
     };
@@ -109,7 +109,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
 #[test]
 fn a_call_s_attributes_set_its_lock_its_fallibility_and_its_asynchronous_body() {
     let calls = calls(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// The name.
             #[read]
             #[infallible]
@@ -147,7 +147,7 @@ fn a_call_s_attributes_set_its_lock_its_fallibility_and_its_asynchronous_body() 
 fn a_call_s_attributes_are_its_lock_and_the_known_ones() {
     let call = |attributes: TokenStream| {
         refusal(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 /// A call.
                 #attributes
                 fn call(&self) -> Result<(), EranosError>;
@@ -185,7 +185,7 @@ fn a_call_s_attributes_are_its_lock_and_the_known_ones() {
 fn a_call_is_a_plain_method_of_self_by_reference() {
     let signature = |signature: TokenStream| {
         refusal(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 /// A call.
                 #[read]
                 #signature;
@@ -208,7 +208,7 @@ fn a_call_is_a_plain_method_of_self_by_reference() {
     }
     assert_eq!(
         refusal(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 /// A call.
                 #[read]
                 fn call(&self) -> Result<(), EranosError> {}
@@ -236,7 +236,7 @@ fn a_call_is_a_plain_method_of_self_by_reference() {
 #[test]
 fn a_second_receiver_is_refused() {
     let mut item: ItemTrait = syn::parse2(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// A call.
             #[read]
             fn call(&self, id: &str) -> Result<(), EranosError>;
@@ -264,7 +264,7 @@ fn a_second_receiver_is_refused() {
 fn a_parameter_is_a_plain_name_of_a_type_a_rule_covers() {
     let parameter = |parameter: TokenStream| {
         refusal(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 /// A call.
                 #[read]
                 fn call(&self, #parameter) -> Result<(), EranosError>;
@@ -315,7 +315,7 @@ fn a_call_answers_with_a_result_of_its_answer_and_its_error() {
     ] {
         assert_eq!(
             refusal(quote! {
-                trait GroupCalls {
+                trait ExpenseGroupCalls {
                     /// A call.
                     #[read]
                     fn call(&self) #output;
@@ -332,7 +332,7 @@ fn a_call_answers_with_a_result_of_its_answer_and_its_error() {
 fn a_call_is_documented() {
     assert_eq!(
         refusal(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 #[read]
                 fn call(&self) -> Result<(), EranosError>;
             }
@@ -346,7 +346,7 @@ fn a_call_is_documented() {
 #[test]
 fn an_answer_of_no_path_is_refused() {
     let mut item: ItemTrait = syn::parse2(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// A call.
             #[read]
             fn call(&self) -> Result<(), EranosError>;
@@ -374,10 +374,10 @@ fn an_answer_of_no_path_is_refused() {
 #[test]
 fn the_trait_is_a_plain_trait_of_calls() {
     for heading in [
-        quote!(trait GroupCalls<Answer>),
-        quote!(trait GroupCalls: Send),
-        quote!(unsafe trait GroupCalls),
-        quote!(trait GroupCalls where Self: Sized),
+        quote!(trait ExpenseGroupCalls<Answer>),
+        quote!(trait ExpenseGroupCalls: Send),
+        quote!(unsafe trait ExpenseGroupCalls),
+        quote!(trait ExpenseGroupCalls where Self: Sized),
     ] {
         assert_eq!(
             refusal(quote!(#heading {})),
@@ -387,7 +387,7 @@ fn the_trait_is_a_plain_trait_of_calls() {
     }
     assert_eq!(
         refusal(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 const LIMIT: usize;
             }
         }),
@@ -395,7 +395,7 @@ fn the_trait_is_a_plain_trait_of_calls() {
     );
     assert!(
         calls(quote!(
-            trait GroupCalls {}
+            trait ExpenseGroupCalls {}
         ))
         .unwrap()
         .calls

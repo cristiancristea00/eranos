@@ -16,15 +16,15 @@ use std::pin::pin;
 use std::task::{Context, Waker};
 
 use eranos::cooperative::block_on;
-use eranos::error::{ExpenseError, GroupError, TransferError};
+use eranos::error::{ExpenseError, ExpenseGroupError, TransferError};
 use eranos::expense::ExpenseBuilder;
 use eranos::{
     Account, AccountDetails, AccountKind, Balance, CalendarDate, Category, CategoryId,
-    CategoryTotal, Cost, Currency, CurrencyRate, Email, ExchangeRate, Expense, ExpenseId,
-    ExpenseShares, ExpenseSplit, Group, Iban, Item, Language, Member, MemberAmount, MemberId,
-    MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage, PhoneNumber, SavedGroup,
-    SettlementStrategy, SharedGroup, Split, TimeOfDay, Tip, TipDistribution, TipValue, Transfer,
-    Username,
+    CategoryTotal, Cost, Currency, CurrencyRate, Email, ExchangeRate, Expense, ExpenseGroup,
+    ExpenseId, ExpenseShares, ExpenseSplit, Iban, Item, Language, Member, MemberAmount, MemberId,
+    MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage, PhoneNumber,
+    SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup, Split, TimeOfDay, Tip,
+    TipDistribution, TipValue, Transfer, Username,
 };
 use tabled::settings::formatting::AlignmentStrategy;
 use tabled::settings::object::Columns;
@@ -230,7 +230,7 @@ struct LoadRow {
     #[tabled(rename = "Change to the file")]
     change: &'static str,
     #[tabled(rename = "Message")]
-    message: GroupError,
+    message: ExpenseGroupError,
 }
 
 #[derive(Tabled)]
@@ -282,7 +282,7 @@ fn october(date: u8) -> Result<CalendarDate, Box<dyn Error>> {
     Ok(CalendarDate::new(2026, 10, date)?)
 }
 
-fn name(group: &Group, member: MemberId) -> String {
+fn name(group: &ExpenseGroup, member: MemberId) -> String {
     group
         .member(member)
         .map_or("?", Member::first_name)
@@ -290,7 +290,11 @@ fn name(group: &Group, member: MemberId) -> String {
 }
 
 /// The first names of `members`, joined by `separator`.
-fn names(group: &Group, members: impl IntoIterator<Item = MemberId>, separator: &str) -> String {
+fn names(
+    group: &ExpenseGroup,
+    members: impl IntoIterator<Item = MemberId>,
+    separator: &str,
+) -> String {
     members
         .into_iter()
         .map(|member| name(group, member))
@@ -333,7 +337,7 @@ fn sum(
         })
 }
 
-fn print_balances(group: &Group) {
+fn print_balances(group: &ExpenseGroup) {
     let summary = group.summary();
     print_table(
         group.members().map(|member| {
@@ -351,7 +355,7 @@ fn print_balances(group: &Group) {
     );
 }
 
-fn print_categories(group: &Group) {
+fn print_categories(group: &ExpenseGroup) {
     let summary = group.summary();
     print_table(
         summary.category_totals().map(|total| CategoryRow {
@@ -371,7 +375,7 @@ fn print_categories(group: &Group) {
 
 /// Every expense and transfer in a currency `shown` accepts, as entered and
 /// in the group currency.
-fn print_entries(group: &Group, shown: impl Fn(Currency) -> bool) {
+fn print_entries(group: &ExpenseGroup, shown: impl Fn(Currency) -> bool) {
     let expenses = group
         .expenses()
         .filter(|expense| shown(expense.amount().currency()))
@@ -399,9 +403,9 @@ fn print_entries(group: &Group, shown: impl Fn(Currency) -> bool) {
     print_table(expenses.chain(transfers), 2);
 }
 
-fn the_group() -> Result<Group, Box<dyn Error>> {
+fn the_group() -> Result<ExpenseGroup, Box<dyn Error>> {
     section("1. The group");
-    let mut group = Group::builder("Lisbon", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR)
         .description("A week by the Atlantic")
         .language(Language::parse("pt-pt")?)
         .build()?;
@@ -441,7 +445,7 @@ fn the_group() -> Result<Group, Box<dyn Error>> {
         message(&blank)
     );
 
-    assert_eq!(blank, Err(GroupError::EmptyName));
+    assert_eq!(blank, Err(ExpenseGroupError::EmptyName));
     assert_eq!(group.name(), "Lisbon and Porto");
     assert_eq!(group.language().map(Language::as_str), Some("pt-PT"));
     Ok(group)
@@ -462,7 +466,7 @@ fn describe(account: &Account) -> String {
     format!("{}, {kind} {details}", account.name())
 }
 
-fn print_members(group: &Group) {
+fn print_members(group: &ExpenseGroup) {
     print_table(
         group.members().map(|member| MemberRow {
             name: [Some(member.first_name()), member.last_name()]
@@ -531,7 +535,7 @@ fn validation() {
     );
 }
 
-fn members(group: &mut Group) -> Result<People, Box<dyn Error>> {
+fn members(group: &mut ExpenseGroup) -> Result<People, Box<dyn Error>> {
     section("2. Members");
     let ana = group.add_member(
         Member::builder("Ana")
@@ -586,7 +590,7 @@ fn members(group: &mut Group) -> Result<People, Box<dyn Error>> {
     })
 }
 
-fn categories(group: &mut Group) -> Result<Categories, Box<dyn Error>> {
+fn categories(group: &mut ExpenseGroup) -> Result<Categories, Box<dyn Error>> {
     section("3. Categories");
     let food = group.add_category(Category::new("Food")?)?;
     let lodging = group.add_category(Category::new("Lodging")?)?;
@@ -629,9 +633,9 @@ fn categories(group: &mut Group) -> Result<Categories, Box<dyn Error>> {
 
     assert_eq!(
         homonym,
-        Err(GroupError::DuplicateCategoryName { existing: food })
+        Err(ExpenseGroupError::DuplicateCategoryName { existing: food })
     );
-    assert_eq!(built_in, Err(GroupError::BuiltInCategory));
+    assert_eq!(built_in, Err(ExpenseGroupError::BuiltInCategory));
     assert_eq!(
         group.category(transport).map(Category::name),
         Some("Getting around")
@@ -675,7 +679,7 @@ fn how(expense: &Expense) -> String {
 
 /// Each expense of `expenses`, with every involved member's payment and
 /// consumption.
-fn print_shares(group: &Group, expenses: &[ExpenseId]) {
+fn print_shares(group: &ExpenseGroup, expenses: &[ExpenseId]) {
     let rows = expenses.iter().filter_map(|&id| {
         let expense = group.expense(id)?;
         let shares = group.expense_shares(id)?;
@@ -707,7 +711,7 @@ fn print_shares(group: &Group, expenses: &[ExpenseId]) {
     print_table(rows, 3);
 }
 
-fn print_items(group: &Group, id: ExpenseId) {
+fn print_items(group: &ExpenseGroup, id: ExpenseId) {
     let Some(ExpenseSplit::Itemised(items)) = group.expense(id).map(Expense::split) else {
         return;
     };
@@ -776,7 +780,7 @@ fn fado_night(people: People, categories: Categories) -> Result<ExpenseBuilder, 
 
 /// Adds one expense for every way of dividing one.
 fn add_expenses(
-    group: &mut Group,
+    group: &mut ExpenseGroup,
     people: People,
     categories: Categories,
 ) -> Result<Expenses, Box<dyn Error>> {
@@ -873,7 +877,7 @@ fn add_expenses(
 }
 
 /// The consumption of `member` in the expense `id`.
-fn consumed(group: &Group, id: ExpenseId, member: MemberId) -> Option<Money> {
+fn consumed(group: &ExpenseGroup, id: ExpenseId, member: MemberId) -> Option<Money> {
     group
         .expense_shares(id)?
         .member(member)
@@ -881,7 +885,7 @@ fn consumed(group: &Group, id: ExpenseId, member: MemberId) -> Option<Money> {
 }
 
 fn expenses(
-    group: &mut Group,
+    group: &mut ExpenseGroup,
     people: People,
     categories: Categories,
 ) -> Result<ExpenseId, Box<dyn Error>> {
@@ -963,7 +967,7 @@ fn expenses(
 }
 
 fn another_currency(
-    group: &mut Group,
+    group: &mut ExpenseGroup,
     people: People,
     categories: Categories,
 ) -> Result<(), Box<dyn Error>> {
@@ -1021,7 +1025,7 @@ fn another_currency(
 /// Replaces an expense and a transfer, and removes one of each; returns
 /// what changed.
 fn replace_and_remove(
-    group: &mut Group,
+    group: &mut ExpenseGroup,
     people: People,
     categories: Categories,
     seafood: ExpenseId,
@@ -1121,7 +1125,7 @@ fn replace_and_remove(
 }
 
 fn edits(
-    group: &mut Group,
+    group: &mut ExpenseGroup,
     people: People,
     categories: Categories,
     seafood: ExpenseId,
@@ -1190,7 +1194,7 @@ fn edits(
     assert_eq!(to_herself, Err(TransferError::SameMember));
     assert_eq!(
         unrated,
-        Err(GroupError::MissingExchangeRate {
+        Err(ExpenseGroupError::MissingExchangeRate {
             currency: Currency::RON
         })
     );
@@ -1198,7 +1202,7 @@ fn edits(
     Ok(())
 }
 
-fn comings_and_goings(group: &mut Group, people: People) -> Result<(), Box<dyn Error>> {
+fn comings_and_goings(group: &mut ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
     section("7. Members come and go");
     let People {
         ana,
@@ -1258,13 +1262,17 @@ fn comings_and_goings(group: &mut Group, people: People) -> Result<(), Box<dyn E
 
     assert_eq!(removed.first_name(), "Filip");
     assert!(group.member(filip).is_none());
-    assert_eq!(farewell, Err(GroupError::ArchivedMember(dan)));
-    assert!(matches!(in_use, Err(GroupError::MemberInUse { .. })));
+    assert_eq!(farewell, Err(ExpenseGroupError::ArchivedMember(dan)));
+    assert!(matches!(in_use, Err(ExpenseGroupError::MemberInUse { .. })));
     assert!(!group.is_archived(dan));
     Ok(())
 }
 
-fn summary(group: &Group, people: People, categories: Categories) -> Result<(), Box<dyn Error>> {
+fn summary(
+    group: &ExpenseGroup,
+    people: People,
+    categories: Categories,
+) -> Result<(), Box<dyn Error>> {
     section("8. The summary");
     let summary = group.summary();
     println!(
@@ -1322,7 +1330,10 @@ fn summary(group: &Group, people: People, categories: Categories) -> Result<(), 
     Ok(())
 }
 
-fn removing_a_category(group: &mut Group, categories: Categories) -> Result<(), Box<dyn Error>> {
+fn removing_a_category(
+    group: &mut ExpenseGroup,
+    categories: Categories,
+) -> Result<(), Box<dyn Error>> {
     section("9. Removing a category");
     let removed = group.remove_category(categories.transport)?;
     let built_in = group.remove_category(CategoryId::UNCATEGORISED);
@@ -1335,7 +1346,7 @@ fn removing_a_category(group: &mut Group, categories: Categories) -> Result<(), 
     );
     print_categories(group);
 
-    assert_eq!(built_in, Err(GroupError::BuiltInCategory));
+    assert_eq!(built_in, Err(ExpenseGroupError::BuiltInCategory));
     assert!(group.category(categories.transport).is_none());
     assert_eq!(
         group.summary().category_total(CategoryId::UNCATEGORISED),
@@ -1349,7 +1360,7 @@ fn removing_a_category(group: &mut Group, categories: Categories) -> Result<(), 
     Ok(())
 }
 
-fn new_currency(group: &mut Group, people: People) -> Result<(), Box<dyn Error>> {
+fn new_currency(group: &mut ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
     section("10. A new currency");
     let missing = group.change_currency(Currency::RON, &[]);
     group.change_currency(
@@ -1373,7 +1384,7 @@ fn new_currency(group: &mut Group, people: People) -> Result<(), Box<dyn Error>>
 
     assert_eq!(
         missing,
-        Err(GroupError::MissingExchangeRate {
+        Err(ExpenseGroupError::MissingExchangeRate {
             currency: Currency::EUR
         })
     );
@@ -1401,7 +1412,7 @@ const fn strategy_name(strategy: SettlementStrategy) -> &'static str {
     }
 }
 
-fn settling_up(group: &mut Group) -> Result<(), Box<dyn Error>> {
+fn settling_up(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
     section("11. Settling up");
     let mut counts = Vec::new();
     for strategy in SettlementStrategy::all() {
@@ -1457,18 +1468,18 @@ fn settling_up(group: &mut Group) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// What loading the saved form `text` refuses: the error of `into_group`,
+/// What loading the saved form `text` refuses: the error of `into_expense_group`,
 /// which replays every entry through the checks of adding it.
-fn refusal(text: &str) -> Result<GroupError, Box<dyn Error>> {
-    let saved: SavedGroup = serde_json::from_str(text)?;
+fn refusal(text: &str) -> Result<ExpenseGroupError, Box<dyn Error>> {
+    let saved: SavedExpenseGroup = serde_json::from_str(text)?;
     Ok(saved
-        .into_group()
+        .into_expense_group()
         .err()
         .ok_or("the change must be refused")?)
 }
 
 fn saving_and_loading(
-    group: &Group,
+    group: &ExpenseGroup,
     people: People,
     categories: Categories,
 ) -> Result<(), Box<dyn Error>> {
@@ -1489,11 +1500,11 @@ fn saving_and_loading(
         assert!(saved.contains(details), "{details} is saved as it is");
         println!("  {}: {details}", account.name());
     }
-    let loaded: Group = serde_json::from_str(&saved)?;
+    let loaded: ExpenseGroup = serde_json::from_str(&saved)?;
     println!(
         "Loading replays every entry through the same checks as adding it and rebuilds the\n\
-         totals: the loaded group equals the saved one. Reading a SavedGroup and loading it\n\
-         with into_group reports a refusal as a typed error instead of a message:"
+         totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and\n\
+         loading it with into_expense_group reports a refusal as a typed error, not as text:"
     );
     let tampered = [
         Tampering {
@@ -1531,9 +1542,9 @@ fn saving_and_loading(
     assert_eq!(
         errors,
         [
-            GroupError::UnsupportedFormat { format: 3 },
-            GroupError::EmptyName,
-            GroupError::DuplicateCategoryName {
+            ExpenseGroupError::UnsupportedFormat { format: 3 },
+            ExpenseGroupError::EmptyName,
+            ExpenseGroupError::DuplicateCategoryName {
                 existing: categories.food
             },
         ]
@@ -1746,9 +1757,9 @@ fn values(people: People) -> Result<(), Box<dyn Error>> {
     dates_and_identifiers(people)
 }
 
-fn sharing(group: Group, people: People) -> Result<(), Box<dyn Error>> {
+fn sharing(group: ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
     section("14. Sharing the group");
-    let shared = SharedGroup::new(group);
+    let shared = SharedExpenseGroup::new(group);
     // Another handle on the same group, as another task or thread holds.
     let other = shared.clone();
     let everyone = [people.ana, people.bob, people.carol, people.dan, people.eva];
@@ -1763,10 +1774,10 @@ fn sharing(group: Group, people: People) -> Result<(), Box<dyn Error>> {
     block_on(other.add_expense(coffee))?;
     let plan = block_on(shared.settlement(SettlementStrategy::MinimumTransfers))?;
     println!(
-        "An app shares the group between its tasks and threads through a SharedGroup,\n\
-         whose calls are futures any executor runs; here the library's block_on runs\n\
-         each one on this thread. Bob adds the airport coffee through another handle,\n\
-         and the plan that settles it comes through the first:"
+        "An app shares the group between its tasks and threads through a\n\
+         SharedExpenseGroup, whose calls are futures any executor runs; here the library's\n\
+         block_on runs each one on this thread. Bob adds the airport coffee through another\n\
+         handle, and the plan that settles it comes through the first:"
     );
     {
         let reading = block_on(shared.read());
@@ -1806,7 +1817,7 @@ fn sharing(group: Group, people: People) -> Result<(), Box<dyn Error>> {
     );
     drop(other);
     let returned = shared
-        .into_group()
+        .into_expense_group()
         .map_err(|_| "another handle still shares the group")?;
     println!(
         "With the other handle gone, the app takes the group back: {} expenses.",

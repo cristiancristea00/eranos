@@ -13,9 +13,9 @@ import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberSummary;
@@ -71,7 +71,7 @@ public final class Main {
     }
 
     /** Every expense and transfer, as entered and in the group currency. */
-    private static void printEntries(Group group) throws EranosException {
+    private static void printEntries(ExpenseGroup group) throws EranosException {
         Money zero = new Money(0, group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
@@ -111,7 +111,7 @@ public final class Main {
         };
     }
 
-    private static void printBalances(Group group) {
+    private static void printBalances(ExpenseGroup group) {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
@@ -130,7 +130,8 @@ public final class Main {
         printTable(BalanceRow.HEADERS, rows, 1);
     }
 
-    private static void expenses(Group group, MemberId ana, MemberId bob) throws EranosException {
+    private static void expenses(ExpenseGroup group, MemberId ana, MemberId bob)
+            throws EranosException {
         section("1. Expenses in three currencies");
         ExpenseSplit both = new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob)));
         group.addExpense(
@@ -170,7 +171,8 @@ public final class Main {
                         .formatted(group.currency()));
     }
 
-    private static void repayment(Group group, MemberId ana, MemberId bob) throws EranosException {
+    private static void repayment(ExpenseGroup group, MemberId ana, MemberId bob)
+            throws EranosException {
         section("3. A repayment in cash, in another currency");
         group.addTransfer(
                 Transfer.builder(
@@ -191,7 +193,7 @@ public final class Main {
         printBalances(group);
     }
 
-    private static void newCurrency(Group group) throws EranosException {
+    private static void newCurrency(ExpenseGroup group) throws EranosException {
         section("4. Moving the books to another currency");
         System.out.print(
                 """
@@ -220,7 +222,7 @@ public final class Main {
     public static void main(String[] arguments) throws EranosException {
         Currency euro = Currency.of("EUR");
         Currency leu = Currency.of("RON");
-        try (Group group = Group.builder("Danube road trip", euro).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Danube road trip", euro).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
 

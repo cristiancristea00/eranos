@@ -30,9 +30,9 @@ static void addComparisonRow(Table *const table, ComparisonRow const *const row)
 }
 
 /// The balance of @p member in @p group, as the library writes it, or ? for a member without totals.
-static Line balanceOf(EranosGroup const *const group, Id const member) {
+static Line balanceOf(EranosExpenseGroup const *const group, Id const member) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
     Line const line = nullptr == totals ? lineOf("%s", "?") : balanceLine(eranosMemberSummaryBalance(totals));
     eranosMemberSummaryDestroy(totals);
@@ -55,11 +55,11 @@ static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCal
 
 int main(void) {
     EranosCalendarDate const day = {.year = 2026, .month = 9, .day = 23};
-    EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("Road trip", "EUR", &details));
-    EranosGroup *group = nullptr;
-    must(eranosGroupCreate(details, &group));
-    eranosNewGroupDestroy(details);
+    EranosNewExpenseGroup *details = nullptr;
+    must(eranosNewExpenseGroupCreate("Road trip", "EUR", &details));
+    EranosExpenseGroup *group = nullptr;
+    must(eranosExpenseGroupCreate(details, &group));
+    eranosNewExpenseGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Members const both = {.count = 2, .ids = {ana, bob}};
@@ -76,15 +76,15 @@ int main(void) {
     // Account details would be in clear text: store this in the platform's secure storage (Keychain, Keystore, or an
     // encrypted database).
     EranosText *const saved = eranosTextCreate();
-    must(eranosGroupSave(group, saved));
+    must(eranosExpenseGroupSave(group, saved));
     printLine(eranosTextData(saved));
     printLine("Amounts are minor units with their currency, dates are YYYY-MM-DD, and the\n"
               "`format` number lets a future release refuse a file it cannot read instead of\n"
               "dropping fields.");
 
     section("2. Loading it back");
-    EranosGroup *loaded = nullptr;
-    must(eranosGroupLoad(eranosTextData(saved), &loaded));
+    EranosExpenseGroup *loaded = nullptr;
+    must(eranosExpenseGroupLoad(eranosTextData(saved), &loaded));
     printLine("Loading replays every entry through the same checks as adding it, then rebuilds\n"
               "the totals. The loaded group equals the saved one, and so do its balances:");
     Table *const table = comparisonTable(1);
@@ -97,34 +97,34 @@ int main(void) {
     }
     tablePrint(table);
     EranosSettlement *plan = nullptr;
-    must(eranosGroupSettlement(loaded, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &plan));
+    must(eranosExpenseGroupSettlement(loaded, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &plan));
     EranosPaymentList *const payments = eranosSettlementPayments(plan);
     printFormatted("Payments needed to settle the loaded group: %zu.", eranosPaymentListLength(payments));
 
     section("3. A corrupted file is refused");
     printLine("Here Ana's identifier was edited in her member entry, so the fuel's payer is an\n"
-              "identifier no member has. Reading the file as a SavedGroup and loading it with\n"
-              "into_group replays every entry through the same checks as adding it, and refuses\n"
-              "the file instead of producing balances that do not add up:");
+              "identifier no member has. Reading the file as a SavedExpenseGroup and loading it\n"
+              "with into_expense_group replays every entry through the same checks as adding it,\n"
+              "and refuses the file instead of producing balances that do not add up:");
     // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel she
     // paid is left naming an identifier no member has.
     char *const corrupted = replaceFirst(eranosTextData(saved), ana.text, "0199a000-0000-7000-8000-00000000ffff");
-    EranosGroup *refusedGroup = nullptr;
-    EranosError *const refused = eranosGroupLoad(corrupted, &refusedGroup);
+    EranosExpenseGroup *refusedGroup = nullptr;
+    EranosError *const refused = eranosExpenseGroupLoad(corrupted, &refusedGroup);
     check(nullptr != refused && nullptr == refusedGroup, "the file is refused");
     Line const message = messageLine(refused);
     printFormatted("  error: %s", message.text);
 
     EranosText *const resaved = eranosTextCreate();
-    must(eranosGroupSave(loaded, resaved));
+    must(eranosExpenseGroupSave(loaded, resaved));
     check(0 == strcmp(eranosTextData(resaved), eranosTextData(saved)), "the loaded group saves as the group did");
     check(1 == eranosPaymentListLength(payments), "one payment settles the loaded group");
     eranosTextDestroy(resaved);
     free(corrupted);
     eranosPaymentListDestroy(payments);
     eranosSettlementDestroy(plan);
-    eranosGroupDestroy(loaded);
+    eranosExpenseGroupDestroy(loaded);
     eranosTextDestroy(saved);
-    eranosGroupDestroy(group);
+    eranosExpenseGroupDestroy(group);
     return EXIT_SUCCESS;
 }

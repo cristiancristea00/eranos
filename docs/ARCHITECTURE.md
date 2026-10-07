@@ -49,7 +49,7 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   parser, without its clock or time zones), and `rlibphonenumber`
   (libphonenumber's numbering plans, pinned exactly); besides them
   `thiserror` (derive only), `uuid` (v7 identifiers), `async-lock` (the
-  read-write lock behind `SharedGroup`, without `std`), and optionally
+  read-write lock behind `SharedExpenseGroup`, without `std`), and optionally
   `serde`. Everything else, including IBAN validation and the email rules,
   is in the crates. The licences the apps' notices must list are Apache-2.0
   (iso4217-static, and rlibphonenumber with libphonenumber's metadata),
@@ -85,13 +85,13 @@ which `cargo xtask generate` writes into eranos-capi's sources.
 
 ```mermaid
 flowchart TD
-    UNIFFI["eranos-uniffi<br/>UniFFI mirrors; Group, GroupReader,<br/>Cancellation; value functions"]
+    UNIFFI["eranos-uniffi<br/>UniFFI mirrors; ExpenseGroup, ExpenseGroupReader,<br/>Cancellation; value functions"]
     WEB["eranos-web<br/>the sources of eranos-uniffi,<br/>built for WebAssembly"]
     KMP["eranos-kmp<br/>the sources of eranos-uniffi,<br/>built for gobley"]
-    CAPI["eranos-capi<br/>the Diplomat bridge for C and C++;<br/>EranosGroup, its worker, callbacks"]
-    BINDINGS["eranos-bindings<br/>records, EranosError, GroupHandle,<br/>GroupReader, value helpers"]
+    CAPI["eranos-capi<br/>the Diplomat bridge for C and C++;<br/>EranosExpenseGroup, its worker, callbacks"]
+    BINDINGS["eranos-bindings<br/>records, EranosError, ExpenseGroupHandle,<br/>ExpenseGroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
-    GROUP["eranos-group<br/>Group, GroupBuilder, Language, SavedGroup,<br/>SharedGroup"]
+    EXPENSE_GROUP["eranos-expense-group<br/>ExpenseGroup, ExpenseGroupBuilder, Language, SavedExpenseGroup,<br/>SharedExpenseGroup"]
     EXPENSE["eranos-expense<br/>Expense, Split, Item, Tip<br/>(+ resolve_expense)"]
     TRANSFER["eranos-transfer<br/>Transfer (+ resolve_transfer)"]
     MEMBER["eranos-member<br/>Member"]
@@ -115,14 +115,14 @@ flowchart TD
     BINDINGS --> FACADE
     BINDINGS --> MACROS
     MACROS --> GLUE
-    FACADE --> GROUP
-    GROUP --> EXPENSE
-    GROUP --> TRANSFER
-    GROUP --> MEMBER
-    GROUP --> CATEGORY
-    GROUP --> SETTLEMENT
-    GROUP --> LEDGER
-    GROUP --> MONEY
+    FACADE --> EXPENSE_GROUP
+    EXPENSE_GROUP --> EXPENSE
+    EXPENSE_GROUP --> TRANSFER
+    EXPENSE_GROUP --> MEMBER
+    EXPENSE_GROUP --> CATEGORY
+    EXPENSE_GROUP --> SETTLEMENT
+    EXPENSE_GROUP --> LEDGER
+    EXPENSE_GROUP --> MONEY
     EXPENSE --> LEDGER
     EXPENSE --> CALENDAR
     EXPENSE --> MONEY
@@ -145,83 +145,86 @@ flowchart TD
 <summary>ASCII version (for renderers without Mermaid)</summary>
 
 ```text
- ┌──────────────────────────────────────────────────────────────────────────┐
- │ eranos-uniffi      UniFFI mirrors of the core's types; Group,            │
- │                    GroupReader, Cancellation; the value functions        │
- │ eranos-web         the sources of eranos-uniffi on UniFFI 0.31, built    │
- │                    for WebAssembly                                       │
- │ eranos-kmp         the sources of eranos-uniffi on UniFFI 0.29, built    │
- │                    for gobley                                            │
- │ eranos-capi        the Diplomat bridge for C and C++: opaque records,    │
- │                    EranosGroup with its worker thread, the callbacks     │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-bindings    what every binding exposes: records, EranosError,     │
- │                    GroupHandle, GroupReader, value helpers               │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos             the facade: re-exports; tests, examples, benchmarks   │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-group       Group, GroupBuilder, Language, SavedGroup,            │
- │                    SharedGroup                                           │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-expense     Expense, Split, Item, Tip (+ resolve_expense)         │
- │ eranos-transfer    Transfer (+ resolve_transfer)                         │
- │ eranos-member      Member                                                │
- │ eranos-category    Category                                              │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-settlement  SettlementStrategy, Settlement, Payment               │
- │                    (+ Settlements)                                       │
- │ eranos-account     Account, Iban, Username                               │
- │ eranos-contact     Email, PhoneNumber                                    │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-ledger      Summary, Balance, ExpenseShares (+ Ledger, Delta)     │
- │ eranos-calendar    CalendarDate, TimeOfDay                               │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-money       Money, Currency, Cost, rates, ratios (+ allocation)   │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-core        identifiers and cooperative futures (+ text, pacer)   │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-glue-macros the proc macros the binding core and the UniFFI       │
- │                    crates invoke                                         │
- ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-glue        the model of the group calls; the code written from   │
- │                    it                                                    │
- └──────────────────────────────────────────────────────────────────────────┘
+ ┌─────────────────────────────────────────────────────────────────────────────┐
+ │ eranos-uniffi          UniFFI mirrors of the core's types; ExpenseGroup,    │
+ │                        ExpenseGroupReader, Cancellation; the value          │
+ │                        functions                                            │
+ │ eranos-web             the sources of eranos-uniffi on UniFFI 0.31, built   │
+ │                        for WebAssembly                                      │
+ │ eranos-kmp             the sources of eranos-uniffi on UniFFI 0.29, built   │
+ │                        for gobley                                           │
+ │ eranos-capi            the Diplomat bridge for C and C++: opaque records,   │
+ │                        EranosExpenseGroup with its worker thread, the       │
+ │                        callbacks                                            │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-bindings        what every binding exposes: records, EranosError,    │
+ │                        ExpenseGroupHandle, ExpenseGroupReader, value        │
+ │                        helpers                                              │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos                 the facade: re-exports; tests, examples, benchmarks  │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-expense-group   ExpenseGroup, ExpenseGroupBuilder, Language,         │
+ │                        SavedExpenseGroup, SharedExpenseGroup                │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-expense         Expense, Split, Item, Tip (+ resolve_expense)        │
+ │ eranos-transfer        Transfer (+ resolve_transfer)                        │
+ │ eranos-member          Member                                               │
+ │ eranos-category        Category                                             │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-settlement      SettlementStrategy, Settlement, Payment              │
+ │                        (+ Settlements)                                      │
+ │ eranos-account         Account, Iban, Username                              │
+ │ eranos-contact         Email, PhoneNumber                                   │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-ledger          Summary, Balance, ExpenseShares (+ Ledger, Delta)    │
+ │ eranos-calendar        CalendarDate, TimeOfDay                              │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-money           Money, Currency, Cost, rates, ratios (+ allocation)  │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-core            identifiers and cooperative futures (+ text, pacer)  │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-glue-macros     the proc macros the binding core and the UniFFI      │
+ │                        crates invoke                                        │
+ ├─────────────────────────────────────────────────────────────────────────────┤
+ │ eranos-glue            the model of the group calls; the code written from  │
+ │                        it                                                   │
+ └─────────────────────────────────────────────────────────────────────────────┘
    A crate depends only on crates in the bands below its own; the table
    lists each crate's direct dependencies.
 ```
 
 </details>
 
-| Crate                   | Holds                                                                                                                                                                                                                      | Depends on                                                                                                             |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `eranos-uniffi-bindgen` | the generators `uniffi-bindgen`, for Swift, Kotlin, and Python, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                                                                         | uniffi, uniffi-bindgen-java                                                                                            |
-| `eranos-uniffi`         | the `uniffi` copies of the core's records, enums, and error, stamped from their mirrors; the `Group`, `GroupReader`, and `Cancellation` objects, their calls stamped from the core's table; the value helpers as functions | eranos-bindings, eranos-glue-macros; uniffi                                                                            |
-| `eranos-web`            | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                                                                            | eranos-bindings, eranos-glue-macros; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
-| `eranos-kmp`            | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                                                                                    | eranos-bindings, eranos-glue-macros; uniffi                                                                            |
-| `eranos-capi`           | the Diplomat bridge for C and C++: an opaque object per record, list, and enum with data, the C-like enums, `EranosError`, `EranosGroup`, `EranosGroupReader`, `EranosCancellation`, and the outcomes of the callbacks     | eranos-bindings; diplomat, diplomat-runtime                                                                            |
-| `eranos-bindings`       | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewGroup`, `GroupHandle`, `GroupReader`, `Cancellation`, the value helpers; the trait that lists the group calls            | `eranos` with `serde`, the twelve internal crates for their conversion traits, and eranos-glue-macros; serde_json      |
-| `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                                | the twelve crates below                                                                                                |
-| `eranos-group`          | `Group`, `GroupBuilder`, `Language`, `SavedGroup`, `SharedGroup`, `GroupReadGuard`, `GroupWriteGuard`, `GroupError`, `LanguageError`                                                                                       | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core                      |
-| `eranos-expense`        | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                        | calendar, core, ledger, money                                                                                          |
-| `eranos-transfer`       | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                         | calendar, core, money, settlement                                                                                      |
-| `eranos-member`         | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                                   | account, contact, core                                                                                                 |
-| `eranos-category`       | `Category`, `CategoryError`                                                                                                                                                                                                | core; icu_casemap, icu_normalizer                                                                                      |
-| `eranos-settlement`     | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                                                                                  | core, ledger, money                                                                                                    |
-| `eranos-account`        | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                                                                                | core                                                                                                                   |
-| `eranos-contact`        | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                     | core; icu_properties, rlibphonenumber                                                                                  |
-| `eranos-ledger`         | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                         | core, money                                                                                                            |
-| `eranos-calendar`       | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                               | core; jiff                                                                                                             |
-| `eranos-money`          | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                             | core; iso4217-static                                                                                                   |
-| `eranos-core`           | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                     | uuid                                                                                                                   |
-| `eranos-glue-macros`    | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                            | eranos-glue; syn                                                                                                       |
-| `eranos-glue`           | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge  | proc-macro2, quote, syn                                                                                                |
+| Crate                   | Holds                                                                                                                                                                                                                                    | Depends on                                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `eranos-uniffi-bindgen` | the generators `uniffi-bindgen`, for Swift, Kotlin, and Python, and `uniffi-bindgen-java`, which read the library of eranos-uniffi                                                                                                       | uniffi, uniffi-bindgen-java                                                                                            |
+| `eranos-uniffi`         | the `uniffi` copies of the core's records, enums, and error, stamped from their mirrors; the `ExpenseGroup`, `ExpenseGroupReader`, and `Cancellation` objects, their calls stamped from the core's table; the value helpers as functions | eranos-bindings, eranos-glue-macros; uniffi                                                                            |
+| `eranos-web`            | the source files of eranos-uniffi, compiled on UniFFI 0.31.2 for WebAssembly, with the runtime of uniffi-bindgen-react-native's `wasm2` flavour                                                                                          | eranos-bindings, eranos-glue-macros; uniffi, and for WebAssembly uniffi-runtime-wasm, wasm-bindgen, and uuid with `js` |
+| `eranos-kmp`            | the source files of eranos-uniffi, compiled on UniFFI 0.29.4 for gobley's Kotlin Multiplatform bindings                                                                                                                                  | eranos-bindings, eranos-glue-macros; uniffi                                                                            |
+| `eranos-capi`           | the Diplomat bridge for C and C++: an opaque object per record, list, and enum with data, the C-like enums, `EranosError`, `EranosExpenseGroup`, `EranosExpenseGroupReader`, `EranosCancellation`, and the outcomes of the callbacks     | eranos-bindings; diplomat, diplomat-runtime                                                                            |
+| `eranos-bindings`       | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewExpenseGroup`, `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, the value helpers; the trait that lists the group calls     | `eranos` with `serde`, the twelve internal crates for their conversion traits, and eranos-glue-macros; serde_json      |
+| `eranos`                | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                                              | the twelve crates below                                                                                                |
+| `eranos-expense-group`  | `ExpenseGroup`, `ExpenseGroupBuilder`, `Language`, `SavedExpenseGroup`, `SharedExpenseGroup`, `ExpenseGroupReadGuard`, `ExpenseGroupWriteGuard`, `ExpenseGroupError`, `LanguageError`                                                    | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core                      |
+| `eranos-expense`        | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                                      | calendar, core, ledger, money                                                                                          |
+| `eranos-transfer`       | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                                       | calendar, core, money, settlement                                                                                      |
+| `eranos-member`         | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                                                 | account, contact, core                                                                                                 |
+| `eranos-category`       | `Category`, `CategoryError`                                                                                                                                                                                                              | core; icu_casemap, icu_normalizer                                                                                      |
+| `eranos-settlement`     | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                                                                                                | core, ledger, money                                                                                                    |
+| `eranos-account`        | `Account`, `AccountDetails`, `AccountKind`, `Iban`, `Username`, `AccountError`, `IbanError`                                                                                                                                              | core                                                                                                                   |
+| `eranos-contact`        | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                                   | core; icu_properties, rlibphonenumber                                                                                  |
+| `eranos-ledger`         | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
+| `eranos-calendar`       | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                                             | core; jiff                                                                                                             |
+| `eranos-money`          | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                                           | core; iso4217-static                                                                                                   |
+| `eranos-core`           | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                                   | uuid                                                                                                                   |
+| `eranos-glue-macros`    | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                                          | eranos-glue; syn                                                                                                       |
+| `eranos-glue`           | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge                | proc-macro2, quote, syn                                                                                                |
 
 For the internal crates, the facade's modules (`eranos::money`,
 `eranos::member`, …) and its root re-export what the table lists before a
 semicolon, and nothing else: what follows one is machinery the crates above
 use, free to change. So is a conversion trait, which every crate holds
 beside each of its non-exhaustive enums that the bindings convert, named
-after the enum (`FromSplit`, `FromGroupError`, and the like): one method
+after the enum (`FromSplit`, `FromExpenseGroupError`, and the like): one method
 per variant, so that a crate above tells every variant apart without a
 wildcard arm
 ([DEVELOPMENT.md § 3.9](DEVELOPMENT.md#39-a-crossing-between-crates)).
@@ -231,7 +234,7 @@ depends on `thiserror`, and every crate but `eranos-ledger` and
 
 ## 3. Data model
 
-A `Group` has an ID, a name (the only required text), a description, a
+An `ExpenseGroup` has an ID, a name (the only required text), a description, a
 **required** currency (every total is in it), and a language tag for the
 apps. It owns four maps keyed by the UUID v7 identifiers of their entries,
 so iteration order is the order the entries were built in, on every
@@ -394,7 +397,7 @@ computing it from the other four could overflow when each of them fits.
 | read the summary                                         | O(1) or O(log m)                 | —                 |
 
 Settlements are computed on the first request per strategy and cached in
-`OnceLock`s, which keep `Group` `Send + Sync`; the cache belongs to the
+`OnceLock`s, which keep `ExpenseGroup` `Send + Sync`; the cache belongs to the
 settlement module and reads the balances from the summary, and every
 balance-changing mutation clears it. A plan is kept once it is computed,
 never while it is: no request waits for another's computation, and an
@@ -487,20 +490,20 @@ group (members exist and are not archived, the category exists, and the
 cost is converted exactly when the entry is foreign) and against the
 ledger's range.
 
-| Error             | Returned by                                                                                                                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IdError`         | reading an identifier from text                                                                                                                                                                   |
-| `CalendarError`   | building and reading dates and times of day                                                                                                                                                       |
-| `MoneyError`      | building, reading, and combining amounts, currencies, rates, percentages, and parts                                                                                                               |
-| `AccountError`    | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                                                                                                      |
-| `ContactError`    | `Email::parse`, `PhoneNumber::parse`                                                                                                                                                              |
-| `MemberError`     | `MemberBuilder::build`                                                                                                                                                                            |
-| `CategoryError`   | `Category::new`, `Category::renamed`                                                                                                                                                              |
-| `LanguageError`   | `Language::parse`                                                                                                                                                                                 |
-| `ExpenseError`    | `ExpenseBuilder::build`, `ItemBuilder::build`                                                                                                                                                     |
-| `TransferError`   | `TransferBuilder::build`                                                                                                                                                                          |
-| `GroupError`      | `GroupBuilder::build`, `SavedGroup::into_group`, every group mutation, and `SharedGroup::try_read` and `try_write` while another call holds the lock; the group is unchanged when one is returned |
-| `SettlementError` | `Group::settlement` (only `MinimumTransfers` can fail)                                                                                                                                            |
+| Error               | Returned by                                                                                                                                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `IdError`           | reading an identifier from text                                                                                                                                                                                                |
+| `CalendarError`     | building and reading dates and times of day                                                                                                                                                                                    |
+| `MoneyError`        | building, reading, and combining amounts, currencies, rates, percentages, and parts                                                                                                                                            |
+| `AccountError`      | `Account::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                                                                                                                                   |
+| `ContactError`      | `Email::parse`, `PhoneNumber::parse`                                                                                                                                                                                           |
+| `MemberError`       | `MemberBuilder::build`                                                                                                                                                                                                         |
+| `CategoryError`     | `Category::new`, `Category::renamed`                                                                                                                                                                                           |
+| `LanguageError`     | `Language::parse`                                                                                                                                                                                                              |
+| `ExpenseError`      | `ExpenseBuilder::build`, `ItemBuilder::build`                                                                                                                                                                                  |
+| `TransferError`     | `TransferBuilder::build`                                                                                                                                                                                                       |
+| `ExpenseGroupError` | `ExpenseGroupBuilder::build`, `SavedExpenseGroup::into_expense_group`, every group mutation, and `SharedExpenseGroup::try_read` and `try_write` while another call holds the lock; the group is unchanged when one is returned |
+| `SettlementError`   | `ExpenseGroup::settlement` (only `MinimumTransfers` can fail)                                                                                                                                                                  |
 
 Each module has one error enum, `#[non_exhaustive]` and built with
 `thiserror`, and none wraps another: a function reports the failure of its
@@ -511,13 +514,14 @@ contact details.
 
 ## 9. The serialised form
 
-With the `serde` feature, `Group` and every type it stores serialise and
-deserialise: its entries, members, and categories, the identifiers, and the
-values inside them, such as `Money`, `Currency`, `ExchangeRate`,
-`CalendarDate`, and `Language`. `SavedGroup` only deserialises. What a group
-derives (`Summary`, `Settlement`, `ExpenseShares`, and the types they hold),
-the builders, the errors, `CurrencyRate`, and `SettlementStrategy` do not
-serialise. A group serialises only its inputs, never the derived totals:
+With the `serde` feature, `ExpenseGroup` and every type it stores serialise
+and deserialise: its entries, members, and categories, the identifiers, and
+the values inside them, such as `Money`, `Currency`, `ExchangeRate`,
+`CalendarDate`, and `Language`. `SavedExpenseGroup` only deserialises. What
+a group derives (`Summary`, `Settlement`, `ExpenseShares`, and the types
+they hold), the builders, the errors, `CurrencyRate`, and
+`SettlementStrategy` do not serialise. A group serialises only its inputs,
+never the derived totals:
 
 ```text
 {
@@ -554,17 +558,17 @@ serialise. A group serialises only its inputs, never the derived totals:
   unarchived first), categories, expenses, transfers, then the `archived`
   list, because an expense may reference a member archived after it was
   added. A hand-edited or corrupted file is refused, never loaded
-  inconsistently. Deserialising a `Group` reports the refusal as the
-  deserialiser's error; deserialising a `SavedGroup` and calling
-  `into_group` reports it as a `GroupError`, so an app can tell a newer
-  file from a damaged one. An entry that could never have been built fails
-  the read in both cases, since every entity deserialises through its
-  validating constructor. `into_group_async` replays the same steps,
-  yielding once per 1 024 of them; it owns the saved form, so a dropped
-  load leaves nothing behind, and a copy of the `SavedGroup` starts it
-  again ([§ 12](#12-async-and-concurrency)).
+  inconsistently. Deserialising an `ExpenseGroup` reports the refusal as the
+  deserialiser's error; deserialising a `SavedExpenseGroup` and calling
+  `into_expense_group` reports it as an `ExpenseGroupError`, so an app can
+  tell a newer file from a damaged one. An entry that could never have been
+  built fails the read in both cases, since every entity deserialises
+  through its validating constructor. `into_expense_group_async` replays the
+  same steps, yielding once per 1 024 of them; it owns the saved form, so a
+  dropped load leaves nothing behind, and a copy of the `SavedExpenseGroup`
+  starts it again ([§ 12](#12-async-and-concurrency)).
 - `format` is checked: a newer one is refused rather than read with fields
-  silently dropped (`GroupError::UnsupportedFormat`). New optional fields
+  silently dropped (`ExpenseGroupError::UnsupportedFormat`). New optional fields
   get `#[serde(default)]`, so files written by older releases keep
   loading.
 
@@ -603,23 +607,23 @@ time grows with the group is a cooperative future: it pends only by
 yielding, once per budget of work that a `Pacer` counts, never after an
 amount of time, so it yields at the same points on every device.
 
-| Call                           | Yields                                 | Between two yields                                                               |
-| ------------------------------ | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `Group::settlement_async`      | while the exact solver fills its table | 2²¹ subsets times balances, about 0.7 ms; no yield for 16 open balances or fewer |
-| `Group::change_currency_async` | after each re-resolved entry           | 1 024 entries, about 1 ms                                                        |
-| `SavedGroup::into_group_async` | after each replayed step               | 1 024 members, categories, expenses, transfers, or archivings                    |
+| Call                                          | Yields                                 | Between two yields                                                               |
+| --------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| `ExpenseGroup::settlement_async`              | while the exact solver fills its table | 2²¹ subsets times balances, about 0.7 ms; no yield for 16 open balances or fewer |
+| `ExpenseGroup::change_currency_async`         | after each re-resolved entry           | 1 024 entries, about 1 ms                                                        |
+| `SavedExpenseGroup::into_expense_group_async` | after each replayed step               | 1 024 members, categories, expenses, transfers, or archivings                    |
 
 Each returns a `Cooperative`, which an executor awaits like any future and
-`Cooperative::complete` runs to its end on the calling thread;
-`settlement`, `change_currency`, and `into_group` are those completions, so
-the synchronous and asynchronous calls run the same code. The exact solver
-fills its table for `MinimumTransfers` and for `Adaptive` within its limit;
-the greedy and direct strategies, and `Adaptive` beyond its limit, never
-yield: their largest benchmarked cases take about 0.1 ms each. A call
-writes nothing before its last yield, so one dropped at a yield changes
-nothing: a currency change swaps in its new entries and ledger after its
-last yield, a load builds a group of its own, and a settlement enters the
-cache only once it is complete ([§ 6](#6-the-ledger-and-its-caches)).
+`Cooperative::complete` runs to its end on the calling thread; `settlement`,
+`change_currency`, and `into_expense_group` are those completions, so the
+synchronous and asynchronous calls run the same code. The exact solver fills
+its table for `MinimumTransfers` and for `Adaptive` within its limit; the
+greedy and direct strategies, and `Adaptive` beyond its limit, never yield:
+their largest benchmarked cases take about 0.1 ms each. A call writes
+nothing before its last yield, so one dropped at a yield changes nothing: a
+currency change swaps in its new entries and ledger after its last yield, a
+load builds a group of its own, and a settlement enters the cache only once
+it is complete ([§ 6](#6-the-ledger-and-its-caches)).
 
 Against the same computations without yield points, measured in
 alternating runs on the reference machine, the yield points cost the exact
@@ -630,7 +634,7 @@ either way; the difference follows where the compiler places the code.
 
 ### The shared group
 
-`SharedGroup` puts a group behind a read-write lock: async-lock, built
+`SharedExpenseGroup` puts a group behind a read-write lock: async-lock, built
 without its `std` feature, so the lock reads no clock and keeps no
 per-thread parker (a gate keeps its features off,
 [AGENTS.md](../AGENTS.md#gates-before-committing)). Its clones share one
@@ -693,20 +697,20 @@ sequenceDiagram
 
 ### Drivers
 
-| Future                                                          | Pends                                       | Driven by                                                           |
-| --------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
-| a `Cooperative`: the `_async` calls of `Group` and `SavedGroup` | only by yielding                            | any executor, or `Cooperative::complete` on the calling thread      |
-| a `SharedGroup` call, `read`, or `write`                        | by yielding, or while it waits for the lock | any executor, or `block_on`, which sleeps until the future is woken |
+| Future                                                                        | Pends                                       | Driven by                                                           |
+| ----------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| a `Cooperative`: the `_async` calls of `ExpenseGroup` and `SavedExpenseGroup` | only by yielding                            | any executor, or `Cooperative::complete` on the calling thread      |
+| a `SharedExpenseGroup` call, `read`, or `write`                               | by yielding, or while it waits for the lock | any executor, or `block_on`, which sleeps until the future is woken |
 
 `complete` polls again as soon as a poll pends, with a waker that does
 nothing. It is reachable only through `Cooperative`, because a future that
-waits for another thread, such as a `SharedGroup` call, would keep the
+waits for another thread, such as a `SharedExpenseGroup` call, would keep the
 thread busy until the lock is free. `block_on` parks the thread between
 polls and wakes it through the future's waker. On wasm, whose one thread
 `block_on` would put to sleep with nothing left to wake it, neither it nor
 `read_blocking` and `write_blocking` is compiled; a synchronous caller
 tries the lock with `try_read` or `try_write`, which fail with
-`GroupError::Busy` instead of waiting.
+`ExpenseGroupError::Busy` instead of waiting.
 
 ## 13. Key numbers
 

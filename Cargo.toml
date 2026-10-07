@@ -1,7 +1,7 @@
 # eranos workspace manifest.
 #
 # The library, crates/eranos, re-exports the types callers use from the
-# twelve internal crates beside it, crates/eranos-core to crates/eranos-group,
+# twelve internal crates beside it, crates/eranos-core to crates/eranos-expense-group,
 # which docs/ARCHITECTURE.md § 2 maps; crates/eranos-bindings holds what every
 # binding exposes, in plain Rust, whose group calls crates/eranos-glue and
 # crates/eranos-glue-macros write from one list, crates/eranos-uniffi
@@ -27,7 +27,7 @@ members = [
     "crates/eranos-expense",
     "crates/eranos-glue",
     "crates/eranos-glue-macros",
-    "crates/eranos-group",
+    "crates/eranos-expense-group",
     "crates/eranos-kmp",
     "crates/eranos-ledger",
     "crates/eranos-member",
@@ -62,7 +62,7 @@ eranos-core = { path = "crates/eranos-core" }
 eranos-expense = { path = "crates/eranos-expense" }
 eranos-glue = { path = "crates/eranos-glue" }
 eranos-glue-macros = { path = "crates/eranos-glue-macros" }
-eranos-group = { path = "crates/eranos-group" }
+eranos-expense-group = { path = "crates/eranos-expense-group" }
 eranos-ledger = { path = "crates/eranos-ledger" }
 eranos-member = { path = "crates/eranos-member" }
 eranos-money = { path = "crates/eranos-money" }
@@ -71,7 +71,7 @@ eranos-transfer = { path = "crates/eranos-transfer" }
 eranos-uniffi = { path = "crates/eranos-uniffi" }
 
 # --- Library -----------------------------------------------------------------
-# The read-write lock behind `SharedGroup`, whose guards can be held across
+# The read-write lock behind `SharedExpenseGroup`, whose guards can be held across
 # a yield. Without the default `std` feature: no blocking methods (the
 # library's `block_on` drives its futures), no clock, and no per-thread
 # parker, and its event-listener keeps its waiters in a list built on atomics

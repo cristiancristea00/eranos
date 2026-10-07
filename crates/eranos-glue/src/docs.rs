@@ -80,10 +80,10 @@ impl Docs {
     pub(crate) fn synchronous(&self, access: Access, infallible: bool) -> String {
         let busy = match access {
             Access::Read => {
-                "[`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while a change holds the lock or waits for it."
+                "[`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) on wasm while a change holds the lock or waits for it."
             }
             Access::Write => {
-                "[`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another call holds the lock."
+                "[`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) on wasm while another call holds the lock."
             }
         };
         documented(&self.summary, &self.details, infallible, busy)

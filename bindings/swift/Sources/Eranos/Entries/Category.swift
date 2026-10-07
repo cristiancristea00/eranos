@@ -2,7 +2,7 @@ internal import EranosGenerated
 
 /// A label the group gives expenses: "Food".
 ///
-/// A new category has no identifier; `Group.add(_:)` gives it one. The built-in
+/// A new category has no identifier; `ExpenseGroup.add(_:)` gives it one. The built-in
 /// category, Uncategorised, holds every expense without another.
 public struct Category: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.

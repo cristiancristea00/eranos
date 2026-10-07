@@ -168,8 +168,8 @@ class ValuesTest {
     @Test
     void anIdentifierIsItsText() {
         String text = "0192f1c3-0000-7000-8000-000000000001";
-        assertEquals(text, new GroupId(text).value());
-        assertEquals(text, new GroupId(text).toString());
+        assertEquals(text, new ExpenseGroupId(text).value());
+        assertEquals(text, new ExpenseGroupId(text).toString());
         assertEquals(text, new MemberId(text).toString());
         assertEquals(text, new CategoryId(text).toString());
         assertEquals(text, new ExpenseId(text).toString());

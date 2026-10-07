@@ -15,12 +15,12 @@ use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
 use eranos::cooperative::block_on;
-use eranos::error::GroupError;
+use eranos::error::ExpenseGroupError;
 use eranos::{
-    Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, Group,
-    Iban, Item, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money,
-    Parts, Percentage, PhoneNumber, SavedGroup, SettlementStrategy, Split, TimeOfDay, Tip,
-    TipDistribution, Transfer, Username,
+    Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense,
+    ExpenseGroup, Iban, Item, Language, Member, MemberAmount, MemberId, MemberParts,
+    MemberPercentage, Money, Parts, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy,
+    Split, TimeOfDay, Tip, TipDistribution, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -35,7 +35,7 @@ fn day() -> CalendarDate {
 /// The group of `trip`, with Ana, who gives every member detail, and Carol,
 /// who is archived.
 struct Trip {
-    group: Group,
+    group: ExpenseGroup,
     ana: MemberId,
     carol: MemberId,
 }
@@ -43,7 +43,7 @@ struct Trip {
 /// A group using every serialised feature, and the two members the tests
 /// look up.
 fn trip() -> Trip {
-    let mut group = Group::builder("Lisbon", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR)
         .description("Autumn trip")
         .language(Language::parse("pt-PT").unwrap())
         .build()
@@ -129,7 +129,7 @@ fn trip() -> Trip {
     Trip { group, ana, carol }
 }
 
-fn json_of(group: &Group) -> Value {
+fn json_of(group: &ExpenseGroup) -> Value {
     serde_json::to_value(group).unwrap()
 }
 
@@ -139,7 +139,7 @@ fn json_of(group: &Group) -> Value {
 fn a_group_round_trips_through_json() {
     let Trip { group, carol, .. } = trip();
     let text = serde_json::to_string(&group).unwrap();
-    let loaded: Group = serde_json::from_str(&text).unwrap();
+    let loaded: ExpenseGroup = serde_json::from_str(&text).unwrap();
     assert_eq!(loaded, group);
     assert_eq!(loaded.summary(), group.summary());
     for strategy in SettlementStrategy::all() {
@@ -240,7 +240,7 @@ fn a_tampered_file_is_refused() {
     let tamper = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
-        serde_json::from_value::<Group>(value)
+        serde_json::from_value::<ExpenseGroup>(value)
             .map(|_| ())
             .unwrap_err()
             .to_string()
@@ -320,7 +320,7 @@ fn an_inconsistent_file_is_refused() {
     let tamper = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
-        serde_json::from_value::<Group>(value)
+        serde_json::from_value::<ExpenseGroup>(value)
             .map(|_| ())
             .unwrap_err()
             .to_string()
@@ -366,7 +366,7 @@ fn an_inconsistent_file_is_refused() {
     );
 }
 
-/// An app that loads through `SavedGroup` must learn why the group refused a
+/// An app that loads through `SavedExpenseGroup` must learn why the group refused a
 /// file, or it could not tell a file from a newer release from a damaged
 /// one.
 #[test]
@@ -375,9 +375,9 @@ fn a_saved_group_names_why_the_group_refuses_it() {
     let load = |change: &dyn Fn(&mut Value)| {
         let mut value = json_of(&group);
         change(&mut value);
-        serde_json::from_value::<SavedGroup>(value)
+        serde_json::from_value::<SavedExpenseGroup>(value)
             .unwrap()
-            .into_group()
+            .into_expense_group()
             .map(|loaded| json_of(&loaded))
     };
 
@@ -386,31 +386,31 @@ fn a_saved_group_names_why_the_group_refuses_it() {
     // A newer format and an older one, each named in the error.
     assert_eq!(
         load(&|value| value["format"] = json!(3)),
-        Err(GroupError::UnsupportedFormat { format: 3 })
+        Err(ExpenseGroupError::UnsupportedFormat { format: 3 })
     );
     assert_eq!(
         load(&|value| value["format"] = json!(1)),
-        Err(GroupError::UnsupportedFormat { format: 1 })
+        Err(ExpenseGroupError::UnsupportedFormat { format: 1 })
     );
     // A blank group name, and two members with one ID.
     assert_eq!(
         load(&|value| value["name"] = json!("  ")),
-        Err(GroupError::EmptyName)
+        Err(ExpenseGroupError::EmptyName)
     );
     assert_eq!(
         load(&|value| value["members"][1]["id"] = value["members"][0]["id"].clone()),
-        Err(GroupError::DuplicateMember(ana))
+        Err(ExpenseGroupError::DuplicateMember(ana))
     );
     // Someone archived who is not a member.
     let stranger = MemberId::from_bytes([200; 16]);
     assert_eq!(
         load(&|value| value["archived"] = json!([stranger.to_string()])),
-        Err(GroupError::UnknownMember(stranger))
+        Err(ExpenseGroupError::UnknownMember(stranger))
     );
     // An entry that could never have been built fails the read itself.
     let mut typo = json_of(&group);
     typo["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
-    assert!(serde_json::from_value::<SavedGroup>(typo).is_err());
+    assert!(serde_json::from_value::<SavedExpenseGroup>(typo).is_err());
 }
 
 /// A load would hold its thread for the whole file, or leave half a group
@@ -421,7 +421,9 @@ fn a_saved_group_names_why_the_group_refuses_it() {
 fn a_saved_group_loads_asynchronously() {
     // 3 members, 2 000 expenses, and 100 transfers: 2 103 steps, so the
     // load yields after the 1 024th and the 2 048th.
-    let mut group = Group::builder("Club", Currency::EUR).build().unwrap();
+    let mut group = ExpenseGroup::builder("Club", Currency::EUR)
+        .build()
+        .unwrap();
     let members: Vec<MemberId> = ["Ana", "Bob", "Carol"]
         .into_iter()
         .map(|name| {
@@ -439,14 +441,14 @@ fn a_saved_group_loads_asynchronously() {
         let transfer = Transfer::builder(members[1], members[0], eur("1.00"), day());
         group.add_transfer(transfer.build().unwrap()).unwrap();
     }
-    let saved: SavedGroup = serde_json::from_value(json_of(&group)).unwrap();
+    let saved: SavedExpenseGroup = serde_json::from_value(json_of(&group)).unwrap();
 
     let mut context = Context::from_waker(Waker::noop());
     {
-        let mut load = pin!(saved.clone().into_group_async().into_future());
+        let mut load = pin!(saved.clone().into_expense_group_async().into_future());
         assert!(load.as_mut().poll(&mut context).is_pending());
     }
-    let mut load = pin!(saved.clone().into_group_async().into_future());
+    let mut load = pin!(saved.clone().into_expense_group_async().into_future());
     for _ in 0..2 {
         assert!(load.as_mut().poll(&mut context).is_pending());
     }
@@ -455,17 +457,19 @@ fn a_saved_group_loads_asynchronously() {
     };
     assert_eq!(loaded, group);
     assert_eq!(loaded.summary(), group.summary());
-    assert_eq!(block_on(saved.into_group_async()), Ok(group));
+    assert_eq!(block_on(saved.into_expense_group_async()), Ok(group));
 }
 
 /// A group with none of the optional details round-trips as well, without
 /// gaining any.
 #[test]
 fn a_bare_group_round_trips_through_json() {
-    let group = Group::builder("Bare", Currency::EUR).build().unwrap();
+    let group = ExpenseGroup::builder("Bare", Currency::EUR)
+        .build()
+        .unwrap();
     let text = serde_json::to_string(&group).unwrap();
     assert!(!text.contains("description"), "{text}");
-    let loaded: Group = serde_json::from_str(&text).unwrap();
+    let loaded: ExpenseGroup = serde_json::from_str(&text).unwrap();
     assert_eq!(loaded, group);
     assert_eq!(loaded.description(), None);
     assert_eq!(loaded.language(), None);

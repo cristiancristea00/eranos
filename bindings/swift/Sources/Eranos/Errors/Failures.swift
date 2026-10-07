@@ -165,8 +165,8 @@ extension ExpenseFailure {
     }
 }
 
-/// What the library's `GroupError` reports: a case per failure, with what it holds.
-public enum GroupFailure: Sendable, Hashable {
+/// What the library's `ExpenseGroupError` reports: a case per failure, with what it holds.
+public enum ExpenseGroupFailure: Sendable, Hashable {
     /// A saved group in a format this version does not read: a newer one, whose fields it would
     /// drop, or an earlier one.
     case unsupportedFormat(format: Int)
@@ -228,8 +228,8 @@ public enum GroupFailure: Sendable, Hashable {
     case overflow
 }
 
-extension GroupFailure {
-    init(_ failure: EranosGenerated.GroupFailure) {
+extension ExpenseGroupFailure {
+    init(_ failure: EranosGenerated.ExpenseGroupFailure) {
         switch failure {
         case let .unsupportedFormat(format):
             self = .unsupportedFormat(format: Int(format))

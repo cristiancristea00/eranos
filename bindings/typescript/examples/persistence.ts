@@ -3,7 +3,17 @@
 
 import assert from 'node:assert/strict';
 
-import { type MemberId, type Summary, CalendarDate, Currency, Group, Money, Percentage, SettlementStrategy, formatBalance } from '../src/index.js';
+import {
+    type MemberId,
+    type Summary,
+    CalendarDate,
+    Currency,
+    ExpenseGroup,
+    Money,
+    Percentage,
+    SettlementStrategy,
+    formatBalance,
+} from '../src/index.js';
 import { type Columns, load, printLines, printTable, refusal, section, title, totals } from './report.js';
 
 /** A member's balance before saving and after loading, as the table of balances prints it. */
@@ -28,7 +38,7 @@ function balance(member: MemberId, summary: Summary): string {
 await load();
 const euro = Currency.of('EUR');
 const day = CalendarDate.of(2026, 9, 23);
-using group = Group.create('Road trip', euro);
+using group = ExpenseGroup.create('Road trip', euro);
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 group.addExpenseSync({
@@ -67,7 +77,7 @@ printLines(
 );
 
 section('2. Loading it back');
-using loaded = Group.loadSync(saved);
+using loaded = ExpenseGroup.loadSync(saved);
 printLines(
     'Loading replays every entry through the same checks as adding it, then rebuilds',
     'the totals. The loaded group equals the saved one, and so do its balances:',
@@ -89,15 +99,15 @@ printLines(`Payments needed to settle the loaded group: ${String(plan.payments.l
 section('3. A corrupted file is refused');
 printLines(
     "Here Ana's identifier was edited in her member entry, so the fuel's payer is an",
-    'identifier no member has. Reading the file as a SavedGroup and loading it with',
-    'into_group replays every entry through the same checks as adding it, and refuses',
-    'the file instead of producing balances that do not add up:',
+    'identifier no member has. Reading the file as a SavedExpenseGroup and loading it',
+    'with into_expense_group replays every entry through the same checks as adding it,',
+    'and refuses the file instead of producing balances that do not add up:',
 );
 // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel
 // she paid is left naming an identifier no member has.
 const corrupted = saved.replace(ana, '0199a000-0000-7000-8000-00000000ffff');
 const refused = refusal(() => {
-    Group.loadSync(corrupted).destroy();
+    ExpenseGroup.loadSync(corrupted).destroy();
 });
 assert.ok(undefined !== refused, 'the file must be refused');
 printLines(`  error: ${refused.message}`);

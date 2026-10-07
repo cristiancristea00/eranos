@@ -1,7 +1,7 @@
 //! Group expense tracking: who paid what, who owes whom, and the fewest
 //! payments that settle everyone up.
 //!
-//! A [`Group`] (a trip, a day out, a household) holds [`Member`]s, the
+//! A [`ExpenseGroup`] (a trip, a day out, a household) holds [`Member`]s, the
 //! [`Expense`]s they share, and the [`Transfer`]s they make to pay each other
 //! back. Every change updates the group's [`Summary`] in place: total
 //! spending, what each member paid and consumed, their [`Balance`], and
@@ -13,11 +13,11 @@
 //!
 //! ```
 //! use eranos::{
-//!     Balance, Currency, CalendarDate, Expense, Group, Member, Money, Percentage, SettlementStrategy,
+//!     Balance, Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
 //!     Split, Tip,
 //! };
 //!
-//! let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
+//! let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
 //! let ana = group.add_member(Member::builder("Ana").build()?)?;
 //! let bob = group.add_member(Member::builder("Bob").build()?)?;
 //! let carol = group.add_member(Member::builder("Carol").build()?)?;
@@ -66,12 +66,12 @@
 //! # Async calls and sharing
 //!
 //! The slow calls also come as futures that yield while they work, so an
-//! app's other tasks keep running: [`Group::settlement_async`],
-//! [`Group::change_currency_async`], and `SavedGroup::into_group_async`.
+//! app's other tasks keep running: [`ExpenseGroup::settlement_async`],
+//! [`ExpenseGroup::change_currency_async`], and `SavedExpenseGroup::into_expense_group_async`.
 //! They need no particular executor, and
 //! [`Cooperative::complete`](cooperative::Cooperative::complete) runs one on
 //! the calling thread, which is what the synchronous calls do. A
-//! [`SharedGroup`] shares a group between tasks and threads behind a
+//! [`SharedExpenseGroup`] shares a group between tasks and threads behind a
 //! read-write lock; each of its calls is a future an executor can run on any
 //! thread, and [`block_on`](cooperative::block_on) waits for one from
 //! synchronous code.
@@ -79,11 +79,11 @@
 //! ```
 //! use eranos::cooperative::block_on;
 //! use eranos::{
-//!     CalendarDate, Currency, Expense, Group, Member, Money, SettlementStrategy, SharedGroup,
+//!     CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, SettlementStrategy, SharedExpenseGroup,
 //!     Split,
 //! };
 //!
-//! let shared = SharedGroup::new(Group::builder("Flat", Currency::EUR).build()?);
+//! let shared = SharedExpenseGroup::new(ExpenseGroup::builder("Flat", Currency::EUR).build()?);
 //! let ana = block_on(shared.add_member(Member::builder("Ana").build()?))?;
 //! let bob = block_on(shared.add_member(Member::builder("Bob").build()?))?;
 //!
@@ -100,13 +100,13 @@
 //!
 //! # Features
 //!
-//! - `serde`: `Serialize` and `Deserialize` for [`Group`] and every type it
+//! - `serde`: `Serialize` and `Deserialize` for [`ExpenseGroup`] and every type it
 //!   stores: entries, members, categories, identifiers, and the values in
 //!   them; what a group derives, such as its [`Summary`] and settlements,
-//!   does not serialise. A deserialised [`Group`] is rebuilt through the
-//!   same checks as its `add_*` methods; a `SavedGroup` does the same in its
-//!   `into_group`, which reports a refused file as a
-//!   [`GroupError`](error::GroupError). Account details serialise in clear
+//!   does not serialise. A deserialised [`ExpenseGroup`] is rebuilt through the
+//!   same checks as its `add_*` methods; a `SavedExpenseGroup` does the same in its
+//!   `into_expense_group`, which reports a refused file as a
+//!   [`ExpenseGroupError`](error::ExpenseGroupError). Account details serialise in clear
 //!   text, so store serialised groups in the platform's secure storage.
 //! - `sequential-ids`: identifiers count up from one instead of reading the
 //!   clock and the random source, so a program that builds the same entries
@@ -175,7 +175,7 @@ pub mod error {
     #[doc(inline)]
     pub use eranos_expense::ExpenseError;
     #[doc(inline)]
-    pub use eranos_group::{GroupError, LanguageError};
+    pub use eranos_expense_group::{ExpenseGroupError, LanguageError};
     #[doc(inline)]
     pub use eranos_member::MemberError;
     #[doc(inline)]
@@ -194,16 +194,17 @@ pub mod expense {
         MemberPercentage, Split, Tip, TipDistribution, TipValue,
     };
 }
-pub mod group {
+pub mod expense_group {
     //! Groups: the members, categories, expenses, and transfers of a trip, a
     //! household, or any shared spending, with their totals kept current.
 
     #[cfg(feature = "serde")]
     #[doc(inline)]
-    pub use eranos_group::SavedGroup;
+    pub use eranos_expense_group::SavedExpenseGroup;
     #[doc(inline)]
-    pub use eranos_group::{
-        Group, GroupBuilder, GroupReadGuard, GroupWriteGuard, Language, SharedGroup,
+    pub use eranos_expense_group::{
+        ExpenseGroup, ExpenseGroupBuilder, ExpenseGroupReadGuard, ExpenseGroupWriteGuard, Language,
+        SharedExpenseGroup,
     };
 }
 pub mod id {
@@ -218,7 +219,7 @@ pub mod id {
     //! identifiers.
 
     #[doc(inline)]
-    pub use eranos_core::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
+    pub use eranos_core::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId};
 }
 pub mod ledger {
     //! The group's totals and balances, kept current with every change.
@@ -274,11 +275,11 @@ pub use expense::{
 };
 #[cfg(feature = "serde")]
 #[doc(no_inline)]
-pub use group::SavedGroup;
+pub use expense_group::SavedExpenseGroup;
 #[doc(no_inline)]
-pub use group::{Group, Language, SharedGroup};
+pub use expense_group::{ExpenseGroup, Language, SharedExpenseGroup};
 #[doc(no_inline)]
-pub use id::{CategoryId, ExpenseId, GroupId, MemberId, TransferId};
+pub use id::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId};
 #[doc(no_inline)]
 pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};
 #[doc(no_inline)]

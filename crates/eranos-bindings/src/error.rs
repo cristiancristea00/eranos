@@ -5,8 +5,8 @@
 use std::fmt;
 
 use eranos::error::{
-    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, GroupError, IbanError,
-    IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
+    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError,
+    IbanError, IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
 };
 use eranos::{CategoryId, Currency, ExpenseId, MemberId, TransferId};
 use eranos_account::{FromAccountError, FromIbanError};
@@ -15,7 +15,7 @@ use eranos_category::FromCategoryError;
 use eranos_contact::FromContactError;
 use eranos_core::FromIdError;
 use eranos_expense::FromExpenseError;
-use eranos_group::{FromGroupError, FromLanguageError};
+use eranos_expense_group::{FromExpenseGroupError, FromLanguageError};
 use eranos_member::FromMemberError;
 use eranos_money::FromMoneyError;
 use eranos_settlement::FromSettlementError;
@@ -29,7 +29,7 @@ use crate::Money;
 /// module's failure, with a case per variant of the module's error and what
 /// it holds, and the library's message; and the binding's own cases. A
 /// synchronous call on wasm that finds the group locked by another call
-/// fails with [`GroupFailure::Busy`].
+/// fails with [`ExpenseGroupFailure::Busy`].
 #[eranos_glue_macros::mirrored(error)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EranosError {
@@ -104,11 +104,11 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
-    /// A [`GroupError`], about how an entry fits the group, or the group's
+    /// A [`ExpenseGroupError`], about how an entry fits the group, or the group's
     /// lock.
-    Group {
+    ExpenseGroup {
         /// Which failure, with what it holds.
-        failure: GroupFailure,
+        failure: ExpenseGroupFailure,
         /// The library's message.
         detail: String,
     },
@@ -215,7 +215,7 @@ impl EranosError {
             | Self::Expense { detail, .. }
             | Self::Settlement { detail, .. }
             | Self::Transfer { detail, .. }
-            | Self::Group { detail, .. }
+            | Self::ExpenseGroup { detail, .. }
             | Self::Language { detail, .. }
             | Self::IdentifierGiven { detail, .. }
             | Self::IdentifierMissing { detail, .. }
@@ -340,46 +340,46 @@ pub enum ExpenseFailure {
     Overflow,
 }
 
-/// What a [`GroupError`] reports: a case per variant, with
+/// What a [`ExpenseGroupError`] reports: a case per variant, with
 /// what the variant holds.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GroupFailure {
-    /// [`GroupError::UnsupportedFormat`].
+pub enum ExpenseGroupFailure {
+    /// [`ExpenseGroupError::UnsupportedFormat`].
     UnsupportedFormat {
         /// The format the saved group names.
         format: i64,
     },
-    /// [`GroupError::EmptyName`].
+    /// [`ExpenseGroupError::EmptyName`].
     EmptyName,
-    /// [`GroupError::MissingExchangeRate`].
+    /// [`ExpenseGroupError::MissingExchangeRate`].
     MissingExchangeRate {
         /// The currency, as its ISO 4217 code.
         currency: String,
     },
-    /// [`GroupError::UnexpectedExchangeRate`].
+    /// [`ExpenseGroupError::UnexpectedExchangeRate`].
     UnexpectedExchangeRate,
-    /// [`GroupError::DuplicateExchangeRate`].
+    /// [`ExpenseGroupError::DuplicateExchangeRate`].
     DuplicateExchangeRate {
         /// The currency, as its ISO 4217 code.
         currency: String,
     },
-    /// [`GroupError::DuplicateMember`].
+    /// [`ExpenseGroupError::DuplicateMember`].
     DuplicateMember {
         /// The member, as their identifier.
         member: String,
     },
-    /// [`GroupError::UnknownMember`].
+    /// [`ExpenseGroupError::UnknownMember`].
     UnknownMember {
         /// The member, as their identifier.
         member: String,
     },
-    /// [`GroupError::ArchivedMember`].
+    /// [`ExpenseGroupError::ArchivedMember`].
     ArchivedMember {
         /// The member, as their identifier.
         member: String,
     },
-    /// [`GroupError::MemberInUse`].
+    /// [`ExpenseGroupError::MemberInUse`].
     MemberInUse {
         /// The member, as their identifier.
         member: String,
@@ -388,46 +388,46 @@ pub enum GroupFailure {
         /// The transfers that reference the member, as identifiers.
         transfers: Vec<String>,
     },
-    /// [`GroupError::DuplicateCategory`].
+    /// [`ExpenseGroupError::DuplicateCategory`].
     DuplicateCategory {
         /// The category, as its identifier.
         category: String,
     },
-    /// [`GroupError::DuplicateCategoryName`].
+    /// [`ExpenseGroupError::DuplicateCategoryName`].
     DuplicateCategoryName {
         /// The category that has the name, as its identifier.
         existing: String,
     },
-    /// [`GroupError::UnknownCategory`].
+    /// [`ExpenseGroupError::UnknownCategory`].
     UnknownCategory {
         /// The category, as its identifier.
         category: String,
     },
-    /// [`GroupError::BuiltInCategory`].
+    /// [`ExpenseGroupError::BuiltInCategory`].
     BuiltInCategory,
-    /// [`GroupError::DuplicateExpense`].
+    /// [`ExpenseGroupError::DuplicateExpense`].
     DuplicateExpense {
         /// The expense, as its identifier.
         expense: String,
     },
-    /// [`GroupError::UnknownExpense`].
+    /// [`ExpenseGroupError::UnknownExpense`].
     UnknownExpense {
         /// The expense, as its identifier.
         expense: String,
     },
-    /// [`GroupError::DuplicateTransfer`].
+    /// [`ExpenseGroupError::DuplicateTransfer`].
     DuplicateTransfer {
         /// The transfer, as its identifier.
         transfer: String,
     },
-    /// [`GroupError::UnknownTransfer`].
+    /// [`ExpenseGroupError::UnknownTransfer`].
     UnknownTransfer {
         /// The transfer, as its identifier.
         transfer: String,
     },
-    /// [`GroupError::Busy`].
+    /// [`ExpenseGroupError::Busy`].
     Busy,
-    /// [`GroupError::Overflow`].
+    /// [`ExpenseGroupError::Overflow`].
     Overflow,
 }
 
@@ -940,10 +940,10 @@ impl From<LanguageError> for EranosError {
     }
 }
 
-impl FromGroupError for EranosError {
+impl FromExpenseGroupError for EranosError {
     fn unsupported_format(format: u32, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::UnsupportedFormat {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnsupportedFormat {
                 format: i64::from(format),
             },
             detail: message,
@@ -951,15 +951,15 @@ impl FromGroupError for EranosError {
     }
 
     fn empty_name(message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::EmptyName,
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::EmptyName,
             detail: message,
         }
     }
 
     fn missing_exchange_rate(currency: Currency, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::MissingExchangeRate {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::MissingExchangeRate {
                 currency: currency.code().to_owned(),
             },
             detail: message,
@@ -967,15 +967,15 @@ impl FromGroupError for EranosError {
     }
 
     fn unexpected_exchange_rate(message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::UnexpectedExchangeRate,
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnexpectedExchangeRate,
             detail: message,
         }
     }
 
     fn duplicate_exchange_rate(currency: Currency, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::DuplicateExchangeRate {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::DuplicateExchangeRate {
                 currency: currency.code().to_owned(),
             },
             detail: message,
@@ -983,8 +983,8 @@ impl FromGroupError for EranosError {
     }
 
     fn duplicate_member(member: MemberId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::DuplicateMember {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::DuplicateMember {
                 member: member.to_string(),
             },
             detail: message,
@@ -992,8 +992,8 @@ impl FromGroupError for EranosError {
     }
 
     fn unknown_member(member: MemberId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::UnknownMember {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownMember {
                 member: member.to_string(),
             },
             detail: message,
@@ -1001,8 +1001,8 @@ impl FromGroupError for EranosError {
     }
 
     fn archived_member(member: MemberId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::ArchivedMember {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::ArchivedMember {
                 member: member.to_string(),
             },
             detail: message,
@@ -1015,8 +1015,8 @@ impl FromGroupError for EranosError {
         transfers: &[TransferId],
         message: String,
     ) -> Self {
-        Self::Group {
-            failure: GroupFailure::MemberInUse {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::MemberInUse {
                 member: member.to_string(),
                 expenses: identifiers(expenses),
                 transfers: identifiers(transfers),
@@ -1026,8 +1026,8 @@ impl FromGroupError for EranosError {
     }
 
     fn duplicate_category(category: CategoryId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::DuplicateCategory {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::DuplicateCategory {
                 category: category.to_string(),
             },
             detail: message,
@@ -1035,8 +1035,8 @@ impl FromGroupError for EranosError {
     }
 
     fn duplicate_category_name(existing: CategoryId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::DuplicateCategoryName {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::DuplicateCategoryName {
                 existing: existing.to_string(),
             },
             detail: message,
@@ -1044,8 +1044,8 @@ impl FromGroupError for EranosError {
     }
 
     fn unknown_category(category: CategoryId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::UnknownCategory {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownCategory {
                 category: category.to_string(),
             },
             detail: message,
@@ -1053,15 +1053,15 @@ impl FromGroupError for EranosError {
     }
 
     fn built_in_category(message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::BuiltInCategory,
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::BuiltInCategory,
             detail: message,
         }
     }
 
     fn duplicate_expense(expense: ExpenseId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::DuplicateExpense {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::DuplicateExpense {
                 expense: expense.to_string(),
             },
             detail: message,
@@ -1069,8 +1069,8 @@ impl FromGroupError for EranosError {
     }
 
     fn unknown_expense(expense: ExpenseId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::UnknownExpense {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownExpense {
                 expense: expense.to_string(),
             },
             detail: message,
@@ -1078,8 +1078,8 @@ impl FromGroupError for EranosError {
     }
 
     fn duplicate_transfer(transfer: TransferId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::DuplicateTransfer {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::DuplicateTransfer {
                 transfer: transfer.to_string(),
             },
             detail: message,
@@ -1087,8 +1087,8 @@ impl FromGroupError for EranosError {
     }
 
     fn unknown_transfer(transfer: TransferId, message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::UnknownTransfer {
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownTransfer {
                 transfer: transfer.to_string(),
             },
             detail: message,
@@ -1096,23 +1096,23 @@ impl FromGroupError for EranosError {
     }
 
     fn busy(message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::Busy,
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::Busy,
             detail: message,
         }
     }
 
     fn overflow(message: String) -> Self {
-        Self::Group {
-            failure: GroupFailure::Overflow,
+        Self::ExpenseGroup {
+            failure: ExpenseGroupFailure::Overflow,
             detail: message,
         }
     }
 }
 
-impl From<GroupError> for EranosError {
-    fn from(error: GroupError) -> Self {
-        Self::from_group_error(&error)
+impl From<ExpenseGroupError> for EranosError {
+    fn from(error: ExpenseGroupError) -> Self {
+        Self::from_expense_group_error(&error)
     }
 }
 

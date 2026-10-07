@@ -8,8 +8,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, Group, Member, Money, Percentage, SavedGroup,
-    SettlementStrategy, Split, Tip,
+    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, Percentage,
+    SavedExpenseGroup, SettlementStrategy, Split, Tip,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -41,7 +41,7 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Road trip", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Road trip", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     group.add_expense(
@@ -87,7 +87,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     section("2. Loading it back");
-    let loaded: Group = serde_json::from_str(&saved)?;
+    let loaded: ExpenseGroup = serde_json::from_str(&saved)?;
     println!(
         "Loading replays every entry through the same checks as adding it, then rebuilds\n\
          the totals. The loaded group equals the saved one, and so do its balances:"
@@ -110,15 +110,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     section("3. A corrupted file is refused");
     println!(
         "Here Ana's identifier was edited in her member entry, so the fuel's payer is an\n\
-         identifier no member has. Reading the file as a SavedGroup and loading it with\n\
-         into_group replays every entry through the same checks as adding it, and refuses\n\
-         the file instead of producing balances that do not add up:"
+         identifier no member has. Reading the file as a SavedExpenseGroup and loading it\n\
+         with into_expense_group replays every entry through the same checks as adding it,\n\
+         and refuses the file instead of producing balances that do not add up:"
     );
     // Ana's own entry is the first to name her: the members come before the
     // expenses in the saved form, so the fuel she paid is left naming an
     // identifier no member has.
     let corrupted = saved.replacen(&ana.to_string(), "0199a000-0000-7000-8000-00000000ffff", 1);
-    let refused = serde_json::from_str::<SavedGroup>(&corrupted)?.into_group();
+    let refused = serde_json::from_str::<SavedExpenseGroup>(&corrupted)?.into_expense_group();
     println!(
         "  error: {}",
         refused.err().ok_or("the file must be refused")?

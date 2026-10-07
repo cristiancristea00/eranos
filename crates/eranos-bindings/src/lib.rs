@@ -26,8 +26,8 @@ mod calls;
 mod cancellation;
 mod error;
 mod expense;
+mod expense_group;
 mod flat;
-mod group;
 mod ledger;
 mod member;
 mod mirrors;
@@ -46,22 +46,22 @@ pub use calendar::{CalendarDate, TimeOfDay};
 pub use cancellation::Cancellation;
 pub use error::{
     AccountFailure, CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
-    GroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MoneyFailure,
+    ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MoneyFailure,
     SettlementFailure, TransferFailure,
 };
 pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,
 };
+pub use expense_group::{ExpenseGroupHandle, NewExpenseGroup};
 pub use flat::{ErrorKind, FailureKind, FlatError, IbanReasonKind, Payload};
-pub use group::{GroupHandle, NewGroup};
 pub use ledger::{
     Balance, CategoryTotal, ExpenseShares, MemberCategoryTotals, MemberShare, MemberSummary,
     Summary,
 };
 pub use member::{Account, AccountDetails, Category, Member};
 pub use money::{Cost, CurrencyDetails, CurrencyRate, Money};
-pub use reader::GroupReader;
+pub use reader::ExpenseGroupReader;
 pub use settlement::{Payment, Settlement, SettlementStrategy};
 pub use transfer::Transfer;
 pub use values::{

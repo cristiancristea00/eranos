@@ -63,8 +63,8 @@ func receipt(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(Eran
 
 /// How `expense` would divide if it were added to `group`, computed on a copy loaded from the group's saved form, so
 /// the group itself is unchanged.
-func preview(_ group: Group, _ expense: Expense) throws(EranosError) -> ExpenseShares? {
-    let copy = try Group.load(try group.save())
+func preview(_ group: ExpenseGroup, _ expense: Expense) throws(EranosError) -> ExpenseShares? {
+    let copy = try ExpenseGroup.load(try group.save())
     return try copy.shares(of: try copy.add(expense))
 }
 
@@ -74,7 +74,7 @@ func consumed(_ shares: ExpenseShares?, _ member: Member.ID) -> Money? {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(name: "Dinner at Caru' cu Bere", currency: euro)
+    let group = try ExpenseGroup(name: "Dinner at Caru' cu Bere", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
     let carol = try group.add(Member(firstName: "Carol"))

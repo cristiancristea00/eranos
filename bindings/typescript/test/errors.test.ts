@@ -14,7 +14,7 @@ import {
     Currency,
     EranosError,
     ExpenseError,
-    GroupError,
+    ExpenseGroupError,
     IdError,
     InvalidJsonError,
     LanguageError,
@@ -259,54 +259,69 @@ const conversions: readonly Conversion[] = [
         failure: { kind: 'nonPositiveAmount' },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.UnsupportedFormat({ format: 26n }), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.UnsupportedFormat({ format: 26n }),
+            detail: 'detail',
+        }),
+        type: ExpenseGroupError,
         failure: { kind: 'unsupportedFormat', format: 26 },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.EmptyName(), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({ failure: new internal.ExpenseGroupFailure.EmptyName(), detail: 'detail' }),
+        type: ExpenseGroupError,
         failure: { kind: 'emptyName' },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.MissingExchangeRate({ currency: 'RON' }), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.MissingExchangeRate({ currency: 'RON' }),
+            detail: 'detail',
+        }),
+        type: ExpenseGroupError,
         failure: { kind: 'missingExchangeRate', currency: Currency.known('RON') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.UnexpectedExchangeRate(), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({ failure: new internal.ExpenseGroupFailure.UnexpectedExchangeRate(), detail: 'detail' }),
+        type: ExpenseGroupError,
         failure: { kind: 'unexpectedExchangeRate' },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.DuplicateExchangeRate({ currency: 'GBP' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.DuplicateExchangeRate({ currency: 'GBP' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'duplicateExchangeRate', currency: Currency.known('GBP') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.DuplicateMember({ member: 'member-16' }), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.DuplicateMember({ member: 'member-16' }),
+            detail: 'detail',
+        }),
+        type: ExpenseGroupError,
         failure: { kind: 'duplicateMember', member: memberId('member-16') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.UnknownMember({ member: 'member-24' }), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.UnknownMember({ member: 'member-24' }),
+            detail: 'detail',
+        }),
+        type: ExpenseGroupError,
         failure: { kind: 'unknownMember', member: memberId('member-24') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.ArchivedMember({ member: 'member-11' }), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.ArchivedMember({ member: 'member-11' }),
+            detail: 'detail',
+        }),
+        type: ExpenseGroupError,
         failure: { kind: 'archivedMember', member: memberId('member-11') },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.MemberInUse({ member: 'member-19', expenses: ['expenses-18'], transfers: ['transfers-20'] }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.MemberInUse({ member: 'member-19', expenses: ['expenses-18'], transfers: ['transfers-20'] }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: {
             kind: 'memberInUse',
             member: memberId('member-19'),
@@ -315,71 +330,74 @@ const conversions: readonly Conversion[] = [
         },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.DuplicateCategory({ category: 'category-12' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.DuplicateCategory({ category: 'category-12' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'duplicateCategory', category: categoryId('category-12') },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.DuplicateCategoryName({ existing: 'existing-13' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.DuplicateCategoryName({ existing: 'existing-13' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'duplicateCategoryName', existing: categoryId('existing-13') },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.UnknownCategory({ category: 'category-22' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.UnknownCategory({ category: 'category-22' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'unknownCategory', category: categoryId('category-22') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.BuiltInCategory(), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({ failure: new internal.ExpenseGroupFailure.BuiltInCategory(), detail: 'detail' }),
+        type: ExpenseGroupError,
         failure: { kind: 'builtInCategory' },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.DuplicateExpense({ expense: 'expense-15' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.DuplicateExpense({ expense: 'expense-15' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'duplicateExpense', expense: expenseId('expense-15') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.UnknownExpense({ expense: 'expense-23' }), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.UnknownExpense({ expense: 'expense-23' }),
+            detail: 'detail',
+        }),
+        type: ExpenseGroupError,
         failure: { kind: 'unknownExpense', expense: expenseId('expense-23') },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.DuplicateTransfer({ transfer: 'transfer-17' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.DuplicateTransfer({ transfer: 'transfer-17' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'duplicateTransfer', transfer: transferId('transfer-17') },
     },
     {
-        generated: new internal.EranosError.Group({
-            failure: new internal.GroupFailure.UnknownTransfer({ transfer: 'transfer-25' }),
+        generated: new internal.EranosError.ExpenseGroup({
+            failure: new internal.ExpenseGroupFailure.UnknownTransfer({ transfer: 'transfer-25' }),
             detail: 'detail',
         }),
-        type: GroupError,
+        type: ExpenseGroupError,
         failure: { kind: 'unknownTransfer', transfer: transferId('transfer-25') },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.Busy(), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({ failure: new internal.ExpenseGroupFailure.Busy(), detail: 'detail' }),
+        type: ExpenseGroupError,
         failure: { kind: 'busy' },
     },
     {
-        generated: new internal.EranosError.Group({ failure: new internal.GroupFailure.Overflow(), detail: 'detail' }),
-        type: GroupError,
+        generated: new internal.EranosError.ExpenseGroup({ failure: new internal.ExpenseGroupFailure.Overflow(), detail: 'detail' }),
+        type: ExpenseGroupError,
         failure: { kind: 'overflow' },
     },
     {

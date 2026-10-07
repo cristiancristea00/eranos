@@ -14,7 +14,7 @@ import java.util.List;
 final class Flat {
     final Currency euro;
     final CalendarDate day;
-    final Group group;
+    final ExpenseGroup group;
     final MemberId ana;
     final MemberId bob;
     final CategoryId food;
@@ -25,7 +25,7 @@ final class Flat {
         euro = Currency.of("EUR");
         day = CalendarDate.of(2026, 9, 23);
         group =
-                Group.builder("Flat", euro)
+                ExpenseGroup.builder("Flat", euro)
                         .description("Rent")
                         .language(Language.parse("pt-pt"))
                         .build();

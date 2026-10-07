@@ -10,7 +10,7 @@ public import Foundation
 /// ```swift
 /// do {
 ///     try group.remove(memberID)
-/// } catch .group(.memberInUse(_, let expenses, let transfers), _) {
+/// } catch .expenseGroup(.memberInUse(_, let expenses, let transfers), _) {
 ///     // The member still has entries; archive them instead.
 /// } catch {
 ///     print(error.detail)
@@ -47,8 +47,8 @@ public enum EranosError: Error, Sendable, Hashable {
     /// The library's `TransferError`, with the message it words.
     case transfer(TransferFailure, detail: String)
 
-    /// The library's `GroupError`, with the message it words.
-    case group(GroupFailure, detail: String)
+    /// The library's `ExpenseGroupError`, with the message it words.
+    case expenseGroup(ExpenseGroupFailure, detail: String)
 
     /// The library's `LanguageError`, with the message it words.
     case language(LanguageFailure, detail: String)
@@ -85,7 +85,7 @@ public enum EranosError: Error, Sendable, Hashable {
              .expense(_, let detail),
              .settlement(_, let detail),
              .transfer(_, let detail),
-             .group(_, let detail),
+             .expenseGroup(_, let detail),
              .language(_, let detail),
              .identifierGiven(let detail),
              .identifierMissing(let detail),
@@ -128,8 +128,8 @@ extension EranosError {
             self = .settlement(SettlementFailure(failure), detail: detail)
         case let .Transfer(failure, detail):
             self = .transfer(TransferFailure(failure), detail: detail)
-        case let .Group(failure, detail):
-            self = .group(GroupFailure(failure), detail: detail)
+        case let .ExpenseGroup(failure, detail):
+            self = .expenseGroup(ExpenseGroupFailure(failure), detail: detail)
         case let .Language(failure, detail):
             self = .language(LanguageFailure(failure), detail: detail)
         case let .IdentifierGiven(detail):

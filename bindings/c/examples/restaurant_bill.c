@@ -136,16 +136,16 @@ static EranosExpense *tippedBillOf(Friends const *const friends, EranosTipDistri
 
 /// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so
 /// the group itself is unchanged; destroys @p expense.
-static EranosExpenseShares *preview(EranosGroup const *const group, EranosExpense *const expense) {
+static EranosExpenseShares *preview(EranosExpenseGroup const *const group, EranosExpense *const expense) {
     EranosText *const text = eranosTextCreate();
-    must(eranosGroupSave(group, text));
-    EranosGroup *copy = nullptr;
-    must(eranosGroupLoad(eranosTextData(text), &copy));
-    must(eranosGroupAddExpense(copy, expense, text));
+    must(eranosExpenseGroupSave(group, text));
+    EranosExpenseGroup *copy = nullptr;
+    must(eranosExpenseGroupLoad(eranosTextData(text), &copy));
+    must(eranosExpenseGroupAddExpense(copy, expense, text));
     EranosExpenseShares *shares = nullptr;
-    must(eranosGroupExpenseShares(copy, eranosTextData(text), &shares));
+    must(eranosExpenseGroupExpenseShares(copy, eranosTextData(text), &shares));
     check(nullptr != shares, "the copy holds the dinner");
-    eranosGroupDestroy(copy);
+    eranosExpenseGroupDestroy(copy);
     eranosTextDestroy(text);
     eranosExpenseDestroy(expense);
     return shares;
@@ -186,7 +186,7 @@ static bool consumedIs(EranosExpenseShares const *const shares, Id const member,
 }
 
 /// Prints the receipt's lines: who shared each, its quantity, its unit price, and its total.
-static void printReceipt(EranosGroup const *const group, Friends const *const friends) {
+static void printReceipt(EranosExpenseGroup const *const group, Friends const *const friends) {
     EranosItemList *const items = receipt(friends);
     Table *const table = lineTable(2);
     EranosText *const text = eranosTextCreate();
@@ -217,7 +217,7 @@ static void printReceipt(EranosGroup const *const group, Friends const *const fr
 
 /// Prints what each friend ordered, and what they pay with the tip shared by consumption, in @p byConsumption, and
 /// equally, in @p even; @p ordered divides the dinner without a tip.
-static void printTips(EranosGroup const *const group, Friends const *const friends, EranosExpenseShares const *const ordered,
+static void printTips(EranosExpenseGroup const *const group, Friends const *const friends, EranosExpenseShares const *const ordered,
                       EranosExpenseShares const *const byConsumption, EranosExpenseShares const *const even) {
     Table *const table = tipTable(1);
     Id const members[] = {friends->ana, friends->bob, friends->carol};
@@ -241,18 +241,18 @@ static void printTips(EranosGroup const *const group, Friends const *const frien
 }
 
 int main(void) {
-    EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("Dinner at Caru' cu Bere", "EUR", &details));
-    EranosGroup *group = nullptr;
-    must(eranosGroupCreate(details, &group));
-    eranosNewGroupDestroy(details);
+    EranosNewExpenseGroup *details = nullptr;
+    must(eranosNewExpenseGroupCreate("Dinner at Caru' cu Bere", "EUR", &details));
+    EranosExpenseGroup *group = nullptr;
+    must(eranosExpenseGroupCreate(details, &group));
+    eranosNewExpenseGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Id const carol = addMember(group, "Carol");
     Friends const friends = {.ana = ana, .bob = bob, .carol = carol, .day = {.year = 2026, .month = 9, .day = 23}};
 
     EranosText *const name = eranosTextCreate();
-    must(eranosGroupName(group, name));
+    must(eranosExpenseGroupName(group, name));
     Line const heading = lineOf("%s: an itemised bill", eranosTextData(name));
     eranosTextDestroy(name);
     title(heading.text);
@@ -268,7 +268,7 @@ int main(void) {
     EranosExpenseShares *const ordered = preview(group, billOf(&friends, "54.00"));
     Id const proportional = addExpense(group, tippedBillOf(&friends, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL));
     EranosExpenseShares *byConsumption = nullptr;
-    must(eranosGroupExpenseShares(group, proportional.text, &byConsumption));
+    must(eranosExpenseGroupExpenseShares(group, proportional.text, &byConsumption));
     check(nullptr != byConsumption, "the group holds the dinner");
     EranosExpenseShares *const even = preview(group, tippedBillOf(&friends, ERANOS_TIP_DISTRIBUTION_EQUAL));
     Line const tip = moneyLine(eranosExpenseSharesTip(byConsumption));
@@ -299,6 +299,6 @@ int main(void) {
     eranosExpenseSharesDestroy(even);
     eranosExpenseSharesDestroy(byConsumption);
     eranosExpenseSharesDestroy(ordered);
-    eranosGroupDestroy(group);
+    eranosExpenseGroupDestroy(group);
     return EXIT_SUCCESS;
 }

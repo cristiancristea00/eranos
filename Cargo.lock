@@ -469,7 +469,7 @@ dependencies = [
  "eranos-contact",
  "eranos-core",
  "eranos-expense",
- "eranos-group",
+ "eranos-expense-group",
  "eranos-ledger",
  "eranos-member",
  "eranos-money",
@@ -503,8 +503,8 @@ dependencies = [
  "eranos-contact",
  "eranos-core",
  "eranos-expense",
+ "eranos-expense-group",
  "eranos-glue-macros",
- "eranos-group",
  "eranos-ledger",
  "eranos-member",
  "eranos-money",
@@ -590,24 +590,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eranos-glue"
-version = "0.7.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.6",
-]
-
-[[package]]
-name = "eranos-glue-macros"
-version = "0.7.0"
-dependencies = [
- "eranos-glue",
- "syn 3.0.6",
-]
-
-[[package]]
-name = "eranos-group"
+name = "eranos-expense-group"
 version = "0.7.0"
 dependencies = [
  "async-lock",
@@ -626,6 +609,23 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-glue"
+version = "0.7.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+]
+
+[[package]]
+name = "eranos-glue-macros"
+version = "0.7.0"
+dependencies = [
+ "eranos-glue",
+ "syn 3.0.6",
 ]
 
 [[package]]

@@ -32,7 +32,7 @@ const PASS_DEBTS: u64 = 2 << 32;
 /// Divides one expense among its members in the group currency.
 ///
 /// The group has checked the kind of the expense's cost against
-/// `currency` (`Group::check_cost`, or the rates of a currency change).
+/// `currency` (`ExpenseGroup::check_cost`, or the rates of a currency change).
 ///
 /// # Errors
 ///

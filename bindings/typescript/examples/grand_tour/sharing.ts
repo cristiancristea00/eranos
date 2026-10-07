@@ -3,11 +3,11 @@
 
 import assert from 'node:assert/strict';
 
-import { type Group, Currency, ExchangeRate, SettlementStrategy } from '../../src/index.js';
+import { type ExpenseGroup, Currency, ExchangeRate, SettlementStrategy } from '../../src/index.js';
 import { printLines, printTable, section } from '../report.js';
 import { type People, october, paymentColumns, ron } from './tour.js';
 
-export async function sharing(group: Group, people: People): Promise<void> {
+export async function sharing(group: ExpenseGroup, people: People): Promise<void> {
     section('14. Sharing the group');
     // Another handle on the same group, as another task holds: a group is shared as it is.
     const other = group;
@@ -21,10 +21,10 @@ export async function sharing(group: Group, people: People): Promise<void> {
     });
     const plan = await group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
     printLines(
-        'An app shares the group between its tasks and threads through a SharedGroup,',
-        "whose calls are futures any executor runs; here the library's block_on runs",
-        'each one on this thread. Bob adds the airport coffee through another handle,',
-        'and the plan that settles it comes through the first:',
+        'An app shares the group between its tasks and threads through a',
+        "SharedExpenseGroup, whose calls are futures any executor runs; here the library's",
+        'block_on runs each one on this thread. Bob adds the airport coffee through another',
+        'handle, and the plan that settles it comes through the first:',
     );
     {
         using reader = await group.read();

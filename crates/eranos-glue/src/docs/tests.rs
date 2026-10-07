@@ -23,7 +23,7 @@ fn docs(item: TokenStream) -> syn::Result<Docs> {
 /// A documentation of two paragraphs, the first over two lines.
 fn two_paragraphs() -> Docs {
     docs(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// Renames the category that `category` names by its
             /// identifier, and returns it as it was.
             ///
@@ -48,7 +48,7 @@ fn a_doc_comment_reads_as_its_paragraphs() {
         }
     );
     let attributes = docs(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             #[doc = "The first.\nstill the first."]
             #[doc = ""]
             #[doc = "  The second.  "]
@@ -75,13 +75,13 @@ fn each_form_names_its_own_failures() {
     assert_eq!(
         docs.synchronous(Access::Write, false),
         format!(
-            "{paragraphs}\n\n# Errors\n\nThe library's refusal, and [`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while another call holds the lock."
+            "{paragraphs}\n\n# Errors\n\nThe library's refusal, and [`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) on wasm while another call holds the lock."
         )
     );
     assert_eq!(
         docs.synchronous(Access::Read, true),
         format!(
-            "{paragraphs}\n\n# Errors\n\n[`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm while a change holds the lock or waits for it."
+            "{paragraphs}\n\n# Errors\n\n[`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) on wasm while a change holds the lock or waits for it."
         )
     );
     assert_eq!(
@@ -113,7 +113,7 @@ fn each_form_names_its_own_failures() {
 fn a_call_is_documented_and_its_summary_ends_with_a_full_stop() {
     let refusal = |attributes: TokenStream| {
         docs(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 #attributes
                 #[read]
                 fn call(&self) -> Result<(), EranosError>;
@@ -151,9 +151,9 @@ fn a_call_is_documented_and_its_summary_ends_with_a_full_stop() {
 fn a_foreign_binding_reads_every_link_as_its_code_span() {
     assert_eq!(
         foreign(
-            "[`GroupFailure::Busy`](crate::GroupFailure::Busy) on wasm, or [`EranosError::Cancelled`]."
+            "[`ExpenseGroupFailure::Busy`](crate::ExpenseGroupFailure::Busy) on wasm, or [`EranosError::Cancelled`]."
         ),
-        "`GroupFailure::Busy` on wasm, or `EranosError::Cancelled`."
+        "`ExpenseGroupFailure::Busy` on wasm, or `EranosError::Cancelled`."
     );
     assert_eq!(
         foreign("[`EranosError::Released`] after [`release`](Self::release)."),

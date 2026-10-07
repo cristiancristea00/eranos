@@ -1,9 +1,9 @@
 //! The code the `uniffi` glue writes from the binding core's tables: the
-//! methods of its `Group` and `GroupReader` objects, which forward to the
+//! methods of its `ExpenseGroup` and `ExpenseGroupReader` objects, which forward to the
 //! core's handles, and the `#[uniffi::remote]` copies of the core's records,
 //! enums, and error.
 //!
-//! The code names `Group`, `GroupReader`, `Cancellation`, `shared`, and every
+//! The code names `ExpenseGroup`, `ExpenseGroupReader`, `Cancellation`, `shared`, and every
 //! type a call takes or answers as the module that invokes the table imports
 //! them, and `::uniffi` as the invoking crate's own release, so the three
 //! glue crates, each on its release, share one source.
@@ -17,7 +17,7 @@ use crate::calls::{Access, Call, Calls, Parameter};
 use crate::docs::foreign;
 
 /// The exported methods of the objects: each call's synchronous and
-/// asynchronous forms on `Group`, and each read's form on `GroupReader`,
+/// asynchronous forms on `ExpenseGroup`, and each read's form on `ExpenseGroupReader`,
 /// with the core's documentation in the form a foreign binding shows.
 pub(crate) fn objects(calls: &Calls) -> TokenStream {
     let group = calls.calls.iter().map(|call| {
@@ -67,12 +67,12 @@ pub(crate) fn objects(calls: &Calls) -> TokenStream {
         });
     quote! {
         #[::uniffi::export]
-        impl Group {
+        impl ExpenseGroup {
             #(#group)*
         }
 
         #[::uniffi::export]
-        impl GroupReader {
+        impl ExpenseGroupReader {
             #(#reads)*
         }
     }

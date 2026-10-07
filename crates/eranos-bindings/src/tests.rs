@@ -40,8 +40,8 @@ fn every_public_type_is_send_and_sync() {
     const {
         // The objects.
         assert_send_and_sync::<Cancellation>();
-        assert_send_and_sync::<GroupHandle>();
-        assert_send_and_sync::<GroupReader>();
+        assert_send_and_sync::<ExpenseGroupHandle>();
+        assert_send_and_sync::<ExpenseGroupReader>();
         // The error, and the failure of every module.
         assert_send_and_sync::<AccountFailure>();
         assert_send_and_sync::<CalendarFailure>();
@@ -49,7 +49,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<ContactFailure>();
         assert_send_and_sync::<EranosError>();
         assert_send_and_sync::<ExpenseFailure>();
-        assert_send_and_sync::<GroupFailure>();
+        assert_send_and_sync::<ExpenseGroupFailure>();
         assert_send_and_sync::<IbanReason>();
         assert_send_and_sync::<IdFailure>();
         assert_send_and_sync::<LanguageFailure>();
@@ -75,7 +75,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<MemberAmount>();
         assert_send_and_sync::<MemberParts>();
         assert_send_and_sync::<MemberPercentage>();
-        assert_send_and_sync::<NewGroup>();
+        assert_send_and_sync::<NewExpenseGroup>();
         assert_send_and_sync::<Split>();
         assert_send_and_sync::<Tip>();
         assert_send_and_sync::<TipDistribution>();

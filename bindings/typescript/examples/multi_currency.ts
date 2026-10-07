@@ -12,7 +12,7 @@ import {
     CalendarDate,
     Currency,
     ExchangeRate,
-    Group,
+    ExpenseGroup,
     Money,
     expenseTotal,
     formatBalance,
@@ -62,7 +62,7 @@ function rate(cost: Cost): ExchangeRate {
 }
 
 /** Every expense and transfer, as entered and in the group currency. */
-function printEntries(group: Group): void {
+function printEntries(group: ExpenseGroup): void {
     const zero = new Money(0n, group.currencySync());
     const expenses = group.expensesSync().map((expense): EntryRow => ({
         name: expense.name,
@@ -81,7 +81,7 @@ function printEntries(group: Group): void {
     printTable(entryColumns, [...expenses, ...transfers], 2);
 }
 
-function printBalances(group: Group): void {
+function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     printTable(
         balanceColumns,
@@ -104,7 +104,7 @@ function printBalances(group: Group): void {
     );
 }
 
-function expenses(group: Group, ana: MemberId, bob: MemberId): void {
+function expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     section('1. Expenses in three currencies');
     const both: Split = { kind: 'equal', members: [ana, bob] };
     group.addExpenseSync({
@@ -135,7 +135,7 @@ function expenses(group: Group, ana: MemberId, bob: MemberId): void {
     );
 }
 
-function repayment(group: Group, ana: MemberId, bob: MemberId): void {
+function repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     section('3. A repayment in cash, in another currency');
     group.addTransferSync({
         from: ana,
@@ -151,7 +151,7 @@ function repayment(group: Group, ana: MemberId, bob: MemberId): void {
     printBalances(group);
 }
 
-function newCurrency(group: Group): void {
+function newCurrency(group: ExpenseGroup): void {
     section('4. Moving the books to another currency');
     printLines(
         'Changing the group currency needs a rate into the new currency for every other',
@@ -170,7 +170,7 @@ function newCurrency(group: Group): void {
 await load();
 const euro = Currency.of('EUR');
 const leu = Currency.of('RON');
-using group = Group.create('Danube road trip', euro);
+using group = ExpenseGroup.create('Danube road trip', euro);
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 

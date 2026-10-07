@@ -43,7 +43,7 @@ func how(_ expense: Expense) throws(EranosError) -> String {
 }
 
 /// Each expense of `expenses`, with every involved member's payment and consumption.
-func printShares(_ group: Group, _ expenses: [Expense.ID]) throws(EranosError) {
+func printShares(_ group: ExpenseGroup, _ expenses: [Expense.ID]) throws(EranosError) {
     var rows: [ShareRow] = []
     for id in expenses {
         guard let expense = try group.expense(withID: id), let shares = try group.shares(of: id) else {
@@ -62,7 +62,7 @@ func printShares(_ group: Group, _ expenses: [Expense.ID]) throws(EranosError) {
     printTable(rows, numbersFrom: 3)
 }
 
-func printItems(_ group: Group, _ id: Expense.ID) throws(EranosError) {
+func printItems(_ group: ExpenseGroup, _ id: Expense.ID) throws(EranosError) {
     guard case let .itemised(items) = try group.expense(withID: id)?.split else {
         return
     }
@@ -117,7 +117,7 @@ func fadoNight(_ people: People, _ categories: Categories) throws(EranosError) -
 }
 
 /// Adds one expense for every way of dividing one.
-func addExpenses(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) -> Expenses {
+func addExpenses(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) -> Expenses {
     let groceries = try group.add(
         Expense(
             name: "Groceries",
@@ -205,12 +205,12 @@ func addExpenses(_ group: Group, _ people: People, _ categories: Categories) thr
 }
 
 /// The consumption of `member` in the expense `id`.
-func consumed(_ group: Group, _ id: Expense.ID, _ member: Member.ID) throws(EranosError) -> Money? {
+func consumed(_ group: ExpenseGroup, _ id: Expense.ID, _ member: Member.ID) throws(EranosError) -> Money? {
     try group.shares(of: id)?.members.first { share in share.member == member }?.share
 }
 
 /// Prints how the fado night's tip was shared, and its receipt.
-func printFado(_ group: Group, _ fado: Expense) throws(EranosError) {
+func printFado(_ group: ExpenseGroup, _ fado: Expense) throws(EranosError) {
     let rule = switch fado.tip?.value {
     case let .percentage(rate)?:
         "\(rate)"
@@ -239,7 +239,7 @@ func printFado(_ group: Group, _ fado: Expense) throws(EranosError) {
     print("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.")
 }
 
-func expenses(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) -> Expense.ID {
+func expenses(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) -> Expense.ID {
     section("4. Expenses, one for every way of dividing")
     let added = try addExpenses(group, people, categories)
     print("""

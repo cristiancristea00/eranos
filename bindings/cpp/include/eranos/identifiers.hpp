@@ -21,12 +21,12 @@ namespace eranos {
 
 /// The identifier of a group: a hyphenated UUID the library gave it; each entity has a type of its own, so one's identifier cannot stand where
 /// another's is expected.
-class GroupId final {
+class ExpenseGroupId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
     ///
     /// @param text A hyphenated UUID
-    explicit GroupId(std::string text) noexcept : text(std::move(text)) {}
+    explicit ExpenseGroupId(std::string text) noexcept : text(std::move(text)) {}
 
     /// The identifier's text: a hyphenated UUID.
     ///
@@ -38,14 +38,16 @@ class GroupId final {
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(GroupId const &left, GroupId const &right) noexcept = default;
+    [[nodiscard]] friend bool operator==(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept = default;
 
     /// How two identifiers order, by text.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(GroupId const &left, GroupId const &right) noexcept { return left.text <=> right.text; }
+    [[nodiscard]] friend std::strong_ordering operator<=>(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept {
+        return left.text <=> right.text;
+    }
 
   private:
     std::string text;
@@ -186,12 +188,14 @@ class TransferId final {
 } // namespace eranos
 
 /// The hash of an identifier: its text's.
-template <> struct std::hash<eranos::GroupId> final {
+template <> struct std::hash<eranos::ExpenseGroupId> final {
     /// The hash of @p identifier.
     ///
     /// @param identifier The identifier
     /// @return The hash
-    [[nodiscard]] std::size_t operator()(eranos::GroupId const &identifier) const noexcept { return std::hash<std::string>()(identifier.value()); }
+    [[nodiscard]] std::size_t operator()(eranos::ExpenseGroupId const &identifier) const noexcept {
+        return std::hash<std::string>()(identifier.value());
+    }
 };
 
 /// The hash of an identifier: its text's.

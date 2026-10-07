@@ -73,7 +73,7 @@ func ratios() throws(EranosError) {
     precondition(150 == parts.hundredths, "the parts in hundredths")
 }
 
-func datesAndIdentifiers(_ group: Group, _ people: People) throws(EranosError) {
+func datesAndIdentifiers(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     let date = try CalendarDate(parsing: "2026-10-01")
     let time = try TimeOfDay(parsing: "22:15")
     let parsed = Member.ID(rawValue: people.ana.rawValue)
@@ -98,7 +98,7 @@ func datesAndIdentifiers(_ group: Group, _ people: People) throws(EranosError) {
     precondition(people.ana == parsed, "the identifier survives the round trip")
 }
 
-func values(_ group: Group, _ people: People) throws(EranosError) {
+func values(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     section("13. Values on their own")
     try currencies()
     try amounts()

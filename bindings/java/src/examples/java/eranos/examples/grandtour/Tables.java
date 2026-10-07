@@ -14,8 +14,8 @@ import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseShares;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberSummary;
 import eranos.Money;
@@ -242,11 +242,11 @@ final class Tables {
     }
 
     /** The identifier of the built-in category, which the group lists first. */
-    static Optional<CategoryId> builtInCategory(Group group) {
+    static Optional<CategoryId> builtInCategory(ExpenseGroup group) {
         return group.categories().stream().findFirst().flatMap(Category::id);
     }
 
-    static void printBalances(Group group) {
+    static void printBalances(ExpenseGroup group) {
         Summary summary = group.summary();
         Money zero = new Money(0, group.currency());
         List<BalanceRow> rows = new ArrayList<>();
@@ -275,7 +275,7 @@ final class Tables {
         printTable(BalanceRow.HEADERS, rows, 1);
     }
 
-    static void printCategories(Group group) throws EranosException {
+    static void printCategories(ExpenseGroup group) throws EranosException {
         List<Expense> expenses = group.expenses();
         Optional<CategoryId> builtIn = builtInCategory(group);
         List<CategoryRow> rows = new ArrayList<>();
@@ -301,7 +301,7 @@ final class Tables {
      * Every expense and transfer in a currency {@code shown} accepts, as entered and in the group
      * currency.
      */
-    static void printEntries(Group group, Predicate<Currency> shown) throws EranosException {
+    static void printEntries(ExpenseGroup group, Predicate<Currency> shown) throws EranosException {
         Money zero = new Money(0, group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {

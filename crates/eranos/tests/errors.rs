@@ -8,8 +8,8 @@
 use std::fmt::Display;
 
 use eranos::error::{
-    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, GroupError, IbanError,
-    IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
+    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError,
+    IbanError, IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
 };
 use eranos::{
     CalendarDate, CategoryId, Currency, Email, ExchangeRate, ExpenseId, Iban, Language, MemberId,
@@ -277,53 +277,53 @@ fn transfer_errors() -> Vec<Expected<TransferError>> {
     ]
 }
 
-/// One example of every `GroupError` variant, with its exact message.
-fn group_errors() -> Vec<Expected<GroupError>> {
+/// One example of every `ExpenseGroupError` variant, with its exact message.
+fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
     vec![
         Expected {
-            error: GroupError::ArchivedMember(MEMBER),
+            error: ExpenseGroupError::ArchivedMember(MEMBER),
             message: "member 11111111-1111-1111-1111-111111111111 is archived",
         },
         Expected {
-            error: GroupError::BuiltInCategory,
+            error: ExpenseGroupError::BuiltInCategory,
             message: "the built-in category cannot be renamed or removed",
         },
         Expected {
-            error: GroupError::Busy,
+            error: ExpenseGroupError::Busy,
             message: "the group is locked by another call",
         },
         Expected {
-            error: GroupError::DuplicateCategory(CATEGORY),
+            error: ExpenseGroupError::DuplicateCategory(CATEGORY),
             message: "category 22222222-2222-2222-2222-222222222222 already exists",
         },
         Expected {
-            error: GroupError::DuplicateCategoryName { existing: CATEGORY },
+            error: ExpenseGroupError::DuplicateCategoryName { existing: CATEGORY },
             message: "category 22222222-2222-2222-2222-222222222222 already has this name",
         },
         Expected {
-            error: GroupError::DuplicateExchangeRate {
+            error: ExpenseGroupError::DuplicateExchangeRate {
                 currency: Currency::USD,
             },
             message: "two exchange rates were given for USD",
         },
         Expected {
-            error: GroupError::DuplicateExpense(EXPENSE),
+            error: ExpenseGroupError::DuplicateExpense(EXPENSE),
             message: "expense 33333333-3333-3333-3333-333333333333 already exists",
         },
         Expected {
-            error: GroupError::DuplicateMember(MEMBER),
+            error: ExpenseGroupError::DuplicateMember(MEMBER),
             message: "member 11111111-1111-1111-1111-111111111111 already exists",
         },
         Expected {
-            error: GroupError::DuplicateTransfer(TRANSFER),
+            error: ExpenseGroupError::DuplicateTransfer(TRANSFER),
             message: "transfer 44444444-4444-4444-4444-444444444444 already exists",
         },
         Expected {
-            error: GroupError::EmptyName,
+            error: ExpenseGroupError::EmptyName,
             message: "the group name must not be empty",
         },
         Expected {
-            error: GroupError::MemberInUse {
+            error: ExpenseGroupError::MemberInUse {
                 member: MEMBER,
                 expenses: vec![EXPENSE, ExpenseId::from_bytes([0x55; 16])],
                 transfers: vec![TRANSFER],
@@ -331,37 +331,37 @@ fn group_errors() -> Vec<Expected<GroupError>> {
             message: "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",
         },
         Expected {
-            error: GroupError::MissingExchangeRate {
+            error: ExpenseGroupError::MissingExchangeRate {
                 currency: Currency::USD,
             },
             message: "an exchange rate from USD into the group currency is required",
         },
         Expected {
-            error: GroupError::Overflow,
+            error: ExpenseGroupError::Overflow,
             message: "the group totals would be out of range",
         },
         Expected {
-            error: GroupError::UnexpectedExchangeRate,
+            error: ExpenseGroupError::UnexpectedExchangeRate,
             message: "an entry in the group currency cannot have an exchange rate",
         },
         Expected {
-            error: GroupError::UnknownCategory(CATEGORY),
+            error: ExpenseGroupError::UnknownCategory(CATEGORY),
             message: "unknown category 22222222-2222-2222-2222-222222222222",
         },
         Expected {
-            error: GroupError::UnknownExpense(EXPENSE),
+            error: ExpenseGroupError::UnknownExpense(EXPENSE),
             message: "unknown expense 33333333-3333-3333-3333-333333333333",
         },
         Expected {
-            error: GroupError::UnknownMember(MEMBER),
+            error: ExpenseGroupError::UnknownMember(MEMBER),
             message: "unknown member 11111111-1111-1111-1111-111111111111",
         },
         Expected {
-            error: GroupError::UnknownTransfer(TRANSFER),
+            error: ExpenseGroupError::UnknownTransfer(TRANSFER),
             message: "unknown transfer 44444444-4444-4444-4444-444444444444",
         },
         Expected {
-            error: GroupError::UnsupportedFormat { format: 3 },
+            error: ExpenseGroupError::UnsupportedFormat { format: 3 },
             message: "unsupported group format 3: this version reads format 2",
         },
     ]

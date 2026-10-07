@@ -41,7 +41,7 @@ use eranos_money::{Cost, ExchangeRate, Money};
 /// several, and a whole split or items. An expense gets its identifier when
 /// it is built, and keeps it through every edit. Expenses are values: to
 /// change one, edit a copy with [`to_builder`](Self::to_builder) and pass it
-/// to `Group::replace_expense`.
+/// to `ExpenseGroup::replace_expense`.
 ///
 /// # Examples
 ///

@@ -13,7 +13,7 @@
 
 mod compare;
 mod crossing;
-mod group;
+mod expense_group;
 mod items;
 mod records;
 mod render;
@@ -95,10 +95,10 @@ pub(crate) fn bridge(sources: &[String]) -> syn::Result<Vec<Generated>> {
     let plan = Plan::of(&core)?;
     let records = records::items(&core, &plan)?;
     let written = records.iter().map(|named| named.name.clone()).collect();
-    let group = group::items(&core)?;
+    let group = expense_group::items(&core)?;
     Ok(vec![
         Generated {
-            path: "generated/group.rs",
+            path: "generated/expense_group.rs",
             file: module(group, &written),
         },
         Generated {

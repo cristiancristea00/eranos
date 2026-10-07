@@ -87,8 +87,8 @@ struct TipRow final {
 
 /// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so the
 /// group itself is unchanged.
-[[nodiscard]] ExpenseShares preview(Group const &group, Expense const &expense) {
-    auto copy = must(Group::load(group.save()));
+[[nodiscard]] ExpenseShares preview(ExpenseGroup const &group, Expense const &expense) {
+    auto copy = must(ExpenseGroup::load(group.save()));
     auto const id = must(copy.addExpense(expense));
     return must(copy.expenseShares(id)).value();
 }
@@ -102,7 +102,7 @@ struct TipRow final {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create("Dinner at Caru' cu Bere", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Dinner at Caru' cu Bere", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const carol = must(group.addMember(Member("Carol")));

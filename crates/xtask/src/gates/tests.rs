@@ -467,7 +467,7 @@ fn a_feature_of_async_lock_stops_the_gates() {
         "async-lock v3.4.2",
         "async-lock feature \"default\"",
         "async-lock feature \"std\"",
-        "eranos-group v0.4.0 (/eranos/crates/eranos-group)",
+        "eranos-expense-group v0.4.0 (/eranos/crates/eranos-expense-group)",
         "async-lock feature \"std\" (*)",
     ]
     .join("\n");
@@ -499,7 +499,8 @@ fn a_failing_feature_tree_stops_the_gates() {
 /// A tree without a feature line passes, whatever else it shows.
 #[test]
 fn a_lock_without_features_passes() {
-    let tree = "async-lock v3.4.2\neranos-group v0.4.0 (/eranos/crates/eranos-group)\n";
+    let tree =
+        "async-lock v3.4.2\neranos-expense-group v0.4.0 (/eranos/crates/eranos-expense-group)\n";
     assert!(check_lock_features(tree).is_ok());
     assert!(check_lock_features("").is_ok());
 }

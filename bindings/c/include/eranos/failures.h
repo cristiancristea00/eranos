@@ -99,44 +99,44 @@ static constexpr EranosFailure ERANOS_FAILURE_TRANSFER_SAME_MEMBER = EranosFailu
 /// The amount is zero or negative.
 static constexpr EranosFailure ERANOS_FAILURE_TRANSFER_NON_POSITIVE_AMOUNT = EranosFailure_TransferNonPositiveAmount;
 /// A saved group in a format this version does not read: a newer one, whose fields it would drop, or an earlier one.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_UNSUPPORTED_FORMAT = EranosFailure_GroupUnsupportedFormat;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT = EranosFailure_ExpenseGroupUnsupportedFormat;
 /// A group name that is blank.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_EMPTY_NAME = EranosFailure_GroupEmptyName;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME = EranosFailure_ExpenseGroupEmptyName;
 /// An entry in another currency than the group's has no exchange rate into the group currency: its cost is local, or a currency change gave no
 /// rate for its currency.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_MISSING_EXCHANGE_RATE = EranosFailure_GroupMissingExchangeRate;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_MISSING_EXCHANGE_RATE = EranosFailure_ExpenseGroupMissingExchangeRate;
 /// An entry in the group currency has a converted cost; only a local cost is in the group currency.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_UNEXPECTED_EXCHANGE_RATE = EranosFailure_GroupUnexpectedExchangeRate;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNEXPECTED_EXCHANGE_RATE = EranosFailure_ExpenseGroupUnexpectedExchangeRate;
 /// The same currency appears twice among the rates of a currency change.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_DUPLICATE_EXCHANGE_RATE = EranosFailure_GroupDuplicateExchangeRate;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE = EranosFailure_ExpenseGroupDuplicateExchangeRate;
 /// A member with this ID already exists.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_DUPLICATE_MEMBER = EranosFailure_GroupDuplicateMember;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_MEMBER = EranosFailure_ExpenseGroupDuplicateMember;
 /// No member with this ID.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_UNKNOWN_MEMBER = EranosFailure_GroupUnknownMember;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_MEMBER = EranosFailure_ExpenseGroupUnknownMember;
 /// An archived member cannot join a new expense.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_ARCHIVED_MEMBER = EranosFailure_GroupArchivedMember;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_ARCHIVED_MEMBER = EranosFailure_ExpenseGroupArchivedMember;
 /// The member is still referenced and cannot be removed; archive it instead.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_MEMBER_IN_USE = EranosFailure_GroupMemberInUse;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_MEMBER_IN_USE = EranosFailure_ExpenseGroupMemberInUse;
 /// A category with this ID already exists.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_DUPLICATE_CATEGORY = EranosFailure_GroupDuplicateCategory;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY = EranosFailure_ExpenseGroupDuplicateCategory;
 /// Another category already has this name, compared by Unicode canonical caseless matching.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_DUPLICATE_CATEGORY_NAME = EranosFailure_GroupDuplicateCategoryName;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME = EranosFailure_ExpenseGroupDuplicateCategoryName;
 /// No category with this ID.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_UNKNOWN_CATEGORY = EranosFailure_GroupUnknownCategory;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_CATEGORY = EranosFailure_ExpenseGroupUnknownCategory;
 /// The built-in Uncategorised category cannot be renamed or removed.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_BUILT_IN_CATEGORY = EranosFailure_GroupBuiltInCategory;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_BUILT_IN_CATEGORY = EranosFailure_ExpenseGroupBuiltInCategory;
 /// An expense with this ID already exists.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_DUPLICATE_EXPENSE = EranosFailure_GroupDuplicateExpense;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXPENSE = EranosFailure_ExpenseGroupDuplicateExpense;
 /// No expense with this ID.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_UNKNOWN_EXPENSE = EranosFailure_GroupUnknownExpense;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_EXPENSE = EranosFailure_ExpenseGroupUnknownExpense;
 /// A transfer with this ID already exists.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_DUPLICATE_TRANSFER = EranosFailure_GroupDuplicateTransfer;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_TRANSFER = EranosFailure_ExpenseGroupDuplicateTransfer;
 /// No transfer with this ID.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_UNKNOWN_TRANSFER = EranosFailure_GroupUnknownTransfer;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_TRANSFER = EranosFailure_ExpenseGroupUnknownTransfer;
 /// A shared group's lock was asked for without waiting, while another call held it.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_BUSY = EranosFailure_GroupBusy;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_BUSY = EranosFailure_ExpenseGroupBusy;
 /// A total would leave the range of an amount.
-static constexpr EranosFailure ERANOS_FAILURE_GROUP_OVERFLOW = EranosFailure_GroupOverflow;
+static constexpr EranosFailure ERANOS_FAILURE_EXPENSE_GROUP_OVERFLOW = EranosFailure_ExpenseGroupOverflow;
 /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
 static constexpr EranosFailure ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE = EranosFailure_LanguageInvalidLanguage;
 
@@ -163,8 +163,8 @@ static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE = EranosErrorKind_Exp
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_SETTLEMENT = EranosErrorKind_Settlement;
 /// A `TransferError`, about a transfer.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_TRANSFER = EranosErrorKind_Transfer;
-/// A `GroupError`, about how an entry fits the group, or the group's lock.
-static constexpr EranosErrorKind ERANOS_ERROR_KIND_GROUP = EranosErrorKind_Group;
+/// An `ExpenseGroupError`, about how an entry fits the group, or the group's lock.
+static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE_GROUP = EranosErrorKind_ExpenseGroup;
 /// A `LanguageError`, about a language tag.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_LANGUAGE = EranosErrorKind_Language;
 /// An entry to add carried an identifier; the group gives a new entry its own.

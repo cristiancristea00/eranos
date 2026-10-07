@@ -16,7 +16,7 @@ from eranos import (
     EqualSplit,
     Expense,
     ExpenseId,
-    Group,
+    ExpenseGroup,
     LocalCost,
     Member,
     MemberAmount,
@@ -113,7 +113,7 @@ def euros(text: str) -> Money:
     return Money.parse(text, Currency('EUR'))
 
 
-def report(group: Group, expense_id: ExpenseId, rules: Mapping[MemberId, str]) -> None:
+def report(group: ExpenseGroup, expense_id: ExpenseId, rules: Mapping[MemberId, str]) -> None:
     """
     Print how one expense divides: every involved member's rule, what they paid, and what they consumed.
 
@@ -152,7 +152,7 @@ def thirds(family: Family) -> dict[MemberId, str]:
     return dict.fromkeys((family.ana, family.bob, family.mia), 'an equal third')
 
 
-def equally(group: Group, family: Family) -> None:
+def equally(group: ExpenseGroup, family: Family) -> None:
     """
     Print an expense the family shares equally, whose leftover cent one member pays.
 
@@ -179,7 +179,7 @@ def equally(group: Group, family: Family) -> None:
     report(group, taxi, thirds(family))
 
 
-def by_percentage(group: Group, family: Family) -> None:
+def by_percentage(group: ExpenseGroup, family: Family) -> None:
     """
     Print an expense the family divides by percentage.
 
@@ -213,7 +213,7 @@ def by_percentage(group: Group, family: Family) -> None:
     report(group, rent, {family.ana: '40%', family.bob: '40%', family.mia: '20%'})
 
 
-def by_parts(group: Group, family: Family) -> ExpenseId:
+def by_parts(group: ExpenseGroup, family: Family) -> ExpenseId:
     """
     Print an expense the family divides by parts, half a part for the child.
 
@@ -251,7 +251,7 @@ def by_parts(group: Group, family: Family) -> ExpenseId:
     return food
 
 
-def by_amounts(group: Group, family: Family) -> None:
+def by_amounts(group: ExpenseGroup, family: Family) -> None:
     """
     Print an expense the family divides by exact amounts.
 
@@ -282,7 +282,7 @@ def by_amounts(group: Group, family: Family) -> None:
     report(group, tickets, {family.ana: '15.00 EUR', family.bob: '15.00 EUR', family.mia: '5.00 EUR'})
 
 
-def several_payers(group: Group, family: Family) -> None:
+def several_payers(group: ExpenseGroup, family: Family) -> None:
     """
     Print an expense that two members paid, each an exact amount, and the family shares equally.
 
@@ -308,7 +308,7 @@ def several_payers(group: Group, family: Family) -> None:
     report(group, dinner, thirds(family))
 
 
-def mistakes(group: Group, family: Family) -> None:
+def mistakes(group: ExpenseGroup, family: Family) -> None:
     """
     Print how the library refuses a split whose percentages add up to 90 %.
 
@@ -335,7 +335,7 @@ def mistakes(group: Group, family: Family) -> None:
     print_lines(f'  error: {refused}')
 
 
-def print_totals(group: Group) -> None:
+def print_totals(group: ExpenseGroup) -> None:
     """
     Print what each member paid and consumed over the holiday, and where they stand.
 
@@ -359,7 +359,7 @@ def print_totals(group: Group) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create('Family holiday', Currency('EUR'))
+    group = ExpenseGroup.create('Family holiday', Currency('EUR'))
     family = Family(
         ana=group.add_member(Member(first_name='Ana')),
         bob=group.add_member(Member(first_name='Bob')),

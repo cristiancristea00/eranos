@@ -10,7 +10,7 @@ import eranos.internal.CalendarFailure as GeneratedCalendarFailure
 import eranos.internal.CategoryFailure as GeneratedCategoryFailure
 import eranos.internal.ContactFailure as GeneratedContactFailure
 import eranos.internal.ExpenseFailure as GeneratedExpenseFailure
-import eranos.internal.GroupFailure as GeneratedGroupFailure
+import eranos.internal.ExpenseGroupFailure as GeneratedExpenseGroupFailure
 import eranos.internal.IbanReason as GeneratedIbanReason
 import eranos.internal.IdFailure as GeneratedIdFailure
 import eranos.internal.LanguageFailure as GeneratedLanguageFailure
@@ -243,13 +243,13 @@ internal fun GeneratedExpenseFailure.converted(): ExpenseFailure =
         GeneratedExpenseFailure.Overflow -> ExpenseFailure.Overflow
     }
 
-/** What the library's `GroupError` reports: a type per failure, with what it holds. */
-public sealed interface GroupFailure {
+/** What the library's `ExpenseGroupError` reports: a type per failure, with what it holds. */
+public sealed interface ExpenseGroupFailure {
     /** A saved group in a format this version does not read: a newer one, whose fields it would drop, or an earlier one. */
     public class UnsupportedFormat(
         /** The format the saved group names. */
         public val format: Long,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [format]. */
         override fun equals(other: Any?): Boolean = other is UnsupportedFormat && format == other.format
 
@@ -261,7 +261,7 @@ public sealed interface GroupFailure {
     }
 
     /** A group name that is blank. */
-    public data object EmptyName : GroupFailure
+    public data object EmptyName : ExpenseGroupFailure
 
     /**
      * An entry in another currency than the group's has no exchange rate into the group currency: its cost is local, or a
@@ -270,7 +270,7 @@ public sealed interface GroupFailure {
     public class MissingExchangeRate(
         /** The currency without a rate. */
         public val currency: Currency,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [currency]. */
         override fun equals(other: Any?): Boolean = other is MissingExchangeRate && currency == other.currency
 
@@ -282,13 +282,13 @@ public sealed interface GroupFailure {
     }
 
     /** An entry in the group currency has a converted cost; only a local cost is in the group currency. */
-    public data object UnexpectedExchangeRate : GroupFailure
+    public data object UnexpectedExchangeRate : ExpenseGroupFailure
 
     /** The same currency appears twice among the rates of a currency change. */
     public class DuplicateExchangeRate(
         /** The currency that appears twice. */
         public val currency: Currency,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [currency]. */
         override fun equals(other: Any?): Boolean = other is DuplicateExchangeRate && currency == other.currency
 
@@ -303,7 +303,7 @@ public sealed interface GroupFailure {
     public class DuplicateMember(
         /** The identifier another member has. */
         public val member: MemberId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [member]. */
         override fun equals(other: Any?): Boolean = other is DuplicateMember && member == other.member
 
@@ -318,7 +318,7 @@ public sealed interface GroupFailure {
     public class UnknownMember(
         /** The identifier no member has. */
         public val member: MemberId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [member]. */
         override fun equals(other: Any?): Boolean = other is UnknownMember && member == other.member
 
@@ -333,7 +333,7 @@ public sealed interface GroupFailure {
     public class ArchivedMember(
         /** The archived member. */
         public val member: MemberId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [member]. */
         override fun equals(other: Any?): Boolean = other is ArchivedMember && member == other.member
 
@@ -352,7 +352,7 @@ public sealed interface GroupFailure {
         public val expenses: List<ExpenseId>,
         /** The transfers that name the member. */
         public val transfers: List<TransferId>,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [member], [expenses], and [transfers]. */
         override fun equals(other: Any?): Boolean =
             other is MemberInUse && member == other.member && expenses == other.expenses && transfers == other.transfers
@@ -368,7 +368,7 @@ public sealed interface GroupFailure {
     public class DuplicateCategory(
         /** The identifier another category has. */
         public val category: CategoryId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [category]. */
         override fun equals(other: Any?): Boolean = other is DuplicateCategory && category == other.category
 
@@ -383,7 +383,7 @@ public sealed interface GroupFailure {
     public class DuplicateCategoryName(
         /** The category that has the name. */
         public val existing: CategoryId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [existing]. */
         override fun equals(other: Any?): Boolean = other is DuplicateCategoryName && existing == other.existing
 
@@ -398,7 +398,7 @@ public sealed interface GroupFailure {
     public class UnknownCategory(
         /** The identifier no category has. */
         public val category: CategoryId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [category]. */
         override fun equals(other: Any?): Boolean = other is UnknownCategory && category == other.category
 
@@ -410,13 +410,13 @@ public sealed interface GroupFailure {
     }
 
     /** The built-in Uncategorised category cannot be renamed or removed. */
-    public data object BuiltInCategory : GroupFailure
+    public data object BuiltInCategory : ExpenseGroupFailure
 
     /** An expense with this ID already exists. */
     public class DuplicateExpense(
         /** The identifier another expense has. */
         public val expense: ExpenseId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [expense]. */
         override fun equals(other: Any?): Boolean = other is DuplicateExpense && expense == other.expense
 
@@ -431,7 +431,7 @@ public sealed interface GroupFailure {
     public class UnknownExpense(
         /** The identifier no expense has. */
         public val expense: ExpenseId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [expense]. */
         override fun equals(other: Any?): Boolean = other is UnknownExpense && expense == other.expense
 
@@ -446,7 +446,7 @@ public sealed interface GroupFailure {
     public class DuplicateTransfer(
         /** The identifier another transfer has. */
         public val transfer: TransferId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [transfer]. */
         override fun equals(other: Any?): Boolean = other is DuplicateTransfer && transfer == other.transfer
 
@@ -461,7 +461,7 @@ public sealed interface GroupFailure {
     public class UnknownTransfer(
         /** The identifier no transfer has. */
         public val transfer: TransferId,
-    ) : GroupFailure {
+    ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [transfer]. */
         override fun equals(other: Any?): Boolean = other is UnknownTransfer && transfer == other.transfer
 
@@ -473,35 +473,39 @@ public sealed interface GroupFailure {
     }
 
     /** A shared group's lock was asked for without waiting, while another call held it. */
-    public data object Busy : GroupFailure
+    public data object Busy : ExpenseGroupFailure
 
     /** A total would leave the range of an amount. */
-    public data object Overflow : GroupFailure
+    public data object Overflow : ExpenseGroupFailure
 }
 
 /** The failure the generated code reports as [this]. */
-internal fun GeneratedGroupFailure.converted(): GroupFailure =
+internal fun GeneratedExpenseGroupFailure.converted(): ExpenseGroupFailure =
     when (this) {
-        is GeneratedGroupFailure.UnsupportedFormat -> GroupFailure.UnsupportedFormat(format)
-        GeneratedGroupFailure.EmptyName -> GroupFailure.EmptyName
-        is GeneratedGroupFailure.MissingExchangeRate -> GroupFailure.MissingExchangeRate(Currency.known(currency))
-        GeneratedGroupFailure.UnexpectedExchangeRate -> GroupFailure.UnexpectedExchangeRate
-        is GeneratedGroupFailure.DuplicateExchangeRate -> GroupFailure.DuplicateExchangeRate(Currency.known(currency))
-        is GeneratedGroupFailure.DuplicateMember -> GroupFailure.DuplicateMember(MemberId(member))
-        is GeneratedGroupFailure.UnknownMember -> GroupFailure.UnknownMember(MemberId(member))
-        is GeneratedGroupFailure.ArchivedMember -> GroupFailure.ArchivedMember(MemberId(member))
-        is GeneratedGroupFailure.MemberInUse -> GroupFailure.MemberInUse(MemberId(member), expenses.map(::ExpenseId), transfers.map(::TransferId))
-        is GeneratedGroupFailure.DuplicateCategory -> GroupFailure.DuplicateCategory(CategoryId(category))
-        is GeneratedGroupFailure.DuplicateCategoryName -> GroupFailure.DuplicateCategoryName(CategoryId(existing))
-        is GeneratedGroupFailure.UnknownCategory -> GroupFailure.UnknownCategory(CategoryId(category))
-        GeneratedGroupFailure.BuiltInCategory -> GroupFailure.BuiltInCategory
-        is GeneratedGroupFailure.DuplicateExpense -> GroupFailure.DuplicateExpense(ExpenseId(expense))
-        is GeneratedGroupFailure.UnknownExpense -> GroupFailure.UnknownExpense(ExpenseId(expense))
-        is GeneratedGroupFailure.DuplicateTransfer -> GroupFailure.DuplicateTransfer(TransferId(transfer))
-        is GeneratedGroupFailure.UnknownTransfer -> GroupFailure.UnknownTransfer(TransferId(transfer))
-        GeneratedGroupFailure.Busy -> GroupFailure.Busy
-        GeneratedGroupFailure.Overflow -> GroupFailure.Overflow
+        is GeneratedExpenseGroupFailure.UnsupportedFormat -> ExpenseGroupFailure.UnsupportedFormat(format)
+        GeneratedExpenseGroupFailure.EmptyName -> ExpenseGroupFailure.EmptyName
+        is GeneratedExpenseGroupFailure.MissingExchangeRate -> ExpenseGroupFailure.MissingExchangeRate(Currency.known(currency))
+        GeneratedExpenseGroupFailure.UnexpectedExchangeRate -> ExpenseGroupFailure.UnexpectedExchangeRate
+        is GeneratedExpenseGroupFailure.DuplicateExchangeRate -> ExpenseGroupFailure.DuplicateExchangeRate(Currency.known(currency))
+        is GeneratedExpenseGroupFailure.DuplicateMember -> ExpenseGroupFailure.DuplicateMember(MemberId(member))
+        is GeneratedExpenseGroupFailure.UnknownMember -> ExpenseGroupFailure.UnknownMember(MemberId(member))
+        is GeneratedExpenseGroupFailure.ArchivedMember -> ExpenseGroupFailure.ArchivedMember(MemberId(member))
+        is GeneratedExpenseGroupFailure.MemberInUse -> memberInUse()
+        is GeneratedExpenseGroupFailure.DuplicateCategory -> ExpenseGroupFailure.DuplicateCategory(CategoryId(category))
+        is GeneratedExpenseGroupFailure.DuplicateCategoryName -> ExpenseGroupFailure.DuplicateCategoryName(CategoryId(existing))
+        is GeneratedExpenseGroupFailure.UnknownCategory -> ExpenseGroupFailure.UnknownCategory(CategoryId(category))
+        GeneratedExpenseGroupFailure.BuiltInCategory -> ExpenseGroupFailure.BuiltInCategory
+        is GeneratedExpenseGroupFailure.DuplicateExpense -> ExpenseGroupFailure.DuplicateExpense(ExpenseId(expense))
+        is GeneratedExpenseGroupFailure.UnknownExpense -> ExpenseGroupFailure.UnknownExpense(ExpenseId(expense))
+        is GeneratedExpenseGroupFailure.DuplicateTransfer -> ExpenseGroupFailure.DuplicateTransfer(TransferId(transfer))
+        is GeneratedExpenseGroupFailure.UnknownTransfer -> ExpenseGroupFailure.UnknownTransfer(TransferId(transfer))
+        GeneratedExpenseGroupFailure.Busy -> ExpenseGroupFailure.Busy
+        GeneratedExpenseGroupFailure.Overflow -> ExpenseGroupFailure.Overflow
     }
+
+/** The failure the generated code reports as [this], with the entries that name the member. */
+private fun GeneratedExpenseGroupFailure.MemberInUse.memberInUse(): ExpenseGroupFailure =
+    ExpenseGroupFailure.MemberInUse(MemberId(member), expenses.map(::ExpenseId), transfers.map(::TransferId))
 
 /** What the library's `IdError` reports: a type per failure, with what it holds. */
 public sealed interface IdFailure {

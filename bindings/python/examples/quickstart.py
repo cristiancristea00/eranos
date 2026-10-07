@@ -15,7 +15,7 @@ from eranos import (
     EqualSplit,
     Expense,
     GetsBackBalance,
-    Group,
+    ExpenseGroup,
     LocalCost,
     Member,
     Money,
@@ -97,7 +97,7 @@ class PaymentRow(Row):
 def main() -> None:
     """Print the report, checking its key numbers."""
     euro = Currency('EUR')
-    group = Group.create('Weekend in Sinaia', euro)
+    group = ExpenseGroup.create('Weekend in Sinaia', euro)
     title(group.name())
     print_lines(
         f'Three friends rent a cabin and buy groceries. The group keeps its books in {group.currency()}, so',

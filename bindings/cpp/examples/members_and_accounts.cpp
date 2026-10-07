@@ -104,7 +104,7 @@ template <typename Parse, typename Shown>
 }
 
 /// Prints every member of @p group with their contact and account details.
-void printMembers(Group const &group) {
+void printMembers(ExpenseGroup const &group) {
     std::vector<MemberRow> rows;
     for (auto const &member : group.members()) {
         std::vector<std::string> accounts;
@@ -123,7 +123,7 @@ void printMembers(Group const &group) {
 }
 
 /// Prints whether each member of @p group is active or archived, what they consumed, and their balance.
-void printBalances(Group const &group) {
+void printBalances(ExpenseGroup const &group) {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
@@ -139,7 +139,7 @@ void printBalances(Group const &group) {
 }
 
 /// Adds Ana, with every detail, and Bob, with a first name only, to @p group, and prints them.
-[[nodiscard]] Flatmates members(Group &group) {
+[[nodiscard]] Flatmates members(ExpenseGroup &group) {
     section("1. Members");
     Member first("Ana");
     first.accounts = {
@@ -197,7 +197,7 @@ void validation() {
 }
 
 /// Adds the rent that Ana and Bob share, archives Bob, and shows what that allows and refuses.
-void movingOut(Group &group, Flatmates const &flatmates) {
+void movingOut(ExpenseGroup &group, Flatmates const &flatmates) {
     section("3. A flatmate moves out");
     WholeExpenseSplit const both{EqualSplit{{flatmates.ana, flatmates.bob}}};
     auto const rent =
@@ -215,15 +215,15 @@ void movingOut(Group &group, Flatmates const &flatmates) {
     check(removal.has_value(), "the referenced member stays");
     std::println("Nor can he be removed while the rent references him:\n  error: {}", message(removal));
 
-    check(Failure::GROUP_ARCHIVED_MEMBER == refused->failure() && flatmates.bob == refused->member(), "the refusal names Bob");
-    check(Failure::GROUP_MEMBER_IN_USE == removal->failure(), "Bob is in use");
+    check(Failure::EXPENSE_GROUP_ARCHIVED_MEMBER == refused->failure() && flatmates.bob == refused->member(), "the refusal names Bob");
+    check(Failure::EXPENSE_GROUP_MEMBER_IN_USE == removal->failure(), "Bob is in use");
     check(Balance(OwesBalance{euros("450.00")}) == totalsOf(group.summary(), flatmates.bob).value().balance, "Bob owes 450.00 EUR");
     check(must(group.expense(rent)).has_value(), "the group keeps the rent");
 }
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create("Flat 4B", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Flat 4B", must(Currency::of("EUR"))));
     printLine("Flat 4B: members and their accounts\n"
               "═══════════════════════════════════");
     printLine("Ana and Bob share a flat. A member needs only a first name; the last name,\n"

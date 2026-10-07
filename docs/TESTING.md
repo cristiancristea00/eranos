@@ -117,7 +117,7 @@ companion that pins concrete numbers.
 | greedy needs at most n − 1 payments, never more than the largest-first plan alone, and at most 3/2 of the exact plan's; the exact plan never more than greedy | `eranos-settlement/src/greedy/tests.rs`, `tests/properties.rs`                                           |
 | the adaptive plan is the exact one while at most its limit of balances is left after pairing and greedy's beyond, named by the strategy that made it          | `eranos-settlement/src/adaptive/tests.rs`, `tests/properties.rs`                                         |
 | no two balances left after pairing exact opposites are opposites, and every pair owes exactly what it is owed                                                 | `eranos-settlement/src/opposites/tests.rs`                                                               |
-| incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing                                                       | `eranos-group/src/tests.rs`                                                                              |
+| incremental totals equal a full rebuild after any sequence of changes; a refused change changes nothing                                                       | `eranos-expense-group/src/tests.rs`                                                                      |
 | paid, consumed, and spent agree; balances sum to zero; category totals add up                                                                                 | `tests/properties.rs`                                                                                    |
 | the order entries arrive in does not change the group, its totals, or its plans                                                                               | `tests/properties.rs`                                                                                    |
 | a plan or a currency change awaited in an executor equals the one made on the caller's thread                                                                 | `tests/properties.rs`                                                                                    |
@@ -169,7 +169,7 @@ those declare the same exception once, at the top of their file, with
 
 A test polls a future by hand: with `Waker::noop()` when only the pending
 polls count, and with a counting waker when a wake-up must happen, as in
-`eranos-group/src/shared/tests.rs`. It pins where a computation yields
+`eranos-expense-group/src/shared/tests.rs`. It pins where a computation yields
 (the exact solver's table of 16 balances fills in one poll and that of 17
 in two; a currency change of 2 100 entries yields twice) and drops the
 future at each yield. A test that needs another thread gives it 50 ms and
@@ -243,7 +243,7 @@ follows three rules:
 - **Generic functions stay small.** A generic function is measured per
   instantiation and the report keeps the best single one, so logic that
   every instantiation shares lives in a non-generic function (the replay
-  behind `Deserialize for Group`).
+  behind `Deserialize for ExpenseGroup`).
 
 The Swift layer is held to the same rules by its own tests: `swift test
 --enable-code-coverage` reports every line, region, and function of the
@@ -331,11 +331,11 @@ includes `sequential-ids`, so an audit of `eranos-core` also runs once with
 `benches/settlement.rs` times every strategy on groups of growing size (the
 exact solver's worst case: every member pays one expense everyone shares),
 `benches/ledger.rs` times adding, replacing, and removing one expense in a
-group of 10 000, and `benches/group.rs` times a currency change and loading
-a saved group (feature `serde`) with 1 000 and 10 000 expenses, the
-operations that touch every entry. The timings of
-[ARCHITECTURE § 13](ARCHITECTURE.md#13-key-numbers) come from them; no
-comment or doc comment quotes one.
+group of 10 000, and `benches/expense_group.rs` times a currency change and
+loading a saved group (feature `serde`) with 1 000 and 10 000 expenses, the
+operations that touch every entry. The timings of [ARCHITECTURE §
+13](ARCHITECTURE.md#13-key-numbers) come from them; no comment or doc
+comment quotes one.
 
 ## 8. What to run for a given change
 

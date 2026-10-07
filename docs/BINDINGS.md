@@ -67,7 +67,7 @@ flowchart TD
     KMP["eranos-kmp<br/>eranos-uniffi's sources on UniFFI 0.29.4"]
     WEB["eranos-web<br/>eranos-uniffi's sources on UniFFI 0.31.2"]
     CAPI["eranos-capi<br/>the Diplomat bridge, on Diplomat 0.16.1"]
-    BINDINGS["eranos-bindings<br/>records, EranosError, FlatError,<br/>GroupHandle, GroupReader, Cancellation"]
+    BINDINGS["eranos-bindings<br/>records, EranosError, FlatError,<br/>ExpenseGroupHandle, ExpenseGroupReader, Cancellation"]
     FACADE["eranos<br/>the library"]
     SWIFT --> UNIFFI
     KOTLIN --> UNIFFI
@@ -105,8 +105,8 @@ flowchart TD
  │ eranos-web           eranos-uniffi's sources on UniFFI 0.31.2            │
  │ eranos-capi          the Diplomat bridge, on Diplomat 0.16.1             │
  ├──────────────────────────────────────────────────────────────────────────┤
- │ eranos-bindings      records, EranosError, FlatError, GroupHandle,       │
- │                      GroupReader, Cancellation, the value helpers        │
+ │ eranos-bindings      records, EranosError, FlatError, ExpenseGroupHandle,       │
+ │                      ExpenseGroupReader, Cancellation, the value helpers        │
  ├──────────────────────────────────────────────────────────────────────────┤
  │ eranos               the library                                         │
  └──────────────────────────────────────────────────────────────────────────┘
@@ -139,10 +139,10 @@ flowchart TD
   it, and a generated function throws one error type, so every call
   reports `EranosError`. It has a case per module of the library, as the
   library has an error per module: `Account`, `Calendar`, `Category`,
-  `Contact`, `Expense`, `Group`, `Id`, `Language`, `Member`, `Money`,
+  `Contact`, `Expense`, `ExpenseGroup`, `Id`, `Language`, `Member`, `Money`,
   `Settlement`, and `Transfer`. Each holds the module's failure, an enum
   with a case per variant of the module's error and what the variant holds
-  (`GroupFailure::MemberInUse { expenses, member, transfers }`), and, as
+  (`ExpenseGroupFailure::MemberInUse { expenses, member, transfers }`), and, as
   `detail`, the library's message; a field named `message` would clash
   with the property of every Kotlin exception. A caller catches a whole
   module or one failure, and no failure needs its crate's name in front.
@@ -152,18 +152,18 @@ flowchart TD
   text can hold an account number, and `Released`. The conversion traits
   of [ARCHITECTURE.md § 2](ARCHITECTURE.md#2-crate-map) keep the
   conversion exhaustive, so a new variant fails the core's build.
-- **One group object.** `GroupHandle` holds a `SharedGroup` and has every
-  group call in two forms: a synchronous one, which waits for the lock
-  where a thread can sleep and, on wasm, whose one thread must not, fails
-  with `GroupFailure::Busy` while another call holds it; and an
-  asynchronous one, a `Send + 'static` future that waits for the lock.
-  Only the two functions that take a synchronous call's lock depend on the
+- **One group object.** `ExpenseGroupHandle` holds a `SharedExpenseGroup`
+  and has every group call in two forms: a synchronous one, which waits for
+  the lock where a thread can sleep and, on wasm, whose one thread must not,
+  fails with `ExpenseGroupFailure::Busy` while another call holds it; and an
+  asynchronous one, a `Send + 'static` future that waits for the lock. Only
+  the two functions that take a synchronous call's lock depend on the
   target, and the trying form wasm uses is tested on the host.
-  `GroupHandle::read` returns a `GroupReader`, which holds the shared lock
-  until it is released or dropped, so the reads of one report see no
-  change in between; `release` frees the lock at once, for languages whose
-  collector frees objects late, and is not named `close`, which the Kotlin
-  and Java generators give every object to free it.
+  `ExpenseGroupHandle::read` returns an `ExpenseGroupReader`, which holds
+  the shared lock until it is released or dropped, so the reads of one
+  report see no change in between; `release` frees the lock at once, for
+  languages whose collector frees objects late, and is not named `close`,
+  which the Kotlin and Java generators give every object to free it.
 - **Cancellation.** Every asynchronous call takes an optional
   `Cancellation`. Cancelling it stops the call at its next yield, or at
   once while the call waits for the lock, and fails it with `Cancelled`;
@@ -191,15 +191,15 @@ flowchart TD
 Each layer turns the core's records into its language's own kinds of type,
 under the core's names, and every value prints the library's text.
 
-| What            | Swift                         | Kotlin                         | Java                                         | TypeScript                    | C                               | C++                                    | Python                                           |
-| --------------- | ----------------------------- | ------------------------------ | -------------------------------------------- | ----------------------------- | ------------------------------- | -------------------------------------- | ------------------------------------------------ |
-| the group       | `final class Group`           | `class Group`, `AutoCloseable` | `final class Group`, `AutoCloseable`         | `class Group`, `Disposable`   | `EranosGroup *`                 | `Group`, which only moves              | `class Group`, a context manager                 |
-| a read handle   | `GroupReader`, `withRead`     | `GroupReader`, `withRead`      | `GroupReader`                                | `GroupReader`, `Disposable`   | `EranosGroupReader *`           | `GroupReader`                          | `GroupReader`, a context manager                 |
-| an identifier   | `Member.ID`                   | the value class `MemberId`     | the record `MemberId`                        | the branded string `MemberId` | text                            | the class `MemberId`                   | the `NewType` `MemberId`                         |
-| a checked value | a struct: `Currency`, `Money` | a class: `Currency`, `Money`   | `Currency`, a final class; `Money`, a record | a class: `Currency`, `Money`  | an opaque object: `EranosMoney` | `Currency`, a class; `Money`, a struct | `Currency`, a class; `Money`, a frozen dataclass |
-| an entry        | a struct: `Expense`           | a class: `Expense`             | a final class with a builder                 | an interface: `Expense`       | an opaque object with setters   | a struct: `Expense`                    | a frozen dataclass: `Expense`                    |
-| a variant       | an enum: `Split`              | a sealed interface: `Split`    | a sealed interface of records                | a union by `kind`: `Split`    | an opaque object with `kind`    | a `std::variant`                       | a union of frozen dataclasses: `Split`           |
-| a failure       | `EranosError`, thrown typed   | `EranosException`, thrown      | `EranosException`, checked                   | `EranosError`, thrown         | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`  | `EranosError`, raised                            |
+| What            | Swift                            | Kotlin                                | Java                                         | TypeScript                         | C                               | C++                                    | Python                                           |
+| --------------- | -------------------------------- | ------------------------------------- | -------------------------------------------- | ---------------------------------- | ------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| the group       | `final class ExpenseGroup`       | `class ExpenseGroup`, `AutoCloseable` | `final class ExpenseGroup`, `AutoCloseable`  | `class ExpenseGroup`, `Disposable` | `EranosExpenseGroup *`          | `ExpenseGroup`, which only moves       | `class ExpenseGroup`, a context manager          |
+| a read handle   | `ExpenseGroupReader`, `withRead` | `ExpenseGroupReader`, `withRead`      | `ExpenseGroupReader`                         | `ExpenseGroupReader`, `Disposable` | `EranosExpenseGroupReader *`    | `ExpenseGroupReader`                   | `ExpenseGroupReader`, a context manager          |
+| an identifier   | `Member.ID`                      | the value class `MemberId`            | the record `MemberId`                        | the branded string `MemberId`      | text                            | the class `MemberId`                   | the `NewType` `MemberId`                         |
+| a checked value | a struct: `Currency`, `Money`    | a class: `Currency`, `Money`          | `Currency`, a final class; `Money`, a record | a class: `Currency`, `Money`       | an opaque object: `EranosMoney` | `Currency`, a class; `Money`, a struct | `Currency`, a class; `Money`, a frozen dataclass |
+| an entry        | a struct: `Expense`              | a class: `Expense`                    | a final class with a builder                 | an interface: `Expense`            | an opaque object with setters   | a struct: `Expense`                    | a frozen dataclass: `Expense`                    |
+| a variant       | an enum: `Split`                 | a sealed interface: `Split`           | a sealed interface of records                | a union by `kind`: `Split`         | an opaque object with `kind`    | a `std::variant`                       | a union of frozen dataclasses: `Split`           |
+| a failure       | `EranosError`, thrown typed      | `EranosException`, thrown             | `EranosException`, checked                   | `EranosError`, thrown              | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`  | `EranosError`, raised                            |
 
 ## 4. Calls, threads, and cancellation
 
@@ -210,15 +210,15 @@ the language's own mechanism, which the layer turns into the core's
 waits for the lock, fails with the cancellation, and leaves the group as
 it was.
 
-| Language   | Synchronous form                        | Asynchronous form                                     | Cancellation                     |
-| ---------- | --------------------------------------- | ----------------------------------------------------- | -------------------------------- |
-| Swift      | `group.name()`                          | `await group.name()`, the same name                   | the task's                       |
-| Kotlin     | `group.nameBlocking()`                  | `group.name()`, a `suspend` function                  | the coroutine's                  |
-| Java       | `group.name()`                          | `group.nameAsync()`, a `CompletableFuture`            | `cancel` on the future           |
-| TypeScript | `group.nameSync()`, which does not wait | `group.name()`, a Promise                             | the `AbortSignal` of its options |
-| C          | `eranosGroupName(group, text)`          | `eranosGroupNameAsync(group, cancellation, callback)` | `eranosCancellationCancel`       |
-| C++        | `group.name()`                          | `group.nameAsync(&cancellation)`, a `std::future`     | `cancellation.cancel()`          |
-| Python     | `group.name()`                          | `await group.name_async()`, a coroutine               | `cancel()` on the task           |
+| Language   | Synchronous form                        | Asynchronous form                                            | Cancellation                     |
+| ---------- | --------------------------------------- | ------------------------------------------------------------ | -------------------------------- |
+| Swift      | `group.name()`                          | `await group.name()`, the same name                          | the task's                       |
+| Kotlin     | `group.nameBlocking()`                  | `group.name()`, a `suspend` function                         | the coroutine's                  |
+| Java       | `group.name()`                          | `group.nameAsync()`, a `CompletableFuture`                   | `cancel` on the future           |
+| TypeScript | `group.nameSync()`, which does not wait | `group.name()`, a Promise                                    | the `AbortSignal` of its options |
+| C          | `eranosExpenseGroupName(group, text)`   | `eranosExpenseGroupNameAsync(group, cancellation, callback)` | `eranosCancellationCancel`       |
+| C++        | `group.name()`                          | `group.nameAsync(&cancellation)`, a `std::future`            | `cancellation.cancel()`          |
+| Python     | `group.name()`                          | `await group.name_async()`, a coroutine                      | `cancel()` on the task           |
 
 A synchronous call waits while another call holds the group's write lock,
 or while a change waits behind a read in progress, since the lock lets a
@@ -227,7 +227,7 @@ thread too, where an app calls the asynchronous form instead, and on the
 thread of Python's event loop, where a coroutine awaits the `_async` form
 instead. On wasm,
 whose one thread must not wait, the TypeScript package's synchronous form
-fails with `GroupFailure::Busy` while another call holds the lock. The C
+fails with `ExpenseGroupFailure::Busy` while another call holds the lock. The C
 and C++ packages run every asynchronous call on the group's worker thread,
 in the order of the calls, and report its outcome there, to a callback or
 through a `std::future`; a load runs on a thread of its own. Kotlin
@@ -264,28 +264,27 @@ and print their examples' reports byte for byte
 
 ## 8. The glue crates
 
-`eranos-uniffi` copies the core's records, enums, and error for UniFFI
-with `#[uniffi::remote]`, which repeats each definition field for field. A
-crate carries the derives of one UniFFI release, so the core's items cannot
-carry them; instead each carries `#[mirrored]`, which adds a macro of its
-fields, and the core's `mirrors!` hands every mirror to the glue's
-`uniffi_mirror!`, which stamps the copies, so a copy always repeats its
-item. It wraps the group handle, the read handle, and the cancellation in
-the objects `Group`, `GroupReader`, and `Cancellation`, whose methods
+`eranos-uniffi` copies the core's records, enums, and error for UniFFI with
+`#[uniffi::remote]`, which repeats each definition field for field. A crate
+carries the derives of one UniFFI release, so the core's items cannot carry
+them; instead each carries `#[mirrored]`, which adds a macro of its fields,
+and the core's `mirrors!` hands every mirror to the glue's `uniffi_mirror!`,
+which stamps the copies, so a copy always repeats its item. It wraps the
+group handle, the read handle, and the cancellation in the objects
+`ExpenseGroup`, `ExpenseGroupReader`, and `Cancellation`, whose methods
 forward to the core: every group call's two forms and every read's are
-stamped from the core's `group_calls!` table, the trait that lists the
-calls, with the core's documentation, its links as code spans; the
+stamped from the core's `expense_group_calls!` table, the trait that lists
+the calls, with the core's documentation, its links as code spans; the
 constructors, `read`, and `release` are written by hand. It exports the
 value helpers as functions and the asynchronous load as
-`load_group_async`. Its three source files are compiled by `eranos-web` as
-well, against UniFFI 0.31.2, and by `eranos-kmp`, against 0.29.4: they keep
-to what 0.29 accepts, and every release compiles them and the code the
-macros stamp in them.
-`uniffi.toml` names the generated Swift module `EranosGenerated` and the
-generated Kotlin and Java package `eranos.internal`, and the generated
-Python module keeps the namespace's name, `eranos`, which the Python
-package holds as `eranos._internal.eranos`: the generated code sits beneath
-each package's hand-written layer.
+`load_expense_group_async`. Its three source files are compiled by
+`eranos-web` as well, against UniFFI 0.31.2, and by `eranos-kmp`, against
+0.29.4: they keep to what 0.29 accepts, and every release compiles them and
+the code the macros stamp in them. `uniffi.toml` names the generated Swift
+module `EranosGenerated` and the generated Kotlin and Java package
+`eranos.internal`, and the generated Python module keeps the namespace's
+name, `eranos`, which the Python package holds as `eranos._internal.eranos`:
+the generated code sits beneath each package's hand-written layer.
 
 `eranos-web` builds the same glue for browsers and Node. A crate carries
 the derives of one UniFFI release, so it includes the three source files of
@@ -310,7 +309,7 @@ and C++ classes, which live in `eranos::detail`. `diplomat-tool` reads the
 crate's source files, not what a macro expands them to, so most of the
 bridge is code the repository holds: `cargo xtask generate` writes
 `src/generated/records.rs`, an object for every record, list, and enum the
-calls reach, and `src/generated/group.rs`, the group with both forms of
+calls reach, and `src/generated/expense_group.rs`, the group with both forms of
 every call, the read handle with every read's, the cancellation, and an
 outcome per kind of answer, from the core's `#[mirrored]` items and its
 trait of calls, through eranos-glue's generator, and lays them out with
@@ -375,13 +374,13 @@ Design Guidelines:
   `Username`, and `Language`, each printing the library's text.
 - Every call throws `EranosError` as a typed throw, with the core's case per
   module and a failure enum per module whose payloads are typed
-  (`GroupFailure.memberInUse(expenses:member:transfers:)`); a failure the
+  (`ExpenseGroupFailure.memberInUse(expenses:member:transfers:)`); a failure the
   generated code reports that is not the library's, such as a defect in the
   bindings, is `unexpected`.
 - Every group call is one name overloaded by `async`: asynchronous code
   picks the form that waits for the lock without blocking a thread of the
-  pool, and cancelling its task cancels the call. `Group.withRead` holds a
-  read handle for a closure.
+  pool, and cancelling its task cancels the call. `ExpenseGroup.withRead`
+  holds a read handle for a closure.
 
 `bindings/swift/examples` is a package of its own over this one, with a
 program per example of eranos that prints the example's report
@@ -413,16 +412,17 @@ its code. The layer follows the Kotlin library guidelines:
   (`Currency.of`, `Money.parse`, `CalendarDate.of`), and prints the
   library's text.
 - A failure the library reports throws `EranosException`, a subclass per
-  module holding the module's failure (`GroupFailure.MemberInUse`) and the
-  library's message. A call the program should not make throws the
-  standard exception for it: `IllegalArgumentException` for an entry to
-  add that has an identifier or one to replace that has none, and
-  `IllegalStateException` for a read through a closed `GroupReader`.
-- Every group call is a `suspend` function that waits for the lock
-  without blocking its thread; cancelling its coroutine drops the
-  library's call, which leaves the group as it was. Its twin, whose name
-  ends in `Blocking`, blocks instead. `Group` and `GroupReader` are
-  `AutoCloseable`, and `Group.withRead` holds a read handle for a block.
+  module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
+  and the library's message. A call the program should not make throws the
+  standard exception for it: `IllegalArgumentException` for an entry to add
+  that has an identifier or one to replace that has none, and
+  `IllegalStateException` for a read through a closed `ExpenseGroupReader`.
+- Every group call is a `suspend` function that waits for the lock without
+  blocking its thread; cancelling its coroutine drops the library's call,
+  which leaves the group as it was. Its twin, whose name ends in `Blocking`,
+  blocks instead. `ExpenseGroup` and `ExpenseGroupReader` are
+  `AutoCloseable`, and `ExpenseGroup.withRead` holds a read handle for a
+  block.
 - The binary-compatibility validator checks the layer's API against the
   committed dump, `eranos/api/eranos.api`.
 
@@ -488,14 +488,14 @@ build. The layer follows the Google TypeScript Style Guide:
   module holding the module's failure, itself a union by `kind`. A call the
   program should not make throws `TypeError`: an entry to add that has an
   identifier, one to replace that has none, and a read through a released
-  `GroupReader`.
+  `ExpenseGroupReader`.
 - Every group call returns a Promise that waits for the lock; aborting the
   `AbortSignal` of its options cancels the call, which leaves the group as
-  it was, and rejects with the signal's reason. Its twin, whose name ends
-  in `Sync`, does not wait: it throws `GroupError` with the failure `busy`
-  while another call holds the lock, since the page's one thread cannot
-  wait for it. `Group` and `GroupReader` are `Disposable`, so `using` frees
-  them at the end of a block.
+  it was, and rejects with the signal's reason. Its twin, whose name ends in
+  `Sync`, does not wait: it throws `ExpenseGroupError` with the failure
+  `busy` while another call holds the lock, since the page's one thread
+  cannot wait for it. `ExpenseGroup` and `ExpenseGroupReader` are
+  `Disposable`, so `using` frees them at the end of a block.
 
 `examples` holds a module per example of eranos, over the layer, that prints
 the example's report on Node ([TESTING.md § 2](TESTING.md#2-layout));
@@ -531,8 +531,8 @@ package's ports of the examples, from their sources, for the JVM target.
 kind of value under `eranos/`, each of `static inline` functions over
 Diplomat's C API, whose names start with a type's and an underscore and
 are not part of the layer. It follows one naming rule, that of the C++
-layer too: PascalCase for types (`EranosGroup`, `EranosText`), camelCase
-for functions, parameters, and fields (`eranosGroupAddExpense`,
+layer too: PascalCase for types (`EranosExpenseGroup`, `EranosText`), camelCase
+for functions, parameters, and fields (`eranosExpenseGroupAddExpense`,
 `minorUnits`), and UPPER_CASE for constants and enum values
 (`ERANOS_SETTLEMENT_STRATEGY_DIRECT`), which alias Diplomat's so that a
 `switch` over an enum takes them; no name carries an affix, and every
@@ -559,7 +559,7 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   valid until its function runs, once. A trampoline for each kind of
   outcome reads the outcome, destroys it, and calls the function.
 - Every parameter the function does not change is `const`, the pointer
-  itself included (`EranosGroup const *const group`), and a call that
+  itself included (`EranosExpenseGroup const *const group`), and a call that
   changes what later calls see takes its object as not `const`, though
   Diplomat's function takes it `const`.
 
@@ -594,10 +594,10 @@ Core Guidelines with the naming rule above:
   amount's text, returns its value. Nothing throws: the tests and the ports
   build with `-fno-exceptions`, so a `throw` or a `try` in a header fails
   the gates, and a program built without exceptions can use the package.
-- `Group` owns its handle, so it moves and never copies; an asynchronous
+- `ExpenseGroup` owns its handle, so it moves and never copies; an asynchronous
   call returns a `std::future` of what the synchronous form returns, as a
   `std::expected`, and takes an optional `Cancellation`, which leaves an
-  error of the kind `CANCELLED` in the future. `GroupReader` releases the
+  error of the kind `CANCELLED` in the future. `ExpenseGroupReader` releases the
   lock when it is destroyed or released.
 - Text goes in as `std::string_view` and comes back as `std::string`.
   Every class and struct is `final`, `const` sits after what it qualifies,
@@ -630,17 +630,16 @@ library refuses a call the example makes.
 
 ### Python
 
-`bindings/python` is the Python package `eranos`, for Python 3.14 and
-later. The generated module, `eranos._internal.eranos`, loads the host
-library from its own directory through ctypes, which releases the GIL for
-every call, so the gates link the library beside it. The layer's modules
-are private (`eranos._group`, `eranos._entries`), and `eranos` exports what
-apps use, as its `__all__` lists, so no generated class reaches an app.
-The layer follows PEP 8, with lines of 150 columns as in the other
-languages, and carries a type on every function, parameter, and return,
-which ty checks with every rule an error; the generated module keeps to no
-checker, so ty reads its annotations without checking its code, and Ruff
-leaves it out:
+`bindings/python` is the Python package `eranos`, for Python 3.14 and later.
+The generated module, `eranos._internal.eranos`, loads the host library from
+its own directory through ctypes, which releases the GIL for every call, so
+the gates link the library beside it. The layer's modules are private
+(`eranos._expense_group`, `eranos._entries`), and `eranos` exports what apps
+use, as its `__all__` lists, so no generated class reaches an app. The layer
+follows PEP 8, with lines of 150 columns as in the other languages, and
+carries a type on every function, parameter, and return, which ty checks
+with every rule an error; the generated module keeps to no checker, so ty
+reads its annotations without checking its code, and Ruff leaves it out:
 
 - Every entry has an identifier type of its own, a `NewType` over `str`
   (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
@@ -653,17 +652,17 @@ leaves it out:
   `LocalCost`), which a `match` takes apart.
 - A failure the library reports raises an `EranosError`, a subclass per
   module holding the module's failure, a dataclass nested in it
-  (`GroupError.MemberInUse`), with the library's message; a saved group
-  that is not JSON raises `InvalidJsonError`, with the line and column.
-  A call the program should not make raises the standard error for it:
-  `ValueError` for an entry to add that has an identifier or one to
-  replace that has none, and `RuntimeError` for a call on a closed `Group`
-  or a read through a released `GroupReader`.
+  (`ExpenseGroupError.MemberInUse`), with the library's message; a saved
+  group that is not JSON raises `InvalidJsonError`, with the line and
+  column. A call the program should not make raises the standard error for
+  it: `ValueError` for an entry to add that has an identifier or one to
+  replace that has none, and `RuntimeError` for a call on a closed
+  `ExpenseGroup` or a read through a released `ExpenseGroupReader`.
 - Every group call blocks, and its twin, whose name ends in `_async`, is a
   coroutine that waits for the lock without blocking the event loop;
   cancelling its task drops the library's call, which leaves the group as
-  it was, and raises `asyncio.CancelledError` in the task. `Group` and
-  `GroupReader` are context managers: leaving the block closes the group
+  it was, and raises `asyncio.CancelledError` in the task. `ExpenseGroup` and
+  `ExpenseGroupReader` are context managers: leaving the block closes the group
   or releases the reader.
 - A transfer's and a payment's members are `sender` and `receiver`, since
   `from` is a keyword; the generated module names the field `_from`.

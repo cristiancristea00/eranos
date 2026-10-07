@@ -9,7 +9,7 @@ from eranos import (
     ConvertedCost,
     Currency,
     ExchangeRate,
-    Group,
+    ExpenseGroup,
     Language,
     MemberId,
     Money,
@@ -155,7 +155,7 @@ def _ratios() -> None:
     assert str(rate) == '4.9765'
 
 
-def _dates_and_identifiers(group: Group, people: People) -> None:
+def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
     """
     Print dates, times, an identifier, and language tags as the library reads and writes them, and what it refuses.
 
@@ -194,7 +194,7 @@ def _dates_and_identifiers(group: Group, people: People) -> None:
     assert parsed == people.ana
 
 
-def values(group: Group, people: People) -> None:
+def values(group: ExpenseGroup, people: People) -> None:
     """
     Print section 13: the library's values on their own.
 

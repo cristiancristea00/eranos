@@ -12,7 +12,7 @@ use std::iter;
 
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
 use eranos::{
-    CalendarDate, Currency, Expense, Group, Member, MemberId, Money, Settlement,
+    CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money, Settlement,
     SettlementStrategy, Split,
 };
 
@@ -32,8 +32,8 @@ impl Draws {
 /// A group of `size` members where each member paid one expense shared by
 /// everyone: `size` open balances with, almost surely, no zero-sum subset
 /// smaller than the whole group, which is the exact solver's worst case.
-fn group(size: usize) -> Group {
-    let mut group = Group::builder("Benchmark", Currency::EUR)
+fn group(size: usize) -> ExpenseGroup {
+    let mut group = ExpenseGroup::builder("Benchmark", Currency::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     // A member of their own for each slot, since a group holds each member

@@ -107,14 +107,14 @@ template <TableRow Row> void printTable(std::vector<Row> const &rows, std::size_
 /// @param group The group
 /// @param member The member
 /// @return The first name
-[[nodiscard]] std::string firstName(Group const &group, MemberId const &member);
+[[nodiscard]] std::string firstName(ExpenseGroup const &group, MemberId const &member);
 
 /// The first names of @p members in @p group, joined by commas.
 ///
 /// @param group The group
 /// @param members The members
 /// @return The names
-[[nodiscard]] std::string names(Group const &group, std::vector<MemberId> const &members);
+[[nodiscard]] std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members);
 
 /// Every member who shares the cost of @p split, once each, in the order of their identifiers.
 ///

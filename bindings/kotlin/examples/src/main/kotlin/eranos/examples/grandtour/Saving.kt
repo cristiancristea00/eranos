@@ -3,8 +3,8 @@ package eranos.examples.grandtour
 
 import eranos.AccountDetails
 import eranos.EranosException
-import eranos.Group
-import eranos.GroupFailure
+import eranos.ExpenseGroup
+import eranos.ExpenseGroupFailure
 import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
@@ -28,10 +28,11 @@ private data class Tampering(
 )
 
 /** What loading the saved form [text] refuses: the error the replay of its entries reports. */
-internal fun loadRefusal(text: String): EranosException = checkNotNull(refusal { Group.loadBlocking(text).close() }) { "the change must be refused" }
+internal fun loadRefusal(text: String): EranosException =
+    checkNotNull(refusal { ExpenseGroup.loadBlocking(text).close() }) { "the change must be refused" }
 
 internal fun savingAndLoading(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
 ) {
@@ -53,12 +54,12 @@ internal fun savingAndLoading(
         check(details in saved) { "$details is saved as it is" }
         println("  ${account.name}: $details")
     }
-    Group.loadBlocking(saved).use { loaded ->
+    ExpenseGroup.loadBlocking(saved).use { loaded ->
         println(
             """
             Loading replays every entry through the same checks as adding it and rebuilds the
-            totals: the loaded group equals the saved one. Reading a SavedGroup and loading it
-            with into_group reports a refusal as a typed error instead of a message:
+            totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and
+            loading it with into_expense_group reports a refusal as a typed error, not as text:
             """.trimIndent(),
         )
         val tampered =
@@ -80,8 +81,12 @@ internal fun savingAndLoading(
         check(saved == loaded.saveBlocking())
         check(group.summaryBlocking() == loaded.summaryBlocking())
         check(
-            listOf(GroupFailure.UnsupportedFormat(3), GroupFailure.EmptyName, GroupFailure.DuplicateCategoryName(categories.food)) ==
-                errors.map { error -> (error as? EranosException.Group)?.failure },
+            listOf(
+                ExpenseGroupFailure.UnsupportedFormat(3),
+                ExpenseGroupFailure.EmptyName,
+                ExpenseGroupFailure.DuplicateCategoryName(categories.food),
+            ) ==
+                errors.map { error -> (error as? EranosException.ExpenseGroup)?.failure },
         )
     }
 }

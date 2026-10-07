@@ -2,7 +2,7 @@ internal import EranosGenerated
 
 /// A person in the group: a first name, and optionally more ways to reach and pay them.
 ///
-/// A new member has no identifier; `Group.add(_:)` gives them one.
+/// A new member has no identifier; `ExpenseGroup.add(_:)` gives them one.
 public struct Member: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a member.

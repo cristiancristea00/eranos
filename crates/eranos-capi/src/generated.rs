@@ -8,7 +8,7 @@
 
 /// The group, its read handle, the cancellation of asynchronous calls, and
 /// the outcomes that their callbacks receive.
-pub mod group;
+pub mod expense_group;
 /// The records, lists, and enums the group's calls take and answer.
 ///
 /// Each record is an opaque object with a getter of every field, and a

@@ -457,15 +457,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::ArchivedMember {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::ArchivedMember {
                     member: MEMBER.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupArchivedMember),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupArchivedMember),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     member: Some(MEMBER.to_owned()),
@@ -474,39 +474,39 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::BuiltInCategory,
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::BuiltInCategory,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupBuiltInCategory),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupBuiltInCategory),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::Busy,
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::Busy,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupBusy),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupBusy),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::DuplicateCategory {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::DuplicateCategory {
                     category: CATEGORY.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupDuplicateCategory),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupDuplicateCategory),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     category: Some(CATEGORY.to_owned()),
@@ -515,15 +515,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::DuplicateCategoryName {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::DuplicateCategoryName {
                     existing: CATEGORY.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupDuplicateCategoryName),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupDuplicateCategoryName),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     existing: Some(CATEGORY.to_owned()),
@@ -532,15 +532,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::DuplicateExchangeRate {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::DuplicateExchangeRate {
                     currency: "RON".to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupDuplicateExchangeRate),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupDuplicateExchangeRate),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     currency: Some("RON".to_owned()),
@@ -549,15 +549,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::DuplicateExpense {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::DuplicateExpense {
                     expense: EXPENSE.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupDuplicateExpense),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupDuplicateExpense),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     expense: Some(EXPENSE.to_owned()),
@@ -566,15 +566,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::DuplicateMember {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::DuplicateMember {
                     member: MEMBER.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupDuplicateMember),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupDuplicateMember),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     member: Some(MEMBER.to_owned()),
@@ -583,15 +583,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::DuplicateTransfer {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::DuplicateTransfer {
                     transfer: TRANSFER.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupDuplicateTransfer),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupDuplicateTransfer),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     transfer: Some(TRANSFER.to_owned()),
@@ -600,20 +600,20 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::EmptyName,
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::EmptyName,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupEmptyName),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupEmptyName),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::MemberInUse {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::MemberInUse {
                     member: MEMBER.to_owned(),
                     expenses: vec![EXPENSE.to_owned()],
                     transfers: vec![TRANSFER.to_owned()],
@@ -621,8 +621,8 @@ fn flattenings() -> Vec<Flattening> {
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupMemberInUse),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupMemberInUse),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     expenses: Some(vec![EXPENSE.to_owned()]),
@@ -633,15 +633,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::MissingExchangeRate {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::MissingExchangeRate {
                     currency: "RON".to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupMissingExchangeRate),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupMissingExchangeRate),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     currency: Some("RON".to_owned()),
@@ -650,39 +650,39 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::Overflow,
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::Overflow,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupOverflow),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupOverflow),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::UnexpectedExchangeRate,
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::UnexpectedExchangeRate,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupUnexpectedExchangeRate),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupUnexpectedExchangeRate),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::UnknownCategory {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::UnknownCategory {
                     category: CATEGORY.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupUnknownCategory),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupUnknownCategory),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     category: Some(CATEGORY.to_owned()),
@@ -691,15 +691,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::UnknownExpense {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::UnknownExpense {
                     expense: EXPENSE.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupUnknownExpense),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupUnknownExpense),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     expense: Some(EXPENSE.to_owned()),
@@ -708,15 +708,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::UnknownMember {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::UnknownMember {
                     member: MEMBER.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupUnknownMember),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupUnknownMember),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     member: Some(MEMBER.to_owned()),
@@ -725,15 +725,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::UnknownTransfer {
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::UnknownTransfer {
                     transfer: TRANSFER.to_owned(),
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupUnknownTransfer),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupUnknownTransfer),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     transfer: Some(TRANSFER.to_owned()),
@@ -742,13 +742,13 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Group {
-                failure: GroupFailure::UnsupportedFormat { format: 3 },
+            error: EranosError::ExpenseGroup {
+                failure: ExpenseGroupFailure::UnsupportedFormat { format: 3 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Group,
-                failure: Some(FailureKind::GroupUnsupportedFormat),
+                kind: ErrorKind::ExpenseGroup,
+                failure: Some(FailureKind::ExpenseGroupUnsupportedFormat),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     format: Some(3),

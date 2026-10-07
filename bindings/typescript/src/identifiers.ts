@@ -13,7 +13,7 @@ declare const expenseBrand: unique symbol;
 declare const transferBrand: unique symbol;
 
 /** The identifier of a group: a hyphenated UUID the library gave it. */
-export type GroupId = string & {
+export type ExpenseGroupId = string & {
     /** What sets the identifier of a group apart from other text and other identifiers: no value has it. */
     readonly [groupBrand]: never;
 };
@@ -48,8 +48,8 @@ export type TransferId = string & {
  * @param text - The identifier's text
  * @returns The identifier
  */
-export function groupId(text: string): GroupId {
-    return text as GroupId;
+export function groupId(text: string): ExpenseGroupId {
+    return text as ExpenseGroupId;
 }
 
 /**

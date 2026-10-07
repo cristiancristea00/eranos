@@ -53,7 +53,7 @@ FAILURES = {
     'Expense': Conversion(kind=generated.ExpenseFailure, table=_errors._EXPENSE_FAILURES, error=_errors.ExpenseError),
     'Settlement': Conversion(kind=generated.SettlementFailure, table=_errors._SETTLEMENT_FAILURES, error=_errors.SettlementError),
     'Transfer': Conversion(kind=generated.TransferFailure, table=_errors._TRANSFER_FAILURES, error=_errors.TransferError),
-    'Group': Conversion(kind=generated.GroupFailure, table=_errors._GROUP_FAILURES, error=_errors.GroupError),
+    'ExpenseGroup': Conversion(kind=generated.ExpenseGroupFailure, table=_errors._EXPENSE_GROUP_FAILURES, error=_errors.ExpenseGroupError),
     'Language': Conversion(kind=generated.LanguageFailure, table=_errors._LANGUAGE_FAILURES, error=_errors.LanguageError),
 }
 """How each module's failure converts, by the module's name."""

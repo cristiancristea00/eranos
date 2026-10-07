@@ -3,7 +3,7 @@ package eranos
 /**
  * A label the group gives expenses: "Food".
  *
- * A new category has no identifier; [Group.add] gives it one. The built-in category, Uncategorised, holds every expense
+ * A new category has no identifier; [ExpenseGroup.add] gives it one. The built-in category, Uncategorised, holds every expense
  * without another.
  */
 public class Category internal constructor(

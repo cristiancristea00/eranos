@@ -10,21 +10,23 @@ use std::task::{Context, Poll, Waker};
 use eranos::{Currency, MemberId};
 
 use super::*;
-use crate::group::GroupHandle;
+use crate::expense_group::ExpenseGroupHandle;
 use crate::settlement::SettlementStrategy;
-use crate::{GroupFailure, IdFailure};
+use crate::{ExpenseGroupFailure, IdFailure};
 
 /// The group handle and the identifiers of an entry of every kind.
 struct Flat {
     ana: String,
     dinner: String,
     food: String,
-    handle: GroupHandle,
+    handle: ExpenseGroupHandle,
     repayment: String,
 }
 
 fn flat() -> Flat {
-    let mut group = Group::builder("Flat", Currency::EUR).build().unwrap();
+    let mut group = ExpenseGroup::builder("Flat", Currency::EUR)
+        .build()
+        .unwrap();
     let ana = group
         .add_member(eranos::Member::builder("Ana").build().unwrap())
         .unwrap();
@@ -51,7 +53,7 @@ fn flat() -> Flat {
         ana: ana.to_string(),
         dinner: dinner.to_string(),
         food: food.to_string(),
-        handle: GroupHandle::from(group),
+        handle: ExpenseGroupHandle::from(group),
         repayment: repayment.to_string(),
     }
 }
@@ -111,8 +113,8 @@ fn a_released_handle_reads_nothing_and_holds_no_lock() {
     let reader = flat.handle.read().unwrap();
     assert!(matches!(
         flat.handle.try_write_lock(),
-        Err(EranosError::Group {
-            failure: GroupFailure::Busy,
+        Err(EranosError::ExpenseGroup {
+            failure: ExpenseGroupFailure::Busy,
             ..
         })
     ));
@@ -176,8 +178,8 @@ fn a_change_waits_for_every_open_handle() {
     drop(dropped);
     assert!(matches!(
         archiving.as_mut().poll(&mut context),
-        Poll::Ready(Err(EranosError::Group {
-            failure: GroupFailure::UnknownMember { .. },
+        Poll::Ready(Err(EranosError::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownMember { .. },
             ..
         }))
     ));

@@ -22,7 +22,7 @@ const PLAIN: [&str; 2] = ["CalendarDate", "TimeOfDay"];
 const WRITTEN: [&str; 1] = ["Money"];
 
 /// The records the group's constructor takes, which no call does.
-const CONSTRUCTED: [&str; 1] = ["NewGroup"];
+const CONSTRUCTED: [&str; 1] = ["NewExpenseGroup"];
 
 /// The records whose lists the templates answer with: the list of every
 /// currency.

@@ -11,8 +11,8 @@ from eranos import (
     Currency,
     Email,
     EranosError,
-    Group,
-    GroupError,
+    ExpenseGroup,
+    ExpenseGroupError,
     Iban,
     IbanAccountDetails,
     Language,
@@ -88,7 +88,7 @@ class CheckRow(Row):
         return self.input, self.kind, self.result
 
 
-def the_group() -> Group:
+def the_group() -> ExpenseGroup:
     """
     Print section 1: make the group, change its details, and show them.
 
@@ -97,7 +97,7 @@ def the_group() -> Group:
 
     """
     section('1. The group')
-    group = Group.create('Lisbon', Currency('EUR'), description='A week by the Atlantic', language=Language('pt-pt'))
+    group = ExpenseGroup.create('Lisbon', Currency('EUR'), description='A week by the Atlantic', language=Language('pt-pt'))
     blank = refusal(lambda: group.set_name('   '))
     group.set_name('Lisbon and Porto')
     group.set_description('A week by the Atlantic, with a day in Porto')
@@ -121,8 +121,8 @@ def the_group() -> Group:
         f'  error: {message(blank)}',
     )
 
-    assert isinstance(blank, GroupError)
-    assert blank.failure == GroupError.EmptyName()
+    assert isinstance(blank, ExpenseGroupError)
+    assert blank.failure == ExpenseGroupError.EmptyName()
     assert group.name() == 'Lisbon and Porto'
     assert tag == 'pt-PT'
     return group
@@ -149,7 +149,7 @@ def _describe(account: Account) -> str:
             assert_never(details)
 
 
-def _print_members(group: Group) -> None:
+def _print_members(group: ExpenseGroup) -> None:
     """
     Print every member with their contact details and accounts.
 
@@ -221,7 +221,7 @@ def _phone(text: str) -> CheckRow:
     )
 
 
-def _validation(group: Group) -> None:
+def _validation(group: ExpenseGroup) -> None:
     """
     Print what the library checks in a member's details: IBANs, emails, phone numbers, and required text.
 
@@ -249,7 +249,7 @@ def _validation(group: Group) -> None:
     )
 
 
-def members(group: Group) -> People:
+def members(group: ExpenseGroup) -> People:
     """
     Print section 2: add the members, edit one, and show how the library checks their details.
 
@@ -300,7 +300,7 @@ def members(group: Group) -> People:
     return People(ana=ana, bob=bob, carol=carol, dan=dan, eva=eva, filip=filip)
 
 
-def add_categories(group: Group) -> Categories:
+def add_categories(group: ExpenseGroup) -> Categories:
     """
     Print section 3: add the categories, rename one, and show what the group refuses.
 
@@ -337,10 +337,10 @@ def add_categories(group: Group) -> Categories:
         2,
     )
 
-    assert isinstance(homonym, GroupError)
-    assert homonym.failure == GroupError.DuplicateCategoryName(existing=food)
-    assert isinstance(built_in, GroupError)
-    assert built_in.failure == GroupError.BuiltInCategory()
+    assert isinstance(homonym, ExpenseGroupError)
+    assert homonym.failure == ExpenseGroupError.DuplicateCategoryName(existing=food)
+    assert isinstance(built_in, ExpenseGroupError)
+    assert built_in.failure == ExpenseGroupError.BuiltInCategory()
     renamed = group.category(transport)
     assert renamed is not None
     assert renamed.name == 'Getting around'

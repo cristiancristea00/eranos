@@ -181,14 +181,14 @@ builds are all up to date, takes about 7 minutes on an Apple M4 Pro, two
 fifths of it clang-tidy's pass over the C and C++ translation units, each
 of which parses the layer's header again:
 
-| Gates                                                                  |  Warm | Most of it                                                          |
-| ---------------------------------------------------------------------- | ----: | ------------------------------------------------------------------- |
-| 1–9, the Rust checks, the target lints, and the examples               |  37 s | the two test runs, 16 s and 14 s                                    |
-| 10–11, the host library and its sources                                |   4 s |                                                                     |
-| 12, the Swift package                                                  |  65 s | the analyzer, 29 s, and the examples' clean build, 22 s             |
-| 13–16, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages |  33 s | the TypeScript package, 12 s                                        |
+| Gates                                                                  | Warm  | Most of it                                                          |
+| ---------------------------------------------------------------------- | ----- | ------------------------------------------------------------------- |
+| 1–9, the Rust checks, the target lints, and the examples               | 37 s  | the two test runs, 16 s and 14 s                                    |
+| 10–11, the host library and its sources                                | 4 s   |                                                                     |
+| 12, the Swift package                                                  | 65 s  | the analyzer, 29 s, and the examples' clean build, 22 s             |
+| 13–16, the Kotlin, Java, TypeScript, and Kotlin Multiplatform packages | 33 s  | the TypeScript package, 12 s                                        |
 | 17, the C and C++ packages                                             | 178 s | clang-tidy, 28 s on the C tests and ports and 138 s on the C++ ones |
-| 18, the Python package                                                 |   3 s | Sphinx, 2 s                                                         |
+| 18, the Python package                                                 | 3 s   | Sphinx, 2 s                                                         |
 | 19, the ports                                                          | 102 s | the C++ ports' builds, 62 s                                         |
 
 ```sh
@@ -307,12 +307,12 @@ profile on an Apple M4 Pro, after touching one file, with the library as
 one crate and as thirteen:
 
 | Rebuild after touching                    | One crate | Thirteen crates |
-| ----------------------------------------- | --------: | --------------: |
-| `cargo build -p eranos`, the group        |    0.65 s |          0.67 s |
-| `cargo build -p eranos`, money            |    0.64 s |          1.70 s |
-| the touched crate's unit tests, the group |     1.1 s |           1.2 s |
-| the touched crate's unit tests, money     |     1.1 s |           2.1 s |
-| every test target (`--no-run`), money     |     1.9 s |           6.4 s |
+| ----------------------------------------- | --------- | --------------- |
+| `cargo build -p eranos`, the group        | 0.65 s    | 0.67 s          |
+| `cargo build -p eranos`, money            | 0.64 s    | 1.70 s          |
+| the touched crate's unit tests, the group | 1.1 s     | 1.2 s           |
+| the touched crate's unit tests, money     | 1.1 s     | 2.1 s           |
+| every test target (`--no-run`), money     | 1.9 s     | 6.4 s           |
 
 The split buys layers the compiler enforces, crates whose APIs stand on
 their own, and smaller units, at those seconds.
@@ -440,8 +440,8 @@ breaking.
    where the field order of [AGENTS.md](../AGENTS.md) puts it, in the
    builder and the `*Record` struct too, and its getter and setter go where
    the accessor order puts them.
-2. Validate it in the builder's `build()`, or in `Group::check_*` when the
-   rule depends on the group.
+2. Validate it in the builder's `build()`, or in `ExpenseGroup::check_*`
+   when the rule depends on the group.
 3. With `serde`: add `#[serde(skip_serializing_if = …)]` for an optional
    field, and the field with `#[serde(default)]` to the type's `*Record`
    struct, so data written before the field existed still loads.
@@ -482,40 +482,42 @@ joins its crate's enum in that crate's `error.rs`, in the group of the
 subject it reports on, as [AGENTS.md](../AGENTS.md) orders variants; its
 message is lowercase, has no trailing full stop, and never repeats the
 rejected text. Pin the message in its enum's list in `tests/errors.rs`, and
-name the variant in the `# Errors` section of every function that can
-return it. Give the enum's conversion trait (`FromGroupError` and the like,
-beside the enum) a method for it, in variant order, taking what the
-variant holds and the message, and its arm in the provided `from_…`; add
-its row to the conversion test in the crate's `error/tests.rs`. The binding
-core then fails to build until the module's failure enum in
-`crates/eranos-bindings/src/error.rs` (`GroupFailure` for `GroupError`,
-and the like) has a case for the variant, in the same place, with what
-it holds, and its row in that crate's `error/tests.rs`; the UniFFI glue's copy of
-the failure is stamped from its `#[mirrored]` definition, so it takes the
-case too. A new error type is a new case of `EranosError`, with a failure
-enum of its own, marked `#[mirrored]` and named in the core's `mirrors!`
-list in `crates/eranos-bindings/src/mirrors.rs`, without which a glue
-signature that names it fails to build. The Swift layer's failure enum in
+name the variant in the `# Errors` section of every function that can return
+it. Give the enum's conversion trait (`FromExpenseGroupError` and the like,
+beside the enum) a method for it, in variant order, taking what the variant
+holds and the message, and its arm in the provided `from_…`; add its row to
+the conversion test in the crate's `error/tests.rs`. The binding core then
+fails to build until the module's failure enum in
+`crates/eranos-bindings/src/error.rs` (`ExpenseGroupFailure` for
+`ExpenseGroupError`, and the like) has a case for the variant, in the same
+place, with what it holds, and its row in that crate's `error/tests.rs`; the
+UniFFI glue's copy of the failure is stamped from its `#[mirrored]`
+definition, so it takes the case too. A new error type is a new case of
+`EranosError`, with a failure enum of its own, marked `#[mirrored]` and
+named in the core's `mirrors!` list in
+`crates/eranos-bindings/src/mirrors.rs`, without which a glue signature that
+names it fails to build. The Swift layer's failure enum in
 `bindings/swift/Sources/Eranos/Errors/Failures.swift` gets the case, with
 its payload typed, the conversion from the generated one gets its arm, and
 `Tests/EranosTests/ErrorTests.swift` its row; so does the Kotlin layer's
-failure interface in `bindings/kotlin/eranos/src/main/kotlin/eranos/Failures.kt`,
-whose conversion fails to build without the case, and
-`src/test/kotlin/eranos/ErrorTest.kt`; the Java layer's failure
-interface in `bindings/java/src/main/java/eranos/`, whose conversion in
+failure interface in
+`bindings/kotlin/eranos/src/main/kotlin/eranos/Failures.kt`, whose
+conversion fails to build without the case, and
+`src/test/kotlin/eranos/ErrorTest.kt`; the Java layer's failure interface in
+`bindings/java/src/main/java/eranos/`, whose conversion in
 `EranosException.java` fails to build without the case, and
 `src/test/java/eranos/ErrorTest.java`; and the TypeScript layer's failure
 union in `bindings/typescript/src/errors.ts`, whose conversion fails to
-type-check without the case, and `test/errors.test.ts`. The Python
-layer's error class of the module in `bindings/python/src/eranos/_errors.py`
-gets a nested dataclass for the case, with what it holds typed, a member
-of the module's failure union (`GroupFailure`), and a row in the module's
+type-check without the case, and `test/errors.test.ts`. The Python layer's
+error class of the module in `bindings/python/src/eranos/_errors.py` gets a
+nested dataclass for the case, with what it holds typed, a member of the
+module's failure union (`ExpenseGroupFailure`), and a row in the module's
 conversion table, keyed by the generated case, which
 `tests/test_conversions.py` checks against every case the generated module
 writes. A new error type is also a registration in the conversion table of
-`EranosException.java`, which the Java error test checks, and in the
-Python layer's table of the generated error's cases, `_ERRORS`, with an
-error class of its own.
+`EranosException.java`, which the Java error test checks, and in the Python
+layer's table of the generated error's cases, `_ERRORS`, with an error class
+of its own.
 
 ### 3.7 A lint exception
 
@@ -597,17 +599,18 @@ When code in one crate needs something another crate holds:
 
 ### 3.10 A new group method
 
-1. Add it to `Group` in `crates/eranos-group/src/lib.rs`, under the section
-   of the field it reads or changes, with its `# Errors`.
+1. Add it to `ExpenseGroup` in `crates/eranos-expense-group/src/lib.rs`,
+   under the section of the field it reads or changes, with its `# Errors`.
 2. A method whose time grows with the group, as a currency change's does,
    is written as `<name>_async`: an `async fn` that reports its work to a
    `Pacer`, returned in a `Cooperative`, with the synchronous method as its
    `.complete()`. A change writes nothing to the group before its last
    yield, so a dropped call changes nothing.
-3. Mirror it on `SharedGroup` in `crates/eranos-group/src/shared.rs`, in the
-   same section and under the same name: a read through `read_with`, a
-   change through `write_with`, each returning owned values; a method that
-   yields awaits the group's `_async` method while it holds the lock.
+3. Mirror it on `SharedExpenseGroup` in
+   `crates/eranos-expense-group/src/shared.rs`, in the same section and
+   under the same name: a read through `read_with`, a change through
+   `write_with`, each returning owned values; a method that yields awaits
+   the group's `_async` method while it holds the lock.
 4. Compare its result with the group's in the shared group's tests
    (`every_read_returns_what_the_group_returns` or
    `every_change_does_what_the_group_does`), and add its future to
@@ -615,52 +618,59 @@ When code in one crate needs something another crate holds:
 5. Forward it in the binding core: a function over the group in
    `crates/eranos-bindings/src/operations.rs`, named as the call, which
    converts the records and the answer; then the call in the trait
-   `GroupCalls` of `calls.rs`, in its section, with the synchronous form's
-   signature, a summary that ends with a full stop, `#[read]` or
+   `ExpenseGroupCalls` of `calls.rs`, in its section, with the synchronous
+   form's signature, a summary that ends with a full stop, `#[read]` or
    `#[write]`, and `#[infallible]` when the operation cannot fail. Both
-   forms on `GroupHandle` and, for a read, the form on `GroupReader` are
-   written from it, with their `# Errors`. A call whose asynchronous form
-   works before it takes the lock or while it holds it, as a currency
-   change checks its rates first and a settlement yields, names a
-   hand-written body in `group.rs` with `#[async_body = group::<name>]`.
-   Test the conversion in `operations/tests.rs` and the two forms in
-   `group/tests.rs` (`every_read_answers_alike_in_both_forms` or the
-   change's `*_change_alike_in_both_forms`).
-6. The UniFFI glue's `Group` and `GroupReader` take both forms and the
-   read's from the same trait, with the core's documentation, through the
-   core's `group_calls!` table in `crates/eranos-uniffi/src/objects.rs`: a
-   parameter the trait takes as optional text crosses as an owned
-   `Option<String>`, and the rest as the core takes them.
+   forms on `ExpenseGroupHandle` and, for a read, the form on
+   `ExpenseGroupReader` are written from it, with their `# Errors`. A call
+   whose asynchronous form works before it takes the lock or while it holds
+   it, as a currency change checks its rates first and a settlement yields,
+   names a hand-written body in `group.rs` with
+   `#[async_body = expense_group::<name>]`. Test the conversion in
+   `operations/tests.rs` and the two forms in `group/tests.rs`
+   (`every_read_answers_alike_in_both_forms` or the change's
+   `*_change_alike_in_both_forms`).
+6. The UniFFI glue's `ExpenseGroup` and `ExpenseGroupReader` take both forms
+   and the read's from the same trait, with the core's documentation,
+   through the core's `expense_group_calls!` table in
+   `crates/eranos-uniffi/src/objects.rs`: a parameter the trait takes as
+   optional text crosses as an owned `Option<String>`, and the rest as the
+   core takes them.
 7. Add both forms, one name overloaded by `async`, to the Swift layer's
-   `Group` in `bindings/swift/Sources/Eranos/Group/Group+<section>.swift`,
+   `ExpenseGroup` in
+   `bindings/swift/Sources/Eranos/ExpenseGroup/ExpenseGroup+<section>.swift`,
    named by the Swift API Design Guidelines, and a read to its
-   `GroupReader`; call them in `Tests/EranosTests/GroupTests.swift`.
-8. Add both forms to the Kotlin layer's `Group` in
-   `bindings/kotlin/eranos/src/main/kotlin/eranos/Group.kt`, the `suspend`
-   one under the call's name and its twin with `Blocking` after it, and a
-   read to its `GroupReader`; call them in `GroupTest.kt`, and record the
-   API with `./gradlew :eranos:apiDump`.
-9. Add both forms to the Java layer's `Group` in
-   `bindings/java/src/main/java/eranos/Group.java`, the blocking one under
-   the call's name and its twin with `Async` after it, and a read to its
-   `GroupReader`; call them in `GroupTest.java`.
-10. Add both forms to the TypeScript layer's `Group` in
-    `bindings/typescript/src/group.ts`, the Promise under the call's name
-    and its twin with `Sync` after it, and a read to its `GroupReader` in
-    `group_reader.ts`; call them in `test/group.test.ts`.
-11. Add both forms to the Python layer's `Group` in
-    `bindings/python/src/eranos/_group.py`, the blocking one under the
-    call's name and its coroutine with `_async` after it, and a read to its
-    `GroupReader` in `_group_reader.py`; call them in `tests/test_group.py`
-    and `tests/test_asynchronous.py`.
-12. Run `cargo xtask generate`: the C glue's `EranosGroup` takes both
-    forms and `EranosGroupReader` the read's, from the same trait, with an
-    outcome for a new kind of answer; a call that takes optional text gets
-    a twin of each form that passes none, `clear_` for its `set_`. Add the
-    call to the C layer in `bindings/c/include/eranos/group.h` and a read
-    to `group_reader.h`, then to the C++ layer's `Group` in
-    `bindings/cpp/include/eranos/group.hpp` and a read to
-    `group_reader.hpp`; call them in each package's `tests`.
+   `ExpenseGroupReader`; call them in
+   `Tests/EranosTests/ExpenseGroupTests.swift`.
+8. Add both forms to the Kotlin layer's `ExpenseGroup` in
+   `bindings/kotlin/eranos/src/main/kotlin/eranos/ExpenseGroup.kt`, the
+   `suspend` one under the call's name and its twin with `Blocking` after
+   it, and a read to its `ExpenseGroupReader`; call them in
+   `ExpenseGroupTest.kt`, and record the API with
+   `./gradlew :eranos:apiDump`.
+9. Add both forms to the Java layer's `ExpenseGroup` in
+   `bindings/java/src/main/java/eranos/ExpenseGroup.java`, the blocking one
+   under the call's name and its twin with `Async` after it, and a read to
+   its `ExpenseGroupReader`; call them in `ExpenseGroupTest.java`.
+10. Add both forms to the TypeScript layer's `ExpenseGroup` in
+    `bindings/typescript/src/expense_group.ts`, the Promise under the call's
+    name and its twin with `Sync` after it, and a read to its
+    `ExpenseGroupReader` in `expense_group_reader.ts`; call them in
+    `test/expense_group.test.ts`.
+11. Add both forms to the Python layer's `ExpenseGroup` in
+    `bindings/python/src/eranos/_expense_group.py`, the blocking one under
+    the call's name and its coroutine with `_async` after it, and a read to
+    its `ExpenseGroupReader` in `_expense_group_reader.py`; call them in
+    `tests/test_expense_group.py` and `tests/test_asynchronous.py`.
+12. Run `cargo xtask generate`: the C glue's `EranosExpenseGroup` takes both
+    forms and `EranosExpenseGroupReader` the read's, from the same trait,
+    with an outcome for a new kind of answer; a call that takes optional
+    text gets a twin of each form that passes none, `clear_` for its `set_`.
+    Add the call to the C layer in
+    `bindings/c/include/eranos/expense_group.h` and a read to
+    `expense_group_reader.h`, then to the C++ layer's `ExpenseGroup` in
+    `bindings/cpp/include/eranos/expense_group.hpp` and a read to
+    `expense_group_reader.hpp`; call them in each package's `tests`.
 
 ## 4. Examples and benchmarks
 

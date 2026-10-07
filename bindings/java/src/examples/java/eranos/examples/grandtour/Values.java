@@ -14,7 +14,7 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
-import eranos.Group;
+import eranos.ExpenseGroup;
 import eranos.Language;
 import eranos.Member;
 import eranos.MemberId;
@@ -119,7 +119,7 @@ final class Values {
         check(150 == parts.hundredths());
     }
 
-    static void datesAndIdentifiers(Group group, People people) throws EranosException {
+    static void datesAndIdentifiers(ExpenseGroup group, People people) throws EranosException {
         CalendarDate date = CalendarDate.parse("2026-10-01");
         TimeOfDay time = TimeOfDay.parse("22:15");
         MemberId parsed = new MemberId(people.ana().value());
@@ -158,7 +158,7 @@ final class Values {
         check(people.ana().equals(parsed));
     }
 
-    static void values(Group group, People people) throws EranosException {
+    static void values(ExpenseGroup group, People people) throws EranosException {
         section("13. Values on their own");
         currencies();
         amounts();

@@ -3,7 +3,7 @@
 //! outside the group, or let a refusal of the library through as a success
 //! would give every binding the same wrong answer.
 
-use eranos::{CategoryId, Currency, ExpenseId, Group, MemberId, TransferId};
+use eranos::{CategoryId, Currency, ExpenseGroup, ExpenseId, MemberId, TransferId};
 
 use crate::calendar::CalendarDate;
 use crate::expense::{Expense, ExpenseSplit, Split};
@@ -14,7 +14,7 @@ use crate::operations;
 use crate::settlement::{Settlement, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{
-    CategoryFailure, EranosError, ExpenseFailure, GroupFailure, IdFailure, LanguageFailure,
+    CategoryFailure, EranosError, ExpenseFailure, ExpenseGroupFailure, IdFailure, LanguageFailure,
     MemberFailure, MoneyFailure, TransferFailure,
 };
 
@@ -25,7 +25,7 @@ struct Flat {
     bob: String,
     dinner: String,
     food: String,
-    group: Group,
+    group: ExpenseGroup,
     repayment: String,
 }
 
@@ -101,7 +101,9 @@ fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
 }
 
 fn flat() -> Flat {
-    let mut group = Group::builder("Flat", Currency::EUR).build().unwrap();
+    let mut group = ExpenseGroup::builder("Flat", Currency::EUR)
+        .build()
+        .unwrap();
     let ana = operations::add_member(&mut group, &new_member("Ana")).unwrap();
     let bob = operations::add_member(&mut group, &new_member("Bob")).unwrap();
     let food = operations::add_category(&mut group, &new_category("Food")).unwrap();
@@ -198,7 +200,7 @@ fn every_read_converts_what_the_group_holds() {
     );
     assert_eq!(operations::description(group), None);
     assert_eq!(operations::language(group), None);
-    let saved: Group = serde_json::from_str(&operations::save(group)).unwrap();
+    let saved: ExpenseGroup = serde_json::from_str(&operations::save(group)).unwrap();
     assert_eq!(&saved, group);
 
     let (category, expense) = (
@@ -231,7 +233,7 @@ fn every_read_converts_what_the_group_holds() {
 /// entry, or answer as if no entry had it.
 #[test]
 fn every_call_by_identifier_refuses_text_that_is_not_one() {
-    let calls: [fn(&mut Group, &str) -> Option<EranosError>; 13] = [
+    let calls: [fn(&mut ExpenseGroup, &str) -> Option<EranosError>; 13] = [
         |group, id| operations::category(group, id).err(),
         |group, id| operations::remove_category(group, id).err(),
         |group, id| operations::expense(group, id).err(),
@@ -329,25 +331,25 @@ fn categories_change_through_the_records() {
             refusals,
             [
                 EranosError::IdentifierGiven { .. },
-                EranosError::Group {
-                    failure: GroupFailure::DuplicateCategoryName { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateCategoryName { .. },
                     ..
                 },
                 EranosError::IdentifierMissing { .. },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownCategory { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownCategory { .. },
                     ..
                 },
                 EranosError::Category {
                     failure: CategoryFailure::EmptyName,
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::DuplicateCategoryName { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateCategoryName { .. },
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::BuiltInCategory,
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::BuiltInCategory,
                     ..
                 },
             ]
@@ -358,8 +360,8 @@ fn categories_change_through_the_records() {
     assert_eq!(operations::remove_category(group, &travel), Ok(renamed));
     assert!(matches!(
         operations::remove_category(group, &travel),
-        Err(EranosError::Group {
-            failure: GroupFailure::UnknownCategory { .. },
+        Err(EranosError::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownCategory { .. },
             ..
         })
     ));
@@ -425,21 +427,21 @@ fn expenses_change_through_the_records() {
             refusals,
             [
                 EranosError::IdentifierGiven { .. },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
                 EranosError::IdentifierMissing { .. },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownExpense { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownExpense { .. },
                     ..
                 },
                 EranosError::Expense {
                     failure: ExpenseFailure::EmptyName,
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
             ]
@@ -450,8 +452,8 @@ fn expenses_change_through_the_records() {
     assert_eq!(operations::remove_expense(group, &lunch), Ok(replacement));
     assert!(matches!(
         operations::remove_expense(group, &lunch),
-        Err(EranosError::Group {
-            failure: GroupFailure::UnknownExpense { .. },
+        Err(EranosError::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownExpense { .. },
             ..
         })
     ));
@@ -515,28 +517,28 @@ fn members_change_through_the_records() {
                     ..
                 },
                 EranosError::IdentifierMissing { .. },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
                 EranosError::Member {
                     failure: MemberFailure::EmptyFirstName,
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::MemberInUse { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::MemberInUse { .. },
                     ..
                 },
             ]
@@ -606,21 +608,21 @@ fn transfers_change_through_the_records() {
             refusals,
             [
                 EranosError::IdentifierGiven { .. },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
                 EranosError::IdentifierMissing { .. },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownTransfer { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownTransfer { .. },
                     ..
                 },
                 EranosError::Transfer {
                     failure: TransferFailure::SameMember,
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::UnknownMember { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
             ]
@@ -634,8 +636,8 @@ fn transfers_change_through_the_records() {
     );
     assert!(matches!(
         operations::remove_transfer(group, &payment),
-        Err(EranosError::Group {
-            failure: GroupFailure::UnknownTransfer { .. },
+        Err(EranosError::ExpenseGroup {
+            failure: ExpenseGroupFailure::UnknownTransfer { .. },
             ..
         })
     ));
@@ -651,8 +653,8 @@ fn the_name_description_and_language_change_through_text() {
     assert_eq!(operations::name(group), "Home");
     assert!(matches!(
         operations::set_name(group, " "),
-        Err(EranosError::Group {
-            failure: GroupFailure::EmptyName,
+        Err(EranosError::ExpenseGroup {
+            failure: ExpenseGroupFailure::EmptyName,
             ..
         })
     ));
@@ -729,8 +731,8 @@ fn the_currency_changes_at_the_given_rates() {
                     failure: MoneyFailure::UnknownCurrency,
                     ..
                 },
-                EranosError::Group {
-                    failure: GroupFailure::MissingExchangeRate { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::MissingExchangeRate { .. },
                     ..
                 },
             ]

@@ -12,14 +12,14 @@ struct Tampering {
 /// What loading the saved form `text` refuses: the error the replay of its entries reports.
 func refusal(_ text: String) -> EranosError {
     do {
-        _ = try Group.load(text)
+        _ = try ExpenseGroup.load(text)
         preconditionFailure("the change must be refused")
     } catch {
         return error
     }
 }
 
-func savingAndLoading(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) {
+func savingAndLoading(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) {
     section("12. Saving and loading")
     let saved = try group.save()
     print("""
@@ -39,11 +39,11 @@ func savingAndLoading(_ group: Group, _ people: People, _ categories: Categories
         precondition(nil != saved.firstRange(of: details), "\(details) is saved as it is")
         print("  \(account.name): \(details)")
     }
-    let loaded = try Group.load(saved)
+    let loaded = try ExpenseGroup.load(saved)
     print("""
         Loading replays every entry through the same checks as adding it and rebuilds the
-        totals: the loaded group equals the saved one. Reading a SavedGroup and loading it
-        with into_group reports a refusal as a typed error instead of a message:
+        totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and
+        loading it with into_expense_group reports a refusal as a typed error, not as text:
         """)
     let tampered = [
         Tampering(change: "\"format\": 3", text: saved.replacing("\"format\": 2", with: "\"format\": 3", maxReplacements: 1)),
@@ -51,12 +51,12 @@ func savingAndLoading(_ group: Group, _ people: People, _ categories: Categories
         Tampering(change: "Lodging renamed FOOD", text: saved.replacing("\"name\": \"Lodging\"", with: "\"name\": \"FOOD\"", maxReplacements: 1))
     ]
     var rows: [LoadRow] = []
-    var failures: [GroupFailure] = []
+    var failures: [ExpenseGroupFailure] = []
     for tampering in tampered {
         precondition(tampering.text != saved, "\(tampering.change) changes the file")
         let error = refusal(tampering.text)
         rows.append(LoadRow(change: tampering.change, message: error.detail))
-        guard case let .group(failure, _) = error else {
+        guard case let .expenseGroup(failure, _) = error else {
             preconditionFailure("the replay refuses \(tampering.change) with the group's failure")
         }
         failures.append(failure)

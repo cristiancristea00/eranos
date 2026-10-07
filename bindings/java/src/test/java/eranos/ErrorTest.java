@@ -102,7 +102,7 @@ class ErrorTest {
             case EranosException.Expense expense -> expense.failure();
             case EranosException.Settlement settlement -> settlement.failure();
             case EranosException.Transfer transfer -> transfer.failure();
-            case EranosException.Group group -> group.failure();
+            case EranosException.ExpenseGroup group -> group.failure();
             case EranosException.Language language -> language.failure();
             case EranosException.InvalidJson json -> new Position(json.line(), json.column());
         };
@@ -278,105 +278,119 @@ class ErrorTest {
                             new eranos.internal.EranosException.Transfer(
                                     eranos.internal.TransferFailure.NON_POSITIVE_AMOUNT, "detail")),
                     new Conversion(
-                            new GroupFailure.UnsupportedFormat(26L),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.UnsupportedFormat(26L),
+                            new ExpenseGroupFailure.UnsupportedFormat(26L),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.UnsupportedFormat(26L),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.EmptyName(),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.EmptyName(), "detail")),
+                            new ExpenseGroupFailure.EmptyName(),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.EmptyName(), "detail")),
                     new Conversion(
-                            new GroupFailure.MissingExchangeRate(Currency.known("RON")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.MissingExchangeRate("RON"),
+                            new ExpenseGroupFailure.MissingExchangeRate(Currency.known("RON")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.MissingExchangeRate(
+                                            "RON"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.UnexpectedExchangeRate(),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.UnexpectedExchangeRate(),
+                            new ExpenseGroupFailure.UnexpectedExchangeRate(),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure
+                                            .UnexpectedExchangeRate(),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.DuplicateExchangeRate(Currency.known("GBP")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.DuplicateExchangeRate("GBP"),
+                            new ExpenseGroupFailure.DuplicateExchangeRate(Currency.known("GBP")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.DuplicateExchangeRate(
+                                            "GBP"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.DuplicateMember(new MemberId("member-16")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.DuplicateMember("member-16"),
+                            new ExpenseGroupFailure.DuplicateMember(new MemberId("member-16")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.DuplicateMember(
+                                            "member-16"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.UnknownMember(new MemberId("member-24")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.UnknownMember("member-24"),
+                            new ExpenseGroupFailure.UnknownMember(new MemberId("member-24")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.UnknownMember(
+                                            "member-24"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.ArchivedMember(new MemberId("member-11")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.ArchivedMember("member-11"),
+                            new ExpenseGroupFailure.ArchivedMember(new MemberId("member-11")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.ArchivedMember(
+                                            "member-11"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.MemberInUse(
+                            new ExpenseGroupFailure.MemberInUse(
                                     new MemberId("member-19"),
                                     List.of(new ExpenseId("expenses-18")),
                                     List.of(new TransferId("transfers-20"))),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.MemberInUse(
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.MemberInUse(
                                             "member-19",
                                             List.of("expenses-18"),
                                             List.of("transfers-20")),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.DuplicateCategory(new CategoryId("category-12")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.DuplicateCategory(
+                            new ExpenseGroupFailure.DuplicateCategory(
+                                    new CategoryId("category-12")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.DuplicateCategory(
                                             "category-12"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.DuplicateCategoryName(new CategoryId("existing-13")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.DuplicateCategoryName(
+                            new ExpenseGroupFailure.DuplicateCategoryName(
+                                    new CategoryId("existing-13")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.DuplicateCategoryName(
                                             "existing-13"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.UnknownCategory(new CategoryId("category-22")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.UnknownCategory("category-22"),
+                            new ExpenseGroupFailure.UnknownCategory(new CategoryId("category-22")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.UnknownCategory(
+                                            "category-22"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.BuiltInCategory(),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.BuiltInCategory(), "detail")),
-                    new Conversion(
-                            new GroupFailure.DuplicateExpense(new ExpenseId("expense-15")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.DuplicateExpense("expense-15"),
+                            new ExpenseGroupFailure.BuiltInCategory(),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.BuiltInCategory(),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.UnknownExpense(new ExpenseId("expense-23")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.UnknownExpense("expense-23"),
+                            new ExpenseGroupFailure.DuplicateExpense(new ExpenseId("expense-15")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.DuplicateExpense(
+                                            "expense-15"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.DuplicateTransfer(new TransferId("transfer-17")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.DuplicateTransfer(
+                            new ExpenseGroupFailure.UnknownExpense(new ExpenseId("expense-23")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.UnknownExpense(
+                                            "expense-23"),
+                                    "detail")),
+                    new Conversion(
+                            new ExpenseGroupFailure.DuplicateTransfer(
+                                    new TransferId("transfer-17")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.DuplicateTransfer(
                                             "transfer-17"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.UnknownTransfer(new TransferId("transfer-25")),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.UnknownTransfer("transfer-25"),
+                            new ExpenseGroupFailure.UnknownTransfer(new TransferId("transfer-25")),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.UnknownTransfer(
+                                            "transfer-25"),
                                     "detail")),
                     new Conversion(
-                            new GroupFailure.Busy(),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.Busy(), "detail")),
+                            new ExpenseGroupFailure.Busy(),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.Busy(), "detail")),
                     new Conversion(
-                            new GroupFailure.Overflow(),
-                            new eranos.internal.EranosException.Group(
-                                    new eranos.internal.GroupFailure.Overflow(), "detail")),
+                            new ExpenseGroupFailure.Overflow(),
+                            new eranos.internal.EranosException.ExpenseGroup(
+                                    new eranos.internal.ExpenseGroupFailure.Overflow(), "detail")),
                     new Conversion(
                             new LanguageFailure.InvalidLanguage(),
                             new eranos.internal.EranosException.Language(

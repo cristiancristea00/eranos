@@ -8,7 +8,7 @@ import {
     type Split,
     CalendarDate,
     Currency,
-    Group,
+    ExpenseGroup,
     Money,
     SettlementStrategy,
     expenseTotal,
@@ -62,7 +62,7 @@ const paymentColumns: Columns<PaymentRow> = [
 
 await load();
 const euro = Currency.of('EUR');
-const group = Group.create('Weekend in Sinaia', euro);
+const group = ExpenseGroup.create('Weekend in Sinaia', euro);
 title(group.nameSync());
 printLines(
     `Three friends rent a cabin and buy groceries. The group keeps its books in ${group.currencySync().toString()}, so`,

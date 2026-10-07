@@ -80,7 +80,7 @@ func strategyName(_ strategy: SettlementStrategy) -> String {
 }
 
 /// Records an expense of `amount` EUR paid by `payer` and split equally.
-func spend(_ group: Group, _ name: String, _ amount: String, _ payer: Member.ID, _ participants: [Member.ID]) throws(EranosError) {
+func spend(_ group: ExpenseGroup, _ name: String, _ amount: String, _ payer: Member.ID, _ participants: [Member.ID]) throws(EranosError) {
     _ = try group.add(
         Expense(
             name: name,
@@ -92,7 +92,7 @@ func spend(_ group: Group, _ name: String, _ amount: String, _ payer: Member.ID,
     )
 }
 
-func printBalances(_ group: Group) throws(EranosError) {
+func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = try group.summary()
     printTable(
         try group.members().compactMap { member in
@@ -104,7 +104,7 @@ func printBalances(_ group: Group) throws(EranosError) {
     )
 }
 
-func printPayments(_ group: Group, _ settlement: Settlement) throws(EranosError) {
+func printPayments(_ group: ExpenseGroup, _ settlement: Settlement) throws(EranosError) {
     printTable(
         try settlement.payments.map { payment throws(EranosError) in
             PaymentRow(from: try names(group, [payment.from]), to: try names(group, [payment.to]), amount: payment.amount)
@@ -114,7 +114,7 @@ func printPayments(_ group: Group, _ settlement: Settlement) throws(EranosError)
 }
 
 /// Prints each strategy's plan with what it promises; returns the number of payments of each.
-func strategies(_ group: Group) throws(EranosError) -> Counts {
+func strategies(_ group: ExpenseGroup) throws(EranosError) -> Counts {
     section("3. Minimum transfers")
     let minimum = try group.settlement(by: .minimumTransfers)
     print("""
@@ -174,7 +174,7 @@ func strategies(_ group: Group) throws(EranosError) -> Counts {
 /// strategy's plan it took; returns the number of payments.
 func festival() throws(EranosError) -> Int {
     section("8. A larger group")
-    let group = try Group(name: "Festival", currency: euro)
+    let group = try ExpenseGroup(name: "Festival", currency: euro)
     var friends: [Member.ID] = []
     for number in 1...21 {
         friends.append(try group.add(Member(firstName: "Friend \(number)")))
@@ -208,7 +208,7 @@ func festival() throws(EranosError) -> Int {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(name: "Ski week", currency: euro)
+    let group = try ExpenseGroup(name: "Ski week", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
     let carol = try group.add(Member(firstName: "Carol"))

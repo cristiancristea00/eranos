@@ -13,7 +13,7 @@ use super::*;
 /// The documentation of a call with the summary `summary`.
 fn docs(summary: &str) -> crate::docs::Docs {
     let item: ItemTrait = syn::parse2(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             #[doc = #summary]
             #[read]
             fn call(&self) -> Result<(), EranosError>;
@@ -35,7 +35,7 @@ fn docs(summary: &str) -> crate::docs::Docs {
 fn the_objects_forward_every_form_to_the_core() {
     let calls = Calls::parse(
         &syn::parse2(quote! {
-            trait GroupCalls {
+            trait ExpenseGroupCalls {
                 /// The category with the identifier `id`.
                 #[read]
                 fn category(&self, id: &str) -> Result<Option<Category>, EranosError>;
@@ -59,7 +59,7 @@ fn the_objects_forward_every_form_to_the_core() {
     assert!(!category_doc.contains("]("));
     let expected: TokenStream = quote! {
         #[::uniffi::export]
-        impl Group {
+        impl ExpenseGroup {
             #[doc = #category_doc]
             pub(crate) fn category(&self, id: &str) -> ::std::result::Result<Option<Category>, EranosError> {
                 self.handle.category(id)
@@ -93,7 +93,7 @@ fn the_objects_forward_every_form_to_the_core() {
         }
 
         #[::uniffi::export]
-        impl GroupReader {
+        impl ExpenseGroupReader {
             #[doc = #category_read]
             pub(crate) fn category(&self, id: &str) -> ::std::result::Result<Option<Category>, EranosError> {
                 self.reader.category(id)

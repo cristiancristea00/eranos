@@ -25,8 +25,8 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
-import eranos.Group;
-import eranos.GroupFailure;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupFailure;
 import eranos.Member;
 import eranos.MemberCategoryTotals;
 import eranos.MemberId;
@@ -73,7 +73,8 @@ final class Totals {
                 .map(CategoryTotal::total);
     }
 
-    static void summary(Group group, People people, Categories categories) throws EranosException {
+    static void summary(ExpenseGroup group, People people, Categories categories)
+            throws EranosException {
         section("8. The summary");
         Summary summary = group.summary();
         System.out.print(
@@ -141,7 +142,8 @@ final class Totals {
         check(0 == sum(zero.currency(), nets).minorUnits());
     }
 
-    static void removingACategory(Group group, Categories categories) throws EranosException {
+    static void removingACategory(ExpenseGroup group, Categories categories)
+            throws EranosException {
         section("9. Removing a category");
         Category removed = group.removeCategory(categories.transport());
         CategoryId uncategorised = builtInCategory(group).orElseThrow();
@@ -155,7 +157,7 @@ final class Totals {
                         .formatted(removed.name(), message(builtIn)));
         printCategories(group);
 
-        check(Optional.of(new GroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
+        check(Optional.of(new ExpenseGroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
         check(group.category(categories.transport()).isEmpty());
         check(
                 Optional.of(eur("248.50"))
@@ -171,7 +173,7 @@ final class Totals {
                                                 .equals(expense.category())));
     }
 
-    static void newCurrency(Group group, People people) throws EranosException {
+    static void newCurrency(ExpenseGroup group, People people) throws EranosException {
         section("10. A new currency");
         Currency euro = Currency.of("EUR");
         Currency leu = Currency.of("RON");
@@ -197,7 +199,7 @@ final class Totals {
 
         Summary summary = group.summary();
         check(
-                Optional.of(new GroupFailure.MissingExchangeRate(euro))
+                Optional.of(new ExpenseGroupFailure.MissingExchangeRate(euro))
                         .equals(groupFailure(missing)));
         check(leu.equals(group.currency()));
         check(ron("6114.50").equals(summary.totalSpent()));
@@ -219,7 +221,7 @@ final class Totals {
         };
     }
 
-    static void settlingUp(Group group) throws EranosException {
+    static void settlingUp(ExpenseGroup group) throws EranosException {
         section("11. Settling up");
         List<StrategyRow> counts = new ArrayList<>();
         for (SettlementStrategy strategy : SettlementStrategy.values()) {

@@ -8,9 +8,9 @@ import eranos.Cost
 import eranos.Currency
 import eranos.EranosException
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseShares
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.Item
 import eranos.Member
 import eranos.MemberId
@@ -84,9 +84,9 @@ private fun receipt(
  * group itself is unchanged.
  */
 private fun preview(
-    group: Group,
+    group: ExpenseGroup,
     expense: Expense,
-): ExpenseShares? = Group.loadBlocking(group.saveBlocking()).use { copy -> copy.expenseSharesBlocking(copy.addBlocking(expense)) }
+): ExpenseShares? = ExpenseGroup.loadBlocking(group.saveBlocking()).use { copy -> copy.expenseSharesBlocking(copy.addBlocking(expense)) }
 
 /** What [member] consumed of the expense that [shares] divides. */
 private fun consumed(
@@ -96,7 +96,7 @@ private fun consumed(
 
 /** Prints the report of the dinner. */
 fun main() {
-    Group("Dinner at Caru' cu Bere", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Dinner at Caru' cu Bere", Currency.of("EUR")).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val carol = group.addBlocking(Member("Carol"))

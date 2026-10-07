@@ -19,7 +19,7 @@ from eranos import (
     Currency,
     ExchangeRate,
     Expense,
-    Group,
+    ExpenseGroup,
     LocalCost,
     Member,
     MemberId,
@@ -213,7 +213,7 @@ def october(day: int) -> CalendarDate:
     return CalendarDate(2026, 10, day)
 
 
-def name(group: Group, member: MemberId) -> str:
+def name(group: ExpenseGroup, member: MemberId) -> str:
     """
     Find the first name of member in group.
 
@@ -242,7 +242,7 @@ def cell(lines: Iterable[str]) -> str:
     return '\n'.join(lines)
 
 
-def built_in_category(group: Group) -> CategoryId:
+def built_in_category(group: ExpenseGroup) -> CategoryId:
     """
     Find the identifier of the built-in category, which the group lists first.
 
@@ -278,7 +278,7 @@ def _balance_row(member: Member, summary: Summary, zero: Money) -> BalanceRow:
     return BalanceRow(name=member.first_name, paid=found.paid, consumed=found.share, sent=found.sent, received=found.received, balance=found.balance)
 
 
-def print_balances(group: Group) -> None:
+def print_balances(group: ExpenseGroup) -> None:
     """
     Print what each member paid, consumed, sent, and received, and their balance.
 
@@ -291,7 +291,7 @@ def print_balances(group: Group) -> None:
     print_table(BalanceRow, [_balance_row(member, summary, zero) for member in group.members()], 1)
 
 
-def print_categories(group: Group) -> None:
+def print_categories(group: ExpenseGroup) -> None:
     """
     Print what the group spent in each category, and on how many expenses.
 
@@ -336,7 +336,7 @@ def _rate(cost: Cost) -> ExchangeRate:
             assert_never(cost)
 
 
-def _expense_row(group: Group, expense: Expense) -> EntryRow:
+def _expense_row(group: ExpenseGroup, expense: Expense) -> EntryRow:
     """
     Write the row of expense among the entries.
 
@@ -358,7 +358,7 @@ def _expense_row(group: Group, expense: Expense) -> EntryRow:
     )
 
 
-def _transfer_row(group: Group, transfer: Transfer) -> EntryRow:
+def _transfer_row(group: ExpenseGroup, transfer: Transfer) -> EntryRow:
     """
     Write the row of transfer among the entries.
 
@@ -381,7 +381,7 @@ def _transfer_row(group: Group, transfer: Transfer) -> EntryRow:
     )
 
 
-def print_entries(group: Group, shown: Callable[[Currency], bool]) -> None:
+def print_entries(group: ExpenseGroup, shown: Callable[[Currency], bool]) -> None:
     """
     Print every expense and transfer in a currency shown accepts, as entered and in the group currency.
 

@@ -81,33 +81,33 @@ class ConvertingTest {
                         () ->
                                 Converting.callUnfailing(
                                         () -> {
-                                            throw new eranos.internal.EranosException.Group(
-                                                    new eranos.internal.GroupFailure.Busy(),
+                                            throw new eranos.internal.EranosException.ExpenseGroup(
+                                                    new eranos.internal.ExpenseGroupFailure.Busy(),
                                                     "busy");
                                         }));
         assertEquals("busy", call.getMessage());
-        assertEquals(EranosException.Group.class, call.getCause().getClass());
+        assertEquals(EranosException.ExpenseGroup.class, call.getCause().getClass());
         IllegalStateException run =
                 assertThrows(
                         IllegalStateException.class,
                         () ->
                                 Converting.runUnfailing(
                                         () -> {
-                                            throw new eranos.internal.EranosException.Group(
-                                                    new eranos.internal.GroupFailure.Busy(),
+                                            throw new eranos.internal.EranosException.ExpenseGroup(
+                                                    new eranos.internal.ExpenseGroupFailure.Busy(),
                                                     "busy");
                                         }));
         assertEquals("busy", run.getMessage());
-        EranosException.Group refused =
+        EranosException.ExpenseGroup refused =
                 assertThrows(
-                        EranosException.Group.class,
+                        EranosException.ExpenseGroup.class,
                         () ->
                                 Converting.run(
                                         () -> {
-                                            throw new eranos.internal.EranosException.Group(
-                                                    new eranos.internal.GroupFailure.Busy(),
+                                            throw new eranos.internal.EranosException.ExpenseGroup(
+                                                    new eranos.internal.ExpenseGroupFailure.Busy(),
                                                     "busy");
                                         }));
-        assertEquals(new GroupFailure.Busy(), refused.failure());
+        assertEquals(new ExpenseGroupFailure.Busy(), refused.failure());
     }
 }

@@ -30,7 +30,7 @@ macro_rules! mirrors {
         $crate::mirror_expense_failure!($($callback)+);
         $crate::mirror_expense_shares!($($callback)+);
         $crate::mirror_expense_split!($($callback)+);
-        $crate::mirror_group_failure!($($callback)+);
+        $crate::mirror_expense_group_failure!($($callback)+);
         $crate::mirror_iban_reason!($($callback)+);
         $crate::mirror_id_failure!($($callback)+);
         $crate::mirror_item!($($callback)+);
@@ -45,7 +45,7 @@ macro_rules! mirrors {
         $crate::mirror_member_summary!($($callback)+);
         $crate::mirror_money!($($callback)+);
         $crate::mirror_money_failure!($($callback)+);
-        $crate::mirror_new_group!($($callback)+);
+        $crate::mirror_new_expense_group!($($callback)+);
         $crate::mirror_payment!($($callback)+);
         $crate::mirror_settlement!($($callback)+);
         $crate::mirror_settlement_failure!($($callback)+);

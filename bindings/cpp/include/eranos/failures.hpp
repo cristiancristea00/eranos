@@ -37,7 +37,7 @@ enum class ErrorKind : std::uint8_t {
     /// A failure of the transfer module.
     TRANSFER,
     /// A failure of the group module.
-    GROUP,
+    EXPENSE_GROUP,
     /// A failure of the language module.
     LANGUAGE,
     /// An entry to add has an identifier, which the group gives it.
@@ -128,44 +128,44 @@ enum class Failure : std::uint8_t {
     /// The amount is zero or negative.
     TRANSFER_NON_POSITIVE_AMOUNT,
     /// A saved group in a format this version does not read: a newer one, whose fields it would drop, or an earlier one.
-    GROUP_UNSUPPORTED_FORMAT,
+    EXPENSE_GROUP_UNSUPPORTED_FORMAT,
     /// A group name that is blank.
-    GROUP_EMPTY_NAME,
+    EXPENSE_GROUP_EMPTY_NAME,
     /// An entry in another currency than the group's has no exchange rate into the group currency: its cost is local, or a currency change gave no
     /// rate for its currency.
-    GROUP_MISSING_EXCHANGE_RATE,
+    EXPENSE_GROUP_MISSING_EXCHANGE_RATE,
     /// An entry in the group currency has a converted cost; only a local cost is in the group currency.
-    GROUP_UNEXPECTED_EXCHANGE_RATE,
+    EXPENSE_GROUP_UNEXPECTED_EXCHANGE_RATE,
     /// The same currency appears twice among the rates of a currency change.
-    GROUP_DUPLICATE_EXCHANGE_RATE,
+    EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE,
     /// A member with this ID already exists.
-    GROUP_DUPLICATE_MEMBER,
+    EXPENSE_GROUP_DUPLICATE_MEMBER,
     /// No member with this ID.
-    GROUP_UNKNOWN_MEMBER,
+    EXPENSE_GROUP_UNKNOWN_MEMBER,
     /// An archived member cannot join a new expense.
-    GROUP_ARCHIVED_MEMBER,
+    EXPENSE_GROUP_ARCHIVED_MEMBER,
     /// The member is still referenced and cannot be removed; archive it instead.
-    GROUP_MEMBER_IN_USE,
+    EXPENSE_GROUP_MEMBER_IN_USE,
     /// A category with this ID already exists.
-    GROUP_DUPLICATE_CATEGORY,
+    EXPENSE_GROUP_DUPLICATE_CATEGORY,
     /// Another category already has this name, compared by Unicode canonical caseless matching.
-    GROUP_DUPLICATE_CATEGORY_NAME,
+    EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME,
     /// No category with this ID.
-    GROUP_UNKNOWN_CATEGORY,
+    EXPENSE_GROUP_UNKNOWN_CATEGORY,
     /// The built-in Uncategorised category cannot be renamed or removed.
-    GROUP_BUILT_IN_CATEGORY,
+    EXPENSE_GROUP_BUILT_IN_CATEGORY,
     /// An expense with this ID already exists.
-    GROUP_DUPLICATE_EXPENSE,
+    EXPENSE_GROUP_DUPLICATE_EXPENSE,
     /// No expense with this ID.
-    GROUP_UNKNOWN_EXPENSE,
+    EXPENSE_GROUP_UNKNOWN_EXPENSE,
     /// A transfer with this ID already exists.
-    GROUP_DUPLICATE_TRANSFER,
+    EXPENSE_GROUP_DUPLICATE_TRANSFER,
     /// No transfer with this ID.
-    GROUP_UNKNOWN_TRANSFER,
+    EXPENSE_GROUP_UNKNOWN_TRANSFER,
     /// A shared group's lock was asked for without waiting, while another call held it.
-    GROUP_BUSY,
+    EXPENSE_GROUP_BUSY,
     /// A total would leave the range of an amount.
-    GROUP_OVERFLOW,
+    EXPENSE_GROUP_OVERFLOW,
     /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
     LANGUAGE_INVALID_LANGUAGE,
 };

@@ -30,7 +30,7 @@ fn the_core_is_its_marked_items_and_its_one_trait_of_calls() {
             "Balance",
             "Expense",
             "CurrencyDetails",
-            "NewGroup",
+            "NewExpenseGroup",
             "Summary",
         ]
     );
@@ -169,7 +169,10 @@ fn a_core_the_rules_refuse_is_refused() {
         assert_eq!(refusal(&[refused, CALLS]), "documentation is text");
     }
     assert_ne!(
-        refusal(&[RECORDS, "#[calls] trait GroupCalls { const LIMIT: usize; }"]),
+        refusal(&[
+            RECORDS,
+            "#[calls] trait ExpenseGroupCalls { const LIMIT: usize; }"
+        ]),
         ""
     );
 }

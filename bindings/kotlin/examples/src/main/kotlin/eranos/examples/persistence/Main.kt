@@ -7,8 +7,8 @@ import eranos.Cost
 import eranos.Currency
 import eranos.EranosException
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.Member
 import eranos.Money
 import eranos.Percentage
@@ -40,7 +40,7 @@ private data class ComparisonRow(
 fun main() {
     val euro = Currency.of("EUR")
     val day = CalendarDate.of(year = 2026, month = 9, day = 23)
-    Group("Road trip", euro).use { group ->
+    ExpenseGroup("Road trip", euro).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val both = ExpenseSplit.Whole(Split.Equal(listOf(ana, bob)))
@@ -80,7 +80,7 @@ fun main() {
         )
 
         section("2. Loading it back")
-        Group.loadBlocking(saved).use { loaded ->
+        ExpenseGroup.loadBlocking(saved).use { loaded ->
             println(
                 """
                 Loading replays every entry through the same checks as adding it, then rebuilds
@@ -107,16 +107,16 @@ fun main() {
             println(
                 """
                 Here Ana's identifier was edited in her member entry, so the fuel's payer is an
-                identifier no member has. Reading the file as a SavedGroup and loading it with
-                into_group replays every entry through the same checks as adding it, and refuses
-                the file instead of producing balances that do not add up:
+                identifier no member has. Reading the file as a SavedExpenseGroup and loading it
+                with into_expense_group replays every entry through the same checks as adding it,
+                and refuses the file instead of producing balances that do not add up:
                 """.trimIndent(),
             )
             // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel
             // she paid is left naming an identifier no member has.
             val corrupted = saved.replaceFirst(ana.value, "0199a000-0000-7000-8000-00000000ffff")
             try {
-                Group.loadBlocking(corrupted).close()
+                ExpenseGroup.loadBlocking(corrupted).close()
                 error("the file must be refused")
             } catch (refusal: EranosException) {
                 println("  error: ${refusal.message}")

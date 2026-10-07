@@ -2,7 +2,7 @@
 //! parameters, answer, lock, and documentation, and
 //! `eranos_glue_macros::calls` writes from it the group handle's synchronous
 //! and asynchronous form of every call, the read handle's form of every
-//! read, and the exported macro `group_calls!`, which hands the list to the
+//! read, and the exported macro `expense_group_calls!`, which hands the list to the
 //! glue crates. Each call runs the operation of its name in `operations`
 //! under the lock it names; a call marked `#[infallible]` runs one that
 //! cannot fail, and `#[async_body]` names the hand-written asynchronous form
@@ -11,17 +11,17 @@
 use crate::EranosError;
 use crate::cancellation::Cancellation;
 use crate::expense::Expense;
-use crate::group::{self, GroupHandle};
+use crate::expense_group::{self, ExpenseGroupHandle};
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
 use crate::money::{CurrencyRate, Money};
 use crate::operations;
-use crate::reader::GroupReader;
+use crate::reader::ExpenseGroupReader;
 use crate::settlement::{Settlement, SettlementStrategy};
 use crate::transfer::Transfer;
 
 #[eranos_glue_macros::calls]
-trait GroupCalls {
+trait ExpenseGroupCalls {
     // --- Identifier ----------------------------------------------------------
 
     /// The group's identifier.
@@ -65,7 +65,7 @@ trait GroupCalls {
     /// Moves the group to `currency`, with a rate into it for every other
     /// currency its entries use.
     #[write]
-    #[async_body = group::change_currency]
+    #[async_body = expense_group::change_currency]
     fn change_currency(&self, currency: &str, rates: &[CurrencyRate]) -> Result<(), EranosError>;
 
     // --- Expenses ------------------------------------------------------------
@@ -157,7 +157,7 @@ trait GroupCalls {
 
     /// The payments that settle every balance by `strategy`.
     #[read]
-    #[async_body = group::settlement]
+    #[async_body = expense_group::settlement]
     fn settlement(&self, strategy: SettlementStrategy) -> Result<Settlement, EranosError>;
 
     // --- Transfers -----------------------------------------------------------

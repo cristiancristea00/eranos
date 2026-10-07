@@ -14,10 +14,10 @@ import eranos.Currency;
 import eranos.Email;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupFailure;
 import eranos.ExpenseId;
 import eranos.ExpenseSplit;
-import eranos.Group;
-import eranos.GroupFailure;
 import eranos.Iban;
 import eranos.Member;
 import eranos.MemberId;
@@ -126,7 +126,7 @@ public final class Main {
         throw new IllegalStateException("the change must be refused");
     }
 
-    private static void printMembers(Group group) {
+    private static void printMembers(ExpenseGroup group) {
         List<MemberRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             rows.add(
@@ -142,7 +142,7 @@ public final class Main {
         printTable(MemberRow.HEADERS, rows, 4);
     }
 
-    private static void printBalances(Group group) throws EranosException {
+    private static void printBalances(ExpenseGroup group) throws EranosException {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
@@ -160,7 +160,7 @@ public final class Main {
         printTable(BalanceRow.HEADERS, rows, 2);
     }
 
-    private static Flatmates members(Group group) throws EranosException {
+    private static Flatmates members(ExpenseGroup group) throws EranosException {
         section("1. Members");
         Account bank =
                 new Account(
@@ -220,7 +220,7 @@ public final class Main {
         printTable(CheckRow.HEADERS, rows, 3);
     }
 
-    private static void movingOut(Group group, Flatmates flatmates) throws EranosException {
+    private static void movingOut(ExpenseGroup group, Flatmates flatmates) throws EranosException {
         section("3. A flatmate moves out");
         Currency euro = Currency.of("EUR");
         MemberId ana = flatmates.ana();
@@ -260,11 +260,11 @@ public final class Main {
                         + removal.getMessage());
 
         check(
-                refused instanceof EranosException.Group archived
-                        && new GroupFailure.ArchivedMember(bob).equals(archived.failure()));
+                refused instanceof EranosException.ExpenseGroup archived
+                        && new ExpenseGroupFailure.ArchivedMember(bob).equals(archived.failure()));
         check(
-                removal instanceof EranosException.Group inUse
-                        && inUse.failure() instanceof GroupFailure.MemberInUse);
+                removal instanceof EranosException.ExpenseGroup inUse
+                        && inUse.failure() instanceof ExpenseGroupFailure.MemberInUse);
         check(
                 Optional.of(new Balance.Owes(Money.parse("450.00", euro)))
                         .equals(totals(bob, group.summary()).map(MemberSummary::balance)));
@@ -278,7 +278,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder("Flat 4B", Currency.of("EUR")).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Flat 4B", Currency.of("EUR")).build()) {
             System.out.println("Flat 4B: members and their accounts");
             System.out.println("═══════════════════════════════════");
             System.out.print(

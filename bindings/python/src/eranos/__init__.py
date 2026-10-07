@@ -4,10 +4,10 @@ Split and settle shared expenses: the eranos library for Python.
 A group holds its members, categories, expenses, and transfers, and adds them up into balances and the payments that
 settle them. Every amount is a whole number of minor units, and every division adds up exactly::
 
-    from eranos import CalendarDate, Currency, EqualSplit, Expense, Group, LocalCost, Member, Money, WholeExpenseSplit
+    from eranos import CalendarDate, Currency, EqualSplit, Expense, ExpenseGroup, LocalCost, Member, Money, WholeExpenseSplit
 
     euro = Currency('EUR')
-    group = Group.create('Flat', euro)
+    group = ExpenseGroup.create('Flat', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     group.add_expense(
@@ -70,8 +70,8 @@ from eranos._errors import (
     EranosError,
     ExpenseError,
     ExpenseFailure,
-    GroupError,
-    GroupFailure,
+    ExpenseGroupError,
+    ExpenseGroupFailure,
     IbanReason,
     IdError,
     IdFailure,
@@ -87,8 +87,8 @@ from eranos._errors import (
     TransferError,
     TransferFailure,
 )
-from eranos._group import CurrencyRate, Group
-from eranos._group_reader import GroupReader
+from eranos._expense_group import CurrencyRate, ExpenseGroup
+from eranos._expense_group_reader import ExpenseGroupReader
 from eranos import _identifiers
 from eranos._money import Money
 from eranos._ratios import ExchangeRate, Parts, Percentage
@@ -111,7 +111,7 @@ from eranos._totals import (
 
 # ruff: disable[non-empty-init-module]
 # Autodoc documents an identifier only where the module it documents gives the identifier's docstring.
-GroupId = _identifiers.GroupId
+ExpenseGroupId = _identifiers.ExpenseGroupId
 """The identifier of a group: a hyphenated UUID the library gave it."""
 
 MemberId = _identifiers.MemberId
@@ -156,16 +156,16 @@ __all__ = [
     'Expense',
     'ExpenseError',
     'ExpenseFailure',
+    'ExpenseGroup',
+    'ExpenseGroupError',
+    'ExpenseGroupFailure',
+    'ExpenseGroupId',
+    'ExpenseGroupReader',
     'ExpenseId',
     'ExpenseShares',
     'ExpenseSplit',
     'FixedTip',
     'GetsBackBalance',
-    'Group',
-    'GroupError',
-    'GroupFailure',
-    'GroupId',
-    'GroupReader',
     'Iban',
     'IbanAccountDetails',
     'IbanReason',

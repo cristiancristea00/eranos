@@ -129,13 +129,13 @@ struct StrategyRow final {
 
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the Rust example gives them.
-void spend(Group &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
+void spend(ExpenseGroup &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
     static_cast<void>(must(group.addExpense(Expense(name, LocalCost{must(Money::parse(amount, must(Currency::of("EUR"))))}, EqualSplit{{payer}},
                                                     WholeExpenseSplit{EqualSplit{std::move(members)}}, must(CalendarDate::of(2026, 9, 20))))));
 }
 
 /// Prints what each member of @p group paid and consumed, and their balance.
-void printBalances(Group const &group) {
+void printBalances(ExpenseGroup const &group) {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
@@ -151,7 +151,7 @@ void printBalances(Group const &group) {
 }
 
 /// Prints the payments of @p settlement: who pays whom, and how much.
-void printPayments(Group const &group, Settlement const &settlement) {
+void printPayments(ExpenseGroup const &group, Settlement const &settlement) {
     std::vector<PaymentRow> rows;
     rows.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {
@@ -161,7 +161,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
 }
 
 /// Prints each strategy's plan with what it promises; returns the number of payments of each.
-[[nodiscard]] Counts strategies(Group const &group) {
+[[nodiscard]] Counts strategies(ExpenseGroup const &group) {
     section("3. Minimum transfers");
     auto const minimum = must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS));
     std::println("The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n"
@@ -238,7 +238,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
 [[nodiscard]] std::size_t festival() {
     section("8. A larger group");
     auto const euro = must(Currency::of("EUR"));
-    auto group = must(Group::create("Festival", euro));
+    auto group = must(ExpenseGroup::create("Festival", euro));
     std::vector<MemberId> friends;
     friends.reserve(FRIENDS);
     for (std::size_t number = 1; FRIENDS >= number; ++number) {
@@ -272,7 +272,7 @@ void printPayments(Group const &group, Settlement const &settlement) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create("Ski week", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Ski week", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const carol = must(group.addMember(Member("Carol")));

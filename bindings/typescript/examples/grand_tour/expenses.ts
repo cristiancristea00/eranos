@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {
     type Expense,
     type ExpenseId,
-    type Group,
+    type ExpenseGroup,
     type Item,
     type MemberId,
     type Split,
@@ -97,7 +97,7 @@ function how(expense: Expense): string {
 }
 
 /** Each expense of `expenses`, with every involved member's payment and consumption. */
-function printShares(group: Group, expenses: readonly ExpenseId[]): void {
+function printShares(group: ExpenseGroup, expenses: readonly ExpenseId[]): void {
     printTable(
         shareColumns,
         expenses.flatMap((id) => {
@@ -119,7 +119,7 @@ function printShares(group: Group, expenses: readonly ExpenseId[]): void {
     );
 }
 
-function printItems(group: Group, id: ExpenseId): void {
+function printItems(group: ExpenseGroup, id: ExpenseId): void {
     const split = group.expenseSync(id)?.split;
     if ('itemised' !== split?.kind) {
         return;
@@ -165,7 +165,7 @@ function fadoItems(people: People): Item[] {
 }
 
 /** Adds one expense for every way of dividing one. */
-function addExpenses(group: Group, people: People, categories: Categories): Expenses {
+function addExpenses(group: ExpenseGroup, people: People, categories: Categories): Expenses {
     const { ana, bob, carol, dan, eva } = people;
     const groceries = group.addExpenseSync({
         name: 'Groceries',
@@ -270,12 +270,12 @@ function addExpenses(group: Group, people: People, categories: Categories): Expe
 }
 
 /** The consumption of `member` in the expense `id`. */
-function consumed(group: Group, id: ExpenseId, member: MemberId): Money | undefined {
+function consumed(group: ExpenseGroup, id: ExpenseId, member: MemberId): Money | undefined {
     return group.expenseSharesSync(id)?.members.find((share) => share.member === member)?.share;
 }
 
 /** Prints how the fado night's tip was shared, and its receipt. */
-function printFado(group: Group, fado: Expense): void {
+function printFado(group: ExpenseGroup, fado: Expense): void {
     const tip = fado.tip;
     const rule = undefined === tip ? 'a tip' : 'percentage' === tip.value.kind ? tip.value.percentage.toString() : tip.value.amount.toString();
     const shared =
@@ -297,7 +297,7 @@ function isEuros(expected: string, found: Money | undefined): boolean {
     return undefined !== found && eur(expected).equals(found);
 }
 
-export function expenses(group: Group, people: People, categories: Categories): ExpenseId {
+export function expenses(group: ExpenseGroup, people: People, categories: Categories): ExpenseId {
     section('4. Expenses, one for every way of dividing');
     const { apartment, fado, groceries, museum, seafood, tour, train } = addExpenses(group, people, categories);
     printLines(

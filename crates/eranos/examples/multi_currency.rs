@@ -8,8 +8,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseShares, Group,
-    Member, MemberId, Money, Split, Transfer,
+    Balance, CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
+    ExpenseShares, Member, MemberId, Money, Split, Transfer,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -60,7 +60,7 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
     println!("{table}");
 }
 
-fn name(group: &Group, member: MemberId) -> String {
+fn name(group: &ExpenseGroup, member: MemberId) -> String {
     group
         .member(member)
         .map_or("?", Member::first_name)
@@ -68,7 +68,7 @@ fn name(group: &Group, member: MemberId) -> String {
 }
 
 /// Every expense and transfer, as entered and in the group currency.
-fn print_entries(group: &Group) {
+fn print_entries(group: &ExpenseGroup) {
     let expenses = group.expenses().map(|expense| EntryRow {
         name: expense.name().to_owned(),
         payer: expense
@@ -95,7 +95,7 @@ fn print_entries(group: &Group) {
     print_table(expenses.chain(transfers), 2);
 }
 
-fn print_balances(group: &Group) {
+fn print_balances(group: &ExpenseGroup) {
     let summary = group.summary();
     print_table(
         group.members().map(|member| {
@@ -113,7 +113,7 @@ fn print_balances(group: &Group) {
     );
 }
 
-fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
+fn expenses(group: &mut ExpenseGroup, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
     section("1. Expenses in three currencies");
     let both = Split::equal([ana, bob]);
     group.add_expense(
@@ -155,7 +155,7 @@ fn expenses(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<d
     Ok(())
 }
 
-fn repayment(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
+fn repayment(group: &mut ExpenseGroup, ana: MemberId, bob: MemberId) -> Result<(), Box<dyn Error>> {
     section("3. A repayment in cash, in another currency");
     let cash = Transfer::builder(
         ana,
@@ -175,7 +175,7 @@ fn repayment(group: &mut Group, ana: MemberId, bob: MemberId) -> Result<(), Box<
     Ok(())
 }
 
-fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
+fn new_currency(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
     section("4. Moving the books to another currency");
     println!(
         "Changing the group currency needs a rate into the new currency for every other\n\
@@ -200,7 +200,7 @@ fn new_currency(group: &mut Group) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Danube road trip", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Danube road trip", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
 

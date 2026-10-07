@@ -28,7 +28,7 @@ use std::thread;
 
 use diplomat_runtime::{DiplomatStr, DiplomatWrite};
 
-use crate::generated::group::ffi::{EranosCancellation, EranosGroup};
+use crate::generated::expense_group::ffi::{EranosCancellation, EranosExpenseGroup};
 
 pub mod error;
 pub mod generated;
@@ -145,8 +145,8 @@ pub(crate) fn run<Value: 'static, Outcome: 'static>(
     });
 }
 
-impl From<eranos_bindings::GroupHandle> for EranosGroup {
-    fn from(handle: eranos_bindings::GroupHandle) -> Self {
+impl From<eranos_bindings::ExpenseGroupHandle> for EranosExpenseGroup {
+    fn from(handle: eranos_bindings::ExpenseGroupHandle) -> Self {
         Self {
             handle,
             jobs: OnceLock::new(),

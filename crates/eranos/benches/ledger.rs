@@ -13,7 +13,7 @@ use std::iter;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use eranos::{
-    CalendarDate, Currency, Expense, Group, Member, MemberId, MemberParts, Money, Parts,
+    CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, MemberParts, Money, Parts,
     SettlementStrategy, Split,
 };
 
@@ -48,14 +48,14 @@ fn member() -> Member {
 
 /// A group and its members, in the order they joined.
 struct Household {
-    group: Group,
+    group: ExpenseGroup,
     members: Vec<MemberId>,
 }
 
 /// A household of six with `EXISTING` expenses, each paid by the next member
 /// in turn.
 fn household() -> Household {
-    let mut group = Group::builder("Benchmark", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Benchmark", Currency::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     let members: Vec<MemberId> = iter::repeat_with(|| {

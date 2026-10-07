@@ -185,7 +185,7 @@ pub struct CurrencyDetails {
 
 /// What a new group starts with.
 #[mirrored]
-pub struct NewGroup {
+pub struct NewExpenseGroup {
     /// The name.
     pub name: String,
 }
@@ -207,7 +207,7 @@ pub struct Handle(u8);
 /// a change of every kind of parameter.
 pub(crate) const CALLS: &str = "
 #[eranos_glue_macros::calls]
-trait GroupCalls {
+trait ExpenseGroupCalls {
     /// The expense with the identifier `id`.
     #[read]
     fn expense(&self, id: &str) -> Result<Option<Expense>, EranosError>;
@@ -296,7 +296,7 @@ fn the_bridge_is_two_modules_that_import_what_they_name() {
     let files = bridge(&sources()).unwrap();
     assert_eq!(
         files.iter().map(Generated::path).collect::<Vec<_>>(),
-        ["generated/group.rs", "generated/records.rs"]
+        ["generated/expense_group.rs", "generated/records.rs"]
     );
     for generated in &files {
         let text = generated.text();
@@ -313,11 +313,11 @@ fn the_bridge_is_two_modules_that_import_what_they_name() {
             .collect::<Vec<_>>()
     };
     assert_eq!(
-        imports(at(&files, "generated/group.rs")),
+        imports(at(&files, "generated/expense_group.rs")),
         expected(quote! {
             use crate::error::ffi::EranosError;
             use crate::generated::records::ffi::{
-                EranosExpense, EranosExpenseList, EranosItemList, EranosNewGroup, EranosSummary,
+                EranosExpense, EranosExpenseList, EranosItemList, EranosNewExpenseGroup, EranosSummary,
                 EranosTipDistribution
             };
             use crate::values::ffi::{EranosCalendarDate, EranosTextList};

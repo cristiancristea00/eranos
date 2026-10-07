@@ -8,7 +8,7 @@ import eranos.Cost
 import eranos.Currency
 import eranos.EranosException
 import eranos.ExchangeRate
-import eranos.Group
+import eranos.ExpenseGroup
 import eranos.MemberId
 import eranos.Money
 import eranos.examples.names
@@ -38,7 +38,7 @@ internal fun ron(text: String): Money = Money.parse(text, Currency.of("RON"))
 internal fun october(date: Int): CalendarDate = CalendarDate.of(year = 2026, month = 10, day = date)
 
 internal fun name(
-    group: Group,
+    group: ExpenseGroup,
     member: MemberId,
 ): String = names(group, listOf(member))
 

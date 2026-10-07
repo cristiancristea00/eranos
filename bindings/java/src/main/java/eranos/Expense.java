@@ -9,9 +9,9 @@ import java.util.Optional;
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * <p>A new expense has no identifier; {@link Group#addExpense} gives it one. To change an expense,
- * read it from the group, edit it through {@link #toBuilder}, and pass the result to {@link
- * Group#replaceExpense}.
+ * <p>A new expense has no identifier; {@link ExpenseGroup#addExpense} gives it one. To change an
+ * expense, read it from the group, edit it through {@link #toBuilder}, and pass the result to
+ * {@link ExpenseGroup#replaceExpense}.
  */
 public final class Expense {
     private final ExpenseId id;

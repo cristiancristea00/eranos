@@ -24,17 +24,16 @@ Signed-off-by: <committer name> <<committer email>>
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
   `account`, `contact`, `member`, `category`, `ledger`, `expense`,
-  `settlement`, `transfer`, and `group`; `bindings` for the binding core,
-  `glue` for the model of its calls and records, the code written from
-  it, and the proc macros over it, `uniffi`
-  for the UniFFI glue and its generators, `swift` for the Swift
-  package, `kotlin` for the Kotlin package, `java` for the Java package,
-  `web` for the WebAssembly glue and the TypeScript package, `kmp` for the
-  Kotlin Multiplatform glue and package, `capi` for the C glue and the
-  C and C++ packages, and `python` for the Python package; and besides
-  them `serde`,
-  `docs`, `examples`, `build`, and `xtask`. A change to the facade alone,
-  or to several crates, takes no scope.
+  `settlement`, `transfer`, and `expense-group`; `bindings` for the binding
+  core, `glue` for the model of its calls and records, the code written from
+  it, and the proc macros over it, `uniffi` for the UniFFI glue and its
+  generators, `swift` for the Swift package, `kotlin` for the Kotlin
+  package, `java` for the Java package, `web` for the WebAssembly glue and
+  the TypeScript package, `kmp` for the Kotlin Multiplatform glue and
+  package, `capi` for the C glue and the C and C++ packages, and `python`
+  for the Python package; and besides them `serde`, `docs`, `examples`,
+  `build`, and `xtask`. A change to the facade alone, or to several crates,
+  takes no scope.
 - A breaking change appends `!` after the type or scope and adds a `BREAKING CHANGE:` footer.
 - One commit per concern. Bodies are prose in full sentences, not bullet dumps.
 - **Every commit is signed off**: a `Signed-off-by:` trailer with the
@@ -240,7 +239,7 @@ test in `crates/xtask` checks every root.
   validation reads rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that
   decodes the embedded libphonenumber metadata on first use and is never
   written after; the invariant that rules out its panic is stated at the
-  call in `eranos-contact`. The lock behind `SharedGroup` is async-lock
+  call in `eranos-contact`. The lock behind `SharedExpenseGroup` is async-lock
   without its `std` feature, which would bring blocking methods that read
   the clock; a gate keeps its features off.
 - **Async calls are cooperative.** A computation whose time grows with the
@@ -248,7 +247,7 @@ test in `crates/xtask` checks every root.
   by yielding; its public form returns it in a `Cooperative`, the
   synchronous method is its `.complete()`, and it writes nothing to the
   group before its last yield, so a dropped call changes nothing. A future
-  that can wait for a lock, such as a `SharedGroup` call, is never a
+  that can wait for a lock, such as a `SharedExpenseGroup` call, is never a
   `Cooperative`: `complete` would spin on it. Where each call yields and
   which lock it takes:
   [docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency).
@@ -333,7 +332,7 @@ test in `crates/xtask` checks every root.
   its other readers, then its setters. A method derived from one field
   sits beside it (`tip_amount` after `tip`, `paid_by` before `payers`),
   and methods that read several fields, such as `build`, come last.
-  `Group` heads each field's methods with a section comment.
+  `ExpenseGroup` heads each field's methods with a section comment.
 - **Variants follow the domain.** Enum variants are declared in the order
   the domain presents them where it has one, otherwise the default or the
   simplest case first: `Split` is equal, parts, percentages, then amounts,
@@ -350,14 +349,14 @@ test in `crates/xtask` checks every root.
   validating constructor, in a written-out `Deserialize` impl that reads a
   private record (the `TryFrom` impl that `serde(try_from = …)` needs would
   show the record on the facade's pages); a group loads through
-  `SavedGroup::into_group`, which replays its entries through the `add_*`
-  methods; a change older readers cannot accept bumps the `FORMAT` constant
-  of `eranos-group`.
+  `SavedExpenseGroup::into_expense_group`, which replays its entries through
+  the `add_*` methods; a change older readers cannot accept bumps the
+  `FORMAT` constant of `eranos-expense-group`.
 - **Doc comments follow rustdoc conventions**: a one-sentence summary, then
   `# Errors`, `# Panics`, and `# Examples` sections where they apply.
   Examples use `?`, never `unwrap`, and compile with warnings denied. Types
-  are referenced with intra-doc links (`` [`Group`] ``); values and snippets
-  keep single backticks.
+  are referenced with intra-doc links (`` [`ExpenseGroup`] ``); values and
+  snippets keep single backticks.
 - **Every fence in README.md has a language tag** (`rust`, `sh`, `text`,
   `mermaid`, `toml`): the README is compiled as a doctest, and an untagged
   fence would be compiled as Rust.
@@ -421,43 +420,41 @@ test in `crates/xtask` checks every root.
 ## Architecture in one paragraph
 
 The library is thirteen crates in `crates/`: `eranos`, the facade callers
-depend on, which holds only re-exports and the integration tests,
-examples, and benchmarks, and twelve internal crates below it, one per part
-of the domain, from `eranos-core` (identifiers) up to `eranos-group`
+depend on, which holds only re-exports and the integration tests, examples,
+and benchmarks, and twelve internal crates below it, one per part of the
+domain, from `eranos-core` (identifiers) up to `eranos-expense-group`
 ([map](docs/ARCHITECTURE.md#2-crate-map)). Above the facade,
 `eranos-bindings` holds what every binding exposes, in plain Rust: records,
-one error, and a group handle with a synchronous and an asynchronous form
-of every call, both written, with the read handle's reads, by the proc
-macros of `eranos-glue-macros` and `eranos-glue` from one trait that lists
-the calls. `eranos-uniffi` mirrors it for Swift, Kotlin, Java, and
-Python through UniFFI, whose generators are the binaries of
+one error, and a group handle with a synchronous and an asynchronous form of
+every call, both written, with the read handle's reads, by the proc macros
+of `eranos-glue-macros` and `eranos-glue` from one trait that lists the
+calls. `eranos-uniffi` mirrors it for Swift, Kotlin, Java, and Python
+through UniFFI, whose generators are the binaries of
 `eranos-uniffi-bindgen`; `eranos-web` and `eranos-kmp` compile the same
 sources on the UniFFI releases that uniffi-bindgen-react-native and gobley
-read, for WebAssembly and for Kotlin Multiplatform; `eranos-capi` exports
-it through Diplomat, which generates a C API and C++ classes from its
-bridge, most of which `cargo xtask generate` writes from the core's records
-and calls. Each language's package in `bindings/` puts a hand-written layer
-over the generated code: `bindings/swift` for Apple platforms,
-`bindings/kotlin` for Android and the JVM, `bindings/java` for Java,
-`bindings/typescript` for browsers and Node, `bindings/kmp`, which
-compiles the Kotlin layer for Kotlin Multiplatform, `bindings/c` and
-`bindings/cpp`, header-only layers for C23 and C++23, and
-`bindings/python` for Python 3.14
-([docs/BINDINGS.md](docs/BINDINGS.md)). A `Group` owns its members,
-categories, expenses, and transfers in ID-keyed maps. Each entry
-is resolved into group-currency shares when it is added or replaced
+read, for WebAssembly and for Kotlin Multiplatform; `eranos-capi` exports it
+through Diplomat, which generates a C API and C++ classes from its bridge,
+most of which `cargo xtask generate` writes from the core's records and
+calls. Each language's package in `bindings/` puts a hand-written layer over
+the generated code: `bindings/swift` for Apple platforms, `bindings/kotlin`
+for Android and the JVM, `bindings/java` for Java, `bindings/typescript` for
+browsers and Node, `bindings/kmp`, which compiles the Kotlin layer for
+Kotlin Multiplatform, `bindings/c` and `bindings/cpp`, header-only layers
+for C23 and C++23, and `bindings/python` for Python 3.14
+([docs/BINDINGS.md](docs/BINDINGS.md)). An `ExpenseGroup` owns its members,
+categories, expenses, and transfers in ID-keyed maps. Each entry is resolved
+into group-currency shares when it is added or replaced
 (`eranos_expense::resolve_expense`: exact splits, tips, conversion, and the
 pairwise debts behind the direct settlement;
 `eranos_transfer::resolve_transfer` for a transfer) and applied to the
-`Ledger` as a range-checked `Delta`; the
-`Summary` is part of the ledger and is updated by every change. Only
-`change_currency` resolves every entry again and rebuilds the ledger.
-Settlements are computed from the ledger on request, by the strategy the
-caller names, and cached per strategy in `OnceLock`s that every
-balance-changing mutation clears. The slow calls also come as cooperative
-futures (`settlement_async`, `change_currency_async`, `into_group_async`),
-and `SharedGroup` shares a group between tasks and threads behind a
-read-write lock. Diagrams, rules, and numbers:
+`Ledger` as a range-checked `Delta`; the `Summary` is part of the ledger and
+is updated by every change. Only `change_currency` resolves every entry
+again and rebuilds the ledger. Settlements are computed from the ledger on
+request, by the strategy the caller names, and cached per strategy in
+`OnceLock`s that every balance-changing mutation clears. The slow calls also
+come as cooperative futures (`settlement_async`, `change_currency_async`,
+`into_expense_group_async`), and `SharedExpenseGroup` shares a group between
+tasks and threads behind a read-write lock. Diagrams, rules, and numbers:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Verification habits

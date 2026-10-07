@@ -11,10 +11,10 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseId;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Item;
 import eranos.Member;
 import eranos.MemberId;
@@ -132,9 +132,9 @@ public final class Main {
      * How {@code expense} would divide if it were added to {@code group}, computed on a copy loaded
      * from the group's saved form, so the group itself is unchanged.
      */
-    private static Optional<ExpenseShares> preview(Group group, Expense expense)
+    private static Optional<ExpenseShares> preview(ExpenseGroup group, Expense expense)
             throws EranosException {
-        try (Group copy = Group.load(group.save())) {
+        try (ExpenseGroup copy = ExpenseGroup.load(group.save())) {
             return copy.expenseShares(copy.addExpense(expense));
         }
     }
@@ -156,7 +156,8 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder("Dinner at Caru' cu Bere", Currency.of("EUR")).build()) {
+        try (ExpenseGroup group =
+                ExpenseGroup.builder("Dinner at Caru' cu Bere", Currency.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             MemberId carol = group.addMember(Member.builder("Carol").build());

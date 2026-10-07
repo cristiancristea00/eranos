@@ -1,8 +1,8 @@
 package eranos.examples;
 
 import eranos.EranosException;
+import eranos.ExpenseGroup;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberSummary;
@@ -135,7 +135,7 @@ public final class Report {
      * @return the names
      * @throws EranosException for an identifier that is not one
      */
-    public static String names(Group group, List<MemberId> members) throws EranosException {
+    public static String names(ExpenseGroup group, List<MemberId> members) throws EranosException {
         List<String> names = new ArrayList<>();
         for (MemberId member : members) {
             names.add(group.member(member).map(Member::firstName).orElse("?"));

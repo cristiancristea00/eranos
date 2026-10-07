@@ -90,11 +90,11 @@ static char const *ruleOf(Rule const *const rules, size_t const count, char cons
 
 /// Prints how the expense @p id divides: every involved member's rule among the @p count rules of @p rules, what they
 /// paid, and what they consumed.
-static void report(EranosGroup const *const group, Id const id, Rule const *const rules, size_t const count) {
+static void report(EranosExpenseGroup const *const group, Id const id, Rule const *const rules, size_t const count) {
     EranosExpense *expense = nullptr;
-    must(eranosGroupExpense(group, id.text, &expense));
+    must(eranosExpenseGroupExpense(group, id.text, &expense));
     EranosExpenseShares *shares = nullptr;
-    must(eranosGroupExpenseShares(group, id.text, &shares));
+    must(eranosExpenseGroupExpenseShares(group, id.text, &shares));
     if (nullptr == expense || nullptr == shares) {
         eranosExpenseSharesDestroy(shares);
         eranosExpenseDestroy(expense);
@@ -125,7 +125,7 @@ static void report(EranosGroup const *const group, Id const id, Rule const *cons
 }
 
 /// Adds the taxi, which the three share equally, the leftover cent going to one of them.
-static void equally(EranosGroup *const group, Family const *const family) {
+static void equally(EranosExpenseGroup *const group, Family const *const family) {
     section("1. Equally");
     printLine("Everyone pays the same. 10.00 does not divide by three, so one member pays the\n"
               "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
@@ -141,7 +141,7 @@ static void equally(EranosGroup *const group, Family const *const family) {
 }
 
 /// Adds the flat, which the three share by percentage.
-static void byPercentage(EranosGroup *const group, Family const *const family) {
+static void byPercentage(EranosExpenseGroup *const group, Family const *const family) {
     section("2. By percentage");
     printLine("Everyone pays a percentage of the amount; the percentages must add up to exactly\n"
               "100 %. Mia's room is smaller, so she takes 20 %.");
@@ -161,7 +161,7 @@ static void byPercentage(EranosGroup *const group, Family const *const family) {
 }
 
 /// Adds the food, which the three share by parts, Mia counting as half an adult.
-static Id byParts(EranosGroup *const group, Family const *const family) {
+static Id byParts(EranosExpenseGroup *const group, Family const *const family) {
     section("3. By parts");
     printLine("Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n"
               "2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.");
@@ -181,7 +181,7 @@ static Id byParts(EranosGroup *const group, Family const *const family) {
 }
 
 /// Adds the museum tickets, which the three share by exact amounts.
-static void byAmounts(EranosGroup *const group, Family const *const family) {
+static void byAmounts(EranosExpenseGroup *const group, Family const *const family) {
     section("4. By exact amounts");
     printLine("Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n"
               "exactly the expense amount.");
@@ -201,7 +201,7 @@ static void byAmounts(EranosGroup *const group, Family const *const family) {
 }
 
 /// Adds the dinner, which two of them paid and the three share equally.
-static void severalPayers(EranosGroup *const group, Family const *const family) {
+static void severalPayers(EranosExpenseGroup *const group, Family const *const family) {
     section("5. Several payers");
     printLine("The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n"
               "divided with the same methods as the participants.");
@@ -221,7 +221,7 @@ static void severalPayers(EranosGroup *const group, Family const *const family) 
 }
 
 /// Shows that a split whose percentages do not add up to 100 % is refused.
-static void mistakes(EranosGroup *const group, Family const *const family) {
+static void mistakes(EranosExpenseGroup *const group, Family const *const family) {
     section("6. Mistakes are refused");
     printLine("A percentage split that adds up to 90 % is refused when the expense is built:");
     Share const shares[] = {
@@ -236,14 +236,14 @@ static void mistakes(EranosGroup *const group, Family const *const family) {
 }
 
 /// Prints what each member paid and consumed over the holiday, and their balance.
-static void totals(EranosGroup const *const group) {
+static void totals(EranosExpenseGroup const *const group) {
     section("7. The holiday in total");
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     Line const spent = moneyLine(eranosSummaryTotalSpent(summary));
     printFormatted("%s spent over five expenses:", spent.text);
     EranosMemberList *members = nullptr;
-    must(eranosGroupMembers(group, &members));
+    must(eranosExpenseGroupMembers(group, &members));
     Table *const table = totalTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -268,9 +268,9 @@ static void totals(EranosGroup const *const group) {
 }
 
 /// Whether Mia consumed 25.00 EUR of the food: 125.00 over 2.5 parts is 50.00 per part.
-static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *const family, Id const food) {
+static bool miaConsumedHalfAPart(EranosExpenseGroup const *const group, Family const *const family, Id const food) {
     EranosExpenseShares *shares = nullptr;
-    must(eranosGroupExpenseShares(group, food.text, &shares));
+    must(eranosExpenseGroupExpenseShares(group, food.text, &shares));
     check(nullptr != shares, "food was added");
     EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
     EranosText *const text = eranosTextCreate();
@@ -292,11 +292,11 @@ static bool miaConsumedHalfAPart(EranosGroup const *const group, Family const *c
 }
 
 int main(void) {
-    EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("Family holiday", "EUR", &details));
-    EranosGroup *group = nullptr;
-    must(eranosGroupCreate(details, &group));
-    eranosNewGroupDestroy(details);
+    EranosNewExpenseGroup *details = nullptr;
+    must(eranosNewExpenseGroupCreate("Family holiday", "EUR", &details));
+    EranosExpenseGroup *group = nullptr;
+    must(eranosExpenseGroupCreate(details, &group));
+    eranosNewExpenseGroupDestroy(details);
     // The members join in this order, which gives them their identifiers: an initialiser evaluates its values in no set
     // order.
     Id const ana = addMember(group, "Ana");
@@ -318,6 +318,6 @@ int main(void) {
     totals(group);
 
     check(miaConsumedHalfAPart(group, &family, food), "Mia consumed 25.00 EUR of the food");
-    eranosGroupDestroy(group);
+    eranosExpenseGroupDestroy(group);
     return EXIT_SUCCESS;
 }

@@ -335,7 +335,7 @@ impl<'de> serde::Deserialize<'de> for Transfer {
 /// A transfer's amount in the group currency `currency`, in minor units.
 ///
 /// The group has checked the kind of the transfer's cost against
-/// `currency` (`Group::check_cost`, or the rates of a currency change).
+/// `currency` (`ExpenseGroup::check_cost`, or the rates of a currency change).
 ///
 /// # Errors
 ///

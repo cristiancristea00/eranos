@@ -2,7 +2,7 @@ internal import EranosGenerated
 
 /// Money one member paid another, such as a repayment.
 ///
-/// A new transfer has no identifier; `Group.add(_:)` gives it one.
+/// A new transfer has no identifier; `ExpenseGroup.add(_:)` gives it one.
 public struct Transfer: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a transfer.

@@ -51,7 +51,7 @@ struct ComparisonRow final {
 /// Runs the example.
 void run() {
     auto const day = must(CalendarDate::of(2026, 9, 23));
-    auto group = must(Group::create("Road trip", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Road trip", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
@@ -76,7 +76,7 @@ void run() {
               "dropping fields.");
 
     section("2. Loading it back");
-    auto const loaded = must(Group::load(saved));
+    auto const loaded = must(ExpenseGroup::load(saved));
     printLine("Loading replays every entry through the same checks as adding it, then rebuilds\n"
               "the totals. The loaded group equals the saved one, and so do its balances:");
     auto const before = group.summary();
@@ -91,13 +91,13 @@ void run() {
 
     section("3. A corrupted file is refused");
     printLine("Here Ana's identifier was edited in her member entry, so the fuel's payer is an\n"
-              "identifier no member has. Reading the file as a SavedGroup and loading it with\n"
-              "into_group replays every entry through the same checks as adding it, and refuses\n"
-              "the file instead of producing balances that do not add up:");
+              "identifier no member has. Reading the file as a SavedExpenseGroup and loading it\n"
+              "with into_expense_group replays every entry through the same checks as adding it,\n"
+              "and refuses the file instead of producing balances that do not add up:");
     // Ana's own entry is the first to name her: the members come before the expenses in the saved form, so the fuel she
     // paid is left naming an identifier no member has.
     auto const corrupted = replaceFirst(saved, ana.value(), "0199a000-0000-7000-8000-00000000ffff");
-    auto const refused = refusal(Group::load(corrupted));
+    auto const refused = refusal(ExpenseGroup::load(corrupted));
     check(refused.has_value(), "the file is refused");
     std::println("  error: {}", message(refused));
 

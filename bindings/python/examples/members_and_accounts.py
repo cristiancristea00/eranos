@@ -18,8 +18,8 @@ from eranos import (
     EqualSplit,
     EranosError,
     Expense,
-    Group,
-    GroupError,
+    ExpenseGroup,
+    ExpenseGroupError,
     Iban,
     IbanAccountDetails,
     LocalCost,
@@ -158,7 +158,7 @@ def checked(text: str, kind: str, parse: Callable[[str], object]) -> CheckRow:
     return CheckRow(input=text, kind=kind, result=f'valid: {value}')
 
 
-def print_members(group: Group) -> None:
+def print_members(group: ExpenseGroup) -> None:
     """
     Print each member's full name, email, phone, and accounts, an account per line.
 
@@ -181,7 +181,7 @@ def print_members(group: Group) -> None:
     )
 
 
-def print_balances(group: Group) -> None:
+def print_balances(group: ExpenseGroup) -> None:
     """
     Print whether each member is active or archived, what they consumed, and where they stand.
 
@@ -206,7 +206,7 @@ def print_balances(group: Group) -> None:
     )
 
 
-def members(group: Group) -> Flatmates:
+def members(group: ExpenseGroup) -> Flatmates:
     """
     Add Ana, with every detail a member can have, and Bob, with a first name only, and print them.
 
@@ -269,7 +269,7 @@ def validation() -> None:
     )
 
 
-def moving_out(group: Group, flatmates: Flatmates) -> None:
+def moving_out(group: ExpenseGroup, flatmates: Flatmates) -> None:
     """
     Archive Bob after he shares the rent, print the balances, and print what the group refuses of him.
 
@@ -296,14 +296,14 @@ def moving_out(group: Group, flatmates: Flatmates) -> None:
         name='Utilities', cost=LocalCost(Money.parse('60.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 10, 1)
     )
     refused = refusal(lambda: group.add_expense(utilities))
-    assert isinstance(refused, GroupError), 'the archived member must be refused'
+    assert isinstance(refused, ExpenseGroupError), 'the archived member must be refused'
     print_lines("October's utilities cannot include him:", f'  error: {refused}')
     removal = refusal(lambda: group.remove_member(bob))
-    assert isinstance(removal, GroupError), 'the referenced member must stay'
+    assert isinstance(removal, ExpenseGroupError), 'the referenced member must stay'
     print_lines('Nor can he be removed while the rent references him:', f'  error: {removal}')
 
-    assert refused.failure == GroupError.ArchivedMember(bob)
-    assert isinstance(removal.failure, GroupError.MemberInUse)
+    assert refused.failure == ExpenseGroupError.ArchivedMember(bob)
+    assert isinstance(removal.failure, ExpenseGroupError.MemberInUse)
     bob_totals = totals(bob, group.summary())
     assert bob_totals is not None
     assert bob_totals.balance == OwesBalance(Money.parse('450.00', euro))
@@ -312,7 +312,7 @@ def moving_out(group: Group, flatmates: Flatmates) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create('Flat 4B', Currency('EUR'))
+    group = ExpenseGroup.create('Flat 4B', Currency('EUR'))
     title('Flat 4B: members and their accounts')
     print_lines(
         'Ana and Bob share a flat. A member needs only a first name; the last name,',

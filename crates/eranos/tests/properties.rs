@@ -17,9 +17,10 @@
 
 use eranos::cooperative::block_on;
 use eranos::{
-    CalendarDate, CategoryTotal, Cost, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseId,
-    Group, Item, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
-    Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer, error::GroupError,
+    CalendarDate, CategoryTotal, Cost, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
+    ExpenseId, Item, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
+    Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
+    error::ExpenseGroupError,
 };
 use proptest::prelude::*;
 
@@ -280,12 +281,12 @@ struct TransferRecipe {
 }
 
 #[derive(Debug, Clone)]
-struct GroupRecipe {
+struct ExpenseGroupRecipe {
     expenses: Vec<ExpenseRecipe>,
     transfers: Vec<TransferRecipe>,
 }
 
-fn group_recipe() -> impl Strategy<Value = GroupRecipe> {
+fn group_recipe() -> impl Strategy<Value = ExpenseGroupRecipe> {
     (
         proptest::collection::vec(expense_recipe(), 0..12),
         proptest::collection::vec(
@@ -294,7 +295,7 @@ fn group_recipe() -> impl Strategy<Value = GroupRecipe> {
             0..6,
         ),
     )
-        .prop_map(|(expenses, transfers)| GroupRecipe {
+        .prop_map(|(expenses, transfers)| ExpenseGroupRecipe {
             expenses,
             transfers,
         })
@@ -308,7 +309,7 @@ struct Entries {
     transfers: Vec<Transfer>,
 }
 
-fn entries(recipe: &GroupRecipe) -> Entries {
+fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
     let members: Vec<Member> =
         std::iter::repeat_with(|| Member::builder("Member").build().unwrap())
             .take(MEMBERS)
@@ -342,8 +343,10 @@ fn entries(recipe: &GroupRecipe) -> Entries {
 }
 
 /// A group of `members` without entries; clones of it share its identifier.
-fn base(members: &[Member]) -> Group {
-    let mut group = Group::builder("Random", Currency::EUR).build().unwrap();
+fn base(members: &[Member]) -> ExpenseGroup {
+    let mut group = ExpenseGroup::builder("Random", Currency::EUR)
+        .build()
+        .unwrap();
     for member in members {
         group.add_member(member.clone()).unwrap();
     }
@@ -351,12 +354,12 @@ fn base(members: &[Member]) -> Group {
 }
 
 /// `base` with the entries added in the order given.
-fn group(base: &Group, expenses: &[Expense], transfers: &[Transfer]) -> Group {
+fn group(base: &ExpenseGroup, expenses: &[Expense], transfers: &[Transfer]) -> ExpenseGroup {
     let mut group = base.clone();
     for expense in expenses {
         // A conversion far out of range is refused; nothing else may be.
         match group.add_expense(expense.clone()) {
-            Ok(_) | Err(GroupError::Overflow) => {}
+            Ok(_) | Err(ExpenseGroupError::Overflow) => {}
             Err(error) => panic!("a valid expense was refused: {error}"),
         }
     }

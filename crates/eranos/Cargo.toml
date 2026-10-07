@@ -15,7 +15,7 @@ readme = "../../README.md"
 
 [features]
 # `Serialize` and `Deserialize` for a group and every type it stores. A
-# deserialised `Group` is rebuilt through the same validation as its `add_*`
+# deserialised `ExpenseGroup` is rebuilt through the same validation as its `add_*`
 # methods.
 serde = [
     "eranos-account/serde",
@@ -24,7 +24,7 @@ serde = [
     "eranos-contact/serde",
     "eranos-core/serde",
     "eranos-expense/serde",
-    "eranos-group/serde",
+    "eranos-expense-group/serde",
     "eranos-member/serde",
     "eranos-money/serde",
     "eranos-transfer/serde",
@@ -41,7 +41,7 @@ eranos-category = { workspace = true }
 eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
 eranos-expense = { workspace = true }
-eranos-group = { workspace = true }
+eranos-expense-group = { workspace = true }
 eranos-ledger = { workspace = true }
 eranos-member = { workspace = true }
 eranos-money = { workspace = true }
@@ -71,7 +71,7 @@ name = "ledger"
 harness = false
 
 [[bench]]
-name = "group"
+name = "expense_group"
 harness = false
 
 [lints]

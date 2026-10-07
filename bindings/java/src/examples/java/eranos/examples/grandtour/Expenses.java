@@ -12,10 +12,10 @@ import static eranos.examples.grandtour.Tour.october;
 import eranos.Cost;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseId;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Item;
 import eranos.MemberAmount;
 import eranos.MemberId;
@@ -71,7 +71,7 @@ final class Expenses {
     }
 
     /** Each expense of {@code expenses}, with every involved member's payment and consumption. */
-    static void printShares(Group group, List<ExpenseId> expenses) throws EranosException {
+    static void printShares(ExpenseGroup group, List<ExpenseId> expenses) throws EranosException {
         List<ShareRow> rows = new ArrayList<>();
         for (ExpenseId id : expenses) {
             Optional<Expense> expense = group.expense(id);
@@ -97,7 +97,7 @@ final class Expenses {
         printTable(ShareRow.HEADERS, rows, 3);
     }
 
-    static void printItems(Group group, ExpenseId id) throws EranosException {
+    static void printItems(ExpenseGroup group, ExpenseId id) throws EranosException {
         Optional<ExpenseSplit> split = group.expense(id).map(Expense::split);
         if (split.isPresent() && split.orElseThrow() instanceof ExpenseSplit.Itemised itemised) {
             List<ItemRow> rows = new ArrayList<>();
@@ -160,7 +160,7 @@ final class Expenses {
     }
 
     /** Adds one expense for every way of dividing one. */
-    static Tour.Expenses addExpenses(Group group, People people, Categories categories)
+    static Tour.Expenses addExpenses(ExpenseGroup group, People people, Categories categories)
             throws EranosException {
         ExpenseId groceries =
                 group.addExpense(
@@ -291,7 +291,7 @@ final class Expenses {
     }
 
     /** The consumption of {@code member} in the expense {@code id}. */
-    static Optional<Money> consumed(Group group, ExpenseId id, MemberId member)
+    static Optional<Money> consumed(ExpenseGroup group, ExpenseId id, MemberId member)
             throws EranosException {
         return group.expenseShares(id)
                 .flatMap(
@@ -303,7 +303,7 @@ final class Expenses {
     }
 
     /** Prints how the fado night's tip was shared, and its receipt. */
-    static void printFado(Group group, Expense fado) throws EranosException {
+    static void printFado(ExpenseGroup group, Expense fado) throws EranosException {
         String rule =
                 fado.tip()
                         .map(
@@ -344,7 +344,7 @@ final class Expenses {
         System.out.println("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
     }
 
-    static ExpenseId expenses(Group group, People people, Categories categories)
+    static ExpenseId expenses(ExpenseGroup group, People people, Categories categories)
             throws EranosException {
         section("4. Expenses, one for every way of dividing");
         Tour.Expenses expenses = addExpenses(group, people, categories);

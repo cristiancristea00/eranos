@@ -11,8 +11,8 @@ from eranos import (
     Currency,
     CurrencyRate,
     ExchangeRate,
-    Group,
-    GroupError,
+    ExpenseGroup,
+    ExpenseGroupError,
     InvalidJsonError,
     Language,
     LocalCost,
@@ -103,7 +103,7 @@ def test_every_asynchronous_change_of_the_details_does_what_its_synchronous_form
         assert group.language() is None
         await group.change_currency_async(Currency('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))])
         assert group.currency() == Currency('RON')
-        with await Group.load_async(group.save()) as loaded:
+        with await ExpenseGroup.load_async(group.save()) as loaded:
             assert loaded.save() == group.save()
 
     asyncio.run(changes())
@@ -114,14 +114,14 @@ def test_an_asynchronous_call_reports_the_error_its_synchronous_form_raises(flat
     nobody = MemberId('0199a000-0000-7000-8000-00000000ffff')
 
     async def calls() -> None:
-        with pytest.raises(GroupError) as removing:
+        with pytest.raises(ExpenseGroupError) as removing:
             await flat.group.remove_member_async(nobody)
-        assert removing.value.failure == GroupError.UnknownMember(member=nobody)
-        with pytest.raises(GroupError) as archiving:
+        assert removing.value.failure == ExpenseGroupError.UnknownMember(member=nobody)
+        with pytest.raises(ExpenseGroupError) as archiving:
             await flat.group.archive_member_async(nobody)
-        assert archiving.value.failure == GroupError.UnknownMember(member=nobody)
+        assert archiving.value.failure == ExpenseGroupError.UnknownMember(member=nobody)
         with pytest.raises(InvalidJsonError):
-            await Group.load_async('{')
+            await ExpenseGroup.load_async('{')
 
     asyncio.run(calls())
 

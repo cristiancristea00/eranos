@@ -7,10 +7,10 @@
 
 use std::error::Error;
 
-use eranos::error::GroupError;
+use eranos::error::ExpenseGroupError;
 use eranos::{
-    Account, AccountDetails, Balance, CalendarDate, Currency, Email, Expense, Group, Iban, Member,
-    MemberId, Money, PhoneNumber, Split, Username,
+    Account, AccountDetails, Balance, CalendarDate, Currency, Email, Expense, ExpenseGroup, Iban,
+    Member, MemberId, Money, PhoneNumber, Split, Username,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -92,7 +92,7 @@ fn outcome<Value, Error: std::fmt::Display>(
     )
 }
 
-fn print_members(group: &Group) {
+fn print_members(group: &ExpenseGroup) {
     print_table(
         group.members().map(|member| MemberRow {
             name: [Some(member.first_name()), member.last_name()]
@@ -115,7 +115,7 @@ fn print_members(group: &Group) {
     );
 }
 
-fn print_balances(group: &Group) {
+fn print_balances(group: &ExpenseGroup) {
     let summary = group.summary();
     print_table(
         group.members().map(|member| BalanceRow {
@@ -132,7 +132,7 @@ fn print_balances(group: &Group) {
     );
 }
 
-fn members(group: &mut Group) -> Result<Flatmates, Box<dyn Error>> {
+fn members(group: &mut ExpenseGroup) -> Result<Flatmates, Box<dyn Error>> {
     section("1. Members");
     let ana = group.add_member(
         Member::builder("Ana")
@@ -198,7 +198,7 @@ fn validation() {
     );
 }
 
-fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Error>> {
+fn moving_out(group: &mut ExpenseGroup, flatmates: Flatmates) -> Result<(), Box<dyn Error>> {
     section("3. A flatmate moves out");
     let Flatmates { ana, bob } = flatmates;
     let rent = Expense::builder(
@@ -242,8 +242,11 @@ fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Err
             .ok_or("the referenced member must stay")?
     );
 
-    assert_eq!(refused, Err(GroupError::ArchivedMember(bob)));
-    assert!(matches!(removal, Err(GroupError::MemberInUse { .. })));
+    assert_eq!(refused, Err(ExpenseGroupError::ArchivedMember(bob)));
+    assert!(matches!(
+        removal,
+        Err(ExpenseGroupError::MemberInUse { .. })
+    ));
     assert_eq!(
         group.summary().member(bob).balance(),
         Balance::Owes(Money::parse("450.00", Currency::EUR)?)
@@ -253,7 +256,7 @@ fn moving_out(group: &mut Group, flatmates: Flatmates) -> Result<(), Box<dyn Err
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Flat 4B", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Flat 4B", Currency::EUR).build()?;
     println!("Flat 4B: members and their accounts");
     println!("═══════════════════════════════════");
     println!(

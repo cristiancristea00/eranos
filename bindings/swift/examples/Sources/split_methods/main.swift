@@ -37,7 +37,7 @@ func eur(_ text: String) throws(EranosError) -> Money {
 }
 
 /// Prints how one expense divides: every involved member's rule, what they paid, and what they consumed.
-func report(_ group: Group, _ id: Expense.ID, _ rules: [Member.ID: String]) throws(EranosError) {
+func report(_ group: ExpenseGroup, _ id: Expense.ID, _ rules: [Member.ID: String]) throws(EranosError) {
     guard let expense = try group.expense(withID: id), let shares = try group.shares(of: id) else {
         return
     }
@@ -63,7 +63,7 @@ struct Family {
     }
 }
 
-func equally(_ group: Group, _ family: Family) throws(EranosError) {
+func equally(_ group: ExpenseGroup, _ family: Family) throws(EranosError) {
     section("1. Equally")
     print("""
         Everyone pays the same. 10.00 does not divide by three, so one member pays the
@@ -82,7 +82,7 @@ func equally(_ group: Group, _ family: Family) throws(EranosError) {
     try report(group, taxi, family.thirds)
 }
 
-func byPercentage(_ group: Group, _ family: Family) throws(EranosError) {
+func byPercentage(_ group: ExpenseGroup, _ family: Family) throws(EranosError) {
     section("2. By percentage")
     print("""
         Everyone pays a percentage of the amount; the percentages must add up to exactly
@@ -106,7 +106,7 @@ func byPercentage(_ group: Group, _ family: Family) throws(EranosError) {
     try report(group, rent, [family.ana: "40%", family.bob: "40%", family.mia: "20%"])
 }
 
-func byParts(_ group: Group, _ family: Family) throws(EranosError) -> Expense.ID {
+func byParts(_ group: ExpenseGroup, _ family: Family) throws(EranosError) -> Expense.ID {
     section("3. By parts")
     print("""
         Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:
@@ -131,7 +131,7 @@ func byParts(_ group: Group, _ family: Family) throws(EranosError) -> Expense.ID
     return food
 }
 
-func byAmounts(_ group: Group, _ family: Family) throws(EranosError) {
+func byAmounts(_ group: ExpenseGroup, _ family: Family) throws(EranosError) {
     section("4. By exact amounts")
     print("""
         Everyone pays a fixed amount, such as a ticket price; the amounts must add up to
@@ -155,7 +155,7 @@ func byAmounts(_ group: Group, _ family: Family) throws(EranosError) {
     try report(group, tickets, [family.ana: "15.00 EUR", family.bob: "15.00 EUR", family.mia: "5.00 EUR"])
 }
 
-func severalPayers(_ group: Group, _ family: Family) throws(EranosError) {
+func severalPayers(_ group: ExpenseGroup, _ family: Family) throws(EranosError) {
     section("5. Several payers")
     print("""
         The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are
@@ -176,7 +176,7 @@ func severalPayers(_ group: Group, _ family: Family) throws(EranosError) {
     try report(group, dinner, family.thirds)
 }
 
-func mistakes(_ group: Group, _ family: Family) throws(EranosError) {
+func mistakes(_ group: ExpenseGroup, _ family: Family) throws(EranosError) {
     section("6. Mistakes are refused")
     print("A percentage split that adds up to 90 % is refused when the expense is built:")
     let invalid = Expense(
@@ -199,7 +199,7 @@ func mistakes(_ group: Group, _ family: Family) throws(EranosError) {
     }
 }
 
-func printTotals(_ group: Group) throws(EranosError) {
+func printTotals(_ group: ExpenseGroup) throws(EranosError) {
     section("7. The holiday in total")
     let summary = try group.summary()
     print("\(summary.totalSpent) spent over five expenses:")
@@ -214,7 +214,7 @@ func printTotals(_ group: Group) throws(EranosError) {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(name: "Family holiday", currency: euro)
+    let group = try ExpenseGroup(name: "Family holiday", currency: euro)
     let family = Family(
         ana: try group.add(Member(firstName: "Ana")),
         bob: try group.add(Member(firstName: "Bob")),

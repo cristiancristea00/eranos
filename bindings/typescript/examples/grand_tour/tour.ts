@@ -5,7 +5,7 @@ import {
     type Balance,
     type CategoryId,
     type Cost,
-    type Group,
+    type ExpenseGroup,
     type MemberId,
     CalendarDate,
     Currency,
@@ -120,7 +120,7 @@ export function october(date: number): CalendarDate {
     return CalendarDate.of(2026, 10, date);
 }
 
-export function name(group: Group, member: MemberId): string {
+export function name(group: ExpenseGroup, member: MemberId): string {
     return names(group, [member]);
 }
 
@@ -149,11 +149,11 @@ export function rate(cost: Cost): ExchangeRate {
 }
 
 /** The identifier of the built-in category, which the group lists first. */
-export function builtInCategory(group: Group): CategoryId | undefined {
+export function builtInCategory(group: ExpenseGroup): CategoryId | undefined {
     return group.categoriesSync()[0]?.id;
 }
 
-export function printBalances(group: Group): void {
+export function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     const zero = new Money(0n, group.currencySync());
     printTable(
@@ -176,7 +176,7 @@ export function printBalances(group: Group): void {
     );
 }
 
-export function printCategories(group: Group): void {
+export function printCategories(group: ExpenseGroup): void {
     const expenses = group.expensesSync();
     const builtIn = builtInCategory(group);
     printTable(
@@ -191,7 +191,7 @@ export function printCategories(group: Group): void {
 }
 
 /** Every expense and transfer in a currency `shown` accepts, as entered and in the group currency. */
-export function printEntries(group: Group, shown: (currency: Currency) => boolean): void {
+export function printEntries(group: ExpenseGroup, shown: (currency: Currency) => boolean): void {
     const zero = new Money(0n, group.currencySync());
     const expenses = group
         .expensesSync()

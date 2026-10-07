@@ -3,7 +3,16 @@
 
 import { readFile } from 'node:fs/promises';
 
-import { type ExpenseSplit, type Group, type MemberId, type MemberSummary, type Summary, EranosError, init, splitMembers } from '../src/index.js';
+import {
+    type ExpenseSplit,
+    type ExpenseGroup,
+    type MemberId,
+    type MemberSummary,
+    type Summary,
+    EranosError,
+    init,
+    splitMembers,
+} from '../src/index.js';
 
 /** Loads the WebAssembly module beside the layer, which every other call runs in. */
 export async function load(): Promise<void> {
@@ -70,7 +79,7 @@ function width(text: string): number {
 }
 
 /** The first names of `members` in `group`, joined by commas, or `?` for one the group does not hold. */
-export function names(group: Group, members: readonly MemberId[]): string {
+export function names(group: ExpenseGroup, members: readonly MemberId[]): string {
     return members.map((member) => group.memberSync(member)?.firstName ?? '?').join(', ');
 }
 

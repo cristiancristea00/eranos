@@ -1669,11 +1669,11 @@ pub mod ffi {
     /// What a new group starts with.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
-    pub struct EranosNewGroup(pub(crate) eranos_bindings::NewGroup);
+    pub struct EranosNewExpenseGroup(pub(crate) eranos_bindings::NewExpenseGroup);
 
-    impl EranosNewGroup {
-        /// A new group of its required fields; every other field starts absent, empty, or at its
-        /// default.
+    impl EranosNewExpenseGroup {
+        /// A new expense group of its required fields; every other field starts absent, empty, or
+        /// at its default.
         ///
         /// # Errors
         ///
@@ -1682,7 +1682,7 @@ pub mod ffi {
             name: &DiplomatStr,
             currency: &DiplomatStr,
         ) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::NewGroup {
+            Ok(Box::new(Self(eranos_bindings::NewExpenseGroup {
                 name: crate::text(name)?,
                 currency: crate::text(currency)?,
                 description: None,

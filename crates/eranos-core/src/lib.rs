@@ -145,7 +145,7 @@ macro_rules! define_id {
 
 define_id! {
     /// Identifies a group.
-    GroupId
+    ExpenseGroupId
 }
 
 define_id! {

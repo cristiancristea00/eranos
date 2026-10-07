@@ -11,8 +11,8 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberSummary;
@@ -66,7 +66,7 @@ public final class Main {
     public static void main(String[] arguments) throws EranosException {
         Currency euro = Currency.of("EUR");
         CalendarDate day = CalendarDate.of(2026, 9, 23);
-        try (Group group = Group.builder("Road trip", euro).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Road trip", euro).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             ExpenseSplit both = new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob)));
@@ -110,7 +110,7 @@ public final class Main {
                     """);
 
             section("2. Loading it back");
-            try (Group loaded = Group.load(saved)) {
+            try (ExpenseGroup loaded = ExpenseGroup.load(saved)) {
                 System.out.print(
                         """
                         Loading replays every entry through the same checks as adding it, then rebuilds
@@ -136,9 +136,9 @@ public final class Main {
                 System.out.print(
                         """
                         Here Ana's identifier was edited in her member entry, so the fuel's payer is an
-                        identifier no member has. Reading the file as a SavedGroup and loading it with
-                        into_group replays every entry through the same checks as adding it, and refuses
-                        the file instead of producing balances that do not add up:
+                        identifier no member has. Reading the file as a SavedExpenseGroup and loading it
+                        with into_expense_group replays every entry through the same checks as adding it,
+                        and refuses the file instead of producing balances that do not add up:
                         """);
                 // Ana's own entry is the first to name her: the members come before the expenses
                 // in the saved form, so the fuel she paid is left naming an identifier no member
@@ -147,7 +147,7 @@ public final class Main {
                         saved.replaceFirst(
                                 Pattern.quote(ana.value()), "0199a000-0000-7000-8000-00000000ffff");
                 try {
-                    Group.load(corrupted).close();
+                    ExpenseGroup.load(corrupted).close();
                     throw new IllegalStateException("the file must be refused");
                 } catch (EranosException refusal) {
                     System.out.println("  error: " + refusal.getMessage());

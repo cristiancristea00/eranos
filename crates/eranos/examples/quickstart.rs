@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, Group, Member, MemberId, Money, SettlementStrategy,
-    Split,
+    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money,
+    SettlementStrategy, Split,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -64,7 +64,7 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 /// The first names of `members`, joined by commas.
-fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
+fn names(group: &ExpenseGroup, members: impl IntoIterator<Item = MemberId>) -> String {
     members
         .into_iter()
         .map(|member| group.member(member).map_or("?", Member::first_name))
@@ -73,7 +73,7 @@ fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Weekend in Sinaia", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Weekend in Sinaia", Currency::EUR).build()?;
     println!("{}", group.name());
     println!("{}", "═".repeat(group.name().chars().count()));
     println!(

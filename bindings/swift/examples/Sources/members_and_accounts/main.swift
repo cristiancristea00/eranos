@@ -70,7 +70,7 @@ func outcome<Value>(_ make: () throws(EranosError) -> Value, _ shown: (Value) ->
     }
 }
 
-func printMembers(_ group: Group) throws(EranosError) {
+func printMembers(_ group: ExpenseGroup) throws(EranosError) {
     printTable(
         try group.members().map { member in
             MemberRow(
@@ -84,7 +84,7 @@ func printMembers(_ group: Group) throws(EranosError) {
     )
 }
 
-func printBalances(_ group: Group) throws(EranosError) {
+func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = try group.summary()
     var rows: [BalanceRow] = []
     for member in try group.members() {
@@ -96,7 +96,7 @@ func printBalances(_ group: Group) throws(EranosError) {
     printTable(rows, numbersFrom: 2)
 }
 
-func members(_ group: Group) throws(EranosError) -> Flatmates {
+func members(_ group: ExpenseGroup) throws(EranosError) -> Flatmates {
     section("1. Members")
     let ana = try group.add(
         Member(
@@ -150,7 +150,7 @@ func validation() {
     )
 }
 
-func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
+func movingOut(_ group: ExpenseGroup, _ flatmates: Flatmates) throws(EranosError) {
     section("3. A flatmate moves out")
     let ana = flatmates.ana
     let bob = flatmates.bob
@@ -194,8 +194,8 @@ func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
     }
     print("Nor can he be removed while the rent references him:\n  error: \(removal.detail)")
 
-    precondition(EranosError.group(.archivedMember(bob), detail: refused.detail) == refused)
-    guard case .group(.memberInUse, _) = removal else {
+    precondition(EranosError.expenseGroup(.archivedMember(bob), detail: refused.detail) == refused)
+    guard case .expenseGroup(.memberInUse, _) = removal else {
         preconditionFailure("the rent references Bob")
     }
     let owed = try Money(parsing: "450.00", in: euro)
@@ -206,7 +206,7 @@ func movingOut(_ group: Group, _ flatmates: Flatmates) throws(EranosError) {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(name: "Flat 4B", currency: euro)
+    let group = try ExpenseGroup(name: "Flat 4B", currency: euro)
     print("Flat 4B: members and their accounts")
     print("═══════════════════════════════════")
     print("""

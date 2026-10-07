@@ -5,8 +5,8 @@
 //! here, and every case's message is read.
 
 use eranos::error::{
-    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, GroupError, IbanError,
-    IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
+    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError,
+    IbanError, IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
 };
 use eranos::{CategoryId, Currency, ExpenseId, MemberId, TransferId};
 
@@ -478,12 +478,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::ArchivedMember(MemberId::from_bytes([16; 16]));
+            let error = ExpenseGroupError::ArchivedMember(MemberId::from_bytes([16; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::ArchivedMember {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::ArchivedMember {
                         member: MemberId::from_bytes([16; 16]).to_string(),
                     },
                     detail: message,
@@ -491,34 +491,34 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::BuiltInCategory;
+            let error = ExpenseGroupError::BuiltInCategory;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::BuiltInCategory,
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::BuiltInCategory,
                     detail: message,
                 },
             }
         },
         {
-            let error = GroupError::Busy;
+            let error = ExpenseGroupError::Busy;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::Busy,
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::Busy,
                     detail: message,
                 },
             }
         },
         {
-            let error = GroupError::DuplicateCategory(CategoryId::from_bytes([17; 16]));
+            let error = ExpenseGroupError::DuplicateCategory(CategoryId::from_bytes([17; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::DuplicateCategory {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateCategory {
                         category: CategoryId::from_bytes([17; 16]).to_string(),
                     },
                     detail: message,
@@ -526,14 +526,14 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::DuplicateCategoryName {
+            let error = ExpenseGroupError::DuplicateCategoryName {
                 existing: CategoryId::from_bytes([18; 16]),
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::DuplicateCategoryName {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateCategoryName {
                         existing: CategoryId::from_bytes([18; 16]).to_string(),
                     },
                     detail: message,
@@ -541,14 +541,14 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::DuplicateExchangeRate {
+            let error = ExpenseGroupError::DuplicateExchangeRate {
                 currency: Currency::USD,
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::DuplicateExchangeRate {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateExchangeRate {
                         currency: "USD".to_owned(),
                     },
                     detail: message,
@@ -556,12 +556,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::DuplicateExpense(ExpenseId::from_bytes([20; 16]));
+            let error = ExpenseGroupError::DuplicateExpense(ExpenseId::from_bytes([20; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::DuplicateExpense {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateExpense {
                         expense: ExpenseId::from_bytes([20; 16]).to_string(),
                     },
                     detail: message,
@@ -569,12 +569,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::DuplicateMember(MemberId::from_bytes([21; 16]));
+            let error = ExpenseGroupError::DuplicateMember(MemberId::from_bytes([21; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::DuplicateMember {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateMember {
                         member: MemberId::from_bytes([21; 16]).to_string(),
                     },
                     detail: message,
@@ -582,12 +582,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::DuplicateTransfer(TransferId::from_bytes([22; 16]));
+            let error = ExpenseGroupError::DuplicateTransfer(TransferId::from_bytes([22; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::DuplicateTransfer {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateTransfer {
                         transfer: TransferId::from_bytes([22; 16]).to_string(),
                     },
                     detail: message,
@@ -595,18 +595,18 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::EmptyName;
+            let error = ExpenseGroupError::EmptyName;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::EmptyName,
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::EmptyName,
                     detail: message,
                 },
             }
         },
         {
-            let error = GroupError::MemberInUse {
+            let error = ExpenseGroupError::MemberInUse {
                 member: MemberId::from_bytes([24; 16]),
                 expenses: vec![ExpenseId::from_bytes([23; 16])],
                 transfers: vec![TransferId::from_bytes([25; 16])],
@@ -614,8 +614,8 @@ fn conversions() -> Vec<Conversion> {
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::MemberInUse {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::MemberInUse {
                         member: MemberId::from_bytes([24; 16]).to_string(),
                         expenses: vec![ExpenseId::from_bytes([23; 16]).to_string()],
                         transfers: vec![TransferId::from_bytes([25; 16]).to_string()],
@@ -625,14 +625,14 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::MissingExchangeRate {
+            let error = ExpenseGroupError::MissingExchangeRate {
                 currency: Currency::GBP,
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::MissingExchangeRate {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::MissingExchangeRate {
                         currency: "GBP".to_owned(),
                     },
                     detail: message,
@@ -640,34 +640,34 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::Overflow;
+            let error = ExpenseGroupError::Overflow;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::Overflow,
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::Overflow,
                     detail: message,
                 },
             }
         },
         {
-            let error = GroupError::UnexpectedExchangeRate;
+            let error = ExpenseGroupError::UnexpectedExchangeRate;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::UnexpectedExchangeRate,
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnexpectedExchangeRate,
                     detail: message,
                 },
             }
         },
         {
-            let error = GroupError::UnknownCategory(CategoryId::from_bytes([27; 16]));
+            let error = ExpenseGroupError::UnknownCategory(CategoryId::from_bytes([27; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::UnknownCategory {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownCategory {
                         category: CategoryId::from_bytes([27; 16]).to_string(),
                     },
                     detail: message,
@@ -675,12 +675,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::UnknownExpense(ExpenseId::from_bytes([28; 16]));
+            let error = ExpenseGroupError::UnknownExpense(ExpenseId::from_bytes([28; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::UnknownExpense {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownExpense {
                         expense: ExpenseId::from_bytes([28; 16]).to_string(),
                     },
                     detail: message,
@@ -688,12 +688,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::UnknownMember(MemberId::from_bytes([29; 16]));
+            let error = ExpenseGroupError::UnknownMember(MemberId::from_bytes([29; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::UnknownMember {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownMember {
                         member: MemberId::from_bytes([29; 16]).to_string(),
                     },
                     detail: message,
@@ -701,12 +701,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::UnknownTransfer(TransferId::from_bytes([30; 16]));
+            let error = ExpenseGroupError::UnknownTransfer(TransferId::from_bytes([30; 16]));
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::UnknownTransfer {
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnknownTransfer {
                         transfer: TransferId::from_bytes([30; 16]).to_string(),
                     },
                     detail: message,
@@ -714,12 +714,12 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = GroupError::UnsupportedFormat { format: 31 };
+            let error = ExpenseGroupError::UnsupportedFormat { format: 31 };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Group {
-                    failure: GroupFailure::UnsupportedFormat { format: 31 },
+                expected: EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::UnsupportedFormat { format: 31 },
                     detail: message,
                 },
             }
@@ -817,7 +817,8 @@ fn every_reason_of_a_refused_iban_converts() {
 #[test]
 fn a_refused_saved_group_names_the_fault_and_its_place() {
     let refusal = |text: &str| {
-        let error = serde_json::from_str::<eranos::group::SavedGroup>(text).unwrap_err();
+        let error =
+            serde_json::from_str::<eranos::expense_group::SavedExpenseGroup>(text).unwrap_err();
         EranosError::invalid_json(&error)
     };
     assert_eq!(

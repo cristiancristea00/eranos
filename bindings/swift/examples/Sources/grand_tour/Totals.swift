@@ -3,7 +3,7 @@
 import Eranos
 import Report
 
-func summary(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) {
+func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) {
     section("8. The summary")
     let summary = try group.summary()
     print("""
@@ -53,7 +53,7 @@ func summary(_ group: Group, _ people: People, _ categories: Categories) throws(
     precondition(0 == net.minorUnits, "the balances add up to zero")
 }
 
-func removingACategory(_ group: Group, _ categories: Categories) throws(EranosError) {
+func removingACategory(_ group: ExpenseGroup, _ categories: Categories) throws(EranosError) {
     section("9. Removing a category")
     let removed = try group.remove(categories.transport)
     guard let uncategorised = try builtInCategory(group) else {
@@ -67,7 +67,7 @@ func removingACategory(_ group: Group, _ categories: Categories) throws(EranosEr
         """)
     try printCategories(group)
 
-    guard case .failure(.group(.builtInCategory, _)) = builtIn else {
+    guard case .failure(.expenseGroup(.builtInCategory, _)) = builtIn else {
         preconditionFailure("the built-in category stays")
     }
     let transport = try group.category(withID: categories.transport)
@@ -77,7 +77,7 @@ func removingACategory(_ group: Group, _ categories: Categories) throws(EranosEr
     precondition(moved, "no expense is in Transport")
 }
 
-func newCurrency(_ group: Group, _ people: People) throws(EranosError) {
+func newCurrency(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     section("10. A new currency")
     let euro = try Currency(code: "EUR")
     let leu = try Currency(code: "RON")
@@ -97,7 +97,7 @@ func newCurrency(_ group: Group, _ people: People) throws(EranosError) {
         """)
     try printBalances(group)
 
-    guard case .failure(.group(.missingExchangeRate(euro), _)) = missing else {
+    guard case .failure(.expenseGroup(.missingExchangeRate(euro), _)) = missing else {
         preconditionFailure("the amounts in EUR need a rate")
     }
     let summary = try group.summary()
@@ -121,7 +121,7 @@ func strategyName(_ strategy: SettlementStrategy) -> String {
     }
 }
 
-func settlingUp(_ group: Group) throws(EranosError) {
+func settlingUp(_ group: ExpenseGroup) throws(EranosError) {
     section("11. Settling up")
     var counts: [StrategyRow] = []
     for strategy in SettlementStrategy.allCases {

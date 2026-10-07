@@ -325,7 +325,7 @@ fn the_plan_holds_what_the_calls_reach() {
                     taken: true,
                 },
                 Reached {
-                    name: "NewGroup",
+                    name: "NewExpenseGroup",
                     taken: true,
                 },
                 Reached {
@@ -350,7 +350,7 @@ fn the_plan_holds_what_the_calls_reach() {
 #[test]
 fn a_core_without_the_templates_records_gives_no_plan() {
     for records in [
-        RECORDS.replace("pub struct NewGroup", "pub struct OldGroup"),
+        RECORDS.replace("pub struct NewExpenseGroup", "pub struct OldGroup"),
         RECORDS.replace("pub struct CurrencyDetails", "pub struct Currencies"),
         RECORDS.replace("pub code: String,", "pub code: f64,"),
     ] {
@@ -370,7 +370,7 @@ fn a_field_the_bridge_cannot_carry_is_refused_wherever_it_is_reached() {
     let records = "
         /// What a new group starts with.
         #[mirrored]
-        pub struct NewGroup {
+        pub struct NewExpenseGroup {
             /// The name.
             pub name: String,
         }
@@ -397,9 +397,9 @@ fn a_field_the_bridge_cannot_carry_is_refused_wherever_it_is_reached() {
         }
     ";
     for calls in [
-        "#[calls] trait GroupCalls { /// Takes it. #[write] fn take(&self, inner: &Inner) -> Result<(), E>; }",
-        "#[calls] trait GroupCalls { /// Gives it. #[read] fn give(&self) -> Result<Inner, E>; }",
-        "#[calls] trait GroupCalls { /// Gives it. #[read] fn give(&self) -> Result<Outer, E>; }",
+        "#[calls] trait ExpenseGroupCalls { /// Takes it. #[write] fn take(&self, inner: &Inner) -> Result<(), E>; }",
+        "#[calls] trait ExpenseGroupCalls { /// Gives it. #[read] fn give(&self) -> Result<Inner, E>; }",
+        "#[calls] trait ExpenseGroupCalls { /// Gives it. #[read] fn give(&self) -> Result<Outer, E>; }",
     ] {
         let calls = calls
             .replace("/// ", "#[doc = \"")

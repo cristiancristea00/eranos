@@ -118,7 +118,7 @@ jobs:
             jq -r '.packages[] | .name as $package | .targets[] | select(.kind == ["example"]) | "\($package) \(.name)"')"
           test -n "$examples"
           while read -r package example; do
-            echo "::group::$package: $example"
+            echo "::expense_group::$package: $example"
             cargo run --locked --quiet --package "$package" --all-features --example "$example" </dev/null
             echo "::endgroup::"
           done <<<"$examples"

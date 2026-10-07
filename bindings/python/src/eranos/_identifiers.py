@@ -10,7 +10,7 @@ library checks the text when a call carries it.
 from typing import NewType
 
 
-GroupId = NewType('GroupId', str)
+ExpenseGroupId = NewType('ExpenseGroupId', str)
 
 MemberId = NewType('MemberId', str)
 

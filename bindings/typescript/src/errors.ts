@@ -21,7 +21,7 @@ import { Money } from './money.js';
  * try {
  *     group.removeMemberSync(member);
  * } catch (error: unknown) {
- *     if (!(error instanceof GroupError) || error.failure.kind !== 'memberInUse') {
+ *     if (!(error instanceof ExpenseGroupError) || error.failure.kind !== 'memberInUse') {
  *         throw error;
  *     }
  *     group.archiveMemberSync(member); // The member still has entries; archive them instead.
@@ -29,7 +29,7 @@ import { Money } from './money.js';
  * ```
  *
  * A call the program should not make throws a `TypeError` instead: for an entry to add that has an identifier, for one
- * to replace that has none, and for a read through a {@link GroupReader} after its release.
+ * to replace that has none, and for a read through an {@link ExpenseGroupReader} after its release.
  */
 export abstract class EranosError extends Error {}
 
@@ -213,8 +213,8 @@ export class TransferError extends EranosError {
     }
 }
 
-/** The library's `GroupError`, with the message it words. */
-export class GroupError extends EranosError {
+/** The library's `ExpenseGroupError`, with the message it words. */
+export class ExpenseGroupError extends EranosError {
     /**
      * The error of `failure`, which the library words as `message`.
      *
@@ -223,11 +223,11 @@ export class GroupError extends EranosError {
      */
     constructor(
         /** What the module reports. */
-        readonly failure: GroupFailure,
+        readonly failure: ExpenseGroupFailure,
         message: string,
     ) {
         super(message);
-        this.name = 'GroupError';
+        this.name = 'ExpenseGroupError';
     }
 }
 
@@ -478,8 +478,8 @@ export type TransferFailure =
           readonly kind: 'nonPositiveAmount';
       };
 
-/** What the library's `GroupError` reports: a type per failure, with what it holds. */
-export type GroupFailure =
+/** What the library's `ExpenseGroupError` reports: a type per failure, with what it holds. */
+export type ExpenseGroupFailure =
     | {
           /**
            * A saved group in a format this version does not read: a newer one, whose fields it would drop, or an earlier
@@ -670,8 +670,8 @@ export function convertedError(error: unknown): unknown {
             return new SettlementError(convertedSettlementFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.Transfer:
             return new TransferError(convertedTransferFailure(error.inner.failure), error.inner.detail);
-        case internal.EranosError_Tags.Group:
-            return new GroupError(convertedGroupFailure(error.inner.failure), error.inner.detail);
+        case internal.EranosError_Tags.ExpenseGroup:
+            return new ExpenseGroupError(convertedGroupFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.Language:
             return new LanguageError(convertedLanguageFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.IdentifierGiven:
@@ -822,50 +822,50 @@ function convertedTransferFailure(failure: internal.TransferFailure): TransferFa
 }
 
 /** The failure the generated code reports as `failure`. */
-function convertedGroupFailure(failure: internal.GroupFailure): GroupFailure {
+function convertedGroupFailure(failure: internal.ExpenseGroupFailure): ExpenseGroupFailure {
     switch (failure.tag) {
-        case internal.GroupFailure_Tags.UnsupportedFormat:
+        case internal.ExpenseGroupFailure_Tags.UnsupportedFormat:
             return { kind: 'unsupportedFormat', format: Number(failure.inner.format) };
-        case internal.GroupFailure_Tags.EmptyName:
+        case internal.ExpenseGroupFailure_Tags.EmptyName:
             return { kind: 'emptyName' };
-        case internal.GroupFailure_Tags.MissingExchangeRate:
+        case internal.ExpenseGroupFailure_Tags.MissingExchangeRate:
             return { kind: 'missingExchangeRate', currency: Currency.known(failure.inner.currency) };
-        case internal.GroupFailure_Tags.UnexpectedExchangeRate:
+        case internal.ExpenseGroupFailure_Tags.UnexpectedExchangeRate:
             return { kind: 'unexpectedExchangeRate' };
-        case internal.GroupFailure_Tags.DuplicateExchangeRate:
+        case internal.ExpenseGroupFailure_Tags.DuplicateExchangeRate:
             return { kind: 'duplicateExchangeRate', currency: Currency.known(failure.inner.currency) };
-        case internal.GroupFailure_Tags.DuplicateMember:
+        case internal.ExpenseGroupFailure_Tags.DuplicateMember:
             return { kind: 'duplicateMember', member: memberId(failure.inner.member) };
-        case internal.GroupFailure_Tags.UnknownMember:
+        case internal.ExpenseGroupFailure_Tags.UnknownMember:
             return { kind: 'unknownMember', member: memberId(failure.inner.member) };
-        case internal.GroupFailure_Tags.ArchivedMember:
+        case internal.ExpenseGroupFailure_Tags.ArchivedMember:
             return { kind: 'archivedMember', member: memberId(failure.inner.member) };
-        case internal.GroupFailure_Tags.MemberInUse:
+        case internal.ExpenseGroupFailure_Tags.MemberInUse:
             return {
                 kind: 'memberInUse',
                 member: memberId(failure.inner.member),
                 expenses: failure.inner.expenses.map(expenseId),
                 transfers: failure.inner.transfers.map(transferId),
             };
-        case internal.GroupFailure_Tags.DuplicateCategory:
+        case internal.ExpenseGroupFailure_Tags.DuplicateCategory:
             return { kind: 'duplicateCategory', category: categoryId(failure.inner.category) };
-        case internal.GroupFailure_Tags.DuplicateCategoryName:
+        case internal.ExpenseGroupFailure_Tags.DuplicateCategoryName:
             return { kind: 'duplicateCategoryName', existing: categoryId(failure.inner.existing) };
-        case internal.GroupFailure_Tags.UnknownCategory:
+        case internal.ExpenseGroupFailure_Tags.UnknownCategory:
             return { kind: 'unknownCategory', category: categoryId(failure.inner.category) };
-        case internal.GroupFailure_Tags.BuiltInCategory:
+        case internal.ExpenseGroupFailure_Tags.BuiltInCategory:
             return { kind: 'builtInCategory' };
-        case internal.GroupFailure_Tags.DuplicateExpense:
+        case internal.ExpenseGroupFailure_Tags.DuplicateExpense:
             return { kind: 'duplicateExpense', expense: expenseId(failure.inner.expense) };
-        case internal.GroupFailure_Tags.UnknownExpense:
+        case internal.ExpenseGroupFailure_Tags.UnknownExpense:
             return { kind: 'unknownExpense', expense: expenseId(failure.inner.expense) };
-        case internal.GroupFailure_Tags.DuplicateTransfer:
+        case internal.ExpenseGroupFailure_Tags.DuplicateTransfer:
             return { kind: 'duplicateTransfer', transfer: transferId(failure.inner.transfer) };
-        case internal.GroupFailure_Tags.UnknownTransfer:
+        case internal.ExpenseGroupFailure_Tags.UnknownTransfer:
             return { kind: 'unknownTransfer', transfer: transferId(failure.inner.transfer) };
-        case internal.GroupFailure_Tags.Busy:
+        case internal.ExpenseGroupFailure_Tags.Busy:
             return { kind: 'busy' };
-        case internal.GroupFailure_Tags.Overflow:
+        case internal.ExpenseGroupFailure_Tags.Overflow:
             return { kind: 'overflow' };
     }
 }

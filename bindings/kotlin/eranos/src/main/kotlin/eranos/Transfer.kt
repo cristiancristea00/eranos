@@ -3,8 +3,8 @@ package eranos
 /**
  * Money one member paid another, such as a repayment.
  *
- * A new transfer has no identifier; [Group.add] gives it one. To change a transfer, read it from the group, [copy] it with
- * the changes, and pass the copy to [Group.replace].
+ * A new transfer has no identifier; [ExpenseGroup.add] gives it one. To change a transfer, read it from the group, [copy] it with
+ * the changes, and pass the copy to [ExpenseGroup.replace].
  */
 @Suppress("LongParameterList") // A transfer has the library's fields; the public constructor defaults the optional ones.
 public class Transfer internal constructor(

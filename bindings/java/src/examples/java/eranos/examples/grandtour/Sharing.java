@@ -11,9 +11,9 @@ import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupReader;
 import eranos.ExpenseSplit;
-import eranos.Group;
-import eranos.GroupReader;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.Money;
@@ -37,10 +37,10 @@ import java.util.concurrent.CompletableFuture;
 final class Sharing {
     private Sharing() {}
 
-    static void sharing(Group group, People people) throws EranosException {
+    static void sharing(ExpenseGroup group, People people) throws EranosException {
         section("14. Sharing the group");
         // Another handle on the same group, as another thread holds: a group is shared as it is.
-        Group other = group;
+        ExpenseGroup other = group;
         List<MemberId> everyone =
                 List.of(people.ana(), people.bob(), people.carol(), people.dan(), people.eva());
         Expense coffee =
@@ -55,13 +55,13 @@ final class Sharing {
         Settlement plan = group.settlementAsync(SettlementStrategy.MINIMUM_TRANSFERS).join();
         System.out.print(
                 """
-                An app shares the group between its tasks and threads through a SharedGroup,
-                whose calls are futures any executor runs; here the library's block_on runs
-                each one on this thread. Bob adds the airport coffee through another handle,
-                and the plan that settles it comes through the first:
+                An app shares the group between its tasks and threads through a
+                SharedExpenseGroup, whose calls are futures any executor runs; here the library's
+                block_on runs each one on this thread. Bob adds the airport coffee through another
+                handle, and the plan that settles it comes through the first:
                 """);
         List<PaymentRow> rows = new ArrayList<>();
-        try (GroupReader reader = group.readAsync().join()) {
+        try (ExpenseGroupReader reader = group.readAsync().join()) {
             for (Payment payment : plan.payments()) {
                 rows.add(
                         new PaymentRow(
@@ -77,7 +77,7 @@ final class Sharing {
         // A report reads the group, holding the shared lock meanwhile, so the change waits for
         // it; a new read would wait behind the change, so the report reads through its own
         // handle.
-        GroupReader report = group.readAsync().join();
+        ExpenseGroupReader report = group.readAsync().join();
         CompletableFuture<Void> change = group.changeCurrencyAsync(Currency.of("EUR"), rates);
         Money reported = report.summary().totalSpent();
         // Cancelling the future cancels the waiting change, which leaves the group as it was.

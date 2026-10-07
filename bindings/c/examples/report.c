@@ -117,11 +117,11 @@ Id idOf(EranosText const *const text) {
     return id;
 }
 
-Id addMember(EranosGroup *const group, char const *const firstName) {
+Id addMember(EranosExpenseGroup *const group, char const *const firstName) {
     EranosMember *member = nullptr;
     must(eranosMemberCreate(firstName, &member));
     EranosText *const text = eranosTextCreate();
-    must(eranosGroupAddMember(group, member, text));
+    must(eranosExpenseGroupAddMember(group, member, text));
     Id const id = idOf(text);
     eranosTextDestroy(text);
     eranosMemberDestroy(member);
@@ -220,18 +220,18 @@ EranosExpense *expenseOf(char const *const name, EranosCost *const cost, EranosS
     return expense;
 }
 
-Id addExpense(EranosGroup *const group, EranosExpense *const expense) {
+Id addExpense(EranosExpenseGroup *const group, EranosExpense *const expense) {
     EranosText *const text = eranosTextCreate();
-    must(eranosGroupAddExpense(group, expense, text));
+    must(eranosExpenseGroupAddExpense(group, expense, text));
     Id const id = idOf(text);
     eranosTextDestroy(text);
     eranosExpenseDestroy(expense);
     return id;
 }
 
-EranosError *expenseRefusal(EranosGroup *const group, EranosExpense *const expense) {
+EranosError *expenseRefusal(EranosExpenseGroup *const group, EranosExpense *const expense) {
     EranosText *const text = eranosTextCreate();
-    EranosError *const refusal = eranosGroupAddExpense(group, expense, text);
+    EranosError *const refusal = eranosExpenseGroupAddExpense(group, expense, text);
     eranosTextDestroy(text);
     eranosExpenseDestroy(expense);
     return refusal;
@@ -245,18 +245,18 @@ EranosTransfer *transferOf(Id const from, Id const to, EranosCost *const cost, E
     return transfer;
 }
 
-Id addTransfer(EranosGroup *const group, EranosTransfer *const transfer) {
+Id addTransfer(EranosExpenseGroup *const group, EranosTransfer *const transfer) {
     EranosText *const text = eranosTextCreate();
-    must(eranosGroupAddTransfer(group, transfer, text));
+    must(eranosExpenseGroupAddTransfer(group, transfer, text));
     Id const id = idOf(text);
     eranosTextDestroy(text);
     eranosTransferDestroy(transfer);
     return id;
 }
 
-Line firstName(EranosGroup const *const group, char const *const member) {
+Line firstName(EranosExpenseGroup const *const group, char const *const member) {
     EranosMember *found = nullptr;
-    must(eranosGroupMember(group, member, &found));
+    must(eranosExpenseGroupMember(group, member, &found));
     if (nullptr == found) {
         return lineFrom("?");
     }
@@ -268,7 +268,7 @@ Line firstName(EranosGroup const *const group, char const *const member) {
     return line;
 }
 
-Line names(EranosGroup const *const group, Members const *const members) {
+Line names(EranosExpenseGroup const *const group, Members const *const members) {
     Line line = {};
     size_t length = 0;
     for (size_t index = 0; members->count > index; ++index) {

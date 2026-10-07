@@ -16,8 +16,8 @@ import java.util.function.Function;
  * <pre>{@code
  * try {
  *     group.removeMember(member);
- * } catch (EranosException.Group exception) {
- *     if (!(exception.failure() instanceof GroupFailure.MemberInUse)) {
+ * } catch (EranosException.ExpenseGroup exception) {
+ *     if (!(exception.failure() instanceof ExpenseGroupFailure.MemberInUse)) {
  *         throw exception;
  *     }
  *     group.archiveMember(member); // The member still has entries; archive them instead.
@@ -26,8 +26,8 @@ import java.util.function.Function;
  *
  * <p>A call the program should not make throws the standard exception instead: {@link
  * IllegalArgumentException} for an entry to add that has an identifier or one to replace that has
- * none, and {@link IllegalStateException} for a read through a {@link GroupReader} after it is
- * closed. A future whose call is cancelled fails with a {@link CancellationException}.
+ * none, and {@link IllegalStateException} for a read through an {@link ExpenseGroupReader} after it
+ * is closed. A future whose call is cancelled fails with a {@link CancellationException}.
  */
 // The exceptions are not serialisable in full: their failures hold the package's values, which
 // make no promise about a serialised form.
@@ -43,7 +43,7 @@ public abstract sealed class EranosException extends Exception
                 EranosException.Expense,
                 EranosException.Settlement,
                 EranosException.Transfer,
-                EranosException.Group,
+                EranosException.ExpenseGroup,
                 EranosException.Language,
                 EranosException.InvalidJson {
     private EranosException(String message) {
@@ -310,10 +310,10 @@ public abstract sealed class EranosException extends Exception
         }
     }
 
-    /** The library's {@code GroupError}, with the message it words. */
-    public static final class Group extends EranosException {
+    /** The library's {@code ExpenseGroupError}, with the message it words. */
+    public static final class ExpenseGroup extends EranosException {
         /** What the module reports. */
-        private final GroupFailure failure;
+        private final ExpenseGroupFailure failure;
 
         /**
          * The exception of {@code failure}, which the library words as {@code message}.
@@ -321,7 +321,7 @@ public abstract sealed class EranosException extends Exception
          * @param failure what the module reports
          * @param message the library's message
          */
-        public Group(GroupFailure failure, String message) {
+        public ExpenseGroup(ExpenseGroupFailure failure, String message) {
             super(message);
             this.failure = Objects.requireNonNull(failure, "failure");
         }
@@ -331,7 +331,7 @@ public abstract sealed class EranosException extends Exception
          *
          * @return the failure
          */
-        public GroupFailure failure() {
+        public ExpenseGroupFailure failure() {
             return failure;
         }
     }
@@ -465,8 +465,8 @@ public abstract sealed class EranosException extends Exception
                 exception -> new Transfer(converted(exception.failure()), exception.detail()));
         register(
                 conversions,
-                eranos.internal.EranosException.Group.class,
-                exception -> new Group(converted(exception.failure()), exception.detail()));
+                eranos.internal.EranosException.ExpenseGroup.class,
+                exception -> new ExpenseGroup(converted(exception.failure()), exception.detail()));
         register(
                 conversions,
                 eranos.internal.EranosException.Language.class,
@@ -699,51 +699,56 @@ public abstract sealed class EranosException extends Exception
      * @param failure the generated failure
      * @return the failure
      */
-    static GroupFailure converted(eranos.internal.GroupFailure failure) {
+    static ExpenseGroupFailure converted(eranos.internal.ExpenseGroupFailure failure) {
         return switch (failure) {
-            case eranos.internal.GroupFailure.UnsupportedFormat unsupportedFormat ->
-                    new GroupFailure.UnsupportedFormat(unsupportedFormat.format());
-            case eranos.internal.GroupFailure.EmptyName _ -> new GroupFailure.EmptyName();
-            case eranos.internal.GroupFailure.MissingExchangeRate missingExchangeRate ->
-                    new GroupFailure.MissingExchangeRate(
+            case eranos.internal.ExpenseGroupFailure.UnsupportedFormat unsupportedFormat ->
+                    new ExpenseGroupFailure.UnsupportedFormat(unsupportedFormat.format());
+            case eranos.internal.ExpenseGroupFailure.EmptyName _ ->
+                    new ExpenseGroupFailure.EmptyName();
+            case eranos.internal.ExpenseGroupFailure.MissingExchangeRate missingExchangeRate ->
+                    new ExpenseGroupFailure.MissingExchangeRate(
                             Currency.known(missingExchangeRate.currency()));
-            case eranos.internal.GroupFailure.UnexpectedExchangeRate _ ->
-                    new GroupFailure.UnexpectedExchangeRate();
-            case eranos.internal.GroupFailure.DuplicateExchangeRate duplicateExchangeRate ->
-                    new GroupFailure.DuplicateExchangeRate(
+            case eranos.internal.ExpenseGroupFailure.UnexpectedExchangeRate _ ->
+                    new ExpenseGroupFailure.UnexpectedExchangeRate();
+            case eranos.internal.ExpenseGroupFailure.DuplicateExchangeRate duplicateExchangeRate ->
+                    new ExpenseGroupFailure.DuplicateExchangeRate(
                             Currency.known(duplicateExchangeRate.currency()));
-            case eranos.internal.GroupFailure.DuplicateMember duplicateMember ->
-                    new GroupFailure.DuplicateMember(new MemberId(duplicateMember.member()));
-            case eranos.internal.GroupFailure.UnknownMember unknownMember ->
-                    new GroupFailure.UnknownMember(new MemberId(unknownMember.member()));
-            case eranos.internal.GroupFailure.ArchivedMember archivedMember ->
-                    new GroupFailure.ArchivedMember(new MemberId(archivedMember.member()));
-            case eranos.internal.GroupFailure.MemberInUse memberInUse ->
-                    new GroupFailure.MemberInUse(
+            case eranos.internal.ExpenseGroupFailure.DuplicateMember duplicateMember ->
+                    new ExpenseGroupFailure.DuplicateMember(new MemberId(duplicateMember.member()));
+            case eranos.internal.ExpenseGroupFailure.UnknownMember unknownMember ->
+                    new ExpenseGroupFailure.UnknownMember(new MemberId(unknownMember.member()));
+            case eranos.internal.ExpenseGroupFailure.ArchivedMember archivedMember ->
+                    new ExpenseGroupFailure.ArchivedMember(new MemberId(archivedMember.member()));
+            case eranos.internal.ExpenseGroupFailure.MemberInUse memberInUse ->
+                    new ExpenseGroupFailure.MemberInUse(
                             new MemberId(memberInUse.member()),
                             memberInUse.expenses().stream().map(ExpenseId::new).toList(),
                             memberInUse.transfers().stream().map(TransferId::new).toList());
-            case eranos.internal.GroupFailure.DuplicateCategory duplicateCategory ->
-                    new GroupFailure.DuplicateCategory(
+            case eranos.internal.ExpenseGroupFailure.DuplicateCategory duplicateCategory ->
+                    new ExpenseGroupFailure.DuplicateCategory(
                             new CategoryId(duplicateCategory.category()));
-            case eranos.internal.GroupFailure.DuplicateCategoryName duplicateCategoryName ->
-                    new GroupFailure.DuplicateCategoryName(
+            case eranos.internal.ExpenseGroupFailure.DuplicateCategoryName duplicateCategoryName ->
+                    new ExpenseGroupFailure.DuplicateCategoryName(
                             new CategoryId(duplicateCategoryName.existing()));
-            case eranos.internal.GroupFailure.UnknownCategory unknownCategory ->
-                    new GroupFailure.UnknownCategory(new CategoryId(unknownCategory.category()));
-            case eranos.internal.GroupFailure.BuiltInCategory _ ->
-                    new GroupFailure.BuiltInCategory();
-            case eranos.internal.GroupFailure.DuplicateExpense duplicateExpense ->
-                    new GroupFailure.DuplicateExpense(new ExpenseId(duplicateExpense.expense()));
-            case eranos.internal.GroupFailure.UnknownExpense unknownExpense ->
-                    new GroupFailure.UnknownExpense(new ExpenseId(unknownExpense.expense()));
-            case eranos.internal.GroupFailure.DuplicateTransfer duplicateTransfer ->
-                    new GroupFailure.DuplicateTransfer(
+            case eranos.internal.ExpenseGroupFailure.UnknownCategory unknownCategory ->
+                    new ExpenseGroupFailure.UnknownCategory(
+                            new CategoryId(unknownCategory.category()));
+            case eranos.internal.ExpenseGroupFailure.BuiltInCategory _ ->
+                    new ExpenseGroupFailure.BuiltInCategory();
+            case eranos.internal.ExpenseGroupFailure.DuplicateExpense duplicateExpense ->
+                    new ExpenseGroupFailure.DuplicateExpense(
+                            new ExpenseId(duplicateExpense.expense()));
+            case eranos.internal.ExpenseGroupFailure.UnknownExpense unknownExpense ->
+                    new ExpenseGroupFailure.UnknownExpense(new ExpenseId(unknownExpense.expense()));
+            case eranos.internal.ExpenseGroupFailure.DuplicateTransfer duplicateTransfer ->
+                    new ExpenseGroupFailure.DuplicateTransfer(
                             new TransferId(duplicateTransfer.transfer()));
-            case eranos.internal.GroupFailure.UnknownTransfer unknownTransfer ->
-                    new GroupFailure.UnknownTransfer(new TransferId(unknownTransfer.transfer()));
-            case eranos.internal.GroupFailure.Busy _ -> new GroupFailure.Busy();
-            case eranos.internal.GroupFailure.Overflow _ -> new GroupFailure.Overflow();
+            case eranos.internal.ExpenseGroupFailure.UnknownTransfer unknownTransfer ->
+                    new ExpenseGroupFailure.UnknownTransfer(
+                            new TransferId(unknownTransfer.transfer()));
+            case eranos.internal.ExpenseGroupFailure.Busy _ -> new ExpenseGroupFailure.Busy();
+            case eranos.internal.ExpenseGroupFailure.Overflow _ ->
+                    new ExpenseGroupFailure.Overflow();
         };
     }
 

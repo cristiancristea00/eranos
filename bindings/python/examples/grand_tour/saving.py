@@ -3,7 +3,7 @@
 import dataclasses
 from typing import ClassVar, assert_never, final, override
 
-from eranos import Account, Group, GroupError, IbanAccountDetails, UsernameAccountDetails
+from eranos import Account, ExpenseGroup, ExpenseGroupError, IbanAccountDetails, UsernameAccountDetails
 from examples.grand_tour.tour import Categories, People
 from examples.report import Row, print_lines, print_table, refusal, section
 
@@ -30,7 +30,7 @@ class LoadRow(Row):
     change: str
     """What was changed."""
 
-    message: GroupError
+    message: ExpenseGroupError
     """The library's error."""
 
     @override
@@ -59,7 +59,7 @@ def _details(account: Account) -> str:
             assert_never(details)
 
 
-def _refused(text: str) -> GroupError:
+def _refused(text: str) -> ExpenseGroupError:
     """
     Load text, a saved group changed so that the library refuses it.
 
@@ -70,12 +70,12 @@ def _refused(text: str) -> GroupError:
         The library's error.
 
     """
-    refused = refusal(lambda: Group.load(text))
-    assert isinstance(refused, GroupError), 'the change is refused'
+    refused = refusal(lambda: ExpenseGroup.load(text))
+    assert isinstance(refused, ExpenseGroupError), 'the change is refused'
     return refused
 
 
-def saving_and_loading(group: Group, people: People, categories: Categories) -> None:
+def saving_and_loading(group: ExpenseGroup, people: People, categories: Categories) -> None:
     """
     Print section 12: save the group, load it again, and show what the library refuses in a changed file.
 
@@ -97,11 +97,11 @@ def saving_and_loading(group: Group, people: People, categories: Categories) -> 
         details = _details(account)
         assert details in saved, f'{details} is saved as it is'
         print_lines(f'  {account.name}: {details}')
-    with Group.load(saved) as loaded:
+    with ExpenseGroup.load(saved) as loaded:
         print_lines(
             'Loading replays every entry through the same checks as adding it and rebuilds the',
-            'totals: the loaded group equals the saved one. Reading a SavedGroup and loading it',
-            'with into_group reports a refusal as a typed error instead of a message:',
+            'totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and',
+            'loading it with into_expense_group reports a refusal as a typed error, not as text:',
         )
         tampered = (
             Tampering(change='"format": 3', text=saved.replace('"format": 2', '"format": 3', 1)),
@@ -117,7 +117,7 @@ def saving_and_loading(group: Group, people: People, categories: Categories) -> 
         assert loaded.save() == saved
         assert loaded.summary() == group.summary()
         assert [row.message.failure for row in rows] == [
-            GroupError.UnsupportedFormat(format=3),
-            GroupError.EmptyName(),
-            GroupError.DuplicateCategoryName(existing=categories.food),
+            ExpenseGroupError.UnsupportedFormat(format=3),
+            ExpenseGroupError.EmptyName(),
+            ExpenseGroupError.DuplicateCategoryName(existing=categories.food),
         ]

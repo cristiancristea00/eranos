@@ -8,8 +8,8 @@ import eranos.Category
 import eranos.Currency
 import eranos.Email
 import eranos.EranosException
-import eranos.Group
-import eranos.GroupFailure
+import eranos.ExpenseGroup
+import eranos.ExpenseGroupFailure
 import eranos.Iban
 import eranos.Language
 import eranos.Member
@@ -58,9 +58,9 @@ private data class CheckRow(
     }
 }
 
-internal fun theGroup(): Group {
+internal fun theGroup(): ExpenseGroup {
     section("1. The group")
-    val group = Group("Lisbon", Currency.of("EUR"), "A week by the Atlantic", Language.parse("pt-pt"))
+    val group = ExpenseGroup("Lisbon", Currency.of("EUR"), "A week by the Atlantic", Language.parse("pt-pt"))
     val blank = refusal { group.renameBlocking("   ") }
     group.renameBlocking("Lisbon and Porto")
     group.setDescriptionBlocking("A week by the Atlantic, with a day in Porto")
@@ -84,7 +84,7 @@ internal fun theGroup(): Group {
         """.trimIndent(),
     )
 
-    check(GroupFailure.EmptyName == (blank as? EranosException.Group)?.failure)
+    check(ExpenseGroupFailure.EmptyName == (blank as? EranosException.ExpenseGroup)?.failure)
     check("Lisbon and Porto" == group.nameBlocking())
     check("pt-PT" == group.languageBlocking()?.toString())
     return group
@@ -97,7 +97,7 @@ internal fun describe(account: Account): String =
         is AccountDetails.Username -> "${account.name}, username ${details.username}"
     }
 
-internal fun printMembers(group: Group) {
+internal fun printMembers(group: ExpenseGroup) {
     printTable(
         MemberRow.HEADERS,
         group.membersBlocking().map { member ->
@@ -112,7 +112,7 @@ internal fun printMembers(group: Group) {
     )
 }
 
-internal fun validation(group: Group) {
+internal fun validation(group: ExpenseGroup) {
     println(
         """
         IBANs are checked against the SWIFT registry and their mod-97 check digits,
@@ -142,7 +142,7 @@ internal fun validation(group: Group) {
     )
 }
 
-internal fun members(group: Group): People {
+internal fun members(group: ExpenseGroup): People {
     section("2. Members")
     val ana =
         group.addBlocking(
@@ -183,7 +183,7 @@ internal fun members(group: Group): People {
     return People(ana, bob, carol, dan, eva, filip)
 }
 
-internal fun addCategories(group: Group): Categories {
+internal fun addCategories(group: ExpenseGroup): Categories {
     section("3. Categories")
     val food = group.addBlocking(Category("Food"))
     val lodging = group.addBlocking(Category("Lodging"))
@@ -210,8 +210,8 @@ internal fun addCategories(group: Group): Categories {
         numbersFrom = 2,
     )
 
-    check(GroupFailure.DuplicateCategoryName(food) == (homonym as? EranosException.Group)?.failure)
-    check(GroupFailure.BuiltInCategory == (builtIn as? EranosException.Group)?.failure)
+    check(ExpenseGroupFailure.DuplicateCategoryName(food) == (homonym as? EranosException.ExpenseGroup)?.failure)
+    check(ExpenseGroupFailure.BuiltInCategory == (builtIn as? EranosException.ExpenseGroup)?.failure)
     check("Getting around" == group.categoryBlocking(transport)?.name)
     return Categories(food, lodging, transport)
 }

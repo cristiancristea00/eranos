@@ -18,7 +18,7 @@ from eranos import (
     ExpenseId,
     FixedTip,
     GetsBackBalance,
-    GroupError,
+    ExpenseGroupError,
     Iban,
     IbanAccountDetails,
     IdError,
@@ -161,9 +161,9 @@ def test_removing_an_entry_returns_it_and_forgets_it(flat: Flat) -> None:
 
 def test_a_member_in_use_is_not_removed(flat: Flat) -> None:
     """A member removed while entries name them would leave shares nobody owes."""
-    with pytest.raises(GroupError) as refused:
+    with pytest.raises(ExpenseGroupError) as refused:
         flat.group.remove_member(flat.ana)
-    assert refused.value.failure == GroupError.MemberInUse(member=flat.ana, expenses=(flat.dinner,), transfers=(flat.repayment,))
+    assert refused.value.failure == ExpenseGroupError.MemberInUse(member=flat.ana, expenses=(flat.dinner,), transfers=(flat.repayment,))
 
 
 def test_an_archived_member_joins_no_new_expense(flat: Flat) -> None:
@@ -171,15 +171,15 @@ def test_an_archived_member_joins_no_new_expense(flat: Flat) -> None:
     flat.group.archive_member(flat.bob)
     assert flat.group.is_archived(flat.bob)
     assert not flat.group.is_archived(flat.ana)
-    with pytest.raises(GroupError) as refused:
+    with pytest.raises(ExpenseGroupError) as refused:
         flat.group.add_expense(flat.expense('Snack', flat.ana, (flat.ana, flat.bob)))
-    assert refused.value.failure == GroupError.ArchivedMember(member=flat.bob)
+    assert refused.value.failure == ExpenseGroupError.ArchivedMember(member=flat.bob)
     flat.group.unarchive_member(flat.bob)
     assert not flat.group.is_archived(flat.bob)
     nobody = MemberId('0199a000-0000-7000-8000-00000000ffff')
-    with pytest.raises(GroupError) as unknown:
+    with pytest.raises(ExpenseGroupError) as unknown:
         flat.group.archive_member(nobody)
-    assert unknown.value.failure == GroupError.UnknownMember(member=nobody)
+    assert unknown.value.failure == ExpenseGroupError.UnknownMember(member=nobody)
 
 
 def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:

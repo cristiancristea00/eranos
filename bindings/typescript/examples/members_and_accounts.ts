@@ -11,8 +11,8 @@ import {
     CalendarDate,
     Currency,
     Email,
-    GroupError,
-    Group,
+    ExpenseGroupError,
+    ExpenseGroup,
     Iban,
     Money,
     PhoneNumber,
@@ -85,7 +85,7 @@ function validated<Value>(input: string, kind: string, parse: (text: string) => 
     return { input, kind, result: undefined === refused ? result : `refused: ${refused.message}` };
 }
 
-function printMembers(group: Group): void {
+function printMembers(group: ExpenseGroup): void {
     printTable(
         memberColumns,
         group.membersSync().map((member) => ({
@@ -98,7 +98,7 @@ function printMembers(group: Group): void {
     );
 }
 
-function printBalances(group: Group): void {
+function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     printTable(
         balanceColumns,
@@ -119,7 +119,7 @@ function printBalances(group: Group): void {
     );
 }
 
-function members(group: Group): Flatmates {
+function members(group: ExpenseGroup): Flatmates {
     section('1. Members');
     const ana = group.addMemberSync({
         firstName: 'Ana',
@@ -178,7 +178,7 @@ function validation(): void {
     );
 }
 
-function movingOut(group: Group, flatmates: Flatmates): void {
+function movingOut(group: ExpenseGroup, flatmates: Flatmates): void {
     section('3. A flatmate moves out');
     const { ana, bob } = flatmates;
     const euro = Currency.of('EUR');
@@ -206,10 +206,10 @@ function movingOut(group: Group, flatmates: Flatmates): void {
             date: CalendarDate.of(2026, 10, 1),
         }),
     );
-    assert.ok(refused instanceof GroupError, 'the archived member must be refused');
+    assert.ok(refused instanceof ExpenseGroupError, 'the archived member must be refused');
     printLines("October's utilities cannot include him:", `  error: ${refused.message}`);
     const removal = refusal(() => group.removeMemberSync(bob));
-    assert.ok(removal instanceof GroupError, 'the referenced member must stay');
+    assert.ok(removal instanceof ExpenseGroupError, 'the referenced member must stay');
     printLines('Nor can he be removed while the rent references him:', `  error: ${removal.message}`);
 
     assert.deepEqual(refused.failure, { kind: 'archivedMember', member: bob });
@@ -219,7 +219,7 @@ function movingOut(group: Group, flatmates: Flatmates): void {
 }
 
 await load();
-using group = Group.create('Flat 4B', Currency.of('EUR'));
+using group = ExpenseGroup.create('Flat 4B', Currency.of('EUR'));
 printLines('Flat 4B: members and their accounts', '═══════════════════════════════════');
 printLines(
     'Ana and Bob share a flat. A member needs only a first name; the last name,',

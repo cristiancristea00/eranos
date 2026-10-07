@@ -7,9 +7,9 @@ import eranos.Cost
 import eranos.Currency
 import eranos.EranosException
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseId
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.Member
 import eranos.MemberAmount
 import eranos.MemberId
@@ -57,7 +57,7 @@ private fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
 
 /** Prints how one expense divides: every involved member's rule, what they paid, and what they consumed. */
 private fun report(
-    group: Group,
+    group: ExpenseGroup,
     id: ExpenseId,
     rules: Map<MemberId, String>,
 ) {
@@ -91,7 +91,7 @@ private class Family(
 }
 
 private fun equally(
-    group: Group,
+    group: ExpenseGroup,
     family: Family,
 ) {
     section("1. Equally")
@@ -116,7 +116,7 @@ private fun equally(
 }
 
 private fun byPercentage(
-    group: Group,
+    group: ExpenseGroup,
     family: Family,
 ) {
     section("2. By percentage")
@@ -148,7 +148,7 @@ private fun byPercentage(
 }
 
 private fun byParts(
-    group: Group,
+    group: ExpenseGroup,
     family: Family,
 ): ExpenseId {
     section("3. By parts")
@@ -181,7 +181,7 @@ private fun byParts(
 }
 
 private fun byAmounts(
-    group: Group,
+    group: ExpenseGroup,
     family: Family,
 ) {
     section("4. By exact amounts")
@@ -213,7 +213,7 @@ private fun byAmounts(
 }
 
 private fun severalPayers(
-    group: Group,
+    group: ExpenseGroup,
     family: Family,
 ) {
     section("5. Several payers")
@@ -237,7 +237,7 @@ private fun severalPayers(
 }
 
 private fun mistakes(
-    group: Group,
+    group: ExpenseGroup,
     family: Family,
 ) {
     section("6. Mistakes are refused")
@@ -262,7 +262,7 @@ private fun mistakes(
     }
 }
 
-private fun printTotals(group: Group) {
+private fun printTotals(group: ExpenseGroup) {
     section("7. The holiday in total")
     val summary = group.summaryBlocking()
     println("${summary.totalSpent} spent over five expenses:")
@@ -279,7 +279,7 @@ private fun printTotals(group: Group) {
 
 /** Prints the report of the family holiday. */
 fun main() {
-    Group("Family holiday", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Family holiday", Currency.of("EUR")).use { group ->
         val family =
             Family(
                 ana = group.addBlocking(Member("Ana")),

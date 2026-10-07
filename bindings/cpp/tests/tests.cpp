@@ -84,7 +84,7 @@ class Flat final {
   public:
     Flat()
         : euro(Currency::of("EUR").value()), day(CalendarDate::of(2026, 9, 23).value()),
-          group(Group::create("Flat", euro, GroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
+          group(ExpenseGroup::create("Flat", euro, ExpenseGroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
           ana(group.addMember(Member("Ana")).value()), bob(group.addMember(Member("Bob")).value()), food(group.addCategory(Category("Food")).value()),
           dinner(group.addExpense(dinnerExpense()).value()), repayment(group.addTransfer(Transfer(bob, ana, LocalCost{euros(1'000)}, day)).value()) {}
 
@@ -98,7 +98,7 @@ class Flat final {
 
     Currency euro;
     CalendarDate day;
-    Group group;
+    ExpenseGroup group;
     MemberId ana;
     MemberId bob;
     CategoryId food;
@@ -251,7 +251,7 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) {
 
 /// An identifier that compared or hashed otherwise than by its text would lose an entry in the maps and sets of an app.
 void everyIdentifierComparesAndHashesByItsText(Check &check) {
-    checkIdentifier<GroupId>(check, "a group's identifier");
+    checkIdentifier<ExpenseGroupId>(check, "a group's identifier");
     checkIdentifier<MemberId>(check, "a member's identifier");
     checkIdentifier<CategoryId>(check, "a category's identifier");
     checkIdentifier<ExpenseId>(check, "an expense's identifier");
@@ -439,7 +439,7 @@ void removingAnEntryReturnsItAndForgetsIt(Check &check) {
 void aMemberInUseIsNotRemoved(Check &check) {
     Flat flat;
     auto const refused = refusal(flat.group.removeMember(flat.ana));
-    check.that(isFailure(refused, ErrorKind::GROUP, Failure::GROUP_MEMBER_IN_USE), "Ana paid the dinner and received the repayment");
+    check.that(isFailure(refused, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MEMBER_IN_USE), "Ana paid the dinner and received the repayment");
     check.that(refused.has_value() && refused.value().member() == flat.ana && refused.value().expenses() == std::vector<ExpenseId>{flat.dinner} &&
                    refused.value().transfers() == std::vector<TransferId>{flat.repayment},
                "the error names the member and every entry that names them");
@@ -451,11 +451,13 @@ void anArchivedMemberJoinsNoNewExpense(Check &check) {
     flat.group.archiveMember(flat.bob).value();
     check.that(flat.group.isArchived(flat.bob).value() && !flat.group.isArchived(flat.ana).value(), "Bob is archived and Ana is not");
     auto const refused = refusal(flat.group.addExpense(flat.expense("Snack", flat.ana, {flat.ana, flat.bob})));
-    check.that(isFailure(refused, ErrorKind::GROUP, Failure::GROUP_ARCHIVED_MEMBER) && refused.value().member() == flat.bob, "the error names Bob");
+    check.that(isFailure(refused, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_ARCHIVED_MEMBER) && refused.value().member() == flat.bob,
+               "the error names Bob");
     flat.group.unarchiveMember(flat.bob).value();
     check.that(!flat.group.isArchived(flat.bob).value(), "Bob is back");
     auto const unknown = refusal(flat.group.archiveMember(MemberId("0199a000-0000-7000-8000-00000000ffff")));
-    check.that(isFailure(unknown, ErrorKind::GROUP, Failure::GROUP_UNKNOWN_MEMBER) && unknown.value().member().has_value(), "an unknown member");
+    check.that(isFailure(unknown, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_MEMBER) && unknown.value().member().has_value(),
+               "an unknown member");
 }
 
 /// A helper that read an entry otherwise than the library would show an app a total the group does not hold.
@@ -492,11 +494,12 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
     flat.group.clearDescription();
     flat.group.clearLanguage();
     check.that(!flat.group.description().has_value() && !flat.group.language().has_value(), "the details cleared");
-    check.that(isFailure(refusal(flat.group.setName(" ")), ErrorKind::GROUP, Failure::GROUP_EMPTY_NAME), "a blank name");
+    check.that(isFailure(refusal(flat.group.setName(" ")), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME), "a blank name");
     check.that(isFailure(refusal(flat.group.setDescription("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a description that is not text");
-    auto const trip = Group::create("Trip", flat.euro).value();
+    auto const trip = ExpenseGroup::create("Trip", flat.euro).value();
     check.that(!trip.description().has_value() && !trip.language().has_value(), "a group made without options has neither");
-    check.that(isFailure(refusal(Group::create(" ", flat.euro)), ErrorKind::GROUP, Failure::GROUP_EMPTY_NAME), "a group needs a name");
+    check.that(isFailure(refusal(ExpenseGroup::create(" ", flat.euro)), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME),
+               "a group needs a name");
 }
 
 /// Totals that did not add up would tell a member they owe what they do not.
@@ -554,20 +557,22 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
     Flat flat;
     auto const lei = Currency::of("RON").value();
     auto const missing = refusal(flat.group.changeCurrency(lei, {}));
-    check.that(isFailure(missing, ErrorKind::GROUP, Failure::GROUP_MISSING_EXCHANGE_RATE) && "EUR" == missing.value().currency(),
+    check.that(isFailure(missing, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE) && "EUR" == missing.value().currency(),
                "the euro needs a rate");
     auto const rate = CurrencyRate(flat.euro, ExchangeRate::parse("5").value());
     auto const twice = refusal(flat.group.changeCurrency(lei, std::array{rate, rate}));
-    check.that(isFailure(twice, ErrorKind::GROUP, Failure::GROUP_DUPLICATE_EXCHANGE_RATE) && "EUR" == twice.value().currency(),
+    check.that(isFailure(twice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXCHANGE_RATE) && "EUR" == twice.value().currency(),
                "one rate per currency");
     auto converted = flat.expense("Taxi", flat.ana, {flat.ana});
     converted.cost = ConvertedCost{.amount = flat.euros(1'000), .rate = ExchangeRate::parse("1").value()};
     auto const unexpected = refusal(flat.group.addExpense(converted));
-    check.that(isFailure(unexpected, ErrorKind::GROUP, Failure::GROUP_UNEXPECTED_EXCHANGE_RATE), "an amount in the group currency has no rate");
+    check.that(isFailure(unexpected, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNEXPECTED_EXCHANGE_RATE),
+               "an amount in the group currency has no rate");
     auto local = converted;
     local.cost = LocalCost{Money(1'000, lei)};
     auto const unconverted = refusal(flat.group.addExpense(local));
-    check.that(isFailure(unconverted, ErrorKind::GROUP, Failure::GROUP_MISSING_EXCHANGE_RATE) && "RON" == unconverted.value().currency(),
+    check.that(isFailure(unconverted, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE) &&
+                   "RON" == unconverted.value().currency(),
                "an amount in another currency needs a rate");
     flat.group.changeCurrency(lei, std::array{rate}).value();
     check.that(flat.group.currency() == lei && flat.group.summary().totalSpent == Money(15'000, lei), "30.00 EUR at 5 is 150.00 RON");
@@ -577,15 +582,15 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
 void aSavedGroupLoadsAsItWasSaved(Check &check) {
     Flat const flat;
     auto const json = flat.group.save();
-    check.that(Group::load(json).value().save() == json, "the loaded group saves the same text");
-    auto const broken = refusal(Group::load("{"));
+    check.that(ExpenseGroup::load(json).value().save() == json, "the loaded group saves the same text");
+    auto const broken = refusal(ExpenseGroup::load("{"));
     check.that(isFailure(broken, ErrorKind::INVALID_JSON, std::nullopt) && 1 == broken.value().line() && 1 == broken.value().column(),
                "where the text stops being JSON");
     auto tampered = json;
     auto const format = tampered.find("\"format\": 2");
     tampered.replace(format, std::string_view("\"format\": 2").size(), "\"format\": 26");
-    auto const newer = refusal(Group::load(tampered));
-    check.that(isFailure(newer, ErrorKind::GROUP, Failure::GROUP_UNSUPPORTED_FORMAT) && 26 == newer.value().format(),
+    auto const newer = refusal(ExpenseGroup::load(tampered));
+    check.that(isFailure(newer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT) && 26 == newer.value().format(),
                "a format this release cannot read");
 }
 
@@ -611,18 +616,20 @@ void everyErrorHoldsWhatItsFailureHolds(Check &check) {
                    5'000 == percentages.value().totalBasisPoints(),
                "what the percentages add up to");
     auto const duplicate = refusal(flat.group.addCategory(Category("food")));
-    check.that(isFailure(duplicate, ErrorKind::GROUP, Failure::GROUP_DUPLICATE_CATEGORY_NAME) && duplicate.value().existing() == flat.food,
+    check.that(isFailure(duplicate, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME) &&
+                   duplicate.value().existing() == flat.food,
                "the category that has the name");
     CategoryId const absent("0199a000-0000-7000-8000-00000000ffff");
     auto uncategorised = flat.expense("Taxi", flat.ana, {flat.ana});
     uncategorised.category = absent;
     auto const category = refusal(flat.group.addExpense(uncategorised));
-    check.that(isFailure(category, ErrorKind::GROUP, Failure::GROUP_UNKNOWN_CATEGORY) && category.value().category() == absent,
+    check.that(isFailure(category, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_CATEGORY) && category.value().category() == absent,
                "the unknown category");
     auto const expense = refusal(flat.group.removeExpense(ExpenseId("0199a000-0000-7000-8000-00000000ffff")));
-    check.that(isFailure(expense, ErrorKind::GROUP, Failure::GROUP_UNKNOWN_EXPENSE) && expense.value().expense().has_value(), "the unknown expense");
+    check.that(isFailure(expense, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_EXPENSE) && expense.value().expense().has_value(),
+               "the unknown expense");
     auto const transfer = refusal(flat.group.removeTransfer(TransferId("0199a000-0000-7000-8000-00000000ffff")));
-    check.that(isFailure(transfer, ErrorKind::GROUP, Failure::GROUP_UNKNOWN_TRANSFER) && transfer.value().transfer().has_value(),
+    check.that(isFailure(transfer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_TRANSFER) && transfer.value().transfer().has_value(),
                "the unknown transfer");
     auto const identifier = refusal(flat.group.member(MemberId("not an identifier")));
     check.that(isFailure(identifier, ErrorKind::ID, Failure::ID_INVALID_ID), "text that is no identifier");
@@ -690,7 +697,7 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) {
     check.that(!group.description().has_value() && !group.language().has_value(), "the details cleared");
     group.changeCurrencyAsync(Currency::of("RON").value(), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())}).get().value();
     check.that(group.currency() == Currency::of("RON").value(), "the currency changed");
-    auto const loaded = Group::loadAsync(group.save()).get().value();
+    auto const loaded = ExpenseGroup::loadAsync(group.save()).get().value();
     check.that(loaded.save() == group.save(), "a group loaded on a thread of its own");
 }
 
@@ -700,10 +707,10 @@ void anAsynchronousCallReportsTheErrorItsSynchronousFormReturns(Check &check) {
     Flat flat;
     MemberId const nobody("0199a000-0000-7000-8000-00000000ffff");
     auto removing = flat.group.removeMemberAsync(nobody);
-    check.that(isFailure(refusal(removing.get()), ErrorKind::GROUP, Failure::GROUP_UNKNOWN_MEMBER), "a call that returns a value");
+    check.that(isFailure(refusal(removing.get()), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_MEMBER), "a call that returns a value");
     auto archiving = flat.group.archiveMemberAsync(nobody);
-    check.that(isFailure(refusal(archiving.get()), ErrorKind::GROUP, Failure::GROUP_UNKNOWN_MEMBER), "a call that returns nothing");
-    auto loading = Group::loadAsync("{");
+    check.that(isFailure(refusal(archiving.get()), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_MEMBER), "a call that returns nothing");
+    auto loading = ExpenseGroup::loadAsync("{");
     check.that(isFailure(refusal(loading.get()), ErrorKind::INVALID_JSON, std::nullopt), "a load");
     auto adding = flat.group.addCategoryAsync(Category("\xff"));
     check.that(isFailure(refusal(adding.get()), ErrorKind::INVALID_TEXT, std::nullopt), "an entry whose text is not UTF-8");

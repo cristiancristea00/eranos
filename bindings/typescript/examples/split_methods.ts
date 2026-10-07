@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type ExpenseId, type MemberId, CalendarDate, Currency, Group, Money, Parts, Percentage, formatBalance } from '../src/index.js';
+import { type ExpenseId, type MemberId, CalendarDate, Currency, ExpenseGroup, Money, Parts, Percentage, formatBalance } from '../src/index.js';
 import { type Columns, load, names, printLines, printTable, refusal, section, totals } from './report.js';
 
 /** A member's rule, payment, and consumption in one expense, as the table of shares prints them. */
@@ -58,7 +58,7 @@ function thirds(family: Family): Map<MemberId, string> {
 }
 
 /** Prints how one expense divides: every involved member's rule, what they paid, and what they consumed. */
-function report(group: Group, id: ExpenseId, rules: ReadonlyMap<MemberId, string>): void {
+function report(group: ExpenseGroup, id: ExpenseId, rules: ReadonlyMap<MemberId, string>): void {
     const expense = group.expenseSync(id);
     const shares = group.expenseSharesSync(id);
     if (undefined === expense || undefined === shares) {
@@ -77,7 +77,7 @@ function report(group: Group, id: ExpenseId, rules: ReadonlyMap<MemberId, string
     );
 }
 
-function equally(group: Group, family: Family): void {
+function equally(group: ExpenseGroup, family: Family): void {
     section('1. Equally');
     printLines(
         'Everyone pays the same. 10.00 does not divide by three, so one member pays the',
@@ -94,7 +94,7 @@ function equally(group: Group, family: Family): void {
     report(group, taxi, thirds(family));
 }
 
-function byPercentage(group: Group, family: Family): void {
+function byPercentage(group: ExpenseGroup, family: Family): void {
     section('2. By percentage');
     printLines(
         'Everyone pays a percentage of the amount; the percentages must add up to exactly',
@@ -128,7 +128,7 @@ function byPercentage(group: Group, family: Family): void {
     );
 }
 
-function byParts(group: Group, family: Family): ExpenseId {
+function byParts(group: ExpenseGroup, family: Family): ExpenseId {
     section('3. By parts');
     printLines(
         'Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:',
@@ -163,7 +163,7 @@ function byParts(group: Group, family: Family): ExpenseId {
     return food;
 }
 
-function byAmounts(group: Group, family: Family): void {
+function byAmounts(group: ExpenseGroup, family: Family): void {
     section('4. By exact amounts');
     printLines('Everyone pays a fixed amount, such as a ticket price; the amounts must add up to', 'exactly the expense amount.');
     const tickets = group.addExpenseSync({
@@ -194,7 +194,7 @@ function byAmounts(group: Group, family: Family): void {
     );
 }
 
-function severalPayers(group: Group, family: Family): void {
+function severalPayers(group: ExpenseGroup, family: Family): void {
     section('5. Several payers');
     printLines(
         'The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are',
@@ -216,7 +216,7 @@ function severalPayers(group: Group, family: Family): void {
     report(group, dinner, thirds(family));
 }
 
-function mistakes(group: Group, family: Family): void {
+function mistakes(group: ExpenseGroup, family: Family): void {
     section('6. Mistakes are refused');
     printLines('A percentage split that adds up to 90 % is refused when the expense is built:');
     const refused = refusal(() =>
@@ -241,7 +241,7 @@ function mistakes(group: Group, family: Family): void {
     printLines(`  error: ${refused.message}`);
 }
 
-function printTotals(group: Group): void {
+function printTotals(group: ExpenseGroup): void {
     section('7. The holiday in total');
     const summary = group.summarySync();
     printLines(`${summary.totalSpent.toString()} spent over five expenses:`);
@@ -258,7 +258,7 @@ function printTotals(group: Group): void {
 }
 
 await load();
-using group = Group.create('Family holiday', Currency.of('EUR'));
+using group = ExpenseGroup.create('Family holiday', Currency.of('EUR'));
 const family: Family = {
     ana: group.addMemberSync({ firstName: 'Ana' }),
     bob: group.addMemberSync({ firstName: 'Bob' }),

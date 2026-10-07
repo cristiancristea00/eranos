@@ -13,8 +13,8 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberSummary;
@@ -98,7 +98,11 @@ public final class Main {
 
     /** Records an expense of {@code amount} EUR paid by {@code payer} and split equally. */
     private static void spend(
-            Group group, String name, String amount, MemberId payer, List<MemberId> participants)
+            ExpenseGroup group,
+            String name,
+            String amount,
+            MemberId payer,
+            List<MemberId> participants)
             throws EranosException {
         group.addExpense(
                 Expense.builder(
@@ -110,7 +114,7 @@ public final class Main {
                         .build());
     }
 
-    private static void printBalances(Group group) {
+    private static void printBalances(ExpenseGroup group) {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
@@ -127,7 +131,8 @@ public final class Main {
         printTable(BalanceRow.HEADERS, rows, 1);
     }
 
-    private static void printPayments(Group group, Settlement settlement) throws EranosException {
+    private static void printPayments(ExpenseGroup group, Settlement settlement)
+            throws EranosException {
         List<PaymentRow> rows = new ArrayList<>();
         for (Payment payment : settlement.payments()) {
             rows.add(
@@ -142,7 +147,7 @@ public final class Main {
     /**
      * Prints each strategy's plan with what it promises; returns the number of payments of each.
      */
-    private static Counts strategies(Group group) throws EranosException {
+    private static Counts strategies(ExpenseGroup group) throws EranosException {
         section("3. Minimum transfers");
         Settlement minimum = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
         System.out.print(
@@ -226,7 +231,7 @@ public final class Main {
      */
     private static int festival() throws EranosException {
         section("8. A larger group");
-        try (Group group = Group.builder("Festival", Currency.of("EUR")).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Festival", Currency.of("EUR")).build()) {
             List<MemberId> friends = new ArrayList<>();
             for (int number = 1; 21 >= number; number++) {
                 friends.add(group.addMember(Member.builder("Friend " + number).build()));
@@ -277,7 +282,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder("Ski week", Currency.of("EUR")).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Ski week", Currency.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             MemberId carol = group.addMember(Member.builder("Carol").build());

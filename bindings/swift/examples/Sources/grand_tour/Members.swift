@@ -4,9 +4,9 @@
 import Eranos
 import Report
 
-func theGroup() throws(EranosError) -> Group {
+func theGroup() throws(EranosError) -> ExpenseGroup {
     section("1. The group")
-    let group = try Group(name: "Lisbon", currency: Currency(code: "EUR"), description: "A week by the Atlantic", language: Language("pt-pt"))
+    let group = try ExpenseGroup(name: "Lisbon", currency: Currency(code: "EUR"), description: "A week by the Atlantic", language: Language("pt-pt"))
     let blank = Result { () throws(EranosError) in try group.rename(to: "   ") }
     try group.rename(to: "Lisbon and Porto")
     try group.changeDescription(to: "A week by the Atlantic, with a day in Porto")
@@ -27,7 +27,7 @@ func theGroup() throws(EranosError) -> Group {
           error: \(message(blank))
         """)
 
-    guard case .failure(.group(.emptyName, _)) = blank else {
+    guard case .failure(.expenseGroup(.emptyName, _)) = blank else {
         preconditionFailure("a blank name is refused")
     }
     expect("Lisbon and Porto", try group.name(), "the group is renamed")
@@ -45,7 +45,7 @@ func describe(_ account: Account) -> String {
     }
 }
 
-func printMembers(_ group: Group) throws(EranosError) {
+func printMembers(_ group: ExpenseGroup) throws(EranosError) {
     printTable(
         try group.members().map { member in
             MemberRow(
@@ -59,7 +59,7 @@ func printMembers(_ group: Group) throws(EranosError) {
     )
 }
 
-func validation(_ group: Group) {
+func validation(_ group: ExpenseGroup) {
     print("""
         IBANs are checked against the SWIFT registry and their mod-97 check digits,
         emails against RFC 5321 and 5322, and phone numbers against their country's
@@ -88,7 +88,7 @@ func validation(_ group: Group) {
     )
 }
 
-func members(_ group: Group) throws(EranosError) -> People {
+func members(_ group: ExpenseGroup) throws(EranosError) -> People {
     section("2. Members")
     let ana = try group.add(
         Member(
@@ -129,7 +129,7 @@ func members(_ group: Group) throws(EranosError) -> People {
     return People(ana: ana, bob: bob, carol: carol, dan: dan, eva: eva, filip: filip)
 }
 
-func addCategories(_ group: Group) throws(EranosError) -> Categories {
+func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
     section("3. Categories")
     let food = try group.add(Category(name: "Food"))
     let lodging = try group.add(Category(name: "Lodging"))
@@ -159,10 +159,10 @@ func addCategories(_ group: Group) throws(EranosError) -> Categories {
         numbersFrom: 2
     )
 
-    guard case .failure(.group(.duplicateCategoryName(food), _)) = homonym else {
+    guard case .failure(.expenseGroup(.duplicateCategoryName(food), _)) = homonym else {
         preconditionFailure("the name is Food's")
     }
-    guard case .failure(.group(.builtInCategory, _)) = builtIn else {
+    guard case .failure(.expenseGroup(.builtInCategory, _)) = builtIn else {
         preconditionFailure("the built-in category keeps its name")
     }
     expect("Getting around", try group.category(withID: transport)?.name, "Transport is renamed")

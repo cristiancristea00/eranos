@@ -6,7 +6,7 @@ import eranos.CalendarDate
 import eranos.Cost
 import eranos.Currency
 import eranos.ExchangeRate
-import eranos.Group
+import eranos.ExpenseGroup
 import eranos.Language
 import eranos.MemberId
 import eranos.Money
@@ -115,7 +115,7 @@ internal fun ratios() {
 }
 
 internal fun datesAndIdentifiers(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
 ) {
     val date = CalendarDate.parse("2026-10-01")
@@ -144,7 +144,7 @@ internal fun datesAndIdentifiers(
 }
 
 internal fun values(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
 ) {
     section("13. Values on their own")

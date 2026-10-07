@@ -34,7 +34,7 @@ func october(_ date: Int32) throws(EranosError) -> CalendarDate {
     try CalendarDate(year: 2026, month: 10, day: date)
 }
 
-func name(_ group: Group, _ member: Member.ID) throws(EranosError) -> String {
+func name(_ group: ExpenseGroup, _ member: Member.ID) throws(EranosError) -> String {
     try names(group, [member])
 }
 
@@ -87,11 +87,11 @@ func rate(of cost: Cost) throws(EranosError) -> ExchangeRate {
 }
 
 /// The identifier of the built-in category, which the group lists first.
-func builtInCategory(_ group: Group) throws(EranosError) -> Category.ID? {
+func builtInCategory(_ group: ExpenseGroup) throws(EranosError) -> Category.ID? {
     try group.categories().first?.id
 }
 
-func printBalances(_ group: Group) throws(EranosError) {
+func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = try group.summary()
     let zero = Money(minorUnits: 0, currency: try group.currency())
     printTable(
@@ -113,7 +113,7 @@ func printBalances(_ group: Group) throws(EranosError) {
     )
 }
 
-func printCategories(_ group: Group) throws(EranosError) {
+func printCategories(_ group: ExpenseGroup) throws(EranosError) {
     let expenses = try group.expenses()
     let builtIn = try builtInCategory(group)
     printTable(
@@ -129,7 +129,7 @@ func printCategories(_ group: Group) throws(EranosError) {
 }
 
 /// Every expense and transfer in a currency `shown` accepts, as entered and in the group currency.
-func printEntries(_ group: Group, _ shown: (Currency) -> Bool) throws(EranosError) {
+func printEntries(_ group: ExpenseGroup, _ shown: (Currency) -> Bool) throws(EranosError) {
     let zero = Money(minorUnits: 0, currency: try group.currency())
     let expenses = try group.expenses().filter { expense in shown(expense.cost.amount.currency) }.map { expense throws(EranosError) in
         EntryRow(

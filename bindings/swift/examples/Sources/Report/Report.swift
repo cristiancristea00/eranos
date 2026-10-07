@@ -52,7 +52,7 @@ public func printTable<Row: TableRow>(_ rows: [Row], numbersFrom: Int) {
 }
 
 /// The first names of `members` in `group`, joined by commas, or `?` for one the group does not hold.
-public func names(_ group: Group, _ members: [Member.ID]) throws(EranosError) -> String {
+public func names(_ group: ExpenseGroup, _ members: [Member.ID]) throws(EranosError) -> String {
     try members.map { id throws(EranosError) in try group.member(withID: id)?.firstName ?? "?" }.joined(separator: ", ")
 }
 

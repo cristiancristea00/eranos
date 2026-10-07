@@ -171,7 +171,7 @@ impl<'de> serde::Deserialize<'de> for ExchangeRate {
 }
 
 /// The rate that converts one currency into another, as a currency change
-/// needs one for every currency in use: `Group::change_currency`.
+/// needs one for every currency in use: `ExpenseGroup::change_currency`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CurrencyRate {
     currency: Currency,

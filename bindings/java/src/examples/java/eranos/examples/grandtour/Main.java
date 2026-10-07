@@ -1,8 +1,8 @@
 package eranos.examples.grandtour;
 
 import eranos.EranosException;
+import eranos.ExpenseGroup;
 import eranos.ExpenseId;
-import eranos.Group;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
 
@@ -31,7 +31,7 @@ public final class Main {
                 section below uses another part of the library, from creating the group to saving
                 it, and checks its key numbers.
                 """);
-        try (Group group = Members.theGroup()) {
+        try (ExpenseGroup group = Members.theGroup()) {
             People people = Members.members(group);
             Categories categories = Members.addCategories(group);
             ExpenseId seafood = Expenses.expenses(group, people, categories);

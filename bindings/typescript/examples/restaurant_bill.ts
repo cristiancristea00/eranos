@@ -11,7 +11,7 @@ import {
     type MemberId,
     CalendarDate,
     Currency,
-    Group,
+    ExpenseGroup,
     Money,
     Parts,
     Percentage,
@@ -85,8 +85,8 @@ function receipt(ana: MemberId, bob: MemberId, carol: MemberId): Item[] {
  * How `expense` would divide if it were added to `group`, computed on a copy loaded from the group's saved form, so the
  * group itself is unchanged.
  */
-function preview(group: Group, expense: Expense): ExpenseShares | undefined {
-    using copy = Group.loadSync(group.saveSync());
+function preview(group: ExpenseGroup, expense: Expense): ExpenseShares | undefined {
+    using copy = ExpenseGroup.loadSync(group.saveSync());
     return copy.expenseSharesSync(copy.addExpenseSync(expense));
 }
 
@@ -96,7 +96,7 @@ function consumed(shares: ExpenseShares | undefined, member: MemberId): Money | 
 }
 
 await load();
-using group = Group.create("Dinner at Caru' cu Bere", Currency.of('EUR'));
+using group = ExpenseGroup.create("Dinner at Caru' cu Bere", Currency.of('EUR'));
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 const carol = group.addMemberSync({ firstName: 'Carol' });

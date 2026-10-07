@@ -34,6 +34,10 @@
 #include "eranos/detail/EranosErrorKind.hpp"
 #include "eranos/detail/EranosExchangeRate.hpp"
 #include "eranos/detail/EranosExpense.hpp"
+#include "eranos/detail/EranosExpenseGroup.hpp"
+#include "eranos/detail/EranosExpenseGroupOutcome.hpp"
+#include "eranos/detail/EranosExpenseGroupReader.hpp"
+#include "eranos/detail/EranosExpenseGroupReaderOutcome.hpp"
 #include "eranos/detail/EranosExpenseList.hpp"
 #include "eranos/detail/EranosExpenseListOutcome.hpp"
 #include "eranos/detail/EranosExpenseOutcome.hpp"
@@ -43,10 +47,6 @@
 #include "eranos/detail/EranosExpenseSplitKind.hpp"
 #include "eranos/detail/EranosFailure.hpp"
 #include "eranos/detail/EranosFlagOutcome.hpp"
-#include "eranos/detail/EranosGroup.hpp"
-#include "eranos/detail/EranosGroupOutcome.hpp"
-#include "eranos/detail/EranosGroupReader.hpp"
-#include "eranos/detail/EranosGroupReaderOutcome.hpp"
 #include "eranos/detail/EranosIban.hpp"
 #include "eranos/detail/EranosIbanReason.hpp"
 #include "eranos/detail/EranosItem.hpp"
@@ -70,7 +70,7 @@
 #include "eranos/detail/EranosMemberSummaryList.hpp"
 #include "eranos/detail/EranosMoney.hpp"
 #include "eranos/detail/EranosMoneyOutcome.hpp"
-#include "eranos/detail/EranosNewGroup.hpp"
+#include "eranos/detail/EranosNewExpenseGroup.hpp"
 #include "eranos/detail/EranosOptionalTextOutcome.hpp"
 #include "eranos/detail/EranosParts.hpp"
 #include "eranos/detail/EranosPayment.hpp"
@@ -117,9 +117,9 @@ class Email;
 class Error;
 class ExchangeRate;
 class ExpenseId;
-class Group;
-class GroupId;
-class GroupReader;
+class ExpenseGroup;
+class ExpenseGroupId;
+class ExpenseGroupReader;
 class Iban;
 class Language;
 class MemberId;
@@ -138,7 +138,7 @@ struct Expense;
 struct ExpenseShares;
 struct FixedTipValue;
 struct GetsBackBalance;
-struct GroupOptions;
+struct ExpenseGroupOptions;
 struct IbanAccountDetails;
 struct Item;
 struct ItemisedExpenseSplit;

@@ -21,7 +21,7 @@ pub use error::{FromMemberError, MemberError};
 /// Only the first name is required. A member gets its identifier when it is
 /// built, and keeps it through every edit. Members are values: to change
 /// one, edit a copy with [`to_builder`](Self::to_builder) and pass it to
-/// `Group::replace_member`.
+/// `ExpenseGroup::replace_member`.
 ///
 /// # Examples
 ///

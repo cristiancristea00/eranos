@@ -33,8 +33,8 @@ pub mod ffi {
         Settlement,
         /// A `TransferError`, about a transfer.
         Transfer,
-        /// A `GroupError`, about how an entry fits the group, or the group's lock.
-        Group,
+        /// An `ExpenseGroupError`, about how an entry fits the group, or the group's lock.
+        ExpenseGroup,
         /// A `LanguageError`, about a language tag.
         Language,
         /// An entry to add carried an identifier; the group gives a new entry its own.
@@ -131,45 +131,45 @@ pub mod ffi {
         TransferNonPositiveAmount,
         /// A saved group in a format this version does not read: a newer one, whose fields it would
         /// drop, or an earlier one.
-        GroupUnsupportedFormat,
+        ExpenseGroupUnsupportedFormat,
         /// A group name that is blank.
-        GroupEmptyName,
+        ExpenseGroupEmptyName,
         /// An entry in another currency than the group's has no exchange rate into the group
         /// currency: its cost is local, or a currency change gave no rate for its currency.
-        GroupMissingExchangeRate,
+        ExpenseGroupMissingExchangeRate,
         /// An entry in the group currency has a converted cost; only a local cost is in the group
         /// currency.
-        GroupUnexpectedExchangeRate,
+        ExpenseGroupUnexpectedExchangeRate,
         /// The same currency appears twice among the rates of a currency change.
-        GroupDuplicateExchangeRate,
+        ExpenseGroupDuplicateExchangeRate,
         /// A member with this ID already exists.
-        GroupDuplicateMember,
+        ExpenseGroupDuplicateMember,
         /// No member with this ID.
-        GroupUnknownMember,
+        ExpenseGroupUnknownMember,
         /// An archived member cannot join a new expense.
-        GroupArchivedMember,
+        ExpenseGroupArchivedMember,
         /// The member is still referenced and cannot be removed; archive it instead.
-        GroupMemberInUse,
+        ExpenseGroupMemberInUse,
         /// A category with this ID already exists.
-        GroupDuplicateCategory,
+        ExpenseGroupDuplicateCategory,
         /// Another category already has this name, compared by Unicode canonical caseless matching.
-        GroupDuplicateCategoryName,
+        ExpenseGroupDuplicateCategoryName,
         /// No category with this ID.
-        GroupUnknownCategory,
+        ExpenseGroupUnknownCategory,
         /// The built-in Uncategorised category cannot be renamed or removed.
-        GroupBuiltInCategory,
+        ExpenseGroupBuiltInCategory,
         /// An expense with this ID already exists.
-        GroupDuplicateExpense,
+        ExpenseGroupDuplicateExpense,
         /// No expense with this ID.
-        GroupUnknownExpense,
+        ExpenseGroupUnknownExpense,
         /// A transfer with this ID already exists.
-        GroupDuplicateTransfer,
+        ExpenseGroupDuplicateTransfer,
         /// No transfer with this ID.
-        GroupUnknownTransfer,
+        ExpenseGroupUnknownTransfer,
         /// A shared group's lock was asked for without waiting, while another call held it.
-        GroupBusy,
+        ExpenseGroupBusy,
         /// A total would leave the range of an amount.
-        GroupOverflow,
+        ExpenseGroupOverflow,
         /// A language tag that is not a Unicode BCP 47 locale identifier (UTS #35).
         LanguageInvalidLanguage,
     }

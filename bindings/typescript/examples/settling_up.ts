@@ -9,7 +9,7 @@ import {
     type Settlement,
     CalendarDate,
     Currency,
-    Group,
+    ExpenseGroup,
     Money,
     SettlementStrategy,
     expenseTotal,
@@ -99,7 +99,7 @@ function strategyName(strategy: SettlementStrategy): string {
 }
 
 /** Records an expense of `amount` EUR paid by `payer` and split equally. */
-function spend(group: Group, name: string, amount: string, payer: MemberId, members: MemberId[]): void {
+function spend(group: ExpenseGroup, name: string, amount: string, payer: MemberId, members: MemberId[]): void {
     group.addExpenseSync({
         name,
         cost: { kind: 'local', amount: Money.parse(amount, Currency.of('EUR')) },
@@ -109,7 +109,7 @@ function spend(group: Group, name: string, amount: string, payer: MemberId, memb
     });
 }
 
-function printBalances(group: Group): void {
+function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     printTable(
         balanceColumns,
@@ -121,7 +121,7 @@ function printBalances(group: Group): void {
     );
 }
 
-function printPayments(group: Group, settlement: Settlement): void {
+function printPayments(group: ExpenseGroup, settlement: Settlement): void {
     printTable(
         paymentColumns,
         settlement.payments.map((payment) => ({ from: names(group, [payment.from]), to: names(group, [payment.to]), amount: payment.amount })),
@@ -130,7 +130,7 @@ function printPayments(group: Group, settlement: Settlement): void {
 }
 
 /** Prints each strategy's plan with what it promises; returns the number of payments of each. */
-function strategies(group: Group): Counts {
+function strategies(group: ExpenseGroup): Counts {
     section('3. Minimum transfers');
     const minimum = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
     printLines(
@@ -204,7 +204,7 @@ function strategies(group: Group): Counts {
 function festival(): number {
     section('8. A larger group');
     const euro = Currency.of('EUR');
-    using group = Group.create('Festival', euro);
+    using group = ExpenseGroup.create('Festival', euro);
     const friends: MemberId[] = [];
     for (let number = 1; 21 >= number; number += 1) {
         friends.push(group.addMemberSync({ firstName: `Friend ${String(number)}` }));
@@ -237,7 +237,7 @@ function festival(): number {
 }
 
 await load();
-using group = Group.create('Ski week', Currency.of('EUR'));
+using group = ExpenseGroup.create('Ski week', Currency.of('EUR'));
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 const carol = group.addMemberSync({ firstName: 'Carol' });

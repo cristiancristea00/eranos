@@ -13,23 +13,23 @@
 #ifndef ERANOS_H
 #define ERANOS_H
 
-#include "eranos/calendar.h"     // IWYU pragma: export
-#include "eranos/category.h"     // IWYU pragma: export
-#include "eranos/contact.h"      // IWYU pragma: export
-#include "eranos/currency.h"     // IWYU pragma: export
-#include "eranos/detail.h"       // IWYU pragma: export
-#include "eranos/error.h"        // IWYU pragma: export
-#include "eranos/expense.h"      // IWYU pragma: export
-#include "eranos/failures.h"     // IWYU pragma: export
-#include "eranos/group.h"        // IWYU pragma: export
-#include "eranos/group_reader.h" // IWYU pragma: export
-#include "eranos/identifiers.h"  // IWYU pragma: export
-#include "eranos/members.h"      // IWYU pragma: export
-#include "eranos/money.h"        // IWYU pragma: export
-#include "eranos/ratios.h"       // IWYU pragma: export
-#include "eranos/split.h"        // IWYU pragma: export
-#include "eranos/text.h"         // IWYU pragma: export
-#include "eranos/totals.h"       // IWYU pragma: export
-#include "eranos/transfer.h"     // IWYU pragma: export
+#include "eranos/calendar.h"             // IWYU pragma: export
+#include "eranos/category.h"             // IWYU pragma: export
+#include "eranos/contact.h"              // IWYU pragma: export
+#include "eranos/currency.h"             // IWYU pragma: export
+#include "eranos/detail.h"               // IWYU pragma: export
+#include "eranos/error.h"                // IWYU pragma: export
+#include "eranos/expense.h"              // IWYU pragma: export
+#include "eranos/expense_group.h"        // IWYU pragma: export
+#include "eranos/expense_group_reader.h" // IWYU pragma: export
+#include "eranos/failures.h"             // IWYU pragma: export
+#include "eranos/identifiers.h"          // IWYU pragma: export
+#include "eranos/members.h"              // IWYU pragma: export
+#include "eranos/money.h"                // IWYU pragma: export
+#include "eranos/ratios.h"               // IWYU pragma: export
+#include "eranos/split.h"                // IWYU pragma: export
+#include "eranos/text.h"                 // IWYU pragma: export
+#include "eranos/totals.h"               // IWYU pragma: export
+#include "eranos/transfer.h"             // IWYU pragma: export
 
 #endif // ERANOS_H

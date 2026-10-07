@@ -7,8 +7,8 @@ import eranos.CalendarDate
 import eranos.Cost
 import eranos.Currency
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.Member
 import eranos.MemberId
 import eranos.Money
@@ -97,7 +97,7 @@ private fun strategyName(strategy: SettlementStrategy): String =
 
 /** Records an expense of [amount] EUR paid by [payer] and split equally. */
 private fun spend(
-    group: Group,
+    group: ExpenseGroup,
     name: String,
     amount: String,
     payer: MemberId,
@@ -114,7 +114,7 @@ private fun spend(
     )
 }
 
-private fun printBalances(group: Group) {
+private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     printTable(
         BalanceRow.HEADERS,
@@ -128,7 +128,7 @@ private fun printBalances(group: Group) {
 }
 
 private fun printPayments(
-    group: Group,
+    group: ExpenseGroup,
     settlement: Settlement,
 ) {
     printTable(
@@ -141,7 +141,7 @@ private fun printPayments(
 }
 
 /** Prints each strategy's plan with what it promises; returns the number of payments of each. */
-private fun strategies(group: Group): Counts {
+private fun strategies(group: ExpenseGroup): Counts {
     section("3. Minimum transfers")
     val minimum = group.settlementBlocking(SettlementStrategy.MINIMUM_TRANSFERS)
     println(
@@ -222,7 +222,7 @@ private fun strategies(group: Group): Counts {
  */
 private fun festival(): Int {
     section("8. A larger group")
-    return Group("Festival", Currency.of("EUR")).use { group ->
+    return ExpenseGroup("Festival", Currency.of("EUR")).use { group ->
         val friends = (1..21).map { number -> group.addBlocking(Member("Friend $number")) }
         // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
         // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
@@ -258,7 +258,7 @@ private fun festival(): Int {
 
 /** Prints the report of the ski week. */
 fun main() {
-    Group("Ski week", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Ski week", Currency.of("EUR")).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val carol = group.addBlocking(Member("Carol"))

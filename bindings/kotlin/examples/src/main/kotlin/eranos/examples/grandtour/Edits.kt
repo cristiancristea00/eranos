@@ -8,10 +8,10 @@ import eranos.EranosException
 import eranos.ExchangeRate
 import eranos.Expense
 import eranos.ExpenseFailure
+import eranos.ExpenseGroup
+import eranos.ExpenseGroupFailure
 import eranos.ExpenseId
 import eranos.ExpenseSplit
-import eranos.Group
-import eranos.GroupFailure
 import eranos.MemberPercentage
 import eranos.Money
 import eranos.Percentage
@@ -50,7 +50,7 @@ private data class StatusRow(
 }
 
 internal fun anotherCurrency(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
 ) {
@@ -106,7 +106,7 @@ internal fun anotherCurrency(
 
 /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
 private fun replaceAndRemove(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
     seafood: ExpenseId,
@@ -159,7 +159,7 @@ private fun replaceAndRemove(
 }
 
 internal fun edits(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
     seafood: ExpenseId,
@@ -215,12 +215,12 @@ internal fun edits(
 
     check(ExpenseFailure.PercentagesDoNotAddUp(9_999) == (unbalanced as? EranosException.Expense)?.failure)
     check(TransferFailure.SameMember == (toHerself as? EranosException.Transfer)?.failure)
-    check(GroupFailure.MissingExchangeRate(Currency.of("RON")) == (unrated as? EranosException.Group)?.failure)
+    check(ExpenseGroupFailure.MissingExchangeRate(Currency.of("RON")) == (unrated as? EranosException.ExpenseGroup)?.failure)
     check(before == group.summaryBlocking())
 }
 
 internal fun comingsAndGoings(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
 ) {
     section("7. Members come and go")
@@ -266,7 +266,7 @@ internal fun comingsAndGoings(
 
     check("Filip" == removed.firstName)
     check(null == group.memberBlocking(people.filip))
-    check(GroupFailure.ArchivedMember(people.dan) == (farewell as? EranosException.Group)?.failure)
-    check((inUse as? EranosException.Group)?.failure is GroupFailure.MemberInUse)
+    check(ExpenseGroupFailure.ArchivedMember(people.dan) == (farewell as? EranosException.ExpenseGroup)?.failure)
+    check((inUse as? EranosException.ExpenseGroup)?.failure is ExpenseGroupFailure.MemberInUse)
     check(!group.isArchivedBlocking(people.dan))
 }

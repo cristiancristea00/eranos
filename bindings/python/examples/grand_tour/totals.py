@@ -12,8 +12,8 @@ from eranos import (
     CurrencyRate,
     ExchangeRate,
     GetsBackBalance,
-    Group,
-    GroupError,
+    ExpenseGroup,
+    ExpenseGroupError,
     LocalCost,
     Member,
     MemberId,
@@ -176,7 +176,7 @@ def _consumption_row(member: Member, summary: Summary, categories: Categories, b
     )
 
 
-def summary(group: Group, people: People, categories: Categories) -> None:
+def summary(group: ExpenseGroup, people: People, categories: Categories) -> None:
     """
     Print section 8: what the group spent, each member's totals, and the spending per category.
 
@@ -216,7 +216,7 @@ def summary(group: Group, people: People, categories: Categories) -> None:
     assert _add_up(zero.currency, (found.net for found in summary.members)).minor_units == 0
 
 
-def removing_a_category(group: Group, categories: Categories) -> None:
+def removing_a_category(group: ExpenseGroup, categories: Categories) -> None:
     """
     Print section 9: remove a category, whose expenses move to the built-in one, which cannot be removed.
 
@@ -236,14 +236,14 @@ def removing_a_category(group: Group, categories: Categories) -> None:
     )
     print_categories(group)
 
-    assert isinstance(built_in, GroupError)
-    assert built_in.failure == GroupError.BuiltInCategory()
+    assert isinstance(built_in, ExpenseGroupError)
+    assert built_in.failure == ExpenseGroupError.BuiltInCategory()
     assert group.category(categories.transport) is None
     assert _total(group.summary().category_totals, uncategorised) == eur('248.50')
     assert all(expense.category != categories.transport for expense in group.expenses())
 
 
-def new_currency(group: Group, people: People) -> None:
+def new_currency(group: ExpenseGroup, people: People) -> None:
     """
     Print section 10: move the group to lei, with the rate of the euro, and show every entry converted again.
 
@@ -272,8 +272,8 @@ def new_currency(group: Group, people: People) -> None:
     print_balances(group)
 
     summary = group.summary()
-    assert isinstance(missing, GroupError)
-    assert missing.failure == GroupError.MissingExchangeRate(currency=euro)
+    assert isinstance(missing, ExpenseGroupError)
+    assert missing.failure == ExpenseGroupError.MissingExchangeRate(currency=euro)
     assert group.currency() == leu
     assert summary.total_spent == ron('6114.50')
     assert _member_totals(summary, people.dan).balance == GetsBackBalance(ron('62.75'))
@@ -304,7 +304,7 @@ def _strategy_name(strategy: SettlementStrategy) -> str:
             assert_never(strategy)
 
 
-def settling_up(group: Group) -> None:
+def settling_up(group: ExpenseGroup) -> None:
     """
     Print section 11: the payments of each strategy, and the minimum plan, recorded as transfers.
 

@@ -5,10 +5,10 @@
  * Call {@link init} with the WebAssembly module first, once, before any other call:
  *
  * ```ts
- * import { Currency, Group, init } from 'eranos';
+ * import { Currency, ExpenseGroup, init } from 'eranos';
  *
  * await init(new URL('eranos/eranos_web.wasm', import.meta.url));
- * const group = Group.create('Flat', Currency.of('EUR'));
+ * const group = ExpenseGroup.create('Flat', Currency.of('EUR'));
  * ```
  *
  * @packageDocumentation
@@ -46,7 +46,7 @@ export {
     type CategoryFailure,
     type ContactFailure,
     type ExpenseFailure,
-    type GroupFailure,
+    type ExpenseGroupFailure,
     type IbanReason,
     type IdFailure,
     type LanguageFailure,
@@ -60,7 +60,7 @@ export {
     ContactError,
     EranosError,
     ExpenseError,
-    GroupError,
+    ExpenseGroupError,
     IdError,
     InvalidJsonError,
     LanguageError,
@@ -69,12 +69,12 @@ export {
     SettlementError,
     TransferError,
 } from './errors.js';
-export { type CurrencyRate, Group, type GroupOptions } from './group.js';
-export { GroupReader } from './group_reader.js';
+export { type CurrencyRate, ExpenseGroup, type ExpenseGroupOptions } from './expense_group.js';
+export { ExpenseGroupReader } from './expense_group_reader.js';
 export {
     type CategoryId,
     type ExpenseId,
-    type GroupId,
+    type ExpenseGroupId,
     type MemberId,
     type TransferId,
     categoryId,

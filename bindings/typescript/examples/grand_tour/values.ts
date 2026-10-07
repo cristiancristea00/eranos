@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 
 import {
     type Cost,
-    type Group,
+    type ExpenseGroup,
     CalendarDate,
     Currency,
     ExchangeRate,
@@ -116,7 +116,7 @@ function ratios(): void {
     assert.equal(parts.hundredths, 150);
 }
 
-function datesAndIdentifiers(group: Group, people: People): void {
+function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
     const date = CalendarDate.parse('2026-10-01');
     const time = TimeOfDay.parse('22:15');
     const parsed = memberId(people.ana);
@@ -145,7 +145,7 @@ function datesAndIdentifiers(group: Group, people: People): void {
     assert.equal(parsed, people.ana);
 }
 
-export function values(group: Group, people: People): void {
+export function values(group: ExpenseGroup, people: People): void {
     section('13. Values on their own');
     currencies();
     amounts();

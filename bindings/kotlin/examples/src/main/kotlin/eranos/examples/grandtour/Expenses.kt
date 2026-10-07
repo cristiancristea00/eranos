@@ -2,9 +2,9 @@
 package eranos.examples.grandtour
 
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseId
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.MemberId
 import eranos.Money
 import eranos.Split
@@ -90,7 +90,7 @@ internal fun how(expense: Expense): String {
 
 /** Each expense of [expenses], with every involved member's payment and consumption. */
 internal fun printShares(
-    group: Group,
+    group: ExpenseGroup,
     expenses: List<ExpenseId>,
 ) {
     val rows =
@@ -113,7 +113,7 @@ internal fun printShares(
 }
 
 internal fun printItems(
-    group: Group,
+    group: ExpenseGroup,
     id: ExpenseId,
 ) {
     val split = group.expenseBlocking(id)?.split
@@ -136,7 +136,7 @@ internal fun printItems(
 
 /** The consumption of [member] in the expense [id]. */
 internal fun consumed(
-    group: Group,
+    group: ExpenseGroup,
     id: ExpenseId,
     member: MemberId,
 ): Money? =
@@ -148,7 +148,7 @@ internal fun consumed(
 
 /** Prints how the fado night's tip was shared, and its receipt. */
 internal fun printFado(
-    group: Group,
+    group: ExpenseGroup,
     fado: Expense,
 ) {
     val rule =
@@ -177,7 +177,7 @@ internal fun printFado(
 
 /** Adds one expense for every way of dividing one. */
 private fun addExpenses(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
 ): Expenses {
@@ -192,7 +192,7 @@ private fun addExpenses(
 }
 
 internal fun expenses(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
 ): ExpenseId {

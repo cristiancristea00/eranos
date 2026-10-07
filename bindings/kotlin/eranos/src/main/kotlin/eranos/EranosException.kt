@@ -11,14 +11,14 @@ import kotlin.coroutines.cancellation.CancellationException
  * ```kotlin
  * try {
  *     group.remove(member)
- * } catch (exception: EranosException.Group) {
- *     if (exception.failure !is GroupFailure.MemberInUse) throw exception
+ * } catch (exception: EranosException.ExpenseGroup) {
+ *     if (exception.failure !is ExpenseGroupFailure.MemberInUse) throw exception
  *     group.archive(member) // The member still has entries; archive them instead.
  * }
  * ```
  *
  * A call the program should not make throws the standard exception instead: [IllegalArgumentException] for an entry to add
- * that has an identifier or one to replace that has none, and [IllegalStateException] for a read through a [GroupReader]
+ * that has an identifier or one to replace that has none, and [IllegalStateException] for a read through an [ExpenseGroupReader]
  * after it is closed. A call whose coroutine is cancelled throws [CancellationException].
  */
 public sealed class EranosException(
@@ -95,10 +95,10 @@ public sealed class EranosException(
         message: String,
     ) : EranosException(message)
 
-    /** The library's `GroupError`, with the message it words. */
-    public class Group(
+    /** The library's `ExpenseGroupError`, with the message it words. */
+    public class ExpenseGroup(
         /** What the module reports. */
-        public val failure: GroupFailure,
+        public val failure: ExpenseGroupFailure,
         message: String,
     ) : EranosException(message)
 
@@ -138,7 +138,7 @@ internal fun eranos.internal.EranosException.converted(): Exception =
         is eranos.internal.EranosException.Expense -> EranosException.Expense(failure.converted(), detail)
         is eranos.internal.EranosException.Settlement -> EranosException.Settlement(failure.converted(), detail)
         is eranos.internal.EranosException.Transfer -> EranosException.Transfer(failure.converted(), detail)
-        is eranos.internal.EranosException.Group -> EranosException.Group(failure.converted(), detail)
+        is eranos.internal.EranosException.ExpenseGroup -> EranosException.ExpenseGroup(failure.converted(), detail)
         is eranos.internal.EranosException.Language -> EranosException.Language(failure.converted(), detail)
         is eranos.internal.EranosException.IdentifierGiven -> IllegalArgumentException(detail)
         is eranos.internal.EranosException.IdentifierMissing -> IllegalArgumentException(detail)

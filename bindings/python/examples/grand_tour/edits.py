@@ -13,8 +13,8 @@ from eranos import (
     Expense,
     ExpenseError,
     ExpenseId,
-    Group,
-    GroupError,
+    ExpenseGroup,
+    ExpenseGroupError,
     LocalCost,
     MemberPercentage,
     Money,
@@ -68,7 +68,7 @@ class StatusRow(Row):
         return self.name, self.status, str(self.balance)
 
 
-def another_currency(group: Group, people: People, categories: Categories) -> None:
+def another_currency(group: ExpenseGroup, people: People, categories: Categories) -> None:
     """
     Print section 5: add an expense and a transfer in lei, each with its rate into the group currency.
 
@@ -125,7 +125,7 @@ def another_currency(group: Group, people: People, categories: Categories) -> No
     assert isinstance(transfer.cost, ConvertedCost)
 
 
-def _replace_and_remove(group: Group, people: People, categories: Categories, seafood: ExpenseId) -> list[EditRow]:
+def _replace_and_remove(group: ExpenseGroup, people: People, categories: Categories, seafood: ExpenseId) -> list[EditRow]:
     """
     Replace an expense and a transfer, and remove one of each.
 
@@ -183,7 +183,7 @@ def _replace_and_remove(group: Group, people: People, categories: Categories, se
     ]
 
 
-def edits(group: Group, people: People, categories: Categories, seafood: ExpenseId) -> None:
+def edits(group: ExpenseGroup, people: People, categories: Categories, seafood: ExpenseId) -> None:
     """
     Print section 6: edit and remove entries, then show the changes the group refuses, which leave it as it was.
 
@@ -241,12 +241,12 @@ def edits(group: Group, people: People, categories: Categories, seafood: Expense
     assert unbalanced.failure == ExpenseError.PercentagesDoNotAddUp(total_basis_points=9_999)
     assert isinstance(to_herself, TransferError)
     assert to_herself.failure == TransferError.SameMember()
-    assert isinstance(unrated, GroupError)
-    assert unrated.failure == GroupError.MissingExchangeRate(currency=Currency('RON'))
+    assert isinstance(unrated, ExpenseGroupError)
+    assert unrated.failure == ExpenseGroupError.MissingExchangeRate(currency=Currency('RON'))
     assert group.summary() == before
 
 
-def comings_and_goings(group: Group, people: People) -> None:
+def comings_and_goings(group: ExpenseGroup, people: People) -> None:
     """
     Print section 7: remove a member, archive another, and show what an archived member cannot do.
 
@@ -295,8 +295,8 @@ def comings_and_goings(group: Group, people: People) -> None:
 
     assert removed.first_name == 'Filip'
     assert group.member(people.filip) is None
-    assert isinstance(farewell, GroupError)
-    assert farewell.failure == GroupError.ArchivedMember(member=people.dan)
-    assert isinstance(in_use, GroupError)
-    assert isinstance(in_use.failure, GroupError.MemberInUse)
+    assert isinstance(farewell, ExpenseGroupError)
+    assert farewell.failure == ExpenseGroupError.ArchivedMember(member=people.dan)
+    assert isinstance(in_use, ExpenseGroupError)
+    assert isinstance(in_use.failure, ExpenseGroupError.MemberInUse)
     assert not group.is_archived(people.dan)

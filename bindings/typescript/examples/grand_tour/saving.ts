@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type GroupFailure, Group, GroupError } from '../../src/index.js';
+import { type ExpenseGroupFailure, ExpenseGroup, ExpenseGroupError } from '../../src/index.js';
 import { type Columns, printLines, printTable, refusal, section } from '../report.js';
 import type { Categories, People } from './tour.js';
 
@@ -15,7 +15,7 @@ interface Tampering {
 /** A change to the saved group and the refusal of its loading, as the table of refusals prints them. */
 interface LoadRow {
     readonly change: string;
-    readonly message: GroupError;
+    readonly message: ExpenseGroupError;
 }
 
 const loadColumns: Columns<LoadRow> = [
@@ -23,7 +23,7 @@ const loadColumns: Columns<LoadRow> = [
     { header: 'Message', text: (row) => row.message.message },
 ];
 
-export function savingAndLoading(group: Group, people: People, categories: Categories): void {
+export function savingAndLoading(group: ExpenseGroup, people: People, categories: Categories): void {
     section('12. Saving and loading');
     const saved = group.saveSync();
     printLines(
@@ -35,11 +35,11 @@ export function savingAndLoading(group: Group, people: People, categories: Categ
         assert.ok(saved.includes(details), `${details} is saved as it is`);
         printLines(`  ${account.name}: ${details}`);
     }
-    using loaded = Group.loadSync(saved);
+    using loaded = ExpenseGroup.loadSync(saved);
     printLines(
         'Loading replays every entry through the same checks as adding it and rebuilds the',
-        'totals: the loaded group equals the saved one. Reading a SavedGroup and loading it',
-        'with into_group reports a refusal as a typed error instead of a message:',
+        'totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and',
+        'loading it with into_expense_group reports a refusal as a typed error, not as text:',
     );
     const tampered: Tampering[] = [
         { change: '"format": 3', text: saved.replace('"format": 2', '"format": 3') },
@@ -49,16 +49,16 @@ export function savingAndLoading(group: Group, people: People, categories: Categ
     const rows = tampered.map((tampering): LoadRow => {
         assert.notEqual(tampering.text, saved, `${tampering.change} changes the file`);
         const refused = refusal(() => {
-            Group.loadSync(tampering.text).destroy();
+            ExpenseGroup.loadSync(tampering.text).destroy();
         });
-        assert.ok(refused instanceof GroupError, `${tampering.change} is refused`);
+        assert.ok(refused instanceof ExpenseGroupError, `${tampering.change} is refused`);
         return { change: tampering.change, message: refused };
     });
     printTable(loadColumns, rows, 2);
 
     assert.equal(loaded.saveSync(), saved);
     assert.deepEqual(loaded.summarySync(), group.summarySync());
-    const failures: GroupFailure[] = rows.map((row) => row.message.failure);
+    const failures: ExpenseGroupFailure[] = rows.map((row) => row.message.failure);
     assert.deepEqual(failures, [
         { kind: 'unsupportedFormat', format: 3 },
         { kind: 'emptyName' },

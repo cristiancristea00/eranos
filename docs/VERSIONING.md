@@ -14,7 +14,7 @@ changes it).
 | The serialised form      | the JSON shapes of [ARCHITECTURE § 9](ARCHITECTURE.md#9-the-serialised-form) and the `FORMAT` number                                                                                                    |
 | The numbers              | the shares, totals, and settlements computed from the same entries: rounding, the tie rotation, conversion, and payment order                                                                           |
 | The minimum Rust version | `rust-version` in `Cargo.toml`                                                                                                                                                                          |
-| The concurrency          | which lock each `SharedGroup` call takes, the order in which waiting calls get it, and that a call dropped before it completes changes nothing                                                          |
+| The concurrency          | which lock each `SharedExpenseGroup` call takes, the order in which waiting calls get it, and that a call dropped before it completes changes nothing                                                   |
 | The floors               | what each binding's package runs on, as the first table of [BINDINGS.md](BINDINGS.md) lists it: a platform, a JDK, Node, or Python release, or a language standard such as C23; raising one is breaking |
 
 The numbers are part of the contract because groups are shared: two devices
@@ -23,20 +23,20 @@ change to the allocation order, the FNV-1a tie rotation, the rounding rule,
 or a strategy's payment choice changes what users see without any API
 change, and counts as breaking.
 
-The internal crates (`eranos-core` to `eranos-group`) are outside the
-contract on their own: they are not published, they take the workspace's
+The internal crates (`eranos-core` to `eranos-expense-group`) are outside
+the contract on their own: they are not published, they take the workspace's
 version, and callers depend on the facade. A re-exported type is covered
 through its `eranos::` path, so moving it to another internal crate changes
 nothing the contract covers. What the facade does not re-export moves
 freely: the machinery the crates above use (such as `eranos_core::text`,
 `eranos_money::allocation`, `eranos_ledger::Ledger`, and
 `eranos_expense::resolve_expense`), the internal crates' own paths, private
-modules, and the internal layout of `Group`. So does `eranos-bindings`, the
-core the bindings forward to: a binding's contract is the API of its
-language's package. For C, whose header includes Diplomat's, that is what
-`eranos.h` and its parts declare, not the names Diplomat generates, which
-change with the bridge. The Kotlin package records its API in
-`bindings/kotlin/eranos/api/eranos.api`, which the gates check the layer
+modules, and the internal layout of `ExpenseGroup`. So does
+`eranos-bindings`, the core the bindings forward to: a binding's contract is
+the API of its language's package. For C, whose header includes Diplomat's,
+that is what `eranos.h` and its parts declare, not the names Diplomat
+generates, which change with the bridge. The Kotlin package records its API
+in `bindings/kotlin/eranos/api/eranos.api`, which the gates check the layer
 against, so a change to the API shows in the commit that makes it; the
 Kotlin Multiplatform package compiles the same layer, so the dump records
 its API too.

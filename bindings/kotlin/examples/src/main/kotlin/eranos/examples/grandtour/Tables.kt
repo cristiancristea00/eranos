@@ -6,7 +6,7 @@ import eranos.Balance
 import eranos.CategoryId
 import eranos.Currency
 import eranos.ExchangeRate
-import eranos.Group
+import eranos.ExpenseGroup
 import eranos.Money
 import eranos.examples.Row
 import eranos.examples.names
@@ -83,9 +83,9 @@ internal data class RefusalRow(
 }
 
 /** The identifier of the built-in category, which the group lists first. */
-internal fun builtInCategory(group: Group): CategoryId? = group.categoriesBlocking().firstOrNull()?.id
+internal fun builtInCategory(group: ExpenseGroup): CategoryId? = group.categoriesBlocking().firstOrNull()?.id
 
-internal fun printBalances(group: Group) {
+internal fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     val zero = Money(0, group.currencyBlocking())
     printTable(
@@ -110,7 +110,7 @@ internal fun printBalances(group: Group) {
     )
 }
 
-internal fun printCategories(group: Group) {
+internal fun printCategories(group: ExpenseGroup) {
     val expenses = group.expensesBlocking()
     val builtIn = builtInCategory(group)
     printTable(
@@ -128,7 +128,7 @@ internal fun printCategories(group: Group) {
 
 /** Every expense and transfer in a currency [shown] accepts, as entered and in the group currency. */
 internal fun printEntries(
-    group: Group,
+    group: ExpenseGroup,
     shown: (Currency) -> Boolean,
 ) {
     val zero = Money(0, group.currencyBlocking())

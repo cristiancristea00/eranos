@@ -6,9 +6,9 @@ import java.util.Optional;
 /**
  * Money one member paid another, such as a repayment.
  *
- * <p>A new transfer has no identifier; {@link Group#addTransfer} gives it one. To change a
+ * <p>A new transfer has no identifier; {@link ExpenseGroup#addTransfer} gives it one. To change a
  * transfer, read it from the group, edit it through {@link #toBuilder}, and pass the result to
- * {@link Group#replaceTransfer}.
+ * {@link ExpenseGroup#replaceTransfer}.
  */
 public final class Transfer {
     private final TransferId id;

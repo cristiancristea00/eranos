@@ -27,8 +27,8 @@ nitpick_ignore = [
     ('py:class', name)
     for name in (
         'collections.abc.Iterable',
-        'eranos._internal.eranos.Group',
-        'eranos._internal.eranos.GroupReader',
+        'eranos._internal.eranos.ExpenseGroup',
+        'eranos._internal.eranos.ExpenseGroupReader',
         'types.TracebackType',
     )
 ]

@@ -32,7 +32,7 @@ use eranos_money::{Currency, Money};
 
 pub use error::{FromSettlementError, SettlementError};
 
-/// How `Group::settlement` turns balances into payments.
+/// How `ExpenseGroup::settlement` turns balances into payments.
 ///
 /// There is no default: the strategies trade the number of payments against
 /// computation time, and the caller chooses; an app that wants the fewest
@@ -43,9 +43,9 @@ pub use error::{FromSettlementError, SettlementError};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Group, Member, Money, SettlementStrategy, Transfer};
+/// use eranos::{Currency, CalendarDate, ExpenseGroup, Member, Money, SettlementStrategy, Transfer};
 ///
-/// let mut group = Group::builder("Flat", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Flat", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let day = CalendarDate::new(2026, 9, 23)?;

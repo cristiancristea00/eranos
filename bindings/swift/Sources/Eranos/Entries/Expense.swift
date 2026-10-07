@@ -2,8 +2,8 @@ internal import EranosGenerated
 
 /// Something bought for the group: what it cost, who paid, and how it divides.
 ///
-/// A new expense has no identifier; `Group.add(_:)` gives it one. To change an expense,
-/// read it from the group, change its properties, and pass it to `Group.replace(_:)`.
+/// A new expense has no identifier; `ExpenseGroup.add(_:)` gives it one. To change an expense,
+/// read it from the group, change its properties, and pass it to `ExpenseGroup.replace(_:)`.
 public struct Expense: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of an expense.

@@ -2,7 +2,7 @@
 //! and asynchronous form of every call, the read handle's form of every
 //! read, and the table that hands the calls to the glue crates.
 //!
-//! The code names `GroupHandle`, `GroupReader`, `Cancellation`, and
+//! The code names `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, and
 //! `operations` as the module that lists the calls imports them, and calls
 //! the handles' `reading`, `writing`, `reading_async`, and `writing_async`
 //! and the group handle's `shared`, which that module can reach.
@@ -28,11 +28,11 @@ pub(crate) fn expand(calls: &Calls, item: &ItemTrait) -> TokenStream {
         .map(reader);
     let table = table(calls, item);
     quote! {
-        impl GroupHandle {
+        impl ExpenseGroupHandle {
             #(#forms)*
         }
 
-        impl GroupReader {
+        impl ExpenseGroupReader {
             #(#reads)*
         }
 

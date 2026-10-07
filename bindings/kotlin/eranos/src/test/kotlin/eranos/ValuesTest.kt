@@ -143,8 +143,8 @@ class ValuesTest {
     @Test
     fun anIdentifierIsItsText() {
         val text = "0192f1c3-0000-7000-8000-000000000001"
-        assertEquals(text, GroupId(text).value)
-        assertEquals(text, GroupId(text).toString())
+        assertEquals(text, ExpenseGroupId(text).value)
+        assertEquals(text, ExpenseGroupId(text).toString())
         assertEquals(text, MemberId(text).value)
         assertEquals(text, MemberId(text).toString())
         assertEquals(text, CategoryId(text).value)

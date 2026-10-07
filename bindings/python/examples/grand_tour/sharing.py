@@ -14,8 +14,8 @@ from eranos import (
     EqualSplit,
     ExchangeRate,
     Expense,
-    Group,
-    GroupReader,
+    ExpenseGroup,
+    ExpenseGroupReader,
     LocalCost,
     MemberId,
     SettlementStrategy,
@@ -25,7 +25,7 @@ from examples.grand_tour.tour import PaymentRow, People, october, ron
 from examples.report import print_lines, print_table, section
 
 
-def _first_name(reader: GroupReader, member: MemberId) -> str:
+def _first_name(reader: ExpenseGroupReader, member: MemberId) -> str:
     """
     Read the first name of member through reader.
 
@@ -41,7 +41,7 @@ def _first_name(reader: GroupReader, member: MemberId) -> str:
     return '?' if found is None else found.first_name
 
 
-async def sharing(group: Group, people: People) -> None:
+async def sharing(group: ExpenseGroup, people: People) -> None:
     """
     Print section 14: share the group between tasks, and cancel a change that waits for a report's read.
 
@@ -65,10 +65,10 @@ async def sharing(group: Group, people: People) -> None:
     )
     plan = await group.settlement_async(SettlementStrategy.MINIMUM_TRANSFERS)
     print_lines(
-        'An app shares the group between its tasks and threads through a SharedGroup,',
-        "whose calls are futures any executor runs; here the library's block_on runs",
-        'each one on this thread. Bob adds the airport coffee through another handle,',
-        'and the plan that settles it comes through the first:',
+        'An app shares the group between its tasks and threads through a',
+        "SharedExpenseGroup, whose calls are futures any executor runs; here the library's",
+        'block_on runs each one on this thread. Bob adds the airport coffee through another',
+        'handle, and the plan that settles it comes through the first:',
     )
     with await group.read_async() as reader:
         print_table(

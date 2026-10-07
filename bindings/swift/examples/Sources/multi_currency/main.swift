@@ -39,12 +39,12 @@ let forint = try Currency(code: "HUF")
 let leu = try Currency(code: "RON")
 
 /// The first name of `member` in `group`, or `?` for one the group does not hold.
-func name(_ group: Group, _ member: Member.ID) throws(EranosError) -> String {
+func name(_ group: ExpenseGroup, _ member: Member.ID) throws(EranosError) -> String {
     try names(group, [member])
 }
 
 /// Every expense and transfer, as entered and in the group currency.
-func printEntries(_ group: Group) throws(EranosError) {
+func printEntries(_ group: ExpenseGroup) throws(EranosError) {
     let zero = Money(minorUnits: 0, currency: try group.currency())
     let expenses = try group.expenses().map { expense throws(EranosError) in
         EntryRow(
@@ -77,7 +77,7 @@ func rate(of cost: Cost) throws(EranosError) -> ExchangeRate {
     }
 }
 
-func printBalances(_ group: Group) throws(EranosError) {
+func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = try group.summary()
     printTable(
         try group.members().compactMap { member in
@@ -96,7 +96,7 @@ func printBalances(_ group: Group) throws(EranosError) {
     )
 }
 
-func expenses(_ group: Group, _ ana: Member.ID, _ bob: Member.ID) throws(EranosError) {
+func expenses(_ group: ExpenseGroup, _ ana: Member.ID, _ bob: Member.ID) throws(EranosError) {
     section("1. Expenses in three currencies")
     let both = Split.equal([ana, bob])
     _ = try group.add(
@@ -133,7 +133,7 @@ func expenses(_ group: Group, _ ana: Member.ID, _ bob: Member.ID) throws(EranosE
         """)
 }
 
-func repayment(_ group: Group, _ ana: Member.ID, _ bob: Member.ID) throws(EranosError) {
+func repayment(_ group: ExpenseGroup, _ ana: Member.ID, _ bob: Member.ID) throws(EranosError) {
     section("3. A repayment in cash, in another currency")
     _ = try group.add(
         Transfer(
@@ -151,7 +151,7 @@ func repayment(_ group: Group, _ ana: Member.ID, _ bob: Member.ID) throws(Eranos
     try printBalances(group)
 }
 
-func newCurrency(_ group: Group) throws(EranosError) {
+func newCurrency(_ group: ExpenseGroup) throws(EranosError) {
     section("4. Moving the books to another currency")
     print("""
         Changing the group currency needs a rate into the new currency for every other
@@ -165,7 +165,7 @@ func newCurrency(_ group: Group) throws(EranosError) {
 }
 
 func main() throws(EranosError) {
-    let group = try Group(name: "Danube road trip", currency: euro)
+    let group = try ExpenseGroup(name: "Danube road trip", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))
     let bob = try group.add(Member(firstName: "Bob"))
 

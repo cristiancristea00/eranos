@@ -7,8 +7,8 @@ import eranos.Cost
 import eranos.Currency
 import eranos.EranosException
 import eranos.ExchangeRate
-import eranos.Group
-import eranos.GroupFailure
+import eranos.ExpenseGroup
+import eranos.ExpenseGroupFailure
 import eranos.MemberId
 import eranos.Money
 import eranos.SettlementStrategy
@@ -47,7 +47,7 @@ private data class StrategyRow(
 }
 
 internal fun summary(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
     categories: Categories,
 ) {
@@ -111,7 +111,7 @@ internal fun summary(
 }
 
 internal fun removingACategory(
-    group: Group,
+    group: ExpenseGroup,
     categories: Categories,
 ) {
     section("9. Removing a category")
@@ -127,7 +127,7 @@ internal fun removingACategory(
     )
     printCategories(group)
 
-    check(GroupFailure.BuiltInCategory == (builtIn as? EranosException.Group)?.failure)
+    check(ExpenseGroupFailure.BuiltInCategory == (builtIn as? EranosException.ExpenseGroup)?.failure)
     check(null == group.categoryBlocking(categories.transport))
     check(
         eur("248.50") ==
@@ -141,7 +141,7 @@ internal fun removingACategory(
 }
 
 internal fun newCurrency(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
 ) {
     section("10. A new currency")
@@ -168,7 +168,7 @@ internal fun newCurrency(
     printBalances(group)
 
     val summary = group.summaryBlocking()
-    check(GroupFailure.MissingExchangeRate(euro) == (missing as? EranosException.Group)?.failure)
+    check(ExpenseGroupFailure.MissingExchangeRate(euro) == (missing as? EranosException.ExpenseGroup)?.failure)
     check(leu == group.currencyBlocking())
     check(ron("6114.50") == summary.totalSpent)
     check(Balance.GetsBack(ron("62.75")) == totals(people.dan, summary)?.balance)
@@ -184,7 +184,7 @@ internal fun strategyName(strategy: SettlementStrategy): String =
         SettlementStrategy.DIRECT -> "Direct"
     }
 
-internal fun settlingUp(group: Group) {
+internal fun settlingUp(group: ExpenseGroup) {
     section("11. Settling up")
     val counts =
         SettlementStrategy.entries.map { strategy ->

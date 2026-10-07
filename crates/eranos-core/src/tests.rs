@@ -207,7 +207,7 @@ fn identifiers_stay_in_creation_order_across_a_second_boundary() {
 #[test]
 fn sequential_ids_count_up_with_every_random_bit_zero() {
     // Two types share the counter, in the order this thread asked.
-    let first = GroupId::generate().to_bytes();
+    let first = ExpenseGroupId::generate().to_bytes();
     let second = MemberId::generate().to_bytes();
     assert!(first[..6] < second[..6]);
     // Only the version and variant bits are set outside the counter.
@@ -222,7 +222,7 @@ fn sequential_ids_count_up_with_every_random_bit_zero() {
     assert!(MemberId::from_bytes(second) < MemberId::from_bytes(Uuid::now_v7().into_bytes()));
 }
 
-identifier_tests!(group_id, GroupId);
+identifier_tests!(group_id, ExpenseGroupId);
 identifier_tests!(member_id, MemberId);
 identifier_tests!(category_id, CategoryId);
 identifier_tests!(expense_id, ExpenseId);

@@ -7,7 +7,7 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, Group, Member, MemberId, Money, Settlement,
+    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money, Settlement,
     SettlementStrategy, Split, Transfer,
 };
 use tabled::settings::object::Columns;
@@ -96,7 +96,7 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 /// The first names of `members`, joined by commas.
-fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
+fn names(group: &ExpenseGroup, members: impl IntoIterator<Item = MemberId>) -> String {
     members
         .into_iter()
         .map(|member| group.member(member).map_or("?", Member::first_name))
@@ -106,7 +106,7 @@ fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
 
 /// Records an expense of `amount` EUR paid by `payer` and split equally.
 fn spend(
-    group: &mut Group,
+    group: &mut ExpenseGroup,
     name: &str,
     amount: &str,
     payer: MemberId,
@@ -124,7 +124,7 @@ fn spend(
     Ok(())
 }
 
-fn print_balances(group: &Group) {
+fn print_balances(group: &ExpenseGroup) {
     let summary = group.summary();
     print_table(
         group.members().map(|member| {
@@ -140,7 +140,7 @@ fn print_balances(group: &Group) {
     );
 }
 
-fn print_payments(group: &Group, settlement: &Settlement) {
+fn print_payments(group: &ExpenseGroup, settlement: &Settlement) {
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
             from: names(group, [payment.from()]),
@@ -153,7 +153,7 @@ fn print_payments(group: &Group, settlement: &Settlement) {
 
 /// Prints each strategy's plan with what it promises; returns the number of
 /// payments of each.
-fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
+fn strategies(group: &ExpenseGroup) -> Result<Counts, Box<dyn Error>> {
     section("3. Minimum transfers");
     let minimum = group.settlement(SettlementStrategy::MinimumTransfers)?;
     println!(
@@ -239,7 +239,7 @@ fn strategies(group: &Group) -> Result<Counts, Box<dyn Error>> {
 /// returns the number of payments.
 fn festival() -> Result<usize, Box<dyn Error>> {
     section("8. A larger group");
-    let mut group = Group::builder("Festival", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Festival", Currency::EUR).build()?;
     let mut friends = Vec::new();
     for number in 1..=21 {
         friends.push(group.add_member(Member::builder(format!("Friend {number}")).build()?)?);
@@ -280,7 +280,7 @@ fn festival() -> Result<usize, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Ski week", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Ski week", Currency::EUR).build()?;
     let mut add = |name| -> Result<MemberId, Box<dyn Error>> {
         Ok(group.add_member(Member::builder(name).build()?)?)
     };

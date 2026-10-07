@@ -4,8 +4,8 @@
 
 use crate::{
     AccountFailure, CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
-    GroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, Money, MoneyFailure,
-    SettlementFailure, TransferFailure,
+    ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, Money,
+    MoneyFailure, SettlementFailure, TransferFailure,
 };
 
 /// An [`EranosError`] as fields: its kind, the library's message, the
@@ -118,10 +118,10 @@ impl From<&EranosError> for FlatError {
                 message,
                 payload: Payload::default(),
             },
-            EranosError::Group { failure, .. } => {
-                let FlatFailure { failure, payload } = group(failure);
+            EranosError::ExpenseGroup { failure, .. } => {
+                let FlatFailure { failure, payload } = expense_group(failure);
                 Self {
-                    kind: ErrorKind::Group,
+                    kind: ErrorKind::ExpenseGroup,
                     failure: Some(failure),
                     message,
                     payload,
@@ -195,8 +195,8 @@ pub enum ErrorKind {
     Settlement,
     /// [`EranosError::Transfer`].
     Transfer,
-    /// [`EranosError::Group`].
-    Group,
+    /// [`EranosError::ExpenseGroup`].
+    ExpenseGroup,
     /// [`EranosError::Language`].
     Language,
     /// [`EranosError::IdentifierGiven`].
@@ -288,44 +288,44 @@ pub enum FailureKind {
     TransferSameMember,
     /// [`TransferFailure::NonPositiveAmount`].
     TransferNonPositiveAmount,
-    /// [`GroupFailure::UnsupportedFormat`].
-    GroupUnsupportedFormat,
-    /// [`GroupFailure::EmptyName`].
-    GroupEmptyName,
-    /// [`GroupFailure::MissingExchangeRate`].
-    GroupMissingExchangeRate,
-    /// [`GroupFailure::UnexpectedExchangeRate`].
-    GroupUnexpectedExchangeRate,
-    /// [`GroupFailure::DuplicateExchangeRate`].
-    GroupDuplicateExchangeRate,
-    /// [`GroupFailure::DuplicateMember`].
-    GroupDuplicateMember,
-    /// [`GroupFailure::UnknownMember`].
-    GroupUnknownMember,
-    /// [`GroupFailure::ArchivedMember`].
-    GroupArchivedMember,
-    /// [`GroupFailure::MemberInUse`].
-    GroupMemberInUse,
-    /// [`GroupFailure::DuplicateCategory`].
-    GroupDuplicateCategory,
-    /// [`GroupFailure::DuplicateCategoryName`].
-    GroupDuplicateCategoryName,
-    /// [`GroupFailure::UnknownCategory`].
-    GroupUnknownCategory,
-    /// [`GroupFailure::BuiltInCategory`].
-    GroupBuiltInCategory,
-    /// [`GroupFailure::DuplicateExpense`].
-    GroupDuplicateExpense,
-    /// [`GroupFailure::UnknownExpense`].
-    GroupUnknownExpense,
-    /// [`GroupFailure::DuplicateTransfer`].
-    GroupDuplicateTransfer,
-    /// [`GroupFailure::UnknownTransfer`].
-    GroupUnknownTransfer,
-    /// [`GroupFailure::Busy`].
-    GroupBusy,
-    /// [`GroupFailure::Overflow`].
-    GroupOverflow,
+    /// [`ExpenseGroupFailure::UnsupportedFormat`].
+    ExpenseGroupUnsupportedFormat,
+    /// [`ExpenseGroupFailure::EmptyName`].
+    ExpenseGroupEmptyName,
+    /// [`ExpenseGroupFailure::MissingExchangeRate`].
+    ExpenseGroupMissingExchangeRate,
+    /// [`ExpenseGroupFailure::UnexpectedExchangeRate`].
+    ExpenseGroupUnexpectedExchangeRate,
+    /// [`ExpenseGroupFailure::DuplicateExchangeRate`].
+    ExpenseGroupDuplicateExchangeRate,
+    /// [`ExpenseGroupFailure::DuplicateMember`].
+    ExpenseGroupDuplicateMember,
+    /// [`ExpenseGroupFailure::UnknownMember`].
+    ExpenseGroupUnknownMember,
+    /// [`ExpenseGroupFailure::ArchivedMember`].
+    ExpenseGroupArchivedMember,
+    /// [`ExpenseGroupFailure::MemberInUse`].
+    ExpenseGroupMemberInUse,
+    /// [`ExpenseGroupFailure::DuplicateCategory`].
+    ExpenseGroupDuplicateCategory,
+    /// [`ExpenseGroupFailure::DuplicateCategoryName`].
+    ExpenseGroupDuplicateCategoryName,
+    /// [`ExpenseGroupFailure::UnknownCategory`].
+    ExpenseGroupUnknownCategory,
+    /// [`ExpenseGroupFailure::BuiltInCategory`].
+    ExpenseGroupBuiltInCategory,
+    /// [`ExpenseGroupFailure::DuplicateExpense`].
+    ExpenseGroupDuplicateExpense,
+    /// [`ExpenseGroupFailure::UnknownExpense`].
+    ExpenseGroupUnknownExpense,
+    /// [`ExpenseGroupFailure::DuplicateTransfer`].
+    ExpenseGroupDuplicateTransfer,
+    /// [`ExpenseGroupFailure::UnknownTransfer`].
+    ExpenseGroupUnknownTransfer,
+    /// [`ExpenseGroupFailure::Busy`].
+    ExpenseGroupBusy,
+    /// [`ExpenseGroupFailure::Overflow`].
+    ExpenseGroupOverflow,
     /// [`LanguageFailure::InvalidLanguage`].
     LanguageInvalidLanguage,
 }
@@ -360,19 +360,19 @@ pub struct Payload {
     /// How many open balances the plan has:
     /// [`SettlementFailure::OutOfMemory`].
     pub balances: Option<i64>,
-    /// The category, as its identifier: [`GroupFailure::DuplicateCategory`],
-    /// [`GroupFailure::UnknownCategory`].
+    /// The category, as its identifier: [`ExpenseGroupFailure::DuplicateCategory`],
+    /// [`ExpenseGroupFailure::UnknownCategory`].
     pub category: Option<String>,
     /// The column where the saved group stops being one, from 1:
     /// [`EranosError::InvalidJson`].
     pub column: Option<i64>,
     /// The currency, as its ISO 4217 code:
-    /// [`GroupFailure::DuplicateExchangeRate`],
-    /// [`GroupFailure::MissingExchangeRate`],
+    /// [`ExpenseGroupFailure::DuplicateExchangeRate`],
+    /// [`ExpenseGroupFailure::MissingExchangeRate`],
     /// [`MoneyFailure::TooManyDecimals`].
     pub currency: Option<String>,
     /// The category that has the name, as its identifier:
-    /// [`GroupFailure::DuplicateCategoryName`].
+    /// [`ExpenseGroupFailure::DuplicateCategoryName`].
     pub existing: Option<String>,
     /// What the amounts must add up to:
     /// [`ExpenseFailure::AmountsDoNotAddUp`],
@@ -384,13 +384,13 @@ pub struct Payload {
     /// How many characters the country's IBANs have:
     /// [`IbanReason::WrongLength`].
     pub expected_length: Option<i64>,
-    /// The expense, as its identifier: [`GroupFailure::DuplicateExpense`],
-    /// [`GroupFailure::UnknownExpense`].
+    /// The expense, as its identifier: [`ExpenseGroupFailure::DuplicateExpense`],
+    /// [`ExpenseGroupFailure::UnknownExpense`].
     pub expense: Option<String>,
-    /// The expenses that name the member: [`GroupFailure::MemberInUse`].
+    /// The expenses that name the member: [`ExpenseGroupFailure::MemberInUse`].
     pub expenses: Option<Vec<String>>,
     /// The format the saved group names:
-    /// [`GroupFailure::UnsupportedFormat`].
+    /// [`ExpenseGroupFailure::UnsupportedFormat`].
     pub format: Option<i64>,
     /// The currency the part is in: [`ExpenseFailure::CurrencyMismatch`].
     pub found_currency: Option<String>,
@@ -403,8 +403,8 @@ pub struct Payload {
     pub line: Option<i64>,
     /// The member, as their identifier: [`ExpenseFailure::DuplicateMember`],
     /// [`ExpenseFailure::NonPositiveShare`],
-    /// [`GroupFailure::ArchivedMember`], [`GroupFailure::DuplicateMember`],
-    /// [`GroupFailure::MemberInUse`], [`GroupFailure::UnknownMember`].
+    /// [`ExpenseGroupFailure::ArchivedMember`], [`ExpenseGroupFailure::DuplicateMember`],
+    /// [`ExpenseGroupFailure::MemberInUse`], [`ExpenseGroupFailure::UnknownMember`].
     pub member: Option<String>,
     /// The check the IBAN failed: [`AccountFailure::InvalidIban`].
     pub reason: Option<IbanReasonKind>,
@@ -414,10 +414,10 @@ pub struct Payload {
     /// What the percentages add up to, in basis points:
     /// [`ExpenseFailure::PercentagesDoNotAddUp`].
     pub total_basis_points: Option<i64>,
-    /// The transfer, as its identifier: [`GroupFailure::DuplicateTransfer`],
-    /// [`GroupFailure::UnknownTransfer`].
+    /// The transfer, as its identifier: [`ExpenseGroupFailure::DuplicateTransfer`],
+    /// [`ExpenseGroupFailure::UnknownTransfer`].
     pub transfer: Option<String>,
-    /// The transfers that name the member: [`GroupFailure::MemberInUse`].
+    /// The transfers that name the member: [`ExpenseGroupFailure::MemberInUse`].
     pub transfers: Option<Vec<String>>,
 }
 
@@ -539,60 +539,60 @@ fn expense(failure: &ExpenseFailure) -> FlatFailure {
     clippy::too_many_lines,
     reason = "one arm per failure of the group module, of which there are 19"
 )]
-fn group(failure: &GroupFailure) -> FlatFailure {
+fn expense_group(failure: &ExpenseGroupFailure) -> FlatFailure {
     match failure {
-        GroupFailure::UnsupportedFormat { format } => FlatFailure {
-            failure: FailureKind::GroupUnsupportedFormat,
+        ExpenseGroupFailure::UnsupportedFormat { format } => FlatFailure {
+            failure: FailureKind::ExpenseGroupUnsupportedFormat,
             payload: Payload {
                 format: Some(*format),
                 ..Payload::default()
             },
         },
-        GroupFailure::EmptyName => FlatFailure::new(FailureKind::GroupEmptyName),
-        GroupFailure::MissingExchangeRate { currency } => FlatFailure {
-            failure: FailureKind::GroupMissingExchangeRate,
+        ExpenseGroupFailure::EmptyName => FlatFailure::new(FailureKind::ExpenseGroupEmptyName),
+        ExpenseGroupFailure::MissingExchangeRate { currency } => FlatFailure {
+            failure: FailureKind::ExpenseGroupMissingExchangeRate,
             payload: Payload {
                 currency: Some(currency.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::UnexpectedExchangeRate => {
-            FlatFailure::new(FailureKind::GroupUnexpectedExchangeRate)
+        ExpenseGroupFailure::UnexpectedExchangeRate => {
+            FlatFailure::new(FailureKind::ExpenseGroupUnexpectedExchangeRate)
         }
-        GroupFailure::DuplicateExchangeRate { currency } => FlatFailure {
-            failure: FailureKind::GroupDuplicateExchangeRate,
+        ExpenseGroupFailure::DuplicateExchangeRate { currency } => FlatFailure {
+            failure: FailureKind::ExpenseGroupDuplicateExchangeRate,
             payload: Payload {
                 currency: Some(currency.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::DuplicateMember { member } => FlatFailure {
-            failure: FailureKind::GroupDuplicateMember,
+        ExpenseGroupFailure::DuplicateMember { member } => FlatFailure {
+            failure: FailureKind::ExpenseGroupDuplicateMember,
             payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::UnknownMember { member } => FlatFailure {
-            failure: FailureKind::GroupUnknownMember,
+        ExpenseGroupFailure::UnknownMember { member } => FlatFailure {
+            failure: FailureKind::ExpenseGroupUnknownMember,
             payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::ArchivedMember { member } => FlatFailure {
-            failure: FailureKind::GroupArchivedMember,
+        ExpenseGroupFailure::ArchivedMember { member } => FlatFailure {
+            failure: FailureKind::ExpenseGroupArchivedMember,
             payload: Payload {
                 member: Some(member.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::MemberInUse {
+        ExpenseGroupFailure::MemberInUse {
             member,
             expenses,
             transfers,
         } => FlatFailure {
-            failure: FailureKind::GroupMemberInUse,
+            failure: FailureKind::ExpenseGroupMemberInUse,
             payload: Payload {
                 expenses: Some(expenses.clone()),
                 member: Some(member.clone()),
@@ -600,58 +600,60 @@ fn group(failure: &GroupFailure) -> FlatFailure {
                 ..Payload::default()
             },
         },
-        GroupFailure::DuplicateCategory { category } => FlatFailure {
-            failure: FailureKind::GroupDuplicateCategory,
+        ExpenseGroupFailure::DuplicateCategory { category } => FlatFailure {
+            failure: FailureKind::ExpenseGroupDuplicateCategory,
             payload: Payload {
                 category: Some(category.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::DuplicateCategoryName { existing } => FlatFailure {
-            failure: FailureKind::GroupDuplicateCategoryName,
+        ExpenseGroupFailure::DuplicateCategoryName { existing } => FlatFailure {
+            failure: FailureKind::ExpenseGroupDuplicateCategoryName,
             payload: Payload {
                 existing: Some(existing.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::UnknownCategory { category } => FlatFailure {
-            failure: FailureKind::GroupUnknownCategory,
+        ExpenseGroupFailure::UnknownCategory { category } => FlatFailure {
+            failure: FailureKind::ExpenseGroupUnknownCategory,
             payload: Payload {
                 category: Some(category.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::BuiltInCategory => FlatFailure::new(FailureKind::GroupBuiltInCategory),
-        GroupFailure::DuplicateExpense { expense } => FlatFailure {
-            failure: FailureKind::GroupDuplicateExpense,
+        ExpenseGroupFailure::BuiltInCategory => {
+            FlatFailure::new(FailureKind::ExpenseGroupBuiltInCategory)
+        }
+        ExpenseGroupFailure::DuplicateExpense { expense } => FlatFailure {
+            failure: FailureKind::ExpenseGroupDuplicateExpense,
             payload: Payload {
                 expense: Some(expense.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::UnknownExpense { expense } => FlatFailure {
-            failure: FailureKind::GroupUnknownExpense,
+        ExpenseGroupFailure::UnknownExpense { expense } => FlatFailure {
+            failure: FailureKind::ExpenseGroupUnknownExpense,
             payload: Payload {
                 expense: Some(expense.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::DuplicateTransfer { transfer } => FlatFailure {
-            failure: FailureKind::GroupDuplicateTransfer,
+        ExpenseGroupFailure::DuplicateTransfer { transfer } => FlatFailure {
+            failure: FailureKind::ExpenseGroupDuplicateTransfer,
             payload: Payload {
                 transfer: Some(transfer.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::UnknownTransfer { transfer } => FlatFailure {
-            failure: FailureKind::GroupUnknownTransfer,
+        ExpenseGroupFailure::UnknownTransfer { transfer } => FlatFailure {
+            failure: FailureKind::ExpenseGroupUnknownTransfer,
             payload: Payload {
                 transfer: Some(transfer.clone()),
                 ..Payload::default()
             },
         },
-        GroupFailure::Busy => FlatFailure::new(FailureKind::GroupBusy),
-        GroupFailure::Overflow => FlatFailure::new(FailureKind::GroupOverflow),
+        ExpenseGroupFailure::Busy => FlatFailure::new(FailureKind::ExpenseGroupBusy),
+        ExpenseGroupFailure::Overflow => FlatFailure::new(FailureKind::ExpenseGroupOverflow),
     }
 }
 

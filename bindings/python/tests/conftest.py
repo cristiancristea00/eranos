@@ -14,7 +14,7 @@ from eranos import (
     EqualSplit,
     Expense,
     ExpenseId,
-    Group,
+    ExpenseGroup,
     Language,
     LocalCost,
     Member,
@@ -31,7 +31,7 @@ from eranos import (
 class Flat:
     """A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them."""
 
-    group: Group
+    group: ExpenseGroup
     """The group."""
 
     euro: Currency
@@ -97,7 +97,7 @@ def flat() -> Iterator[Flat]:
     """
     euro = Currency('EUR')
     day = CalendarDate(2026, 9, 23)
-    with Group.create('Flat', euro, description='Rent', language=Language('pt-pt')) as group:
+    with ExpenseGroup.create('Flat', euro, description='Rent', language=Language('pt-pt')) as group:
         ana = group.add_member(Member(first_name='Ana'))
         bob = group.add_member(Member(first_name='Bob'))
         food = group.add_category(Category(name='Food'))

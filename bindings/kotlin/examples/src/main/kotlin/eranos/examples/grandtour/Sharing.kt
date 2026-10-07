@@ -6,8 +6,8 @@ import eranos.Cost
 import eranos.Currency
 import eranos.ExchangeRate
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.SettlementStrategy
 import eranos.Split
 import eranos.examples.printTable
@@ -17,7 +17,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 internal suspend fun sharing(
-    group: Group,
+    group: ExpenseGroup,
     people: People,
 ): Unit =
     coroutineScope {
@@ -37,10 +37,10 @@ internal suspend fun sharing(
         val plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
         println(
             """
-            An app shares the group between its tasks and threads through a SharedGroup,
-            whose calls are futures any executor runs; here the library's block_on runs
-            each one on this thread. Bob adds the airport coffee through another handle,
-            and the plan that settles it comes through the first:
+            An app shares the group between its tasks and threads through a
+            SharedExpenseGroup, whose calls are futures any executor runs; here the library's
+            block_on runs each one on this thread. Bob adds the airport coffee through another
+            handle, and the plan that settles it comes through the first:
             """.trimIndent(),
         )
         val rows =

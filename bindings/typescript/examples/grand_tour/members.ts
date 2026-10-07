@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type Account, Currency, Email, Group, GroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
+import { type Account, Currency, Email, ExpenseGroup, ExpenseGroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
 import { type Categories, type People, cell, outcome, refusalColumns } from './tour.js';
 
@@ -46,9 +46,9 @@ const checkColumns: Columns<CheckRow> = [
     { header: 'Result', text: (row) => row.result },
 ];
 
-export function theGroup(): Group {
+export function theGroup(): ExpenseGroup {
     section('1. The group');
-    const group = Group.create('Lisbon', Currency.of('EUR'), { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
+    const group = ExpenseGroup.create('Lisbon', Currency.of('EUR'), { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
     const blank = refusal(() => {
         group.setNameSync('   ');
     });
@@ -73,7 +73,7 @@ export function theGroup(): Group {
         `  error: ${message(blank)}`,
     );
 
-    assert.ok(blank instanceof GroupError && 'emptyName' === blank.failure.kind);
+    assert.ok(blank instanceof ExpenseGroupError && 'emptyName' === blank.failure.kind);
     assert.equal(group.nameSync(), 'Lisbon and Porto');
     assert.equal(language, 'pt-PT');
     return group;
@@ -86,7 +86,7 @@ function describe(account: Account): string {
         : `${account.name}, username ${account.details.username.toString()}`;
 }
 
-function printMembers(group: Group): void {
+function printMembers(group: ExpenseGroup): void {
     printTable(
         memberColumns,
         group.membersSync().map((member) => ({
@@ -99,7 +99,7 @@ function printMembers(group: Group): void {
     );
 }
 
-function validation(group: Group): void {
+function validation(group: ExpenseGroup): void {
     printLines(
         'IBANs are checked against the SWIFT registry and their mod-97 check digits,',
         "emails against RFC 5321 and 5322, and phone numbers against their country's",
@@ -136,7 +136,7 @@ function validation(group: Group): void {
     );
 }
 
-export function members(group: Group): People {
+export function members(group: ExpenseGroup): People {
     section('2. Members');
     const ana = group.addMemberSync({
         firstName: 'Ana',
@@ -172,7 +172,7 @@ export function members(group: Group): People {
     return { ana, bob, carol, dan, eva, filip };
 }
 
-export function addCategories(group: Group): Categories {
+export function addCategories(group: ExpenseGroup): Categories {
     section('3. Categories');
     const food = group.addCategorySync({ name: 'Food' });
     const lodging = group.addCategorySync({ name: 'Lodging' });
@@ -202,9 +202,9 @@ export function addCategories(group: Group): Categories {
         2,
     );
 
-    assert.ok(homonym instanceof GroupError);
+    assert.ok(homonym instanceof ExpenseGroupError);
     assert.deepEqual(homonym.failure, { kind: 'duplicateCategoryName', existing: food });
-    assert.ok(builtIn instanceof GroupError && 'builtInCategory' === builtIn.failure.kind);
+    assert.ok(builtIn instanceof ExpenseGroupError && 'builtInCategory' === builtIn.failure.kind);
     assert.equal(group.categorySync(transport)?.name, 'Getting around');
     return { food, lodging, transport };
 }

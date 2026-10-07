@@ -8,8 +8,8 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseShares, Group, Item, Member, MemberId, MemberParts,
-    MemberShare, Money, Parts, Percentage, Split, Tip, TipDistribution,
+    CalendarDate, Currency, Expense, ExpenseGroup, ExpenseShares, Item, Member, MemberId,
+    MemberParts, MemberShare, Money, Parts, Percentage, Split, Tip, TipDistribution,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -65,7 +65,7 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 /// The first names of `members`, joined by commas.
-fn names(group: &Group, members: impl IntoIterator<Item = MemberId>) -> String {
+fn names(group: &ExpenseGroup, members: impl IntoIterator<Item = MemberId>) -> String {
     members
         .into_iter()
         .map(|member| group.member(member).map_or("?", Member::first_name))
@@ -96,7 +96,7 @@ fn receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> Result<Vec<Item>, B
 
 /// How `expense` would divide if it were added to `group`, computed on a
 /// copy so the group itself is unchanged.
-fn preview(group: &Group, expense: Expense) -> Result<ExpenseShares, Box<dyn Error>> {
+fn preview(group: &ExpenseGroup, expense: Expense) -> Result<ExpenseShares, Box<dyn Error>> {
     let mut copy = group.clone();
     let id = copy.add_expense(expense)?;
     Ok(copy
@@ -113,7 +113,7 @@ fn consumed(shares: &ExpenseShares, member: MemberId) -> Result<Money, Box<dyn E
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Dinner at Caru' cu Bere", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Dinner at Caru' cu Bere", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;

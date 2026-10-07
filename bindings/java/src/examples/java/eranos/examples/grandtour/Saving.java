@@ -10,8 +10,8 @@ import static eranos.examples.grandtour.Tour.refusal;
 import eranos.Account;
 import eranos.AccountDetails;
 import eranos.EranosException;
-import eranos.Group;
-import eranos.GroupFailure;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupFailure;
 import eranos.examples.grandtour.Tables.LoadRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
@@ -35,7 +35,7 @@ final class Saving {
         return text.replaceFirst(Pattern.quote(found), Matcher.quoteReplacement(replacement));
     }
 
-    static void savingAndLoading(Group group, People people, Categories categories)
+    static void savingAndLoading(ExpenseGroup group, People people, Categories categories)
             throws EranosException {
         section("12. Saving and loading");
         String saved = group.save();
@@ -54,12 +54,12 @@ final class Saving {
             check(saved.contains(details));
             System.out.println("  " + account.name() + ": " + details);
         }
-        try (Group loaded = Group.load(saved)) {
+        try (ExpenseGroup loaded = ExpenseGroup.load(saved)) {
             System.out.print(
                     """
                     Loading replays every entry through the same checks as adding it and rebuilds the
-                    totals: the loaded group equals the saved one. Reading a SavedGroup and loading it
-                    with into_group reports a refusal as a typed error instead of a message:
+                    totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and
+                    loading it with into_expense_group reports a refusal as a typed error, not as text:
                     """);
             List<Tampering> tampered =
                     List.of(
@@ -77,11 +77,11 @@ final class Saving {
                                     replaceFirst(
                                             saved, "\"name\": \"Lodging\"", "\"name\": \"FOOD\"")));
             List<LoadRow> rows = new ArrayList<>();
-            List<Optional<GroupFailure>> failures = new ArrayList<>();
+            List<Optional<ExpenseGroupFailure>> failures = new ArrayList<>();
             for (Tampering tampering : tampered) {
                 check(!saved.equals(tampering.text()));
                 Optional<EranosException> refused =
-                        refusal(() -> Group.load(tampering.text()).close());
+                        refusal(() -> ExpenseGroup.load(tampering.text()).close());
                 check(refused.isPresent());
                 rows.add(new LoadRow(tampering.change(), message(refused)));
                 failures.add(groupFailure(refused));
@@ -92,10 +92,10 @@ final class Saving {
             check(group.summary().equals(loaded.summary()));
             check(
                     List.of(
-                                    Optional.of(new GroupFailure.UnsupportedFormat(3)),
-                                    Optional.of(new GroupFailure.EmptyName()),
+                                    Optional.of(new ExpenseGroupFailure.UnsupportedFormat(3)),
+                                    Optional.of(new ExpenseGroupFailure.EmptyName()),
                                     Optional.of(
-                                            new GroupFailure.DuplicateCategoryName(
+                                            new ExpenseGroupFailure.DuplicateCategoryName(
                                                     categories.food())))
                             .equals(failures));
         }

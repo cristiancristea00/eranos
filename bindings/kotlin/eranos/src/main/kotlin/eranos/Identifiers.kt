@@ -9,7 +9,7 @@ import kotlin.jvm.JvmInline
  * identifier converts to its text and back, for storing it; the library checks the text when a call carries it.
  */
 @JvmInline
-public value class GroupId(
+public value class ExpenseGroupId(
     /** The identifier's text: a hyphenated UUID. */
     public val value: String,
 ) {

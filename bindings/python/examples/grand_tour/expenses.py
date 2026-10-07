@@ -10,7 +10,7 @@ from eranos import (
     Expense,
     ExpenseId,
     FixedTip,
-    Group,
+    ExpenseGroup,
     Item,
     ItemisedExpenseSplit,
     LocalCost,
@@ -207,7 +207,7 @@ def _how(expense: Expense) -> str:
     return divided + payers + worth
 
 
-def _share_row(group: Group, expense_id: ExpenseId) -> ShareRow | None:
+def _share_row(group: ExpenseGroup, expense_id: ExpenseId) -> ShareRow | None:
     """
     Write the row of an expense among the shares: every involved member's payment and consumption.
 
@@ -232,7 +232,7 @@ def _share_row(group: Group, expense_id: ExpenseId) -> ShareRow | None:
     )
 
 
-def _print_shares(group: Group, expenses: Sequence[ExpenseId]) -> None:
+def _print_shares(group: ExpenseGroup, expenses: Sequence[ExpenseId]) -> None:
     """
     Print each of expenses, with every involved member's payment and consumption.
 
@@ -262,7 +262,7 @@ def _line_total(item: Item) -> Money:
     return Money(item.unit_price.minor_units * item.quantity, item.unit_price.currency)
 
 
-def _print_items(group: Group, expense: Expense) -> None:
+def _print_items(group: ExpenseGroup, expense: Expense) -> None:
     """
     Print the lines of an itemised expense, and nothing for another.
 
@@ -323,7 +323,7 @@ def _fado_items(people: People) -> tuple[Item, ...]:
     )
 
 
-def _add_expenses(group: Group, people: People, categories: Categories) -> Expenses:
+def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -> Expenses:
     """
     Add one expense for every way of dividing one.
 
@@ -444,7 +444,7 @@ def _add_expenses(group: Group, people: People, categories: Categories) -> Expen
     return Expenses(apartment=apartment, fado=fado, groceries=groceries, museum=museum, seafood=seafood, tour=tour, train=train)
 
 
-def _share(group: Group, expense_id: ExpenseId, member: MemberId) -> MemberShare | None:
+def _share(group: ExpenseGroup, expense_id: ExpenseId, member: MemberId) -> MemberShare | None:
     """
     Find what member paid and consumed of the expense expense_id.
 
@@ -461,7 +461,7 @@ def _share(group: Group, expense_id: ExpenseId, member: MemberId) -> MemberShare
     return None if shares is None else next((share for share in shares.members if share.member == member), None)
 
 
-def _consumed(group: Group, expense_id: ExpenseId, member: MemberId) -> Money | None:
+def _consumed(group: ExpenseGroup, expense_id: ExpenseId, member: MemberId) -> Money | None:
     """
     Find what member consumed of the expense expense_id.
 
@@ -478,7 +478,7 @@ def _consumed(group: Group, expense_id: ExpenseId, member: MemberId) -> Money | 
     return None if share is None else share.share
 
 
-def _print_fado(group: Group, fado: Expense) -> None:
+def _print_fado(group: ExpenseGroup, fado: Expense) -> None:
     """
     Print how the fado night's tip was shared, and its receipt.
 
@@ -499,7 +499,7 @@ def _print_fado(group: Group, fado: Expense) -> None:
     print_lines("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.")
 
 
-def expenses(group: Group, people: People, categories: Categories) -> ExpenseId:
+def expenses(group: ExpenseGroup, people: People, categories: Categories) -> ExpenseId:
     """
     Print section 4: add an expense for every way of dividing one, and show each member's payment and consumption.
 

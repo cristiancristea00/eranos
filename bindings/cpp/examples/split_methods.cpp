@@ -92,7 +92,7 @@ using Rules = std::map<MemberId, std::string>;
 [[nodiscard]] EqualSplit everyone(Family const &family) { return EqualSplit{{family.ana, family.bob, family.mia}}; }
 
 /// Prints how the expense @p id divides: every involved member's rule, what they paid, and what they consumed.
-void report(Group const &group, ExpenseId const &id, Rules const &rules) {
+void report(ExpenseGroup const &group, ExpenseId const &id, Rules const &rules) {
     auto const expense = must(group.expense(id));
     auto const shares = must(group.expenseShares(id));
     if (!expense.has_value() || !shares.has_value()) {
@@ -114,7 +114,7 @@ void report(Group const &group, ExpenseId const &id, Rules const &rules) {
 }
 
 /// Adds the taxi, which the three share equally, the leftover cent going to one of them.
-void equally(Group &group, Family const &family) {
+void equally(ExpenseGroup &group, Family const &family) {
     section("1. Equally");
     printLine("Everyone pays the same. 10.00 does not divide by three, so one member pays the\n"
               "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
@@ -125,7 +125,7 @@ void equally(Group &group, Family const &family) {
 }
 
 /// Adds the flat, which the three share by percentage.
-void byPercentage(Group &group, Family const &family) {
+void byPercentage(ExpenseGroup &group, Family const &family) {
     section("2. By percentage");
     printLine("Everyone pays a percentage of the amount; the percentages must add up to exactly\n"
               "100 %. Mia's room is smaller, so she takes 20 %.");
@@ -140,7 +140,7 @@ void byPercentage(Group &group, Family const &family) {
 }
 
 /// Adds the food, which the three share by parts, Mia counting as half an adult.
-[[nodiscard]] ExpenseId byParts(Group &group, Family const &family) {
+[[nodiscard]] ExpenseId byParts(ExpenseGroup &group, Family const &family) {
     section("3. By parts");
     printLine("Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n"
               "2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.");
@@ -156,7 +156,7 @@ void byPercentage(Group &group, Family const &family) {
 }
 
 /// Adds the museum tickets, which the three share by exact amounts.
-void byAmounts(Group &group, Family const &family) {
+void byAmounts(ExpenseGroup &group, Family const &family) {
     section("4. By exact amounts");
     printLine("Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n"
               "exactly the expense amount.");
@@ -171,7 +171,7 @@ void byAmounts(Group &group, Family const &family) {
 }
 
 /// Adds the dinner, which two of them paid and the three share equally.
-void severalPayers(Group &group, Family const &family) {
+void severalPayers(ExpenseGroup &group, Family const &family) {
     section("5. Several payers");
     printLine("The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n"
               "divided with the same methods as the participants.");
@@ -181,7 +181,7 @@ void severalPayers(Group &group, Family const &family) {
 }
 
 /// Shows that a split whose percentages do not add up to 100 % is refused.
-void mistakes(Group &group, Family const &family) {
+void mistakes(ExpenseGroup &group, Family const &family) {
     section("6. Mistakes are refused");
     printLine("A percentage split that adds up to 90 % is refused when the expense is built:");
     std::vector<MemberPercentage> const ninety{
@@ -195,7 +195,7 @@ void mistakes(Group &group, Family const &family) {
 }
 
 /// Prints what each member paid and consumed over the holiday, and their balance.
-void totals(Group const &group) {
+void totals(ExpenseGroup const &group) {
     section("7. The holiday in total");
     auto const summary = group.summary();
     std::println("{} spent over five expenses:", summary.totalSpent.toString());
@@ -214,7 +214,7 @@ void totals(Group const &group) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create("Family holiday", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Family holiday", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const mia = must(group.addMember(Member("Mia")));

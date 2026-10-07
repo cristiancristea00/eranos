@@ -176,80 +176,80 @@ private let conversions: [Conversion] = [
         generated: .Transfer(failure: .nonPositiveAmount, detail: "detail")
     ),
     Conversion(
-        expected: .group(.unsupportedFormat(format: 26), detail: "detail"),
-        generated: .Group(failure: .unsupportedFormat(format: 26), detail: "detail")
+        expected: .expenseGroup(.unsupportedFormat(format: 26), detail: "detail"),
+        generated: .ExpenseGroup(failure: .unsupportedFormat(format: 26), detail: "detail")
     ),
     Conversion(
-        expected: .group(.emptyName, detail: "detail"),
-        generated: .Group(failure: .emptyName, detail: "detail")
+        expected: .expenseGroup(.emptyName, detail: "detail"),
+        generated: .ExpenseGroup(failure: .emptyName, detail: "detail")
     ),
     Conversion(
-        expected: .group(.missingExchangeRate(known("RON")), detail: "detail"),
-        generated: .Group(failure: .missingExchangeRate(currency: "RON"), detail: "detail")
+        expected: .expenseGroup(.missingExchangeRate(known("RON")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .missingExchangeRate(currency: "RON"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.unexpectedExchangeRate, detail: "detail"),
-        generated: .Group(failure: .unexpectedExchangeRate, detail: "detail")
+        expected: .expenseGroup(.unexpectedExchangeRate, detail: "detail"),
+        generated: .ExpenseGroup(failure: .unexpectedExchangeRate, detail: "detail")
     ),
     Conversion(
-        expected: .group(.duplicateExchangeRate(known("GBP")), detail: "detail"),
-        generated: .Group(failure: .duplicateExchangeRate(currency: "GBP"), detail: "detail")
+        expected: .expenseGroup(.duplicateExchangeRate(known("GBP")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateExchangeRate(currency: "GBP"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.duplicateMember(id("member-16")), detail: "detail"),
-        generated: .Group(failure: .duplicateMember(member: "member-16"), detail: "detail")
+        expected: .expenseGroup(.duplicateMember(id("member-16")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateMember(member: "member-16"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.unknownMember(id("member-24")), detail: "detail"),
-        generated: .Group(failure: .unknownMember(member: "member-24"), detail: "detail")
+        expected: .expenseGroup(.unknownMember(id("member-24")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .unknownMember(member: "member-24"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.archivedMember(id("member-11")), detail: "detail"),
-        generated: .Group(failure: .archivedMember(member: "member-11"), detail: "detail")
+        expected: .expenseGroup(.archivedMember(id("member-11")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .archivedMember(member: "member-11"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.memberInUse(member: id("member-19"), expenses: [id("expenses-18")], transfers: [id("transfers-20")]), detail: "detail"),
-        generated: .Group(failure: .memberInUse(member: "member-19", expenses: ["expenses-18"], transfers: ["transfers-20"]), detail: "detail")
+        expected: .expenseGroup(.memberInUse(member: id("member-19"), expenses: [id("expenses-18")], transfers: [id("transfers-20")]), detail: "detail"),
+        generated: .ExpenseGroup(failure: .memberInUse(member: "member-19", expenses: ["expenses-18"], transfers: ["transfers-20"]), detail: "detail")
     ),
     Conversion(
-        expected: .group(.duplicateCategory(id("category-12")), detail: "detail"),
-        generated: .Group(failure: .duplicateCategory(category: "category-12"), detail: "detail")
+        expected: .expenseGroup(.duplicateCategory(id("category-12")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateCategory(category: "category-12"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.duplicateCategoryName(id("existing-13")), detail: "detail"),
-        generated: .Group(failure: .duplicateCategoryName(existing: "existing-13"), detail: "detail")
+        expected: .expenseGroup(.duplicateCategoryName(id("existing-13")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateCategoryName(existing: "existing-13"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.unknownCategory(id("category-22")), detail: "detail"),
-        generated: .Group(failure: .unknownCategory(category: "category-22"), detail: "detail")
+        expected: .expenseGroup(.unknownCategory(id("category-22")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .unknownCategory(category: "category-22"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.builtInCategory, detail: "detail"),
-        generated: .Group(failure: .builtInCategory, detail: "detail")
+        expected: .expenseGroup(.builtInCategory, detail: "detail"),
+        generated: .ExpenseGroup(failure: .builtInCategory, detail: "detail")
     ),
     Conversion(
-        expected: .group(.duplicateExpense(id("expense-15")), detail: "detail"),
-        generated: .Group(failure: .duplicateExpense(expense: "expense-15"), detail: "detail")
+        expected: .expenseGroup(.duplicateExpense(id("expense-15")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateExpense(expense: "expense-15"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.unknownExpense(id("expense-23")), detail: "detail"),
-        generated: .Group(failure: .unknownExpense(expense: "expense-23"), detail: "detail")
+        expected: .expenseGroup(.unknownExpense(id("expense-23")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .unknownExpense(expense: "expense-23"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.duplicateTransfer(id("transfer-17")), detail: "detail"),
-        generated: .Group(failure: .duplicateTransfer(transfer: "transfer-17"), detail: "detail")
+        expected: .expenseGroup(.duplicateTransfer(id("transfer-17")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .duplicateTransfer(transfer: "transfer-17"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.unknownTransfer(id("transfer-25")), detail: "detail"),
-        generated: .Group(failure: .unknownTransfer(transfer: "transfer-25"), detail: "detail")
+        expected: .expenseGroup(.unknownTransfer(id("transfer-25")), detail: "detail"),
+        generated: .ExpenseGroup(failure: .unknownTransfer(transfer: "transfer-25"), detail: "detail")
     ),
     Conversion(
-        expected: .group(.busy, detail: "detail"),
-        generated: .Group(failure: .busy, detail: "detail")
+        expected: .expenseGroup(.busy, detail: "detail"),
+        generated: .ExpenseGroup(failure: .busy, detail: "detail")
     ),
     Conversion(
-        expected: .group(.overflow, detail: "detail"),
-        generated: .Group(failure: .overflow, detail: "detail")
+        expected: .expenseGroup(.overflow, detail: "detail"),
+        generated: .ExpenseGroup(failure: .overflow, detail: "detail")
     ),
     Conversion(
         expected: .language(.invalidLanguage, detail: "detail"),

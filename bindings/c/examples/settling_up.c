@@ -133,15 +133,15 @@ static char const *strategyName(EranosSettlementStrategy const strategy) {
 
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the library's constructor reads them.
-static void spend(EranosGroup *const group, char const *const name, char const *const amount, Id const payer, Members const members) {
+static void spend(EranosExpenseGroup *const group, char const *const name, char const *const amount, Id const payer, Members const members) {
     EranosCalendarDate const date = {.year = 2026, .month = 9, .day = 20};
     addExpense(group, expenseOf(name, localCost(amountOf(amount, "EUR")), soleSplit(payer), equalSplit(&members), date));
 }
 
 /// Prints the expenses of @p group: who paid each, who shares it, and its amount.
-static void printExpenses(EranosGroup const *const group) {
+static void printExpenses(EranosExpenseGroup const *const group) {
     EranosExpenseList *expenses = nullptr;
-    must(eranosGroupExpenses(group, &expenses));
+    must(eranosExpenseGroupExpenses(group, &expenses));
     Table *const table = expenseTable(3);
     EranosText *const name = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
@@ -167,11 +167,11 @@ static void printExpenses(EranosGroup const *const group) {
 }
 
 /// Prints what each member of @p group paid and consumed, and their balance.
-static void printBalances(EranosGroup const *const group) {
+static void printBalances(EranosExpenseGroup const *const group) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberList *members = nullptr;
-    must(eranosGroupMembers(group, &members));
+    must(eranosExpenseGroupMembers(group, &members));
     Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -196,7 +196,7 @@ static void printBalances(EranosGroup const *const group) {
 }
 
 /// Prints @p payments: who pays whom, and how much.
-static void printPayments(EranosGroup const *const group, EranosPaymentList const *const payments) {
+static void printPayments(EranosExpenseGroup const *const group, EranosPaymentList const *const payments) {
     Table *const table = paymentTable(2);
     EranosText *const from = eranosTextCreate();
     EranosText *const to = eranosTextCreate();
@@ -217,14 +217,14 @@ static void printPayments(EranosGroup const *const group, EranosPaymentList cons
 }
 
 /// The plan that @p strategy makes for @p group, which the caller destroys.
-static EranosSettlement *settlementOf(EranosGroup const *const group, EranosSettlementStrategy const strategy) {
+static EranosSettlement *settlementOf(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy) {
     EranosSettlement *settlement = nullptr;
-    must(eranosGroupSettlement(group, strategy, &settlement));
+    must(eranosExpenseGroupSettlement(group, strategy, &settlement));
     return settlement;
 }
 
 /// The payments of the plan that @p strategy makes for @p group, which the caller destroys.
-static EranosPaymentList *planOf(EranosGroup const *const group, EranosSettlementStrategy const strategy) {
+static EranosPaymentList *planOf(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy) {
     EranosSettlement *const settlement = settlementOf(group, strategy);
     EranosPaymentList *const payments = eranosSettlementPayments(settlement);
     eranosSettlementDestroy(settlement);
@@ -259,7 +259,7 @@ static bool samePayments(EranosPaymentList const *const left, EranosPaymentList 
 }
 
 /// Prints each strategy's plan with what it promises; returns the number of payments of each.
-static Counts strategies(EranosGroup const *const group) {
+static Counts strategies(EranosExpenseGroup const *const group) {
     section("3. Minimum transfers");
     EranosPaymentList *const minimum = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
     printFormatted("The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n"
@@ -336,9 +336,9 @@ static Counts strategies(EranosGroup const *const group) {
 }
 
 /// How many members of @p group have a balance that is not zero.
-static size_t openBalances(EranosGroup const *const group) {
+static size_t openBalances(EranosExpenseGroup const *const group) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberSummaryList *const members = eranosSummaryMembers(summary);
     size_t open = 0;
     for (size_t index = 0; eranosMemberSummaryListLength(members) > index; ++index) {
@@ -359,11 +359,11 @@ static size_t openBalances(EranosGroup const *const group) {
 /// strategy's plan it took; returns the number of payments.
 static size_t festival(void) {
     section("8. A larger group");
-    EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("Festival", "EUR", &details));
-    EranosGroup *group = nullptr;
-    must(eranosGroupCreate(details, &group));
-    eranosNewGroupDestroy(details);
+    EranosNewExpenseGroup *details = nullptr;
+    must(eranosNewExpenseGroupCreate("Festival", "EUR", &details));
+    EranosExpenseGroup *group = nullptr;
+    must(eranosExpenseGroupCreate(details, &group));
+    eranosNewExpenseGroupDestroy(details);
     Id friends[FRIENDS] = {};
     EranosTextList *const everyone = eranosTextListCreate();
     for (size_t index = 0; FRIENDS > index; ++index) {
@@ -397,12 +397,12 @@ static size_t festival(void) {
     eranosPaymentListDestroy(adaptive);
     eranosSettlementDestroy(settlement);
     eranosTextListDestroy(everyone);
-    eranosGroupDestroy(group);
+    eranosExpenseGroupDestroy(group);
     return payments;
 }
 
 /// Records every payment of the minimum plan for @p group as a transfer.
-static void settle(EranosGroup *const group) {
+static void settle(EranosExpenseGroup *const group) {
     EranosPaymentList *const plan = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
     EranosCalendarDate const date = {.year = 2026, .month = 9, .day = 27};
     EranosText *const text = eranosTextCreate();
@@ -420,9 +420,9 @@ static void settle(EranosGroup *const group) {
 }
 
 /// Whether @p member of @p group is settled.
-static bool settled(EranosGroup const *const group, Id const member) {
+static bool settled(EranosExpenseGroup const *const group, Id const member) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
     check(nullptr != totals, "the member has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
@@ -434,11 +434,11 @@ static bool settled(EranosGroup const *const group, Id const member) {
 }
 
 int main(void) {
-    EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("Ski week", "EUR", &details));
-    EranosGroup *group = nullptr;
-    must(eranosGroupCreate(details, &group));
-    eranosNewGroupDestroy(details);
+    EranosNewExpenseGroup *details = nullptr;
+    must(eranosNewExpenseGroupCreate("Ski week", "EUR", &details));
+    EranosExpenseGroup *group = nullptr;
+    must(eranosExpenseGroupCreate(details, &group));
+    eranosNewExpenseGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Id const carol = addMember(group, "Carol");
@@ -484,6 +484,6 @@ int main(void) {
     for (size_t index = 0; 6 > index; ++index) {
         check(settled(group, everyone[index]), "every member is settled");
     }
-    eranosGroupDestroy(group);
+    eranosExpenseGroupDestroy(group);
     return EXIT_SUCCESS;
 }

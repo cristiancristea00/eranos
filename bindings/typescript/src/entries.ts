@@ -356,8 +356,8 @@ function generatedTipDistribution(distribution: TipDistribution): internal.TipDi
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * A new expense has no `id`; {@link Group.addExpense} gives it one. To change an expense, read it from the group, spread
- * it into a new object with the changes, and pass that to {@link Group.replaceExpense}.
+ * A new expense has no `id`; {@link ExpenseGroup.addExpense} gives it one. To change an expense, read it from the group, spread
+ * it into a new object with the changes, and pass that to {@link ExpenseGroup.replaceExpense}.
  */
 export interface Expense {
     /** The identifier: absent for an expense to add, present for one the group holds. */
@@ -503,7 +503,7 @@ function generatedAccountDetails(details: AccountDetails): internal.AccountDetai
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * A new member has no `id`; {@link Group.addMember} gives them one.
+ * A new member has no `id`; {@link ExpenseGroup.addMember} gives them one.
  */
 export interface Member {
     /** The identifier: absent for a member to add, present for one the group holds. */
@@ -557,7 +557,7 @@ export function generatedMember(member: Member): internal.Member {
 /**
  * A label the group gives expenses: "Food".
  *
- * A new category has no `id`; {@link Group.addCategory} gives it one. The built-in category, Uncategorised, holds every
+ * A new category has no `id`; {@link ExpenseGroup.addCategory} gives it one. The built-in category, Uncategorised, holds every
  * expense without another.
  */
 export interface Category {
@@ -588,7 +588,7 @@ export function generatedCategory(category: Category): internal.Category {
 /**
  * Money one member paid another, such as a repayment.
  *
- * A new transfer has no `id`; {@link Group.addTransfer} gives it one.
+ * A new transfer has no `id`; {@link ExpenseGroup.addTransfer} gives it one.
  */
 export interface Transfer {
     /** The identifier: absent for a transfer to add, present for one the group holds. */

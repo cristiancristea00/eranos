@@ -9,8 +9,8 @@ import eranos.Cost
 import eranos.Currency
 import eranos.ExchangeRate
 import eranos.Expense
+import eranos.ExpenseGroup
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.Member
 import eranos.MemberId
 import eranos.Money
@@ -55,12 +55,12 @@ private data class BalanceRow(
 
 /** The first name of [member] in [group], or `?` for one the group does not hold. */
 private fun name(
-    group: Group,
+    group: ExpenseGroup,
     member: MemberId,
 ): String = names(group, listOf(member))
 
 /** Every expense and transfer, as entered and in the group currency. */
-private fun printEntries(group: Group) {
+private fun printEntries(group: ExpenseGroup) {
     val zero = Money(0, group.currencyBlocking())
     val expenses =
         group.expensesBlocking().map { expense ->
@@ -92,7 +92,7 @@ private fun rate(cost: Cost): ExchangeRate =
         is Cost.Converted -> cost.rate
     }
 
-private fun printBalances(group: Group) {
+private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     printTable(
         BalanceRow.HEADERS,
@@ -113,7 +113,7 @@ private fun printBalances(group: Group) {
 }
 
 private fun expenses(
-    group: Group,
+    group: ExpenseGroup,
     ana: MemberId,
     bob: MemberId,
 ) {
@@ -156,7 +156,7 @@ private fun expenses(
 }
 
 private fun repayment(
-    group: Group,
+    group: ExpenseGroup,
     ana: MemberId,
     bob: MemberId,
 ) {
@@ -179,7 +179,7 @@ private fun repayment(
     printBalances(group)
 }
 
-private fun newCurrency(group: Group) {
+private fun newCurrency(group: ExpenseGroup) {
     section("4. Moving the books to another currency")
     println(
         """
@@ -201,7 +201,7 @@ private fun newCurrency(group: Group) {
 fun main() {
     val euro = Currency.of("EUR")
     val leu = Currency.of("RON")
-    Group("Danube road trip", euro).use { group ->
+    ExpenseGroup("Danube road trip", euro).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
 

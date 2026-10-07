@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 import {
     type CategoryId,
     type CategoryTotal,
-    type Group,
+    type ExpenseGroup,
     type MemberId,
     type Summary,
     Currency,
     ExchangeRate,
-    GroupError,
+    ExpenseGroupError,
     Money,
     SettlementStrategy,
 } from '../../src/index.js';
@@ -75,7 +75,7 @@ function is(expected: Money, found: Money | undefined): boolean {
     return undefined !== found && expected.equals(found);
 }
 
-export function summary(group: Group, people: People, categories: Categories): void {
+export function summary(group: ExpenseGroup, people: People, categories: Categories): void {
     section('8. The summary');
     const summary = group.summarySync();
     printLines(
@@ -138,7 +138,7 @@ export function summary(group: Group, people: People, categories: Categories): v
     );
 }
 
-export function removingACategory(group: Group, categories: Categories): void {
+export function removingACategory(group: ExpenseGroup, categories: Categories): void {
     section('9. Removing a category');
     const removed = group.removeCategorySync(categories.transport);
     const uncategorised = builtInCategory(group);
@@ -151,13 +151,13 @@ export function removingACategory(group: Group, categories: Categories): void {
     );
     printCategories(group);
 
-    assert.ok(builtIn instanceof GroupError && 'builtInCategory' === builtIn.failure.kind);
+    assert.ok(builtIn instanceof ExpenseGroupError && 'builtInCategory' === builtIn.failure.kind);
     assert.equal(group.categorySync(categories.transport), undefined);
     assert.ok(is(eur('248.50'), total(group.summarySync().categoryTotals, uncategorised)));
     assert.ok(group.expensesSync().every((expense) => categories.transport !== expense.category));
 }
 
-export function newCurrency(group: Group, people: People): void {
+export function newCurrency(group: ExpenseGroup, people: People): void {
     section('10. A new currency');
     const euro = Currency.of('EUR');
     const leu = Currency.of('RON');
@@ -180,7 +180,7 @@ export function newCurrency(group: Group, people: People): void {
     printBalances(group);
 
     const summary = group.summarySync();
-    assert.ok(missing instanceof GroupError);
+    assert.ok(missing instanceof ExpenseGroupError);
     assert.deepEqual(missing.failure, { kind: 'missingExchangeRate', currency: euro });
     assert.equal(group.currencySync().code, leu.code);
     assert.ok(is(ron('6114.50'), summary.totalSpent));
@@ -202,7 +202,7 @@ function strategyName(strategy: SettlementStrategy): string {
     }
 }
 
-export function settlingUp(group: Group): void {
+export function settlingUp(group: ExpenseGroup): void {
     section('11. Settling up');
     const counts = Object.values(SettlementStrategy).map((strategy): StrategyRow => {
         const settlement = group.settlementSync(strategy);

@@ -7,8 +7,8 @@ import eranos.internal.expenseTotal
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * A new expense has no identifier; [Group.add] gives it one. To change an expense, read it from the group, [copy] it with
- * the changes, and pass the copy to [Group.replace].
+ * A new expense has no identifier; [ExpenseGroup.add] gives it one. To change an expense, read it from the group, [copy] it with
+ * the changes, and pass the copy to [ExpenseGroup.replace].
  */
 @Suppress("LongParameterList") // An expense has the library's fields; the public constructor defaults the optional ones.
 public class Expense internal constructor(

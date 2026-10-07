@@ -6,7 +6,7 @@ import java.util.Optional;
 /**
  * A label the group gives expenses: "Food".
  *
- * <p>A new category has no identifier; {@link Group#addCategory} gives it one. The built-in
+ * <p>A new category has no identifier; {@link ExpenseGroup#addCategory} gives it one. The built-in
  * category, Uncategorised, holds every expense without another.
  */
 public final class Category {

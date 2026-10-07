@@ -1,8 +1,8 @@
 // What every port prints its report with: the headings and the tables of the Rust examples.
 package eranos.examples
 
+import eranos.ExpenseGroup
 import eranos.ExpenseSplit
-import eranos.Group
 import eranos.MemberId
 import eranos.MemberSummary
 import eranos.Summary
@@ -61,7 +61,7 @@ private fun width(text: String): Int = text.codePointCount(0, text.length)
 
 /** The first names of [members] in [group], joined by commas, or `?` for one the group does not hold. */
 fun names(
-    group: Group,
+    group: ExpenseGroup,
     members: List<MemberId>,
 ): String = members.joinToString(", ") { member -> group.memberBlocking(member)?.firstName ?: "?" }
 

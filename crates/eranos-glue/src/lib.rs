@@ -67,7 +67,7 @@ pub fn mirrored(attribute: TokenStream, item: TokenStream) -> syn::Result<TokenS
     mirror::mirrored(attribute, item)
 }
 
-/// The exported methods of the `uniffi` glue's `Group` and `GroupReader`
+/// The exported methods of the `uniffi` glue's `ExpenseGroup` and `ExpenseGroupReader`
 /// objects, from `input`, the trait of group calls that the core's table
 /// hands over.
 ///
@@ -105,8 +105,8 @@ pub fn capi_bridge(sources: &[String]) -> syn::Result<Vec<Generated>> {
     capi::bridge(sources)
 }
 
-/// `name`, written in `UpperCamelCase`, in `snake_case`: `GroupCalls` is
-/// `group_calls`.
+/// `name`, written in `UpperCamelCase`, in `snake_case`: `ExpenseGroupCalls` is
+/// `expense_group_calls`.
 fn snake_case(name: &str) -> String {
     let mut snake = String::with_capacity(name.len() * 2);
     for (index, character) in name.char_indices() {

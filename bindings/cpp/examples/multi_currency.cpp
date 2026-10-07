@@ -79,7 +79,7 @@ struct BalanceRow final {
 }
 
 /// Prints every expense and transfer, as entered and in the group currency.
-void printEntries(Group const &group) {
+void printEntries(ExpenseGroup const &group) {
     Money const zero(0, group.currency());
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
@@ -106,7 +106,7 @@ void printEntries(Group const &group) {
 }
 
 /// Prints what each member paid, consumed, sent, and received, and their balance.
-void printBalances(Group const &group) {
+void printBalances(ExpenseGroup const &group) {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
@@ -124,7 +124,7 @@ void printBalances(Group const &group) {
 }
 
 /// Adds the fuel in RON, the dinner in HUF, and the ferry in EUR, which Ana and Bob share.
-void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
+void expenses(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) {
     section("1. Expenses in three currencies");
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
     static_cast<void>(
@@ -142,7 +142,7 @@ void expenses(Group &group, MemberId const &ana, MemberId const &bob) {
 }
 
 /// Adds Ana's repayment to Bob, in cash and in RON.
-void repayment(Group &group, MemberId const &ana, MemberId const &bob) {
+void repayment(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) {
     section("3. A repayment in cash, in another currency");
     Transfer transfer(ana, bob, ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
                       must(CalendarDate::of(2026, 8, 4)));
@@ -155,7 +155,7 @@ void repayment(Group &group, MemberId const &ana, MemberId const &bob) {
 }
 
 /// Moves the books of @p group to RON.
-void newCurrency(Group &group) {
+void newCurrency(ExpenseGroup &group) {
     section("4. Moving the books to another currency");
     printLine("Changing the group currency needs a rate into the new currency for every other\n"
               "currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n"
@@ -171,7 +171,7 @@ void newCurrency(Group &group) {
 
 /// Runs the example.
 void run() {
-    auto group = must(Group::create("Danube road trip", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Danube road trip", must(Currency::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
 

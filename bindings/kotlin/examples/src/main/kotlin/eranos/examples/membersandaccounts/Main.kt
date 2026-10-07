@@ -11,9 +11,9 @@ import eranos.Currency
 import eranos.Email
 import eranos.EranosException
 import eranos.Expense
+import eranos.ExpenseGroup
+import eranos.ExpenseGroupFailure
 import eranos.ExpenseSplit
-import eranos.Group
-import eranos.GroupFailure
 import eranos.Iban
 import eranos.Member
 import eranos.MemberId
@@ -94,7 +94,7 @@ private fun <Value> outcome(
         "refused: ${refusal.message}"
     }
 
-private fun printMembers(group: Group) {
+private fun printMembers(group: ExpenseGroup) {
     printTable(
         MemberRow.HEADERS,
         group.membersBlocking().map { member ->
@@ -109,7 +109,7 @@ private fun printMembers(group: Group) {
     )
 }
 
-private fun printBalances(group: Group) {
+private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     val rows =
         group.membersBlocking().mapNotNull { member ->
@@ -127,7 +127,7 @@ private fun printBalances(group: Group) {
     printTable(BalanceRow.HEADERS, rows, numbersFrom = 2)
 }
 
-private fun members(group: Group): Flatmates {
+private fun members(group: ExpenseGroup): Flatmates {
     section("1. Members")
     val ana =
         group.addBlocking(
@@ -198,7 +198,7 @@ private fun refusal(change: () -> Unit): EranosException =
     }
 
 private fun movingOut(
-    group: Group,
+    group: ExpenseGroup,
     flatmates: Flatmates,
 ) {
     section("3. A flatmate moves out")
@@ -238,15 +238,15 @@ private fun movingOut(
     val removal = refusal { group.removeBlocking(bob) }
     println("Nor can he be removed while the rent references him:\n  error: ${removal.message}")
 
-    check((refused as? EranosException.Group)?.failure == GroupFailure.ArchivedMember(bob))
-    check((removal as? EranosException.Group)?.failure is GroupFailure.MemberInUse)
+    check((refused as? EranosException.ExpenseGroup)?.failure == ExpenseGroupFailure.ArchivedMember(bob))
+    check((removal as? EranosException.ExpenseGroup)?.failure is ExpenseGroupFailure.MemberInUse)
     check(Balance.Owes(Money.parse("450.00", euro)) == totals(bob, group.summaryBlocking())?.balance)
     check(null != group.expenseBlocking(rent))
 }
 
 /** Prints the report of the flat's members. */
 fun main() {
-    Group("Flat 4B", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Flat 4B", Currency.of("EUR")).use { group ->
         println("Flat 4B: members and their accounts")
         println("═══════════════════════════════════")
         println(

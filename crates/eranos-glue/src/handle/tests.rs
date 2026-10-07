@@ -17,7 +17,7 @@ use crate::docs::Docs;
 /// by hand.
 fn trait_item() -> ItemTrait {
     syn::parse2(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// The group's name.
             #[read]
             #[infallible]
@@ -42,7 +42,7 @@ fn trait_item() -> ItemTrait {
 /// `summary`.
 fn docs(summary: &str) -> Docs {
     let item: ItemTrait = syn::parse2(quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             #[doc = #summary]
             #[read]
             fn call(&self) -> Result<(), EranosError>;
@@ -98,7 +98,7 @@ fn every_call_writes_both_forms_on_the_group_handle() {
         settlement.asynchronous(false),
     );
     let expected: TokenStream = quote! {
-        impl GroupHandle {
+        impl ExpenseGroupHandle {
             #[doc = #name_doc]
             pub fn name(&self) -> ::std::result::Result<String, EranosError> {
                 self.reading(|group| ::std::result::Result::Ok(operations::name(group)))
@@ -178,7 +178,7 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
         docs("The payments that settle every balance.").reader(false),
     );
     let reader: TokenStream = quote! {
-        impl GroupReader {
+        impl ExpenseGroupReader {
             #[doc = #name]
             pub fn name(&self) -> ::std::result::Result<String, EranosError> {
                 self.reading(|group| ::std::result::Result::Ok(operations::name(group)))
@@ -190,14 +190,14 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
         }
     };
     let item = trait_item();
-    let table_doc = "Hands every group call to the macro whose path it is given, as the trait `GroupCalls` lists \
-                     them, attributes and documentation included: `group_calls!(path::to::callback);` expands to \
-                     `path::to::callback! { trait GroupCalls { … } }`, from which a glue crate writes its \
+    let table_doc = "Hands every group call to the macro whose path it is given, as the trait `ExpenseGroupCalls` lists \
+                     them, attributes and documentation included: `expense_group_calls!(path::to::callback);` expands to \
+                     `path::to::callback! { trait ExpenseGroupCalls { … } }`, from which a glue crate writes its \
                      objects' methods.";
     let table: TokenStream = quote! {
         #[doc = #table_doc]
         #[macro_export]
-        macro_rules! group_calls {
+        macro_rules! expense_group_calls {
             ($($callback:tt)+) => {
                 $($callback)+ ! { #item }
             };

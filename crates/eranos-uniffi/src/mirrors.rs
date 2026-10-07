@@ -6,11 +6,11 @@
 use eranos_bindings::{
     Account, AccountDetails, AccountFailure, Balance, CalendarDate, CalendarFailure, Category,
     CategoryFailure, CategoryTotal, ContactFailure, Cost, CurrencyDetails, CurrencyRate,
-    EranosError, Expense, ExpenseFailure, ExpenseShares, ExpenseSplit, GroupFailure, IbanReason,
-    IdFailure, Item, LanguageFailure, Member, MemberAmount, MemberCategoryTotals, MemberFailure,
-    MemberParts, MemberPercentage, MemberShare, MemberSummary, Money, MoneyFailure, NewGroup,
-    Payment, Settlement, SettlementFailure, SettlementStrategy, Split, Summary, TimeOfDay, Tip,
-    TipDistribution, TipValue, Transfer, TransferFailure,
+    EranosError, Expense, ExpenseFailure, ExpenseGroupFailure, ExpenseShares, ExpenseSplit,
+    IbanReason, IdFailure, Item, LanguageFailure, Member, MemberAmount, MemberCategoryTotals,
+    MemberFailure, MemberParts, MemberPercentage, MemberShare, MemberSummary, Money, MoneyFailure,
+    NewExpenseGroup, Payment, Settlement, SettlementFailure, SettlementStrategy, Split, Summary,
+    TimeOfDay, Tip, TipDistribution, TipValue, Transfer, TransferFailure,
 };
 
 eranos_bindings::mirrors!(::eranos_glue_macros::uniffi_mirror);

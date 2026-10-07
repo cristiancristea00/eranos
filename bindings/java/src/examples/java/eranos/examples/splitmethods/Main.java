@@ -11,10 +11,10 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseId;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberAmount;
 import eranos.MemberId;
@@ -79,7 +79,7 @@ public final class Main {
      * Prints how one expense divides: every involved member's rule, what they paid, and what they
      * consumed.
      */
-    private static void report(Group group, ExpenseId id, Map<MemberId, String> rules)
+    private static void report(ExpenseGroup group, ExpenseId id, Map<MemberId, String> rules)
             throws EranosException {
         Optional<Expense> expense = group.expense(id);
         Optional<ExpenseShares> shares = group.expenseShares(id);
@@ -99,7 +99,7 @@ public final class Main {
         printTable(ShareRow.HEADERS, rows, 2);
     }
 
-    private static void equally(Group group, Family family) throws EranosException {
+    private static void equally(ExpenseGroup group, Family family) throws EranosException {
         section("1. Equally");
         System.out.print(
                 """
@@ -124,7 +124,7 @@ public final class Main {
         report(group, taxi, family.thirds());
     }
 
-    private static void byPercentage(Group group, Family family) throws EranosException {
+    private static void byPercentage(ExpenseGroup group, Family family) throws EranosException {
         section("2. By percentage");
         System.out.print(
                 """
@@ -154,7 +154,7 @@ public final class Main {
         report(group, rent, Map.of(family.ana(), "40%", family.bob(), "40%", family.mia(), "20%"));
     }
 
-    private static ExpenseId byParts(Group group, Family family) throws EranosException {
+    private static ExpenseId byParts(ExpenseGroup group, Family family) throws EranosException {
         section("3. By parts");
         System.out.print(
                 """
@@ -188,7 +188,7 @@ public final class Main {
         return food;
     }
 
-    private static void byAmounts(Group group, Family family) throws EranosException {
+    private static void byAmounts(ExpenseGroup group, Family family) throws EranosException {
         section("4. By exact amounts");
         System.out.print(
                 """
@@ -225,7 +225,7 @@ public final class Main {
                         "5.00 EUR"));
     }
 
-    private static void severalPayers(Group group, Family family) throws EranosException {
+    private static void severalPayers(ExpenseGroup group, Family family) throws EranosException {
         section("5. Several payers");
         System.out.print(
                 """
@@ -254,7 +254,7 @@ public final class Main {
         report(group, dinner, family.thirds());
     }
 
-    private static void mistakes(Group group, Family family) throws EranosException {
+    private static void mistakes(ExpenseGroup group, Family family) throws EranosException {
         section("6. Mistakes are refused");
         System.out.println(
                 "A percentage split that adds up to 90 % is refused when the expense is built:");
@@ -282,7 +282,7 @@ public final class Main {
         }
     }
 
-    private static void printTotals(Group group) {
+    private static void printTotals(ExpenseGroup group) {
         section("7. The holiday in total");
         Summary summary = group.summary();
         System.out.printf("%s spent over five expenses:%n", summary.totalSpent());
@@ -308,7 +308,8 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (Group group = Group.builder("Family holiday", Currency.of("EUR")).build()) {
+        try (ExpenseGroup group =
+                ExpenseGroup.builder("Family holiday", Currency.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             CalendarDate day = CalendarDate.of(2026, 7, 14);

@@ -17,7 +17,7 @@ from eranos import (
     EqualSplit,
     Expense,
     ExpenseShares,
-    Group,
+    ExpenseGroup,
     Item,
     ItemisedExpenseSplit,
     LocalCost,
@@ -150,7 +150,7 @@ def line_total(item: Item) -> Money:
     return Money(item.unit_price.minor_units * item.quantity, item.unit_price.currency)
 
 
-def preview(group: Group, expense: Expense) -> ExpenseShares:
+def preview(group: ExpenseGroup, expense: Expense) -> ExpenseShares:
     """
     Work out how expense would divide if it were added to group, on a copy, so the group itself is unchanged.
 
@@ -164,7 +164,7 @@ def preview(group: Group, expense: Expense) -> ExpenseShares:
         How the expense divides.
 
     """
-    with Group.load(group.save()) as loaded:
+    with ExpenseGroup.load(group.save()) as loaded:
         shares = loaded.expense_shares(loaded.add_expense(expense))
     assert shares is not None, 'the expense was just added'
     return shares
@@ -202,7 +202,7 @@ def bill(untipped: Expense, distribution: TipDistribution) -> Expense:
     return copy.replace(untipped, tip=Tip(PercentageTip(Percentage.parse('10')), distribution))
 
 
-def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> TipRow:
+def tip_row(group: ExpenseGroup, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> TipRow:
     """
     Write the row of member in the table of the tip: what they ordered, then the tip and the total of each way of sharing it.
 
@@ -232,7 +232,7 @@ def tip_row(group: Group, member: MemberId, ordered: ExpenseShares, by_consumpti
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = Group.create("Dinner at Caru' cu Bere", Currency('EUR'))
+    group = ExpenseGroup.create("Dinner at Caru' cu Bere", Currency('EUR'))
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     carol = group.add_member(Member(first_name='Carol'))

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.fail
 internal class Flat {
     val euro: Currency = Currency.of("EUR")
     val day: CalendarDate = CalendarDate.of(2026, 9, 23)
-    val group: Group = Group("Flat", euro, "Rent", Language.parse("pt-pt"))
+    val group: ExpenseGroup = ExpenseGroup("Flat", euro, "Rent", Language.parse("pt-pt"))
     val ana: MemberId = group.addBlocking(Member("Ana"))
     val bob: MemberId = group.addBlocking(Member("Bob"))
     val food: CategoryId = group.addBlocking(Category("Food"))

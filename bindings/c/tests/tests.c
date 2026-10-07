@@ -164,7 +164,7 @@ static EranosTransfer *transferOf(char const *const from, char const *const to, 
 /// A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them.
 typedef struct Flat {
     /// The group.
-    EranosGroup *group;
+    EranosExpenseGroup *group;
     /// Ana's identifier.
     EranosText *ana;
     /// Bob's identifier.
@@ -178,39 +178,39 @@ typedef struct Flat {
 } Flat;
 
 /// Adds a member called @p firstName to @p group, and returns their identifier.
-static EranosText *memberIn(EranosGroup *const group, char const *const firstName) {
+static EranosText *memberIn(EranosExpenseGroup *const group, char const *const firstName) {
     EranosMember *member = nullptr;
     eranosErrorDestroy(eranosMemberCreate(firstName, &member));
     EranosText *const id = eranosTextCreate();
-    eranosErrorDestroy(eranosGroupAddMember(group, member, id));
+    eranosErrorDestroy(eranosExpenseGroupAddMember(group, member, id));
     eranosMemberDestroy(member);
     return id;
 }
 
 /// The flat.
 static Flat flatOf(void) {
-    EranosNewGroup *details = nullptr;
-    eranosErrorDestroy(eranosNewGroupCreate("Flat", "EUR", &details));
-    eranosErrorDestroy(eranosNewGroupSetDescription(details, "Rent"));
-    eranosErrorDestroy(eranosNewGroupSetLanguage(details, "pt-pt"));
+    EranosNewExpenseGroup *details = nullptr;
+    eranosErrorDestroy(eranosNewExpenseGroupCreate("Flat", "EUR", &details));
+    eranosErrorDestroy(eranosNewExpenseGroupSetDescription(details, "Rent"));
+    eranosErrorDestroy(eranosNewExpenseGroupSetLanguage(details, "pt-pt"));
     Flat flat = {.group = nullptr};
-    eranosErrorDestroy(eranosGroupCreate(details, &flat.group));
-    eranosNewGroupDestroy(details);
+    eranosErrorDestroy(eranosExpenseGroupCreate(details, &flat.group));
+    eranosNewExpenseGroupDestroy(details);
     flat.ana = memberIn(flat.group, "Ana");
     flat.bob = memberIn(flat.group, "Bob");
     EranosCategory *food = nullptr;
     eranosErrorDestroy(eranosCategoryCreate("Food", &food));
     flat.food = eranosTextCreate();
-    eranosErrorDestroy(eranosGroupAddCategory(flat.group, food, flat.food));
+    eranosErrorDestroy(eranosExpenseGroupAddCategory(flat.group, food, flat.food));
     eranosCategoryDestroy(food);
     EranosExpense *const dinner = expenseOf("Dinner", eranosTextData(flat.ana), eranosTextData(flat.ana), eranosTextData(flat.bob));
     eranosErrorDestroy(eranosExpenseSetCategory(dinner, eranosTextData(flat.food)));
     flat.dinner = eranosTextCreate();
-    eranosErrorDestroy(eranosGroupAddExpense(flat.group, dinner, flat.dinner));
+    eranosErrorDestroy(eranosExpenseGroupAddExpense(flat.group, dinner, flat.dinner));
     eranosExpenseDestroy(dinner);
     EranosTransfer *const repayment = transferOf(eranosTextData(flat.bob), eranosTextData(flat.ana), 1'000);
     flat.repayment = eranosTextCreate();
-    eranosErrorDestroy(eranosGroupAddTransfer(flat.group, repayment, flat.repayment));
+    eranosErrorDestroy(eranosExpenseGroupAddTransfer(flat.group, repayment, flat.repayment));
     eranosTransferDestroy(repayment);
     return flat;
 }
@@ -222,7 +222,7 @@ static void flatDestroy(Flat const flat) {
     eranosTextDestroy(flat.food);
     eranosTextDestroy(flat.bob);
     eranosTextDestroy(flat.ana);
-    eranosGroupDestroy(flat.group);
+    eranosExpenseGroupDestroy(flat.group);
 }
 
 /// What an asynchronous call reported, and whether it has: its callback runs on another thread, which signals the waiting one.
@@ -338,7 +338,7 @@ static void receiveExpenseShares(void *const context, EranosError *const error, 
 }
 
 /// Receives a group.
-static void receiveGroup(void *const context, EranosError *const error, EranosGroup *const group) {
+static void receiveGroup(void *const context, EranosError *const error, EranosExpenseGroup *const group) {
     Waiter *const waiter = context;
     waiter->error = error;
     waiter->object = group;
@@ -346,7 +346,7 @@ static void receiveGroup(void *const context, EranosError *const error, EranosGr
 }
 
 /// Receives a read handle.
-static void receiveReader(void *const context, EranosError *const error, EranosGroupReader *const reader) {
+static void receiveReader(void *const context, EranosError *const error, EranosExpenseGroupReader *const reader) {
     Waiter *const waiter = context;
     waiter->error = error;
     waiter->object = reader;
@@ -1108,9 +1108,9 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosCancellationDestroy(nullptr);
     eranosCurrencyRateDestroy(nullptr);
     eranosCurrencyRateListDestroy(nullptr);
-    eranosGroupDestroy(nullptr);
-    eranosNewGroupDestroy(nullptr);
-    eranosGroupReaderDestroy(nullptr);
+    eranosExpenseGroupDestroy(nullptr);
+    eranosNewExpenseGroupDestroy(nullptr);
+    eranosExpenseGroupReaderDestroy(nullptr);
     eranosTextListDestroy(nullptr);
     eranosAccountDestroy(nullptr);
     eranosAccountDetailsDestroy(nullptr);
@@ -1150,61 +1150,67 @@ static void destroyingNullDoesNothing(Check *const check) {
 /// Details that did not reach the group, or a group that did not change as asked, would show an app a name the user replaced.
 static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     EranosText *const text = eranosTextCreate();
-    EranosNewGroup *details = nullptr;
-    checkSucceeded(check, eranosNewGroupCreate("Flat", "EUR", &details), "a new group's details");
-    checkThat(check, !eranosNewGroupDescription(details, text) && !eranosNewGroupLanguage(details, text), "start without description or language");
-    checkSucceeded(check, eranosNewGroupSetCurrency(details, "RON"), "a currency is set");
-    checkSucceeded(check, eranosNewGroupSetName(details, "Home"), "a name");
-    checkSucceeded(check, eranosNewGroupSetDescription(details, "Bills"), "a description");
-    checkSucceeded(check, eranosNewGroupSetLanguage(details, "ro-RO"), "a language");
-    eranosNewGroupCurrency(details, text);
+    EranosNewExpenseGroup *details = nullptr;
+    checkSucceeded(check, eranosNewExpenseGroupCreate("Flat", "EUR", &details), "a new group's details");
+    checkThat(check, !eranosNewExpenseGroupDescription(details, text) && !eranosNewExpenseGroupLanguage(details, text),
+              "start without description or language");
+    checkSucceeded(check, eranosNewExpenseGroupSetCurrency(details, "RON"), "a currency is set");
+    checkSucceeded(check, eranosNewExpenseGroupSetName(details, "Home"), "a name");
+    checkSucceeded(check, eranosNewExpenseGroupSetDescription(details, "Bills"), "a description");
+    checkSucceeded(check, eranosNewExpenseGroupSetLanguage(details, "ro-RO"), "a language");
+    eranosNewExpenseGroupCurrency(details, text);
     checkThat(check, isText(text, "RON"), "the currency as set");
-    eranosNewGroupName(details, text);
+    eranosNewExpenseGroupName(details, text);
     checkThat(check, isText(text, "Home"), "the name");
     checkThat(check,
-              eranosNewGroupDescription(details, text) && isText(text, "Bills") && eranosNewGroupLanguage(details, text) && isText(text, "ro-RO"),
+              eranosNewExpenseGroupDescription(details, text) && isText(text, "Bills") && eranosNewExpenseGroupLanguage(details, text) &&
+                  isText(text, "ro-RO"),
               "the description and the language");
     checkThat(check,
-              isKind(eranosNewGroupSetCurrency(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosNewGroupSetName(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosNewGroupSetDescription(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosNewGroupSetLanguage(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
+              isKind(eranosNewExpenseGroupSetCurrency(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosNewExpenseGroupSetName(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosNewExpenseGroupSetDescription(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosNewExpenseGroupSetLanguage(details, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "its fields are text");
-    eranosNewGroupClearDescription(details);
-    eranosNewGroupClearLanguage(details);
-    checkThat(check, !eranosNewGroupDescription(details, text) && !eranosNewGroupLanguage(details, text), "and clear");
-    EranosNewGroup *noDetails = nullptr;
-    checkThat(check, isKind(eranosNewGroupCreate("Flat", "\xff", &noDetails), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
-    EranosGroup *group = nullptr;
-    checkSucceeded(check, eranosGroupCreate(details, &group), "a group");
-    checkSucceeded(check, eranosGroupId(group, text), "has an identifier");
+    eranosNewExpenseGroupClearDescription(details);
+    eranosNewExpenseGroupClearLanguage(details);
+    checkThat(check, !eranosNewExpenseGroupDescription(details, text) && !eranosNewExpenseGroupLanguage(details, text), "and clear");
+    EranosNewExpenseGroup *noDetails = nullptr;
+    checkThat(check, isKind(eranosNewExpenseGroupCreate("Flat", "\xff", &noDetails), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
+    EranosExpenseGroup *group = nullptr;
+    checkSucceeded(check, eranosExpenseGroupCreate(details, &group), "a group");
+    checkSucceeded(check, eranosExpenseGroupId(group, text), "has an identifier");
     checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a hyphenated UUID");
-    checkSucceeded(check, eranosGroupCurrency(group, text), "a currency");
+    checkSucceeded(check, eranosExpenseGroupCurrency(group, text), "a currency");
     checkThat(check, isText(text, "RON"), "the one it started with");
-    checkSucceeded(check, eranosGroupSetName(group, "Trip"), "a name is set");
-    checkSucceeded(check, eranosGroupName(group, text), "and read");
+    checkSucceeded(check, eranosExpenseGroupSetName(group, "Trip"), "a name is set");
+    checkSucceeded(check, eranosExpenseGroupName(group, text), "and read");
     checkThat(check, isText(text, "Trip"), "the name as set");
-    checkSucceeded(check, eranosGroupSetDescription(group, "Summer"), "a description is set");
-    checkSucceeded(check, eranosGroupDescription(group, text), "and read");
+    checkSucceeded(check, eranosExpenseGroupSetDescription(group, "Summer"), "a description is set");
+    checkSucceeded(check, eranosExpenseGroupDescription(group, text), "and read");
     checkThat(check, isText(text, "Summer"), "the description as set");
-    checkSucceeded(check, eranosGroupSetDescription(group, ""), "blank text clears it");
-    checkSucceeded(check, eranosGroupDescription(group, text), "and it reads");
+    checkSucceeded(check, eranosExpenseGroupSetDescription(group, ""), "blank text clears it");
+    checkSucceeded(check, eranosExpenseGroupDescription(group, text), "and it reads");
     checkThat(check, isText(text, ""), "as nothing");
-    checkSucceeded(check, eranosGroupSetLanguage(group, "pt-pt"), "a language is set");
-    checkSucceeded(check, eranosGroupLanguage(group, text), "and read");
+    checkSucceeded(check, eranosExpenseGroupSetLanguage(group, "pt-pt"), "a language is set");
+    checkSucceeded(check, eranosExpenseGroupLanguage(group, text), "and read");
     checkThat(check, isText(text, "pt-PT"), "canonical");
-    checkSucceeded(check, eranosGroupClearLanguage(group), "a language clears");
-    checkSucceeded(check, eranosGroupLanguage(group, text), "and reads");
+    checkSucceeded(check, eranosExpenseGroupClearLanguage(group), "a language clears");
+    checkSucceeded(check, eranosExpenseGroupLanguage(group, text), "and reads");
     checkThat(check, isText(text, ""), "as nothing");
-    checkThat(check, isFailure(eranosGroupSetName(group, " "), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_EMPTY_NAME), "a blank name");
-    checkThat(check, isFailure(eranosGroupSetLanguage(group, "not a tag"), ERANOS_ERROR_KIND_LANGUAGE, ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE),
+    checkThat(check, isFailure(eranosExpenseGroupSetName(group, " "), ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME),
+              "a blank name");
+    checkThat(check,
+              isFailure(eranosExpenseGroupSetLanguage(group, "not a tag"), ERANOS_ERROR_KIND_LANGUAGE, ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE),
               "no tag");
-    eranosErrorDestroy(eranosNewGroupSetName(details, " "));
-    EranosGroup *noGroup = nullptr;
-    checkThat(check, isFailure(eranosGroupCreate(details, &noGroup), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_EMPTY_NAME) && nullptr == noGroup,
+    eranosErrorDestroy(eranosNewExpenseGroupSetName(details, " "));
+    EranosExpenseGroup *noGroup = nullptr;
+    checkThat(check,
+              isFailure(eranosExpenseGroupCreate(details, &noGroup), ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME) &&
+                  nullptr == noGroup,
               "a group needs a name");
-    eranosGroupDestroy(group);
-    eranosNewGroupDestroy(details);
+    eranosExpenseGroupDestroy(group);
+    eranosNewExpenseGroupDestroy(details);
     eranosTextDestroy(text);
 }
 
@@ -1213,7 +1219,7 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
     EranosExpenseList *expenses = nullptr;
-    checkSucceeded(check, eranosGroupExpenses(flat.group, &expenses), "the expenses");
+    checkSucceeded(check, eranosExpenseGroupExpenses(flat.group, &expenses), "the expenses");
     EranosExpense *const dinner = eranosExpenseListGet(expenses, 0);
     checkThat(check,
               1 == eranosExpenseListLength(expenses) && !eranosExpenseListIsEmpty(expenses) && nullptr != dinner &&
@@ -1222,82 +1228,82 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     checkThat(check, eranosExpenseId(dinner, text) && isText(text, eranosTextData(flat.dinner)), "under its identifier");
     checkSucceeded(check, eranosExpenseSetName(dinner, "Supper"), "an edit");
     EranosExpense *previous = nullptr;
-    checkSucceeded(check, eranosGroupReplaceExpense(flat.group, dinner, &previous), "replaces the expense");
+    checkSucceeded(check, eranosExpenseGroupReplaceExpense(flat.group, dinner, &previous), "replaces the expense");
     eranosExpenseName(previous, text);
     checkThat(check, isText(text, "Dinner"), "which comes back as it was");
     EranosExpense *expense = nullptr;
-    checkSucceeded(check, eranosGroupExpense(flat.group, eranosTextData(flat.dinner), &expense), "the expense by its identifier");
+    checkSucceeded(check, eranosExpenseGroupExpense(flat.group, eranosTextData(flat.dinner), &expense), "the expense by its identifier");
     eranosExpenseName(expense, text);
     checkThat(check, isText(text, "Supper"), "as replaced");
     EranosExpenseShares *shares = nullptr;
-    checkSucceeded(check, eranosGroupExpenseShares(flat.group, eranosTextData(flat.dinner), &shares), "its shares");
+    checkSucceeded(check, eranosExpenseGroupExpenseShares(flat.group, eranosTextData(flat.dinner), &shares), "its shares");
     checkThat(check, nullptr != shares, "which it has");
     eranosExpenseSharesDestroy(shares);
     EranosExpense *removed = nullptr;
-    checkSucceeded(check, eranosGroupRemoveExpense(flat.group, eranosTextData(flat.dinner), &removed), "the expense goes");
+    checkSucceeded(check, eranosExpenseGroupRemoveExpense(flat.group, eranosTextData(flat.dinner), &removed), "the expense goes");
     eranosExpenseName(removed, text);
     checkThat(check, isText(text, "Supper"), "and comes back as it was");
     EranosExpense *gone = nullptr;
-    checkSucceeded(check, eranosGroupExpense(flat.group, eranosTextData(flat.dinner), &gone), "a look for it");
+    checkSucceeded(check, eranosExpenseGroupExpense(flat.group, eranosTextData(flat.dinner), &gone), "a look for it");
     checkThat(check, nullptr == gone, "finds none");
     EranosTransferList *transfers = nullptr;
-    checkSucceeded(check, eranosGroupTransfers(flat.group, &transfers), "the transfers");
+    checkSucceeded(check, eranosExpenseGroupTransfers(flat.group, &transfers), "the transfers");
     EranosTransfer *const repayment = eranosTransferListGet(transfers, 0);
     checkThat(check,
               1 == eranosTransferListLength(transfers) && !eranosTransferListIsEmpty(transfers) && nullptr == eranosTransferListGet(transfers, 1),
               "the repayment, alone");
     checkSucceeded(check, eranosTransferSetNote(repayment, "Back"), "an edit");
     EranosTransfer *previousTransfer = nullptr;
-    checkSucceeded(check, eranosGroupReplaceTransfer(flat.group, repayment, &previousTransfer), "replaces the transfer");
+    checkSucceeded(check, eranosExpenseGroupReplaceTransfer(flat.group, repayment, &previousTransfer), "replaces the transfer");
     checkThat(check, !eranosTransferNote(previousTransfer, text), "which comes back without its note");
     EranosTransfer *transfer = nullptr;
-    checkSucceeded(check, eranosGroupTransfer(flat.group, eranosTextData(flat.repayment), &transfer), "the transfer by its identifier");
+    checkSucceeded(check, eranosExpenseGroupTransfer(flat.group, eranosTextData(flat.repayment), &transfer), "the transfer by its identifier");
     checkThat(check, eranosTransferNote(transfer, text) && isText(text, "Back"), "as replaced");
     EranosMoney *amount = nullptr;
-    checkSucceeded(check, eranosGroupTransferAmount(flat.group, eranosTextData(flat.repayment), &amount), "its amount");
+    checkSucceeded(check, eranosExpenseGroupTransferAmount(flat.group, eranosTextData(flat.repayment), &amount), "its amount");
     checkThat(check, isAmount(amount, 1'000, "EUR"), "in the group currency");
     EranosTransfer *removedTransfer = nullptr;
-    checkSucceeded(check, eranosGroupRemoveTransfer(flat.group, eranosTextData(flat.repayment), &removedTransfer), "the transfer goes");
+    checkSucceeded(check, eranosExpenseGroupRemoveTransfer(flat.group, eranosTextData(flat.repayment), &removedTransfer), "the transfer goes");
     checkThat(check, nullptr != removedTransfer, "and comes back");
     EranosCategoryList *categories = nullptr;
-    checkSucceeded(check, eranosGroupCategories(flat.group, &categories), "the categories");
+    checkSucceeded(check, eranosExpenseGroupCategories(flat.group, &categories), "the categories");
     EranosCategory *const builtIn = eranosCategoryListGet(categories, 0);
     checkThat(check,
               2 == eranosCategoryListLength(categories) && !eranosCategoryListIsEmpty(categories) && nullptr != builtIn &&
                   nullptr == eranosCategoryListGet(categories, 2),
               "the built-in category and the food");
     EranosCategory *food = nullptr;
-    checkSucceeded(check, eranosGroupCategory(flat.group, eranosTextData(flat.food), &food), "the food by its identifier");
+    checkSucceeded(check, eranosExpenseGroupCategory(flat.group, eranosTextData(flat.food), &food), "the food by its identifier");
     checkSucceeded(check, eranosCategorySetName(food, "Meals"), "an edit");
     EranosCategory *previousCategory = nullptr;
-    checkSucceeded(check, eranosGroupReplaceCategory(flat.group, food, &previousCategory), "replaces the category");
+    checkSucceeded(check, eranosExpenseGroupReplaceCategory(flat.group, food, &previousCategory), "replaces the category");
     eranosCategoryName(previousCategory, text);
     checkThat(check, isText(text, "Food"), "which comes back as it was");
     EranosCategory *removedCategory = nullptr;
-    checkSucceeded(check, eranosGroupRemoveCategory(flat.group, eranosTextData(flat.food), &removedCategory), "the category goes");
+    checkSucceeded(check, eranosExpenseGroupRemoveCategory(flat.group, eranosTextData(flat.food), &removedCategory), "the category goes");
     eranosCategoryName(removedCategory, text);
     checkThat(check, isText(text, "Meals"), "and comes back as it was");
     EranosMemberList *members = nullptr;
-    checkSucceeded(check, eranosGroupMembers(flat.group, &members), "the members");
+    checkSucceeded(check, eranosExpenseGroupMembers(flat.group, &members), "the members");
     EranosMember *const ana = eranosMemberListGet(members, 0);
     checkThat(check, 2 == eranosMemberListLength(members) && !eranosMemberListIsEmpty(members) && nullptr == eranosMemberListGet(members, 2),
               "Ana and Bob");
     checkSucceeded(check, eranosMemberSetLastName(ana, "Pop"), "an edit");
     EranosMember *previousMember = nullptr;
-    checkSucceeded(check, eranosGroupReplaceMember(flat.group, ana, &previousMember), "replaces the member");
+    checkSucceeded(check, eranosExpenseGroupReplaceMember(flat.group, ana, &previousMember), "replaces the member");
     checkThat(check, !eranosMemberLastName(previousMember, text), "who comes back as they were");
     EranosMember *member = nullptr;
-    checkSucceeded(check, eranosGroupMember(flat.group, eranosTextData(flat.ana), &member), "the member by their identifier");
+    checkSucceeded(check, eranosExpenseGroupMember(flat.group, eranosTextData(flat.ana), &member), "the member by their identifier");
     checkThat(check, eranosMemberLastName(member, text) && isText(text, "Pop"), "as replaced");
     bool archived = true;
-    checkSucceeded(check, eranosGroupArchiveMember(flat.group, eranosTextData(flat.bob)), "Bob is archived");
-    checkSucceeded(check, eranosGroupIsArchived(flat.group, eranosTextData(flat.bob), &archived), "and asked about");
+    checkSucceeded(check, eranosExpenseGroupArchiveMember(flat.group, eranosTextData(flat.bob)), "Bob is archived");
+    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, eranosTextData(flat.bob), &archived), "and asked about");
     checkThat(check, archived, "and is");
-    checkSucceeded(check, eranosGroupUnarchiveMember(flat.group, eranosTextData(flat.bob)), "Bob is back");
-    checkSucceeded(check, eranosGroupIsArchived(flat.group, eranosTextData(flat.bob), &archived), "and asked about");
+    checkSucceeded(check, eranosExpenseGroupUnarchiveMember(flat.group, eranosTextData(flat.bob)), "Bob is back");
+    checkSucceeded(check, eranosExpenseGroupIsArchived(flat.group, eranosTextData(flat.bob), &archived), "and asked about");
     checkThat(check, !archived, "and is not");
     EranosMember *removedMember = nullptr;
-    checkSucceeded(check, eranosGroupRemoveMember(flat.group, eranosTextData(flat.bob), &removedMember), "Bob goes, once nothing names him");
+    checkSucceeded(check, eranosExpenseGroupRemoveMember(flat.group, eranosTextData(flat.bob), &removedMember), "Bob goes, once nothing names him");
     eranosMemberFirstName(removedMember, text);
     checkThat(check, isText(text, "Bob"), "and comes back");
     eranosMemberDestroy(removedMember);
@@ -1331,25 +1337,27 @@ static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
     char const *const nobody = "not an identifier";
     EranosExpense *expense = nullptr;
     checkThat(check,
-              isFailure(eranosGroupExpense(flat.group, nobody, &expense), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && nullptr == expense,
+              isFailure(eranosExpenseGroupExpense(flat.group, nobody, &expense), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
+                  nullptr == expense,
               "an expense");
     EranosExpenseShares *shares = nullptr;
     checkThat(check,
-              isFailure(eranosGroupExpenseShares(flat.group, nobody, &shares), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
+              isFailure(eranosExpenseGroupExpenseShares(flat.group, nobody, &shares), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
                   nullptr == shares,
               "an expense's shares");
     EranosMember *member = nullptr;
     checkThat(check,
-              isFailure(eranosGroupMember(flat.group, nobody, &member), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) && nullptr == member,
+              isFailure(eranosExpenseGroupMember(flat.group, nobody, &member), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
+                  nullptr == member,
               "a member");
     EranosTransfer *transfer = nullptr;
     checkThat(check,
-              isFailure(eranosGroupTransfer(flat.group, nobody, &transfer), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
+              isFailure(eranosExpenseGroupTransfer(flat.group, nobody, &transfer), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
                   nullptr == transfer,
               "a transfer");
     EranosMoney *amount = nullptr;
     checkThat(check,
-              isFailure(eranosGroupTransferAmount(flat.group, nobody, &amount), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
+              isFailure(eranosExpenseGroupTransferAmount(flat.group, nobody, &amount), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
                   nullptr == amount,
               "a transfer's amount");
     flatDestroy(flat);
@@ -1385,53 +1393,53 @@ static void anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved(Check *const c
     checkSucceeded(check, eranosCategorySetId(category, unknown), "its identifier");
     EranosCategory *previousCategory = nullptr;
     checkThat(check,
-              isFailure(eranosGroupReplaceCategory(flat.group, category, &previousCategory), ERANOS_ERROR_KIND_GROUP,
-                        ERANOS_FAILURE_GROUP_UNKNOWN_CATEGORY) &&
+              isFailure(eranosExpenseGroupReplaceCategory(flat.group, category, &previousCategory), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_CATEGORY) &&
                   nullptr == previousCategory,
               "a category is not replaced");
     checkThat(check,
-              isFailure(eranosGroupRemoveCategory(flat.group, unknown, &previousCategory), ERANOS_ERROR_KIND_GROUP,
-                        ERANOS_FAILURE_GROUP_UNKNOWN_CATEGORY) &&
+              isFailure(eranosExpenseGroupRemoveCategory(flat.group, unknown, &previousCategory), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_CATEGORY) &&
                   nullptr == previousCategory,
               "nor removed");
     EranosExpense *const expense = expenseOf("Taxi", ana, ana, bob);
     checkSucceeded(check, eranosExpenseSetId(expense, unknown), "an expense's identifier");
     EranosExpense *previousExpense = nullptr;
-    checkThat(
-        check,
-        isFailure(eranosGroupReplaceExpense(flat.group, expense, &previousExpense), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_EXPENSE) &&
-            nullptr == previousExpense,
-        "an expense is not replaced");
-    checkThat(
-        check,
-        isFailure(eranosGroupRemoveExpense(flat.group, unknown, &previousExpense), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_EXPENSE) &&
-            nullptr == previousExpense,
-        "nor removed");
+    checkThat(check,
+              isFailure(eranosExpenseGroupReplaceExpense(flat.group, expense, &previousExpense), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_EXPENSE) &&
+                  nullptr == previousExpense,
+              "an expense is not replaced");
+    checkThat(check,
+              isFailure(eranosExpenseGroupRemoveExpense(flat.group, unknown, &previousExpense), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_EXPENSE) &&
+                  nullptr == previousExpense,
+              "nor removed");
     EranosMember *member = nullptr;
     checkSucceeded(check, eranosMemberCreate("Carol", &member), "a member");
     checkSucceeded(check, eranosMemberSetId(member, unknown), "their identifier");
     EranosMember *previousMember = nullptr;
-    checkThat(
-        check,
-        isFailure(eranosGroupReplaceMember(flat.group, member, &previousMember), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_MEMBER) &&
-            nullptr == previousMember,
-        "a member is not replaced");
-    checkThat(
-        check,
-        isFailure(eranosGroupRemoveMember(flat.group, unknown, &previousMember), ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_MEMBER) &&
-            nullptr == previousMember,
-        "nor removed");
+    checkThat(check,
+              isFailure(eranosExpenseGroupReplaceMember(flat.group, member, &previousMember), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_MEMBER) &&
+                  nullptr == previousMember,
+              "a member is not replaced");
+    checkThat(check,
+              isFailure(eranosExpenseGroupRemoveMember(flat.group, unknown, &previousMember), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_MEMBER) &&
+                  nullptr == previousMember,
+              "nor removed");
     EranosTransfer *const transfer = transferOf(ana, bob, 500);
     checkSucceeded(check, eranosTransferSetId(transfer, unknown), "a transfer's identifier");
     EranosTransfer *previousTransfer = nullptr;
     checkThat(check,
-              isFailure(eranosGroupReplaceTransfer(flat.group, transfer, &previousTransfer), ERANOS_ERROR_KIND_GROUP,
-                        ERANOS_FAILURE_GROUP_UNKNOWN_TRANSFER) &&
+              isFailure(eranosExpenseGroupReplaceTransfer(flat.group, transfer, &previousTransfer), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_TRANSFER) &&
                   nullptr == previousTransfer,
               "a transfer is not replaced");
     checkThat(check,
-              isFailure(eranosGroupRemoveTransfer(flat.group, unknown, &previousTransfer), ERANOS_ERROR_KIND_GROUP,
-                        ERANOS_FAILURE_GROUP_UNKNOWN_TRANSFER) &&
+              isFailure(eranosExpenseGroupRemoveTransfer(flat.group, unknown, &previousTransfer), ERANOS_ERROR_KIND_EXPENSE_GROUP,
+                        ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_TRANSFER) &&
                   nullptr == previousTransfer,
               "nor removed");
     eranosTransferDestroy(transfer);
@@ -1446,7 +1454,7 @@ static void theSummaryAndTheSharesAddUp(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
     EranosSummary *summary = nullptr;
-    checkSucceeded(check, eranosGroupSummary(flat.group, &summary), "the summary");
+    checkSucceeded(check, eranosExpenseGroupSummary(flat.group, &summary), "the summary");
     checkThat(check, isAmount(eranosSummaryTotalSpent(summary), 3'000, "EUR"), "the dinner is all that was spent");
     EranosCategoryTotalList *const categoryTotals = eranosSummaryCategoryTotals(summary);
     EranosCategoryTotal *const food = eranosCategoryTotalListGet(categoryTotals, 0);
@@ -1480,7 +1488,7 @@ static void theSummaryAndTheSharesAddUp(Check *const check) {
                   isAmount(eranosMemberSummaryNet(ana), 500, "EUR"),
               "Ana paid 30.00, consumed 15.00, and got 10.00 back, so she is owed 5.00");
     EranosExpenseShares *shares = nullptr;
-    checkSucceeded(check, eranosGroupExpenseShares(flat.group, eranosTextData(flat.dinner), &shares), "the dinner's shares");
+    checkSucceeded(check, eranosExpenseGroupExpenseShares(flat.group, eranosTextData(flat.dinner), &shares), "the dinner's shares");
     EranosMemberShareList *const memberShares = eranosExpenseSharesMembers(shares);
     EranosMemberShare *const anaShare = eranosMemberShareListGet(memberShares, 0);
     eranosMemberShareMember(anaShare, text);
@@ -1524,7 +1532,7 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
         EranosSettlementStrategy const computedBy =
             ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == strategies[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : strategies[index];
         EranosSettlement *settlement = nullptr;
-        checkSucceeded(check, eranosGroupSettlement(flat.group, strategies[index], &settlement), "a settlement");
+        checkSucceeded(check, eranosExpenseGroupSettlement(flat.group, strategies[index], &settlement), "a settlement");
         EranosPaymentList *const payments = eranosSettlementPayments(settlement);
         EranosPayment *const payment = eranosPaymentListGet(payments, 0);
         checkThat(check,
@@ -1550,10 +1558,10 @@ static constexpr size_t NEIGHBOURS = 64;
 /// A plan whose exact solver's table did not fit in memory would end the program or stall it; the exact strategy refuses it,
 /// naming how many balances it holds, and the other strategies settle the same balances.
 static void anExactPlanTooLargeToComputeIsRefused(Check *const check) {
-    EranosNewGroup *details = nullptr;
-    checkSucceeded(check, eranosNewGroupCreate("Street party", "EUR", &details), "the group's details");
-    EranosGroup *group = nullptr;
-    checkSucceeded(check, eranosGroupCreate(details, &group), "the group");
+    EranosNewExpenseGroup *details = nullptr;
+    checkSucceeded(check, eranosNewExpenseGroupCreate("Street party", "EUR", &details), "the group's details");
+    EranosExpenseGroup *group = nullptr;
+    checkSucceeded(check, eranosExpenseGroupCreate(details, &group), "the group");
     EranosText *neighbours[NEIGHBOURS] = {};
     EranosTextList *const everyone = eranosTextListCreate();
     for (size_t index = 0; NEIGHBOURS > index; ++index) {
@@ -1570,16 +1578,16 @@ static void anExactPlanTooLargeToComputeIsRefused(Check *const check) {
     EranosExpense *expense = nullptr;
     checkSucceeded(check, eranosExpenseCreate("Food", cost, payers, split, DAY, &expense), "the food, which the first neighbour paid");
     EranosText *const id = eranosTextCreate();
-    checkSucceeded(check, eranosGroupAddExpense(group, expense, id), "shared by every neighbour");
+    checkSucceeded(check, eranosExpenseGroupAddExpense(group, expense, id), "shared by every neighbour");
     EranosSettlement *settlement = nullptr;
-    EranosError *const refused = eranosGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, &settlement);
+    EranosError *const refused = eranosExpenseGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, &settlement);
     int64_t balances = 0;
     checkThat(check,
               holdsFailure(refused, ERANOS_ERROR_KIND_SETTLEMENT, ERANOS_FAILURE_SETTLEMENT_OUT_OF_MEMORY) &&
                   eranosErrorBalances(refused, &balances) && NEIGHBOURS == balances && nullptr == settlement,
               "the exact plan is refused, naming its balances");
     eranosErrorDestroy(refused);
-    checkSucceeded(check, eranosGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &settlement), "a greedy plan");
+    checkSucceeded(check, eranosExpenseGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &settlement), "a greedy plan");
     EranosPaymentList *const payments = nullptr == settlement ? nullptr : eranosSettlementPayments(settlement);
     checkThat(check, nullptr != payments && NEIGHBOURS - 1 == eranosPaymentListLength(payments), "one payment from each neighbour who owes");
     eranosPaymentListDestroy(payments);
@@ -1595,8 +1603,8 @@ static void anExactPlanTooLargeToComputeIsRefused(Check *const check) {
     for (size_t index = 0; NEIGHBOURS > index; ++index) {
         eranosTextDestroy(neighbours[index]);
     }
-    eranosGroupDestroy(group);
-    eranosNewGroupDestroy(details);
+    eranosExpenseGroupDestroy(group);
+    eranosNewExpenseGroupDestroy(details);
 }
 
 /// A change of currency that left an entry unconverted, or took a rate it was not given, would mix currencies in the totals.
@@ -1618,10 +1626,10 @@ static void aChangeOfCurrencyConvertsEveryEntry(Check *const check) {
     EranosCurrencyRate *none = nullptr;
     checkThat(check, isKind(eranosCurrencyRateCreate("\xff", "5", &none), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
     EranosCurrencyRateList *const empty = eranosCurrencyRateListCreate();
-    EranosError *const missing = eranosGroupChangeCurrency(flat.group, "RON", empty);
+    EranosError *const missing = eranosExpenseGroupChangeCurrency(flat.group, "RON", empty);
     checkThat(check,
-              holdsFailure(missing, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_MISSING_EXCHANGE_RATE) && eranosErrorCurrency(missing, text) &&
-                  isText(text, "EUR"),
+              holdsFailure(missing, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_MISSING_EXCHANGE_RATE) &&
+                  eranosErrorCurrency(missing, text) && isText(text, "EUR"),
               "the euro needs a rate");
     eranosErrorDestroy(missing);
     EranosCurrencyRateList *const rates = eranosCurrencyRateListCreate();
@@ -1629,8 +1637,8 @@ static void aChangeOfCurrencyConvertsEveryEntry(Check *const check) {
     eranosCurrencyRateListPush(rates, rate);
     EranosCurrencyRate *const first = eranosCurrencyRateListGet(rates, 0);
     checkThat(check, 1 == eranosCurrencyRateListLength(rates) && nullptr != first && nullptr == eranosCurrencyRateListGet(rates, 1), "one rate");
-    checkSucceeded(check, eranosGroupChangeCurrency(flat.group, "RON", rates), "the change");
-    checkSucceeded(check, eranosGroupCurrency(flat.group, text), "the currency");
+    checkSucceeded(check, eranosExpenseGroupChangeCurrency(flat.group, "RON", rates), "the change");
+    checkSucceeded(check, eranosExpenseGroupCurrency(flat.group, text), "the currency");
     checkThat(check, isText(text, "RON"), "is the new one");
     eranosCurrencyRateDestroy(first);
     eranosCurrencyRateListDestroy(rates);
@@ -1645,19 +1653,20 @@ static void aSavedGroupLoadsAsItWasSaved(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const json = eranosTextCreate();
     EranosText *const again = eranosTextCreate();
-    checkSucceeded(check, eranosGroupSave(flat.group, json), "the group saves");
-    EranosGroup *loaded = nullptr;
-    checkSucceeded(check, eranosGroupLoad(eranosTextData(json), &loaded), "and loads");
-    checkSucceeded(check, eranosGroupSave(loaded, again), "and saves again");
+    checkSucceeded(check, eranosExpenseGroupSave(flat.group, json), "the group saves");
+    EranosExpenseGroup *loaded = nullptr;
+    checkSucceeded(check, eranosExpenseGroupLoad(eranosTextData(json), &loaded), "and loads");
+    checkSucceeded(check, eranosExpenseGroupSave(loaded, again), "and saves again");
     checkThat(check, isText(again, eranosTextData(json)), "to the same text");
-    EranosGroup *broken = nullptr;
-    EranosError *const error = eranosGroupLoad("{", &broken);
+    EranosExpenseGroup *broken = nullptr;
+    EranosError *const error = eranosExpenseGroupLoad("{", &broken);
     int64_t line = 0;
     int64_t column = 0;
-    checkThat(check, isKind(eranosGroupLoad("{", &broken), ERANOS_ERROR_KIND_INVALID_JSON) && nullptr == broken, "text that is not a saved group");
+    checkThat(check, isKind(eranosExpenseGroupLoad("{", &broken), ERANOS_ERROR_KIND_INVALID_JSON) && nullptr == broken,
+              "text that is not a saved group");
     checkThat(check, eranosErrorLine(error, &line) && 1 == line && eranosErrorColumn(error, &column) && 1 == column, "where it stops being one");
     eranosErrorDestroy(error);
-    eranosGroupDestroy(loaded);
+    eranosExpenseGroupDestroy(loaded);
     eranosTextDestroy(again);
     eranosTextDestroy(json);
     flatDestroy(flat);
@@ -1668,8 +1677,9 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
     EranosMember *removed = nullptr;
-    EranosError *const inUse = eranosGroupRemoveMember(flat.group, eranosTextData(flat.ana), &removed);
-    checkThat(check, holdsFailure(inUse, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_MEMBER_IN_USE) && nullptr == removed, "Ana paid and was paid");
+    EranosError *const inUse = eranosExpenseGroupRemoveMember(flat.group, eranosTextData(flat.ana), &removed);
+    checkThat(check, holdsFailure(inUse, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_MEMBER_IN_USE) && nullptr == removed,
+              "Ana paid and was paid");
     checkThat(check, eranosErrorMember(inUse, text) && isText(text, eranosTextData(flat.ana)), "the error names her");
     checkThat(check, listsMembers(eranosErrorExpenses(inUse), eranosTextData(flat.dinner), nullptr), "the expense that names her");
     checkThat(check, listsMembers(eranosErrorTransfers(inUse), eranosTextData(flat.repayment), nullptr), "the transfer that names her");
@@ -1697,7 +1707,7 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosExpenseSplit *const split = eranosExpenseSplitCreateWhole(uneven);
     EranosExpense *expense = nullptr;
     eranosErrorDestroy(eranosExpenseCreate("Uneven", cost, payers, split, DAY, &expense));
-    EranosError *const unbalanced = eranosGroupAddExpense(flat.group, expense, text);
+    EranosError *const unbalanced = eranosExpenseGroupAddExpense(flat.group, expense, text);
     checkThat(check,
               holdsFailure(unbalanced, ERANOS_ERROR_KIND_EXPENSE, ERANOS_FAILURE_EXPENSE_AMOUNTS_DO_NOT_ADD_UP) &&
                   isAmount(eranosErrorActual(unbalanced), 1'000, "EUR") && isAmount(eranosErrorExpectedAmount(unbalanced), 3'000, "EUR"),
@@ -1710,7 +1720,7 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosSplit *const foreign = eranosSplitCreateAmounts(foreignAmounts);
     EranosExpenseSplit *const foreignSplit = eranosExpenseSplitCreateWhole(foreign);
     eranosExpenseSetSplit(expense, foreignSplit);
-    EranosError *const currencies = eranosGroupAddExpense(flat.group, expense, text);
+    EranosError *const currencies = eranosExpenseGroupAddExpense(flat.group, expense, text);
     checkThat(check,
               holdsFailure(currencies, ERANOS_ERROR_KIND_EXPENSE, ERANOS_FAILURE_EXPENSE_CURRENCY_MISMATCH) &&
                   eranosErrorExpectedCurrency(currencies, text) && isText(text, "EUR") && eranosErrorFoundCurrency(currencies, text) &&
@@ -1724,7 +1734,7 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosSplit *const byHalves = eranosSplitCreatePercentages(halves);
     EranosExpenseSplit *const halvesSplit = eranosExpenseSplitCreateWhole(byHalves);
     eranosExpenseSetSplit(expense, halvesSplit);
-    EranosError *const percentages = eranosGroupAddExpense(flat.group, expense, text);
+    EranosError *const percentages = eranosExpenseGroupAddExpense(flat.group, expense, text);
     checkThat(check,
               holdsFailure(percentages, ERANOS_ERROR_KIND_EXPENSE, ERANOS_FAILURE_EXPENSE_PERCENTAGES_DO_NOT_ADD_UP) &&
                   eranosErrorTotalBasisPoints(percentages, &number) && 5'000 == number,
@@ -1732,49 +1742,51 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     eranosErrorDestroy(percentages);
     EranosCategory *duplicate = nullptr;
     eranosErrorDestroy(eranosCategoryCreate("food", &duplicate));
-    EranosError *const name = eranosGroupAddCategory(flat.group, duplicate, text);
+    EranosError *const name = eranosExpenseGroupAddCategory(flat.group, duplicate, text);
     checkThat(check,
-              holdsFailure(name, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_DUPLICATE_CATEGORY_NAME) && eranosErrorExisting(name, text) &&
-                  isText(text, eranosTextData(flat.food)),
+              holdsFailure(name, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME) &&
+                  eranosErrorExisting(name, text) && isText(text, eranosTextData(flat.food)),
               "the category that has the name");
     eranosErrorDestroy(name);
     EranosExpense *const taxi = expenseOf("Taxi", eranosTextData(flat.ana), eranosTextData(flat.ana), nullptr);
     eranosErrorDestroy(eranosExpenseSetCategory(taxi, "0199a000-0000-7000-8000-00000000ffff"));
-    EranosError *const category = eranosGroupAddExpense(flat.group, taxi, text);
+    EranosError *const category = eranosExpenseGroupAddExpense(flat.group, taxi, text);
     checkThat(check,
-              holdsFailure(category, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_CATEGORY) && eranosErrorCategory(category, text) &&
-                  isText(text, "0199a000-0000-7000-8000-00000000ffff"),
+              holdsFailure(category, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_CATEGORY) &&
+                  eranosErrorCategory(category, text) && isText(text, "0199a000-0000-7000-8000-00000000ffff"),
               "the unknown category");
     eranosErrorDestroy(category);
     EranosExpense *noExpense = nullptr;
-    EranosError *const unknownExpense = eranosGroupRemoveExpense(flat.group, "0199a000-0000-7000-8000-00000000ffff", &noExpense);
+    EranosError *const unknownExpense = eranosExpenseGroupRemoveExpense(flat.group, "0199a000-0000-7000-8000-00000000ffff", &noExpense);
     checkThat(check,
-              holdsFailure(unknownExpense, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_EXPENSE) && eranosErrorExpense(unknownExpense, text),
+              holdsFailure(unknownExpense, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_EXPENSE) &&
+                  eranosErrorExpense(unknownExpense, text),
               "the unknown expense");
     eranosErrorDestroy(unknownExpense);
     EranosTransfer *noTransfer = nullptr;
-    EranosError *const unknownTransfer = eranosGroupRemoveTransfer(flat.group, "0199a000-0000-7000-8000-00000000ffff", &noTransfer);
+    EranosError *const unknownTransfer = eranosExpenseGroupRemoveTransfer(flat.group, "0199a000-0000-7000-8000-00000000ffff", &noTransfer);
     checkThat(check,
-              holdsFailure(unknownTransfer, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_TRANSFER) &&
+              holdsFailure(unknownTransfer, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_TRANSFER) &&
                   eranosErrorTransfer(unknownTransfer, text),
               "the unknown transfer");
     eranosErrorDestroy(unknownTransfer);
     EranosText *const json = eranosTextCreate();
-    eranosErrorDestroy(eranosGroupSave(flat.group, json));
+    eranosErrorDestroy(eranosExpenseGroupSave(flat.group, json));
     char tampered[8192] = {};
     char const *const format = strstr(eranosTextData(json), "\"format\": 2");
     int const before = nullptr == format ? 0 : (int)(format - eranosTextData(json)) + (int)strlen("\"format\": 2");
     (void)snprintf(tampered, sizeof tampered, "%.*s6%s", before, eranosTextData(json), eranosTextData(json) + before);
-    EranosGroup *newer = nullptr;
-    EranosError *const unsupported = eranosGroupLoad(tampered, &newer);
+    EranosExpenseGroup *newer = nullptr;
+    EranosError *const unsupported = eranosExpenseGroupLoad(tampered, &newer);
     checkThat(check,
-              holdsFailure(unsupported, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNSUPPORTED_FORMAT) &&
+              holdsFailure(unsupported, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) &&
                   eranosErrorFormat(unsupported, &number) && 26 == number,
               "a format this release cannot read");
     eranosErrorDestroy(unsupported);
     eranosTextDestroy(json);
     EranosCategory *noCategory = nullptr;
-    checkThat(check, isFailure(eranosGroupCategory(flat.group, "not an identifier", &noCategory), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID),
+    checkThat(check,
+              isFailure(eranosExpenseGroupCategory(flat.group, "not an identifier", &noCategory), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID),
               "text that is no identifier");
     eranosExpenseDestroy(taxi);
     eranosCategoryDestroy(duplicate);
@@ -1808,56 +1820,56 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     EranosText *const text = eranosTextCreate();
     Waiter waiter;
     EranosTextCallback const textCallback = {waiting(&waiter), receiveText};
-    eranosGroupIdAsync(flat.group, nullptr, &textCallback);
+    eranosExpenseGroupIdAsync(flat.group, nullptr, &textCallback);
     await(&waiter);
-    checkSucceeded(check, eranosGroupId(flat.group, text), "the identifier");
+    checkSucceeded(check, eranosExpenseGroupId(flat.group, text), "the identifier");
     checkThat(check, nullptr == waiter.error && isText(waiter.text, eranosTextData(text)), "the same identifier");
     eranosTextDestroy(waiter.text);
     EranosTextCallback const nameCallback = {waiting(&waiter), receiveText};
-    eranosGroupNameAsync(flat.group, nullptr, &nameCallback);
+    eranosExpenseGroupNameAsync(flat.group, nullptr, &nameCallback);
     await(&waiter);
     checkThat(check, isText(waiter.text, "Flat"), "the name");
     eranosTextDestroy(waiter.text);
     EranosTextCallback const currencyCallback = {waiting(&waiter), receiveText};
-    eranosGroupCurrencyAsync(flat.group, nullptr, &currencyCallback);
+    eranosExpenseGroupCurrencyAsync(flat.group, nullptr, &currencyCallback);
     await(&waiter);
     checkThat(check, isText(waiter.text, "EUR"), "the currency");
     eranosTextDestroy(waiter.text);
     EranosOptionalTextCallback const descriptionCallback = {waiting(&waiter), receiveText};
-    eranosGroupDescriptionAsync(flat.group, nullptr, &descriptionCallback);
+    eranosExpenseGroupDescriptionAsync(flat.group, nullptr, &descriptionCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error && nullptr != waiter.text && isText(waiter.text, "Rent"), "the description");
     eranosTextDestroy(waiter.text);
     EranosOptionalTextCallback const languageCallback = {waiting(&waiter), receiveText};
-    eranosGroupLanguageAsync(flat.group, nullptr, &languageCallback);
+    eranosExpenseGroupLanguageAsync(flat.group, nullptr, &languageCallback);
     await(&waiter);
     checkThat(check, isText(waiter.text, "pt-PT"), "the language");
     eranosTextDestroy(waiter.text);
     EranosTextCallback const saveCallback = {waiting(&waiter), receiveText};
-    eranosGroupSaveAsync(flat.group, nullptr, &saveCallback);
+    eranosExpenseGroupSaveAsync(flat.group, nullptr, &saveCallback);
     await(&waiter);
-    checkSucceeded(check, eranosGroupSave(flat.group, text), "the saved group");
+    checkSucceeded(check, eranosExpenseGroupSave(flat.group, text), "the saved group");
     checkThat(check, isText(waiter.text, eranosTextData(text)), "the same saved group");
     EranosText *const json = waiter.text;
-    EranosGroupCallback const loadCallback = {waiting(&waiter), receiveGroup};
-    eranosGroupLoadAsync(eranosTextData(json), nullptr, &loadCallback);
+    EranosExpenseGroupCallback const loadCallback = {waiting(&waiter), receiveGroup};
+    eranosExpenseGroupLoadAsync(eranosTextData(json), nullptr, &loadCallback);
     await(&waiter);
     eranosTextDestroy(json);
     checkThat(check, nullptr == waiter.error && nullptr != waiter.object, "a group loaded on a thread of its own");
-    eranosGroupDestroy(waiter.object);
+    eranosExpenseGroupDestroy(waiter.object);
     EranosCategoryListCallback const categoriesCallback = {waiting(&waiter), receiveCategories};
-    eranosGroupCategoriesAsync(flat.group, nullptr, &categoriesCallback);
+    eranosExpenseGroupCategoriesAsync(flat.group, nullptr, &categoriesCallback);
     await(&waiter);
     checkThat(check, 2 == eranosCategoryListLength(waiter.object), "the categories");
     eranosCategoryListDestroy(waiter.object);
     EranosCategoryCallback const categoryCallback = {waiting(&waiter), receiveCategory};
-    eranosGroupCategoryAsync(flat.group, eranosTextData(flat.food), nullptr, &categoryCallback);
+    eranosExpenseGroupCategoryAsync(flat.group, eranosTextData(flat.food), nullptr, &categoryCallback);
     await(&waiter);
     checkThat(check, nullptr != waiter.object, "a category");
     EranosCategory *const food = waiter.object;
     checkSucceeded(check, eranosCategorySetName(food, "Meals"), "an edit");
     EranosCategoryCallback const replaceCategoryCallback = {waiting(&waiter), receiveCategory};
-    eranosGroupReplaceCategoryAsync(flat.group, food, nullptr, &replaceCategoryCallback);
+    eranosExpenseGroupReplaceCategoryAsync(flat.group, food, nullptr, &replaceCategoryCallback);
     await(&waiter);
     eranosCategoryName(waiter.object, text);
     checkThat(check, isText(text, "Food"), "a replaced category as it was");
@@ -1866,35 +1878,35 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     EranosCategory *drinks = nullptr;
     eranosErrorDestroy(eranosCategoryCreate("Drinks", &drinks));
     EranosTextCallback const addCategoryCallback = {waiting(&waiter), receiveText};
-    eranosGroupAddCategoryAsync(flat.group, drinks, nullptr, &addCategoryCallback);
+    eranosExpenseGroupAddCategoryAsync(flat.group, drinks, nullptr, &addCategoryCallback);
     await(&waiter);
     eranosCategoryDestroy(drinks);
     EranosText *const addedCategory = waiter.text;
     EranosCategoryCallback const removeCategoryCallback = {waiting(&waiter), receiveCategory};
-    eranosGroupRemoveCategoryAsync(flat.group, eranosTextData(addedCategory), nullptr, &removeCategoryCallback);
+    eranosExpenseGroupRemoveCategoryAsync(flat.group, eranosTextData(addedCategory), nullptr, &removeCategoryCallback);
     await(&waiter);
     eranosTextDestroy(addedCategory);
     eranosCategoryName(waiter.object, text);
     checkThat(check, isText(text, "Drinks"), "an added category, removed");
     eranosCategoryDestroy(waiter.object);
     EranosExpenseListCallback const expensesCallback = {waiting(&waiter), receiveExpenses};
-    eranosGroupExpensesAsync(flat.group, nullptr, &expensesCallback);
+    eranosExpenseGroupExpensesAsync(flat.group, nullptr, &expensesCallback);
     await(&waiter);
     checkThat(check, 1 == eranosExpenseListLength(waiter.object), "the expenses");
     eranosExpenseListDestroy(waiter.object);
     EranosExpenseCallback const expenseCallback = {waiting(&waiter), receiveExpense};
-    eranosGroupExpenseAsync(flat.group, eranosTextData(flat.dinner), nullptr, &expenseCallback);
+    eranosExpenseGroupExpenseAsync(flat.group, eranosTextData(flat.dinner), nullptr, &expenseCallback);
     await(&waiter);
     EranosExpense *const dinner = waiter.object;
     checkThat(check, nullptr != dinner, "an expense");
     EranosExpenseSharesCallback const sharesCallback = {waiting(&waiter), receiveExpenseShares};
-    eranosGroupExpenseSharesAsync(flat.group, eranosTextData(flat.dinner), nullptr, &sharesCallback);
+    eranosExpenseGroupExpenseSharesAsync(flat.group, eranosTextData(flat.dinner), nullptr, &sharesCallback);
     await(&waiter);
     checkThat(check, nullptr != waiter.object, "an expense's shares");
     eranosExpenseSharesDestroy(waiter.object);
     checkSucceeded(check, eranosExpenseSetName(dinner, "Supper"), "an edit");
     EranosExpenseCallback const replaceExpenseCallback = {waiting(&waiter), receiveExpense};
-    eranosGroupReplaceExpenseAsync(flat.group, dinner, nullptr, &replaceExpenseCallback);
+    eranosExpenseGroupReplaceExpenseAsync(flat.group, dinner, nullptr, &replaceExpenseCallback);
     await(&waiter);
     eranosExpenseName(waiter.object, text);
     checkThat(check, isText(text, "Dinner"), "a replaced expense as it was");
@@ -1902,40 +1914,40 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     eranosExpenseDestroy(dinner);
     EranosExpense *const lunch = expenseOf("Lunch", eranosTextData(flat.bob), eranosTextData(flat.ana), nullptr);
     EranosTextCallback const addExpenseCallback = {waiting(&waiter), receiveText};
-    eranosGroupAddExpenseAsync(flat.group, lunch, nullptr, &addExpenseCallback);
+    eranosExpenseGroupAddExpenseAsync(flat.group, lunch, nullptr, &addExpenseCallback);
     await(&waiter);
     eranosExpenseDestroy(lunch);
     EranosText *const addedExpense = waiter.text;
     EranosExpenseCallback const removeExpenseCallback = {waiting(&waiter), receiveExpense};
-    eranosGroupRemoveExpenseAsync(flat.group, eranosTextData(addedExpense), nullptr, &removeExpenseCallback);
+    eranosExpenseGroupRemoveExpenseAsync(flat.group, eranosTextData(addedExpense), nullptr, &removeExpenseCallback);
     await(&waiter);
     eranosTextDestroy(addedExpense);
     eranosExpenseName(waiter.object, text);
     checkThat(check, isText(text, "Lunch"), "an added expense, removed");
     eranosExpenseDestroy(waiter.object);
     EranosSummaryCallback const summaryCallback = {waiting(&waiter), receiveSummary};
-    eranosGroupSummaryAsync(flat.group, nullptr, &summaryCallback);
+    eranosExpenseGroupSummaryAsync(flat.group, nullptr, &summaryCallback);
     await(&waiter);
     checkThat(check, isAmount(eranosSummaryTotalSpent(waiter.object), 3'000, "EUR"), "the summary");
     eranosSummaryDestroy(waiter.object);
     EranosSettlementCallback const settlementCallback = {waiting(&waiter), receiveSettlement};
-    eranosGroupSettlementAsync(flat.group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, nullptr, &settlementCallback);
+    eranosExpenseGroupSettlementAsync(flat.group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, nullptr, &settlementCallback);
     await(&waiter);
     checkThat(check, ERANOS_SETTLEMENT_STRATEGY_GREEDY == eranosSettlementStrategy(waiter.object), "a settlement");
     eranosSettlementDestroy(waiter.object);
     EranosMemberListCallback const membersCallback = {waiting(&waiter), receiveMembers};
-    eranosGroupMembersAsync(flat.group, nullptr, &membersCallback);
+    eranosExpenseGroupMembersAsync(flat.group, nullptr, &membersCallback);
     await(&waiter);
     checkThat(check, 2 == eranosMemberListLength(waiter.object), "the members");
     eranosMemberListDestroy(waiter.object);
     EranosMemberCallback const memberCallback = {waiting(&waiter), receiveMember};
-    eranosGroupMemberAsync(flat.group, eranosTextData(flat.ana), nullptr, &memberCallback);
+    eranosExpenseGroupMemberAsync(flat.group, eranosTextData(flat.ana), nullptr, &memberCallback);
     await(&waiter);
     EranosMember *const ana = waiter.object;
     checkThat(check, nullptr != ana, "a member");
     checkSucceeded(check, eranosMemberSetLastName(ana, "Pop"), "an edit");
     EranosMemberCallback const replaceMemberCallback = {waiting(&waiter), receiveMember};
-    eranosGroupReplaceMemberAsync(flat.group, ana, nullptr, &replaceMemberCallback);
+    eranosExpenseGroupReplaceMemberAsync(flat.group, ana, nullptr, &replaceMemberCallback);
     await(&waiter);
     checkThat(check, !eranosMemberLastName(waiter.object, text), "a replaced member as they were");
     eranosMemberDestroy(waiter.object);
@@ -1943,108 +1955,110 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     EranosMember *carla = nullptr;
     eranosErrorDestroy(eranosMemberCreate("Carla", &carla));
     EranosTextCallback const addMemberCallback = {waiting(&waiter), receiveText};
-    eranosGroupAddMemberAsync(flat.group, carla, nullptr, &addMemberCallback);
+    eranosExpenseGroupAddMemberAsync(flat.group, carla, nullptr, &addMemberCallback);
     await(&waiter);
     eranosMemberDestroy(carla);
     EranosText *const carlaId = waiter.text;
     EranosUnitCallback const archiveCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupArchiveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &archiveCallback);
+    eranosExpenseGroupArchiveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &archiveCallback);
     await(&waiter);
     EranosFlagCallback const archivedCallback = {waiting(&waiter), receiveFlag};
-    eranosGroupIsArchivedAsync(flat.group, eranosTextData(carlaId), nullptr, &archivedCallback);
+    eranosExpenseGroupIsArchivedAsync(flat.group, eranosTextData(carlaId), nullptr, &archivedCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error && waiter.flag, "an archived member is archived");
     EranosUnitCallback const unarchiveCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupUnarchiveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &unarchiveCallback);
+    eranosExpenseGroupUnarchiveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &unarchiveCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error, "and comes back");
     EranosMemberCallback const removeMemberCallback = {waiting(&waiter), receiveMember};
-    eranosGroupRemoveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &removeMemberCallback);
+    eranosExpenseGroupRemoveMemberAsync(flat.group, eranosTextData(carlaId), nullptr, &removeMemberCallback);
     await(&waiter);
     eranosMemberFirstName(waiter.object, text);
     checkThat(check, isText(text, "Carla"), "an added member, removed");
     eranosMemberDestroy(waiter.object);
     eranosTextDestroy(carlaId);
     EranosTransferListCallback const transfersCallback = {waiting(&waiter), receiveTransfers};
-    eranosGroupTransfersAsync(flat.group, nullptr, &transfersCallback);
+    eranosExpenseGroupTransfersAsync(flat.group, nullptr, &transfersCallback);
     await(&waiter);
     checkThat(check, 1 == eranosTransferListLength(waiter.object), "the transfers");
     eranosTransferListDestroy(waiter.object);
     EranosTransferCallback const transferCallback = {waiting(&waiter), receiveTransfer};
-    eranosGroupTransferAsync(flat.group, eranosTextData(flat.repayment), nullptr, &transferCallback);
+    eranosExpenseGroupTransferAsync(flat.group, eranosTextData(flat.repayment), nullptr, &transferCallback);
     await(&waiter);
     EranosTransfer *const repayment = waiter.object;
     EranosMoneyCallback const amountCallback = {waiting(&waiter), receiveMoney};
-    eranosGroupTransferAmountAsync(flat.group, eranosTextData(flat.repayment), nullptr, &amountCallback);
+    eranosExpenseGroupTransferAmountAsync(flat.group, eranosTextData(flat.repayment), nullptr, &amountCallback);
     await(&waiter);
     checkThat(check, isAmount(waiter.object, 1'000, "EUR"), "a transfer's amount");
     checkSucceeded(check, eranosTransferSetNote(repayment, "Back"), "an edit");
     EranosTransferCallback const replaceTransferCallback = {waiting(&waiter), receiveTransfer};
-    eranosGroupReplaceTransferAsync(flat.group, repayment, nullptr, &replaceTransferCallback);
+    eranosExpenseGroupReplaceTransferAsync(flat.group, repayment, nullptr, &replaceTransferCallback);
     await(&waiter);
     checkThat(check, !eranosTransferNote(waiter.object, text), "a replaced transfer as it was");
     eranosTransferDestroy(waiter.object);
     eranosTransferDestroy(repayment);
     EranosTransfer *const cash = transferOf(eranosTextData(flat.ana), eranosTextData(flat.bob), 100);
     EranosTextCallback const addTransferCallback = {waiting(&waiter), receiveText};
-    eranosGroupAddTransferAsync(flat.group, cash, nullptr, &addTransferCallback);
+    eranosExpenseGroupAddTransferAsync(flat.group, cash, nullptr, &addTransferCallback);
     await(&waiter);
     eranosTransferDestroy(cash);
     EranosText *const addedTransfer = waiter.text;
     EranosTransferCallback const removeTransferCallback = {waiting(&waiter), receiveTransfer};
-    eranosGroupRemoveTransferAsync(flat.group, eranosTextData(addedTransfer), nullptr, &removeTransferCallback);
+    eranosExpenseGroupRemoveTransferAsync(flat.group, eranosTextData(addedTransfer), nullptr, &removeTransferCallback);
     await(&waiter);
     eranosTextDestroy(addedTransfer);
     checkThat(check, nullptr != waiter.object, "an added transfer, removed");
     eranosTransferDestroy(waiter.object);
     EranosUnitCallback const setNameCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupSetNameAsync(flat.group, "Home", nullptr, &setNameCallback);
+    eranosExpenseGroupSetNameAsync(flat.group, "Home", nullptr, &setNameCallback);
     await(&waiter);
     EranosUnitCallback const setDescriptionCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupSetDescriptionAsync(flat.group, "", nullptr, &setDescriptionCallback);
+    eranosExpenseGroupSetDescriptionAsync(flat.group, "", nullptr, &setDescriptionCallback);
     await(&waiter);
     EranosOptionalTextCallback const clearedCallback = {waiting(&waiter), receiveText};
-    eranosGroupDescriptionAsync(flat.group, nullptr, &clearedCallback);
+    eranosExpenseGroupDescriptionAsync(flat.group, nullptr, &clearedCallback);
     await(&waiter);
     checkThat(check, nullptr == waiter.error && nullptr == waiter.text, "a cleared description is none");
     EranosUnitCallback const setLanguageCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupSetLanguageAsync(flat.group, "ro-RO", nullptr, &setLanguageCallback);
+    eranosExpenseGroupSetLanguageAsync(flat.group, "ro-RO", nullptr, &setLanguageCallback);
     await(&waiter);
     EranosUnitCallback const clearLanguageCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupClearLanguageAsync(flat.group, nullptr, &clearLanguageCallback);
+    eranosExpenseGroupClearLanguageAsync(flat.group, nullptr, &clearLanguageCallback);
     await(&waiter);
-    checkSucceeded(check, eranosGroupName(flat.group, text), "the name");
+    checkSucceeded(check, eranosExpenseGroupName(flat.group, text), "the name");
     checkThat(check, isText(text, "Home"), "as set");
     EranosCurrencyRateList *const rates = eranosCurrencyRateListCreate();
     EranosCurrencyRate *rate = nullptr;
     eranosErrorDestroy(eranosCurrencyRateCreate("EUR", "5", &rate));
     eranosCurrencyRateListPush(rates, rate);
     EranosUnitCallback const changeCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupChangeCurrencyAsync(flat.group, "RON", rates, nullptr, &changeCallback);
+    eranosExpenseGroupChangeCurrencyAsync(flat.group, "RON", rates, nullptr, &changeCallback);
     await(&waiter);
-    checkSucceeded(check, eranosGroupCurrency(flat.group, text), "the currency");
+    checkSucceeded(check, eranosExpenseGroupCurrency(flat.group, text), "the currency");
     checkThat(check, nullptr == waiter.error && isText(text, "RON"), "changed");
     eranosCurrencyRateDestroy(rate);
     eranosCurrencyRateListDestroy(rates);
     EranosMemberCallback const failingCallback = {waiting(&waiter), receiveMember};
-    eranosGroupRemoveMemberAsync(flat.group, "0199a000-0000-7000-8000-00000000ffff", nullptr, &failingCallback);
+    eranosExpenseGroupRemoveMemberAsync(flat.group, "0199a000-0000-7000-8000-00000000ffff", nullptr, &failingCallback);
     await(&waiter);
-    checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_UNKNOWN_MEMBER) && nullptr == waiter.object,
+    checkThat(check,
+              isFailure(waiter.error, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNKNOWN_MEMBER) && nullptr == waiter.object,
               "a call that fails reports its error and no value");
     EranosUnitCallback const failingUnitCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupSetNameAsync(flat.group, " ", nullptr, &failingUnitCallback);
+    eranosExpenseGroupSetNameAsync(flat.group, " ", nullptr, &failingUnitCallback);
     await(&waiter);
-    checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_GROUP, ERANOS_FAILURE_GROUP_EMPTY_NAME), "a change that fails reports its error");
+    checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME),
+              "a change that fails reports its error");
     EranosMember *dan = nullptr;
     eranosErrorDestroy(eranosMemberCreate("Dan", &dan));
     eranosErrorDestroy(eranosMemberSetId(dan, "0199a000-0000-7000-8000-00000000ffff"));
     EranosTextCallback const failingTextCallback = {waiting(&waiter), receiveText};
-    eranosGroupAddMemberAsync(flat.group, dan, nullptr, &failingTextCallback);
+    eranosExpenseGroupAddMemberAsync(flat.group, dan, nullptr, &failingTextCallback);
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_IDENTIFIER_GIVEN) && nullptr == waiter.text, "a call that returns text reports no text");
     eranosMemberDestroy(dan);
-    EranosGroupCallback const brokenCallback = {waiting(&waiter), receiveGroup};
-    eranosGroupLoadAsync("{", nullptr, &brokenCallback);
+    EranosExpenseGroupCallback const brokenCallback = {waiting(&waiter), receiveGroup};
+    eranosExpenseGroupLoadAsync("{", nullptr, &brokenCallback);
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_INVALID_JSON) && nullptr == waiter.object, "a load that fails");
     eranosTextDestroy(text);
@@ -2056,58 +2070,58 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
     Waiter waiter;
-    EranosGroupReaderCallback const readerCallback = {waiting(&waiter), receiveReader};
-    eranosGroupReadAsync(flat.group, nullptr, &readerCallback);
+    EranosExpenseGroupReaderCallback const readerCallback = {waiting(&waiter), receiveReader};
+    eranosExpenseGroupReadAsync(flat.group, nullptr, &readerCallback);
     await(&waiter);
-    EranosGroupReader *const reader = waiter.object;
+    EranosExpenseGroupReader *const reader = waiter.object;
     checkThat(check, nullptr == waiter.error && nullptr != reader, "a read handle from an asynchronous call");
-    checkSucceeded(check, eranosGroupReaderName(reader, text), "the name");
+    checkSucceeded(check, eranosExpenseGroupReaderName(reader, text), "the name");
     checkThat(check, isText(text, "Flat"), "the group's");
-    checkSucceeded(check, eranosGroupReaderId(reader, text), "the identifier");
-    checkSucceeded(check, eranosGroupReaderCurrency(reader, text), "the currency");
+    checkSucceeded(check, eranosExpenseGroupReaderId(reader, text), "the identifier");
+    checkSucceeded(check, eranosExpenseGroupReaderCurrency(reader, text), "the currency");
     checkThat(check, isText(text, "EUR"), "the euro");
-    checkSucceeded(check, eranosGroupReaderDescription(reader, text), "the description");
+    checkSucceeded(check, eranosExpenseGroupReaderDescription(reader, text), "the description");
     checkThat(check, isText(text, "Rent"), "as given");
-    checkSucceeded(check, eranosGroupReaderLanguage(reader, text), "the language");
+    checkSucceeded(check, eranosExpenseGroupReaderLanguage(reader, text), "the language");
     checkThat(check, isText(text, "pt-PT"), "as given");
-    checkSucceeded(check, eranosGroupReaderSave(reader, text), "the saved group");
+    checkSucceeded(check, eranosExpenseGroupReaderSave(reader, text), "the saved group");
     EranosCategoryList *categories = nullptr;
-    checkSucceeded(check, eranosGroupReaderCategories(reader, &categories), "the categories");
+    checkSucceeded(check, eranosExpenseGroupReaderCategories(reader, &categories), "the categories");
     EranosCategory *category = nullptr;
-    checkSucceeded(check, eranosGroupReaderCategory(reader, eranosTextData(flat.food), &category), "a category");
+    checkSucceeded(check, eranosExpenseGroupReaderCategory(reader, eranosTextData(flat.food), &category), "a category");
     EranosExpenseList *expenses = nullptr;
-    checkSucceeded(check, eranosGroupReaderExpenses(reader, &expenses), "the expenses");
+    checkSucceeded(check, eranosExpenseGroupReaderExpenses(reader, &expenses), "the expenses");
     EranosExpense *expense = nullptr;
-    checkSucceeded(check, eranosGroupReaderExpense(reader, eranosTextData(flat.dinner), &expense), "an expense");
+    checkSucceeded(check, eranosExpenseGroupReaderExpense(reader, eranosTextData(flat.dinner), &expense), "an expense");
     EranosExpenseShares *shares = nullptr;
-    checkSucceeded(check, eranosGroupReaderExpenseShares(reader, eranosTextData(flat.dinner), &shares), "its shares");
+    checkSucceeded(check, eranosExpenseGroupReaderExpenseShares(reader, eranosTextData(flat.dinner), &shares), "its shares");
     EranosSummary *summary = nullptr;
-    checkSucceeded(check, eranosGroupReaderSummary(reader, &summary), "the summary");
+    checkSucceeded(check, eranosExpenseGroupReaderSummary(reader, &summary), "the summary");
     EranosMemberList *members = nullptr;
-    checkSucceeded(check, eranosGroupReaderMembers(reader, &members), "the members");
+    checkSucceeded(check, eranosExpenseGroupReaderMembers(reader, &members), "the members");
     EranosMember *member = nullptr;
-    checkSucceeded(check, eranosGroupReaderMember(reader, eranosTextData(flat.ana), &member), "a member");
+    checkSucceeded(check, eranosExpenseGroupReaderMember(reader, eranosTextData(flat.ana), &member), "a member");
     bool archived = true;
-    checkSucceeded(check, eranosGroupReaderIsArchived(reader, eranosTextData(flat.ana), &archived), "whether a member is archived");
+    checkSucceeded(check, eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.ana), &archived), "whether a member is archived");
     EranosSettlement *settlement = nullptr;
-    checkSucceeded(check, eranosGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), "a settlement");
+    checkSucceeded(check, eranosExpenseGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), "a settlement");
     EranosTransferList *transfers = nullptr;
-    checkSucceeded(check, eranosGroupReaderTransfers(reader, &transfers), "the transfers");
+    checkSucceeded(check, eranosExpenseGroupReaderTransfers(reader, &transfers), "the transfers");
     EranosTransfer *transfer = nullptr;
-    checkSucceeded(check, eranosGroupReaderTransfer(reader, eranosTextData(flat.repayment), &transfer), "a transfer");
+    checkSucceeded(check, eranosExpenseGroupReaderTransfer(reader, eranosTextData(flat.repayment), &transfer), "a transfer");
     EranosMoney *amount = nullptr;
-    checkSucceeded(check, eranosGroupReaderTransferAmount(reader, eranosTextData(flat.repayment), &amount), "its amount");
+    checkSucceeded(check, eranosExpenseGroupReaderTransferAmount(reader, eranosTextData(flat.repayment), &amount), "its amount");
     checkThat(check,
               2 == eranosCategoryListLength(categories) && nullptr != category && 1 == eranosExpenseListLength(expenses) && nullptr != expense &&
                   nullptr != shares && nullptr != summary && 2 == eranosMemberListLength(members) && nullptr != member && !archived &&
                   nullptr != settlement && 1 == eranosTransferListLength(transfers) && nullptr != transfer && isAmount(amount, 1'000, "EUR"),
               "every read sees the group");
-    eranosGroupReaderRelease(reader);
-    EranosError *const released = eranosGroupReaderName(reader, text);
+    eranosExpenseGroupReaderRelease(reader);
+    EranosError *const released = eranosExpenseGroupReaderName(reader, text);
     checkThat(check, isKind(released, ERANOS_ERROR_KIND_RELEASED), "a read after the release");
-    EranosGroupReader *synchronous = nullptr;
-    checkSucceeded(check, eranosGroupRead(flat.group, &synchronous), "a read handle from a synchronous call");
-    eranosGroupReaderDestroy(synchronous);
+    EranosExpenseGroupReader *synchronous = nullptr;
+    checkSucceeded(check, eranosExpenseGroupRead(flat.group, &synchronous), "a read handle from a synchronous call");
+    eranosExpenseGroupReaderDestroy(synchronous);
     eranosTransferDestroy(transfer);
     eranosTransferListDestroy(transfers);
     eranosSettlementDestroy(settlement);
@@ -2119,7 +2133,7 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     eranosExpenseListDestroy(expenses);
     eranosCategoryDestroy(category);
     eranosCategoryListDestroy(categories);
-    eranosGroupReaderDestroy(reader);
+    eranosExpenseGroupReaderDestroy(reader);
     eranosTextDestroy(text);
     flatDestroy(flat);
 }
@@ -2128,44 +2142,49 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
 /// read that returns an object fails once the handle is released, and gives no object.
 static void everyReadOfAReleasedReaderFails(Check *const check) {
     Flat const flat = flatOf();
-    EranosGroupReader *reader = nullptr;
-    checkSucceeded(check, eranosGroupRead(flat.group, &reader), "a read handle");
-    eranosGroupReaderRelease(reader);
+    EranosExpenseGroupReader *reader = nullptr;
+    checkSucceeded(check, eranosExpenseGroupRead(flat.group, &reader), "a read handle");
+    eranosExpenseGroupReaderRelease(reader);
     char const *const food = eranosTextData(flat.food);
     char const *const dinner = eranosTextData(flat.dinner);
     char const *const repayment = eranosTextData(flat.repayment);
     EranosCategoryList *categories = nullptr;
-    checkThat(check, isKind(eranosGroupReaderCategories(reader, &categories), ERANOS_ERROR_KIND_RELEASED) && nullptr == categories, "the categories");
+    checkThat(check, isKind(eranosExpenseGroupReaderCategories(reader, &categories), ERANOS_ERROR_KIND_RELEASED) && nullptr == categories,
+              "the categories");
     EranosCategory *category = nullptr;
-    checkThat(check, isKind(eranosGroupReaderCategory(reader, food, &category), ERANOS_ERROR_KIND_RELEASED) && nullptr == category, "a category");
+    checkThat(check, isKind(eranosExpenseGroupReaderCategory(reader, food, &category), ERANOS_ERROR_KIND_RELEASED) && nullptr == category,
+              "a category");
     EranosExpenseList *expenses = nullptr;
-    checkThat(check, isKind(eranosGroupReaderExpenses(reader, &expenses), ERANOS_ERROR_KIND_RELEASED) && nullptr == expenses, "the expenses");
+    checkThat(check, isKind(eranosExpenseGroupReaderExpenses(reader, &expenses), ERANOS_ERROR_KIND_RELEASED) && nullptr == expenses, "the expenses");
     EranosExpense *expense = nullptr;
-    checkThat(check, isKind(eranosGroupReaderExpense(reader, dinner, &expense), ERANOS_ERROR_KIND_RELEASED) && nullptr == expense, "an expense");
+    checkThat(check, isKind(eranosExpenseGroupReaderExpense(reader, dinner, &expense), ERANOS_ERROR_KIND_RELEASED) && nullptr == expense,
+              "an expense");
     EranosExpenseShares *shares = nullptr;
-    checkThat(check, isKind(eranosGroupReaderExpenseShares(reader, dinner, &shares), ERANOS_ERROR_KIND_RELEASED) && nullptr == shares,
+    checkThat(check, isKind(eranosExpenseGroupReaderExpenseShares(reader, dinner, &shares), ERANOS_ERROR_KIND_RELEASED) && nullptr == shares,
               "an expense's shares");
     EranosSummary *summary = nullptr;
-    checkThat(check, isKind(eranosGroupReaderSummary(reader, &summary), ERANOS_ERROR_KIND_RELEASED) && nullptr == summary, "the summary");
+    checkThat(check, isKind(eranosExpenseGroupReaderSummary(reader, &summary), ERANOS_ERROR_KIND_RELEASED) && nullptr == summary, "the summary");
     EranosMemberList *members = nullptr;
-    checkThat(check, isKind(eranosGroupReaderMembers(reader, &members), ERANOS_ERROR_KIND_RELEASED) && nullptr == members, "the members");
+    checkThat(check, isKind(eranosExpenseGroupReaderMembers(reader, &members), ERANOS_ERROR_KIND_RELEASED) && nullptr == members, "the members");
     EranosMember *member = nullptr;
-    checkThat(check, isKind(eranosGroupReaderMember(reader, eranosTextData(flat.ana), &member), ERANOS_ERROR_KIND_RELEASED) && nullptr == member,
+    checkThat(check,
+              isKind(eranosExpenseGroupReaderMember(reader, eranosTextData(flat.ana), &member), ERANOS_ERROR_KIND_RELEASED) && nullptr == member,
               "a member");
     EranosSettlement *settlement = nullptr;
     checkThat(check,
-              isKind(eranosGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), ERANOS_ERROR_KIND_RELEASED) &&
+              isKind(eranosExpenseGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), ERANOS_ERROR_KIND_RELEASED) &&
                   nullptr == settlement,
               "a settlement");
     EranosTransferList *transfers = nullptr;
-    checkThat(check, isKind(eranosGroupReaderTransfers(reader, &transfers), ERANOS_ERROR_KIND_RELEASED) && nullptr == transfers, "the transfers");
+    checkThat(check, isKind(eranosExpenseGroupReaderTransfers(reader, &transfers), ERANOS_ERROR_KIND_RELEASED) && nullptr == transfers,
+              "the transfers");
     EranosTransfer *transfer = nullptr;
-    checkThat(check, isKind(eranosGroupReaderTransfer(reader, repayment, &transfer), ERANOS_ERROR_KIND_RELEASED) && nullptr == transfer,
+    checkThat(check, isKind(eranosExpenseGroupReaderTransfer(reader, repayment, &transfer), ERANOS_ERROR_KIND_RELEASED) && nullptr == transfer,
               "a transfer");
     EranosMoney *amount = nullptr;
-    checkThat(check, isKind(eranosGroupReaderTransferAmount(reader, repayment, &amount), ERANOS_ERROR_KIND_RELEASED) && nullptr == amount,
+    checkThat(check, isKind(eranosExpenseGroupReaderTransferAmount(reader, repayment, &amount), ERANOS_ERROR_KIND_RELEASED) && nullptr == amount,
               "a transfer's amount");
-    eranosGroupReaderDestroy(reader);
+    eranosExpenseGroupReaderDestroy(reader);
     flatDestroy(flat);
 }
 
@@ -2174,33 +2193,33 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
 static void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
-    EranosGroupReader *reader = nullptr;
-    checkSucceeded(check, eranosGroupRead(flat.group, &reader), "a read handle");
+    EranosExpenseGroupReader *reader = nullptr;
+    checkSucceeded(check, eranosExpenseGroupRead(flat.group, &reader), "a read handle");
     EranosCancellation *const cancellation = eranosCancellationCreate();
     checkThat(check, !eranosCancellationIsCancelled(cancellation), "a cancellation starts uncancelled");
     EranosCurrencyRateList *const rates = eranosCurrencyRateListCreate();
     Waiter waiter;
     EranosUnitCallback const changeCallback = {waiting(&waiter), receiveUnit};
-    eranosGroupChangeCurrencyAsync(flat.group, "RON", rates, cancellation, &changeCallback);
+    eranosExpenseGroupChangeCurrencyAsync(flat.group, "RON", rates, cancellation, &changeCallback);
     eranosCancellationCancel(cancellation);
     checkThat(check, eranosCancellationIsCancelled(cancellation), "and is cancelled once cancelled");
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_CANCELLED), "the change reports its cancellation");
-    eranosGroupReaderRelease(reader);
-    checkSucceeded(check, eranosGroupCurrency(flat.group, text), "the currency");
+    eranosExpenseGroupReaderRelease(reader);
+    checkSucceeded(check, eranosExpenseGroupCurrency(flat.group, text), "the currency");
     checkThat(check, isText(text, "EUR"), "is still the euro");
     EranosTextCallback const lateCallback = {waiting(&waiter), receiveText};
-    eranosGroupNameAsync(flat.group, cancellation, &lateCallback);
+    eranosExpenseGroupNameAsync(flat.group, cancellation, &lateCallback);
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_CANCELLED) && nullptr == waiter.text,
               "a call given a cancelled cancellation does not run");
     EranosOptionalTextCallback const lateDescriptionCallback = {waiting(&waiter), receiveText};
-    eranosGroupDescriptionAsync(flat.group, cancellation, &lateDescriptionCallback);
+    eranosExpenseGroupDescriptionAsync(flat.group, cancellation, &lateDescriptionCallback);
     await(&waiter);
     checkThat(check, isKind(waiter.error, ERANOS_ERROR_KIND_CANCELLED) && nullptr == waiter.text, "nor one that returns optional text");
     eranosCurrencyRateListDestroy(rates);
     eranosCancellationDestroy(cancellation);
-    eranosGroupReaderDestroy(reader);
+    eranosExpenseGroupReaderDestroy(reader);
     eranosTextDestroy(text);
     flatDestroy(flat);
 }

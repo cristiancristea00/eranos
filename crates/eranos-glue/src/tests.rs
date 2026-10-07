@@ -13,7 +13,7 @@ use super::*;
 #[test]
 fn every_entry_point_refuses_what_it_does_not_take() {
     let item = quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             /// The group's name.
             #[read]
             #[infallible]
@@ -31,14 +31,14 @@ fn every_entry_point_refuses_what_it_does_not_take() {
         calls(
             quote!(),
             quote!(
-                struct GroupCalls;
+                struct ExpenseGroupCalls;
             )
         )
         .is_err()
     );
     assert!(uniffi_objects(item).is_ok());
     let refused = quote! {
-        trait GroupCalls {
+        trait ExpenseGroupCalls {
             const LIMIT: usize;
         }
     };
@@ -46,7 +46,7 @@ fn every_entry_point_refuses_what_it_does_not_take() {
     assert!(uniffi_objects(refused).is_err());
     assert!(
         uniffi_objects(quote!(
-            struct GroupCalls;
+            struct ExpenseGroupCalls;
         ))
         .is_err()
     );
@@ -67,7 +67,7 @@ fn every_entry_point_refuses_what_it_does_not_take() {
 /// A table or a mirror macro would get a name no glue crate calls it by.
 #[test]
 fn names_turn_from_upper_camel_case_into_snake_case() {
-    assert_eq!(snake_case("GroupCalls"), "group_calls");
+    assert_eq!(snake_case("ExpenseGroupCalls"), "expense_group_calls");
     assert_eq!(snake_case("MemberCategoryTotals"), "member_category_totals");
     assert_eq!(snake_case("Money"), "money");
     assert_eq!(snake_case(""), "");

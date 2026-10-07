@@ -10,7 +10,7 @@ import {
     type TransferId,
     CalendarDate,
     Currency,
-    Group,
+    ExpenseGroup,
     Language,
     Money,
     init,
@@ -25,7 +25,7 @@ await initialised;
 export class Flat {
     readonly euro = Currency.of('EUR');
     readonly day = CalendarDate.of(2026, 9, 23);
-    readonly group = Group.create('Flat', this.euro, { description: 'Rent', language: Language.parse('pt-pt') });
+    readonly group = ExpenseGroup.create('Flat', this.euro, { description: 'Rent', language: Language.parse('pt-pt') });
     readonly ana: MemberId = this.group.addMemberSync({ firstName: 'Ana' });
     readonly bob: MemberId = this.group.addMemberSync({ firstName: 'Bob' });
     readonly food: CategoryId = this.group.addCategorySync({ name: 'Food' });

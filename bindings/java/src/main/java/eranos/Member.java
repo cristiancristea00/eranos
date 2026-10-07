@@ -7,9 +7,9 @@ import java.util.Optional;
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * <p>A new member has no identifier; {@link Group#addMember} gives them one. To change a member,
- * read them from the group, edit them through {@link #toBuilder}, and pass the result to {@link
- * Group#replaceMember}.
+ * <p>A new member has no identifier; {@link ExpenseGroup#addMember} gives them one. To change a
+ * member, read them from the group, edit them through {@link #toBuilder}, and pass the result to
+ * {@link ExpenseGroup#replaceMember}.
  */
 public final class Member {
     private final MemberId id;

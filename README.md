@@ -16,32 +16,32 @@ library itself is plain Rust with no I/O and no async runtime.
 
 ## Concepts
 
-| Concept      | Type          | What it is                                                                        |
-| ------------ | ------------- | --------------------------------------------------------------------------------- |
-| Group        | `Group`       | A trip, a day out, or a household: name, currency, language, and everything below |
-| Shared group | `SharedGroup` | A group shared between tasks and threads, each call locking it while it runs      |
-| Member       | `Member`      | A person: first name (required), last name, email, phone, payment accounts        |
-| Account      | `Account`     | Where a member can be paid: an IBAN or a payment-app username                     |
-| Category     | `Category`    | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
-| Expense      | `Expense`     | What was bought: name, cost, payers, split, date, optional tip and category       |
-| Cost         | `Cost`        | An amount in the group currency, or in another one at a fixed exchange rate       |
-| Split        | `Split`       | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
-| Item         | `Item`        | A receipt line of an itemised expense, with its own quantity and split            |
-| Tip          | `Tip`         | A percentage or a fixed amount on top, shared proportionally or equally           |
-| Transfer     | `Transfer`    | Money one member paid another, such as a repayment                                |
-| Summary      | `Summary`     | Spending, paid, consumed, balances, and totals per category, always current       |
-| Settlement   | `Settlement`  | The payments that bring every balance to zero                                     |
+| Concept      | Type                 | What it is                                                                        |
+| ------------ | -------------------- | --------------------------------------------------------------------------------- |
+| Group        | `ExpenseGroup`       | A trip, a day out, or a household: name, currency, language, and everything below |
+| Shared group | `SharedExpenseGroup` | A group shared between tasks and threads, each call locking it while it runs      |
+| Member       | `Member`             | A person: first name (required), last name, email, phone, payment accounts        |
+| Account      | `Account`            | Where a member can be paid: an IBAN or a payment-app username                     |
+| Category     | `Category`           | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
+| Expense      | `Expense`            | What was bought: name, cost, payers, split, date, optional tip and category       |
+| Cost         | `Cost`               | An amount in the group currency, or in another one at a fixed exchange rate       |
+| Split        | `Split`              | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
+| Item         | `Item`               | A receipt line of an itemised expense, with its own quantity and split            |
+| Tip          | `Tip`                | A percentage or a fixed amount on top, shared proportionally or equally           |
+| Transfer     | `Transfer`           | Money one member paid another, such as a repayment                                |
+| Summary      | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |
+| Settlement   | `Settlement`         | The payments that bring every balance to zero                                     |
 
 ## Quick start
 
 ```rust
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, Group, Member, Money, Percentage, SettlementStrategy,
+    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
     Split, Tip,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut group = Group::builder("Lisbon", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;
@@ -108,7 +108,7 @@ flowchart LR
   change leaves the group untouched.
 - **Async without a runtime.** The slow calls, the fewest-payments plan, a
   currency change, and loading, also come as futures that yield while they
-  work, for any executor or none, and a `SharedGroup` shares a group
+  work, for any executor or none, and a `SharedExpenseGroup` shares a group
   between tasks and threads behind a read-write lock
   ([docs/ARCHITECTURE.md § 12](docs/ARCHITECTURE.md#12-async-and-concurrency)).
 - **Four settlement strategies**, chosen by the caller:
@@ -206,47 +206,47 @@ format, and the rounding results are all part of the contract:
 
 ```text
 eranos/
-├── .github/                   the CI workflow; Dependabot and zizmor configuration
-├── Cargo.toml                 workspace manifest: pinned dependencies, lints, profiles
+├── .github/                    the CI workflow; Dependabot and zizmor configuration
+├── Cargo.toml                  workspace manifest: pinned dependencies, lints, profiles
 ├── bindings/
-│   ├── c/                     the C package, a header over the C API Diplomat generates
-│   ├── cpp/                   the C++ package, a header-only layer over Diplomat's C++ classes
-│   ├── java/                  the Java package, over the UniFFI glue
-│   ├── kmp/                   the Kotlin Multiplatform package, over the glue gobley generates
-│   ├── kotlin/                the Kotlin package for Android and the JVM, over the UniFFI glue
-│   ├── python/                the Python package, over the UniFFI glue
-│   ├── swift/                 the Swift package for Apple platforms, over the UniFFI glue
-│   └── typescript/            the npm package for browsers and Node, over the WebAssembly glue
+│   ├── c/                      the C package, a header over the C API Diplomat generates
+│   ├── cpp/                    the C++ package, a header-only layer over Diplomat's C++ classes
+│   ├── java/                   the Java package, over the UniFFI glue
+│   ├── kmp/                    the Kotlin Multiplatform package, over the glue gobley generates
+│   ├── kotlin/                 the Kotlin package for Android and the JVM, over the UniFFI glue
+│   ├── python/                 the Python package, over the UniFFI glue
+│   ├── swift/                  the Swift package for Apple platforms, over the UniFFI glue
+│   └── typescript/             the npm package for browsers and Node, over the WebAssembly glue
 ├── crates/
-│   ├── eranos/                the facade callers depend on
-│   │   ├── src/               re-exports of the types the internal crates hold
-│   │   ├── tests/             scenarios, properties, persistence, errors, api (public API only)
-│   │   ├── examples/          runnable scenarios
-│   │   └── benches/           criterion benchmarks
-│   ├── eranos-core/           identifiers and text rules
-│   ├── eranos-calendar/       dates and times of day
-│   ├── eranos-money/          amounts, currencies, rates, ratios, and apportionment
-│   ├── eranos-account/        payment accounts: IBANs and usernames
-│   ├── eranos-contact/        emails and phone numbers
-│   ├── eranos-member/         members
-│   ├── eranos-category/       categories
-│   ├── eranos-ledger/         totals and balances
-│   ├── eranos-expense/        expenses, splits, items, and tips
-│   ├── eranos-settlement/     settlement strategies
-│   ├── eranos-transfer/       transfers
-│   ├── eranos-group/          groups and their saved form
-│   ├── eranos-bindings/       what every binding exposes, in plain Rust
-│   ├── eranos-glue/           the model of the group calls and records, and the glue written from it
-│   ├── eranos-glue-macros/    the proc macros the binding core and the UniFFI glue invoke
-│   ├── eranos-capi/           the bindings for C and C++, through Diplomat
-│   ├── eranos-kmp/            the bindings for Kotlin Multiplatform, through UniFFI and gobley
-│   ├── eranos-uniffi/         the bindings for Swift, Kotlin, Java, and Python, through UniFFI
-│   ├── eranos-uniffi-bindgen/ UniFFI's generators for those languages
-│   ├── eranos-web/            the bindings for browsers and Node, through UniFFI and WebAssembly
-│   └── xtask/                 the repository's automation: `cargo xtask gates`, and `generate` for the C bridge
-├── docs/                      architecture, bindings, development, testing, versioning
-├── deny.toml                  the rules of the CI dependency audit
-└── AGENTS.md                  conventions and gates (CLAUDE.md and GEMINI.md link to it)
+│   ├── eranos/                 the facade callers depend on
+│   │   ├── src/                re-exports of the types the internal crates hold
+│   │   ├── tests/              scenarios, properties, persistence, errors, api (public API only)
+│   │   ├── examples/           runnable scenarios
+│   │   └── benches/            criterion benchmarks
+│   ├── eranos-core/            identifiers and text rules
+│   ├── eranos-calendar/        dates and times of day
+│   ├── eranos-money/           amounts, currencies, rates, ratios, and apportionment
+│   ├── eranos-account/         payment accounts: IBANs and usernames
+│   ├── eranos-contact/         emails and phone numbers
+│   ├── eranos-member/          members
+│   ├── eranos-category/        categories
+│   ├── eranos-ledger/          totals and balances
+│   ├── eranos-expense/         expenses, splits, items, and tips
+│   ├── eranos-settlement/      settlement strategies
+│   ├── eranos-transfer/        transfers
+│   ├── eranos-expense-group/   groups and their saved form
+│   ├── eranos-bindings/        what every binding exposes, in plain Rust
+│   ├── eranos-glue/            the model of the group calls and records, and the glue written from it
+│   ├── eranos-glue-macros/     the proc macros the binding core and the UniFFI glue invoke
+│   ├── eranos-capi/            the bindings for C and C++, through Diplomat
+│   ├── eranos-kmp/             the bindings for Kotlin Multiplatform, through UniFFI and gobley
+│   ├── eranos-uniffi/          the bindings for Swift, Kotlin, Java, and Python, through UniFFI
+│   ├── eranos-uniffi-bindgen/  UniFFI's generators for those languages
+│   ├── eranos-web/             the bindings for browsers and Node, through UniFFI and WebAssembly
+│   └── xtask/                  the repository's automation: `cargo xtask gates`, and `generate` for the C bridge
+├── docs/                       architecture, bindings, development, testing, versioning
+├── deny.toml                   the rules of the CI dependency audit
+└── AGENTS.md                   conventions and gates (CLAUDE.md and GEMINI.md link to it)
 ```
 
 Every crate keeps each module's unit tests in `<module>/tests.rs`;

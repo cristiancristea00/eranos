@@ -28,9 +28,9 @@ use eranos_money::{Currency, Money, MoneyError};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Balance, Currency, CalendarDate, Expense, Group, Member, Money, Split};
+/// use eranos::{Balance, Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Split};
 ///
-/// let mut group = Group::builder("Weekend", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Weekend", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
@@ -279,9 +279,9 @@ pub trait FromBalance: Sized {
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Expense, Group, Member, Money, Split};
+/// use eranos::{Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Split};
 ///
-/// let mut group = Group::builder("Trip", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Trip", Currency::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let carol = group.add_member(Member::builder("Carol").build()?)?;

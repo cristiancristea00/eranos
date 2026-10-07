@@ -18,7 +18,10 @@ fn generate_writes_every_file_into_a_cleared_directory_and_lays_it_out() {
     assert_eq!(recorder.created, [directory()]);
     assert_eq!(
         recorder.written,
-        [directory().join("group.rs"), directory().join("records.rs")]
+        [
+            directory().join("expense_group.rs"),
+            directory().join("records.rs")
+        ]
     );
     assert_eq!(recorder.steps, [format()]);
 }

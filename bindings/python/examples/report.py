@@ -3,7 +3,7 @@
 from collections.abc import Callable, Iterable
 from typing import ClassVar, Protocol, assert_never
 
-from eranos import EranosError, ExpenseSplit, Group, ItemisedExpenseSplit, MemberId, MemberSummary, Summary, WholeExpenseSplit
+from eranos import EranosError, ExpenseSplit, ExpenseGroup, ItemisedExpenseSplit, MemberId, MemberSummary, Summary, WholeExpenseSplit
 
 
 def print_lines(*lines: str) -> None:
@@ -95,7 +95,7 @@ def print_table[R: Row](kind: type[R], rows: Iterable[R], numbers_from: int) -> 
     print_lines(border('╭', '┬', '╮'), *lines(header), border('├', '┼', '┤'), *(line for row in body for line in lines(row)), border('╰', '┴', '╯'))
 
 
-def names(group: Group, members: Iterable[MemberId]) -> str:
+def names(group: ExpenseGroup, members: Iterable[MemberId]) -> str:
     """
     Join the first names of members in group with commas, writing ``?`` for one the group does not hold.
 

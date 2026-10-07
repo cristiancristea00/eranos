@@ -73,12 +73,12 @@ static Line rateLine(EranosCost *const cost) {
 }
 
 /// @p amount, or zero of the currency of @p group when it is nullptr.
-static Line amountOrZero(EranosGroup const *const group, EranosMoney *const amount) {
+static Line amountOrZero(EranosExpenseGroup const *const group, EranosMoney *const amount) {
     if (nullptr != amount) {
         return moneyLine(amount);
     }
     EranosText *const currency = eranosTextCreate();
-    must(eranosGroupCurrency(group, currency));
+    must(eranosExpenseGroupCurrency(group, currency));
     EranosMoney *zero = nullptr;
     must(eranosMoneyCreate(0, eranosTextData(currency), &zero));
     eranosTextDestroy(currency);
@@ -86,15 +86,15 @@ static Line amountOrZero(EranosGroup const *const group, EranosMoney *const amou
 }
 
 /// Adds every expense of @p group to @p table, as entered and in the group currency.
-static void addExpenses(EranosGroup const *const group, Table *const table) {
+static void addExpenses(EranosExpenseGroup const *const group, Table *const table) {
     EranosExpenseList *expenses = nullptr;
-    must(eranosGroupExpenses(group, &expenses));
+    must(eranosExpenseGroupExpenses(group, &expenses));
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
         (void)eranosExpenseId(expense, text);
         EranosExpenseShares *shares = nullptr;
-        must(eranosGroupExpenseShares(group, eranosTextData(text), &shares));
+        must(eranosExpenseGroupExpenseShares(group, eranosTextData(text), &shares));
         eranosExpenseName(expense, text);
         EranosSplit *const payers = eranosExpensePayers(expense);
         Members const paidBy = splitMembers(payers);
@@ -116,15 +116,15 @@ static void addExpenses(EranosGroup const *const group, Table *const table) {
 }
 
 /// Adds every transfer of @p group to @p table, as entered and in the group currency.
-static void addTransfers(EranosGroup const *const group, Table *const table) {
+static void addTransfers(EranosExpenseGroup const *const group, Table *const table) {
     EranosTransferList *transfers = nullptr;
-    must(eranosGroupTransfers(group, &transfers));
+    must(eranosExpenseGroupTransfers(group, &transfers));
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosTransferListLength(transfers) > index; ++index) {
         EranosTransfer *const transfer = eranosTransferListGet(transfers, index);
         (void)eranosTransferId(transfer, text);
         EranosMoney *converted = nullptr;
-        must(eranosGroupTransferAmount(group, eranosTextData(text), &converted));
+        must(eranosExpenseGroupTransferAmount(group, eranosTextData(text), &converted));
         eranosTransferTo(transfer, text);
         Line const to = firstName(group, eranosTextData(text));
         eranosTransferFrom(transfer, text);
@@ -144,7 +144,7 @@ static void addTransfers(EranosGroup const *const group, Table *const table) {
 }
 
 /// Prints every expense and transfer of @p group, as entered and in the group currency.
-static void printEntries(EranosGroup const *const group) {
+static void printEntries(EranosExpenseGroup const *const group) {
     Table *const table = entryTable(2);
     addExpenses(group, table);
     addTransfers(group, table);
@@ -152,11 +152,11 @@ static void printEntries(EranosGroup const *const group) {
 }
 
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
-static void printBalances(EranosGroup const *const group) {
+static void printBalances(EranosExpenseGroup const *const group) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberList *members = nullptr;
-    must(eranosGroupMembers(group, &members));
+    must(eranosExpenseGroupMembers(group, &members));
     Table *const table = balanceTable(1);
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
@@ -183,27 +183,27 @@ static void printBalances(EranosGroup const *const group) {
 }
 
 /// The total that @p group spent, as the library writes it.
-static Line totalSpent(EranosGroup const *const group) {
+static Line totalSpent(EranosExpenseGroup const *const group) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     Line const line = moneyLine(eranosSummaryTotalSpent(summary));
     eranosSummaryDestroy(summary);
     return line;
 }
 
 /// The currency of @p group, as its code.
-static Line currencyOf(EranosGroup const *const group) {
+static Line currencyOf(EranosExpenseGroup const *const group) {
     EranosText *const text = eranosTextCreate();
-    must(eranosGroupCurrency(group, text));
+    must(eranosExpenseGroupCurrency(group, text));
     Line const line = textLine(text);
     eranosTextDestroy(text);
     return line;
 }
 
 /// Whether the balance of @p member in @p group is of @p kind, and of @p minorUnits when it has an amount.
-static bool balanceIs(EranosGroup const *const group, Id const member, EranosBalanceKind const kind, int64_t const minorUnits) {
+static bool balanceIs(EranosExpenseGroup const *const group, Id const member, EranosBalanceKind const kind, int64_t const minorUnits) {
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
     check(nullptr != totals, "the member has totals");
     EranosBalance *const balance = eranosMemberSummaryBalance(totals);
@@ -217,7 +217,7 @@ static bool balanceIs(EranosGroup const *const group, Id const member, EranosBal
 }
 
 /// Adds the fuel in RON, the dinner in HUF, and the ferry in EUR, which Ana and Bob share.
-static void expenses(EranosGroup *const group, Id const ana, Id const bob) {
+static void expenses(EranosExpenseGroup *const group, Id const ana, Id const bob) {
     section("1. Expenses in three currencies");
     Members const both = {.count = 2, .ids = {ana, bob}};
     addExpense(group, expenseOf("Fuel", convertedCost(amountOf("400.00", "RON"), "0.2"), soleSplit(ana), equalSplit(&both),
@@ -234,7 +234,7 @@ static void expenses(EranosGroup *const group, Id const ana, Id const bob) {
 }
 
 /// Adds Ana's repayment to Bob, in cash and in RON.
-static void repayment(EranosGroup *const group, Id const ana, Id const bob) {
+static void repayment(EranosExpenseGroup *const group, Id const ana, Id const bob) {
     section("3. A repayment in cash, in another currency");
     EranosTransfer *const transfer =
         transferOf(ana, bob, convertedCost(amountOf("100.00", "RON"), "0.2"), (EranosCalendarDate){.year = 2026, .month = 8, .day = 4});
@@ -248,7 +248,7 @@ static void repayment(EranosGroup *const group, Id const ana, Id const bob) {
 }
 
 /// Moves the books of @p group to RON.
-static void newCurrency(EranosGroup *const group) {
+static void newCurrency(EranosExpenseGroup *const group) {
     section("4. Moving the books to another currency");
     printLine("Changing the group currency needs a rate into the new currency for every other\n"
               "currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n"
@@ -261,7 +261,7 @@ static void newCurrency(EranosGroup *const group) {
     must(eranosCurrencyRateCreate("HUF", "0.0125", &rate));
     eranosCurrencyRateListPush(rates, rate);
     eranosCurrencyRateDestroy(rate);
-    must(eranosGroupChangeCurrency(group, "RON", rates));
+    must(eranosExpenseGroupChangeCurrency(group, "RON", rates));
     eranosCurrencyRateListDestroy(rates);
     printEntries(group);
     Line const currency = currencyOf(group);
@@ -271,16 +271,16 @@ static void newCurrency(EranosGroup *const group) {
 }
 
 int main(void) {
-    EranosNewGroup *details = nullptr;
-    must(eranosNewGroupCreate("Danube road trip", "EUR", &details));
-    EranosGroup *group = nullptr;
-    must(eranosGroupCreate(details, &group));
-    eranosNewGroupDestroy(details);
+    EranosNewExpenseGroup *details = nullptr;
+    must(eranosNewExpenseGroupCreate("Danube road trip", "EUR", &details));
+    EranosExpenseGroup *group = nullptr;
+    must(eranosExpenseGroupCreate(details, &group));
+    eranosNewExpenseGroupDestroy(details);
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
 
     EranosText *const name = eranosTextCreate();
-    must(eranosGroupName(group, name));
+    must(eranosExpenseGroupName(group, name));
     printFormatted("%s: expenses in several currencies", eranosTextData(name));
     eranosTextDestroy(name);
     printLine("════════════════════════════════════════════════");
@@ -305,12 +305,12 @@ int main(void) {
     newCurrency(group);
     // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
     EranosSummary *summary = nullptr;
-    must(eranosGroupSummary(group, &summary));
+    must(eranosExpenseGroupSummary(group, &summary));
     EranosMoney *const total = eranosSummaryTotalSpent(summary);
     check(100'000 == eranosMoneyMinorUnits(total), "the trip cost 1000.00 RON");
     check(balanceIs(group, bob, ERANOS_BALANCE_KIND_SETTLED, 0), "Bob is still settled");
     eranosMoneyDestroy(total);
     eranosSummaryDestroy(summary);
-    eranosGroupDestroy(group);
+    eranosExpenseGroupDestroy(group);
     return EXIT_SUCCESS;
 }

@@ -16,8 +16,8 @@ import eranos.CategoryId;
 import eranos.Currency;
 import eranos.Email;
 import eranos.EranosException;
-import eranos.Group;
-import eranos.GroupFailure;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupFailure;
 import eranos.Iban;
 import eranos.Language;
 import eranos.Member;
@@ -44,10 +44,10 @@ import java.util.stream.Stream;
 final class Members {
     private Members() {}
 
-    static Group theGroup() throws EranosException {
+    static ExpenseGroup theGroup() throws EranosException {
         section("1. The group");
-        Group group =
-                Group.builder("Lisbon", Currency.of("EUR"))
+        ExpenseGroup group =
+                ExpenseGroup.builder("Lisbon", Currency.of("EUR"))
                         .description("A week by the Atlantic")
                         .language(Language.parse("pt-pt"))
                         .build();
@@ -73,7 +73,7 @@ final class Members {
                 """
                         .formatted(group.currency(), language, message(blank)));
 
-        check(Optional.of(new GroupFailure.EmptyName()).equals(groupFailure(blank)));
+        check(Optional.of(new ExpenseGroupFailure.EmptyName()).equals(groupFailure(blank)));
         check("Lisbon and Porto".equals(group.name()));
         check("pt-PT".equals(language));
         return group;
@@ -88,7 +88,7 @@ final class Members {
         };
     }
 
-    static void printMembers(Group group) {
+    static void printMembers(ExpenseGroup group) {
         List<MemberRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             rows.add(
@@ -102,7 +102,7 @@ final class Members {
         printTable(MemberRow.HEADERS, rows, 4);
     }
 
-    static void validation(Group group) {
+    static void validation(ExpenseGroup group) {
         System.out.print(
                 """
                 IBANs are checked against the SWIFT registry and their mod-97 check digits,
@@ -149,7 +149,7 @@ final class Members {
         printTable(CheckRow.HEADERS, rows, 3);
     }
 
-    static People members(Group group) throws EranosException {
+    static People members(ExpenseGroup group) throws EranosException {
         section("2. Members");
         Account bank =
                 new Account(
@@ -193,7 +193,7 @@ final class Members {
         return new People(ana, bob, carol, dan, eva, filip);
     }
 
-    static Categories addCategories(Group group) throws EranosException {
+    static Categories addCategories(ExpenseGroup group) throws EranosException {
         section("3. Categories");
         CategoryId food = group.addCategory(new Category("Food"));
         CategoryId lodging = group.addCategory(new Category("Lodging"));
@@ -221,9 +221,9 @@ final class Members {
                 2);
 
         check(
-                Optional.of(new GroupFailure.DuplicateCategoryName(food))
+                Optional.of(new ExpenseGroupFailure.DuplicateCategoryName(food))
                         .equals(groupFailure(homonym)));
-        check(Optional.of(new GroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
+        check(Optional.of(new ExpenseGroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
         check(Optional.of("Getting around").equals(group.category(transport).map(Category::name)));
         return new Categories(food, lodging, transport);
     }

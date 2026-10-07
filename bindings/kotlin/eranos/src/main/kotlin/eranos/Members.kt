@@ -3,8 +3,8 @@ package eranos
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * A new member has no identifier; [Group.add] gives them one. To change a member, read them from the group, [copy] them with
- * the changes, and pass the copy to [Group.replace].
+ * A new member has no identifier; [ExpenseGroup.add] gives them one. To change a member, read them from the group, [copy] them with
+ * the changes, and pass the copy to [ExpenseGroup.replace].
  */
 public class Member internal constructor(
     /** The identifier: `null` for a member to add, set for one the group holds. */

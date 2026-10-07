@@ -6,11 +6,11 @@ import {
     type Balance,
     type Expense,
     type ExpenseId,
-    type Group,
+    type ExpenseGroup,
     Currency,
     ExchangeRate,
     ExpenseError,
-    GroupError,
+    ExpenseGroupError,
     Money,
     Percentage,
     TimeOfDay,
@@ -44,7 +44,7 @@ const statusColumns: Columns<StatusRow> = [
     { header: 'Balance', text: (row) => formatBalance(row.balance) },
 ];
 
-export function anotherCurrency(group: Group, people: People, categories: Categories): void {
+export function anotherCurrency(group: ExpenseGroup, people: People, categories: Categories): void {
     section('5. Another currency');
     const euro = Currency.of('EUR');
     const rate = ExchangeRate.parse('0.2');
@@ -86,7 +86,7 @@ export function anotherCurrency(group: Group, people: People, categories: Catego
 }
 
 /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
-function replaceAndRemove(group: Group, people: People, categories: Categories, seafood: ExpenseId): EditRow[] {
+function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categories, seafood: ExpenseId): EditRow[] {
     // The dinner's receipt said 99.00.
     const dinner = group.expenseSync(seafood);
     assert.ok(undefined !== dinner, 'the dinner was added');
@@ -136,7 +136,7 @@ function replaceAndRemove(group: Group, people: People, categories: Categories, 
     ];
 }
 
-export function edits(group: Group, people: People, categories: Categories, seafood: ExpenseId): void {
+export function edits(group: ExpenseGroup, people: People, categories: Categories, seafood: ExpenseId): void {
     section('6. Edits');
     const changes = replaceAndRemove(group, people, categories, seafood);
     printLines(
@@ -194,12 +194,12 @@ export function edits(group: Group, people: People, categories: Categories, seaf
     assert.ok(unbalanced instanceof ExpenseError);
     assert.deepEqual(unbalanced.failure, { kind: 'percentagesDoNotAddUp', totalBasisPoints: 9_999 });
     assert.ok(toHerself instanceof TransferError && 'sameMember' === toHerself.failure.kind);
-    assert.ok(unrated instanceof GroupError);
+    assert.ok(unrated instanceof ExpenseGroupError);
     assert.deepEqual(unrated.failure, { kind: 'missingExchangeRate', currency: Currency.of('RON') });
     assert.deepEqual(group.summarySync(), before);
 }
 
-export function comingsAndGoings(group: Group, people: People): void {
+export function comingsAndGoings(group: ExpenseGroup, people: People): void {
     section('7. Members come and go');
     const removed = group.removeMemberSync(people.filip);
     group.archiveMemberSync(people.dan);
@@ -242,8 +242,8 @@ export function comingsAndGoings(group: Group, people: People): void {
 
     assert.equal(removed.firstName, 'Filip');
     assert.equal(group.memberSync(people.filip), undefined);
-    assert.ok(farewell instanceof GroupError);
+    assert.ok(farewell instanceof ExpenseGroupError);
     assert.deepEqual(farewell.failure, { kind: 'archivedMember', member: people.dan });
-    assert.ok(inUse instanceof GroupError && 'memberInUse' === inUse.failure.kind);
+    assert.ok(inUse instanceof ExpenseGroupError && 'memberInUse' === inUse.failure.kind);
     assert.ok(!group.isArchivedSync(people.dan));
 }

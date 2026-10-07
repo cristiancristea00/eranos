@@ -6,9 +6,9 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.ExchangeRate;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupFailure;
 import eranos.ExpenseId;
-import eranos.Group;
-import eranos.GroupFailure;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.Money;
@@ -71,7 +71,7 @@ final class Tour {
         return CalendarDate.of(2026, 10, date);
     }
 
-    static String name(Group group, MemberId member) throws EranosException {
+    static String name(ExpenseGroup group, MemberId member) throws EranosException {
         return group.member(member).map(Member::firstName).orElse("?");
     }
 
@@ -108,10 +108,10 @@ final class Tour {
     }
 
     /** The failure of the group that {@code refused} holds, if it is the group's. */
-    static Optional<GroupFailure> groupFailure(Optional<EranosException> refused) {
-        return refused.filter(EranosException.Group.class::isInstance)
-                .map(EranosException.Group.class::cast)
-                .map(EranosException.Group::failure);
+    static Optional<ExpenseGroupFailure> groupFailure(Optional<EranosException> refused) {
+        return refused.filter(EranosException.ExpenseGroup.class::isInstance)
+                .map(EranosException.ExpenseGroup.class::cast)
+                .map(EranosException.ExpenseGroup::failure);
     }
 
     /** The sum of {@code amounts}, all in {@code currency}. */

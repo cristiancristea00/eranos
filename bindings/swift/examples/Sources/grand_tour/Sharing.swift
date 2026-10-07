@@ -4,7 +4,7 @@
 import Eranos
 import Report
 
-func sharing(_ group: Group, _ people: People) async throws(EranosError) {
+func sharing(_ group: ExpenseGroup, _ people: People) async throws(EranosError) {
     section("14. Sharing the group")
     // Another handle on the same group, as another task holds: a group is shared as it is.
     let other = group
@@ -13,10 +13,10 @@ func sharing(_ group: Group, _ people: People) async throws(EranosError) {
     _ = try await other.add(coffee)
     let plan = try await group.settlement(by: .minimumTransfers)
     print("""
-        An app shares the group between its tasks and threads through a SharedGroup,
-        whose calls are futures any executor runs; here the library's block_on runs
-        each one on this thread. Bob adds the airport coffee through another handle,
-        and the plan that settles it comes through the first:
+        An app shares the group between its tasks and threads through a
+        SharedExpenseGroup, whose calls are futures any executor runs; here the library's
+        block_on runs each one on this thread. Bob adds the airport coffee through another
+        handle, and the plan that settles it comes through the first:
         """)
     let rows = try await group.withRead { reader async throws(EranosError) in
         try plan.payments.map { payment throws(EranosError) in

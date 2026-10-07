@@ -34,7 +34,7 @@ pub fn mirrored(attribute: TokenStream, item: TokenStream) -> TokenStream {
 /// Writes a `uniffi` glue crate's object methods from the core's table.
 ///
 /// The macro is the table's callback, and writes the exported methods of
-/// the crate's `Group` and `GroupReader`, as `eranos_glue::uniffi_objects`
+/// the crate's `ExpenseGroup` and `ExpenseGroupReader`, as `eranos_glue::uniffi_objects`
 /// describes.
 #[proc_macro]
 pub fn uniffi_objects(input: TokenStream) -> TokenStream {

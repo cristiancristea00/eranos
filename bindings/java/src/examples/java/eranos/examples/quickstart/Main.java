@@ -14,8 +14,8 @@ import eranos.Cost;
 import eranos.Currency;
 import eranos.EranosException;
 import eranos.Expense;
+import eranos.ExpenseGroup;
 import eranos.ExpenseSplit;
-import eranos.Group;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberSummary;
@@ -78,7 +78,7 @@ public final class Main {
      */
     public static void main(String[] arguments) throws EranosException {
         Currency euro = Currency.of("EUR");
-        try (Group group = Group.builder("Weekend in Sinaia", euro).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Weekend in Sinaia", euro).build()) {
             title(group.name());
             System.out.print(
                     """

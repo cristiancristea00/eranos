@@ -3,8 +3,8 @@
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use eranos::Group;
-use eranos::group::GroupReadGuard;
+use eranos::ExpenseGroup;
+use eranos::expense_group::ExpenseGroupReadGuard;
 
 use crate::EranosError;
 
@@ -15,14 +15,14 @@ use crate::EranosError;
 /// can be late, so [`release`](Self::release) releases the lock at once; every
 /// read after it fails with [`EranosError::Released`].
 #[derive(Debug)]
-pub struct GroupReader {
+pub struct ExpenseGroupReader {
     /// The lock, until the handle is released.
-    guard: Mutex<Option<GroupReadGuard>>,
+    guard: Mutex<Option<ExpenseGroupReadGuard>>,
 }
 
-impl GroupReader {
+impl ExpenseGroupReader {
     /// A handle that reads through `guard`.
-    pub(crate) const fn new(guard: GroupReadGuard) -> Self {
+    pub(crate) const fn new(guard: ExpenseGroupReadGuard) -> Self {
         Self {
             guard: Mutex::new(Some(guard)),
         }
@@ -36,7 +36,7 @@ impl GroupReader {
     /// Runs `read` on the group, while the handle is open.
     pub(crate) fn reading<T>(
         &self,
-        read: impl FnOnce(&Group) -> Result<T, EranosError>,
+        read: impl FnOnce(&ExpenseGroup) -> Result<T, EranosError>,
     ) -> Result<T, EranosError> {
         let guard = self.guard();
         let group = guard.as_ref().ok_or_else(EranosError::released)?;
@@ -45,7 +45,7 @@ impl GroupReader {
 
     /// The lock's slot; a panic while it was taken leaves it whole, so a
     /// poisoned slot is taken as it is.
-    fn guard(&self) -> MutexGuard<'_, Option<GroupReadGuard>> {
+    fn guard(&self) -> MutexGuard<'_, Option<ExpenseGroupReadGuard>> {
         self.guard.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }

@@ -3,7 +3,7 @@
 import Eranos
 import Report
 
-func anotherCurrency(_ group: Group, _ people: People, _ categories: Categories) throws(EranosError) {
+func anotherCurrency(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) {
     section("5. Another currency")
     let euro = try Currency(code: "EUR")
     let rate = try ExchangeRate(parsing: "0.2")
@@ -53,7 +53,7 @@ func anotherCurrency(_ group: Group, _ people: People, _ categories: Categories)
 }
 
 /// Replaces an expense and a transfer, and removes one of each; returns what changed.
-func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories, _ seafood: Expense.ID) throws(EranosError) -> [EditRow] {
+func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Categories, _ seafood: Expense.ID) throws(EranosError) -> [EditRow] {
     // The dinner's receipt said 99.00.
     guard var corrected = try group.expense(withID: seafood) else {
         preconditionFailure("the dinner was added")
@@ -105,7 +105,7 @@ func replaceAndRemove(_ group: Group, _ people: People, _ categories: Categories
     ]
 }
 
-func edits(_ group: Group, _ people: People, _ categories: Categories, _ seafood: Expense.ID) throws(EranosError) {
+func edits(_ group: ExpenseGroup, _ people: People, _ categories: Categories, _ seafood: Expense.ID) throws(EranosError) {
     section("6. Edits")
     let changes = try replaceAndRemove(group, people, categories, seafood)
     print("""
@@ -154,13 +154,13 @@ func edits(_ group: Group, _ people: People, _ categories: Categories, _ seafood
         preconditionFailure("a transfer is between two members")
     }
     let leu = try Currency(code: "RON")
-    guard case .failure(.group(.missingExchangeRate(leu), _)) = unrated else {
+    guard case .failure(.expenseGroup(.missingExchangeRate(leu), _)) = unrated else {
         preconditionFailure("an amount in RON needs a rate")
     }
     expect(before, try group.summary(), "a refused change leaves the totals")
 }
 
-func comingsAndGoings(_ group: Group, _ people: People) throws(EranosError) {
+func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     section("7. Members come and go")
     let removed = try group.remove(people.filip)
     try group.archive(people.dan)
@@ -200,10 +200,10 @@ func comingsAndGoings(_ group: Group, _ people: People) throws(EranosError) {
     expect("Filip", removed.firstName, "Filip is removed")
     let gone = try group.member(withID: people.filip)
     precondition(nil == gone, "Filip is gone")
-    guard case .failure(.group(.archivedMember(people.dan), _)) = farewell else {
+    guard case .failure(.expenseGroup(.archivedMember(people.dan), _)) = farewell else {
         preconditionFailure("Dan is archived")
     }
-    guard case .failure(.group(.memberInUse, _)) = inUse else {
+    guard case .failure(.expenseGroup(.memberInUse, _)) = inUse else {
         preconditionFailure("entries reference Dan")
     }
     let archived = try group.isArchived(people.dan)

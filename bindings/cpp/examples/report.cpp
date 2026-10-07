@@ -172,12 +172,12 @@ std::string cell(std::vector<std::string> const &lines) {
     return text;
 }
 
-std::string firstName(Group const &group, MemberId const &member) {
+std::string firstName(ExpenseGroup const &group, MemberId const &member) {
     auto const found = must(group.member(member));
     return found.has_value() ? found->firstName : "?";
 }
 
-std::string names(Group const &group, std::vector<MemberId> const &members) {
+std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members) {
     std::string text;
     for (std::size_t index = 0; members.size() > index; ++index) {
         text += (0 == index ? "" : ", ") + firstName(group, members.at(index));

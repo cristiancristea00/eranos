@@ -19,7 +19,7 @@ from eranos import (
     ExchangeRate,
     Expense,
     GetsBackBalance,
-    Group,
+    ExpenseGroup,
     LocalCost,
     Member,
     MemberId,
@@ -108,7 +108,7 @@ def rate(cost: Cost) -> ExchangeRate:
             assert_never(cost)
 
 
-def balance(group: Group, member: MemberId) -> Balance | None:
+def balance(group: ExpenseGroup, member: MemberId) -> Balance | None:
     """
     Find where member stands in group.
 
@@ -124,7 +124,7 @@ def balance(group: Group, member: MemberId) -> Balance | None:
     return None if found is None else found.balance
 
 
-def print_entries(group: Group) -> None:
+def print_entries(group: ExpenseGroup) -> None:
     """
     Print every expense and transfer, as entered and in the group currency.
 
@@ -156,7 +156,7 @@ def print_entries(group: Group) -> None:
     print_table(EntryRow, [*expenses, *transfers], 2)
 
 
-def print_balances(group: Group) -> None:
+def print_balances(group: ExpenseGroup) -> None:
     """
     Print what each member paid, consumed, sent, and received, and where they stand.
 
@@ -183,7 +183,7 @@ def print_balances(group: Group) -> None:
     )
 
 
-def expenses(group: Group, ana: MemberId, bob: MemberId) -> None:
+def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     """
     Add the fuel in RON, the dinner in HUF, and the ferry in EUR, and print them.
 
@@ -229,7 +229,7 @@ def expenses(group: Group, ana: MemberId, bob: MemberId) -> None:
     )
 
 
-def repayment(group: Group, ana: MemberId, bob: MemberId) -> None:
+def repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     """
     Add Ana's repayment to Bob, in cash and in RON, and print the balances it settles.
 
@@ -255,7 +255,7 @@ def repayment(group: Group, ana: MemberId, bob: MemberId) -> None:
     print_balances(group)
 
 
-def new_currency(group: Group) -> None:
+def new_currency(group: ExpenseGroup) -> None:
     """
     Move the group's books from EUR to RON, and print the entries and the balances again.
 
@@ -281,7 +281,7 @@ def new_currency(group: Group) -> None:
 def main() -> None:
     """Print the report, checking its key numbers."""
     euro = Currency('EUR')
-    group = Group.create('Danube road trip', euro)
+    group = ExpenseGroup.create('Danube road trip', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
 

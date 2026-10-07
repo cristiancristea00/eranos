@@ -22,15 +22,15 @@ class EranosError(Exception):
 
         try:
             group.remove_member(member)
-        except GroupError as error:
+        except ExpenseGroupError as error:
             match error.failure:
-                case GroupError.MemberInUse():
+                case ExpenseGroupError.MemberInUse():
                     group.archive_member(member)  # The member still has entries; archive them instead.
                 case _:
                     raise
 
     A call the program should not make raises the standard error instead: ``ValueError`` for an entry to add that has an
-    identifier or one to replace that has none, and ``RuntimeError`` for a read through a ``GroupReader`` after its
+    identifier or one to replace that has none, and ``RuntimeError`` for a read through an ``ExpenseGroupReader`` after its
     release. A call whose task is cancelled raises ``asyncio.CancelledError``.
     """
 
@@ -555,8 +555,8 @@ type TransferFailure = TransferError.SameMember | TransferError.NonPositiveAmoun
 
 
 @final
-class GroupError(EranosError):
-    """The library's ``GroupError``, with the message it words: what the module reports, a class per failure."""
+class ExpenseGroupError(EranosError):
+    """The library's ``ExpenseGroupError``, with the message it words: what the module reports, a class per failure."""
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
@@ -705,7 +705,7 @@ class GroupError(EranosError):
     class Overflow:
         """A total would leave the range of an amount."""
 
-    def __init__(self, failure: GroupFailure, message: str) -> None:
+    def __init__(self, failure: ExpenseGroupFailure, message: str) -> None:
         """
         Make the error of failure, which the library words as message.
 
@@ -715,32 +715,32 @@ class GroupError(EranosError):
 
         """
         super().__init__(message)
-        self.failure: GroupFailure = failure
+        self.failure: ExpenseGroupFailure = failure
         """What the module reports."""
 
 
-type GroupFailure = (
-    GroupError.UnsupportedFormat
-    | GroupError.EmptyName
-    | GroupError.MissingExchangeRate
-    | GroupError.UnexpectedExchangeRate
-    | GroupError.DuplicateExchangeRate
-    | GroupError.DuplicateMember
-    | GroupError.UnknownMember
-    | GroupError.ArchivedMember
-    | GroupError.MemberInUse
-    | GroupError.DuplicateCategory
-    | GroupError.DuplicateCategoryName
-    | GroupError.UnknownCategory
-    | GroupError.BuiltInCategory
-    | GroupError.DuplicateExpense
-    | GroupError.UnknownExpense
-    | GroupError.DuplicateTransfer
-    | GroupError.UnknownTransfer
-    | GroupError.Busy
-    | GroupError.Overflow
+type ExpenseGroupFailure = (
+    ExpenseGroupError.UnsupportedFormat
+    | ExpenseGroupError.EmptyName
+    | ExpenseGroupError.MissingExchangeRate
+    | ExpenseGroupError.UnexpectedExchangeRate
+    | ExpenseGroupError.DuplicateExchangeRate
+    | ExpenseGroupError.DuplicateMember
+    | ExpenseGroupError.UnknownMember
+    | ExpenseGroupError.ArchivedMember
+    | ExpenseGroupError.MemberInUse
+    | ExpenseGroupError.DuplicateCategory
+    | ExpenseGroupError.DuplicateCategoryName
+    | ExpenseGroupError.UnknownCategory
+    | ExpenseGroupError.BuiltInCategory
+    | ExpenseGroupError.DuplicateExpense
+    | ExpenseGroupError.UnknownExpense
+    | ExpenseGroupError.DuplicateTransfer
+    | ExpenseGroupError.UnknownTransfer
+    | ExpenseGroupError.Busy
+    | ExpenseGroupError.Overflow
 )
-"""What ``GroupError`` can report: a class per failure, with what it holds."""
+"""What ``ExpenseGroupError`` can report: a class per failure, with what it holds."""
 
 
 @final
@@ -884,30 +884,36 @@ _TRANSFER_FAILURES: dict[generated.TransferFailure, TransferFailure] = {
     generated.TransferFailure.NON_POSITIVE_AMOUNT: TransferError.NonPositiveAmount(),
 }
 
-_GROUP_FAILURES: dict[type[object], Callable[[Any], GroupFailure]] = {
-    generated.GroupFailure.UNSUPPORTED_FORMAT: lambda failure: GroupError.UnsupportedFormat(format=failure.format),
-    generated.GroupFailure.EMPTY_NAME: lambda _: GroupError.EmptyName(),
-    generated.GroupFailure.MISSING_EXCHANGE_RATE: lambda failure: GroupError.MissingExchangeRate(currency=_currency.Currency(failure.currency)),
-    generated.GroupFailure.UNEXPECTED_EXCHANGE_RATE: lambda _: GroupError.UnexpectedExchangeRate(),
-    generated.GroupFailure.DUPLICATE_EXCHANGE_RATE: lambda failure: GroupError.DuplicateExchangeRate(currency=_currency.Currency(failure.currency)),
-    generated.GroupFailure.DUPLICATE_MEMBER: lambda failure: GroupError.DuplicateMember(member=MemberId(failure.member)),
-    generated.GroupFailure.UNKNOWN_MEMBER: lambda failure: GroupError.UnknownMember(member=MemberId(failure.member)),
-    generated.GroupFailure.ARCHIVED_MEMBER: lambda failure: GroupError.ArchivedMember(member=MemberId(failure.member)),
-    generated.GroupFailure.MEMBER_IN_USE: lambda failure: GroupError.MemberInUse(
+_EXPENSE_GROUP_FAILURES: dict[type[object], Callable[[Any], ExpenseGroupFailure]] = {
+    generated.ExpenseGroupFailure.UNSUPPORTED_FORMAT: lambda failure: ExpenseGroupError.UnsupportedFormat(format=failure.format),
+    generated.ExpenseGroupFailure.EMPTY_NAME: lambda _: ExpenseGroupError.EmptyName(),
+    generated.ExpenseGroupFailure.MISSING_EXCHANGE_RATE: lambda failure: ExpenseGroupError.MissingExchangeRate(
+        currency=_currency.Currency(failure.currency)
+    ),
+    generated.ExpenseGroupFailure.UNEXPECTED_EXCHANGE_RATE: lambda _: ExpenseGroupError.UnexpectedExchangeRate(),
+    generated.ExpenseGroupFailure.DUPLICATE_EXCHANGE_RATE: lambda failure: ExpenseGroupError.DuplicateExchangeRate(
+        currency=_currency.Currency(failure.currency)
+    ),
+    generated.ExpenseGroupFailure.DUPLICATE_MEMBER: lambda failure: ExpenseGroupError.DuplicateMember(member=MemberId(failure.member)),
+    generated.ExpenseGroupFailure.UNKNOWN_MEMBER: lambda failure: ExpenseGroupError.UnknownMember(member=MemberId(failure.member)),
+    generated.ExpenseGroupFailure.ARCHIVED_MEMBER: lambda failure: ExpenseGroupError.ArchivedMember(member=MemberId(failure.member)),
+    generated.ExpenseGroupFailure.MEMBER_IN_USE: lambda failure: ExpenseGroupError.MemberInUse(
         member=MemberId(failure.member),
         expenses=tuple(ExpenseId(each) for each in failure.expenses),
         transfers=tuple(TransferId(each) for each in failure.transfers),
     ),
-    generated.GroupFailure.DUPLICATE_CATEGORY: lambda failure: GroupError.DuplicateCategory(category=CategoryId(failure.category)),
-    generated.GroupFailure.DUPLICATE_CATEGORY_NAME: lambda failure: GroupError.DuplicateCategoryName(existing=CategoryId(failure.existing)),
-    generated.GroupFailure.UNKNOWN_CATEGORY: lambda failure: GroupError.UnknownCategory(category=CategoryId(failure.category)),
-    generated.GroupFailure.BUILT_IN_CATEGORY: lambda _: GroupError.BuiltInCategory(),
-    generated.GroupFailure.DUPLICATE_EXPENSE: lambda failure: GroupError.DuplicateExpense(expense=ExpenseId(failure.expense)),
-    generated.GroupFailure.UNKNOWN_EXPENSE: lambda failure: GroupError.UnknownExpense(expense=ExpenseId(failure.expense)),
-    generated.GroupFailure.DUPLICATE_TRANSFER: lambda failure: GroupError.DuplicateTransfer(transfer=TransferId(failure.transfer)),
-    generated.GroupFailure.UNKNOWN_TRANSFER: lambda failure: GroupError.UnknownTransfer(transfer=TransferId(failure.transfer)),
-    generated.GroupFailure.BUSY: lambda _: GroupError.Busy(),
-    generated.GroupFailure.OVERFLOW: lambda _: GroupError.Overflow(),
+    generated.ExpenseGroupFailure.DUPLICATE_CATEGORY: lambda failure: ExpenseGroupError.DuplicateCategory(category=CategoryId(failure.category)),
+    generated.ExpenseGroupFailure.DUPLICATE_CATEGORY_NAME: lambda failure: ExpenseGroupError.DuplicateCategoryName(
+        existing=CategoryId(failure.existing)
+    ),
+    generated.ExpenseGroupFailure.UNKNOWN_CATEGORY: lambda failure: ExpenseGroupError.UnknownCategory(category=CategoryId(failure.category)),
+    generated.ExpenseGroupFailure.BUILT_IN_CATEGORY: lambda _: ExpenseGroupError.BuiltInCategory(),
+    generated.ExpenseGroupFailure.DUPLICATE_EXPENSE: lambda failure: ExpenseGroupError.DuplicateExpense(expense=ExpenseId(failure.expense)),
+    generated.ExpenseGroupFailure.UNKNOWN_EXPENSE: lambda failure: ExpenseGroupError.UnknownExpense(expense=ExpenseId(failure.expense)),
+    generated.ExpenseGroupFailure.DUPLICATE_TRANSFER: lambda failure: ExpenseGroupError.DuplicateTransfer(transfer=TransferId(failure.transfer)),
+    generated.ExpenseGroupFailure.UNKNOWN_TRANSFER: lambda failure: ExpenseGroupError.UnknownTransfer(transfer=TransferId(failure.transfer)),
+    generated.ExpenseGroupFailure.BUSY: lambda _: ExpenseGroupError.Busy(),
+    generated.ExpenseGroupFailure.OVERFLOW: lambda _: ExpenseGroupError.Overflow(),
 }
 
 _LANGUAGE_FAILURES: dict[generated.LanguageFailure, LanguageFailure] = {
@@ -925,7 +931,7 @@ _ERRORS: dict[type[object], Callable[[Any], BaseException]] = {
     generated.EranosError.Expense: lambda error: ExpenseError(_EXPENSE_FAILURES[type(error.failure)](error.failure), error.detail),
     generated.EranosError.Settlement: lambda error: SettlementError(_SETTLEMENT_FAILURES[type(error.failure)](error.failure), error.detail),
     generated.EranosError.Transfer: lambda error: TransferError(_TRANSFER_FAILURES[error.failure], error.detail),
-    generated.EranosError.Group: lambda error: GroupError(_GROUP_FAILURES[type(error.failure)](error.failure), error.detail),
+    generated.EranosError.ExpenseGroup: lambda error: ExpenseGroupError(_EXPENSE_GROUP_FAILURES[type(error.failure)](error.failure), error.detail),
     generated.EranosError.Language: lambda error: LanguageError(_LANGUAGE_FAILURES[error.failure], error.detail),
     generated.EranosError.IdentifierGiven: lambda error: ValueError(error.detail),
     generated.EranosError.IdentifierMissing: lambda error: ValueError(error.detail),

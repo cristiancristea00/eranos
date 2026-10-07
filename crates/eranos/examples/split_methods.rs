@@ -8,8 +8,8 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseId, Group, Member, MemberAmount, MemberId, MemberParts,
-    MemberPercentage, MemberShare, Money, Parts, Percentage, Split,
+    CalendarDate, Currency, Expense, ExpenseGroup, ExpenseId, Member, MemberAmount, MemberId,
+    MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage, Split,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -58,7 +58,7 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
     println!("{table}");
 }
 
-fn name(group: &Group, member: MemberId) -> String {
+fn name(group: &ExpenseGroup, member: MemberId) -> String {
     group
         .member(member)
         .map_or("?", Member::first_name)
@@ -73,7 +73,7 @@ struct Rule {
 
 /// Prints how one expense divides: every involved member's rule, what they
 /// paid, and what they consumed.
-fn report(group: &Group, id: ExpenseId, rules: &[Rule]) {
+fn report(group: &ExpenseGroup, id: ExpenseId, rules: &[Rule]) {
     let (Some(expense), Some(shares)) = (group.expense(id), group.expense_shares(id)) else {
         return;
     };
@@ -101,7 +101,7 @@ struct Family {
     day: CalendarDate,
 }
 
-fn equally(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
+fn equally(group: &mut ExpenseGroup, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
     let Family { ana, bob, mia, day } = *family;
     section("1. Equally");
     println!(
@@ -140,7 +140,7 @@ const fn thirds(family: &Family) -> [Rule; 3] {
     ]
 }
 
-fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
+fn by_percentage(group: &mut ExpenseGroup, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
     let Family { ana, bob, mia, day } = *family;
     section("2. By percentage");
     println!(
@@ -182,7 +182,7 @@ fn by_percentage(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dy
     Ok(rent)
 }
 
-fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
+fn by_parts(group: &mut ExpenseGroup, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
     let Family { ana, bob, mia, day } = *family;
     section("3. By parts");
     println!(
@@ -224,7 +224,7 @@ fn by_parts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Err
     Ok(food)
 }
 
-fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
+fn by_amounts(group: &mut ExpenseGroup, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
     let Family { ana, bob, mia, day } = *family;
     section("4. By exact amounts");
     println!(
@@ -266,7 +266,7 @@ fn by_amounts(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn E
     Ok(tickets)
 }
 
-fn several_payers(group: &mut Group, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
+fn several_payers(group: &mut ExpenseGroup, family: &Family) -> Result<ExpenseId, Box<dyn Error>> {
     let Family { ana, bob, mia, day } = *family;
     section("5. Several payers");
     println!(
@@ -311,7 +311,7 @@ fn mistakes(family: &Family) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn totals(group: &Group) {
+fn totals(group: &ExpenseGroup) {
     section("7. The holiday in total");
     let summary = group.summary();
     println!("{} spent over five expenses:", summary.total_spent());
@@ -330,7 +330,7 @@ fn totals(group: &Group) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = Group::builder("Family holiday", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Family holiday", Currency::EUR).build()?;
     let family = Family {
         ana: group.add_member(Member::builder("Ana").build()?)?,
         bob: group.add_member(Member::builder("Bob").build()?)?,

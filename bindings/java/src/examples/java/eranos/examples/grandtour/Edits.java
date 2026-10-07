@@ -20,11 +20,11 @@ import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
 import eranos.ExpenseFailure;
+import eranos.ExpenseGroup;
+import eranos.ExpenseGroupFailure;
 import eranos.ExpenseId;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Group;
-import eranos.GroupFailure;
 import eranos.Member;
 import eranos.MemberPercentage;
 import eranos.MemberSummary;
@@ -53,7 +53,7 @@ import java.util.Optional;
 final class Edits {
     private Edits() {}
 
-    static void anotherCurrency(Group group, People people, Categories categories)
+    static void anotherCurrency(ExpenseGroup group, People people, Categories categories)
             throws EranosException {
         section("5. Another currency");
         Currency euro = Currency.of("EUR");
@@ -111,7 +111,7 @@ final class Edits {
 
     /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
     static List<EditRow> replaceAndRemove(
-            Group group, People people, Categories categories, ExpenseId seafood)
+            ExpenseGroup group, People people, Categories categories, ExpenseId seafood)
             throws EranosException {
         // The dinner's receipt said 99.00.
         Expense corrected =
@@ -197,7 +197,7 @@ final class Edits {
                         "%s sent to the wrong member; removed".formatted(undone.cost().amount())));
     }
 
-    static void edits(Group group, People people, Categories categories, ExpenseId seafood)
+    static void edits(ExpenseGroup group, People people, Categories categories, ExpenseId seafood)
             throws EranosException {
         section("6. Edits");
         List<EditRow> changes = replaceAndRemove(group, people, categories, seafood);
@@ -267,12 +267,12 @@ final class Edits {
                                         .map(EranosException.Transfer.class::cast)
                                         .map(EranosException.Transfer::failure)));
         check(
-                Optional.of(new GroupFailure.MissingExchangeRate(Currency.of("RON")))
+                Optional.of(new ExpenseGroupFailure.MissingExchangeRate(Currency.of("RON")))
                         .equals(groupFailure(unrated)));
         check(before.equals(group.summary()));
     }
 
-    static void comingsAndGoings(Group group, People people) throws EranosException {
+    static void comingsAndGoings(ExpenseGroup group, People people) throws EranosException {
         section("7. Members come and go");
         Member removed = group.removeMember(people.filip());
         group.archiveMember(people.dan());
@@ -328,9 +328,12 @@ final class Edits {
         check("Filip".equals(removed.firstName()));
         check(group.member(people.filip()).isEmpty());
         check(
-                Optional.of(new GroupFailure.ArchivedMember(people.dan()))
+                Optional.of(new ExpenseGroupFailure.ArchivedMember(people.dan()))
                         .equals(groupFailure(farewell)));
-        check(groupFailure(inUse).filter(GroupFailure.MemberInUse.class::isInstance).isPresent());
+        check(
+                groupFailure(inUse)
+                        .filter(ExpenseGroupFailure.MemberInUse.class::isInstance)
+                        .isPresent());
         check(!group.isArchived(people.dan()));
     }
 }
