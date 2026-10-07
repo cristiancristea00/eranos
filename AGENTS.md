@@ -170,17 +170,21 @@ It runs these, in this order, and stops at the first that fails:
     report is compared byte for byte with its example's from gate 9, and the
     first line that differs stops the gates
 
-All of them pass before a commit; clippy findings are fixed, not silenced.
-The examples assert their key numbers, so running them is a check, not a
-demonstration. A test in `crates/xtask` reads this list, so the command and
-the list cannot drift apart; others keep the target lints the steps of
-CI's job, and every gate number the documents cite the gate it means.
-`cargo xtask gates --rust` runs the gates up to the examples', gate 9,
-alone, and `cargo xtask test`, `lint`, and `examples` one language's part,
-for iterating on a change; a commit still passes every gate. The VS Code
-task `gates` runs `cargo xtask gates`, and CI runs the Rust steps as its
-jobs on every push, and every step, on Linux, on macOS, or on both, on a
-dispatch that asks for the bindings
+A single commit passes every gate before it is made. A series of commits
+runs the linters, `cargo xtask lint all`, before each of its commits and
+every gate once after the last, and fixes what the gates find in a commit of
+its own, since a full run lasts as long as the timings of
+[docs/DEVELOPMENT.md § 2](docs/DEVELOPMENT.md#2-building-and-testing) show.
+Clippy findings are fixed, not silenced. The examples assert their key
+numbers, so running them is a check, not a demonstration. A test in
+`crates/xtask` reads this list, so the command and the list cannot drift
+apart; others keep the target lints the steps of CI's job, and every gate
+number the documents cite the gate it means. `cargo xtask gates --rust` runs
+the gates up to the examples', gate 9, alone, and `cargo xtask test`,
+`lint`, and `examples` one language's part, for iterating on a change; the
+gates still run as above. The VS Code task `gates` runs `cargo xtask gates`,
+and CI runs the Rust steps as its jobs on every push, and every step, on
+Linux, on macOS, or on both, on a dispatch that asks for the bindings
 ([docs/DEVELOPMENT.md § 6](docs/DEVELOPMENT.md#6-continuous-integration)).
 
 Clippy is strict on every target (library, tests, examples, benches): the

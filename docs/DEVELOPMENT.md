@@ -85,8 +85,10 @@ cargo doc -p eranos --all-features --open        # the API documentation
 ```
 
 `cargo xtask gates` runs the full gate sequence, listed in
-[AGENTS.md § Gates](../AGENTS.md#gates-before-committing), before every
-commit; `cargo xtask help` lists the commands. `test`, `lint`, and
+[AGENTS.md § Gates](../AGENTS.md#gates-before-committing): before a single
+commit, or once after the last commit of a series, whose commits each pass
+`cargo xtask lint all` first and whose gate failures are fixed in a commit
+of their own. `cargo xtask help` lists the commands. `test`, `lint`, and
 `format` take a language: `c`, for the C and C++ packages, `java`, `kmp`,
 `kotlin`, `python`, `rust`, `swift`, `web`, for the TypeScript package, or
 `all`, which leaves Swift out where the machine does not build for Apple
