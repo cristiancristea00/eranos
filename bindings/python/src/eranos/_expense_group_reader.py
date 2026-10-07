@@ -89,7 +89,7 @@ class ExpenseGroupReader:
 
     def categories(self) -> tuple[Category, ...]:
         """
-        List every category, the built-in one first.
+        List every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 
         A read after the reader's release raises ``RuntimeError``.
 
@@ -131,7 +131,7 @@ class ExpenseGroupReader:
 
     def expenses(self) -> tuple[Expense, ...]:
         """
-        List every expense, in the order they were created.
+        List every expense, in identifier order, which is creation order for generated identifiers.
 
         A read after the reader's release raises ``RuntimeError``.
 
@@ -189,7 +189,7 @@ class ExpenseGroupReader:
 
     def members(self) -> tuple[Member, ...]:
         """
-        List every member, archived ones included, in the order they were added.
+        List every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 
         A read after the reader's release raises ``RuntimeError``.
 
@@ -264,7 +264,7 @@ class ExpenseGroupReader:
 
     def transfers(self) -> tuple[Transfer, ...]:
         """
-        List every transfer, in the order they were created.
+        List every transfer, in identifier order, which is creation order for generated identifiers.
 
         A read after the reader's release raises ``RuntimeError``.
 

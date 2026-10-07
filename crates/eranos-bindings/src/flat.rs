@@ -218,8 +218,14 @@ pub enum ErrorKind {
 /// a case per case of every module's failure.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FailureKind {
-    /// [`IdFailure::InvalidId`].
-    IdInvalidId,
+    /// [`IdFailure::Empty`].
+    IdEmpty,
+    /// [`IdFailure::TooLong`].
+    IdTooLong,
+    /// [`IdFailure::ControlCharacter`].
+    IdControlCharacter,
+    /// [`IdFailure::SurroundingWhitespace`].
+    IdSurroundingWhitespace,
     /// [`PaymentAccountFailure::EmptyName`].
     PaymentAccountEmptyName,
     /// [`PaymentAccountFailure::InvalidIban`].
@@ -662,7 +668,10 @@ fn expense_group(failure: &ExpenseGroupFailure) -> FlatFailure {
 /// The id module's `failure`.
 const fn id(failure: IdFailure) -> FailureKind {
     match failure {
-        IdFailure::InvalidId => FailureKind::IdInvalidId,
+        IdFailure::Empty => FailureKind::IdEmpty,
+        IdFailure::TooLong => FailureKind::IdTooLong,
+        IdFailure::ControlCharacter => FailureKind::IdControlCharacter,
+        IdFailure::SurroundingWhitespace => FailureKind::IdSurroundingWhitespace,
     }
 }
 

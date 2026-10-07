@@ -250,7 +250,7 @@ public class ExpenseGroup private constructor(
     // The group's members.
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [membersBlocking] blocks instead.
@@ -258,7 +258,7 @@ public class ExpenseGroup private constructor(
     public suspend fun members(): List<Member> = converting { handle.membersAsync(null).map { it.converted() } }
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [members] waits without blocking it.
      */
@@ -436,7 +436,8 @@ public class ExpenseGroup private constructor(
     // The group's categories.
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
+     * identifiers.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [categoriesBlocking] blocks instead.
@@ -444,7 +445,8 @@ public class ExpenseGroup private constructor(
     public suspend fun categories(): List<Category> = converting { handle.categoriesAsync(null).map { it.converted() } }
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
+     * identifiers.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [categories] waits without blocking it.
      */
@@ -553,7 +555,7 @@ public class ExpenseGroup private constructor(
     // The group's expenses.
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [expensesBlocking] blocks instead.
@@ -561,7 +563,7 @@ public class ExpenseGroup private constructor(
     public suspend fun expenses(): List<Expense> = converting { handle.expensesAsync(null).map { it.converted() } }
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [expenses] waits without blocking it.
      */
@@ -691,7 +693,7 @@ public class ExpenseGroup private constructor(
     // The group's transfers.
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [transfersBlocking] blocks instead.
@@ -699,7 +701,7 @@ public class ExpenseGroup private constructor(
     public suspend fun transfers(): List<Transfer> = converting { handle.transfersAsync(null).map { it.converted() } }
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [transfers] waits without blocking it.
      */

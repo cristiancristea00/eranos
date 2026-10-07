@@ -133,7 +133,8 @@ class ExpenseGroup final {
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<ExpenseGroupId, Error>> idAsync(Cancellation const *const cancellation = nullptr) const;
 
-    /// Every category, the built-in one first. Blocks the calling thread while another call holds the group's lock.
+    /// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers. Blocks the
+    /// calling thread while another call holds the group's lock.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Category> categories() const;
@@ -244,7 +245,8 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<void, Error>> changeCurrencyAsync(CurrencyCode const &currency, std::span<CurrencyRate const> const rates,
                                                                               Cancellation const *const cancellation = nullptr);
 
-    /// Every expense, in the order they were created. Blocks the calling thread while another call holds the group's lock.
+    /// Every expense, in identifier order, which is creation order for generated identifiers. Blocks the calling thread while another call holds the
+    /// group's lock.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Expense> expenses() const;
@@ -351,7 +353,8 @@ class ExpenseGroup final {
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<Summary, Error>> summaryAsync(Cancellation const *const cancellation = nullptr) const;
 
-    /// Every member, archived ones included, in the order they were created. Blocks the calling thread while another call holds the group's lock.
+    /// Every member, archived ones included, in identifier order, which is creation order for generated identifiers. Blocks the calling thread while
+    /// another call holds the group's lock.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Member> members() const;
@@ -518,7 +521,8 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<SettlementPlan, Error>> settlementAsync(SettlementStrategy const strategy,
                                                                                     Cancellation const *const cancellation = nullptr) const;
 
-    /// Every transfer, in the order they were created. Blocks the calling thread while another call holds the group's lock.
+    /// Every transfer, in identifier order, which is creation order for generated identifiers. Blocks the calling thread while another call holds the
+    /// group's lock.
     ///
     /// @return The result
     [[nodiscard]] std::vector<Transfer> transfers() const;

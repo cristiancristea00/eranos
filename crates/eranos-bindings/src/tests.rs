@@ -11,19 +11,19 @@ use eranos::MemberId;
 use super::*;
 
 /// A record to replace without an identifier could not name its entry, and
-/// one whose identifier is not a UUID would name none.
+/// one whose identifier the rules refuse would name none.
 #[test]
 fn a_record_to_replace_names_its_entry_by_a_valid_identifier() {
-    let id = MemberId::from_bytes([1; 16]);
+    let id = MemberId::new("member-1").unwrap();
     assert_eq!(identifier_to_replace(Some(&id.to_string())), Ok(id));
     assert_eq!(
         identifier_to_replace::<MemberId>(None),
         Err(EranosError::identifier_missing())
     );
     assert!(matches!(
-        identifier_to_replace::<MemberId>(Some("nobody")),
+        identifier_to_replace::<MemberId>(Some("")),
         Err(EranosError::Id {
-            failure: IdFailure::InvalidId,
+            failure: IdFailure::Empty,
             ..
         })
     ));

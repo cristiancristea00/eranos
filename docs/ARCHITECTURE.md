@@ -40,7 +40,9 @@ How eranos is built and why. [README.md](../README.md) says what it does,
   fails leaves nothing half-applied.
 - **Deterministic everywhere.** The same entries give the same shares, the
   same totals, and the same settlement on every device and in any order of
-  arrival; this is what future sync relies on.
+  arrival; this is what future sync relies on. Identifiers are text
+  compared byte for byte, so the order of every list and the tie rotation
+  they seed are the same in every language and on every platform.
 - **Dependencies for the rules others maintain.** `icu_casemap` and
   `icu_normalizer` (Unicode caseless matching of category names),
   `icu_locale_core` (UTS #35 language tags), `icu_properties` (the Unicode
@@ -217,7 +219,7 @@ flowchart TD
 | `eranos-ledger`          | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
 | `eranos-calendar`        | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                                             | core; jiff                                                                                                             |
 | `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                                       | core; iso4217-static                                                                                                   |
-| `eranos-core`            | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                                   | uuid                                                                                                                   |
+| `eranos-core`            | the five identifiers, `CategoryKey`, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                    | uuid                                                                                                                   |
 | `eranos-glue-macros`     | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                                          | eranos-glue; syn                                                                                                       |
 | `eranos-glue`            | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge                | proc-macro2, quote, syn                                                                                                |
 
@@ -238,9 +240,11 @@ depends on `thiserror`, and every crate but `eranos-ledger` and
 
 An `ExpenseGroup` has an ID, a name (the only required text), a description, a
 **required** currency (every total is in it), and a language tag for the
-apps. It owns four maps keyed by the UUID v7 identifiers of their entries,
-so iteration order is the order the entries were built in, on every
-device:
+apps. It owns four maps keyed by the identifiers of their entries, so
+iteration order is the byte order of the identifiers' text, on every device,
+which for generated identifiers is the order the entries were built in. The
+categories map is keyed by `CategoryKey`, which puts the built-in
+Uncategorised first whatever the text of the others:
 
 | Map        | Values                                        | Notes                                                             |
 | ---------- | --------------------------------------------- | ----------------------------------------------------------------- |
@@ -258,6 +262,18 @@ category, expense, and transfer carries its identifier, generated when it
 is built and kept by `to_builder`, so an edit stays the same entry: `add_*`
 refuses an identifier the group already holds, and `replace_*` finds the
 entry to replace by it.
+
+An **identifier** (`ExpenseGroupId`, `MemberId`, `CategoryId`, `ExpenseId`,
+`TransferId`) is text stored as it is given: at most 64 bytes of UTF-8, not
+empty, without control characters, and without whitespace at either end,
+which is refused rather than trimmed. Two identifiers are equal when their
+bytes are, so case matters and two spellings of one UUID are two
+identifiers. The text lives in a 64-byte buffer padded with zero bytes,
+which no valid text holds, so an identifier is `Copy` and its derived
+comparisons follow the byte order of the text. A generated identifier is a
+UUID v7 in lowercase hyphenated form, whose text orders as its timestamp
+does; Uncategorised's is the nil UUID's text,
+`00000000-0000-0000-0000-000000000000`.
 
 An **expense** has a name, a cost (an amount in its own currency, local or
 converted into the group currency at a fixed rate), a date and an optional
@@ -309,8 +325,9 @@ cannot be removed.
   Weights that are all zero count as equal, so a division never loses
   money. Members are sorted by ID first, so listing order never matters.
 - **Ties rotate.** Equal remainders, as in every even split, are ordered
-  from a start position given by FNV-1a over the entry's ID and a pass
-  number. The extra cent of 10.00 / 3 therefore lands on a different member
+  from a start position given by FNV-1a over the UTF-8 bytes of the entry's
+  identifier text and the eight bytes of a pass number, least significant
+  first. The extra cent of 10.00 / 3 therefore lands on a different member
   from one expense to the next, while the same expense divides identically
   everywhere. There is no stored cursor and no randomness.
 - **Overflow is an error.** Parsing, conversions, tips, and every total are
@@ -495,7 +512,7 @@ ledger's range.
 
 | Error                 | Returned by                                                                                                                                                                                                                    |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `IdError`             | reading an identifier from text                                                                                                                                                                                                |
+| `IdError`             | the identifiers' `new` and `parse`, for text that is empty, longer than 64 bytes, holds a control character, or starts or ends with whitespace                                                                                 |
 | `CalendarError`       | building and reading dates and times of day                                                                                                                                                                                    |
 | `MoneyError`          | building, reading, and combining amounts, currencies, rates, percentages, and parts                                                                                                                                            |
 | `PaymentAccountError` | `PaymentAccount::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                                                                                                                            |
@@ -528,7 +545,7 @@ never the derived totals:
 
 ```text
 {
-  "format": 2,
+  "format": 3,
   "id": "…",
   "name": "Lisbon",
   "currency": "EUR",
@@ -546,7 +563,7 @@ never the derived totals:
 }
 ```
 
-- Identifiers are hyphenated UUIDs, currencies their code, rates decimal
+- Identifiers are their text, currencies their code, rates decimal
   strings, dates `YYYY-MM-DD` and times `hh:mm` (read back by the ISO 8601
   parser behind `CalendarDate::parse` and `TimeOfDay::parse`), percentages
   basis points, parts hundredths, and each share of a split the two-element
@@ -571,9 +588,14 @@ never the derived totals:
   dropped load leaves nothing behind, and a copy of the `SavedExpenseGroup`
   starts it again ([§ 12](#12-async-and-concurrency)).
 - `format` is checked: a newer one is refused rather than read with fields
-  silently dropped (`ExpenseGroupError::UnsupportedFormat`). New optional fields
-  get `#[serde(default)]`, so files written by older releases keep
-  loading.
+  silently dropped (`ExpenseGroupError::UnsupportedFormat`), and so is an
+  older one. Format 3 writes an identifier as any text of up to 64 bytes,
+  which a reader of format 2, whose identifiers were UUIDs, would refuse;
+  0.7.0 reads format 3 only. New optional fields get `#[serde(default)]`,
+  so files of the same format written by older releases keep loading.
+- The saved form is JSON. Identifiers serialise as text in every serde
+  format, where the 16 bytes of a UUID were written in binary ones, so data
+  a binary format wrote before format 3 does not read back.
 
 ## 10. Account details
 

@@ -15,8 +15,9 @@ use proptest::prelude::*;
 use super::*;
 use crate::greedy;
 
+/// The member `number`; members sort by number.
 fn member(number: u8) -> MemberId {
-    MemberId::from_bytes([number; 16])
+    MemberId::new(&format!("member-{number:03}")).unwrap()
 }
 
 /// Runs one of the solver's computations to its end.

@@ -54,7 +54,8 @@ public final class ExpenseGroupReader: Sendable {
         try converting { try handle.language().map { Language(known: $0) } }
     }
 
-    /// Every member, archived ones included, in the order they were added.
+    /// Every member, archived ones included, in identifier order, which is creation order for
+    /// generated identifiers.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
     public func members() throws(EranosError) -> [Member] {
@@ -78,7 +79,8 @@ public final class ExpenseGroupReader: Sendable {
         try converting { try handle.isArchived(id: id.rawValue) }
     }
 
-    /// Every category, the built-in one first.
+    /// Every category: the built-in one first, then the others in identifier order, which is
+    /// creation order for generated identifiers.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
     public func categories() throws(EranosError) -> [Category] {
@@ -93,7 +95,7 @@ public final class ExpenseGroupReader: Sendable {
         try converting { try handle.category(id: id.rawValue).map(Category.init) }
     }
 
-    /// Every expense, in the order they were created.
+    /// Every expense, in identifier order, which is creation order for generated identifiers.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
     public func expenses() throws(EranosError) -> [Expense] {
@@ -117,7 +119,7 @@ public final class ExpenseGroupReader: Sendable {
         try converting { try handle.expenseShares(id: id.rawValue).map(ExpenseShares.init) }
     }
 
-    /// Every transfer, in the order they were created.
+    /// Every transfer, in identifier order, which is creation order for generated identifiers.
     ///
     /// - Throws: ``EranosError/released(detail:)`` after ``release()``.
     public func transfers() throws(EranosError) -> [Transfer] {

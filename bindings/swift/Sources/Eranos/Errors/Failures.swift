@@ -275,15 +275,30 @@ extension ExpenseGroupFailure {
 
 /// What the library's `IdError` reports: a case per failure, with what it holds.
 public enum IDFailure: Sendable, Hashable {
-    /// Text that is not a UUID.
-    case invalidID
+    /// Empty text.
+    case empty
+
+    /// Text longer than 64 bytes of UTF-8.
+    case tooLong
+
+    /// Text that holds a control character, such as a tab or a line break.
+    case controlCharacter
+
+    /// Text that starts or ends with whitespace.
+    case surroundingWhitespace
 }
 
 extension IDFailure {
     init(_ failure: EranosGenerated.IdFailure) {
         switch failure {
-        case .invalidId:
-            self = .invalidID
+        case .empty:
+            self = .empty
+        case .tooLong:
+            self = .tooLong
+        case .controlCharacter:
+            self = .controlCharacter
+        case .surroundingWhitespace:
+            self = .surroundingWhitespace
         }
     }
 }

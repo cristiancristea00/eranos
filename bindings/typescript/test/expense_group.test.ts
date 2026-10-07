@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+    type IdFailure,
     CurrencyCode,
     ExchangeRate,
     ExpenseGroup,
@@ -23,6 +24,21 @@ import { Flat } from './flat.js';
 function busy(error: unknown): boolean {
     return error instanceof ExpenseGroupError && 'busy' === error.failure.kind;
 }
+
+/** Text the library refuses as an identifier, with the failure it reports and its message. */
+interface RefusedIdentifier {
+    readonly text: string;
+    readonly failure: IdFailure;
+    readonly message: string;
+}
+
+/** Text that fails each of the library's checks of an identifier. */
+const refusedIdentifiers: readonly RefusedIdentifier[] = [
+    { text: '', failure: { kind: 'empty' }, message: 'an identifier must not be empty' },
+    { text: 'a'.repeat(65), failure: { kind: 'tooLong' }, message: 'an identifier can be at most 64 bytes long' },
+    { text: 'a\tb', failure: { kind: 'controlCharacter' }, message: 'an identifier cannot contain control characters' },
+    { text: ' ana', failure: { kind: 'surroundingWhitespace' }, message: 'an identifier cannot start or end with whitespace' },
+];
 
 void describe('every call of the group, synchronous and asynchronous, and every read of its read handle', () => {
     /** A read that answered another way than the group holds would show an app entries, totals, or plans the group does not have. */
@@ -63,10 +79,12 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.deepEqual(group.transferSync(flat.repayment), transfers[0]);
         const json = group.saveSync();
         assert.equal(ExpenseGroup.loadSync(json).saveSync(), json);
-        assert.throws(
-            () => group.memberSync(memberId('nobody')),
-            (error: unknown) => error instanceof IdError && 'invalid identifier: expected a UUID' === error.message,
-        );
+        for (const refused of refusedIdentifiers) {
+            assert.throws(
+                () => group.memberSync(memberId(refused.text)),
+                (error: unknown) => error instanceof IdError && refused.failure.kind === error.failure.kind && refused.message === error.message,
+            );
+        }
     });
 
     /**

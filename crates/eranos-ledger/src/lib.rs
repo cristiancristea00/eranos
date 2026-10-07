@@ -16,8 +16,9 @@
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 use std::fmt;
+use std::iter;
 
-use eranos_core::{CategoryId, MemberId};
+use eranos_core::{CategoryId, CategoryKey, MemberId};
 use eranos_money::{CurrencyCode, Money, MoneyError};
 
 /// The group's running totals, in the group currency.
@@ -47,12 +48,15 @@ use eranos_money::{CurrencyCode, Money, MoneyError};
 pub struct Summary {
     currency: CurrencyCode,
     total_spent: i64,
-    // In the three maps, rows whose values are all zero are removed, so two
-    // summaries with the same totals compare equal however they were
-    // reached.
+    // In the maps, rows whose values are all zero are removed, and so is a
+    // member's map of categories once it is empty, so two summaries with the
+    // same totals compare equal however they were reached. Each member's
+    // categories are a map of their own: a range over one map keyed by
+    // member and category would have to start at the member's first
+    // category, which no identifier is known to precede.
     members: BTreeMap<MemberId, Totals>,
-    categories: BTreeMap<CategoryId, i64>,
-    member_categories: BTreeMap<MemberCategory, i64>,
+    categories: BTreeMap<CategoryKey, i64>,
+    member_categories: BTreeMap<MemberId, BTreeMap<CategoryKey, i64>>,
 }
 
 impl Summary {
@@ -94,13 +98,13 @@ impl Summary {
         }
     }
 
-    /// The spending of every category with expenses, ordered by category,
-    /// so Uncategorised comes first.
+    /// The spending of every category with expenses: Uncategorised first,
+    /// then the others in identifier order.
     pub fn category_totals(&self) -> impl ExactSizeIterator<Item = CategoryTotal> + '_ {
         self.categories
             .iter()
             .map(|(&category, &total)| CategoryTotal {
-                category,
+                category: category.id(),
                 total: Money::from_minor_units(total, self.currency),
             })
     }
@@ -109,28 +113,24 @@ impl Summary {
     #[must_use]
     pub fn category_total(&self, category: CategoryId) -> Money {
         Money::from_minor_units(
-            self.categories.get(&category).copied().unwrap_or(0),
+            stored(&self.categories, &CategoryKey::new(category)),
             self.currency,
         )
     }
 
     /// One member's share of the spending in every category they have
-    /// expenses in, ordered by category, so Uncategorised comes first.
+    /// expenses in: Uncategorised first, then the others in identifier
+    /// order.
     pub fn member_category_totals(
         &self,
         member: MemberId,
     ) -> impl Iterator<Item = CategoryTotal> + '_ {
-        // The nil UUID of Uncategorised is the smallest identifier, so the
-        // member's rows start here.
-        let first = MemberCategory {
-            member,
-            category: CategoryId::UNCATEGORISED,
-        };
         self.member_categories
-            .range(first..)
-            .take_while(move |&(key, _)| key.member == member)
-            .map(|(key, &total)| CategoryTotal {
-                category: key.category,
+            .get(&member)
+            .into_iter()
+            .flatten()
+            .map(|(&category, &total)| CategoryTotal {
+                category: category.id(),
                 total: Money::from_minor_units(total, self.currency),
             })
     }
@@ -138,12 +138,20 @@ impl Summary {
     /// One member's share of the spending in one category.
     #[must_use]
     pub fn member_category_total(&self, member: MemberId, category: CategoryId) -> Money {
-        let total = self
-            .member_categories
-            .get(&MemberCategory { member, category })
-            .copied()
-            .unwrap_or(0);
-        Money::from_minor_units(total, self.currency)
+        Money::from_minor_units(
+            self.member_category_value(MemberCategory {
+                member,
+                category: CategoryKey::new(category),
+            }),
+            self.currency,
+        )
+    }
+
+    /// The minor units of one member's spending in one category.
+    fn member_category_value(&self, key: MemberCategory) -> i64 {
+        self.member_categories
+            .get(&key.member)
+            .map_or(0, |categories| stored(categories, &key.category))
     }
 }
 
@@ -463,12 +471,12 @@ struct TotalsChange {
 }
 
 /// The key of one member's spending in one category.
-// Derived: by `member`, then `category`, which keeps each member's rows
-// together for `Summary::member_category_totals`.
+// Derived: by `member`, then `category`, the order in which a delta writes
+// its rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct MemberCategory {
     member: MemberId,
-    category: CategoryId,
+    category: CategoryKey,
 }
 
 /// A row of one of the ledger's maps: its key and its value.
@@ -483,7 +491,7 @@ struct Row<K, V> {
 pub struct Delta {
     total_spent: i128,
     members: BTreeMap<MemberId, TotalsChange>,
-    categories: BTreeMap<CategoryId, i128>,
+    categories: BTreeMap<CategoryKey, i128>,
     member_categories: BTreeMap<MemberCategory, i128>,
     pairs: BTreeMap<MemberPair, i128>,
 }
@@ -491,6 +499,7 @@ pub struct Delta {
 impl Delta {
     /// Adds (`sign` 1) or removes (`sign` −1) one expense.
     pub fn add_expense(&mut self, resolved: &ResolvedExpense, category: CategoryId, sign: i128) {
+        let category = CategoryKey::new(category);
         let total = sign * i128::from(resolved.shares.total.minor_units());
         self.total_spent += total;
         *self.categories.entry(category).or_default() += total;
@@ -577,23 +586,14 @@ impl Ledger {
     /// spent and one member's to their share, and both are in range, so the
     /// sums moved into `to` are in range too.
     pub fn move_category(&mut self, from: CategoryId, to: CategoryId) {
+        let (from, to) = (CategoryKey::new(from), CategoryKey::new(to));
         let summary = &mut self.summary;
-        if let Some(total) = summary.categories.remove(&from) {
-            *summary.categories.entry(to).or_default() += total;
-        }
-        let moved: Vec<Row<MemberCategory, i64>> = summary
-            .member_categories
-            .iter()
-            .filter(|&(key, _)| key.category == from)
-            .map(|(&key, &value)| Row { key, value })
-            .collect();
-        for row in moved {
-            summary.member_categories.remove(&row.key);
-            let key = MemberCategory {
-                member: row.key.member,
-                category: to,
-            };
-            *summary.member_categories.entry(key).or_default() += row.value;
+        for categories in
+            iter::once(&mut summary.categories).chain(summary.member_categories.values_mut())
+        {
+            if let Some(total) = categories.remove(&from) {
+                *categories.entry(to).or_default() += total;
+            }
         }
     }
 
@@ -629,9 +629,13 @@ impl Ledger {
                 Ok(Row { key: member, value })
             })
             .collect::<Result<Vec<_>, MoneyError>>()?;
-        let categories = updated(&summary.categories, &delta.categories)?;
-        let member_categories = updated(&summary.member_categories, &delta.member_categories)?;
-        let pairs = updated(&self.pairs, &delta.pairs)?;
+        let categories = updated(&delta.categories, |category| {
+            stored(&summary.categories, &category)
+        })?;
+        let member_categories = updated(&delta.member_categories, |key| {
+            summary.member_category_value(key)
+        })?;
+        let pairs = updated(&delta.pairs, |pair| stored(&self.pairs, &pair))?;
 
         self.summary.total_spent = total_spent;
         for row in members {
@@ -640,8 +644,23 @@ impl Ledger {
         for row in categories {
             store(&mut self.summary.categories, row, |total| 0 == total);
         }
-        for row in member_categories {
-            store(&mut self.summary.member_categories, row, |total| 0 == total);
+        for Row { key, value } in member_categories {
+            let totals = self
+                .summary
+                .member_categories
+                .entry(key.member)
+                .or_default();
+            store(
+                totals,
+                Row {
+                    key: key.category,
+                    value,
+                },
+                |total| 0 == total,
+            );
+            if totals.is_empty() {
+                self.summary.member_categories.remove(&key.member);
+            }
         }
         for row in pairs {
             store(&mut self.pairs, row, |amount| 0 == amount);
@@ -650,15 +669,21 @@ impl Ledger {
     }
 }
 
-/// The new values of the rows `changes` touches, range-checked.
-fn updated<K: Ord + Copy>(
-    current: &BTreeMap<K, i64>,
+/// The value `map` holds for `key`, zero for a row it does not hold.
+fn stored<K: Ord>(map: &BTreeMap<K, i64>, key: &K) -> i64 {
+    map.get(key).copied().unwrap_or(0)
+}
+
+/// The new values of the rows `changes` touches, each its change added to
+/// its `current` value, range-checked.
+fn updated<K: Copy>(
     changes: &BTreeMap<K, i128>,
+    current: impl Fn(K) -> i64,
 ) -> Result<Vec<Row<K, i64>>, MoneyError> {
     changes
         .iter()
         .map(|(&key, &change)| {
-            let value = fit(i128::from(current.get(&key).copied().unwrap_or(0)) + change)?;
+            let value = fit(i128::from(current(key)) + change)?;
             Ok(Row { key, value })
         })
         .collect()

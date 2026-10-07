@@ -153,10 +153,12 @@ fn extreme_totals_and_weights_do_not_overflow() {
 #[test]
 fn the_rotation_is_fnv1a_over_the_entry_and_the_pass() {
     // Reference values computed independently of this implementation.
-    assert_eq!(rotation([0; 16], 0), 0x81d2_3fd7_003c_2305);
-    assert_eq!(rotation([0; 16], 1), 0x62d7_78cd_f54c_d8e4);
-    let bytes: [u8; 16] = std::array::from_fn(|index| u8::try_from(index).unwrap());
-    assert_eq!(rotation(bytes, 7), 0x1a65_92dd_385c_f9b2);
+    let nil = "00000000-0000-0000-0000-000000000000";
+    assert_eq!(rotation(nil, 0), 0x7770_b8d5_79c4_8211);
+    assert_eq!(rotation(nil, 1), 0x5875_f1cc_6ed5_37f0);
+    assert_eq!(rotation("ana", 7), 0x74cb_c470_528b_ef42);
+    // The text's UTF-8 bytes: ă is two of them.
+    assert_eq!(rotation("Ană", 7), 0x8364_c87b_0255_b938);
 }
 
 /// Conversions and percentage tips round half away from zero, the EU

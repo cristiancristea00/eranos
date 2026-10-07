@@ -17,10 +17,10 @@ use std::task::{Context, Poll, Waker};
 use eranos::cooperative::block_on;
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    CalendarDate, Category, CategoryId, CurrencyCode, Email, ExchangeRate, Expense, ExpenseGroup,
-    ExpenseItem, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
-    Money, Parts, PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy,
-    Split, TimeOfDay, TipDistribution, TipRule, Transfer, Username,
+    CalendarDate, Category, CategoryId, CategoryTotal, CurrencyCode, Email, ExchangeRate, Expense,
+    ExpenseGroup, ExpenseItem, Iban, Language, Member, MemberAmount, MemberId, MemberParts,
+    MemberPercentage, Money, Parts, PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup,
+    SettlementStrategy, Split, TimeOfDay, TipDistribution, TipRule, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -162,7 +162,7 @@ fn a_group_round_trips_through_json() {
 fn the_json_shape_is_pinned() {
     let Trip { group, ana, carol } = trip();
     let value = json_of(&group);
-    assert_eq!(value["format"], json!(2));
+    assert_eq!(value["format"], json!(3));
     assert_eq!(value["id"], json!(group.id().to_string()));
     assert_eq!(value["name"], json!("Lisbon"));
     assert_eq!(value["currency"], json!("EUR"));
@@ -171,7 +171,7 @@ fn the_json_shape_is_pinned() {
     // and what it holds; every entry starts with its own identifier.
     let text = serde_json::to_string(&group).unwrap();
     let start = format!(
-        r#"{{"format":2,"id":"{}","name":"Lisbon","currency":"EUR","description":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
+        r#"{{"format":3,"id":"{}","name":"Lisbon","currency":"EUR","description":"Autumn trip","language":"pt-PT","members":[{{"id":"#,
         group.id()
     );
     assert!(text.starts_with(&start), "{text}");
@@ -258,7 +258,7 @@ fn a_tampered_file_is_refused() {
         "{unbalanced}"
     );
     // An expense paid by someone who is not a member.
-    let stranger = MemberId::from_bytes([200; 16]).to_string();
+    let stranger = "stranger";
     let unknown_payer = tamper(&|value| {
         value["expenses"][0]["payers"] = json!({"equal": [stranger]});
     });
@@ -303,14 +303,14 @@ fn a_tampered_file_is_refused() {
     // A newer format is refused instead of read with fields dropped, and an
     // older one because no earlier shape is read.
     let newer = tamper(&|value| {
-        value["format"] = json!(3);
+        value["format"] = json!(4);
     });
-    assert!(newer.contains("unsupported group format 3"), "{newer}");
+    assert!(newer.contains("unsupported group format 4"), "{newer}");
     let older = tamper(&|value| {
-        value["format"] = json!(1);
+        value["format"] = json!(2);
     });
     assert!(
-        older.contains("unsupported group format 1: this version reads format 2"),
+        older.contains("unsupported group format 2: this version reads format 3"),
         "{older}"
     );
 }
@@ -336,14 +336,14 @@ fn an_inconsistent_file_is_refused() {
     let twins = tamper(&|value| value["members"][1]["id"] = value["members"][0]["id"].clone());
     assert!(twins.contains("already exists"), "{twins}");
     // Two categories with one name, in different cases.
-    let other = CategoryId::from_bytes([201; 16]).to_string();
+    let other = "other";
     let homonyms = tamper(&|value| {
         let copy = json!({"id": other, "name": "FOOD"});
         value["categories"].as_array_mut().unwrap().push(copy);
     });
     assert!(homonyms.contains("already has this name"), "{homonyms}");
     // A transfer from someone who is not a member.
-    let stranger = MemberId::from_bytes([200; 16]).to_string();
+    let stranger = "stranger";
     let unknown_sender = tamper(&|value| value["transfers"][0]["from"] = json!(stranger));
     assert!(
         unknown_sender.contains("unknown member"),
@@ -388,12 +388,12 @@ fn a_saved_group_names_why_the_group_refuses_it() {
     assert_eq!(load(&|_| ()), Ok(json_of(&group)));
     // A newer format and an older one, each named in the error.
     assert_eq!(
-        load(&|value| value["format"] = json!(3)),
-        Err(ExpenseGroupError::UnsupportedFormat { format: 3 })
+        load(&|value| value["format"] = json!(4)),
+        Err(ExpenseGroupError::UnsupportedFormat { format: 4 })
     );
     assert_eq!(
-        load(&|value| value["format"] = json!(1)),
-        Err(ExpenseGroupError::UnsupportedFormat { format: 1 })
+        load(&|value| value["format"] = json!(2)),
+        Err(ExpenseGroupError::UnsupportedFormat { format: 2 })
     );
     // A blank group name, and two members with one ID.
     assert_eq!(
@@ -405,7 +405,7 @@ fn a_saved_group_names_why_the_group_refuses_it() {
         Err(ExpenseGroupError::DuplicateMember(ana))
     );
     // Someone archived who is not a member.
-    let stranger = MemberId::from_bytes([200; 16]);
+    let stranger = MemberId::new("stranger").unwrap();
     assert_eq!(
         load(&|value| value["archived"] = json!([stranger.to_string()])),
         Err(ExpenseGroupError::UnknownMember(stranger))
@@ -414,6 +414,87 @@ fn a_saved_group_names_why_the_group_refuses_it() {
     let mut typo = json_of(&group);
     typo["members"][0]["accounts"][0]["details"]["iban"] = json!("RO49AAAA1B31007593840001");
     assert!(serde_json::from_value::<SavedExpenseGroup>(typo).is_err());
+}
+
+/// A file whose identifiers are other text than UUIDs would not load, would
+/// come back with its identifiers changed, or would list a category whose
+/// identifier sorts before the nil UUID text ahead of Uncategorised.
+#[test]
+fn identifiers_load_as_written_and_uncategorised_stays_first() {
+    let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
+        .build()
+        .unwrap();
+    let ana = group
+        .add_member(Member::builder("Ana").build().unwrap())
+        .unwrap();
+    let bob = group
+        .add_member(Member::builder("Bob").build().unwrap())
+        .unwrap();
+    let food = group.add_category(Category::new("Food").unwrap()).unwrap();
+    let everyone = Split::equal([ana, bob]);
+    let dinner = Expense::builder("Dinner", eur("30.00"), ana, everyone.clone(), day())
+        .category(food)
+        .build()
+        .unwrap();
+    group.add_expense(dinner).unwrap();
+    let taxi = Expense::builder("Taxi", eur("10.00"), bob, everyone, day())
+        .build()
+        .unwrap();
+    group.add_expense(taxi).unwrap();
+    let text = serde_json::to_string(&group)
+        .unwrap()
+        .replace(&group.id().to_string(), "Lisbon 2026")
+        .replace(&ana.to_string(), "ana")
+        .replace(&bob.to_string(), "Bob")
+        .replace(&food.to_string(), "-food");
+
+    let loaded: ExpenseGroup = serde_json::from_str(&text).unwrap();
+    assert_eq!(loaded.id().as_str(), "Lisbon 2026");
+    // Members in the byte order of their identifiers: uppercase first.
+    assert_eq!(
+        loaded
+            .members()
+            .map(|member| member.id().to_string())
+            .collect::<Vec<_>>(),
+        ["Bob", "ana"]
+    );
+    // `-food` sorts before the nil UUID text, and is listed after it.
+    let listed = [CategoryId::UNCATEGORISED, CategoryId::new("-food").unwrap()];
+    assert!(CategoryId::UNCATEGORISED > listed[1]);
+    assert_eq!(
+        loaded.categories().map(Category::id).collect::<Vec<_>>(),
+        listed
+    );
+    let summary = loaded.summary();
+    assert_eq!(
+        summary
+            .category_totals()
+            .map(CategoryTotal::category)
+            .collect::<Vec<_>>(),
+        listed
+    );
+    assert_eq!(
+        summary
+            .member_category_totals(MemberId::new("Bob").unwrap())
+            .map(CategoryTotal::category)
+            .collect::<Vec<_>>(),
+        listed
+    );
+    // Saved again, the identifiers read back as they were written.
+    let saved = serde_json::to_string(&loaded).unwrap();
+    assert_eq!(
+        serde_json::from_str::<ExpenseGroup>(&saved).unwrap(),
+        loaded
+    );
+    // An identifier the rules refuse fails the read, naming the rule.
+    let padded = text.replace("\"ana\"", "\" ana\"");
+    let refused = serde_json::from_str::<ExpenseGroup>(&padded).unwrap_err();
+    assert!(
+        refused
+            .to_string()
+            .contains("an identifier cannot start or end with whitespace"),
+        "{refused}"
+    );
 }
 
 /// A load would hold its thread for the whole file, or leave half a group

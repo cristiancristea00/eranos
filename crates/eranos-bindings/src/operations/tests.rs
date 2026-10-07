@@ -204,12 +204,12 @@ fn every_read_converts_what_the_group_holds() {
     assert_eq!(&saved, group);
 
     let (category, expense) = (
-        CategoryId::from_bytes([9; 16]),
-        ExpenseId::from_bytes([9; 16]),
+        CategoryId::new("category-9").unwrap(),
+        ExpenseId::new("expense-9").unwrap(),
     );
     let (member, transfer) = (
-        MemberId::from_bytes([9; 16]),
-        TransferId::from_bytes([9; 16]),
+        MemberId::new("member-9").unwrap(),
+        TransferId::new("transfer-9").unwrap(),
     );
     assert_eq!(operations::category(group, &category.to_string()), Ok(None));
     assert_eq!(operations::expense(group, &expense.to_string()), Ok(None));
@@ -227,6 +227,12 @@ fn every_read_converts_what_the_group_holds() {
         operations::transfer_amount(group, &transfer.to_string()),
         Ok(None)
     );
+}
+
+/// Text that is not an identifier, and the failure it is refused with.
+struct RefusedText {
+    text: String,
+    failure: IdFailure,
 }
 
 /// A call given text that is not an identifier would read or change another
@@ -248,20 +254,37 @@ fn every_call_by_identifier_refuses_text_that_is_not_one() {
         |group, id| operations::transfer_amount(group, id).err(),
         |group, id| operations::remove_transfer(group, id).err(),
     ];
+    let refused = [
+        RefusedText {
+            text: String::new(),
+            failure: IdFailure::Empty,
+        },
+        RefusedText {
+            text: "a".repeat(65),
+            failure: IdFailure::TooLong,
+        },
+        RefusedText {
+            text: "a\tb".to_owned(),
+            failure: IdFailure::ControlCharacter,
+        },
+        RefusedText {
+            text: " ana".to_owned(),
+            failure: IdFailure::SurroundingWhitespace,
+        },
+    ];
     let mut flat = flat();
     let before = flat.group.clone();
     for call in calls {
-        let refusal = call(&mut flat.group, "nobody");
-        assert!(
-            matches!(
-                refusal,
-                Some(EranosError::Id {
-                    failure: IdFailure::InvalidId,
-                    ..
-                })
-            ),
-            "{refusal:?}"
-        );
+        for RefusedText { text, failure } in &refused {
+            let refusal = call(&mut flat.group, text);
+            assert!(
+                matches!(
+                    refusal,
+                    Some(EranosError::Id { failure: found, .. }) if found == *failure
+                ),
+                "{text:?}: {refusal:?}"
+            );
+        }
     }
     assert_eq!(flat.group, before);
 }
@@ -296,7 +319,7 @@ fn categories_change_through_the_records() {
         operations::replace_category(
             group,
             &Category {
-                id: Some(CategoryId::from_bytes([9; 16]).to_string()),
+                id: Some(CategoryId::new("category-9").unwrap().to_string()),
                 name: "Trips".to_owned(),
             },
         )
@@ -392,7 +415,7 @@ fn expenses_change_through_the_records() {
         Ok(Some(replacement.clone()))
     );
 
-    let nobody = MemberId::from_bytes([9; 16]).to_string();
+    let nobody = MemberId::new("member-9").unwrap().to_string();
     let refusals = [
         operations::add_expense(group, &replacement).unwrap_err(),
         operations::add_expense(group, &new_expense("Lunch", &nobody, &[ana])).unwrap_err(),
@@ -400,7 +423,7 @@ fn expenses_change_through_the_records() {
         operations::replace_expense(
             group,
             &Expense {
-                id: Some(ExpenseId::from_bytes([9; 16]).to_string()),
+                id: Some(ExpenseId::new("expense-9").unwrap().to_string()),
                 ..replacement.clone()
             },
         )
@@ -484,7 +507,7 @@ fn members_change_through_the_records() {
     operations::unarchive_member(group, &carol).unwrap();
     assert_eq!(operations::is_archived(group, &carol), Ok(false));
 
-    let nobody = MemberId::from_bytes([9; 16]).to_string();
+    let nobody = MemberId::new("member-9").unwrap().to_string();
     let unknown = Member {
         id: Some(nobody.clone()),
         ..new_member("Dan")
@@ -573,7 +596,7 @@ fn transfers_change_through_the_records() {
         Ok(Some(replacement.clone()))
     );
 
-    let nobody = MemberId::from_bytes([9; 16]).to_string();
+    let nobody = MemberId::new("member-9").unwrap().to_string();
     let refusals = [
         operations::add_transfer(group, &replacement).unwrap_err(),
         operations::add_transfer(group, &new_transfer(ana, &nobody, 500)).unwrap_err(),
@@ -581,7 +604,7 @@ fn transfers_change_through_the_records() {
         operations::replace_transfer(
             group,
             &Transfer {
-                id: Some(TransferId::from_bytes([9; 16]).to_string()),
+                id: Some(TransferId::new("transfer-9").unwrap().to_string()),
                 ..replacement.clone()
             },
         )

@@ -59,9 +59,9 @@ class ExpenseGroupTest {
         String json = group.save();
         assertEquals(json, ExpenseGroup.load(json).save());
         EranosException.Id invalid =
-                assertThrows(EranosException.Id.class, () -> group.member(new MemberId("nobody")));
-        assertEquals(new IdFailure.InvalidId(), invalid.failure());
-        assertEquals("invalid identifier: expected a UUID", invalid.getMessage());
+                assertThrows(EranosException.Id.class, () -> group.member(new MemberId(" nobody")));
+        assertEquals(new IdFailure.SurroundingWhitespace(), invalid.failure());
+        assertEquals("an identifier cannot start or end with whitespace", invalid.getMessage());
     }
 
     /**

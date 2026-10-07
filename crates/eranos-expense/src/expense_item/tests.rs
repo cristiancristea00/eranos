@@ -10,9 +10,17 @@ use super::*;
 
 use crate::MemberAmount;
 
-// Two members, in ID order.
-const ANA: MemberId = MemberId::from_bytes([1; 16]);
-const BOB: MemberId = MemberId::from_bytes([2; 16]);
+// Two members, in identifier order.
+
+/// Ana, a member.
+fn ana() -> MemberId {
+    MemberId::new("ana").unwrap()
+}
+
+/// Bob, a member.
+fn bob() -> MemberId {
+    MemberId::new("bob").unwrap()
+}
 
 fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, CurrencyCode::EUR)
@@ -20,7 +28,7 @@ fn euros(minor_units: i64) -> Money {
 
 /// Three beers at 4.50, shared by Ana and Bob.
 fn beers() -> ExpenseItem {
-    ExpenseItem::builder("Beer", euros(450), [ANA, BOB])
+    ExpenseItem::builder("Beer", euros(450), [ana(), bob()])
         .quantity(3)
         .build()
         .unwrap()
@@ -30,7 +38,7 @@ fn beers() -> ExpenseItem {
 #[test]
 fn the_quantity_defaults_to_one() {
     // One unit, priced at the unit price.
-    let pizza = ExpenseItem::builder_with_split("Pizza", euros(1_200), Split::equal([ANA]))
+    let pizza = ExpenseItem::builder_with_split("Pizza", euros(1_200), Split::equal([ana()]))
         .build()
         .unwrap();
     assert_eq!(pizza.quantity(), 1);
@@ -38,7 +46,7 @@ fn the_quantity_defaults_to_one() {
     // The other fields are kept as given.
     assert_eq!(pizza.name(), "Pizza");
     assert_eq!(pizza.unit_price(), euros(1_200));
-    assert_eq!(pizza.split(), &Split::equal([ANA]));
+    assert_eq!(pizza.split(), &Split::equal([ana()]));
 }
 
 /// A receipt line would be charged at another amount than price times
@@ -55,55 +63,57 @@ fn the_line_total_is_the_unit_price_times_the_quantity() {
 #[test]
 fn shared_by_is_an_equal_split() {
     // Same item either way.
-    let explicit = ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ANA, BOB]))
-        .quantity(3)
-        .build()
-        .unwrap();
+    let explicit =
+        ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ana(), bob()]))
+            .quantity(3)
+            .build()
+            .unwrap();
     assert_eq!(beers(), explicit);
-    assert_eq!(beers().split(), &Split::equal([ANA, BOB]));
+    assert_eq!(beers().split(), &Split::equal([ana(), bob()]));
 }
 
 /// Correcting who shares a line before saving it would keep the split the
 /// line was started with.
 #[test]
 fn the_last_split_setter_wins() {
-    let builder = || ExpenseItem::builder("Beer", euros(450), [ANA]);
+    let builder = || ExpenseItem::builder("Beer", euros(450), [ana()]);
     // `split` replaces the constructor's equal split.
-    let item = builder().split(Split::equal([BOB])).build().unwrap();
-    assert_eq!(item.split(), &Split::equal([BOB]));
+    let item = builder().split(Split::equal([bob()])).build().unwrap();
+    assert_eq!(item.split(), &Split::equal([bob()]));
     // `shared_by` after `split`, and `split` after `shared_by`.
     let shared_by_last = builder()
-        .split(Split::equal([ANA]))
-        .shared_by([BOB])
+        .split(Split::equal([ana()]))
+        .shared_by([bob()])
         .build()
         .unwrap();
-    assert_eq!(shared_by_last.split(), &Split::equal([BOB]));
+    assert_eq!(shared_by_last.split(), &Split::equal([bob()]));
     let split_last = builder()
-        .shared_by([BOB])
-        .split(Split::equal([ANA]))
+        .shared_by([bob()])
+        .split(Split::equal([ana()]))
         .build()
         .unwrap();
-    assert_eq!(split_last.split(), &Split::equal([ANA]));
+    assert_eq!(split_last.split(), &Split::equal([ana()]));
     // `shared_by` replaces the split of `builder_with_split`.
-    let shared_by_twice = ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ANA]))
-        .shared_by([BOB])
-        .build()
-        .unwrap();
-    assert_eq!(shared_by_twice.split(), &Split::equal([BOB]));
+    let shared_by_twice =
+        ExpenseItem::builder_with_split("Beer", euros(450), Split::equal([ana()]))
+            .shared_by([bob()])
+            .build()
+            .unwrap();
+    assert_eq!(shared_by_twice.split(), &Split::equal([bob()]));
 }
 
 /// A line without a name would appear blank on the itemised receipt.
 #[test]
 fn the_item_name_is_trimmed_and_required() {
     // Surrounding whitespace.
-    let item = ExpenseItem::builder("  Beer \n", euros(450), [ANA])
+    let item = ExpenseItem::builder("  Beer \n", euros(450), [ana()])
         .build()
         .unwrap();
     assert_eq!(item.name(), "Beer");
     // Blank names.
     for name in ["", "   "] {
         assert_eq!(
-            ExpenseItem::builder(name, euros(450), [ANA]).build(),
+            ExpenseItem::builder(name, euros(450), [ana()]).build(),
             Err(ExpenseError::EmptyItemName),
             "{name:?}"
         );
@@ -117,13 +127,13 @@ fn a_non_positive_unit_price_is_rejected() {
     // Zero and negative prices.
     for unit_price in [euros(0), euros(-450)] {
         assert_eq!(
-            ExpenseItem::builder("Beer", unit_price, [ANA]).build(),
+            ExpenseItem::builder("Beer", unit_price, [ana()]).build(),
             Err(ExpenseError::NonPositiveAmount)
         );
     }
     // The smallest positive price.
     assert!(
-        ExpenseItem::builder("Mint", euros(1), [ANA])
+        ExpenseItem::builder("Mint", euros(1), [ana()])
             .build()
             .is_ok()
     );
@@ -134,14 +144,14 @@ fn a_non_positive_unit_price_is_rejected() {
 fn a_zero_quantity_is_rejected() {
     // With a split.
     assert_eq!(
-        ExpenseItem::builder("Beer", euros(450), [ANA])
+        ExpenseItem::builder("Beer", euros(450), [ana()])
             .quantity(0)
             .build(),
         Err(ExpenseError::ZeroQuantity)
     );
     // The quantity is checked before the split, which would not divide a
     // line total of zero.
-    let one_cent = Split::amounts([MemberAmount::new(ANA, euros(1))]);
+    let one_cent = Split::amounts([MemberAmount::new(ana(), euros(1))]);
     assert_eq!(
         ExpenseItem::builder_with_split("Beer", euros(450), one_cent)
             .quantity(0)
@@ -156,13 +166,13 @@ fn a_zero_quantity_is_rejected() {
 fn a_line_total_out_of_range_is_rejected() {
     // Two units of more than half the range.
     assert_eq!(
-        ExpenseItem::builder("Yacht", euros(i64::MAX / 2 + 1), [ANA])
+        ExpenseItem::builder("Yacht", euros(i64::MAX / 2 + 1), [ana()])
             .quantity(2)
             .build(),
         Err(ExpenseError::Overflow)
     );
     // One unit of the largest price fits.
-    let item = ExpenseItem::builder("Yacht", euros(i64::MAX), [ANA])
+    let item = ExpenseItem::builder("Yacht", euros(i64::MAX), [ana()])
         .build()
         .unwrap();
     assert_eq!(item.line_total(), euros(i64::MAX));
@@ -172,17 +182,17 @@ fn a_line_total_out_of_range_is_rejected() {
 /// more or less than the line costs.
 #[test]
 fn the_split_must_divide_the_line_total() {
-    let builder = || ExpenseItem::builder("Beer", euros(450), [ANA]).quantity(3);
+    let builder = || ExpenseItem::builder("Beer", euros(450), [ana()]).quantity(3);
     // Amounts that add up to 13.50.
     let split = Split::amounts([
-        MemberAmount::new(ANA, euros(1_000)),
-        MemberAmount::new(BOB, euros(350)),
+        MemberAmount::new(ana(), euros(1_000)),
+        MemberAmount::new(bob(), euros(350)),
     ]);
     assert!(builder().split(split).build().is_ok());
     // Amounts that add up to the unit price instead.
     let shares_of_the_unit_price = Split::amounts([
-        MemberAmount::new(ANA, euros(300)),
-        MemberAmount::new(BOB, euros(150)),
+        MemberAmount::new(ana(), euros(300)),
+        MemberAmount::new(bob(), euros(150)),
     ]);
     assert_eq!(
         builder().split(shares_of_the_unit_price).build(),
@@ -211,13 +221,13 @@ fn a_rebuilt_item_accepts_a_new_split() {
     // `split` replaces a split set through `shared_by`.
     let item = beers()
         .to_builder()
-        .split(Split::equal([BOB]))
+        .split(Split::equal([bob()]))
         .build()
         .unwrap();
-    assert_eq!(item.split(), &Split::equal([BOB]));
+    assert_eq!(item.split(), &Split::equal([bob()]));
     // `shared_by` replaces a split set through `split`.
-    let item = item.to_builder().shared_by([ANA]).build().unwrap();
-    assert_eq!(item.split(), &Split::equal([ANA]));
+    let item = item.to_builder().shared_by([ana()]).build().unwrap();
+    assert_eq!(item.split(), &Split::equal([ana()]));
 }
 
 /// Editing a line's name, price, or quantity would be lost or change other

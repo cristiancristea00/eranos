@@ -96,9 +96,9 @@ fn every_read_through_the_handle_answers_as_the_group_does() {
     assert_eq!(reader.language(), handle.language());
     assert_eq!(reader.save(), handle.save());
     assert!(matches!(
-        reader.member("nobody"),
+        reader.member(" nobody"),
         Err(EranosError::Id {
-            failure: IdFailure::InvalidId,
+            failure: IdFailure::SurroundingWhitespace,
             ..
         })
     ));
@@ -172,7 +172,7 @@ fn a_change_waits_for_every_open_handle() {
     }
 
     let dropped = handle.read().unwrap();
-    let carol = MemberId::from_bytes([9; 16]).to_string();
+    let carol = MemberId::new("member-9").unwrap().to_string();
     let mut archiving = pin!(handle.archive_member_async(carol, None));
     assert!(archiving.as_mut().poll(&mut context).is_pending());
     drop(dropped);

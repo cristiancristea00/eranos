@@ -154,3 +154,34 @@ func anIdentifierIsItsText() {
     #expect(id == Member.ID(rawValue: id.rawValue))
     #expect(id != Member.ID(rawValue: "other"))
 }
+
+/// Text that is not an identifier, with the failure and the message the library refuses it with.
+private struct RefusedIdentifier {
+    let text: String
+    let failure: IDFailure
+    let message: String
+}
+
+/// A refusal that reached an app as another failure, or without the library's message, would
+/// give its user another reason than the library's, and refusing text the library accepts would
+/// put an entry the group holds out of the app's reach.
+@Test
+func onlyTextThatCannotBeAnIdentifierIsRefused() throws {
+    let group = try Flat().group
+    // "â" is two bytes of UTF-8: 32 of them reach the limit of 64 bytes, and 33 pass it.
+    let refusals = [
+        RefusedIdentifier(text: "", failure: .empty, message: "an identifier must not be empty"),
+        RefusedIdentifier(text: String(repeating: "a", count: 65), failure: .tooLong, message: "an identifier can be at most 64 bytes long"),
+        RefusedIdentifier(text: String(repeating: "â", count: 33), failure: .tooLong, message: "an identifier can be at most 64 bytes long"),
+        RefusedIdentifier(text: "a\tb", failure: .controlCharacter, message: "an identifier cannot contain control characters"),
+        RefusedIdentifier(text: " ana", failure: .surroundingWhitespace, message: "an identifier cannot start or end with whitespace")
+    ]
+    for refusal in refusals {
+        #expect(throws: EranosError.id(refusal.failure, detail: refusal.message)) {
+            try group.member(withID: Member.ID(rawValue: refusal.text))
+        }
+    }
+    for text in ["nobody", "Ana Maria", String(repeating: "a", count: 64), String(repeating: "â", count: 32)] {
+        #expect(try nil == group.member(withID: Member.ID(rawValue: text)))
+    }
+}

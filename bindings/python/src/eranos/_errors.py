@@ -41,8 +41,23 @@ class IdError(EranosError):
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
-    class InvalidId:
-        """Text that is not a UUID."""
+    class Empty:
+        """An identifier that is empty."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
+    class TooLong:
+        """An identifier longer than 64 bytes of UTF-8."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
+    class ControlCharacter:
+        """An identifier that holds a control character, such as a tab or a line break."""
+
+    @final
+    @dataclasses.dataclass(frozen=True, slots=True)
+    class SurroundingWhitespace:
+        """An identifier that starts or ends with whitespace."""
 
     def __init__(self, failure: IdFailure, message: str) -> None:
         """
@@ -58,7 +73,7 @@ class IdError(EranosError):
         """What the module reports."""
 
 
-type IdFailure = IdError.InvalidId
+type IdFailure = IdError.Empty | IdError.TooLong | IdError.ControlCharacter | IdError.SurroundingWhitespace
 """What ``IdError`` can report: a class per failure, with what it holds."""
 
 
@@ -799,7 +814,10 @@ class InvalidJsonError(EranosError):
 # test checks against every class the generator wrote.
 
 _ID_FAILURES: dict[generated.IdFailure, IdFailure] = {
-    generated.IdFailure.INVALID_ID: IdError.InvalidId(),
+    generated.IdFailure.EMPTY: IdError.Empty(),
+    generated.IdFailure.TOO_LONG: IdError.TooLong(),
+    generated.IdFailure.CONTROL_CHARACTER: IdError.ControlCharacter(),
+    generated.IdFailure.SURROUNDING_WHITESPACE: IdError.SurroundingWhitespace(),
 }
 
 _IBAN_REASONS: dict[type[object], Callable[[Any], IbanReason]] = {

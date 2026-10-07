@@ -42,7 +42,7 @@ export function savingAndLoading(group: ExpenseGroup, people: People, categories
         'loading it with into_expense_group reports a refusal as a typed error, not as text:',
     );
     const tampered: Tampering[] = [
-        { change: '"format": 3', text: saved.replace('"format": 2', '"format": 3') },
+        { change: '"format": 4', text: saved.replace('"format": 3', '"format": 4') },
         { change: 'a blank group name', text: saved.replace('"name": "Lisbon and Porto"', '"name": " "') },
         { change: 'Lodging renamed FOOD', text: saved.replace('"name": "Lodging"', '"name": "FOOD"') },
     ];
@@ -60,7 +60,7 @@ export function savingAndLoading(group: ExpenseGroup, people: People, categories
     assert.deepEqual(loaded.summarySync(), group.summarySync());
     const failures: ExpenseGroupFailure[] = rows.map((row) => row.message.failure);
     assert.deepEqual(failures, [
-        { kind: 'unsupportedFormat', format: 3 },
+        { kind: 'unsupportedFormat', format: 4 },
         { kind: 'emptyName' },
         { kind: 'duplicateCategoryName', existing: categories.food },
     ]);

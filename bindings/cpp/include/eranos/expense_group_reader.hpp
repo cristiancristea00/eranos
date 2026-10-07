@@ -38,7 +38,7 @@ class ExpenseGroupReader final {
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<ExpenseGroupId, Error> id() const;
 
-    /// Every category, the built-in one first.
+    /// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<std::vector<Category>, Error> categories() const;
@@ -55,7 +55,7 @@ class ExpenseGroupReader final {
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<CurrencyCode, Error> currency() const;
 
-    /// Every expense, in the order they were created.
+    /// Every expense, in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<std::vector<Expense>, Error> expenses() const;
@@ -79,7 +79,7 @@ class ExpenseGroupReader final {
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<Summary, Error> summary() const;
 
-    /// Every member, archived ones included, in the order they were created.
+    /// Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<std::vector<Member>, Error> members() const;
@@ -110,7 +110,7 @@ class ExpenseGroupReader final {
     ///   module that refused it
     [[nodiscard]] std::expected<SettlementPlan, Error> settlement(SettlementStrategy const strategy) const;
 
-    /// Every transfer, in the order they were created.
+    /// Every transfer, in identifier order, which is creation order for generated identifiers.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
     [[nodiscard]] std::expected<std::vector<Transfer>, Error> transfers() const;

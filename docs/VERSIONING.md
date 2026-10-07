@@ -21,7 +21,11 @@ The numbers are part of the contract because groups are shared: two devices
 on different releases must compute the same cent for the same expense. A
 change to the allocation order, the FNV-1a tie rotation, the rounding rule,
 or a strategy's payment choice changes what users see without any API
-change, and counts as breaking.
+change, and counts as breaking. The rotation's seed is the text of the
+expense's identifier, byte for byte, and identifiers compare the same way,
+so two spellings of one UUID, such as uppercase and lowercase hexadecimal
+digits or the braced form, are two identifiers, which split and sort
+differently.
 
 The internal crates (`eranos-core` to `eranos-expense-group`) are outside
 the contract on their own: they are not published, they take the workspace's
@@ -84,7 +88,10 @@ for the same reason.
 
 Mark the old item `#[deprecated(since = "…", note = "use … instead")]` in a
 minor release and remove it in the next breaking one; the footer of the
-breaking commit names what disappeared and its replacement. A serialised
+breaking commit names what disappeared and its replacement. Before 1.0, a
+breaking release may remove an item without a deprecating minor release
+when its replacement has another shape, and its `BREAKING CHANGE:` footer
+names the replacement. A serialised
 shape is never removed while `FORMAT` stays the same: reading support for
 an old format stays until a breaking release says otherwise.
 

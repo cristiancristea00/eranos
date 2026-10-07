@@ -3,9 +3,9 @@
 //! Every figure a user entered is in the expense's own currency and is
 //! divided there first; a foreign expense's total is then converted once,
 //! and its shares are re-divided from the converted total, so both sides
-//! still add up exactly. Each division rotates its ties by the expense ID
-//! and a pass number, so the same expense resolves identically on every
-//! device.
+//! still add up exactly. Each division rotates its ties by the text of the
+//! expense identifier and a pass number, so the same expense resolves
+//! identically on every device.
 
 use std::collections::BTreeMap;
 
@@ -63,8 +63,8 @@ pub fn resolve_expense_at(
     conversion: Option<ExchangeRate>,
     currency: CurrencyCode,
 ) -> Result<ResolvedExpense, MoneyError> {
-    let seed = expense.id().to_bytes();
-    let pass = |number: u64| rotation(seed, number);
+    let id = expense.id();
+    let pass = |number: u64| rotation(id.as_str(), number);
     let amount = expense.amount().minor_units();
     let tip = expense.tip_amount().minor_units();
     let total = expense.total().minor_units();

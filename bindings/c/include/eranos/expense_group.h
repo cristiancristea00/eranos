@@ -604,7 +604,7 @@ static inline void eranosExpenseGroupIdAsync(EranosExpenseGroup const *const gro
     EranosExpenseGroup_id_async(group, cancellation, wrapped);
 }
 
-/// Every category, the built-in one first.
+/// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
 /// @param categories Receives the categories on success, which the caller destroys, and nullptr on failure
@@ -838,7 +838,7 @@ static inline void eranosExpenseGroupChangeCurrencyAsync(EranosExpenseGroup *con
     EranosExpenseGroup_change_currency_async(group, eranosDetailView(currency), rates, cancellation, wrapped);
 }
 
-/// Every expense, in the order they were created.
+/// Every expense, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
 /// @param expenses Receives the expenses on success, which the caller destroys, and nullptr on failure
@@ -1070,7 +1070,7 @@ static inline void eranosExpenseGroupSummaryAsync(EranosExpenseGroup const *cons
     EranosExpenseGroup_summary_async(group, cancellation, wrapped);
 }
 
-/// Every member, archived ones included, in the order they were created.
+/// Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
 /// @param members Receives the members on success, which the caller destroys, and nullptr on failure
@@ -1432,7 +1432,7 @@ static inline void eranosExpenseGroupSettlementAsync(EranosExpenseGroup const *c
     EranosExpenseGroup_settlement_async(group, strategy, cancellation, wrapped);
 }
 
-/// Every transfer, in the order they were created.
+/// Every transfer, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param group The group
 /// @param transfers Receives the transfers on success, which the caller destroys, and nullptr on failure

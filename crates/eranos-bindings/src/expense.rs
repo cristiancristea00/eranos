@@ -73,8 +73,7 @@ impl Split {
     ///
     /// # Errors
     ///
-    /// [`IdFailure::InvalidId`](crate::IdFailure::InvalidId) for a member that
-    /// is not an identifier,
+    /// An [`EranosError::Id`] for a member that is not an identifier,
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency)
     /// for an amount in an unknown currency,
     /// [`MoneyFailure::InvalidParts`](crate::MoneyFailure::InvalidParts) for

@@ -22,7 +22,8 @@ pub(crate) fn id(group: &ExpenseGroup) -> String {
 
 // --- Categories --------------------------------------------------------------
 
-/// Every category, the built-in one first.
+/// Every category: the built-in one first, then the others in identifier
+/// order, which is creation order for generated identifiers.
 pub(crate) fn categories(group: &ExpenseGroup) -> Vec<Category> {
     group.categories().map(Category::from_library).collect()
 }
@@ -104,7 +105,8 @@ pub(crate) fn change_currency(
 
 // --- Expenses ----------------------------------------------------------------
 
-/// Every expense, in the order they were created.
+/// Every expense, in identifier order, which is creation order for
+/// generated identifiers.
 pub(crate) fn expenses(group: &ExpenseGroup) -> Vec<Expense> {
     group.expenses().map(Expense::from_library).collect()
 }
@@ -160,7 +162,8 @@ pub(crate) fn summary(group: &ExpenseGroup) -> Summary {
 
 // --- Members -----------------------------------------------------------------
 
-/// Every member, archived ones included, in the order they were created.
+/// Every member, archived ones included, in identifier order, which is
+/// creation order for generated identifiers.
 pub(crate) fn members(group: &ExpenseGroup) -> Vec<Member> {
     group.members().map(Member::from_library).collect()
 }
@@ -248,7 +251,8 @@ pub(crate) fn settlement(
 
 // --- Transfers ---------------------------------------------------------------
 
-/// Every transfer, in the order they were created.
+/// Every transfer, in identifier order, which is creation order for
+/// generated identifiers.
 pub(crate) fn transfers(group: &ExpenseGroup) -> Vec<Transfer> {
     group.transfers().map(Transfer::from_library).collect()
 }

@@ -27,8 +27,14 @@ static constexpr EranosIbanReason ERANOS_IBAN_REASON_INVALID_CHECKSUM = EranosIb
 /// The failure within its module, named after the module and the failure. The values of EranosFailure, by the names of the C layer.
 typedef enum EranosFailure EranosFailure;
 
-/// Text that is not a UUID.
-static constexpr EranosFailure ERANOS_FAILURE_ID_INVALID_ID = EranosFailure_IdInvalidId;
+/// An identifier that is empty.
+static constexpr EranosFailure ERANOS_FAILURE_ID_EMPTY = EranosFailure_IdEmpty;
+/// An identifier longer than 64 bytes of UTF-8.
+static constexpr EranosFailure ERANOS_FAILURE_ID_TOO_LONG = EranosFailure_IdTooLong;
+/// An identifier that holds a control character, such as a tab or a line break.
+static constexpr EranosFailure ERANOS_FAILURE_ID_CONTROL_CHARACTER = EranosFailure_IdControlCharacter;
+/// An identifier that starts or ends with whitespace.
+static constexpr EranosFailure ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE = EranosFailure_IdSurroundingWhitespace;
 /// An account whose name is blank.
 static constexpr EranosFailure ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME = EranosFailure_PaymentAccountEmptyName;
 /// An IBAN that failed validation, and why.

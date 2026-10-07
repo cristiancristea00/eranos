@@ -437,8 +437,14 @@ pub enum ExpenseGroupFailure {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IdFailure {
-    /// [`IdError::InvalidId`].
-    InvalidId,
+    /// [`IdError::Empty`].
+    Empty,
+    /// [`IdError::TooLong`].
+    TooLong,
+    /// [`IdError::ControlCharacter`].
+    ControlCharacter,
+    /// [`IdError::SurroundingWhitespace`].
+    SurroundingWhitespace,
 }
 
 /// What a [`LanguageError`] reports: a case per variant, with
@@ -569,9 +575,30 @@ impl FromIbanError for IbanReason {
 }
 
 impl FromIdError for EranosError {
-    fn invalid_id(message: String) -> Self {
+    fn empty(message: String) -> Self {
         Self::Id {
-            failure: IdFailure::InvalidId,
+            failure: IdFailure::Empty,
+            detail: message,
+        }
+    }
+
+    fn too_long(message: String) -> Self {
+        Self::Id {
+            failure: IdFailure::TooLong,
+            detail: message,
+        }
+    }
+
+    fn control_character(message: String) -> Self {
+        Self::Id {
+            failure: IdFailure::ControlCharacter,
+            detail: message,
+        }
+    }
+
+    fn surrounding_whitespace(message: String) -> Self {
+        Self::Id {
+            failure: IdFailure::SurroundingWhitespace,
             detail: message,
         }
     }

@@ -31,7 +31,8 @@ trait ExpenseGroupCalls {
 
     // --- Categories ----------------------------------------------------------
 
-    /// Every category, the built-in one first.
+    /// Every category: the built-in one first, then the others in identifier
+    /// order, which is creation order for generated identifiers.
     #[read]
     #[infallible]
     fn categories(&self) -> Result<Vec<Category>, EranosError>;
@@ -70,7 +71,8 @@ trait ExpenseGroupCalls {
 
     // --- Expenses ------------------------------------------------------------
 
-    /// Every expense, in the order they were created.
+    /// Every expense, in identifier order, which is creation order for
+    /// generated identifiers.
     #[read]
     #[infallible]
     fn expenses(&self) -> Result<Vec<Expense>, EranosError>;
@@ -106,7 +108,8 @@ trait ExpenseGroupCalls {
 
     // --- Members -------------------------------------------------------------
 
-    /// Every member, archived ones included, in the order they were created.
+    /// Every member, archived ones included, in identifier order, which is
+    /// creation order for generated identifiers.
     #[read]
     #[infallible]
     fn members(&self) -> Result<Vec<Member>, EranosError>;
@@ -162,7 +165,8 @@ trait ExpenseGroupCalls {
 
     // --- Transfers -----------------------------------------------------------
 
-    /// Every transfer, in the order they were created.
+    /// Every transfer, in identifier order, which is creation order for
+    /// generated identifiers.
     #[read]
     #[infallible]
     fn transfers(&self) -> Result<Vec<Transfer>, EranosError>;

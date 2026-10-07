@@ -2212,17 +2212,17 @@ static void savingAndLoading(EranosExpenseGroup const *const group, People const
     printLine("Loading replays every entry through the same checks as adding it and rebuilds the\n"
               "totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and\n"
               "loading it with into_expense_group reports a refusal as a typed error, not as text:");
-    EranosError *const format = changedRefusal(eranosTextData(saved), "\"format\": 2", "\"format\": 3");
+    EranosError *const format = changedRefusal(eranosTextData(saved), "\"format\": 3", "\"format\": 4");
     EranosError *const blank = changedRefusal(eranosTextData(saved), "\"name\": \"Lisbon and Porto\"", "\"name\": \" \"");
     EranosError *const homonym = changedRefusal(eranosTextData(saved), "\"name\": \"Lodging\"", "\"name\": \"FOOD\"");
-    check(isFailure(format, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) && namesFormat(format, 3),
+    check(isFailure(format, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) && namesFormat(format, 4),
           "a later format is refused");
     check(isFailure(blank, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME), "a blank name is refused");
     check(isFailure(homonym, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME) &&
               namesExisting(homonym, categories->food),
           "a caseless homonym is refused");
     Table *const table = loadTable(2);
-    addLoadRow(table, &(LoadRow){.change = lineOf("\"format\": 3"), .message = messageLine(format)});
+    addLoadRow(table, &(LoadRow){.change = lineOf("\"format\": 4"), .message = messageLine(format)});
     addLoadRow(table, &(LoadRow){.change = lineOf("a blank group name"), .message = messageLine(blank)});
     addLoadRow(table, &(LoadRow){.change = lineOf("Lodging renamed FOOD"), .message = messageLine(homonym)});
     tablePrint(table);
@@ -2407,6 +2407,14 @@ static void ratios(void) {
     check(150 == hundredths, "1.5 parts are 150 hundredths");
 }
 
+/// The message the library refuses @p text with as a member's identifier, which it checks is @p failure.
+static Line identifierRefusal(EranosExpenseGroup const *const group, char const *const text, EranosFailure const failure) {
+    EranosMember *member = nullptr;
+    EranosError *const refusal = eranosExpenseGroupMember(group, text, &member);
+    check(isFailure(refusal, ERANOS_ERROR_KIND_ID, failure) && nullptr == member, "the text is refused as an identifier");
+    return messageLine(refusal);
+}
+
 /// Prints what dates, times, identifiers, and language tags read and print.
 static void datesAndIdentifiers(EranosExpenseGroup const *const group, People const *const people) {
     EranosText *const text = eranosTextCreate();
@@ -2425,8 +2433,12 @@ static void datesAndIdentifiers(EranosExpenseGroup const *const group, People co
     check(nullptr != member, "Ana is a member");
     bool const found = eranosMemberId(member, text) && 0 == strcmp(eranosTextData(text), people->ana.text);
     eranosMemberDestroy(member);
-    EranosMember *nobody = nullptr;
-    Line const notAnId = messageLine(eranosExpenseGroupMember(group, "not-a-uuid", &nobody));
+    Line const empty = identifierRefusal(group, "", ERANOS_FAILURE_ID_EMPTY);
+    Line const afterASpace = identifierRefusal(group, " ana", ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE);
+    Line const withATab = identifierRefusal(group, "a\tb", ERANOS_FAILURE_ID_CONTROL_CHARACTER);
+    char letters[66] = {};
+    memset(letters, 'a', sizeof letters - 1);
+    Line const tooLong = identifierRefusal(group, letters, ERANOS_FAILURE_ID_TOO_LONG);
     Line const language = valueOr(eranosLanguageParse("pt-pt", text), text);
     Line const underscore = messageLine(eranosLanguageParse("pt_PT", text));
     eranosTextDestroy(text);
@@ -2440,7 +2452,10 @@ static void datesAndIdentifiers(EranosExpenseGroup const *const group, People co
                            .input = lineOf("Ana's identifier"),
                            .result = lineOf("%s, the same after a round trip: %s", people->ana.text, found ? "true" : "false"),
                        });
-    addValueRow(table, &(ValueRow){.input = lineOf("not-a-uuid"), .result = notAnId});
+    addValueRow(table, &(ValueRow){.input = lineOf("empty text"), .result = empty});
+    addValueRow(table, &(ValueRow){.input = lineOf("ana after a space"), .result = afterASpace});
+    addValueRow(table, &(ValueRow){.input = lineOf("a tab between a and b"), .result = withATab});
+    addValueRow(table, &(ValueRow){.input = lineOf("65 letters a"), .result = tooLong});
     addValueRow(table, &(ValueRow){.input = lineOf("pt-pt"), .result = language});
     addValueRow(table, &(ValueRow){.input = lineOf("pt_PT"), .result = underscore});
     tablePrint(table);

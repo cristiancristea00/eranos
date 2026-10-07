@@ -238,7 +238,7 @@ class ExpenseGroup:
 
     def categories(self) -> tuple[Category, ...]:
         """
-        List every category, the built-in one first.
+        List every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 
         It blocks the calling thread while another call holds the group's lock.
 
@@ -251,7 +251,7 @@ class ExpenseGroup:
 
     async def categories_async(self) -> tuple[Category, ...]:
         """
-        List every category, the built-in one first.
+        List every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what categories refuses.
@@ -461,7 +461,7 @@ class ExpenseGroup:
 
     def expenses(self) -> tuple[Expense, ...]:
         """
-        List every expense, in the order they were created.
+        List every expense, in identifier order, which is creation order for generated identifiers.
 
         It blocks the calling thread while another call holds the group's lock.
 
@@ -474,7 +474,7 @@ class ExpenseGroup:
 
     async def expenses_async(self) -> tuple[Expense, ...]:
         """
-        List every expense, in the order they were created.
+        List every expense, in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what expenses refuses.
@@ -685,7 +685,7 @@ class ExpenseGroup:
 
     def members(self) -> tuple[Member, ...]:
         """
-        List every member, archived ones included, in the order they were added.
+        List every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 
         It blocks the calling thread while another call holds the group's lock.
 
@@ -698,7 +698,7 @@ class ExpenseGroup:
 
     async def members_async(self) -> tuple[Member, ...]:
         """
-        List every member, archived ones included, in the order they were added.
+        List every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what members refuses.
@@ -1026,7 +1026,7 @@ class ExpenseGroup:
 
     def transfers(self) -> tuple[Transfer, ...]:
         """
-        List every transfer, in the order they were created.
+        List every transfer, in identifier order, which is creation order for generated identifiers.
 
         It blocks the calling thread while another call holds the group's lock.
 
@@ -1039,7 +1039,7 @@ class ExpenseGroup:
 
     async def transfers_async(self) -> tuple[Transfer, ...]:
         """
-        List every transfer, in the order they were created.
+        List every transfer, in identifier order, which is creation order for generated identifiers.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what transfers refuses.

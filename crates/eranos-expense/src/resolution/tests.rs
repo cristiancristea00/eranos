@@ -15,17 +15,22 @@ use proptest::prelude::*;
 use super::*;
 use crate::{ExpenseItem, MemberAmount, MemberParts, Split, TipDistribution, TipRule};
 
+/// Identifier text of one to 64 letters, digits, and hyphens.
+const IDENTIFIER: &str = "[A-Za-z0-9-]{1,64}";
+
 /// `expense` under the identifier `id`, which seeds its tie rotation.
 fn identified(expense: &Expense, id: ExpenseId) -> Expense {
     expense.to_builder().with_id(id).build().unwrap()
 }
 
+/// The member `number`; members sort by number.
 fn member(number: u8) -> MemberId {
-    MemberId::from_bytes([number; 16])
+    MemberId::new(&format!("member-{number:03}")).unwrap()
 }
 
+/// The expense `number`, whose identifier seeds its tie rotation.
 fn entry(number: u8) -> ExpenseId {
-    ExpenseId::from_bytes([number; 16])
+    ExpenseId::new(&format!("expense-{number:03}")).unwrap()
 }
 
 fn eur(minor_units: i64) -> Money {
@@ -471,10 +476,10 @@ proptest! {
         tip_basis_points in proptest::option::of(0_u32..3_000),
         equal_tip in any::<bool>(),
         foreign in proptest::option::of((1_u64..100_000, 0_u8..6)),
-        id in any::<[u8; 16]>(),
+        id in IDENTIFIER,
     ) {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, equal_tip, foreign);
-        let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), CurrencyCode::EUR).unwrap();
+        let resolved = resolve_expense(&identified(&expense, ExpenseId::new(&id).unwrap()), CurrencyCode::EUR).unwrap();
         let total = resolved.shares.total().minor_units();
         prop_assert_eq!(rows(&resolved).iter().map(|row| row.paid).sum::<i64>(), total);
         prop_assert_eq!(rows(&resolved).iter().map(|row| row.share).sum::<i64>(), total);
@@ -494,10 +499,10 @@ proptest! {
         payer_parts in proptest::collection::vec(1_u32..1_000, 1..4),
         tip_basis_points in proptest::option::of(0_u32..3_000),
         foreign in proptest::option::of((1_u64..100_000, 0_u8..6)),
-        id in any::<[u8; 16]>(),
+        id in IDENTIFIER,
     ) {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, false, foreign);
-        let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), CurrencyCode::EUR).unwrap();
+        let resolved = resolve_expense(&identified(&expense, ExpenseId::new(&id).unwrap()), CurrencyCode::EUR).unwrap();
         let nets = debt_nets(&resolved);
         for Row { member, paid, share } in rows(&resolved) {
             prop_assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
@@ -530,15 +535,19 @@ fn the_rotation_of_every_pass_is_pinned() {
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&itemised, entry(1)), CurrencyCode::EUR).unwrap();
+    // The items' leftover cents go to Ana, to Carol, and to Bob and Carol,
+    // and the tip's to Ana and Bob, so each consumes 1.01; Bob pays the odd
+    // cent of the 3.03.
     assert_eq!(
         rows(&resolved),
-        vec![row(ana, 151, 101), row(bob, 152, 100), row(carol, 0, 102)]
+        vec![row(ana, 151, 101), row(bob, 152, 101), row(carol, 0, 101)]
     );
+    // Ana's 1.51 over three shares of 1.01 gives Bob the leftover cent.
     assert_eq!(
         resolved.debts,
         vec![
-            debt(bob, ana, 50),
-            debt(carol, ana, 51),
+            debt(bob, ana, 51),
+            debt(carol, ana, 50),
             debt(ana, bob, 51),
             debt(carol, bob, 51)
         ]
@@ -555,9 +564,10 @@ fn the_rotation_of_every_pass_is_pinned() {
     .build()
     .unwrap();
     let converted = resolve_expense(&identified(&foreign, entry(2)), CurrencyCode::EUR).unwrap();
+    // The leftover cent of the re-division goes to Carol.
     assert_eq!(
         rows(&converted),
-        vec![row(ana, 202, 67), row(bob, 0, 68), row(carol, 0, 67)]
+        vec![row(ana, 202, 67), row(bob, 0, 67), row(carol, 0, 68)]
     );
 
     // Pair debts: three payers over four equal shares, so both the first and
@@ -581,15 +591,15 @@ fn the_rotation_of_every_pass_is_pinned() {
             .unwrap()
             .debts,
         vec![
-            debt(bob, ana, 33),
+            debt(bob, ana, 34),
             debt(carol, ana, 33),
-            debt(dan, ana, 34),
-            debt(ana, bob, 33),
-            debt(carol, bob, 34),
+            debt(dan, ana, 33),
+            debt(ana, bob, 34),
+            debt(carol, bob, 33),
             debt(dan, bob, 33),
-            debt(ana, carol, 34),
-            debt(bob, carol, 34),
-            debt(dan, carol, 33),
+            debt(ana, carol, 33),
+            debt(bob, carol, 33),
+            debt(dan, carol, 34),
         ]
     );
 }

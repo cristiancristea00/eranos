@@ -50,9 +50,6 @@ class ExpenseGroupTest {
         assertEquals(listOf(flat.euros(500)), group.settlementBlocking(SettlementStrategy.GREEDY).payments.map { it.amount })
         val json = group.saveBlocking()
         assertEquals(json, ExpenseGroup.loadBlocking(json).saveBlocking())
-        val invalid = assertThrows<EranosException.Id> { group.memberBlocking(MemberId("nobody")) }
-        assertEquals(IdFailure.InvalidId, invalid.failure)
-        assertEquals("invalid identifier: expected a UUID", invalid.message)
     }
 
     /**

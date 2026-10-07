@@ -424,7 +424,8 @@ public final class ExpenseGroup implements AutoCloseable {
     // The group's members.
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for
+     * generated identifiers.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #membersAsync} waits without
      * blocking it.
@@ -437,7 +438,8 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for
+     * generated identifiers.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -693,7 +695,8 @@ public final class ExpenseGroup implements AutoCloseable {
     // The group's categories.
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is
+     * creation order for generated identifiers.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #categoriesAsync} waits without
      * blocking it.
@@ -706,7 +709,8 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is
+     * creation order for generated identifiers.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -869,7 +873,7 @@ public final class ExpenseGroup implements AutoCloseable {
     // The group's expenses.
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #expensesAsync} waits without
      * blocking it.
@@ -882,7 +886,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -1076,7 +1080,7 @@ public final class ExpenseGroup implements AutoCloseable {
     // The group's transfers.
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #transfersAsync} waits without
      * blocking it.
@@ -1089,7 +1093,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.

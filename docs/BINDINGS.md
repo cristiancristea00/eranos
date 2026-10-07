@@ -119,15 +119,16 @@ flowchart TD
 ## 2. What every binding shares
 
 - **Records of text and integers.** Values and entries cross as records
-  and enums with data: identifiers as hyphenated UUIDs, currencies as ISO
-  4217 codes, exchange rates as decimals, amounts as 64-bit minor units,
-  percentages in basis points, and parts in hundredths. Days, months,
-  years, hours, minutes, quantities, basis points, and hundredths are
-  32-bit signed integers, which every target language has: Kotlin's
-  unsigned types are invisible from Java, and JavaScript has one number
-  type. A record is checked by the library's rules on its way in, so a bad
-  value, a number too large for its field included, is a typed error and
-  never wraps into another value.
+  and enums with data: identifiers as their text, which for a generated one
+  is a UUID v7 in lowercase hyphenated form, currencies as ISO 4217 codes,
+  exchange rates as decimals, amounts as 64-bit minor units, percentages in
+  basis points, and parts in hundredths. Days, months, years, hours,
+  minutes, quantities, basis points, and hundredths are 32-bit signed
+  integers, which every target language has: Kotlin's unsigned types are
+  invisible from Java, and JavaScript has one number type. A record is
+  checked by the library's rules on its way in, so a bad value, a number
+  too large for its field included, is a typed error and never wraps into
+  another value.
 - **Identity stays with the group.** An entry to add carries no identifier
   (`IdentifierGiven` otherwise), and the call returns the one the group
   generated. An entry to replace names its entry (`IdentifierMissing`
@@ -146,10 +147,15 @@ flowchart TD
   `detail`, the library's message; a field named `message` would clash
   with the property of every Kotlin exception. A caller catches a whole
   module or one failure, and no failure needs its crate's name in front.
-  The core's own cases stand beside the modules: `Cancelled`,
-  `IdentifierGiven`, `IdentifierMissing`, `InvalidJson`, which names the
-  line and column of a refused saved group but not its text, since the
-  text can hold an account number, and `Released`. The conversion traits
+  `Id` holds `IdFailure`, whose cases are `Empty`, `TooLong` (more than 64
+  bytes of UTF-8), `ControlCharacter`, and `SurroundingWhitespace`, the
+  first rule the text breaks, in that order; the flat form names them
+  `IdEmpty`, `IdTooLong`, `IdControlCharacter`, and
+  `IdSurroundingWhitespace`. The core's own cases stand beside the
+  modules: `Cancelled`, `IdentifierGiven`, `IdentifierMissing`,
+  `InvalidJson`, which names the line and column of a refused saved group
+  but not its text, since the text can hold an account number, and
+  `Released`. The conversion traits
   of [ARCHITECTURE.md § 2](ARCHITECTURE.md#2-crate-map) keep the
   conversion exhaustive, so a new variant fails the core's build.
 - **One group object.** `ExpenseGroupHandle` holds a `SharedExpenseGroup`

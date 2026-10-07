@@ -104,7 +104,7 @@ def saving_and_loading(group: ExpenseGroup, people: People, categories: Categori
             'loading it with into_expense_group reports a refusal as a typed error, not as text:',
         )
         tampered = (
-            Tampering(change='"format": 3', text=saved.replace('"format": 2', '"format": 3', 1)),
+            Tampering(change='"format": 4', text=saved.replace('"format": 3', '"format": 4', 1)),
             Tampering(change='a blank group name', text=saved.replace('"name": "Lisbon and Porto"', '"name": " "', 1)),
             Tampering(change='Lodging renamed FOOD', text=saved.replace('"name": "Lodging"', '"name": "FOOD"', 1)),
         )
@@ -117,7 +117,7 @@ def saving_and_loading(group: ExpenseGroup, people: People, categories: Categori
         assert loaded.save() == saved
         assert loaded.summary() == group.summary()
         assert [row.message.failure for row in rows] == [
-            ExpenseGroupError.UnsupportedFormat(format=3),
+            ExpenseGroupError.UnsupportedFormat(format=4),
             ExpenseGroupError.EmptyName(),
             ExpenseGroupError.DuplicateCategoryName(existing=categories.food),
         ]

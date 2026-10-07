@@ -3,7 +3,9 @@ package eranos;
 import java.util.Objects;
 
 /**
- * The identifier of a category: a hyphenated UUID the group gave it.
+ * The identifier of a category: the text the group gave it, a UUID v7 in lowercase hyphenated form.
+ *
+ * <p>Its text follows the rules of every identifier, on {@link ExpenseGroupId}.
  *
  * @param value the identifier's text
  */

@@ -15,6 +15,7 @@ import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.ExpenseGroup;
+import eranos.IdFailure;
 import eranos.Language;
 import eranos.Member;
 import eranos.MemberId;
@@ -124,6 +125,11 @@ final class Values {
         TimeOfDay time = TimeOfDay.parse("22:15");
         MemberId parsed = new MemberId(people.ana().value());
         Optional<MemberId> found = group.member(parsed).flatMap(Member::id);
+        Optional<EranosException> empty = refusal(() -> group.member(new MemberId("")));
+        Optional<EranosException> spaced = refusal(() -> group.member(new MemberId(" ana")));
+        Optional<EranosException> tabbed = refusal(() -> group.member(new MemberId("a\tb")));
+        Optional<EranosException> tooLong =
+                refusal(() -> group.member(new MemberId("a".repeat(65))));
         Language language = Language.parse("pt-pt");
         System.out.println(
                 "Dates, times, identifiers, and language tags read and print the ISO forms:");
@@ -147,15 +153,27 @@ final class Values {
                                 parsed
                                         + ", the same after a round trip: "
                                         + Optional.of(people.ana()).equals(found)),
-                        new ValueRow(
-                                "not-a-uuid",
-                                message(refusal(() -> group.member(new MemberId("not-a-uuid"))))),
+                        new ValueRow("empty text", message(empty)),
+                        new ValueRow("ana after a space", message(spaced)),
+                        new ValueRow("a tab between a and b", message(tabbed)),
+                        new ValueRow("65 letters a", message(tooLong)),
                         new ValueRow("pt-pt", language.toString()),
                         new ValueRow("pt_PT", message(refusal(() -> Language.parse("pt_PT"))))),
                 2);
         check(1 == date.day() && 10 == date.month() && 2026 == date.year());
         check(22 == time.hour() && 15 == time.minute());
         check(people.ana().equals(parsed));
+        check(Optional.of(new IdFailure.Empty()).equals(idFailure(empty)));
+        check(Optional.of(new IdFailure.SurroundingWhitespace()).equals(idFailure(spaced)));
+        check(Optional.of(new IdFailure.ControlCharacter()).equals(idFailure(tabbed)));
+        check(Optional.of(new IdFailure.TooLong()).equals(idFailure(tooLong)));
+    }
+
+    /** The failure of an identifier that {@code refused} holds, if it is an identifier's. */
+    private static Optional<IdFailure> idFailure(Optional<EranosException> refused) {
+        return refused.filter(EranosException.Id.class::isInstance)
+                .map(EranosException.Id.class::cast)
+                .map(EranosException.Id::failure);
     }
 
     static void values(ExpenseGroup group, People people) throws EranosException {

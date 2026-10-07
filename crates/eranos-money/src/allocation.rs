@@ -96,16 +96,18 @@ impl PartialOrd for LeftoverClaim {
     }
 }
 
-/// The tie rotation for one allocation pass of an entry: FNV-1a over the
-/// entry's ID bytes and the pass number.
+/// The tie rotation for one allocation pass of an entry: 64-bit FNV-1a over
+/// the UTF-8 bytes of the entry's identifier text, then the pass number's
+/// eight bytes, least significant first.
 ///
 /// FNV-1a is fixed by its specification, so every platform and every release
 /// rotates the same way, and a synced entry splits identically everywhere.
 #[must_use]
-pub fn rotation(entry: [u8; 16], pass: u64) -> u64 {
+pub fn rotation(entry: &str, pass: u64) -> u64 {
     const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0000_0100_0000_01b3;
     entry
+        .as_bytes()
         .iter()
         .chain(&pass.to_le_bytes())
         .fold(OFFSET_BASIS, |hash, &byte| {

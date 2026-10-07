@@ -531,7 +531,10 @@ public abstract sealed class EranosException extends Exception
      */
     static IdFailure converted(eranos.internal.IdFailure failure) {
         return switch (failure) {
-            case INVALID_ID -> new IdFailure.InvalidId();
+            case EMPTY -> new IdFailure.Empty();
+            case TOO_LONG -> new IdFailure.TooLong();
+            case CONTROL_CHARACTER -> new IdFailure.ControlCharacter();
+            case SURROUNDING_WHITESPACE -> new IdFailure.SurroundingWhitespace();
         };
     }
 

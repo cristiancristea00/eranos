@@ -1300,12 +1300,12 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
         check(refusedLoad.has_value() && ErrorKind::EXPENSE_GROUP == refusedLoad->kind(), "the changed file is refused");
         return refusedLoad.value();
     };
-    auto const format = refused(R"("format": 2)", R"("format": 3)");
+    auto const format = refused(R"("format": 3)", R"("format": 4)");
     auto const blank = refused(R"("name": "Lisbon and Porto")", R"("name": " ")");
     auto const homonym = refused(R"("name": "Lodging")", R"("name": "FOOD")");
     printTable<LoadRow>(
         {
-            {.change = "\"format\": 3", .message = format.message()},
+            {.change = "\"format\": 4", .message = format.message()},
             {.change = "a blank group name", .message = blank.message()},
             {.change = "Lodging renamed FOOD", .message = homonym.message()},
         },
@@ -1313,7 +1313,7 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
 
     check(saved == loaded.save(), "the loaded group saves as the group did");
     check(group.summary() == loaded.summary(), "the loaded group has the group's totals");
-    check(Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT == format.failure() && std::optional<std::int64_t>(3) == format.format(),
+    check(Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT == format.failure() && std::optional<std::int64_t>(4) == format.format(),
           "a later format is refused");
     check(Failure::EXPENSE_GROUP_EMPTY_NAME == blank.failure(), "a blank name is refused");
     check(Failure::EXPENSE_GROUP_DUPLICATE_CATEGORY_NAME == homonym.failure() && categories.food == homonym.existing(),
@@ -1400,6 +1400,13 @@ void ratios() {
     check(150 == parts.hundredths, "1.5 parts are 150 hundredths");
 }
 
+/// The message the library refuses @p text with as a member's identifier, which it checks is @p failure.
+[[nodiscard]] std::string identifierRefusal(ExpenseGroup const &group, std::string text, Failure const failure) {
+    auto const refused = refusal(group.member(MemberId(std::move(text))));
+    check(refused.has_value() && ErrorKind::ID == refused->kind() && failure == refused->failure(), "the text is refused as an identifier");
+    return message(refused);
+}
+
 /// Prints what dates, times, identifiers, and language tags read and print.
 void datesAndIdentifiers(ExpenseGroup const &group, People const &people) {
     auto const date = must(CalendarDate::parse("2026-10-01"));
@@ -1418,7 +1425,10 @@ void datesAndIdentifiers(ExpenseGroup const &group, People const &people) {
                 .result = std::format("{}, the same after a round trip: {}", people.ana.value(),
                                       (std::optional<MemberId>(people.ana) == found ? "true" : "false")),
             },
-            {.input = "not-a-uuid", .result = message(refusal(group.member(MemberId("not-a-uuid"))))},
+            {.input = "empty text", .result = identifierRefusal(group, "", Failure::ID_EMPTY)},
+            {.input = "ana after a space", .result = identifierRefusal(group, " ana", Failure::ID_SURROUNDING_WHITESPACE)},
+            {.input = "a tab between a and b", .result = identifierRefusal(group, "a\tb", Failure::ID_CONTROL_CHARACTER)},
+            {.input = "65 letters a", .result = identifierRefusal(group, std::string(65, 'a'), Failure::ID_TOO_LONG)},
             {.input = "pt-pt", .result = language.toString()},
             {.input = "pt_PT", .result = message(refusal(Language::parse("pt_PT")))},
         },

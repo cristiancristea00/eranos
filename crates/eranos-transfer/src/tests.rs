@@ -10,10 +10,22 @@ use eranos_settlement::SettlementStrategy;
 
 use super::*;
 
-// Three members, in ID order.
-const ANA: MemberId = MemberId::from_bytes([1; 16]);
-const BOB: MemberId = MemberId::from_bytes([2; 16]);
-const CAROL: MemberId = MemberId::from_bytes([3; 16]);
+// Three members, in identifier order.
+
+/// Ana, a member.
+fn ana() -> MemberId {
+    MemberId::new("ana").unwrap()
+}
+
+/// Bob, a member.
+fn bob() -> MemberId {
+    MemberId::new("bob").unwrap()
+}
+
+/// Carol, a member.
+fn carol() -> MemberId {
+    MemberId::new("carol").unwrap()
+}
 
 fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, CurrencyCode::EUR)
@@ -25,7 +37,7 @@ fn september_24() -> CalendarDate {
 
 /// Bob repays Ana 30.00 on 24 September 2026.
 fn repayment() -> TransferBuilder {
-    Transfer::builder(BOB, ANA, euros(3_000), september_24())
+    Transfer::builder(bob(), ana(), euros(3_000), september_24())
 }
 
 /// The repayment with every optional field set, converted at 1 EUR =
@@ -45,8 +57,8 @@ fn full_repayment() -> Transfer {
 fn a_transfer_keeps_its_fields_and_defaults() {
     let transfer = repayment().build().unwrap();
     // Required fields; a plain amount is a local cost, at a rate of 1.
-    assert_eq!(transfer.from(), BOB);
-    assert_eq!(transfer.to(), ANA);
+    assert_eq!(transfer.from(), bob());
+    assert_eq!(transfer.to(), ana());
     assert_eq!(transfer.amount(), euros(3_000));
     assert_eq!(transfer.cost(), Cost::from(euros(3_000)));
     assert_eq!(transfer.date(), september_24());
@@ -62,12 +74,12 @@ fn a_transfer_keeps_its_fields_and_defaults() {
 fn a_transfer_to_oneself_is_rejected() {
     // Same sender and recipient.
     assert_eq!(
-        Transfer::builder(ANA, ANA, euros(3_000), september_24()).build(),
+        Transfer::builder(ana(), ana(), euros(3_000), september_24()).build(),
         Err(TransferError::SameMember)
     );
     // The members are checked before the amount.
     assert_eq!(
-        Transfer::builder(ANA, ANA, euros(0), september_24()).build(),
+        Transfer::builder(ana(), ana(), euros(0), september_24()).build(),
         Err(TransferError::SameMember)
     );
 }
@@ -155,21 +167,21 @@ fn builder_setters_replace_each_field() {
     let september_25 = CalendarDate::new(2026, 9, 25).unwrap();
     let transfer = full_repayment()
         .to_builder()
-        .from(CAROL)
-        .to(BOB)
+        .from(carol())
+        .to(bob())
         .cost(euros(1_000))
         .date(september_25)
         .build()
         .unwrap();
-    assert_eq!(transfer.from(), CAROL);
-    assert_eq!(transfer.to(), BOB);
+    assert_eq!(transfer.from(), carol());
+    assert_eq!(transfer.to(), bob());
     assert_eq!(transfer.amount(), euros(1_000));
     assert_eq!(transfer.date(), september_25);
     // The other fields are kept.
     assert_eq!(transfer.note(), Some("Dinner"));
     // Replaced fields are validated again.
     assert_eq!(
-        full_repayment().to_builder().to(BOB).build(),
+        full_repayment().to_builder().to(bob()).build(),
         Err(TransferError::SameMember)
     );
 }
@@ -182,7 +194,14 @@ fn a_payment_becomes_the_transfer_that_records_it() {
     // A transfer from Ana to Bob leaves Bob owing her 30.00, which the
     // settlement has him pay back.
     let mut delta = Delta::default();
-    delta.add_transfer(MemberPair { from: ANA, to: BOB }, 3_000, 1);
+    delta.add_transfer(
+        MemberPair {
+            from: ana(),
+            to: bob(),
+        },
+        3_000,
+        1,
+    );
     let mut ledger = Ledger::new(CurrencyCode::EUR);
     ledger.apply(&delta).unwrap();
     let settlement = eranos_settlement::settle(SettlementStrategy::Greedy, &ledger).unwrap();
@@ -292,7 +311,7 @@ fn transfers_round_trip_through_serde() {
         minimal_transfer
     );
     // Loading validates like the builder.
-    let to_oneself = minimal_json.replace(&ANA.to_string(), &BOB.to_string());
+    let to_oneself = minimal_json.replace(&ana().to_string(), &bob().to_string());
     assert_ne!(to_oneself, minimal_json);
     assert!(serde_json::from_str::<Transfer>(&to_oneself).is_err());
     // A record that is not a transfer's shape is refused before its checks.

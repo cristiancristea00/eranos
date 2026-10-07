@@ -10,6 +10,7 @@ from eranos import (
     CurrencyCode,
     ExchangeRate,
     ExpenseGroup,
+    IdError,
     Language,
     MemberId,
     Money,
@@ -168,6 +169,10 @@ def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
     time = TimeOfDay.parse('22:15')
     parsed = MemberId(str(people.ana))
     found = group.member(parsed)
+    empty = refusal(lambda: group.member(MemberId('')))
+    after_a_space = refusal(lambda: group.member(MemberId(' ana')))
+    with_a_tab = refusal(lambda: group.member(MemberId('a\tb')))
+    too_long = refusal(lambda: group.member(MemberId('a' * 65)))
     language = Language('pt-pt')
     print_lines('Dates, times, identifiers, and language tags read and print the ISO forms:')
     print_table(
@@ -180,7 +185,10 @@ def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
             ValueRow(
                 input="Ana's identifier", result=f'{parsed}, the same after a round trip: {_truth(found is not None and found.id == people.ana)}'
             ),
-            ValueRow(input='not-a-uuid', result=message(refusal(lambda: group.member(MemberId('not-a-uuid'))))),
+            ValueRow(input='empty text', result=message(empty)),
+            ValueRow(input='ana after a space', result=message(after_a_space)),
+            ValueRow(input='a tab between a and b', result=message(with_a_tab)),
+            ValueRow(input='65 letters a', result=message(too_long)),
             ValueRow(input='pt-pt', result=str(language)),
             ValueRow(input='pt_PT', result=message(refusal(lambda: Language('pt_PT')))),
         ],
@@ -192,6 +200,15 @@ def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
     assert time.hour == 22
     assert time.minute == 15
     assert parsed == people.ana
+    refused = {
+        IdError.Empty(): empty,
+        IdError.SurroundingWhitespace(): after_a_space,
+        IdError.ControlCharacter(): with_a_tab,
+        IdError.TooLong(): too_long,
+    }
+    for failure, error in refused.items():
+        assert isinstance(error, IdError), f'the identifier is refused with {failure}'
+        assert error.failure == failure
 
 
 def values(group: ExpenseGroup, people: People) -> None:

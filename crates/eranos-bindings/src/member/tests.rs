@@ -215,7 +215,7 @@ fn a_member_refuses_every_detail_that_does_not_convert() {
 #[test]
 fn a_member_to_add_carries_no_identifier() {
     let named = Member {
-        id: Some(MemberId::from_bytes([1; 16]).to_string()),
+        id: Some(MemberId::new("member-1").unwrap().to_string()),
         ..ana()
     };
     assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());

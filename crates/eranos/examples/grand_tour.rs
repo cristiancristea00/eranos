@@ -16,7 +16,7 @@ use std::pin::pin;
 use std::task::{Context, Waker};
 
 use eranos::cooperative::block_on;
-use eranos::error::{ExpenseError, ExpenseGroupError, TransferError};
+use eranos::error::{ExpenseError, ExpenseGroupError, IdError, TransferError};
 use eranos::expense::ExpenseBuilder;
 use eranos::{
     Balance, CalendarDate, Category, CategoryId, CategoryTotal, Cost, CurrencyCode, CurrencyRate,
@@ -728,7 +728,7 @@ fn print_items(group: &ExpenseGroup, id: ExpenseId) {
 }
 
 /// The receipt of the fado night: every line with its own split.
-fn fado_items(people: People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
+fn fado_items(people: &People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
     let People {
         ana,
         bob,
@@ -736,7 +736,7 @@ fn fado_items(people: People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
         dan,
         eva,
         ..
-    } = people;
+    } = *people;
     Ok(vec![
         ExpenseItem::builder("Vinho verde", eur("12.00")?, [ana, bob, dan])
             .quantity(2)
@@ -761,7 +761,7 @@ fn fado_items(people: People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
 
 /// The fado night, item by item, paid by Carol and Dan, with a 10 % tip; the
 /// caller builds it, which gives it its identifier.
-fn fado_night(people: People, categories: Categories) -> Result<ExpenseBuilder, Box<dyn Error>> {
+fn fado_night(people: &People, categories: Categories) -> Result<ExpenseBuilder, Box<dyn Error>> {
     Ok(Expense::itemised_builder_with_payers(
         "Fado night",
         eur("54.00")?,
@@ -781,7 +781,7 @@ fn fado_night(people: People, categories: Categories) -> Result<ExpenseBuilder, 
 /// Adds one expense for every way of dividing one.
 fn add_expenses(
     group: &mut ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
 ) -> Result<Expenses, Box<dyn Error>> {
     let People {
@@ -791,7 +791,7 @@ fn add_expenses(
         dan,
         eva,
         ..
-    } = people;
+    } = *people;
     let everyone = [ana, bob, carol, dan, eva];
     let groceries = Expense::builder(
         "Groceries",
@@ -886,7 +886,7 @@ fn consumed(group: &ExpenseGroup, id: ExpenseId, member: MemberId) -> Option<Mon
 
 fn expenses(
     group: &mut ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
 ) -> Result<ExpenseId, Box<dyn Error>> {
     section("4. Expenses, one for every way of dividing");
@@ -968,11 +968,11 @@ fn expenses(
 
 fn another_currency(
     group: &mut ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
 ) -> Result<(), Box<dyn Error>> {
     section("5. Another currency");
-    let People { ana, bob, .. } = people;
+    let People { ana, bob, .. } = *people;
     let rate = ExchangeRate::parse("0.2")?;
     let parking = group.add_expense(
         Expense::builder(
@@ -1026,7 +1026,7 @@ fn another_currency(
 /// what changed.
 fn replace_and_remove(
     group: &mut ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
     seafood: ExpenseId,
 ) -> Result<Vec<EditRow>, Box<dyn Error>> {
@@ -1036,7 +1036,7 @@ fn replace_and_remove(
         carol,
         dan,
         ..
-    } = people;
+    } = *people;
     // The dinner's receipt said 99.00.
     let corrected = group
         .expense(seafood)
@@ -1126,12 +1126,12 @@ fn replace_and_remove(
 
 fn edits(
     group: &mut ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
     seafood: ExpenseId,
 ) -> Result<(), Box<dyn Error>> {
     section("6. Edits");
-    let People { ana, bob, .. } = people;
+    let People { ana, bob, .. } = *people;
     let changes = replace_and_remove(group, people, categories, seafood)?;
     println!(
         "Entries are values: an edit starts from a copy made with to_builder, keeps the\n\
@@ -1202,7 +1202,7 @@ fn edits(
     Ok(())
 }
 
-fn comings_and_goings(group: &mut ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
+fn comings_and_goings(group: &mut ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
     section("7. Members come and go");
     let People {
         ana,
@@ -1211,7 +1211,7 @@ fn comings_and_goings(group: &mut ExpenseGroup, people: People) -> Result<(), Bo
         dan,
         filip,
         ..
-    } = people;
+    } = *people;
     let removed = group.remove_member(filip)?;
     group.archive_member(dan)?;
     let farewell = group.add_expense(
@@ -1270,7 +1270,7 @@ fn comings_and_goings(group: &mut ExpenseGroup, people: People) -> Result<(), Bo
 
 fn summary(
     group: &ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
 ) -> Result<(), Box<dyn Error>> {
     section("8. The summary");
@@ -1366,7 +1366,7 @@ fn removing_a_category(
     Ok(())
 }
 
-fn new_currency(group: &mut ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
+fn new_currency(group: &mut ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
     section("10. A new currency");
     let missing = group.change_currency(CurrencyCode::RON, &[]);
     group.change_currency(
@@ -1489,7 +1489,7 @@ fn refusal(text: &str) -> Result<ExpenseGroupError, Box<dyn Error>> {
 
 fn saving_and_loading(
     group: &ExpenseGroup,
-    people: People,
+    people: &People,
     categories: Categories,
 ) -> Result<(), Box<dyn Error>> {
     section("12. Saving and loading");
@@ -1517,8 +1517,8 @@ fn saving_and_loading(
     );
     let tampered = [
         Tampering {
-            change: "\"format\": 3",
-            text: saved.replacen("\"format\": 2", "\"format\": 3", 1),
+            change: "\"format\": 4",
+            text: saved.replacen("\"format\": 3", "\"format\": 4", 1),
         },
         Tampering {
             change: "a blank group name",
@@ -1551,7 +1551,7 @@ fn saving_and_loading(
     assert_eq!(
         errors,
         [
-            ExpenseGroupError::UnsupportedFormat { format: 3 },
+            ExpenseGroupError::UnsupportedFormat { format: 4 },
             ExpenseGroupError::EmptyName,
             ExpenseGroupError::DuplicateCategoryName {
                 existing: categories.food
@@ -1697,7 +1697,7 @@ fn ratios() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn dates_and_identifiers(people: People) -> Result<(), Box<dyn Error>> {
+fn dates_and_identifiers(people: &People) -> Result<(), Box<dyn Error>> {
     let date = CalendarDate::parse("2026-10-01")?;
     let time = TimeOfDay::parse("22:15")?;
     let text = people.ana.to_string();
@@ -1731,12 +1731,24 @@ fn dates_and_identifiers(people: People) -> Result<(), Box<dyn Error>> {
                 input: "Ana's identifier",
                 result: format!(
                     "{parsed}, the same after a round trip: {}",
-                    parsed == people.ana && MemberId::from_bytes(parsed.to_bytes()) == people.ana
+                    parsed == people.ana && MemberId::new(people.ana.as_str())? == people.ana
                 ),
             },
             ValueRow {
-                input: "not-a-uuid",
-                result: message(&"not-a-uuid".parse::<MemberId>()),
+                input: "empty text",
+                result: message(&MemberId::new("")),
+            },
+            ValueRow {
+                input: "ana after a space",
+                result: message(&MemberId::new(" ana")),
+            },
+            ValueRow {
+                input: "a tab between a and b",
+                result: message(&MemberId::new("a\tb")),
+            },
+            ValueRow {
+                input: "65 letters a",
+                result: message(&MemberId::new(&"a".repeat(65))),
             },
             ValueRow {
                 input: "pt-pt",
@@ -1755,10 +1767,14 @@ fn dates_and_identifiers(people: People) -> Result<(), Box<dyn Error>> {
     assert_eq!(time.hour(), 22);
     assert_eq!(time.minute(), 15);
     assert_eq!(parsed, people.ana);
+    assert_eq!(MemberId::new(""), Err(IdError::Empty));
+    assert_eq!(MemberId::new(" ana"), Err(IdError::SurroundingWhitespace));
+    assert_eq!(MemberId::new("a\tb"), Err(IdError::ControlCharacter));
+    assert_eq!(MemberId::new(&"a".repeat(65)), Err(IdError::TooLong));
     Ok(())
 }
 
-fn values(people: People) -> Result<(), Box<dyn Error>> {
+fn values(people: &People) -> Result<(), Box<dyn Error>> {
     section("13. Values on their own");
     currencies()?;
     amounts()?;
@@ -1766,7 +1782,7 @@ fn values(people: People) -> Result<(), Box<dyn Error>> {
     dates_and_identifiers(people)
 }
 
-fn sharing(group: ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
+fn sharing(group: ExpenseGroup, people: &People) -> Result<(), Box<dyn Error>> {
     section("14. Sharing the group");
     let shared = SharedExpenseGroup::new(group);
     // Another handle on the same group, as another task or thread holds.
@@ -1856,15 +1872,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut group = the_group()?;
     let people = members(&mut group)?;
     let categories = categories(&mut group)?;
-    let seafood = expenses(&mut group, people, categories)?;
-    another_currency(&mut group, people, categories)?;
-    edits(&mut group, people, categories, seafood)?;
-    comings_and_goings(&mut group, people)?;
-    summary(&group, people, categories)?;
+    let seafood = expenses(&mut group, &people, categories)?;
+    another_currency(&mut group, &people, categories)?;
+    edits(&mut group, &people, categories, seafood)?;
+    comings_and_goings(&mut group, &people)?;
+    summary(&group, &people, categories)?;
     removing_a_category(&mut group, categories)?;
-    new_currency(&mut group, people)?;
+    new_currency(&mut group, &people)?;
     settling_up(&mut group)?;
-    saving_and_loading(&group, people, categories)?;
-    values(people)?;
-    sharing(group, people)
+    saving_and_loading(&group, &people, categories)?;
+    values(&people)?;
+    sharing(group, &people)
 }

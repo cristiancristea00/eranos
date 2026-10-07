@@ -28,7 +28,7 @@ class ErrorTest {
      */
     @Test
     void everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(61, CONVERSIONS.size());
+        assertEquals(64, CONVERSIONS.size());
         for (Conversion conversion : CONVERSIONS) {
             EranosException converted =
                     assertInstanceOf(
@@ -117,9 +117,21 @@ class ErrorTest {
     private static final List<Conversion> CONVERSIONS =
             List.of(
                     new Conversion(
-                            new IdFailure.InvalidId(),
+                            new IdFailure.Empty(),
                             new eranos.internal.EranosException.Id(
-                                    eranos.internal.IdFailure.INVALID_ID, "detail")),
+                                    eranos.internal.IdFailure.EMPTY, "detail")),
+                    new Conversion(
+                            new IdFailure.TooLong(),
+                            new eranos.internal.EranosException.Id(
+                                    eranos.internal.IdFailure.TOO_LONG, "detail")),
+                    new Conversion(
+                            new IdFailure.ControlCharacter(),
+                            new eranos.internal.EranosException.Id(
+                                    eranos.internal.IdFailure.CONTROL_CHARACTER, "detail")),
+                    new Conversion(
+                            new IdFailure.SurroundingWhitespace(),
+                            new eranos.internal.EranosException.Id(
+                                    eranos.internal.IdFailure.SURROUNDING_WHITESPACE, "detail")),
                     new Conversion(
                             new PaymentAccountFailure.EmptyName(),
                             new eranos.internal.EranosException.PaymentAccount(

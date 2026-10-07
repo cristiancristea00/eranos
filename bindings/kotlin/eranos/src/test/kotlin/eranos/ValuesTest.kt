@@ -5,6 +5,7 @@
 package eranos
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -157,6 +158,38 @@ class ValuesTest {
     }
 
     /**
+     * A group that checked an identifier by other rules than the library's, counted its length in characters rather than
+     * bytes, or refused it with another failure or message would let an app keep text no group can hold, or tell it to fix a
+     * rule the text keeps.
+     */
+    @Test
+    fun anIdentifierIsAnyTextThatKeepsTheLibrarysRules() {
+        val group = Flat().group
+        for (text in listOf("nobody", "Ana Lúcia", "a".repeat(64), "é".repeat(32))) {
+            assertNull(group.memberBlocking(MemberId(text)))
+        }
+        val empty = "an identifier must not be empty"
+        val tooLong = "an identifier can be at most 64 bytes long"
+        val controlCharacter = "an identifier cannot contain control characters"
+        val surroundingWhitespace = "an identifier cannot start or end with whitespace"
+        val refusals =
+            listOf(
+                IdentifierRefusal(text = "", failure = IdFailure.Empty, message = empty),
+                IdentifierRefusal(text = "a".repeat(65), failure = IdFailure.TooLong, message = tooLong),
+                IdentifierRefusal(text = "é".repeat(33), failure = IdFailure.TooLong, message = tooLong),
+                IdentifierRefusal(text = "a\tb", failure = IdFailure.ControlCharacter, message = controlCharacter),
+                IdentifierRefusal(text = "\u0007 ", failure = IdFailure.ControlCharacter, message = controlCharacter),
+                IdentifierRefusal(text = " ana", failure = IdFailure.SurroundingWhitespace, message = surroundingWhitespace),
+                IdentifierRefusal(text = "ana\u00a0", failure = IdFailure.SurroundingWhitespace, message = surroundingWhitespace),
+            )
+        for (refusal in refusals) {
+            val refused = assertThrows<EranosException.Id> { group.memberBlocking(MemberId(refusal.text)) }
+            assertEquals(refusal.failure, refused.failure)
+            assertEquals(refusal.message, refused.message)
+        }
+    }
+
+    /**
      * A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of
      * printing.
      */
@@ -177,3 +210,10 @@ class ValuesTest {
         assertTrue("XYZ" in Balance.Owes(Money(1, unlisted)).toString())
     }
 }
+
+/** Text the library refuses as an identifier, with the failure and the message it reports. */
+private data class IdentifierRefusal(
+    val text: String,
+    val failure: IdFailure,
+    val message: String,
+)

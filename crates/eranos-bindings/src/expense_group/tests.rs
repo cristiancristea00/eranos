@@ -578,7 +578,11 @@ fn a_saved_group_loads_alike_in_both_forms() {
     );
 
     // One of Ana's references now names a member the group does not hold.
-    let tampered = json.replacen(&flat.ana, &MemberId::from_bytes([9; 16]).to_string(), 1);
+    let tampered = json.replacen(
+        &flat.ana,
+        &MemberId::new("member-9").unwrap().to_string(),
+        1,
+    );
     let cancelled = Arc::new(Cancellation::new());
     cancelled.cancel();
     let refusals = [

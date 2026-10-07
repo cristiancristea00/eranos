@@ -292,7 +292,7 @@ class Expense:
         """
         List every member the expense names, payers and participants, each once and in the order of their identifiers.
 
-        The library refuses text that is not an identifier with ``IdError.InvalidId``, in an ``IdError``.
+        The library refuses text that is not an identifier with an ``IdError``.
 
         Returns:
             The members.

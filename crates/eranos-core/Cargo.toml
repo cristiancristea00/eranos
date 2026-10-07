@@ -12,7 +12,7 @@ publish.workspace = true
 [features]
 # `Serialize` and `Deserialize` for the identifiers, and the text-form
 # deserialiser the other crates use.
-serde = ["dep:serde", "uuid/serde"]
+serde = ["dep:serde"]
 # Identifiers count up from one instead of reading the clock and the random
 # source, so examples and tests print the same text on every run. Never for
 # apps: identifiers from two devices would collide.
@@ -27,6 +27,7 @@ serde = { workspace = true, optional = true }
 # The documentation examples use the paths callers use.
 eranos = { workspace = true }
 proptest = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

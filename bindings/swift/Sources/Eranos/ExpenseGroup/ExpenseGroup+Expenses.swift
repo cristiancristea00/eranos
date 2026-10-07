@@ -2,7 +2,7 @@ internal import EranosGenerated
 
 // The group's expenses.
 public extension ExpenseGroup {
-    /// Every expense, in the order they were created.
+    /// Every expense, in identifier order, which is creation order for generated identifiers.
     ///
     /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
@@ -10,7 +10,7 @@ public extension ExpenseGroup {
         try converting { try handle.expenses().map(Expense.init) }
     }
 
-    /// Every expense, in the order they were created.
+    /// Every expense, in identifier order, which is creation order for generated identifiers.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.

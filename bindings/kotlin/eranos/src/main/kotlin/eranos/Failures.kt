@@ -509,14 +509,26 @@ private fun GeneratedExpenseGroupFailure.MemberInUse.memberInUse(): ExpenseGroup
 
 /** What the library's `IdError` reports: a type per failure, with what it holds. */
 public sealed interface IdFailure {
-    /** Text that is not a UUID. */
-    public data object InvalidId : IdFailure
+    /** Empty text. */
+    public data object Empty : IdFailure
+
+    /** Text longer than 64 bytes of UTF-8. */
+    public data object TooLong : IdFailure
+
+    /** Text that holds a control character, such as a tab or a line break. */
+    public data object ControlCharacter : IdFailure
+
+    /** Text that starts or ends with whitespace. */
+    public data object SurroundingWhitespace : IdFailure
 }
 
 /** The failure the generated code reports as [this]. */
 internal fun GeneratedIdFailure.converted(): IdFailure =
     when (this) {
-        GeneratedIdFailure.INVALID_ID -> IdFailure.InvalidId
+        GeneratedIdFailure.EMPTY -> IdFailure.Empty
+        GeneratedIdFailure.TOO_LONG -> IdFailure.TooLong
+        GeneratedIdFailure.CONTROL_CHARACTER -> IdFailure.ControlCharacter
+        GeneratedIdFailure.SURROUNDING_WHITESPACE -> IdFailure.SurroundingWhitespace
     }
 
 /** What the library's `LanguageError` reports: a type per failure, with what it holds. */

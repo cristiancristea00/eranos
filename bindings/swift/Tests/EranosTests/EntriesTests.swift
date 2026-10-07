@@ -84,8 +84,8 @@ func anExpenseTellsItsTipTotalAndMembers() throws {
     #expect(Split.percentages([MemberPercentage(member: flat.ana, percentage: try Percentage(basisPoints: 1))]).members == [flat.ana])
     #expect(Split.amounts([MemberAmount(member: flat.bob, amount: flat.euros(1))]).members == [flat.bob])
     var unreadable = taxi
-    unreadable.payers = .equal([Member.ID(rawValue: "nobody")])
-    #expect(throws: EranosError.self) {
+    unreadable.payers = .equal([Member.ID(rawValue: " ana")])
+    #expect(throws: EranosError.id(.surroundingWhitespace, detail: "an identifier cannot start or end with whitespace")) {
         try unreadable.members()
     }
     #expect(TipDistribution.allCases == [.proportional, .equal])

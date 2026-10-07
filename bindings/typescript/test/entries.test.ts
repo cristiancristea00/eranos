@@ -132,7 +132,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.ok(expenseTotal(taxi).equals(new Money(5_500n, lei)));
         assert.deepEqual(expenseMembers(taxi), [flat.ana, flat.bob]);
         assert.ok(expenseTipAmount(dinner).equals(flat.euros(300n)));
-        assert.throws(() => expenseMembers({ ...taxi, payers: { kind: 'equal', members: [memberId('nobody')] } }), IdError);
+        assert.throws(() => expenseMembers({ ...taxi, payers: { kind: 'equal', members: [memberId(' ana')] } }), IdError);
         assert.throws(() => expenseTipAmount({ ...taxi, tip: { value: { kind: 'fixed', amount: flat.euros(1n) } } }), ExpenseError);
         assert.throws(() => expenseTotal({ ...taxi, tip: { value: { kind: 'fixed', amount: new Money(-1n, lei) } } }), ExpenseError);
     });

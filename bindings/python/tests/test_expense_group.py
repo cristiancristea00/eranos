@@ -133,10 +133,11 @@ def test_a_saved_group_loads_as_it_was_saved(flat: Flat) -> None:
         ExpenseGroup.load('{')
     assert broken.value.line == 1
     assert broken.value.column == 1
-    newer = json.loads(saved) | {'format': 26}
+    newer = json.loads(saved) | {'format': 4}
     with pytest.raises(ExpenseGroupError) as unsupported:
         ExpenseGroup.load(json.dumps(newer))
-    assert unsupported.value.failure == ExpenseGroupError.UnsupportedFormat(format=26)
+    assert unsupported.value.failure == ExpenseGroupError.UnsupportedFormat(format=4)
+    assert str(unsupported.value) == 'unsupported group format 4: this version reads format 3'
 
 
 def test_every_error_holds_what_its_failure_holds(flat: Flat) -> None:
@@ -168,9 +169,17 @@ def test_every_error_holds_what_its_failure_holds(flat: Flat) -> None:
     with pytest.raises(ExpenseGroupError) as transfer:
         flat.group.remove_transfer(nowhere)
     assert transfer.value.failure == ExpenseGroupError.UnknownTransfer(transfer=nowhere)
-    with pytest.raises(IdError) as identifier:
-        flat.group.member(MemberId('not an identifier'))
-    assert identifier.value.failure == IdError.InvalidId()
+    refused = {'': IdError.Empty(), 'a' * 65: IdError.TooLong(), 'a\tb': IdError.ControlCharacter(), ' ana': IdError.SurroundingWhitespace()}
+    for text, failure in refused.items():
+        with pytest.raises(IdError) as identifier:
+            flat.group.member(MemberId(text))
+        assert identifier.value.failure == failure, text
+
+
+def test_text_that_is_not_a_uuid_is_an_identifier_the_group_does_not_hold(flat: Flat) -> None:
+    """A group that refused text that is not a UUID would raise where an app looks up an identifier it does not hold, instead of finding nothing."""
+    for text in ('not a uuid', 'ană', 'Ana and Bob', 'a' * 64):
+        assert flat.group.member(MemberId(text)) is None, text
 
 
 def test_a_freed_group_refuses_every_call(flat: Flat) -> None:

@@ -119,7 +119,7 @@ class EntriesTest {
         assertEquals(List.of(flat.ana, flat.bob), taxi.members());
         assertEquals(flat.euros(300), dinner(flat).tipAmount());
         Expense unreadable =
-                taxi.toBuilder().payers(new Split.Equal(List.of(new MemberId("nobody")))).build();
+                taxi.toBuilder().payers(new Split.Equal(List.of(new MemberId(" nobody")))).build();
         assertThrows(EranosException.Id.class, unreadable::members);
         assertThrows(
                 EranosException.Expense.class,

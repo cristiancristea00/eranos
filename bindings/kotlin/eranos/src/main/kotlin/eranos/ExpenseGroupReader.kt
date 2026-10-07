@@ -60,7 +60,7 @@ public class ExpenseGroupReader internal constructor(
     public fun save(): String = converting { handle.save() }
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
      * @throws IllegalStateException after [close].
      */
@@ -85,7 +85,8 @@ public class ExpenseGroupReader internal constructor(
     public fun isArchived(id: MemberId): Boolean = converting { handle.isArchived(id.value) }
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
+     * identifiers.
      *
      * @throws IllegalStateException after [close].
      */
@@ -101,7 +102,7 @@ public class ExpenseGroupReader internal constructor(
     public fun category(id: CategoryId): Category? = converting { handle.category(id.value)?.converted() }
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * @throws IllegalStateException after [close].
      */
@@ -126,7 +127,7 @@ public class ExpenseGroupReader internal constructor(
     public fun expenseShares(id: ExpenseId): ExpenseShares? = converting { handle.expenseShares(id.value)?.converted() }
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * @throws IllegalStateException after [close].
      */

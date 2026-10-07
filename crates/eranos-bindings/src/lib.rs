@@ -8,7 +8,8 @@
 //! web, and with `diplomat` for C and C++) mirror these types and forward
 //! every call here, converting nothing and deciding nothing, so everything
 //! that can be wrong is in this crate, where Rust tests reach it. Values
-//! cross as records of text and integers: identifiers as hyphenated UUIDs,
+//! cross as records of text and integers: identifiers as their text, which
+//! for a generated one is a UUID v7 in lowercase hyphenated form,
 //! currencies as ISO 4217 codes, exchange rates as decimals, amounts as
 //! 64-bit minor units, percentages in basis points, and parts in hundredths.
 //! Every value is checked by the library's own rules on its way in, so a bad
@@ -73,12 +74,13 @@ pub use values::{
     time_of_day_parse, username_parse,
 };
 
-/// The identifier written `text`, a hyphenated UUID.
+/// The identifier `text`, as it is.
 ///
 /// # Errors
 ///
-/// [`IdFailure::InvalidId`] for text that is not a
-/// UUID.
+/// An [`EranosError::Id`] for text that is not an identifier: empty, longer
+/// than 64 bytes, with a control character, or with whitespace at either
+/// end.
 fn identifier<Id: FromStr<Err = IdError>>(text: &str) -> Result<Id, EranosError> {
     Ok(text.parse()?)
 }
@@ -101,8 +103,8 @@ fn check_new(id: Option<&str>) -> Result<(), EranosError> {
 ///
 /// # Errors
 ///
-/// [`EranosError::IdentifierMissing`] when `id` is absent, and
-/// [`IdFailure::InvalidId`] for text that is not a UUID.
+/// [`EranosError::IdentifierMissing`] when `id` is absent, and an
+/// [`EranosError::Id`] for text that is not an identifier.
 fn identifier_to_replace<Id: FromStr<Err = IdError>>(id: Option<&str>) -> Result<Id, EranosError> {
     identifier(id.ok_or_else(EranosError::identifier_missing)?)
 }

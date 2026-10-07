@@ -9,6 +9,7 @@ import {
     CalendarDate,
     CurrencyCode,
     ExchangeRate,
+    IdError,
     Language,
     Money,
     Parts,
@@ -121,6 +122,10 @@ function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
     const time = TimeOfDay.parse('22:15');
     const parsed = memberId(people.ana);
     const found = group.memberSync(parsed)?.id;
+    const empty = refusal(() => group.memberSync(memberId('')));
+    const surroundingWhitespace = refusal(() => group.memberSync(memberId(' ana')));
+    const controlCharacter = refusal(() => group.memberSync(memberId('a\tb')));
+    const tooLong = refusal(() => group.memberSync(memberId('a'.repeat(65))));
     const language = Language.parse('pt-pt');
     printLines('Dates, times, identifiers, and language tags read and print the ISO forms:');
     printTable(
@@ -131,7 +136,10 @@ function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
             { input: '22:15', result: `${time.toString()}: hour ${String(time.hour)}, minute ${String(time.minute)}` },
             { input: '24:00', result: message(refusal(() => TimeOfDay.of(24, 0))) },
             { input: "Ana's identifier", result: `${parsed}, the same after a round trip: ${String(people.ana === found)}` },
-            { input: 'not-a-uuid', result: message(refusal(() => group.memberSync(memberId('not-a-uuid')))) },
+            { input: 'empty text', result: message(empty) },
+            { input: 'ana after a space', result: message(surroundingWhitespace) },
+            { input: 'a tab between a and b', result: message(controlCharacter) },
+            { input: '65 letters a', result: message(tooLong) },
             { input: 'pt-pt', result: language.toString() },
             { input: 'pt_PT', result: message(refusal(() => Language.parse('pt_PT'))) },
         ],
@@ -143,6 +151,10 @@ function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
     assert.equal(time.hour, 22);
     assert.equal(time.minute, 15);
     assert.equal(parsed, people.ana);
+    assert.ok(empty instanceof IdError && 'empty' === empty.failure.kind);
+    assert.ok(surroundingWhitespace instanceof IdError && 'surroundingWhitespace' === surroundingWhitespace.failure.kind);
+    assert.ok(controlCharacter instanceof IdError && 'controlCharacter' === controlCharacter.failure.kind);
+    assert.ok(tooLong instanceof IdError && 'tooLong' === tooLong.failure.kind);
 }
 
 export function values(group: ExpenseGroup, people: People): void {

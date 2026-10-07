@@ -16,11 +16,11 @@ struct Refusal<Record> {
 }
 
 fn ana() -> MemberId {
-    MemberId::from_bytes([1; 16])
+    MemberId::new("member-1").unwrap()
 }
 
 fn bob() -> MemberId {
-    MemberId::from_bytes([2; 16])
+    MemberId::new("member-2").unwrap()
 }
 
 fn euros(minor_units: i64) -> Money {
@@ -53,15 +53,15 @@ fn equal(members: &[MemberId]) -> Split {
 /// A split naming a member by text that is not an identifier.
 fn unreadable_split() -> Split {
     Split::Equal {
-        members: vec!["nobody".to_owned()],
+        members: vec![" nobody".to_owned()],
     }
 }
 
-fn invalid_id(error: &EranosError) -> bool {
+fn surrounding_whitespace(error: &EranosError) -> bool {
     matches!(
         error,
         EranosError::Id {
-            failure: IdFailure::InvalidId,
+            failure: IdFailure::SurroundingWhitespace,
             ..
         }
     )
@@ -233,7 +233,7 @@ fn dinner() -> Expense {
             hour: 20,
             minute: 15,
         }),
-        category: Some(CategoryId::from_bytes([3; 16]).to_string()),
+        category: Some(CategoryId::new("category-3").unwrap().to_string()),
         description: Some("A birthday".to_owned()),
     }
 }
@@ -291,7 +291,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
                 payers: unreadable_split(),
                 ..dinner()
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Expense {
@@ -300,7 +300,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
                 },
                 ..dinner()
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Expense {
@@ -316,10 +316,10 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
         },
         Refusal {
             record: Expense {
-                category: Some("nobody".to_owned()),
+                category: Some(" nobody".to_owned()),
                 ..dinner()
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Expense {
@@ -387,15 +387,15 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Amounts {
                 shares: vec![MemberAmount {
-                    member: "nobody".to_owned(),
+                    member: " nobody".to_owned(),
                     amount: euros(1),
                 }],
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: unreadable_split(),
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Split::Parts {
@@ -418,11 +418,11 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Parts {
                 shares: vec![MemberParts {
-                    member: "nobody".to_owned(),
+                    member: " nobody".to_owned(),
                     hundredths: 100,
                 }],
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Split::Percentages {
@@ -436,11 +436,11 @@ fn a_split_refuses_what_does_not_convert() {
         Refusal {
             record: Split::Percentages {
                 shares: vec![MemberPercentage {
-                    member: "nobody".to_owned(),
+                    member: " nobody".to_owned(),
                     basis_points: 100,
                 }],
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
     ];
     for refusal in refusals {
@@ -486,7 +486,7 @@ fn an_item_converts_both_ways_and_refuses_bad_lines() {
                 split: unreadable_split(),
                 ..fare()
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: ExpenseItem {
@@ -557,7 +557,7 @@ fn an_expense_to_add_converts_both_ways() {
 #[test]
 fn an_expense_to_add_carries_no_identifier() {
     let named = Expense {
-        id: Some(ExpenseId::from_bytes([4; 16]).to_string()),
+        id: Some(ExpenseId::new("expense-4").unwrap().to_string()),
         ..dinner()
     };
     assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());

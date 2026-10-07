@@ -56,8 +56,14 @@ enum class ErrorKind : std::uint8_t {
 
 /// The failure within its module, named after the module and the failure.
 enum class Failure : std::uint8_t {
-    /// Text that is not a UUID.
-    ID_INVALID_ID,
+    /// An identifier that is empty.
+    ID_EMPTY,
+    /// An identifier longer than 64 bytes of UTF-8.
+    ID_TOO_LONG,
+    /// An identifier that holds a control character, such as a tab or a line break.
+    ID_CONTROL_CHARACTER,
+    /// An identifier that starts or ends with whitespace.
+    ID_SURROUNDING_WHITESPACE,
     /// An account whose name is blank.
     PAYMENT_ACCOUNT_EMPTY_NAME,
     /// An IBAN that failed validation, and why.

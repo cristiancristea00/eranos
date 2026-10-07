@@ -18,7 +18,7 @@ class ErrorTest {
      */
     @Test
     fun everyFailureOfTheGeneratedCodeConvertsToItsModuleAndFailure() {
-        assertEquals(61, conversions.size)
+        assertEquals(64, conversions.size)
         for (conversion in conversions) {
             val converted = assertInstanceOf(EranosException::class.java, conversion.generated.converted())
             assertEquals(conversion.failure, converted.failure())
@@ -98,7 +98,16 @@ private fun euros(minorUnits: Long): Money = Money(minorUnits, CurrencyCode.know
 /** Every failure the generated code can report, with every reason of a refused IBAN, beside the failure it becomes. */
 private val conversions: List<Conversion> =
     listOf(
-        Conversion(failure = IdFailure.InvalidId, generated = eranos.internal.EranosException.Id(eranos.internal.IdFailure.INVALID_ID, "detail")),
+        Conversion(failure = IdFailure.Empty, generated = eranos.internal.EranosException.Id(eranos.internal.IdFailure.EMPTY, "detail")),
+        Conversion(failure = IdFailure.TooLong, generated = eranos.internal.EranosException.Id(eranos.internal.IdFailure.TOO_LONG, "detail")),
+        Conversion(
+            failure = IdFailure.ControlCharacter,
+            generated = eranos.internal.EranosException.Id(eranos.internal.IdFailure.CONTROL_CHARACTER, "detail"),
+        ),
+        Conversion(
+            failure = IdFailure.SurroundingWhitespace,
+            generated = eranos.internal.EranosException.Id(eranos.internal.IdFailure.SURROUNDING_WHITESPACE, "detail"),
+        ),
         Conversion(
             failure = PaymentAccountFailure.EmptyName,
             generated = eranos.internal.EranosException.PaymentAccount(eranos.internal.PaymentAccountFailure.EmptyName, "detail"),

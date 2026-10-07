@@ -78,6 +78,10 @@ func datesAndIdentifiers(_ group: ExpenseGroup, _ people: People) throws(EranosE
     let time = try TimeOfDay(parsing: "22:15")
     let parsed = Member.ID(rawValue: people.ana.rawValue)
     let found = try group.member(withID: parsed)?.id
+    let empty = Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: "")) }
+    let spaced = Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: " ana")) }
+    let tabbed = Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: "a\tb")) }
+    let long = Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: String(repeating: "a", count: 65))) }
     let language = try Language("pt-pt")
     print("Dates, times, identifiers, and language tags read and print the ISO forms:")
     printTable(
@@ -87,7 +91,10 @@ func datesAndIdentifiers(_ group: ExpenseGroup, _ people: People) throws(EranosE
             ValueRow(input: "22:15", result: "\(time): hour \(time.hour), minute \(time.minute)"),
             ValueRow(input: "24:00", result: message(Result { () throws(EranosError) in try TimeOfDay(hour: 24, minute: 0) })),
             ValueRow(input: "Ana's identifier", result: "\(parsed), the same after a round trip: \(people.ana == found)"),
-            ValueRow(input: "not-a-uuid", result: message(Result { () throws(EranosError) in try group.member(withID: Member.ID(rawValue: "not-a-uuid")) })),
+            ValueRow(input: "empty text", result: message(empty)),
+            ValueRow(input: "ana after a space", result: message(spaced)),
+            ValueRow(input: "a tab between a and b", result: message(tabbed)),
+            ValueRow(input: "65 letters a", result: message(long)),
             ValueRow(input: "pt-pt", result: "\(language)"),
             ValueRow(input: "pt_PT", result: message(Result { () throws(EranosError) in try Language("pt_PT") }))
         ],
@@ -96,6 +103,18 @@ func datesAndIdentifiers(_ group: ExpenseGroup, _ people: People) throws(EranosE
     precondition(1 == date.day && 10 == date.month && 2026 == date.year, "the date's parts")
     precondition(22 == time.hour && 15 == time.minute, "the time's parts")
     precondition(people.ana == parsed, "the identifier survives the round trip")
+    guard case .failure(.id(.empty, _)) = empty else {
+        preconditionFailure("empty text is refused")
+    }
+    guard case .failure(.id(.surroundingWhitespace, _)) = spaced else {
+        preconditionFailure("text after a space is refused")
+    }
+    guard case .failure(.id(.controlCharacter, _)) = tabbed else {
+        preconditionFailure("text with a tab is refused")
+    }
+    guard case .failure(.id(.tooLong, _)) = long else {
+        preconditionFailure("text of 65 bytes is refused")
+    }
 }
 
 func values(_ group: ExpenseGroup, _ people: People) throws(EranosError) {

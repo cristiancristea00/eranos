@@ -502,7 +502,7 @@ export class ExpenseGroup implements Disposable {
     // The group's members.
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.membersSync} does not wait.
@@ -515,7 +515,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.members} waits for it.
@@ -760,7 +760,8 @@ export class ExpenseGroup implements Disposable {
     // The group's categories.
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
+     * identifiers.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.categoriesSync} does not wait.
@@ -773,7 +774,8 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
+     * identifiers.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.categories} waits for it.
@@ -924,7 +926,7 @@ export class ExpenseGroup implements Disposable {
     // The group's expenses.
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.expensesSync} does not wait.
@@ -937,7 +939,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.expenses} waits for it.
@@ -1119,7 +1121,7 @@ export class ExpenseGroup implements Disposable {
     // The group's transfers.
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.transfersSync} does not wait.
@@ -1132,7 +1134,7 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.transfers} waits for it.

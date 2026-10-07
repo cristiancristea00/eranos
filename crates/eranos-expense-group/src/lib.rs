@@ -29,7 +29,7 @@ pub use shared::{ExpenseGroupReadGuard, ExpenseGroupWriteGuard, SharedExpenseGro
 
 use eranos_category::Category;
 use eranos_core::cooperative::{Cooperative, Pacer};
-use eranos_core::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId, text};
+use eranos_core::{CategoryId, CategoryKey, ExpenseGroupId, ExpenseId, MemberId, TransferId, text};
 use eranos_expense::{Expense, resolve_expense, resolve_expense_at};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
 use eranos_member::Member;
@@ -37,10 +37,11 @@ use eranos_money::{Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money};
 use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy, Settlements};
 use eranos_transfer::{Transfer, resolve_transfer, resolve_transfer_at};
 
-/// The version of the saved form. Every other version is refused: a newer
-/// one would be read with fields silently dropped, and no earlier one is
-/// read.
-pub(crate) const FORMAT: u32 = 2;
+/// The version of the saved form. Format 3 writes identifiers as text of up
+/// to 64 bytes, of which UUIDs are one kind. Every other version is refused:
+/// a newer one would be read with fields silently dropped, and no earlier
+/// one is read.
+pub(crate) const FORMAT: u32 = 3;
 
 /// The entries a currency change re-resolves, or a load replays, between
 /// two yields.
@@ -86,7 +87,7 @@ pub struct ExpenseGroup {
     description: Option<String>,
     language: Option<Language>,
     members: BTreeMap<MemberId, MemberRecord>,
-    categories: BTreeMap<CategoryId, Category>,
+    categories: BTreeMap<CategoryKey, Category>,
     expenses: BTreeMap<ExpenseId, ExpenseRecord>,
     transfers: BTreeMap<TransferId, TransferRecord>,
     ledger: Ledger,
@@ -142,7 +143,10 @@ impl ExpenseGroup {
             description,
             language,
             members: BTreeMap::new(),
-            categories: BTreeMap::from([(CategoryId::UNCATEGORISED, Category::uncategorised())]),
+            categories: BTreeMap::from([(
+                CategoryKey::new(CategoryId::UNCATEGORISED),
+                Category::uncategorised(),
+            )]),
             expenses: BTreeMap::new(),
             transfers: BTreeMap::new(),
             ledger: Ledger::new(currency),
@@ -380,8 +384,9 @@ impl ExpenseGroup {
 
     // --- Members -------------------------------------------------------------
 
-    /// Every member, archived ones included, in the order they were created;
-    /// each carries its identifier.
+    /// Every member, archived ones included, in identifier order, which is
+    /// creation order for generated identifiers; each carries its
+    /// identifier.
     pub fn members(&self) -> impl ExactSizeIterator<Item = &Member> + '_ {
         self.members.values().map(|record| &record.member)
     }
@@ -499,15 +504,16 @@ impl ExpenseGroup {
 
     // --- Categories ----------------------------------------------------------
 
-    /// Every category, in the order they were created, with the built-in
-    /// Uncategorised one first; each carries its identifier.
+    /// Every category: the built-in Uncategorised one first, then the
+    /// others in identifier order, which is creation order for generated
+    /// identifiers; each carries its identifier.
     pub fn categories(&self) -> impl ExactSizeIterator<Item = &Category> + '_ {
         self.categories.values()
     }
 
     /// The category with this identifier.
     pub fn category(&self, id: CategoryId) -> Option<&Category> {
-        self.categories.get(&id)
+        self.categories.get(&CategoryKey::new(id))
     }
 
     /// Adds a category under its identifier.
@@ -520,11 +526,11 @@ impl ExpenseGroup {
     ///   same name under Unicode canonical caseless matching.
     pub fn add_category(&mut self, category: Category) -> Result<CategoryId, ExpenseGroupError> {
         let id = category.id();
-        if self.categories.contains_key(&id) {
+        if self.categories.contains_key(&CategoryKey::new(id)) {
             return Err(ExpenseGroupError::DuplicateCategory(id));
         }
         self.check_category_name(&category, None)?;
-        self.categories.insert(id, category);
+        self.categories.insert(CategoryKey::new(id), category);
         Ok(id)
     }
 
@@ -543,12 +549,12 @@ impl ExpenseGroup {
         if CategoryId::UNCATEGORISED == id {
             return Err(ExpenseGroupError::BuiltInCategory);
         }
-        if !self.categories.contains_key(&id) {
+        if !self.categories.contains_key(&CategoryKey::new(id)) {
             return Err(ExpenseGroupError::UnknownCategory(id));
         }
         self.check_category_name(&category, Some(id))?;
         self.categories
-            .insert(id, category)
+            .insert(CategoryKey::new(id), category)
             .ok_or(ExpenseGroupError::UnknownCategory(id))
     }
 
@@ -569,7 +575,7 @@ impl ExpenseGroup {
         }
         let category = self
             .categories
-            .remove(&id)
+            .remove(&CategoryKey::new(id))
             .ok_or(ExpenseGroupError::UnknownCategory(id))?;
         for record in self.expenses.values_mut() {
             if record.expense.category() == id {
@@ -589,20 +595,20 @@ impl ExpenseGroup {
         except: Option<CategoryId>,
     ) -> Result<(), ExpenseGroupError> {
         let name = category.folded_name();
-        match self
-            .categories
-            .iter()
-            .find(|&(&id, existing)| Some(id) != except && existing.folded_name() == name)
-        {
-            Some((&existing, _)) => Err(ExpenseGroupError::DuplicateCategoryName { existing }),
-            None => Ok(()),
-        }
+        self.categories
+            .values()
+            .find(|existing| Some(existing.id()) != except && existing.folded_name() == name)
+            .map_or(Ok(()), |existing| {
+                Err(ExpenseGroupError::DuplicateCategoryName {
+                    existing: existing.id(),
+                })
+            })
     }
 
     // --- Expenses ------------------------------------------------------------
 
-    /// Every expense, in the order they were created; each carries its
-    /// identifier.
+    /// Every expense, in identifier order, which is creation order for
+    /// generated identifiers; each carries its identifier.
     pub fn expenses(&self) -> impl ExactSizeIterator<Item = &Expense> + '_ {
         self.expenses.values().map(|record| &record.expense)
     }
@@ -711,8 +717,8 @@ impl ExpenseGroup {
 
     // --- Transfers -----------------------------------------------------------
 
-    /// Every transfer, in the order they were created; each carries its
-    /// identifier.
+    /// Every transfer, in identifier order, which is creation order for
+    /// generated identifiers; each carries its identifier.
     pub fn transfers(&self) -> impl ExactSizeIterator<Item = &Transfer> + '_ {
         self.transfers.values().map(|record| &record.transfer)
     }
@@ -923,7 +929,7 @@ impl ExpenseGroup {
             }
         }
         let category = expense.category();
-        if !self.categories.contains_key(&category) {
+        if !self.categories.contains_key(&CategoryKey::new(category)) {
             return Err(ExpenseGroupError::UnknownCategory(category));
         }
         self.check_cost(expense.cost())

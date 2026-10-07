@@ -16,11 +16,11 @@ struct Refusal {
 }
 
 fn ana() -> String {
-    MemberId::from_bytes([1; 16]).to_string()
+    MemberId::new("member-1").unwrap().to_string()
 }
 
 fn bob() -> String {
-    MemberId::from_bytes([2; 16]).to_string()
+    MemberId::new("member-2").unwrap().to_string()
 }
 
 fn date() -> CalendarDate {
@@ -68,11 +68,11 @@ fn payment() -> Transfer {
     }
 }
 
-fn invalid_id(error: &EranosError) -> bool {
+fn surrounding_whitespace(error: &EranosError) -> bool {
     matches!(
         error,
         EranosError::Id {
-            failure: IdFailure::InvalidId,
+            failure: IdFailure::SurroundingWhitespace,
             ..
         }
     )
@@ -118,17 +118,17 @@ fn refused_transfers() -> [Refusal; 6] {
         },
         Refusal {
             record: Transfer {
-                from: "nobody".to_owned(),
+                from: " nobody".to_owned(),
                 ..payment()
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Transfer {
-                to: "nobody".to_owned(),
+                to: " nobody".to_owned(),
                 ..payment()
             },
-            is_expected: invalid_id,
+            is_expected: surrounding_whitespace,
         },
         Refusal {
             record: Transfer {

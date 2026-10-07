@@ -90,7 +90,8 @@ public final class ExpenseGroupReader implements AutoCloseable {
     }
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for
+     * generated identifiers.
      *
      * @return the members
      * @throws IllegalStateException after {@link #close}
@@ -127,7 +128,8 @@ public final class ExpenseGroupReader implements AutoCloseable {
     }
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is
+     * creation order for generated identifiers.
      *
      * @return the categories
      * @throws IllegalStateException after {@link #close}
@@ -151,7 +153,7 @@ public final class ExpenseGroupReader implements AutoCloseable {
     }
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * @return the expenses
      * @throws IllegalStateException after {@link #close}
@@ -191,7 +193,7 @@ public final class ExpenseGroupReader implements AutoCloseable {
     }
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * @return the transfers
      * @throws IllegalStateException after {@link #close}

@@ -696,9 +696,11 @@ static void everyShareOfASplitReadsBackAsItWasMade(Check *const check) {
                   nullptr == eranosSplitPercentagesShares(equal) && nullptr == eranosSplitMembers(byAmounts),
               "and none of another kind's");
     checkThat(check, listsMembers(eranosSplitMembers(equal), "ana", "bob"), "an equal split holds its members");
+    EranosSplit *const unreadable = equally(" ana", nullptr);
     EranosTextList *participants = nullptr;
-    checkThat(check, isFailure(eranosSplitParticipants(equal, &participants), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID),
+    checkThat(check, isFailure(eranosSplitParticipants(unreadable, &participants), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE),
               "a split's members are identifiers");
+    eranosSplitDestroy(unreadable);
     eranosMemberPercentageListDestroy(readPercentages);
     eranosMemberPartsListDestroy(readParts);
     eranosMemberAmountListDestroy(readAmounts);
@@ -862,9 +864,11 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, isAmount(amount, 400, "EUR"), "10 % of 40.00 EUR");
     checkSucceeded(check, eranosExpenseTotal(expense, &amount), "the total");
     checkThat(check, isAmount(amount, 4'400, "EUR"), "the amount with its tip");
+    EranosExpense *const unreadable = expenseOf("Taxi", "a\tb", "ana", nullptr);
     EranosTextList *participants = nullptr;
-    checkThat(check, isFailure(eranosExpenseParticipants(expense, &participants), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID),
+    checkThat(check, isFailure(eranosExpenseParticipants(unreadable, &participants), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_CONTROL_CHARACTER),
               "an expense's members are identifiers");
+    eranosExpenseDestroy(unreadable);
     EranosMoney *const unlisted = amountOf(100, "XYZ");
     EranosCost *const strange = eranosCostCreateLocal(unlisted);
     eranosExpenseSetCost(expense, strange);
@@ -1335,36 +1339,48 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     flatDestroy(flat);
 }
 
-/// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses it
-/// and gives no object.
+/// Text that is not an identifier, and the failure the library refuses it with.
+typedef struct RefusedText {
+    /// The failure.
+    EranosFailure failure;
+    /// The text, as UTF-8 ended by a NUL.
+    char const *text;
+} RefusedText;
+
+/// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses
+/// it, with the failure of the rule it breaks, and gives no object.
 static void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check *const check) {
     Flat const flat = flatOf();
-    char const *const nobody = "not an identifier";
-    EranosExpense *expense = nullptr;
-    checkThat(check,
-              isFailure(eranosExpenseGroupExpense(flat.group, nobody, &expense), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
-                  nullptr == expense,
-              "an expense");
-    EranosExpenseShares *shares = nullptr;
-    checkThat(check,
-              isFailure(eranosExpenseGroupExpenseShares(flat.group, nobody, &shares), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
-                  nullptr == shares,
-              "an expense's shares");
-    EranosMember *member = nullptr;
-    checkThat(check,
-              isFailure(eranosExpenseGroupMember(flat.group, nobody, &member), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
-                  nullptr == member,
-              "a member");
-    EranosTransfer *transfer = nullptr;
-    checkThat(check,
-              isFailure(eranosExpenseGroupTransfer(flat.group, nobody, &transfer), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
-                  nullptr == transfer,
-              "a transfer");
-    EranosMoney *amount = nullptr;
-    checkThat(check,
-              isFailure(eranosExpenseGroupTransferAmount(flat.group, nobody, &amount), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID) &&
-                  nullptr == amount,
-              "a transfer's amount");
+    char letters[66] = {};
+    memset(letters, 'a', sizeof letters - 1);
+    RefusedText const refused[] = {
+        {.failure = ERANOS_FAILURE_ID_EMPTY, .text = ""},
+        {.failure = ERANOS_FAILURE_ID_TOO_LONG, .text = letters},
+        {.failure = ERANOS_FAILURE_ID_CONTROL_CHARACTER, .text = "a\tb"},
+        {.failure = ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE, .text = " ana"},
+    };
+    for (size_t index = 0; index < sizeof refused / sizeof refused[0]; ++index) {
+        char const *const nobody = refused[index].text;
+        EranosFailure const failure = refused[index].failure;
+        EranosCategory *category = nullptr;
+        checkThat(check, isFailure(eranosExpenseGroupCategory(flat.group, nobody, &category), ERANOS_ERROR_KIND_ID, failure) && nullptr == category,
+                  "a category");
+        EranosExpense *expense = nullptr;
+        checkThat(check, isFailure(eranosExpenseGroupExpense(flat.group, nobody, &expense), ERANOS_ERROR_KIND_ID, failure) && nullptr == expense,
+                  "an expense");
+        EranosExpenseShares *shares = nullptr;
+        checkThat(check, isFailure(eranosExpenseGroupExpenseShares(flat.group, nobody, &shares), ERANOS_ERROR_KIND_ID, failure) && nullptr == shares,
+                  "an expense's shares");
+        EranosMember *member = nullptr;
+        checkThat(check, isFailure(eranosExpenseGroupMember(flat.group, nobody, &member), ERANOS_ERROR_KIND_ID, failure) && nullptr == member,
+                  "a member");
+        EranosTransfer *transfer = nullptr;
+        checkThat(check, isFailure(eranosExpenseGroupTransfer(flat.group, nobody, &transfer), ERANOS_ERROR_KIND_ID, failure) && nullptr == transfer,
+                  "a transfer");
+        EranosMoney *amount = nullptr;
+        checkThat(check, isFailure(eranosExpenseGroupTransferAmount(flat.group, nobody, &amount), ERANOS_ERROR_KIND_ID, failure) && nullptr == amount,
+                  "a transfer's amount");
+    }
     flatDestroy(flat);
 }
 
@@ -1778,20 +1794,22 @@ static void everyErrorHoldsWhatItsFailureHolds(Check *const check) {
     EranosText *const json = eranosTextCreate();
     eranosErrorDestroy(eranosExpenseGroupSave(flat.group, json));
     char tampered[8192] = {};
-    char const *const format = strstr(eranosTextData(json), "\"format\": 2");
-    int const before = nullptr == format ? 0 : (int)(format - eranosTextData(json)) + (int)strlen("\"format\": 2");
-    (void)snprintf(tampered, sizeof tampered, "%.*s6%s", before, eranosTextData(json), eranosTextData(json) + before);
+    char const *const format = strstr(eranosTextData(json), "\"format\": 3");
+    int const before = nullptr == format ? 0 : (int)(format - eranosTextData(json)) + (int)strlen("\"format\": ");
+    (void)snprintf(tampered, sizeof tampered, "%.*s4%s", before, eranosTextData(json), eranosTextData(json) + before + 1);
     EranosExpenseGroup *newer = nullptr;
     EranosError *const unsupported = eranosExpenseGroupLoad(tampered, &newer);
     checkThat(check,
               holdsFailure(unsupported, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_UNSUPPORTED_FORMAT) &&
-                  eranosErrorFormat(unsupported, &number) && 26 == number,
+                  eranosErrorFormat(unsupported, &number) && 4 == number,
               "a format this release cannot read");
+    eranosErrorMessage(unsupported, text);
+    checkThat(check, isText(text, "unsupported group format 4: this version reads format 3"), "the format it reads");
     eranosErrorDestroy(unsupported);
     eranosTextDestroy(json);
     EranosCategory *noCategory = nullptr;
     checkThat(check,
-              isFailure(eranosExpenseGroupCategory(flat.group, "not an identifier", &noCategory), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_INVALID_ID),
+              isFailure(eranosExpenseGroupCategory(flat.group, "a\tb", &noCategory), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_CONTROL_CHARACTER),
               "text that is no identifier");
     eranosExpenseDestroy(taxi);
     eranosCategoryDestroy(duplicate);

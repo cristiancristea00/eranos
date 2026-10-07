@@ -17,30 +17,32 @@
 namespace eranos {
 
 // Every identifier writes its order out: the defaulted one holds a branch that no comparison takes, which the layer's coverage would report as
-// unrun.
+// unrun. std::string compares its characters as unsigned char, even where char is signed, so the order is that of the text's bytes, the library's.
 
-/// The identifier of a group: a hyphenated UUID the library gave it; each entity has a type of its own, so one's identifier cannot stand where
-/// another's is expected.
+/// The identifier of a group, which the library gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
+/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
+/// identifier cannot stand where another's is expected.
 class ExpenseGroupId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
     ///
-    /// @param text A hyphenated UUID
+    /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
+    ///   with whitespace at either end
     explicit ExpenseGroupId(std::string text) noexcept : text(std::move(text)) {}
 
-    /// The identifier's text: a hyphenated UUID.
+    /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers have one text: equal ones name one entity.
+    /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
     [[nodiscard]] friend bool operator==(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept = default;
 
-    /// How two identifiers order, by text.
+    /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
@@ -53,28 +55,30 @@ class ExpenseGroupId final {
     std::string text;
 };
 
-/// The identifier of a member: a hyphenated UUID the group gave them; each entity has a type of its own, so one's identifier cannot stand where
-/// another's is expected.
+/// The identifier of a member, which the group gave them: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
+/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
+/// identifier cannot stand where another's is expected.
 class MemberId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
     ///
-    /// @param text A hyphenated UUID
+    /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
+    ///   with whitespace at either end
     explicit MemberId(std::string text) noexcept : text(std::move(text)) {}
 
-    /// The identifier's text: a hyphenated UUID.
+    /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers have one text: equal ones name one entity.
+    /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
     [[nodiscard]] friend bool operator==(MemberId const &left, MemberId const &right) noexcept = default;
 
-    /// How two identifiers order, by text.
+    /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
@@ -85,28 +89,30 @@ class MemberId final {
     std::string text;
 };
 
-/// The identifier of a category: a hyphenated UUID the group gave it; each entity has a type of its own, so one's identifier cannot stand where
-/// another's is expected.
+/// The identifier of a category, which the group gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
+/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
+/// identifier cannot stand where another's is expected.
 class CategoryId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
     ///
-    /// @param text A hyphenated UUID
+    /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
+    ///   with whitespace at either end
     explicit CategoryId(std::string text) noexcept : text(std::move(text)) {}
 
-    /// The identifier's text: a hyphenated UUID.
+    /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers have one text: equal ones name one entity.
+    /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
     [[nodiscard]] friend bool operator==(CategoryId const &left, CategoryId const &right) noexcept = default;
 
-    /// How two identifiers order, by text.
+    /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
@@ -119,28 +125,30 @@ class CategoryId final {
     std::string text;
 };
 
-/// The identifier of an expense: a hyphenated UUID the group gave it; each entity has a type of its own, so one's identifier cannot stand where
-/// another's is expected.
+/// The identifier of an expense, which the group gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
+/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
+/// identifier cannot stand where another's is expected.
 class ExpenseId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
     ///
-    /// @param text A hyphenated UUID
+    /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
+    ///   with whitespace at either end
     explicit ExpenseId(std::string text) noexcept : text(std::move(text)) {}
 
-    /// The identifier's text: a hyphenated UUID.
+    /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers have one text: equal ones name one entity.
+    /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
     [[nodiscard]] friend bool operator==(ExpenseId const &left, ExpenseId const &right) noexcept = default;
 
-    /// How two identifiers order, by text.
+    /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
@@ -151,28 +159,30 @@ class ExpenseId final {
     std::string text;
 };
 
-/// The identifier of a transfer: a hyphenated UUID the group gave it; each entity has a type of its own, so one's identifier cannot stand where
-/// another's is expected.
+/// The identifier of a transfer, which the group gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
+/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
+/// identifier cannot stand where another's is expected.
 class TransferId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
     ///
-    /// @param text A hyphenated UUID
+    /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
+    ///   with whitespace at either end
     explicit TransferId(std::string text) noexcept : text(std::move(text)) {}
 
-    /// The identifier's text: a hyphenated UUID.
+    /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
     [[nodiscard]] std::string const &value() const noexcept { return text; }
 
-    /// Whether two identifiers have one text: equal ones name one entity.
+    /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
     [[nodiscard]] friend bool operator==(TransferId const &left, TransferId const &right) noexcept = default;
 
-    /// How two identifiers order, by text.
+    /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier

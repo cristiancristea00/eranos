@@ -71,10 +71,10 @@ struct ExpenseGroupView<'group> {
 /// assert_eq!(saved.into_expense_group()?.id(), group.id());
 ///
 /// // A file from a later release is refused, with the format it names.
-/// let newer: SavedExpenseGroup = serde_json::from_str(&json.replace(r#""format":2"#, r#""format":3"#))?;
+/// let newer: SavedExpenseGroup = serde_json::from_str(&json.replace(r#""format":3"#, r#""format":4"#))?;
 /// assert_eq!(
 ///     newer.into_expense_group().map(|group| group.id()),
-///     Err(ExpenseGroupError::UnsupportedFormat { format: 3 })
+///     Err(ExpenseGroupError::UnsupportedFormat { format: 4 })
 /// );
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```

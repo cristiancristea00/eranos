@@ -261,7 +261,7 @@ fn an_archived_member_keeps_history_but_joins_no_new_expense() {
         .unwrap();
     group.replace_member(renamed).unwrap();
     assert!(group.is_archived(carol));
-    assert!(!group.is_archived(MemberId::from_bytes([200; 16])));
+    assert!(!group.is_archived(MemberId::new("stranger").unwrap()));
 
     // A new expense with Carol is refused.
     assert_unchanged(
@@ -341,7 +341,7 @@ fn only_an_unreferenced_member_can_be_removed() {
             .map(|member| member.first_name().to_owned()),
         Ok("Carol".to_owned())
     );
-    let stranger = MemberId::from_bytes([200; 16]);
+    let stranger = MemberId::new("stranger").unwrap();
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::UnknownMember(stranger),
@@ -509,13 +509,13 @@ fn an_expense_must_fit_the_group() {
         bob,
         ..
     } = trip();
-    let stranger = MemberId::from_bytes([200; 16]);
+    let stranger = MemberId::new("stranger").unwrap();
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::UnknownMember(stranger),
         |group| group.add_expense(shared("5.00", ana, &[ana, stranger])),
     );
-    let missing = CategoryId::from_bytes([200; 16]);
+    let missing = CategoryId::new("missing").unwrap();
     let categorised = shared("5.00", ana, &[ana])
         .to_builder()
         .category(missing)
@@ -675,7 +675,7 @@ fn transfers_move_balances_exactly() {
     assert_eq!(group.ledger, rebuilt(&group));
 
     // Unknown members, unknown and duplicate transfers are refused.
-    let stranger = MemberId::from_bytes([200; 16]);
+    let stranger = MemberId::new("stranger").unwrap();
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::UnknownMember(stranger),
@@ -1052,7 +1052,7 @@ fn an_overflowing_expense_is_refused() {
 #[test]
 fn only_members_are_archived_or_unarchived() {
     let Trip { mut group, .. } = trip();
-    let stranger = MemberId::from_bytes([200; 16]);
+    let stranger = MemberId::new("stranger").unwrap();
     let unknown = ExpenseGroupError::UnknownMember(stranger);
     assert_unchanged(&mut group, &unknown, |group| group.archive_member(stranger));
     assert_unchanged(&mut group, &unknown, |group| {
@@ -1282,7 +1282,7 @@ fn a_transfer_out_of_range_is_refused() {
     assert_unchanged(&mut group, &ExpenseGroupError::Overflow, |group| {
         group.replace_transfer(converted)
     });
-    let stranger = MemberId::from_bytes([200; 16]);
+    let stranger = MemberId::new("stranger").unwrap();
     let from_a_stranger = edited_transfer(&group, repayment, |builder| builder.from(stranger));
     assert_unchanged(
         &mut group,

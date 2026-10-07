@@ -6,8 +6,9 @@ use eranos_core::MemberId;
 
 use super::*;
 
+/// The member `number`; members sort by number.
 fn member(number: u8) -> MemberId {
-    MemberId::from_bytes([number; 16])
+    MemberId::new(&format!("member-{number:03}")).unwrap()
 }
 
 /// The pair of `from` owing or paying `to`.

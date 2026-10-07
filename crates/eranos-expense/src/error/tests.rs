@@ -144,7 +144,7 @@ impl FromExpenseError for ConvertedExpenseError {
 fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
     let expected_currency = CurrencyCode::USD;
     let found = CurrencyCode::EUR;
-    let member = MemberId::from_bytes([5; 16]);
+    let member = MemberId::new("ana").unwrap();
     let expected_money = Money::from_minor_units(200, CurrencyCode::EUR);
     let actual = Money::from_minor_units(100, CurrencyCode::EUR);
     let total_basis_points = 9005;

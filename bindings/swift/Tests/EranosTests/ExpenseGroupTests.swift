@@ -44,8 +44,9 @@ func everySynchronousReadAnswersWhatTheGroupHolds() throws {
     #expect(try group.amount(of: flat.repayment) == flat.euros(1_000))
     let json = try group.save()
     #expect(try ExpenseGroup.load(json).save() == json)
-    #expect(throws: EranosError.id(.invalidID, detail: "invalid identifier: expected a UUID")) {
-        try group.member(withID: Member.ID(rawValue: "nobody"))
+    #expect(try nil == group.member(withID: Member.ID(rawValue: "nobody")))
+    #expect(throws: EranosError.id(.empty, detail: "an identifier must not be empty")) {
+        try group.member(withID: Member.ID(rawValue: ""))
     }
 }
 

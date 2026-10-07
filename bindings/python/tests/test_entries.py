@@ -196,8 +196,8 @@ def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
     assert str(SettledBalance()) == 'settled'
     assert str(GetsBackBalance(flat.euros(1200))) == 'gets back 12.00 EUR'
     with pytest.raises(IdError) as unknown:
-        flat.expense('Snack', MemberId('not an identifier'), (flat.ana,)).members()
-    assert unknown.value.failure == IdError.InvalidId()
+        flat.expense('Snack', MemberId(' ana'), (flat.ana,)).members()
+    assert unknown.value.failure == IdError.SurroundingWhitespace()
 
 
 def test_a_tip_without_a_distribution_is_shared_in_proportion() -> None:

@@ -12,8 +12,9 @@ use eranos_money::CurrencyCode;
 
 use super::*;
 
+/// The member `number`; members sort by number.
 fn member(number: u8) -> MemberId {
-    MemberId::from_bytes([number; 16])
+    MemberId::new(&format!("member-{number:03}")).unwrap()
 }
 
 /// A ledger where members 3 and 4 owe members 1 and 2 through transfers

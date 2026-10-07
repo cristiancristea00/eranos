@@ -5,8 +5,10 @@ package eranos.examples.grandtour
 import eranos.CalendarDate
 import eranos.Cost
 import eranos.CurrencyCode
+import eranos.EranosException
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
+import eranos.IdFailure
 import eranos.Language
 import eranos.MemberId
 import eranos.Money
@@ -122,6 +124,10 @@ internal fun datesAndIdentifiers(
     val time = TimeOfDay.parse("22:15")
     val parsed = MemberId(people.ana.value)
     val found = group.memberBlocking(parsed)?.id
+    val empty = refusal { group.memberBlocking(MemberId("")) }
+    val spaced = refusal { group.memberBlocking(MemberId(" ana")) }
+    val tabbed = refusal { group.memberBlocking(MemberId("a\tb")) }
+    val tooLong = refusal { group.memberBlocking(MemberId("a".repeat(65))) }
     val language = Language.parse("pt-pt")
     println("Dates, times, identifiers, and language tags read and print the ISO forms:")
     printTable(
@@ -132,7 +138,10 @@ internal fun datesAndIdentifiers(
             ValueRow("22:15", "$time: hour ${time.hour}, minute ${time.minute}"),
             ValueRow("24:00", message(refusal { TimeOfDay.of(24, 0) })),
             ValueRow("Ana's identifier", "$parsed, the same after a round trip: ${people.ana == found}"),
-            ValueRow("not-a-uuid", message(refusal { group.memberBlocking(MemberId("not-a-uuid")) })),
+            ValueRow("empty text", message(empty)),
+            ValueRow("ana after a space", message(spaced)),
+            ValueRow("a tab between a and b", message(tabbed)),
+            ValueRow("65 letters a", message(tooLong)),
             ValueRow("pt-pt", "$language"),
             ValueRow("pt_PT", message(refusal { Language.parse("pt_PT") })),
         ),
@@ -141,6 +150,10 @@ internal fun datesAndIdentifiers(
     check(1 == date.day && 10 == date.month && 2026 == date.year)
     check(22 == time.hour && 15 == time.minute)
     check(people.ana == parsed)
+    check(
+        listOf(IdFailure.Empty, IdFailure.SurroundingWhitespace, IdFailure.ControlCharacter, IdFailure.TooLong) ==
+            listOf(empty, spaced, tabbed, tooLong).map { error -> (error as? EranosException.Id)?.failure },
+    )
 }
 
 internal fun values(

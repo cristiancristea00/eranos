@@ -36,7 +36,7 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Every category, the built-in one first.
+/// Every category: the built-in one first, then the others in identifier order, which is creation order for generated identifiers.
 ///
 /// @param reader The group reader
 /// @param categories Receives the categories on success, which the caller destroys, and nullptr on failure
@@ -76,7 +76,7 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Every expense, in the order they were created.
+/// Every expense, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param reader The group reader
 /// @param expenses Receives the expenses on success, which the caller destroys, and nullptr on failure
@@ -130,7 +130,7 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Every member, archived ones included, in the order they were created.
+/// Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param reader The group reader
 /// @param members Receives the members on success, which the caller destroys, and nullptr on failure
@@ -202,7 +202,7 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Every transfer, in the order they were created.
+/// Every transfer, in identifier order, which is creation order for generated identifiers.
 ///
 /// @param reader The group reader
 /// @param transfers Receives the transfers on success, which the caller destroys, and nullptr on failure

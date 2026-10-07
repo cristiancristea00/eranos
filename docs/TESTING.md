@@ -109,6 +109,7 @@ companion that pins concrete numbers.
 
 | Invariant                                                                                                                                                     | Where                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| identifiers order as the bytes of their text, and lowercase hyphenated UUID text as the UUID's bytes, so generated identifiers keep creation order            | `eranos-core/src/tests.rs`                                                                               |
 | an allocation's parts add up to its total, each its exact share rounded down or up                                                                            | `eranos-money/src/allocation/tests.rs`                                                                   |
 | paid and consumed shares of an expense each add up to its total, in any currency                                                                              | `eranos-expense/src/resolution/tests.rs`                                                                 |
 | the pairwise debts of an expense net to each member's paid minus consumed                                                                                     | `eranos-expense/src/resolution/tests.rs`                                                                 |
@@ -150,10 +151,12 @@ where pytest collects a test by that prefix and the claim follows it
 ### Helpers and fixtures
 
 Helpers are plain functions at the top of the test file (`member(1)`,
-`eur("12.00")`, `day()`). An entity gets a time-based ID when it is built;
-the tie rotation depends on an expense's ID, so a unit test that pins
-which member receives a leftover cent builds it with the test-only
-`ExpenseBuilder::with_id`. An integration test sees only the public API:
+`eur("12.00")`, `day()`). A test names members, categories, and entries by
+identifiers it builds from text with `new`, such as `member-001` or `ana`,
+whose byte order is the order the test means. An entity gets a generated ID
+when it is built; the tie rotation hashes the text of an expense's ID, so a
+unit test that pins which member receives a leftover cent builds it with
+the test-only `ExpenseBuilder::with_id`. An integration test sees only the public API:
 it builds its entries once and clones them, and a base group, wherever
 two groups must be equal.
 

@@ -251,13 +251,13 @@ impl FromExpenseGroupError for ConvertedExpenseGroupError {
 fn every_failure_of_group_error_converts_through_the_method_of_its_variant() {
     let format = 11;
     let currency = CurrencyCode::EUR;
-    let member = MemberId::from_bytes([1; 16]);
-    let expenses = vec![ExpenseId::from_bytes([11; 16])];
-    let transfers = vec![TransferId::from_bytes([14; 16])];
-    let category = CategoryId::from_bytes([2; 16]);
-    let existing = CategoryId::from_bytes([3; 16]);
-    let expense = ExpenseId::from_bytes([5; 16]);
-    let transfer = TransferId::from_bytes([6; 16]);
+    let member = MemberId::new("ana").unwrap();
+    let expenses = vec![ExpenseId::new("dinner").unwrap()];
+    let transfers = vec![TransferId::new("repayment").unwrap()];
+    let category = CategoryId::new("food").unwrap();
+    let existing = CategoryId::new("drinks").unwrap();
+    let expense = ExpenseId::new("lunch").unwrap();
+    let transfer = TransferId::new("refund").unwrap();
     let cases = [
         Case {
             error: ExpenseGroupError::UnsupportedFormat { format },

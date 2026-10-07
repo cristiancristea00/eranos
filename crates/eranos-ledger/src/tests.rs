@@ -9,12 +9,14 @@ use std::cmp::Ordering;
 
 use super::*;
 
+/// The member `number`; members sort by number.
 fn member(number: u8) -> MemberId {
-    MemberId::from_bytes([number; 16])
+    MemberId::new(&format!("member-{number:03}")).unwrap()
 }
 
+/// The category `number`; categories sort by number, after Uncategorised.
 fn category(number: u8) -> CategoryId {
-    CategoryId::from_bytes([number; 16])
+    CategoryId::new(&format!("category-{number:03}")).unwrap()
 }
 
 const fn eur(minor_units: i64) -> Money {
@@ -40,7 +42,10 @@ const fn share(member: MemberId, amount: i64) -> Share {
 
 /// The key of `member`'s spending in `category`.
 const fn member_category(member: MemberId, category: CategoryId) -> MemberCategory {
-    MemberCategory { member, category }
+    MemberCategory {
+        member,
+        category: CategoryKey::new(category),
+    }
 }
 
 /// The spending of `total` minor units in `category`.
@@ -206,18 +211,86 @@ fn member_pairs_order_by_the_first_member_then_the_second() {
     assert_eq!(pair(ana, bob).reversed(), pair(bob, ana));
 }
 
-/// A member's spending would be listed with gaps, or with another member's
-/// rows among it: the rows of one member must lie next to each other, in
-/// category order.
+/// A regression witness: with one map keyed by member and category, a
+/// member's rows were read from the member's Uncategorised row onwards, so
+/// the rows of a category whose identifier sorts before the nil UUID text,
+/// such as `-food`, vanished from the member's totals. Uncategorised is
+/// listed first, in the group's totals and in each member's.
 #[test]
-fn member_category_keys_order_by_member_then_category() {
+fn a_category_that_sorts_before_uncategorised_keeps_its_rows_and_its_place() {
     let (ana, bob) = (member(1), member(2));
-    let (food, fuel) = (category(1), category(2));
-    assert!(member_category(ana, fuel) < member_category(bob, CategoryId::UNCATEGORISED));
-    assert!(member_category(ana, food) < member_category(ana, fuel));
+    let food = CategoryId::new("-food").unwrap();
+    let fuel = category(1);
+    assert!(CategoryId::UNCATEGORISED > food);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
+    applied(&mut ledger, |delta| {
+        delta.add_expense(
+            &expense(1000, ana, &[share(ana, 400), share(bob, 600)]),
+            food,
+            1,
+        );
+        delta.add_expense(&expense(300, bob, &[share(ana, 300)]), fuel, 1);
+        delta.add_expense(
+            &expense(200, ana, &[share(ana, 200)]),
+            CategoryId::UNCATEGORISED,
+            1,
+        );
+    })
+    .unwrap();
+
+    let summary = ledger.summary();
     assert_eq!(
-        member_category(ana, food).cmp(&member_category(ana, food)),
-        Ordering::Equal
+        summary.member_category_totals(ana).collect::<Vec<_>>(),
+        [
+            category_total(CategoryId::UNCATEGORISED, 200),
+            category_total(food, 400),
+            category_total(fuel, 300),
+        ]
+    );
+    assert_eq!(
+        summary.member_category_totals(bob).collect::<Vec<_>>(),
+        [category_total(food, 600)]
+    );
+    assert_eq!(summary.member_category_total(bob, food), eur(600));
+    assert_eq!(
+        summary.category_totals().collect::<Vec<_>>(),
+        [
+            category_total(CategoryId::UNCATEGORISED, 200),
+            category_total(food, 1000),
+            category_total(fuel, 300),
+        ]
+    );
+    // Removing the category moves its rows to Uncategorised.
+    ledger.move_category(food, CategoryId::UNCATEGORISED);
+    assert_eq!(
+        ledger
+            .summary()
+            .member_category_totals(bob)
+            .collect::<Vec<_>>(),
+        [category_total(CategoryId::UNCATEGORISED, 600)]
+    );
+}
+
+/// A member whose last category total returns to zero would keep an empty
+/// list of categories, and the summary would differ from one that never saw
+/// the member's entries.
+#[test]
+fn a_member_without_category_totals_leaves_nothing_behind() {
+    let (ana, bob) = (member(1), member(2));
+    let lunch = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
+    // Added and removed in one delta: the rows of a member the summary does
+    // not hold are written as zero.
+    applied(&mut ledger, |delta| {
+        delta.add_expense(&lunch, category(1), 1);
+        delta.add_expense(&lunch, category(1), -1);
+    })
+    .unwrap();
+    assert_eq!(ledger, Ledger::new(CurrencyCode::EUR));
+    assert_eq!(ledger.summary().member_category_totals(ana).count(), 0);
+    assert_eq!(
+        ledger.summary().member_category_total(ana, category(1)),
+        eur(0)
     );
 }
 
@@ -321,7 +394,7 @@ fn every_value_is_range_checked() {
     }));
     deltas.extend([
         Delta {
-            categories: BTreeMap::from([(category(1), beyond)]),
+            categories: BTreeMap::from([(CategoryKey::new(category(1)), beyond)]),
             ..Delta::default()
         },
         Delta {

@@ -51,9 +51,24 @@ interface Conversion {
 /** Every failure the generated code can report, with every reason of a refused IBAN, beside the class and failure it becomes. */
 const conversions: readonly Conversion[] = [
     {
-        generated: new internal.EranosError.Id({ failure: internal.IdFailure.InvalidId, detail: 'detail' }),
+        generated: new internal.EranosError.Id({ failure: internal.IdFailure.Empty, detail: 'detail' }),
         type: IdError,
-        failure: { kind: 'invalidId' },
+        failure: { kind: 'empty' },
+    },
+    {
+        generated: new internal.EranosError.Id({ failure: internal.IdFailure.TooLong, detail: 'detail' }),
+        type: IdError,
+        failure: { kind: 'tooLong' },
+    },
+    {
+        generated: new internal.EranosError.Id({ failure: internal.IdFailure.ControlCharacter, detail: 'detail' }),
+        type: IdError,
+        failure: { kind: 'controlCharacter' },
+    },
+    {
+        generated: new internal.EranosError.Id({ failure: internal.IdFailure.SurroundingWhitespace, detail: 'detail' }),
+        type: IdError,
+        failure: { kind: 'surroundingWhitespace' },
     },
     {
         generated: new internal.EranosError.PaymentAccount({ failure: new internal.PaymentAccountFailure.EmptyName(), detail: 'detail' }),
@@ -461,7 +476,7 @@ void describe('the conversions of every failure the generated code can report', 
      * app another failure than the library's.
      */
     void it('converts every failure of the generated code to its module and failure', () => {
-        assert.equal(conversions.length, 61);
+        assert.equal(conversions.length, 64);
         for (const conversion of conversions) {
             const converted = convertedError(conversion.generated);
             assert.ok(converted instanceof conversion.type);

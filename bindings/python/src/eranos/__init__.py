@@ -112,19 +112,23 @@ from eranos._totals import (
 # ruff: disable[non-empty-init-module]
 # Autodoc documents an identifier only where the module it documents gives the identifier's docstring.
 ExpenseGroupId = _identifiers.ExpenseGroupId
-"""The identifier of a group: a hyphenated UUID the library gave it."""
+"""The identifier of a group: the text the library gave it, a UUID v7 in lowercase hyphenated form."""
 
 MemberId = _identifiers.MemberId
-"""The identifier of a member: a hyphenated UUID the group gave them."""
+"""The identifier of a member: the text the group gave them, a UUID v7 in lowercase hyphenated form."""
 
 CategoryId = _identifiers.CategoryId
-"""The identifier of a category: a hyphenated UUID the group gave it."""
+"""
+The identifier of a category: the text the group gave it, a UUID v7 in lowercase hyphenated form.
+
+The built-in category's is the nil UUID in that form, and the group lists that category before every other, whatever their identifiers.
+"""
 
 ExpenseId = _identifiers.ExpenseId
-"""The identifier of an expense: a hyphenated UUID the group gave it."""
+"""The identifier of an expense: the text the group gave it, a UUID v7 in lowercase hyphenated form."""
 
 TransferId = _identifiers.TransferId
-"""The identifier of a transfer: a hyphenated UUID the group gave it."""
+"""The identifier of a transfer: the text the group gave it, a UUID v7 in lowercase hyphenated form."""
 # ruff: enable[non-empty-init-module]
 
 

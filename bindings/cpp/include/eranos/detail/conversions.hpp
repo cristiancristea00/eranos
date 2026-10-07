@@ -330,7 +330,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// as every other does.
 [[nodiscard]] inline ErrorKind fromDetail(EranosErrorKind const value) noexcept { return static_cast<ErrorKind>(std::to_underlying(value.AsFFI())); }
 
-/// The failure of @p value. The two enumerations list their 55 values in one order, which the generator of both
+/// The failure of @p value. The two enumerations list their 58 values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
 [[nodiscard]] inline Failure fromDetail(EranosFailure const value) noexcept { return static_cast<Failure>(std::to_underlying(value.AsFFI())); }

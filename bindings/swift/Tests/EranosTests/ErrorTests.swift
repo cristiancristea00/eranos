@@ -36,8 +36,20 @@ private func known(_ code: String) -> Eranos.CurrencyCode {
 /// Every failure the generated code can report, with every reason of a refused IBAN.
 private let conversions: [Conversion] = [
     Conversion(
-        expected: .id(.invalidID, detail: "detail"),
-        generated: .Id(failure: .invalidId, detail: "detail")
+        expected: .id(.empty, detail: "detail"),
+        generated: .Id(failure: .empty, detail: "detail")
+    ),
+    Conversion(
+        expected: .id(.tooLong, detail: "detail"),
+        generated: .Id(failure: .tooLong, detail: "detail")
+    ),
+    Conversion(
+        expected: .id(.controlCharacter, detail: "detail"),
+        generated: .Id(failure: .controlCharacter, detail: "detail")
+    ),
+    Conversion(
+        expected: .id(.surroundingWhitespace, detail: "detail"),
+        generated: .Id(failure: .surroundingWhitespace, detail: "detail")
     ),
     Conversion(
         expected: .paymentAccount(.emptyName, detail: "detail"),
@@ -305,7 +317,7 @@ private let conversions: [Conversion] = [
 /// the message would show an app another failure than the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
-    #expect(66 == conversions.count)
+    #expect(69 == conversions.count)
     for conversion in conversions {
         let error = Eranos.EranosError(conversion.generated)
         #expect(error == conversion.expected)

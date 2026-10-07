@@ -774,8 +774,29 @@ public final class eranos/IbanReason$WrongLength : eranos/IbanReason {
 public abstract interface class eranos/IdFailure {
 }
 
-public final class eranos/IdFailure$InvalidId : eranos/IdFailure {
-	public static final field INSTANCE Leranos/IdFailure$InvalidId;
+public final class eranos/IdFailure$ControlCharacter : eranos/IdFailure {
+	public static final field INSTANCE Leranos/IdFailure$ControlCharacter;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IdFailure$Empty : eranos/IdFailure {
+	public static final field INSTANCE Leranos/IdFailure$Empty;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IdFailure$SurroundingWhitespace : eranos/IdFailure {
+	public static final field INSTANCE Leranos/IdFailure$SurroundingWhitespace;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/IdFailure$TooLong : eranos/IdFailure {
+	public static final field INSTANCE Leranos/IdFailure$TooLong;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

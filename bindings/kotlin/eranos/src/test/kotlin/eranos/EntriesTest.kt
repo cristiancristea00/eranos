@@ -82,7 +82,7 @@ class EntriesTest {
         assertEquals(Money(5_500, lei), expenses.taxi.total())
         assertEquals(listOf(flat.ana, flat.bob), expenses.taxi.members())
         assertEquals(flat.euros(300), expenses.dinner.tipAmount())
-        val unreadable = expenses.taxi.copy(payers = Split.Equal(listOf(MemberId("nobody"))))
+        val unreadable = expenses.taxi.copy(payers = Split.Equal(listOf(MemberId(" nobody"))))
         assertThrows<EranosException.Id> { unreadable.members() }
         assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = TipRule(TipValue.Fixed(flat.euros(1)))).tipAmount() }
         assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = TipRule(TipValue.Fixed(Money(-1, lei)))).total() }

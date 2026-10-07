@@ -274,10 +274,23 @@ export class InvalidJsonError extends EranosError {
 }
 
 /** What the library's `IdError` reports: a type per failure, with what it holds. */
-export interface IdFailure {
-    /** Text that is not a UUID. */
-    readonly kind: 'invalidId';
-}
+export type IdFailure =
+    | {
+          /** Empty text. */
+          readonly kind: 'empty';
+      }
+    | {
+          /** Text longer than 64 bytes of UTF-8. */
+          readonly kind: 'tooLong';
+      }
+    | {
+          /** Text that holds a control character, such as a tab or a line break. */
+          readonly kind: 'controlCharacter';
+      }
+    | {
+          /** Text that starts or ends with whitespace. */
+          readonly kind: 'surroundingWhitespace';
+      };
 
 /** What the library's `PaymentAccountError` reports: a type per failure, with what it holds. */
 export type PaymentAccountFailure =
@@ -690,9 +703,14 @@ export function convertedError(error: unknown): unknown {
 /** The failure the generated code reports as `failure`. */
 function convertedIdFailure(failure: internal.IdFailure): IdFailure {
     switch (failure) {
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- one kind of failure; a second leaves the switch without a return
-        case internal.IdFailure.InvalidId:
-            return { kind: 'invalidId' };
+        case internal.IdFailure.Empty:
+            return { kind: 'empty' };
+        case internal.IdFailure.TooLong:
+            return { kind: 'tooLong' };
+        case internal.IdFailure.ControlCharacter:
+            return { kind: 'controlCharacter' };
+        case internal.IdFailure.SurroundingWhitespace:
+            return { kind: 'surroundingWhitespace' };
     }
 }
 

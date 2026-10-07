@@ -22,17 +22,50 @@ struct Conversion {
 /// Every failure of the library, converted.
 #[expect(
     clippy::too_many_lines,
-    reason = "one entry for each of the 55 variants of the library's errors, which read best as one table"
+    reason = "one entry for each of the 58 variants of the library's errors, which read best as one table"
 )]
 fn conversions() -> Vec<Conversion> {
     vec![
         {
-            let error = IdError::InvalidId;
+            let error = IdError::Empty;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Id {
-                    failure: IdFailure::InvalidId,
+                    failure: IdFailure::Empty,
+                    detail: message,
+                },
+            }
+        },
+        {
+            let error = IdError::TooLong;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Id {
+                    failure: IdFailure::TooLong,
+                    detail: message,
+                },
+            }
+        },
+        {
+            let error = IdError::ControlCharacter;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Id {
+                    failure: IdFailure::ControlCharacter,
+                    detail: message,
+                },
+            }
+        },
+        {
+            let error = IdError::SurroundingWhitespace;
+            let message = error.to_string();
+            Conversion {
+                converted: EranosError::from(error),
+                expected: EranosError::Id {
+                    failure: IdFailure::SurroundingWhitespace,
                     detail: message,
                 },
             }
@@ -280,14 +313,14 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseError::DuplicateMember {
-                member: MemberId::from_bytes([10; 16]),
+                member: MemberId::new("member-10").unwrap(),
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
                     failure: ExpenseFailure::DuplicateMember {
-                        member: MemberId::from_bytes([10; 16]).to_string(),
+                        member: MemberId::new("member-10").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -384,14 +417,14 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseError::NonPositiveShare {
-                member: MemberId::from_bytes([13; 16]),
+                member: MemberId::new("member-13").unwrap(),
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::Expense {
                     failure: ExpenseFailure::NonPositiveShare {
-                        member: MemberId::from_bytes([13; 16]).to_string(),
+                        member: MemberId::new("member-13").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -479,13 +512,13 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = ExpenseGroupError::ArchivedMember(MemberId::from_bytes([16; 16]));
+            let error = ExpenseGroupError::ArchivedMember(MemberId::new("member-16").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::ArchivedMember {
-                        member: MemberId::from_bytes([16; 16]).to_string(),
+                        member: MemberId::new("member-16").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -514,13 +547,14 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = ExpenseGroupError::DuplicateCategory(CategoryId::from_bytes([17; 16]));
+            let error =
+                ExpenseGroupError::DuplicateCategory(CategoryId::new("category-17").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateCategory {
-                        category: CategoryId::from_bytes([17; 16]).to_string(),
+                        category: CategoryId::new("category-17").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -528,14 +562,14 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseGroupError::DuplicateCategoryName {
-                existing: CategoryId::from_bytes([18; 16]),
+                existing: CategoryId::new("category-18").unwrap(),
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateCategoryName {
-                        existing: CategoryId::from_bytes([18; 16]).to_string(),
+                        existing: CategoryId::new("category-18").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -557,39 +591,40 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = ExpenseGroupError::DuplicateExpense(ExpenseId::from_bytes([20; 16]));
+            let error = ExpenseGroupError::DuplicateExpense(ExpenseId::new("expense-20").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateExpense {
-                        expense: ExpenseId::from_bytes([20; 16]).to_string(),
+                        expense: ExpenseId::new("expense-20").unwrap().to_string(),
                     },
                     detail: message,
                 },
             }
         },
         {
-            let error = ExpenseGroupError::DuplicateMember(MemberId::from_bytes([21; 16]));
+            let error = ExpenseGroupError::DuplicateMember(MemberId::new("member-21").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateMember {
-                        member: MemberId::from_bytes([21; 16]).to_string(),
+                        member: MemberId::new("member-21").unwrap().to_string(),
                     },
                     detail: message,
                 },
             }
         },
         {
-            let error = ExpenseGroupError::DuplicateTransfer(TransferId::from_bytes([22; 16]));
+            let error =
+                ExpenseGroupError::DuplicateTransfer(TransferId::new("transfer-22").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateTransfer {
-                        transfer: TransferId::from_bytes([22; 16]).to_string(),
+                        transfer: TransferId::new("transfer-22").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -608,18 +643,18 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseGroupError::MemberInUse {
-                member: MemberId::from_bytes([24; 16]),
-                expenses: vec![ExpenseId::from_bytes([23; 16])],
-                transfers: vec![TransferId::from_bytes([25; 16])],
+                member: MemberId::new("member-24").unwrap(),
+                expenses: vec![ExpenseId::new("expense-23").unwrap()],
+                transfers: vec![TransferId::new("transfer-25").unwrap()],
             };
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::MemberInUse {
-                        member: MemberId::from_bytes([24; 16]).to_string(),
-                        expenses: vec![ExpenseId::from_bytes([23; 16]).to_string()],
-                        transfers: vec![TransferId::from_bytes([25; 16]).to_string()],
+                        member: MemberId::new("member-24").unwrap().to_string(),
+                        expenses: vec![ExpenseId::new("expense-23").unwrap().to_string()],
+                        transfers: vec![TransferId::new("transfer-25").unwrap().to_string()],
                     },
                     detail: message,
                 },
@@ -663,52 +698,52 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = ExpenseGroupError::UnknownCategory(CategoryId::from_bytes([27; 16]));
+            let error = ExpenseGroupError::UnknownCategory(CategoryId::new("category-27").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownCategory {
-                        category: CategoryId::from_bytes([27; 16]).to_string(),
+                        category: CategoryId::new("category-27").unwrap().to_string(),
                     },
                     detail: message,
                 },
             }
         },
         {
-            let error = ExpenseGroupError::UnknownExpense(ExpenseId::from_bytes([28; 16]));
+            let error = ExpenseGroupError::UnknownExpense(ExpenseId::new("expense-28").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownExpense {
-                        expense: ExpenseId::from_bytes([28; 16]).to_string(),
+                        expense: ExpenseId::new("expense-28").unwrap().to_string(),
                     },
                     detail: message,
                 },
             }
         },
         {
-            let error = ExpenseGroupError::UnknownMember(MemberId::from_bytes([29; 16]));
+            let error = ExpenseGroupError::UnknownMember(MemberId::new("member-29").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownMember {
-                        member: MemberId::from_bytes([29; 16]).to_string(),
+                        member: MemberId::new("member-29").unwrap().to_string(),
                     },
                     detail: message,
                 },
             }
         },
         {
-            let error = ExpenseGroupError::UnknownTransfer(TransferId::from_bytes([30; 16]));
+            let error = ExpenseGroupError::UnknownTransfer(TransferId::new("transfer-30").unwrap());
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
                 expected: EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownTransfer {
-                        transfer: TransferId::from_bytes([30; 16]).to_string(),
+                        transfer: TransferId::new("transfer-30").unwrap().to_string(),
                     },
                     detail: message,
                 },
@@ -735,7 +770,7 @@ fn conversions() -> Vec<Conversion> {
 #[test]
 fn every_failure_of_the_library_converts_to_its_case() {
     let conversions = conversions();
-    assert_eq!(conversions.len(), 55);
+    assert_eq!(conversions.len(), 58);
     for Conversion {
         converted,
         expected,

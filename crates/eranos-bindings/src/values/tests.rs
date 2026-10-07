@@ -35,8 +35,11 @@ fn unknown_money() -> Money {
     }
 }
 
-fn member(byte: u8) -> String {
-    MemberId::from_bytes([byte; 16]).to_string()
+/// The identifier of the member `number`; members sort by number.
+fn member(number: u8) -> String {
+    MemberId::new(&format!("member-{number:03}"))
+        .unwrap()
+        .to_string()
 }
 
 fn equal(members: &[String]) -> Split {
@@ -517,7 +520,7 @@ fn an_expense_and_a_split_list_their_members() {
     let listed = equal(&[member(3), member(2)]);
     assert_eq!(split_members(&listed), Ok(vec![member(3), member(2)]));
 
-    let unreadable = equal(&["nobody".to_owned()]);
+    let unreadable = equal(&[" nobody".to_owned()]);
     let refused = [
         expense_members(&Expense {
             payers: unreadable.clone(),
@@ -536,7 +539,7 @@ fn an_expense_and_a_split_list_their_members() {
             matches!(
                 result,
                 Err(EranosError::Id {
-                    failure: IdFailure::InvalidId,
+                    failure: IdFailure::SurroundingWhitespace,
                     ..
                 })
             ),

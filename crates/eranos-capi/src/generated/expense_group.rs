@@ -215,7 +215,8 @@ pub mod ffi {
             );
         }
 
-        /// Every category, the built-in one first.
+        /// Every category: the built-in one first, then the others in identifier order, which is
+        /// creation order for generated identifiers.
         ///
         /// # Errors
         ///
@@ -511,7 +512,7 @@ pub mod ffi {
             );
         }
 
-        /// Every expense, in the order they were created.
+        /// Every expense, in identifier order, which is creation order for generated identifiers.
         ///
         /// # Errors
         ///
@@ -802,7 +803,8 @@ pub mod ffi {
             );
         }
 
-        /// Every member, archived ones included, in the order they were created.
+        /// Every member, archived ones included, in identifier order, which is creation order for
+        /// generated identifiers.
         ///
         /// # Errors
         ///
@@ -1248,7 +1250,7 @@ pub mod ffi {
             );
         }
 
-        /// Every transfer, in the order they were created.
+        /// Every transfer, in identifier order, which is creation order for generated identifiers.
         ///
         /// # Errors
         ///
@@ -1818,7 +1820,8 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Every category, the built-in one first.
+        /// Every category: the built-in one first, then the others in identifier order, which is
+        /// creation order for generated identifiers.
         ///
         /// # Errors
         ///
@@ -1857,7 +1860,7 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Every expense, in the order they were created.
+        /// Every expense, in identifier order, which is creation order for generated identifiers.
         ///
         /// # Errors
         ///
@@ -1913,7 +1916,8 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// Every member, archived ones included, in the order they were created.
+        /// Every member, archived ones included, in identifier order, which is creation order for
+        /// generated identifiers.
         ///
         /// # Errors
         ///
@@ -1977,7 +1981,7 @@ pub mod ffi {
                 .map_err(crate::failed)
         }
 
-        /// Every transfer, in the order they were created.
+        /// Every transfer, in identifier order, which is creation order for generated identifiers.
         ///
         /// # Errors
         ///

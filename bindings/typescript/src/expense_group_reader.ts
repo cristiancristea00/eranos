@@ -127,7 +127,7 @@ export class ExpenseGroupReader implements Disposable {
     }
 
     /**
-     * Every member, archived ones included, in the order they were added.
+     * Every member, archived ones included, in identifier order, which is creation order for generated identifiers.
      *
      * @returns The members
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
@@ -164,7 +164,8 @@ export class ExpenseGroupReader implements Disposable {
     }
 
     /**
-     * Every category, the built-in one first.
+     * Every category: the built-in one first, then the others in identifier order, which is creation order for generated
+     * identifiers.
      *
      * @returns The categories
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
@@ -189,7 +190,7 @@ export class ExpenseGroupReader implements Disposable {
     }
 
     /**
-     * Every expense, in the order they were created.
+     * Every expense, in identifier order, which is creation order for generated identifiers.
      *
      * @returns The expenses
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
@@ -229,7 +230,7 @@ export class ExpenseGroupReader implements Disposable {
     }
 
     /**
-     * Every transfer, in the order they were created.
+     * Every transfer, in identifier order, which is creation order for generated identifiers.
      *
      * @returns The transfers
      * @throws `TypeError` after {@link ExpenseGroupReader.release}

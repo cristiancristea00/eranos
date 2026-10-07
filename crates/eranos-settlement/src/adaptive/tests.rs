@@ -16,8 +16,9 @@ use proptest::prelude::*;
 use super::*;
 use crate::Flow;
 
+/// The member `number`; members sort by number.
 fn member(number: u8) -> MemberId {
-    MemberId::from_bytes([number; 16])
+    MemberId::new(&format!("member-{number:03}")).unwrap()
 }
 
 /// Balances for members 1, 2, 3, … in order.

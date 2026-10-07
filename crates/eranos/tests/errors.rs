@@ -4,6 +4,10 @@
 //! check that no message repeats the rejected input, which may be an account
 //! number or a contact detail.
 #![forbid(unsafe_code)]
+#![expect(
+    clippy::unwrap_used,
+    reason = "a failing test helper panics to report the failure, as clippy.toml allows inside test functions"
+)]
 
 use std::fmt::Display;
 
@@ -18,13 +22,24 @@ use eranos::{
 };
 
 /// The member every example message names.
-const MEMBER: MemberId = MemberId::from_bytes([0x11; 16]);
+fn member() -> MemberId {
+    MemberId::new("11111111-1111-1111-1111-111111111111").unwrap()
+}
+
 /// The category every example message names.
-const CATEGORY: CategoryId = CategoryId::from_bytes([0x22; 16]);
+fn category() -> CategoryId {
+    CategoryId::new("22222222-2222-2222-2222-222222222222").unwrap()
+}
+
 /// The expense every example message names.
-const EXPENSE: ExpenseId = ExpenseId::from_bytes([0x33; 16]);
+fn expense() -> ExpenseId {
+    ExpenseId::new("33333333-3333-3333-3333-333333333333").unwrap()
+}
+
 /// The transfer every example message names.
-const TRANSFER: TransferId = TransferId::from_bytes([0x44; 16]);
+fn transfer() -> TransferId {
+    TransferId::new("44444444-4444-4444-4444-444444444444").unwrap()
+}
 
 /// An error and the exact message it prints.
 struct Expected<Error> {
@@ -38,10 +53,24 @@ const fn euros(minor_units: i64) -> Money {
 
 /// Every `IdError` variant, with its exact message.
 fn id_errors() -> Vec<Expected<IdError>> {
-    vec![Expected {
-        error: IdError::InvalidId,
-        message: "invalid identifier: expected a UUID",
-    }]
+    vec![
+        Expected {
+            error: IdError::Empty,
+            message: "an identifier must not be empty",
+        },
+        Expected {
+            error: IdError::TooLong,
+            message: "an identifier can be at most 64 bytes long",
+        },
+        Expected {
+            error: IdError::ControlCharacter,
+            message: "an identifier cannot contain control characters",
+        },
+        Expected {
+            error: IdError::SurroundingWhitespace,
+            message: "an identifier cannot start or end with whitespace",
+        },
+    ]
 }
 
 /// Every `CalendarError` variant, with its exact message.
@@ -209,7 +238,7 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
             message: "expected an amount in EUR, found one in USD",
         },
         Expected {
-            error: ExpenseError::DuplicateMember { member: MEMBER },
+            error: ExpenseError::DuplicateMember { member: member() },
             message: "member 11111111-1111-1111-1111-111111111111 appears more than once in a split",
         },
         Expected {
@@ -244,7 +273,7 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
             message: "the amount must be positive",
         },
         Expected {
-            error: ExpenseError::NonPositiveShare { member: MEMBER },
+            error: ExpenseError::NonPositiveShare { member: member() },
             message: "member 11111111-1111-1111-1111-111111111111 has a share that is not positive",
         },
         Expected {
@@ -282,7 +311,7 @@ fn transfer_errors() -> Vec<Expected<TransferError>> {
 fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
     vec![
         Expected {
-            error: ExpenseGroupError::ArchivedMember(MEMBER),
+            error: ExpenseGroupError::ArchivedMember(member()),
             message: "member 11111111-1111-1111-1111-111111111111 is archived",
         },
         Expected {
@@ -294,11 +323,13 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
             message: "the group is locked by another call",
         },
         Expected {
-            error: ExpenseGroupError::DuplicateCategory(CATEGORY),
+            error: ExpenseGroupError::DuplicateCategory(category()),
             message: "category 22222222-2222-2222-2222-222222222222 already exists",
         },
         Expected {
-            error: ExpenseGroupError::DuplicateCategoryName { existing: CATEGORY },
+            error: ExpenseGroupError::DuplicateCategoryName {
+                existing: category(),
+            },
             message: "category 22222222-2222-2222-2222-222222222222 already has this name",
         },
         Expected {
@@ -308,15 +339,15 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
             message: "two exchange rates were given for USD",
         },
         Expected {
-            error: ExpenseGroupError::DuplicateExpense(EXPENSE),
+            error: ExpenseGroupError::DuplicateExpense(expense()),
             message: "expense 33333333-3333-3333-3333-333333333333 already exists",
         },
         Expected {
-            error: ExpenseGroupError::DuplicateMember(MEMBER),
+            error: ExpenseGroupError::DuplicateMember(member()),
             message: "member 11111111-1111-1111-1111-111111111111 already exists",
         },
         Expected {
-            error: ExpenseGroupError::DuplicateTransfer(TRANSFER),
+            error: ExpenseGroupError::DuplicateTransfer(transfer()),
             message: "transfer 44444444-4444-4444-4444-444444444444 already exists",
         },
         Expected {
@@ -325,9 +356,12 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
         },
         Expected {
             error: ExpenseGroupError::MemberInUse {
-                member: MEMBER,
-                expenses: vec![EXPENSE, ExpenseId::from_bytes([0x55; 16])],
-                transfers: vec![TRANSFER],
+                member: member(),
+                expenses: vec![
+                    expense(),
+                    ExpenseId::new("55555555-5555-5555-5555-555555555555").unwrap(),
+                ],
+                transfers: vec![transfer()],
             },
             message: "member 11111111-1111-1111-1111-111111111111 is used by 2 expenses and 1 transfer",
         },
@@ -346,24 +380,24 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
             message: "an entry in the group currency cannot have an exchange rate",
         },
         Expected {
-            error: ExpenseGroupError::UnknownCategory(CATEGORY),
+            error: ExpenseGroupError::UnknownCategory(category()),
             message: "unknown category 22222222-2222-2222-2222-222222222222",
         },
         Expected {
-            error: ExpenseGroupError::UnknownExpense(EXPENSE),
+            error: ExpenseGroupError::UnknownExpense(expense()),
             message: "unknown expense 33333333-3333-3333-3333-333333333333",
         },
         Expected {
-            error: ExpenseGroupError::UnknownMember(MEMBER),
+            error: ExpenseGroupError::UnknownMember(member()),
             message: "unknown member 11111111-1111-1111-1111-111111111111",
         },
         Expected {
-            error: ExpenseGroupError::UnknownTransfer(TRANSFER),
+            error: ExpenseGroupError::UnknownTransfer(transfer()),
             message: "unknown transfer 44444444-4444-4444-4444-444444444444",
         },
         Expected {
-            error: ExpenseGroupError::UnsupportedFormat { format: 3 },
-            message: "unsupported group format 3: this version reads format 2",
+            error: ExpenseGroupError::UnsupportedFormat { format: 4 },
+            message: "unsupported group format 4: this version reads format 3",
         },
     ]
 }
@@ -594,7 +628,9 @@ fn rejected_input_never_appears_in_a_message() {
         &CalendarDate::parse("2026-02-30").unwrap_err(),
     );
     assert_not_echoed("24:60", &TimeOfDay::parse("24:60").unwrap_err());
-    assert_not_echoed("not-a-uuid", &"not-a-uuid".parse::<MemberId>().unwrap_err());
+    for identifier in [" popescu", "popescu\tmarin"] {
+        assert_not_echoed(identifier, &identifier.parse::<MemberId>().unwrap_err());
+    }
     assert_not_echoed("ro_RO", &Language::parse("ro_RO").unwrap_err());
     assert_not_echoed("en-US-US", &Language::parse("en-US-US").unwrap_err());
 }

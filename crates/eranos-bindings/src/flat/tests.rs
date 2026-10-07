@@ -33,7 +33,7 @@ struct Flattening {
 /// binding's own cases.
 #[expect(
     clippy::too_many_lines,
-    reason = "one entry for each of the 65 errors, which read best as one table"
+    reason = "one entry for each of the 68 errors, which read best as one table"
 )]
 fn flattenings() -> Vec<Flattening> {
     vec![
@@ -758,12 +758,48 @@ fn flattenings() -> Vec<Flattening> {
         },
         Flattening {
             error: EranosError::Id {
-                failure: IdFailure::InvalidId,
+                failure: IdFailure::Empty,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
                 kind: ErrorKind::Id,
-                failure: Some(FailureKind::IdInvalidId),
+                failure: Some(FailureKind::IdEmpty),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::Id {
+                failure: IdFailure::TooLong,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::Id,
+                failure: Some(FailureKind::IdTooLong),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::Id {
+                failure: IdFailure::ControlCharacter,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::Id,
+                failure: Some(FailureKind::IdControlCharacter),
+                message: DETAIL.to_owned(),
+                payload: Payload::default(),
+            },
+        },
+        Flattening {
+            error: EranosError::Id {
+                failure: IdFailure::SurroundingWhitespace,
+                detail: DETAIL.to_owned(),
+            },
+            flat: FlatError {
+                kind: ErrorKind::Id,
+                failure: Some(FailureKind::IdSurroundingWhitespace),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
@@ -1012,7 +1048,7 @@ fn flattenings() -> Vec<Flattening> {
 #[test]
 fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
     let flattenings = flattenings();
-    assert_eq!(flattenings.len(), 65);
+    assert_eq!(flattenings.len(), 68);
     for Flattening { error, flat } in &flattenings {
         assert_eq!(&FlatError::from(error), flat);
     }
@@ -1029,7 +1065,7 @@ fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
         .filter_map(|flattening| flattening.flat.payload.reason)
         .collect();
     assert_eq!(kinds.len(), 17);
-    assert_eq!(failures.len(), 55);
+    assert_eq!(failures.len(), 58);
     assert_eq!(reasons.len(), 6);
 }
 

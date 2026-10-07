@@ -55,8 +55,14 @@ pub mod ffi {
     #[derive(Debug)]
     #[diplomat::enum_convert(eranos_bindings::FailureKind)]
     pub enum EranosFailure {
-        /// Text that is not a UUID.
-        IdInvalidId,
+        /// An identifier that is empty.
+        IdEmpty,
+        /// An identifier longer than 64 bytes of UTF-8.
+        IdTooLong,
+        /// An identifier that holds a control character, such as a tab or a line break.
+        IdControlCharacter,
+        /// An identifier that starts or ends with whitespace.
+        IdSurroundingWhitespace,
         /// An account whose name is blank.
         PaymentAccountEmptyName,
         /// An IBAN that failed validation, and why.

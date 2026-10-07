@@ -11,11 +11,27 @@ use eranos_money::{CurrencyCode, Percentage};
 
 use super::*;
 
-// Four members, in ID order.
-const ANA: MemberId = MemberId::from_bytes([1; 16]);
-const BOB: MemberId = MemberId::from_bytes([2; 16]);
-const CAROL: MemberId = MemberId::from_bytes([3; 16]);
-const DAN: MemberId = MemberId::from_bytes([4; 16]);
+// Four members, in identifier order.
+
+/// Ana, a member.
+fn ana() -> MemberId {
+    MemberId::new("ana").unwrap()
+}
+
+/// Bob, a member.
+fn bob() -> MemberId {
+    MemberId::new("bob").unwrap()
+}
+
+/// Carol, a member.
+fn carol() -> MemberId {
+    MemberId::new("carol").unwrap()
+}
+
+/// Dan, a member.
+fn dan() -> MemberId {
+    MemberId::new("dan").unwrap()
+}
 
 fn euros(minor_units: i64) -> Money {
     Money::from_minor_units(minor_units, CurrencyCode::EUR)
@@ -35,15 +51,15 @@ fn dinner() -> ExpenseBuilder {
     Expense::builder(
         "Dinner",
         euros(9_000),
-        ANA,
-        Split::equal([ANA, BOB, CAROL]),
+        ana(),
+        Split::equal([ana(), bob(), carol()]),
         september_23(),
     )
 }
 
 /// A line of `minor_units` shared by Ana.
 fn item(name: &str, minor_units: i64) -> ExpenseItem {
-    ExpenseItem::builder(name, euros(minor_units), [ANA])
+    ExpenseItem::builder(name, euros(minor_units), [ana()])
         .build()
         .unwrap()
 }
@@ -55,17 +71,17 @@ fn full_expense() -> Expense {
     dinner()
         .cost(euros(9_000).at(ExchangeRate::parse("4.9765").unwrap()))
         .payers(Split::amounts([
-            MemberAmount::new(ANA, euros(5_000)),
-            MemberAmount::new(BOB, euros(4_900)),
+            MemberAmount::new(ana(), euros(5_000)),
+            MemberAmount::new(bob(), euros(4_900)),
         ]))
         .split(Split::percentages([
-            MemberPercentage::new(ANA, per_cent("50")),
-            MemberPercentage::new(BOB, per_cent("25")),
-            MemberPercentage::new(CAROL, per_cent("25")),
+            MemberPercentage::new(ana(), per_cent("50")),
+            MemberPercentage::new(bob(), per_cent("25")),
+            MemberPercentage::new(carol(), per_cent("25")),
         ]))
         .tip(TipRule::percentage(per_cent("10")))
         .time(TimeOfDay::new(20, 30).unwrap())
-        .category(CategoryId::from_bytes([9; 16]))
+        .category(CategoryId::new("food").unwrap())
         .description("Birthday")
         .build()
         .unwrap()
@@ -74,12 +90,12 @@ fn full_expense() -> Expense {
 /// The dinner as a receipt paid by Bob: a pizza for Ana and two glasses of
 /// wine for Ana and Carol.
 fn itemised_expense() -> Expense {
-    let wine = ExpenseItem::builder("Wine", euros(2_000), [ANA, CAROL])
+    let wine = ExpenseItem::builder("Wine", euros(2_000), [ana(), carol()])
         .quantity(2)
         .build()
         .unwrap();
     dinner()
-        .paid_by(BOB)
+        .paid_by(bob())
         .items([item("Pizza", 5_000), wine])
         .build()
         .unwrap()
@@ -89,8 +105,8 @@ fn itemised_expense() -> Expense {
 #[test]
 fn a_minimal_expense_keeps_its_fields_and_defaults() {
     let expense = dinner()
-        .paid_by(ANA)
-        .split(Split::equal([ANA, BOB, CAROL]))
+        .paid_by(ana())
+        .split(Split::equal([ana(), bob(), carol()]))
         .build()
         .unwrap();
     // Required fields; a plain amount is a local cost, at a rate of 1.
@@ -99,10 +115,10 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
     assert_eq!(expense.amount(), euros(9_000));
     assert_eq!(expense.exchange_rate(), ExchangeRate::ONE);
     assert_eq!(expense.date(), september_23());
-    assert_eq!(expense.payers(), &Split::equal([ANA]));
+    assert_eq!(expense.payers(), &Split::equal([ana()]));
     assert_eq!(
         expense.split(),
-        &ExpenseSplit::Whole(Split::equal([ANA, BOB, CAROL]))
+        &ExpenseSplit::Whole(Split::equal([ana(), bob(), carol()]))
     );
     // Optional fields are absent or at their defaults: the built-in
     // category and no tip.
@@ -122,8 +138,8 @@ fn the_expense_name_is_trimmed_and_required() {
     let expense = Expense::builder(
         "  Dinner \n",
         euros(9_000),
-        ANA,
-        Split::equal([ANA]),
+        ana(),
+        Split::equal([ana()]),
         september_23(),
     )
     .build()
@@ -134,8 +150,8 @@ fn the_expense_name_is_trimmed_and_required() {
         assert_eq!(
             dinner()
                 .name(name)
-                .paid_by(ANA)
-                .split(Split::equal([ANA]))
+                .paid_by(ana())
+                .split(Split::equal([ana()]))
                 .build(),
             Err(ExpenseError::EmptyName),
             "{name:?}"
@@ -152,8 +168,8 @@ fn a_non_positive_amount_is_rejected() {
         assert_eq!(
             dinner()
                 .cost(amount)
-                .paid_by(ANA)
-                .split(Split::equal([ANA]))
+                .paid_by(ana())
+                .split(Split::equal([ana()]))
                 .build(),
             Err(ExpenseError::NonPositiveAmount)
         );
@@ -166,21 +182,21 @@ fn a_non_positive_amount_is_rejected() {
 fn every_constructor_sets_its_payers_and_its_split() {
     let pizza = || item("Pizza", 9_000);
     let payers = Split::amounts([
-        MemberAmount::new(ANA, euros(5_000)),
-        MemberAmount::new(BOB, euros(4_000)),
+        MemberAmount::new(ana(), euros(5_000)),
+        MemberAmount::new(bob(), euros(4_000)),
     ]);
-    let everyone = Split::equal([ANA, BOB, CAROL]);
+    let everyone = Split::equal([ana(), bob(), carol()]);
     // One payer and a whole split.
     let whole = Expense::builder(
         "Dinner",
         euros(9_000),
-        BOB,
+        bob(),
         everyone.clone(),
         september_23(),
     )
     .build()
     .unwrap();
-    assert_eq!(whole.payers(), &Split::equal([BOB]));
+    assert_eq!(whole.payers(), &Split::equal([bob()]));
     assert_eq!(whole.split(), &ExpenseSplit::Whole(everyone.clone()));
     // Several payers and a whole split.
     let shared = Expense::builder_with_payers(
@@ -196,10 +212,10 @@ fn every_constructor_sets_its_payers_and_its_split() {
     assert_eq!(shared.split(), &ExpenseSplit::Whole(everyone));
     // One payer and items.
     let itemised =
-        Expense::itemised_builder("Dinner", euros(9_000), BOB, [pizza()], september_23())
+        Expense::itemised_builder("Dinner", euros(9_000), bob(), [pizza()], september_23())
             .build()
             .unwrap();
-    assert_eq!(itemised.payers(), &Split::equal([BOB]));
+    assert_eq!(itemised.payers(), &Split::equal([bob()]));
     assert_eq!(itemised.split(), &ExpenseSplit::Itemised(vec![pizza()]));
     // Several payers and items.
     let shared_receipt = Expense::itemised_builder_with_payers(
@@ -222,15 +238,15 @@ fn every_constructor_sets_its_payers_and_its_split() {
 /// constructor or an earlier call set.
 #[test]
 fn the_last_setter_wins() {
-    let payers = || Split::amounts([MemberAmount::new(BOB, euros(9_000))]);
+    let payers = || Split::amounts([MemberAmount::new(bob(), euros(9_000))]);
     // A list of payers after a single payer, and the reverse.
-    let listed = dinner().paid_by(ANA).payers(payers()).build().unwrap();
+    let listed = dinner().paid_by(ana()).payers(payers()).build().unwrap();
     assert_eq!(listed.payers(), &payers());
-    let single = dinner().payers(payers()).paid_by(CAROL).build().unwrap();
-    assert_eq!(single.payers(), &Split::equal([CAROL]));
+    let single = dinner().payers(payers()).paid_by(carol()).build().unwrap();
+    assert_eq!(single.payers(), &Split::equal([carol()]));
     // Items after a whole split, and the reverse.
     let receipt = dinner()
-        .split(Split::equal([ANA]))
+        .split(Split::equal([ana()]))
         .items([item("Pizza", 9_000)])
         .build()
         .unwrap();
@@ -240,43 +256,43 @@ fn the_last_setter_wins() {
     );
     let whole = dinner()
         .items([item("Pizza", 9_000)])
-        .split(Split::equal([BOB]))
+        .split(Split::equal([bob()]))
         .build()
         .unwrap();
-    assert_eq!(whole.split(), &ExpenseSplit::Whole(Split::equal([BOB])));
+    assert_eq!(whole.split(), &ExpenseSplit::Whole(Split::equal([bob()])));
     // The same setter twice: `paid_by`.
     let expense = dinner()
-        .paid_by(ANA)
-        .paid_by(BOB)
-        .split(Split::equal([ANA]))
+        .paid_by(ana())
+        .paid_by(bob())
+        .split(Split::equal([ana()]))
         .build()
         .unwrap();
-    assert_eq!(expense.payers(), &Split::equal([BOB]));
+    assert_eq!(expense.payers(), &Split::equal([bob()]));
     // `payers` twice.
     let payers_twice = dinner()
-        .payers(Split::amounts([MemberAmount::new(ANA, euros(9_000))]))
-        .payers(Split::amounts([MemberAmount::new(BOB, euros(9_000))]))
-        .split(Split::equal([ANA]))
+        .payers(Split::amounts([MemberAmount::new(ana(), euros(9_000))]))
+        .payers(Split::amounts([MemberAmount::new(bob(), euros(9_000))]))
+        .split(Split::equal([ana()]))
         .build()
         .unwrap();
     assert_eq!(
         payers_twice.payers(),
-        &Split::amounts([MemberAmount::new(BOB, euros(9_000))])
+        &Split::amounts([MemberAmount::new(bob(), euros(9_000))])
     );
     // `split` twice.
     let split_twice = dinner()
-        .paid_by(ANA)
-        .split(Split::equal([ANA]))
-        .split(Split::equal([BOB]))
+        .paid_by(ana())
+        .split(Split::equal([ana()]))
+        .split(Split::equal([bob()]))
         .build()
         .unwrap();
     assert_eq!(
         split_twice.split(),
-        &ExpenseSplit::Whole(Split::equal([BOB]))
+        &ExpenseSplit::Whole(Split::equal([bob()]))
     );
     // `items` twice.
     let items_twice = dinner()
-        .paid_by(ANA)
+        .paid_by(ana())
         .items([item("Pizza", 9_000)])
         .items([item("Wine", 9_000)])
         .build()
@@ -293,7 +309,7 @@ fn the_last_setter_wins() {
 fn an_itemised_expense_without_items_is_rejected() {
     // An empty receipt.
     assert_eq!(
-        dinner().paid_by(ANA).items([]).build(),
+        dinner().paid_by(ana()).items([]).build(),
         Err(ExpenseError::NoItems)
     );
 }
@@ -304,7 +320,7 @@ fn an_itemised_expense_without_items_is_rejected() {
 fn items_must_add_up_to_the_amount() {
     // Lines of 50.00 and 40.00 on a 90.00 receipt.
     let expense = dinner()
-        .paid_by(ANA)
+        .paid_by(ana())
         .items([item("Pizza", 5_000), item("Wine", 4_000)])
         .build()
         .unwrap();
@@ -312,7 +328,7 @@ fn items_must_add_up_to_the_amount() {
     // Lines of 50.00 and 30.00.
     assert_eq!(
         dinner()
-            .paid_by(ANA)
+            .paid_by(ana())
             .items([item("Pizza", 5_000), item("Wine", 3_000)])
             .build(),
         Err(ExpenseError::ItemsDoNotAddUp {
@@ -323,7 +339,7 @@ fn items_must_add_up_to_the_amount() {
     // Item totals whose sum leaves the 64-bit range.
     assert_eq!(
         dinner()
-            .paid_by(ANA)
+            .paid_by(ana())
             .items([item("Yacht", i64::MAX), item("Yacht", i64::MAX)])
             .build(),
         Err(ExpenseError::Overflow)
@@ -337,12 +353,12 @@ fn an_item_in_another_currency_is_rejected() {
     let dollars = ExpenseItem::builder(
         "Pizza",
         Money::from_minor_units(9_000, CurrencyCode::USD),
-        [ANA],
+        [ana()],
     )
     .build()
     .unwrap();
     assert_eq!(
-        dinner().paid_by(ANA).items([dollars]).build(),
+        dinner().paid_by(ana()).items([dollars]).build(),
         Err(ExpenseError::CurrencyMismatch {
             expected: CurrencyCode::EUR,
             found: CurrencyCode::USD
@@ -356,19 +372,19 @@ fn an_item_in_another_currency_is_rejected() {
 fn the_participants_divide_the_amount_before_the_tip() {
     let tipped = || {
         dinner()
-            .paid_by(ANA)
+            .paid_by(ana())
             .tip(TipRule::percentage(per_cent("10")))
     };
     // Shares of the 90.00 amount.
     let split = Split::amounts([
-        MemberAmount::new(ANA, euros(4_500)),
-        MemberAmount::new(BOB, euros(4_500)),
+        MemberAmount::new(ana(), euros(4_500)),
+        MemberAmount::new(bob(), euros(4_500)),
     ]);
     assert!(tipped().split(split).build().is_ok());
     // Shares of the 99.00 total.
     let shares_of_the_total = Split::amounts([
-        MemberAmount::new(ANA, euros(4_950)),
-        MemberAmount::new(BOB, euros(4_950)),
+        MemberAmount::new(ana(), euros(4_950)),
+        MemberAmount::new(bob(), euros(4_950)),
     ]);
     assert_eq!(
         tipped().split(shares_of_the_total).build(),
@@ -390,19 +406,19 @@ fn the_participants_divide_the_amount_before_the_tip() {
 fn the_payers_cover_the_amount_plus_the_tip() {
     let tipped = || {
         dinner()
-            .split(Split::equal([ANA, BOB]))
+            .split(Split::equal([ana(), bob()]))
             .tip(TipRule::percentage(per_cent("10")))
     };
     // Payments adding up to the 99.00 total.
     let payers = Split::amounts([
-        MemberAmount::new(ANA, euros(5_000)),
-        MemberAmount::new(BOB, euros(4_900)),
+        MemberAmount::new(ana(), euros(5_000)),
+        MemberAmount::new(bob(), euros(4_900)),
     ]);
     assert!(tipped().payers(payers).build().is_ok());
     // Payments adding up to the 90.00 amount only.
     assert_eq!(
         tipped()
-            .payers(Split::amounts([MemberAmount::new(ANA, euros(9_000))]))
+            .payers(Split::amounts([MemberAmount::new(ana(), euros(9_000))]))
             .build(),
         Err(ExpenseError::AmountsDoNotAddUp {
             expected: euros(9_900),
@@ -422,8 +438,8 @@ fn the_payers_cover_the_amount_plus_the_tip() {
 fn total_and_tip_amount_include_the_tip() {
     let tipped = |tip: TipRule| {
         dinner()
-            .paid_by(ANA)
-            .split(Split::equal([ANA, BOB]))
+            .paid_by(ana())
+            .split(Split::equal([ana(), bob()]))
             .tip(tip)
             .build()
             .unwrap()
@@ -454,7 +470,7 @@ fn total_and_tip_amount_include_the_tip() {
 /// A negative or foreign tip would be added to the total.
 #[test]
 fn an_invalid_fixed_tip_is_rejected() {
-    let builder = || dinner().paid_by(ANA).split(Split::equal([ANA]));
+    let builder = || dinner().paid_by(ana()).split(Split::equal([ana()]));
     // Negative.
     assert_eq!(
         builder().tip(TipRule::fixed(euros(-100))).build(),
@@ -479,8 +495,8 @@ fn a_total_out_of_range_is_rejected() {
         Expense::builder(
             "Yacht",
             euros(i64::MAX),
-            ANA,
-            Split::equal([ANA]),
+            ana(),
+            Split::equal([ana()]),
             september_23(),
         )
     };
@@ -502,7 +518,7 @@ fn a_total_out_of_range_is_rejected() {
 /// an empty line.
 #[test]
 fn the_description_is_trimmed_and_blank_clears_it() {
-    let builder = || dinner().paid_by(ANA).split(Split::equal([ANA]));
+    let builder = || dinner().paid_by(ana()).split(Split::equal([ana()]));
     // Surrounding whitespace.
     let expense = builder().description("  Birthday \n").build().unwrap();
     assert_eq!(expense.description(), Some("Birthday"));
@@ -519,7 +535,7 @@ fn the_description_is_trimmed_and_blank_clears_it() {
 fn optional_fields_are_set_and_cleared_with_none() {
     // Set.
     let expense = full_expense();
-    assert_eq!(expense.category(), CategoryId::from_bytes([9; 16]));
+    assert_eq!(expense.category(), CategoryId::new("food").unwrap());
     assert_eq!(expense.time(), Some(TimeOfDay::new(20, 30).unwrap()));
     // Cleared.
     let expense = expense
@@ -544,7 +560,7 @@ fn a_replaced_cost_brings_its_own_rate() {
     let local_expense = expense
         .to_builder()
         .cost(euros(4_000))
-        .paid_by(ANA)
+        .paid_by(ana())
         .build()
         .unwrap();
     assert_eq!(local_expense.cost(), Cost::from(euros(4_000)));
@@ -552,7 +568,7 @@ fn a_replaced_cost_brings_its_own_rate() {
     let corrected_expense = expense
         .to_builder()
         .cost(expense.cost().with_amount(euros(4_000)))
-        .paid_by(ANA)
+        .paid_by(ana())
         .build()
         .unwrap();
     assert_eq!(corrected_expense.cost(), euros(4_000).at(rate));
@@ -564,22 +580,25 @@ fn a_replaced_cost_brings_its_own_rate() {
 fn members_are_the_payers_and_the_participants() {
     // A payer who does not share.
     let expense = dinner()
-        .paid_by(DAN)
-        .split(Split::equal([ANA, BOB]))
+        .paid_by(dan())
+        .split(Split::equal([ana(), bob()]))
         .build()
         .unwrap();
-    assert_eq!(expense.members(), BTreeSet::from([ANA, BOB, DAN]));
+    assert_eq!(expense.members(), BTreeSet::from([ana(), bob(), dan()]));
     // A payer who also shares is counted once.
     let paid_by_a_participant = dinner()
-        .paid_by(ANA)
-        .split(Split::equal([ANA, BOB]))
+        .paid_by(ana())
+        .split(Split::equal([ana(), bob()]))
         .build()
         .unwrap();
-    assert_eq!(paid_by_a_participant.members(), BTreeSet::from([ANA, BOB]));
+    assert_eq!(
+        paid_by_a_participant.members(),
+        BTreeSet::from([ana(), bob()])
+    );
     // Itemised expenses.
     assert_eq!(
         itemised_expense().members(),
-        BTreeSet::from([ANA, BOB, CAROL])
+        BTreeSet::from([ana(), bob(), carol()])
     );
 }
 
@@ -588,12 +607,12 @@ fn members_are_the_payers_and_the_participants() {
 #[test]
 fn participants_are_everyone_who_shares_the_cost() {
     // A whole split.
-    let whole = ExpenseSplit::Whole(Split::equal([CAROL, ANA]));
-    assert_eq!(whole.participants(), BTreeSet::from([ANA, CAROL]));
+    let whole = ExpenseSplit::Whole(Split::equal([carol(), ana()]));
+    assert_eq!(whole.participants(), BTreeSet::from([ana(), carol()]));
     // Items shared by overlapping members.
     assert_eq!(
         itemised_expense().split().participants(),
-        BTreeSet::from([ANA, CAROL])
+        BTreeSet::from([ana(), carol()])
     );
 }
 
@@ -635,12 +654,12 @@ fn a_rebuilt_expense_accepts_a_new_form_of_split() {
     // Itemised into whole.
     let whole_expense = itemised_expense()
         .to_builder()
-        .split(Split::equal([BOB]))
+        .split(Split::equal([bob()]))
         .build()
         .unwrap();
     assert_eq!(
         whole_expense.split(),
-        &ExpenseSplit::Whole(Split::equal([BOB]))
+        &ExpenseSplit::Whole(Split::equal([bob()]))
     );
 }
 
@@ -652,21 +671,25 @@ fn a_rebuilt_expense_accepts_a_new_form_of_payers() {
     let expense = itemised_expense()
         .to_builder()
         .payers(Split::amounts([
-            MemberAmount::new(ANA, euros(4_500)),
-            MemberAmount::new(BOB, euros(4_500)),
+            MemberAmount::new(ana(), euros(4_500)),
+            MemberAmount::new(bob(), euros(4_500)),
         ]))
         .build()
         .unwrap();
     assert_eq!(
         expense.payers(),
         &Split::amounts([
-            MemberAmount::new(ANA, euros(4_500)),
-            MemberAmount::new(BOB, euros(4_500))
+            MemberAmount::new(ana(), euros(4_500)),
+            MemberAmount::new(bob(), euros(4_500))
         ])
     );
     // A list into a single payer.
-    let single_payer_expense = full_expense().to_builder().paid_by(CAROL).build().unwrap();
-    assert_eq!(single_payer_expense.payers(), &Split::equal([CAROL]));
+    let single_payer_expense = full_expense()
+        .to_builder()
+        .paid_by(carol())
+        .build()
+        .unwrap();
+    assert_eq!(single_payer_expense.payers(), &Split::equal([carol()]));
 }
 
 /// Editing an expense's name, cost, or date would be lost or skip
@@ -675,8 +698,8 @@ fn a_rebuilt_expense_accepts_a_new_form_of_payers() {
 fn builder_setters_replace_each_field() {
     let base = || {
         dinner()
-            .paid_by(ANA)
-            .split(Split::equal([ANA, BOB]))
+            .paid_by(ana())
+            .split(Split::equal([ana(), bob()]))
             .build()
             .unwrap()
     };
@@ -815,12 +838,12 @@ impl FromExpenseSplit for ConvertedExpenseSplit {
 /// bindings an itemised bill as one split, or one split as a bill.
 #[test]
 fn an_expense_split_converts_through_the_method_of_its_variant() {
-    let split = Split::equal([ANA, BOB]);
+    let split = Split::equal([ana(), bob()]);
     assert_eq!(
         ConvertedExpenseSplit::from_expense_split(&ExpenseSplit::Whole(split.clone())),
         ConvertedExpenseSplit::Whole(split)
     );
-    let wine = ExpenseItem::builder("Wine", euros(2_400), [ANA, BOB])
+    let wine = ExpenseItem::builder("Wine", euros(2_400), [ana(), bob()])
         .build()
         .unwrap();
     assert_eq!(

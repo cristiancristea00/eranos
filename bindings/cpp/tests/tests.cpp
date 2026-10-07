@@ -67,14 +67,16 @@ template <typename Value> void checkValue(Check &check, Value const &value, Valu
     check.that(value != other && !(value == other), what);
 }
 
-/// Checks an identifier type: equal to its twin with one hash, different from another, and ordered by text, as a map or a set of
-/// them expects.
+/// Checks an identifier type: equal to its twin with one hash, different from another, and ordered by the bytes of its text, as the
+/// library orders the entries it lists and as a map or a set of them expects.
 template <typename Identifier> void checkIdentifier(Check &check, std::string_view const what) {
     Identifier const first("0199a000-0000-7000-8000-000000000001");
     Identifier const twin(first.value());
     Identifier const second("0199a000-0000-7000-8000-000000000002");
     checkValue(check, first, twin, second, what);
     check.that(first < second && !(second < first), what);
+    check.that(Identifier("ana") < Identifier("ana-1") && Identifier("Ana") != Identifier("ana"), what);
+    check.that(Identifier("zoe") < Identifier("éva"), what);
     check.that(std::hash<Identifier>()(first) == std::hash<Identifier>()(twin), what);
     check.that("0199a000-0000-7000-8000-000000000001" == first.value(), what);
 }
@@ -250,7 +252,8 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) {
     check.that(isFailure(tag, ErrorKind::LANGUAGE, Failure::LANGUAGE_INVALID_LANGUAGE), "a language is a tag");
 }
 
-/// An identifier that compared or hashed otherwise than by its text would lose an entry in the maps and sets of an app.
+/// An identifier that compared or hashed otherwise than by its text would lose an entry in the maps and sets of an app, and one that
+/// ordered otherwise than by its bytes would sort entries otherwise than the library lists them.
 void everyIdentifierComparesAndHashesByItsText(Check &check) {
     checkIdentifier<ExpenseGroupId>(check, "a group's identifier");
     checkIdentifier<MemberId>(check, "a member's identifier");
@@ -475,8 +478,8 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) {
     check.that("owes 12.00 EUR" == toString(Balance{OwesBalance{flat.euros(1'200)}}), "a balance a member owes");
     check.that("settled" == toString(Balance{SettledBalance{}}), "a settled balance");
     check.that("gets back 12.00 EUR" == toString(Balance{GetsBackBalance{flat.euros(1'200)}}), "a balance owed to a member");
-    auto const unknown = refusal(participants(Split{EqualSplit{{MemberId("not an identifier")}}}));
-    check.that(isFailure(unknown, ErrorKind::ID, Failure::ID_INVALID_ID), "an identifier that is not one");
+    auto const unknown = refusal(participants(Split{EqualSplit{{MemberId(" ana")}}}));
+    check.that(isFailure(unknown, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "an identifier that is not one");
 }
 
 // --- The group ---------------------------------------------------------------------------------------------------------
@@ -589,11 +592,38 @@ void aSavedGroupLoadsAsItWasSaved(Check &check) {
     check.that(isFailure(broken, ErrorKind::INVALID_JSON, std::nullopt) && 1 == broken.value().line() && 1 == broken.value().column(),
                "where the text stops being JSON");
     auto tampered = json;
-    auto const format = tampered.find("\"format\": 2");
-    tampered.replace(format, std::string_view("\"format\": 2").size(), "\"format\": 26");
+    auto const format = tampered.find("\"format\": 3");
+    tampered.replace(format, std::string_view("\"format\": 3").size(), "\"format\": 4");
     auto const newer = refusal(ExpenseGroup::load(tampered));
-    check.that(isFailure(newer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT) && 26 == newer.value().format(),
+    check.that(isFailure(newer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNSUPPORTED_FORMAT) && 4 == newer.value().format(),
                "a format this release cannot read");
+    check.that("unsupported group format 4: this version reads format 3" == newer.value().message(), "the format it reads");
+}
+
+/// Text that is not an identifier, and the failure the library refuses it with.
+struct RefusedText final {
+    Failure failure;
+    std::string text;
+};
+
+/// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses it with
+/// the failure of the rule it breaks, which converts from the generated failure by its number.
+void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check &check) {
+    Flat const flat;
+    std::array const refused = {
+        RefusedText{.failure = Failure::ID_EMPTY, .text = ""},
+        RefusedText{.failure = Failure::ID_TOO_LONG, .text = std::string(65, 'a')},
+        RefusedText{.failure = Failure::ID_CONTROL_CHARACTER, .text = "a\tb"},
+        RefusedText{.failure = Failure::ID_SURROUNDING_WHITESPACE, .text = " ana"},
+    };
+    for (auto const &[failure, text] : refused) {
+        check.that(isFailure(refusal(flat.group.category(CategoryId(text))), ErrorKind::ID, failure), "a category");
+        check.that(isFailure(refusal(flat.group.expense(ExpenseId(text))), ErrorKind::ID, failure), "an expense");
+        check.that(isFailure(refusal(flat.group.expenseShares(ExpenseId(text))), ErrorKind::ID, failure), "an expense's shares");
+        check.that(isFailure(refusal(flat.group.member(MemberId(text))), ErrorKind::ID, failure), "a member");
+        check.that(isFailure(refusal(flat.group.transfer(TransferId(text))), ErrorKind::ID, failure), "a transfer");
+        check.that(isFailure(refusal(flat.group.transferAmount(TransferId(text))), ErrorKind::ID, failure), "a transfer's amount");
+    }
 }
 
 /// An error that lost what it holds would leave an app unable to say which entry, amount, or category the library refused.
@@ -633,8 +663,8 @@ void everyErrorHoldsWhatItsFailureHolds(Check &check) {
     auto const transfer = refusal(flat.group.removeTransfer(TransferId("0199a000-0000-7000-8000-00000000ffff")));
     check.that(isFailure(transfer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_TRANSFER) && transfer.value().transfer().has_value(),
                "the unknown transfer");
-    auto const identifier = refusal(flat.group.member(MemberId("not an identifier")));
-    check.that(isFailure(identifier, ErrorKind::ID, Failure::ID_INVALID_ID), "text that is no identifier");
+    auto const identifier = refusal(flat.group.member(MemberId("a\tb")));
+    check.that(isFailure(identifier, ErrorKind::ID, Failure::ID_CONTROL_CHARACTER), "text that is no identifier");
     check.that(identifier.has_value() && !identifier.value().balances().has_value() && !identifier.value().actual().has_value() &&
                    !identifier.value().reason().has_value(),
                "an error holds only what its failure holds");
@@ -818,6 +848,7 @@ constexpr std::array TESTS = {
     Test{.name = "everyStrategyConvertsToTheGeneratedOneAndBack", .body = everyStrategyConvertsToTheGeneratedOneAndBack},
     Test{.name = "aChangeOfCurrencyConvertsEveryEntry", .body = aChangeOfCurrencyConvertsEveryEntry},
     Test{.name = "aSavedGroupLoadsAsItWasSaved", .body = aSavedGroupLoadsAsItWasSaved},
+    Test{.name = "anIdentifierThatIsNotOneIsRefusedByEveryLookup", .body = anIdentifierThatIsNotOneIsRefusedByEveryLookup},
     Test{.name = "everyErrorHoldsWhatItsFailureHolds", .body = everyErrorHoldsWhatItsFailureHolds},
     Test{.name = "everyAsynchronousCallReturnsWhatItsSynchronousFormReturns", .body = everyAsynchronousCallReturnsWhatItsSynchronousFormReturns},
     Test{.name = "anAsynchronousCallReportsTheErrorItsSynchronousFormReturns", .body = anAsynchronousCallReportsTheErrorItsSynchronousFormReturns},
