@@ -13,7 +13,7 @@ private struct Expenses {
     let taxi: Expense
 
     init(of flat: Flat) throws {
-        let lei = try Currency(code: "RON")
+        let lei = try CurrencyCode(code: "RON")
         taxi = try Expense(
             name: "Taxi",
             cost: .converted(Money(minorUnits: 5_000, currency: lei), rate: ExchangeRate(parsing: "0.2")),
@@ -72,7 +72,7 @@ func everyKindOfExpenseConvertsAndStoresWhole() throws {
 @Test
 func anExpenseTellsItsTipTotalAndMembers() throws {
     let flat = try Flat()
-    let lei = try Currency(code: "RON")
+    let lei = try CurrencyCode(code: "RON")
     let taxi = try Expenses(of: flat).taxi
     #expect(try taxi.total() == Money(minorUnits: 5_500, currency: lei))
     #expect(try taxi.tipAmount() == Money(minorUnits: 500, currency: lei))
@@ -115,7 +115,7 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     #expect("+40712345678" == stored.phone?.e164)
     #expect(stored.accounts == carol.accounts)
 
-    let lei = try Currency(code: "RON")
+    let lei = try CurrencyCode(code: "RON")
     let cash = try Transfer(
         from: flat.bob,
         to: flat.ana,

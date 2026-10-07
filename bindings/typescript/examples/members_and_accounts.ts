@@ -9,7 +9,7 @@ import {
     type MemberId,
     type Split,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     Email,
     ExpenseGroupError,
     ExpenseGroup,
@@ -181,7 +181,7 @@ function validation(): void {
 function movingOut(group: ExpenseGroup, flatmates: Flatmates): void {
     section('3. A flatmate moves out');
     const { ana, bob } = flatmates;
-    const euro = Currency.of('EUR');
+    const euro = CurrencyCode.of('EUR');
     const both: Split = { kind: 'equal', members: [ana, bob] };
     const rent = group.addExpenseSync({
         name: 'Rent',
@@ -219,7 +219,7 @@ function movingOut(group: ExpenseGroup, flatmates: Flatmates): void {
 }
 
 await load();
-using group = ExpenseGroup.create('Flat 4B', Currency.of('EUR'));
+using group = ExpenseGroup.create('Flat 4B', CurrencyCode.of('EUR'));
 printLines('Flat 4B: members and their accounts', '═══════════════════════════════════');
 printLines(
     'Ana and Bob share a flat. A member needs only a first name; the last name,',

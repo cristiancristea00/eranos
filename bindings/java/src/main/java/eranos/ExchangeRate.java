@@ -41,7 +41,7 @@ public final class ExchangeRate {
      * @return the converted amount
      * @throws EranosException.Money with {@link MoneyFailure.Overflow} for a result out of range
      */
-    public Money convert(Money amount, Currency currency) throws EranosException {
+    public Money convert(Money amount, CurrencyCode currency) throws EranosException {
         return Converting.call(
                 () ->
                         Money.converted(

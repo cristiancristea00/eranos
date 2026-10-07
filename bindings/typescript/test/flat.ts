@@ -9,7 +9,7 @@ import {
     type MemberId,
     type TransferId,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExpenseGroup,
     Language,
     Money,
@@ -23,7 +23,7 @@ await initialised;
 
 /** A group of two with a category, an expense, and a transfer, and the identifiers the group gave them. */
 export class Flat {
-    readonly euro = Currency.of('EUR');
+    readonly euro = CurrencyCode.of('EUR');
     readonly day = CalendarDate.of(2026, 9, 23);
     readonly group = ExpenseGroup.create('Flat', this.euro, { description: 'Rent', language: Language.parse('pt-pt') });
     readonly ana: MemberId = this.group.addMemberSync({ firstName: 'Ana' });

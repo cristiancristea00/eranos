@@ -350,7 +350,7 @@ their own, and smaller units, at those seconds.
 The codes, minor units, and names come from `iso4217-static`, pinned
 exactly in `Cargo.toml` and generated from the list SIX Group publishes at
 <https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml>.
-`crates/eranos-money/src/currency/iso4217.rs` lists, in code order, the
+`crates/eranos-money/src/currency_code/iso4217.rs` lists, in code order, the
 codes that get a constant.
 
 1. Move the exact pin to the release that carries the amendment, and build

@@ -5,7 +5,7 @@
  */
 
 import { calling } from './converting.js';
-import type { Currency } from './currency.js';
+import type { CurrencyCode } from './currency_code.js';
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
 
@@ -45,7 +45,7 @@ export class ExchangeRate {
      * @returns The converted amount
      * @throws {@link MoneyError} with the failure `overflow` for a result out of range
      */
-    convert(amount: Money, currency: Currency): Money {
+    convert(amount: Money, currency: CurrencyCode): Money {
         return Money.converted(calling(() => internal.exchangeRateConvert(this.text, amount.generated(), currency.code)));
     }
 

@@ -23,7 +23,7 @@ use crate::error::ExpenseError;
 /// ```
 /// use eranos::id::MemberId;
 /// use eranos::{
-///     Currency, MemberAmount, MemberParts, MemberPercentage, Money, Parts, Percentage, Split,
+///     CurrencyCode, MemberAmount, MemberParts, MemberPercentage, Money, Parts, Percentage, Split,
 /// };
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
@@ -38,8 +38,8 @@ use crate::error::ExpenseError;
 ///     MemberPercentage::new(bob, Percentage::parse("30")?),
 /// ]);
 /// let exact = Split::amounts([
-///     MemberAmount::new(ana, Money::parse("12.50", Currency::EUR)?),
-///     MemberAmount::new(bob, Money::parse("7.50", Currency::EUR)?),
+///     MemberAmount::new(ana, Money::parse("12.50", CurrencyCode::EUR)?),
+///     MemberAmount::new(bob, Money::parse("7.50", CurrencyCode::EUR)?),
 /// ]);
 /// assert_eq!(exact.members().collect::<Vec<_>>(), [ana, bob]);
 /// # let _ = (even, couple, fixed);

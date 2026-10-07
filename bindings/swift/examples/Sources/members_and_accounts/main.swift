@@ -48,7 +48,7 @@ struct Flatmates {
     let bob: Member.ID
 }
 
-let euro = try Currency(code: "EUR")
+let euro = try CurrencyCode(code: "EUR")
 
 /// An account with its label and its details.
 func describe(_ account: PaymentAccount) -> String {

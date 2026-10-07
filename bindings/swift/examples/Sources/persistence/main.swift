@@ -17,7 +17,7 @@ struct ComparisonRow: TableRow {
 }
 
 func main() throws(EranosError) {
-    let euro = try Currency(code: "EUR")
+    let euro = try CurrencyCode(code: "EUR")
     let day = try CalendarDate(year: 2026, month: 9, day: 23)
     let group = try ExpenseGroup(name: "Road trip", currency: euro)
     let ana = try group.add(Member(firstName: "Ana"))

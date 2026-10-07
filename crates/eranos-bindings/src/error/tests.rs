@@ -9,7 +9,7 @@ use eranos::error::{
     IdError, LanguageError, MemberError, MoneyError, PaymentAccountError, SettlementError,
     TransferError,
 };
-use eranos::{CategoryId, Currency, ExpenseId, MemberId, TransferId};
+use eranos::{CategoryId, CurrencyCode, ExpenseId, MemberId, TransferId};
 
 use super::*;
 
@@ -61,8 +61,8 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = MoneyError::CurrencyMismatch {
-                left: Currency::USD,
-                right: Currency::GBP,
+                left: CurrencyCode::USD,
+                right: CurrencyCode::GBP,
             };
             let message = error.to_string();
             Conversion {
@@ -133,7 +133,7 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = MoneyError::TooManyDecimals {
-                currency: Currency::USD,
+                currency: CurrencyCode::USD,
                 allowed: 3,
             };
             let message = error.to_string();
@@ -240,8 +240,8 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseError::AmountsDoNotAddUp {
-                expected: eranos::Money::from_minor_units(7, Currency::EUR),
-                actual: eranos::Money::from_minor_units(6, Currency::EUR),
+                expected: eranos::Money::from_minor_units(7, CurrencyCode::EUR),
+                actual: eranos::Money::from_minor_units(6, CurrencyCode::EUR),
             };
             let message = error.to_string();
             Conversion {
@@ -263,8 +263,8 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseError::CurrencyMismatch {
-                expected: Currency::GBP,
-                found: Currency::RON,
+                expected: CurrencyCode::GBP,
+                found: CurrencyCode::RON,
             };
             let message = error.to_string();
             Conversion {
@@ -328,8 +328,8 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseError::ItemsDoNotAddUp {
-                expected: eranos::Money::from_minor_units(12, Currency::EUR),
-                actual: eranos::Money::from_minor_units(11, Currency::EUR),
+                expected: eranos::Money::from_minor_units(12, CurrencyCode::EUR),
+                actual: eranos::Money::from_minor_units(11, CurrencyCode::EUR),
             };
             let message = error.to_string();
             Conversion {
@@ -543,7 +543,7 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseGroupError::DuplicateExchangeRate {
-                currency: Currency::USD,
+                currency: CurrencyCode::USD,
             };
             let message = error.to_string();
             Conversion {
@@ -627,7 +627,7 @@ fn conversions() -> Vec<Conversion> {
         },
         {
             let error = ExpenseGroupError::MissingExchangeRate {
-                currency: Currency::GBP,
+                currency: CurrencyCode::GBP,
             };
             let message = error.to_string();
             Conversion {

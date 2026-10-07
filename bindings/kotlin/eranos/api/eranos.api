@@ -135,8 +135,8 @@ public final class eranos/Cost$Local : eranos/Cost {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class eranos/Currency {
-	public static final field Companion Leranos/Currency$Companion;
+public final class eranos/CurrencyCode {
+	public static final field Companion Leranos/CurrencyCode$Companion;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCode ()Ljava/lang/String;
 	public final fun getDecimalPlaces ()I
@@ -146,9 +146,9 @@ public final class eranos/Currency {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class eranos/Currency$Companion {
+public final class eranos/CurrencyCode$Companion {
 	public final fun getAll ()Ljava/util/List;
-	public final fun of (Ljava/lang/String;)Leranos/Currency;
+	public final fun of (Ljava/lang/String;)Leranos/CurrencyCode;
 }
 
 public final class eranos/Email {
@@ -235,7 +235,7 @@ public final class eranos/EranosException$Transfer : eranos/EranosException {
 
 public final class eranos/ExchangeRate {
 	public static final field Companion Leranos/ExchangeRate$Companion;
-	public final fun convert (Leranos/Money;Leranos/Currency;)Leranos/Money;
+	public final fun convert (Leranos/Money;Leranos/CurrencyCode;)Leranos/Money;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -281,10 +281,10 @@ public final class eranos/ExpenseFailure$AmountsDoNotAddUp : eranos/ExpenseFailu
 }
 
 public final class eranos/ExpenseFailure$CurrencyMismatch : eranos/ExpenseFailure {
-	public fun <init> (Leranos/Currency;Leranos/Currency;)V
+	public fun <init> (Leranos/CurrencyCode;Leranos/CurrencyCode;)V
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getExpected ()Leranos/Currency;
-	public final fun getFound ()Leranos/Currency;
+	public final fun getExpected ()Leranos/CurrencyCode;
+	public final fun getFound ()Leranos/CurrencyCode;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -381,8 +381,8 @@ public final class eranos/ExpenseFailure$ZeroQuantity : eranos/ExpenseFailure {
 public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public static final field Companion Leranos/ExpenseGroup$Companion;
 	public synthetic fun <init> (Leranos/internal/ExpenseGroup;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun <init> (Ljava/lang/String;Leranos/Currency;Ljava/lang/String;Leranos/Language;)V
-	public synthetic fun <init> (Ljava/lang/String;Leranos/Currency;Ljava/lang/String;Leranos/Language;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Leranos/CurrencyCode;Ljava/lang/String;Leranos/Language;)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/CurrencyCode;Ljava/lang/String;Leranos/Language;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun add-0hE0xxQ (Leranos/Member;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun add-7Es_YNE (Leranos/Expense;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun add-9ElBL2U (Leranos/Category;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -397,11 +397,11 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public final fun categoriesBlocking ()Ljava/util/List;
 	public final fun category-IDynil4 (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun categoryBlocking-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
-	public final fun changeCurrency (Leranos/Currency;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun changeCurrencyBlocking (Leranos/Currency;Ljava/util/Map;)V
+	public final fun changeCurrency (Leranos/CurrencyCode;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun changeCurrencyBlocking (Leranos/CurrencyCode;Ljava/util/Map;)V
 	public fun close ()V
 	public final fun currency (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun currencyBlocking ()Leranos/Currency;
+	public final fun currencyBlocking ()Leranos/CurrencyCode;
 	public final fun description (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun descriptionBlocking ()Ljava/lang/String;
 	public final fun expense-eQtW8qI (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -511,9 +511,9 @@ public final class eranos/ExpenseGroupFailure$DuplicateCategoryName : eranos/Exp
 }
 
 public final class eranos/ExpenseGroupFailure$DuplicateExchangeRate : eranos/ExpenseGroupFailure {
-	public fun <init> (Leranos/Currency;)V
+	public fun <init> (Leranos/CurrencyCode;)V
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCurrency ()Leranos/Currency;
+	public final fun getCurrency ()Leranos/CurrencyCode;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -560,9 +560,9 @@ public final class eranos/ExpenseGroupFailure$MemberInUse : eranos/ExpenseGroupF
 }
 
 public final class eranos/ExpenseGroupFailure$MissingExchangeRate : eranos/ExpenseGroupFailure {
-	public fun <init> (Leranos/Currency;)V
+	public fun <init> (Leranos/CurrencyCode;)V
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCurrency ()Leranos/Currency;
+	public final fun getCurrency ()Leranos/CurrencyCode;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -639,7 +639,7 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 	public final fun categories ()Ljava/util/List;
 	public final fun category-1P1mEt8 (Ljava/lang/String;)Leranos/Category;
 	public fun close ()V
-	public final fun currency ()Leranos/Currency;
+	public final fun currency ()Leranos/CurrencyCode;
 	public final fun description ()Ljava/lang/String;
 	public final fun expense-rZhyMcA (Ljava/lang/String;)Leranos/Expense;
 	public final fun expenseShares-rZhyMcA (Ljava/lang/String;)Leranos/ExpenseShares;
@@ -901,9 +901,9 @@ public final class eranos/MemberSummary {
 
 public final class eranos/Money {
 	public static final field Companion Leranos/Money$Companion;
-	public fun <init> (JLeranos/Currency;)V
+	public fun <init> (JLeranos/CurrencyCode;)V
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCurrency ()Leranos/Currency;
+	public final fun getCurrency ()Leranos/CurrencyCode;
 	public final fun getMinorUnits ()J
 	public fun hashCode ()I
 	public final fun minus (Leranos/Money;)Leranos/Money;
@@ -912,17 +912,17 @@ public final class eranos/Money {
 }
 
 public final class eranos/Money$Companion {
-	public final fun parse (Ljava/lang/String;Leranos/Currency;)Leranos/Money;
+	public final fun parse (Ljava/lang/String;Leranos/CurrencyCode;)Leranos/Money;
 }
 
 public abstract interface class eranos/MoneyFailure {
 }
 
 public final class eranos/MoneyFailure$CurrencyMismatch : eranos/MoneyFailure {
-	public fun <init> (Leranos/Currency;Leranos/Currency;)V
+	public fun <init> (Leranos/CurrencyCode;Leranos/CurrencyCode;)V
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getLeft ()Leranos/Currency;
-	public final fun getRight ()Leranos/Currency;
+	public final fun getLeft ()Leranos/CurrencyCode;
+	public final fun getRight ()Leranos/CurrencyCode;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -963,10 +963,10 @@ public final class eranos/MoneyFailure$Overflow : eranos/MoneyFailure {
 }
 
 public final class eranos/MoneyFailure$TooManyDecimals : eranos/MoneyFailure {
-	public fun <init> (Leranos/Currency;J)V
+	public fun <init> (Leranos/CurrencyCode;J)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAllowed ()J
-	public final fun getCurrency ()Leranos/Currency;
+	public final fun getCurrency ()Leranos/CurrencyCode;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

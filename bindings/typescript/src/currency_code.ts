@@ -11,12 +11,12 @@ import * as internal from './internal/eranos.js';
  * A currency with minor units, as ISO 4217 lists it: the only currencies an amount can be in.
  *
  * A currency comes from the library's list, so an amount in one always formats: look one up by its code with
- * {@link Currency.of}, or pick one from {@link Currency.all}. Every lookup of a code returns the same currency, so
+ * {@link CurrencyCode.of}, or pick one from {@link CurrencyCode.all}. Every lookup of a code returns the same currency, so
  * currencies compare with `===`.
  */
-export class Currency {
-    /** The currencies of {@link Currency.all} by their codes, read from the library on first use. */
-    private static listed: ReadonlyMap<string, Currency> | undefined;
+export class CurrencyCode {
+    /** The currencies of {@link CurrencyCode.all} by their codes, read from the library on first use. */
+    private static listed: ReadonlyMap<string, CurrencyCode> | undefined;
 
     private constructor(
         /** The three-letter code: "EUR". */
@@ -34,8 +34,8 @@ export class Currency {
      *
      * @returns The currencies
      */
-    static all(): readonly Currency[] {
-        return [...Currency.byCode().values()];
+    static all(): readonly CurrencyCode[] {
+        return [...CurrencyCode.byCode().values()];
     }
 
     /**
@@ -45,29 +45,29 @@ export class Currency {
      * @returns The currency
      * @throws {@link MoneyError} with the failure `unknownCurrency` for a code that names no currency with minor units
      */
-    static of(code: string): Currency {
+    static of(code: string): CurrencyCode {
         const details = calling(() => internal.currencyDetails(code));
-        return Currency.known(details.code);
+        return CurrencyCode.known(details.code);
     }
 
     /**
-     * The currency of `code`, a code the library gave, so always one of {@link Currency.all}; any other code stands for
+     * The currency of `code`, a code the library gave, so always one of {@link CurrencyCode.all}; any other code stands for
      * itself, so that an amount in it keeps the code it came with.
      *
      * @internal
      */
-    static known(code: string): Currency {
-        return Currency.byCode().get(code) ?? new Currency(code, code, 0, 0);
+    static known(code: string): CurrencyCode {
+        return CurrencyCode.byCode().get(code) ?? new CurrencyCode(code, code, 0, 0);
     }
 
     /** The currencies of the library's list by their codes. */
-    private static byCode(): ReadonlyMap<string, Currency> {
-        Currency.listed ??= new Map(
+    private static byCode(): ReadonlyMap<string, CurrencyCode> {
+        CurrencyCode.listed ??= new Map(
             internal
                 .currencies()
-                .map((details) => [details.code, new Currency(details.code, details.name, details.numericCode, details.decimalPlaces)]),
+                .map((details) => [details.code, new CurrencyCode(details.code, details.name, details.numericCode, details.decimalPlaces)]),
         );
-        return Currency.listed;
+        return CurrencyCode.listed;
     }
 
     /**

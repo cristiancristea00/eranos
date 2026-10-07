@@ -8,7 +8,7 @@ from typing import ClassVar, assert_never, final, override
 from eranos import (
     PaymentAccount,
     Category,
-    Currency,
+    CurrencyCode,
     Email,
     EranosError,
     ExpenseGroup,
@@ -97,7 +97,7 @@ def the_group() -> ExpenseGroup:
 
     """
     section('1. The group')
-    group = ExpenseGroup.create('Lisbon', Currency('EUR'), description='A week by the Atlantic', language=Language('pt-pt'))
+    group = ExpenseGroup.create('Lisbon', CurrencyCode('EUR'), description='A week by the Atlantic', language=Language('pt-pt'))
     blank = refusal(lambda: group.set_name('   '))
     group.set_name('Lisbon and Porto')
     group.set_description('A week by the Atlantic, with a day in Porto')

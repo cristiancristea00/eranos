@@ -4,7 +4,7 @@ package eranos.examples.splitmethods
 
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.Expense
 import eranos.ExpenseGroup
@@ -53,7 +53,7 @@ private data class TotalRow(
     }
 }
 
-private fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
+private fun eur(text: String): Money = Money.parse(text, CurrencyCode.of("EUR"))
 
 /** Prints how one expense divides: every involved member's rule, what they paid, and what they consumed. */
 private fun report(
@@ -279,7 +279,7 @@ private fun printTotals(group: ExpenseGroup) {
 
 /** Prints the report of the family holiday. */
 fun main() {
-    ExpenseGroup("Family holiday", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Family holiday", CurrencyCode.of("EUR")).use { group ->
         val family =
             Family(
                 ana = group.addBlocking(Member("Ana")),

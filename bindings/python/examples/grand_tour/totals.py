@@ -8,7 +8,7 @@ from typing import ClassVar, assert_never, final, override
 from eranos import (
     CategoryId,
     CategoryTotal,
-    Currency,
+    CurrencyCode,
     CurrencyRate,
     ExchangeRate,
     GetsBackBalance,
@@ -89,7 +89,7 @@ class StrategyRow(Row):
         return self.strategy, self.computed_by, str(self.payments)
 
 
-def _add_up(currency: Currency, amounts: Iterable[Money]) -> Money:
+def _add_up(currency: CurrencyCode, amounts: Iterable[Money]) -> Money:
     """
     Add up amounts, all in currency, with the library's checks.
 
@@ -253,8 +253,8 @@ def new_currency(group: ExpenseGroup, people: People) -> None:
 
     """
     section('10. A new currency')
-    euro = Currency('EUR')
-    leu = Currency('RON')
+    euro = CurrencyCode('EUR')
+    leu = CurrencyCode('RON')
     missing = refusal(lambda: group.change_currency(leu, ()))
     group.change_currency(leu, (CurrencyRate(euro, ExchangeRate('5')),))
     print_lines(

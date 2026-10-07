@@ -12,7 +12,7 @@ import java.util.List;
  * them.
  */
 final class Flat {
-    final Currency euro;
+    final CurrencyCode euro;
     final CalendarDate day;
     final ExpenseGroup group;
     final MemberId ana;
@@ -22,7 +22,7 @@ final class Flat {
     final TransferId repayment;
 
     Flat() throws EranosException {
-        euro = Currency.of("EUR");
+        euro = CurrencyCode.of("EUR");
         day = CalendarDate.of(2026, 9, 23);
         group =
                 ExpenseGroup.builder("Flat", euro)

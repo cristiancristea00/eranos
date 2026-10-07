@@ -5,7 +5,7 @@ package eranos.examples.grandtour
 import eranos.CalendarDate
 import eranos.CategoryId
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
@@ -30,9 +30,9 @@ internal data class Categories(
     val transport: CategoryId,
 )
 
-internal fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
+internal fun eur(text: String): Money = Money.parse(text, CurrencyCode.of("EUR"))
 
-internal fun ron(text: String): Money = Money.parse(text, Currency.of("RON"))
+internal fun ron(text: String): Money = Money.parse(text, CurrencyCode.of("RON"))
 
 /** A date of the trip, in October 2026. */
 internal fun october(date: Int): CalendarDate = CalendarDate.of(year = 2026, month = 10, day = date)
@@ -70,7 +70,7 @@ internal fun message(refused: EranosException?): String = refused?.message ?: "a
 
 /** The sum of [amounts], all in [currency]. */
 internal fun sum(
-    currency: Currency,
+    currency: CurrencyCode,
     amounts: List<Money>,
 ): Money = amounts.fold(Money(0, currency)) { total, amount -> total + amount }
 

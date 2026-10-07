@@ -22,11 +22,11 @@ struct Categories {
 }
 
 func eur(_ text: String) throws(EranosError) -> Money {
-    try Money(parsing: text, in: Currency(code: "EUR"))
+    try Money(parsing: text, in: CurrencyCode(code: "EUR"))
 }
 
 func ron(_ text: String) throws(EranosError) -> Money {
-    try Money(parsing: text, in: Currency(code: "RON"))
+    try Money(parsing: text, in: CurrencyCode(code: "RON"))
 }
 
 /// A date of the trip, in October 2026.
@@ -63,7 +63,7 @@ func message<Value>(_ result: Result<Value, EranosError>) -> String {
 }
 
 /// The sum of `amounts`, all in `currency`.
-func sum(_ currency: Currency, _ amounts: [Money]) throws(EranosError) -> Money {
+func sum(_ currency: CurrencyCode, _ amounts: [Money]) throws(EranosError) -> Money {
     var total = Money(minorUnits: 0, currency: currency)
     for amount in amounts {
         total = try total.adding(amount)
@@ -129,7 +129,7 @@ func printCategories(_ group: ExpenseGroup) throws(EranosError) {
 }
 
 /// Every expense and transfer in a currency `shown` accepts, as entered and in the group currency.
-func printEntries(_ group: ExpenseGroup, _ shown: (Currency) -> Bool) throws(EranosError) {
+func printEntries(_ group: ExpenseGroup, _ shown: (CurrencyCode) -> Bool) throws(EranosError) {
     let zero = Money(minorUnits: 0, currency: try group.currency())
     let expenses = try group.expenses().filter { expense in shown(expense.cost.amount.currency) }.map { expense throws(EranosError) in
         EntryRow(

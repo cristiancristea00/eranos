@@ -81,7 +81,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::member::Username>();
         // Money.
         assert_send_and_sync::<eranos::money::Cost>();
-        assert_send_and_sync::<eranos::money::Currency>();
+        assert_send_and_sync::<eranos::money::CurrencyCode>();
         assert_send_and_sync::<eranos::money::CurrencyRate>();
         assert_send_and_sync::<eranos::money::ExchangeRate>();
         assert_send_and_sync::<eranos::money::Money>();

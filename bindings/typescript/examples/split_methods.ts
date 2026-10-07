@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type ExpenseId, type MemberId, CalendarDate, Currency, ExpenseGroup, Money, Parts, Percentage, formatBalance } from '../src/index.js';
+import { type ExpenseId, type MemberId, CalendarDate, CurrencyCode, ExpenseGroup, Money, Parts, Percentage, formatBalance } from '../src/index.js';
 import { type Columns, load, names, printLines, printTable, refusal, section, totals } from './report.js';
 
 /** A member's rule, payment, and consumption in one expense, as the table of shares prints them. */
@@ -37,7 +37,7 @@ const totalColumns: Columns<TotalRow> = [
 ];
 
 function eur(text: string): Money {
-    return Money.parse(text, Currency.of('EUR'));
+    return Money.parse(text, CurrencyCode.of('EUR'));
 }
 
 /** The family and the day every expense happened. */
@@ -258,7 +258,7 @@ function printTotals(group: ExpenseGroup): void {
 }
 
 await load();
-using group = ExpenseGroup.create('Family holiday', Currency.of('EUR'));
+using group = ExpenseGroup.create('Family holiday', CurrencyCode.of('EUR'));
 const family: Family = {
     ana: group.addMemberSync({ firstName: 'Ana' }),
     bob: group.addMemberSync({ firstName: 'Bob' }),

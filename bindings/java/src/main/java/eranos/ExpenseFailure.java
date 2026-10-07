@@ -16,7 +16,7 @@ public sealed interface ExpenseFailure {
      * @param expected the expense's currency
      * @param found the currency of the amount inside it
      */
-    record CurrencyMismatch(Currency expected, Currency found) implements ExpenseFailure {
+    record CurrencyMismatch(CurrencyCode expected, CurrencyCode found) implements ExpenseFailure {
         /**
          * The failure of these components.
          *

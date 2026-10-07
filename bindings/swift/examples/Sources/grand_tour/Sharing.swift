@@ -30,8 +30,8 @@ func sharing(_ group: ExpenseGroup, _ people: People) async throws(EranosError) 
     printTable(rows, numbersFrom: 2)
 
     let before = try await group.summary()
-    let euro = try Currency(code: "EUR")
-    let rates = [try Currency(code: "RON"): try ExchangeRate(parsing: "0.2")]
+    let euro = try CurrencyCode(code: "EUR")
+    let rates = [try CurrencyCode(code: "RON"): try ExchangeRate(parsing: "0.2")]
     // A report reads the group, holding the shared lock meanwhile, so the change waits for it; a new read would wait
     // behind the change, so the report reads through its own handle.
     let report = try await group.read()
@@ -60,5 +60,5 @@ func sharing(_ group: ExpenseGroup, _ people: People) async throws(EranosError) 
     }
     expect(before, after, "the cancelled change leaves the totals")
     expect(reported, after.totalSpent, "the report read the totals")
-    expect(try Currency(code: "RON"), currency, "the group keeps its currency")
+    expect(try CurrencyCode(code: "RON"), currency, "the group keeps its currency")
 }

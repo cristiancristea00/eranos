@@ -213,7 +213,7 @@ pub fn currency_details(code: &str) -> Result<CurrencyDetails, EranosError> {
 /// Every currency with minor units, by code.
 #[must_use]
 pub fn currencies() -> Vec<CurrencyDetails> {
-    library::Currency::all()
+    library::CurrencyCode::all()
         .iter()
         .map(|&currency| CurrencyDetails::from_library(currency))
         .collect()

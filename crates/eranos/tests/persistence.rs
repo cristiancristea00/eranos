@@ -17,7 +17,7 @@ use std::task::{Context, Poll, Waker};
 use eranos::cooperative::block_on;
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, ExpenseGroup,
+    CalendarDate, Category, CategoryId, CurrencyCode, Email, ExchangeRate, Expense, ExpenseGroup,
     ExpenseItem, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
     Money, Parts, PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy,
     Split, TimeOfDay, TipDistribution, TipRule, Transfer, Username,
@@ -25,7 +25,7 @@ use eranos::{
 use serde_json::{Value, json};
 
 fn eur(text: &str) -> Money {
-    Money::parse(text, Currency::EUR).unwrap()
+    Money::parse(text, CurrencyCode::EUR).unwrap()
 }
 
 fn day() -> CalendarDate {
@@ -43,7 +43,7 @@ struct Trip {
 /// A group using every serialised feature, and the two members the tests
 /// look up.
 fn trip() -> Trip {
-    let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
         .description("Autumn trip")
         .language(Language::parse("pt-PT").unwrap())
         .build()
@@ -104,12 +104,12 @@ fn trip() -> Trip {
     group.add_expense(bill).unwrap();
     let tram = Expense::builder_with_payers(
         "Tram",
-        Money::parse("30.00", Currency::RON)
+        Money::parse("30.00", CurrencyCode::RON)
             .unwrap()
             .at(ExchangeRate::parse("0.2011").unwrap()),
         Split::amounts([
-            MemberAmount::new(ana, Money::parse("20.00", Currency::RON).unwrap()),
-            MemberAmount::new(carol, Money::parse("10.00", Currency::RON).unwrap()),
+            MemberAmount::new(ana, Money::parse("20.00", CurrencyCode::RON).unwrap()),
+            MemberAmount::new(carol, Money::parse("10.00", CurrencyCode::RON).unwrap()),
         ]),
         Split::percentages([
             MemberPercentage::new(ana, Percentage::parse("50").unwrap()),
@@ -424,7 +424,7 @@ fn a_saved_group_names_why_the_group_refuses_it() {
 fn a_saved_group_loads_asynchronously() {
     // 3 members, 2 000 expenses, and 100 transfers: 2 103 steps, so the
     // load yields after the 1 024th and the 2 048th.
-    let mut group = ExpenseGroup::builder("Club", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Club", CurrencyCode::EUR)
         .build()
         .unwrap();
     let members: Vec<MemberId> = ["Ana", "Bob", "Carol"]
@@ -467,7 +467,7 @@ fn a_saved_group_loads_asynchronously() {
 /// gaining any.
 #[test]
 fn a_bare_group_round_trips_through_json() {
-    let group = ExpenseGroup::builder("Bare", Currency::EUR)
+    let group = ExpenseGroup::builder("Bare", CurrencyCode::EUR)
         .build()
         .unwrap();
     let text = serde_json::to_string(&group).unwrap();
@@ -507,7 +507,7 @@ fn value_types_serialise_on_their_own() {
         Parts::parse("0.5").unwrap()
     );
     assert!(serde_json::from_value::<Parts>(json!(0)).is_err());
-    assert!(serde_json::from_value::<Currency>(json!("XYZ")).is_err());
+    assert!(serde_json::from_value::<CurrencyCode>(json!("XYZ")).is_err());
     assert!(serde_json::from_value::<CalendarDate>(json!("2026-02-30")).is_err());
     assert_eq!(
         serde_json::from_value::<TimeOfDay>(json!("07:05")).unwrap(),

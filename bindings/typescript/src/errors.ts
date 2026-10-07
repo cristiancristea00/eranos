@@ -5,7 +5,7 @@
  * @packageDocumentation
  */
 
-import { Currency } from './currency.js';
+import { CurrencyCode } from './currency_code.js';
 import { type CategoryId, type ExpenseId, type MemberId, type TransferId, categoryId, expenseId, memberId, transferId } from './identifiers.js';
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
@@ -340,7 +340,7 @@ export type MoneyFailure =
           /** An amount with more decimal places than its currency has. */
           readonly kind: 'tooManyDecimals';
           /** The currency. */
-          readonly currency: Currency;
+          readonly currency: CurrencyCode;
           /** How many decimal places the currency has. */
           readonly allowed: number;
       }
@@ -348,9 +348,9 @@ export type MoneyFailure =
           /** Arithmetic between amounts of two different currencies. */
           readonly kind: 'currencyMismatch';
           /** The currency of the first amount. */
-          readonly left: Currency;
+          readonly left: CurrencyCode;
           /** The currency of the second amount. */
-          readonly right: Currency;
+          readonly right: CurrencyCode;
       }
     | {
           /** A currency code that is not an active ISO 4217 code. */
@@ -393,9 +393,9 @@ export type ExpenseFailure =
           /** An amount inside the expense is in a different currency. */
           readonly kind: 'currencyMismatch';
           /** The expense's currency. */
-          readonly expected: Currency;
+          readonly expected: CurrencyCode;
           /** The currency of the amount inside it. */
-          readonly found: Currency;
+          readonly found: CurrencyCode;
       }
     | {
           /** A split lists no member. */
@@ -500,7 +500,7 @@ export type ExpenseGroupFailure =
            */
           readonly kind: 'missingExchangeRate';
           /** The currency without a rate. */
-          readonly currency: Currency;
+          readonly currency: CurrencyCode;
       }
     | {
           /** An entry in the group currency has a converted cost; only a local cost is in the group currency. */
@@ -510,7 +510,7 @@ export type ExpenseGroupFailure =
           /** The same currency appears twice among the rates of a currency change. */
           readonly kind: 'duplicateExchangeRate';
           /** The currency that appears twice. */
-          readonly currency: Currency;
+          readonly currency: CurrencyCode;
       }
     | {
           /** A member with this ID already exists. */
@@ -743,9 +743,9 @@ function convertedMoneyFailure(failure: internal.MoneyFailure): MoneyFailure {
         case internal.MoneyFailure_Tags.InvalidAmount:
             return { kind: 'invalidAmount' };
         case internal.MoneyFailure_Tags.TooManyDecimals:
-            return { kind: 'tooManyDecimals', currency: Currency.known(failure.inner.currency), allowed: Number(failure.inner.allowed) };
+            return { kind: 'tooManyDecimals', currency: CurrencyCode.known(failure.inner.currency), allowed: Number(failure.inner.allowed) };
         case internal.MoneyFailure_Tags.CurrencyMismatch:
-            return { kind: 'currencyMismatch', left: Currency.known(failure.inner.left), right: Currency.known(failure.inner.right) };
+            return { kind: 'currencyMismatch', left: CurrencyCode.known(failure.inner.left), right: CurrencyCode.known(failure.inner.right) };
         case internal.MoneyFailure_Tags.UnknownCurrency:
             return { kind: 'unknownCurrency' };
         case internal.MoneyFailure_Tags.InvalidExchangeRate:
@@ -776,7 +776,7 @@ function convertedExpenseFailure(failure: internal.ExpenseFailure): ExpenseFailu
         case internal.ExpenseFailure_Tags.NonPositiveAmount:
             return { kind: 'nonPositiveAmount' };
         case internal.ExpenseFailure_Tags.CurrencyMismatch:
-            return { kind: 'currencyMismatch', expected: Currency.known(failure.inner.expected), found: Currency.known(failure.inner.found) };
+            return { kind: 'currencyMismatch', expected: CurrencyCode.known(failure.inner.expected), found: CurrencyCode.known(failure.inner.found) };
         case internal.ExpenseFailure_Tags.EmptySplit:
             return { kind: 'emptySplit' };
         case internal.ExpenseFailure_Tags.DuplicateMember:
@@ -829,11 +829,11 @@ function convertedGroupFailure(failure: internal.ExpenseGroupFailure): ExpenseGr
         case internal.ExpenseGroupFailure_Tags.EmptyName:
             return { kind: 'emptyName' };
         case internal.ExpenseGroupFailure_Tags.MissingExchangeRate:
-            return { kind: 'missingExchangeRate', currency: Currency.known(failure.inner.currency) };
+            return { kind: 'missingExchangeRate', currency: CurrencyCode.known(failure.inner.currency) };
         case internal.ExpenseGroupFailure_Tags.UnexpectedExchangeRate:
             return { kind: 'unexpectedExchangeRate' };
         case internal.ExpenseGroupFailure_Tags.DuplicateExchangeRate:
-            return { kind: 'duplicateExchangeRate', currency: Currency.known(failure.inner.currency) };
+            return { kind: 'duplicateExchangeRate', currency: CurrencyCode.known(failure.inner.currency) };
         case internal.ExpenseGroupFailure_Tags.DuplicateMember:
             return { kind: 'duplicateMember', member: memberId(failure.inner.member) };
         case internal.ExpenseGroupFailure_Tags.UnknownMember:

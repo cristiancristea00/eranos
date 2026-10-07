@@ -29,7 +29,7 @@ public sealed interface ExpenseGroupFailure {
      *
      * @param currency the currency without a rate
      */
-    record MissingExchangeRate(Currency currency) implements ExpenseGroupFailure {
+    record MissingExchangeRate(CurrencyCode currency) implements ExpenseGroupFailure {
         /**
          * The failure of these components.
          *
@@ -51,7 +51,7 @@ public sealed interface ExpenseGroupFailure {
      *
      * @param currency the currency that appears twice
      */
-    record DuplicateExchangeRate(Currency currency) implements ExpenseGroupFailure {
+    record DuplicateExchangeRate(CurrencyCode currency) implements ExpenseGroupFailure {
         /**
          * The failure of these components.
          *

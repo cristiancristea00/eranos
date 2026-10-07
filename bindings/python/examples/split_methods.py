@@ -12,7 +12,7 @@ from typing import ClassVar, final, override
 from eranos import (
     AmountsSplit,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     Expense,
     ExpenseId,
@@ -110,7 +110,7 @@ def euros(text: str) -> Money:
         The amount.
 
     """
-    return Money.parse(text, Currency('EUR'))
+    return Money.parse(text, CurrencyCode('EUR'))
 
 
 def report(group: ExpenseGroup, expense_id: ExpenseId, rules: Mapping[MemberId, str]) -> None:
@@ -359,7 +359,7 @@ def print_totals(group: ExpenseGroup) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = ExpenseGroup.create('Family holiday', Currency('EUR'))
+    group = ExpenseGroup.create('Family holiday', CurrencyCode('EUR'))
     family = Family(
         ana=group.add_member(Member(first_name='Ana')),
         bob=group.add_member(Member(first_name='Bob')),

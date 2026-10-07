@@ -30,7 +30,7 @@ struct TotalRow: TableRow {
     }
 }
 
-let euro = try Currency(code: "EUR")
+let euro = try CurrencyCode(code: "EUR")
 
 func eur(_ text: String) throws(EranosError) -> Money {
     try Money(parsing: text, in: euro)

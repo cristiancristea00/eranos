@@ -79,8 +79,8 @@ func removingACategory(_ group: ExpenseGroup, _ categories: Categories) throws(E
 
 func newCurrency(_ group: ExpenseGroup, _ people: People) throws(EranosError) {
     section("10. A new currency")
-    let euro = try Currency(code: "EUR")
-    let leu = try Currency(code: "RON")
+    let euro = try CurrencyCode(code: "EUR")
+    let leu = try CurrencyCode(code: "RON")
     let missing = Result { () throws(EranosError) in try group.changeCurrency(to: leu, rates: [:]) }
     try group.changeCurrency(to: leu, rates: [euro: try ExchangeRate(parsing: "5")])
     print("""

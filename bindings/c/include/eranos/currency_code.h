@@ -1,8 +1,8 @@
-/// @file eranos/currency.h
+/// @file eranos/currency_code.h
 /// The currencies of the ISO 4217 list, with what the library knows of each.
 
-#ifndef ERANOS_CURRENCY_H
-#define ERANOS_CURRENCY_H
+#ifndef ERANOS_CURRENCY_CODE_H
+#define ERANOS_CURRENCY_CODE_H
 
 #include "EranosCurrencyDetails.h"
 #include "EranosCurrencyDetailsList.h"
@@ -115,4 +115,4 @@ static inline void eranosCurrencyDetailsListDestroy(EranosCurrencyDetailsList *c
     }
 }
 
-#endif // ERANOS_CURRENCY_H
+#endif // ERANOS_CURRENCY_CODE_H

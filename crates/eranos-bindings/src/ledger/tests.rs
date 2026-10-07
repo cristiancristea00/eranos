@@ -2,12 +2,12 @@
 //! total of another member or category, or an expense's shares with a
 //! member dropped would be what the apps show.
 
-use eranos::{CalendarDate, Currency, Expense, ExpenseGroup, Member, Split, Transfer};
+use eranos::{CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, Split, Transfer};
 
 use super::*;
 
 fn euros(minor_units: i64) -> eranos::Money {
-    eranos::Money::from_minor_units(minor_units, Currency::EUR)
+    eranos::Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn record(minor_units: i64) -> Money {
@@ -43,7 +43,7 @@ fn every_balance_converts_to_its_side() {
 /// member's or another category's numbers.
 #[test]
 fn the_summary_and_the_shares_keep_every_number() {
-    let mut group = ExpenseGroup::builder("Flat", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group

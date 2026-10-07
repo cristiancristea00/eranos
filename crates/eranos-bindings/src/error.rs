@@ -9,7 +9,7 @@ use eranos::error::{
     IdError, LanguageError, MemberError, MoneyError, PaymentAccountError, SettlementError,
     TransferError,
 };
-use eranos::{CategoryId, Currency, ExpenseId, MemberId, TransferId};
+use eranos::{CategoryId, CurrencyCode, ExpenseId, MemberId, TransferId};
 use eranos_calendar::FromCalendarError;
 use eranos_category::FromCategoryError;
 use eranos_contact::FromContactError;
@@ -613,7 +613,7 @@ impl FromMoneyError for EranosError {
         }
     }
 
-    fn too_many_decimals(currency: Currency, allowed: u8, message: String) -> Self {
+    fn too_many_decimals(currency: CurrencyCode, allowed: u8, message: String) -> Self {
         Self::Money {
             failure: MoneyFailure::TooManyDecimals {
                 currency: currency.code().to_owned(),
@@ -623,7 +623,7 @@ impl FromMoneyError for EranosError {
         }
     }
 
-    fn currency_mismatch(left: Currency, right: Currency, message: String) -> Self {
+    fn currency_mismatch(left: CurrencyCode, right: CurrencyCode, message: String) -> Self {
         Self::Money {
             failure: MoneyFailure::CurrencyMismatch {
                 left: left.code().to_owned(),
@@ -773,7 +773,7 @@ impl FromExpenseError for EranosError {
         }
     }
 
-    fn currency_mismatch(expected: Currency, found: Currency, message: String) -> Self {
+    fn currency_mismatch(expected: CurrencyCode, found: CurrencyCode, message: String) -> Self {
         Self::Expense {
             failure: ExpenseFailure::CurrencyMismatch {
                 expected: expected.code().to_owned(),
@@ -958,7 +958,7 @@ impl FromExpenseGroupError for EranosError {
         }
     }
 
-    fn missing_exchange_rate(currency: Currency, message: String) -> Self {
+    fn missing_exchange_rate(currency: CurrencyCode, message: String) -> Self {
         Self::ExpenseGroup {
             failure: ExpenseGroupFailure::MissingExchangeRate {
                 currency: currency.code().to_owned(),
@@ -974,7 +974,7 @@ impl FromExpenseGroupError for EranosError {
         }
     }
 
-    fn duplicate_exchange_rate(currency: Currency, message: String) -> Self {
+    fn duplicate_exchange_rate(currency: CurrencyCode, message: String) -> Self {
         Self::ExpenseGroup {
             failure: ExpenseGroupFailure::DuplicateExchangeRate {
                 currency: currency.code().to_owned(),

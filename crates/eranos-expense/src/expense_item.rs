@@ -16,19 +16,19 @@ use crate::error::ExpenseError;
 ///
 /// ```
 /// use eranos::id::MemberId;
-/// use eranos::{Currency, ExpenseItem, MemberParts, Money, Parts, Split};
+/// use eranos::{CurrencyCode, ExpenseItem, MemberParts, Money, Parts, Split};
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let beers = ExpenseItem::builder("Beer", Money::parse("4.50", Currency::EUR)?, [ana, bob])
+/// let beers = ExpenseItem::builder("Beer", Money::parse("4.50", CurrencyCode::EUR)?, [ana, bob])
 ///     .quantity(3)
 ///     .build()?;
-/// assert_eq!(beers.line_total(), Money::parse("13.50", Currency::EUR)?);
+/// assert_eq!(beers.line_total(), Money::parse("13.50", CurrencyCode::EUR)?);
 ///
 /// let split = Split::parts([
 ///     MemberParts::new(ana, Parts::from_whole(2)?),
 ///     MemberParts::new(bob, Parts::from_whole(1)?),
 /// ]);
-/// let pizza = ExpenseItem::builder_with_split("Pizza", Money::parse("12.00", Currency::EUR)?, split)
+/// let pizza = ExpenseItem::builder_with_split("Pizza", Money::parse("12.00", CurrencyCode::EUR)?, split)
 ///     .build()?;
 /// assert_eq!(pizza.quantity(), 1);
 /// # Ok::<(), Box<dyn std::error::Error>>(())

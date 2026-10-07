@@ -8,8 +8,8 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseGroup, ExpenseItem, ExpenseShares, Member, MemberId,
-    MemberParts, MemberShare, Money, Parts, Percentage, Split, TipDistribution, TipRule,
+    CalendarDate, CurrencyCode, Expense, ExpenseGroup, ExpenseItem, ExpenseShares, Member,
+    MemberId, MemberParts, MemberShare, Money, Parts, Percentage, Split, TipDistribution, TipRule,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -46,7 +46,7 @@ struct TipRow {
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
-    Ok(Money::parse(text, Currency::EUR)?)
+    Ok(Money::parse(text, CurrencyCode::EUR)?)
 }
 
 /// Prints a section heading with a line under it.
@@ -117,7 +117,7 @@ fn consumed(shares: &ExpenseShares, member: MemberId) -> Result<Money, Box<dyn E
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = ExpenseGroup::builder("Dinner at Caru' cu Bere", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Dinner at Caru' cu Bere", CurrencyCode::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;

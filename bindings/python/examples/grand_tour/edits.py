@@ -7,7 +7,7 @@ from typing import ClassVar, final, override
 from eranos import (
     Balance,
     ConvertedCost,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     ExchangeRate,
     Expense,
@@ -79,7 +79,7 @@ def another_currency(group: ExpenseGroup, people: People, categories: Categories
 
     """
     section('5. Another currency')
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     rate = ExchangeRate('0.2')
     parking = group.add_expense(
         Expense(
@@ -242,7 +242,7 @@ def edits(group: ExpenseGroup, people: People, categories: Categories, seafood: 
     assert isinstance(to_herself, TransferError)
     assert to_herself.failure == TransferError.SameMember()
     assert isinstance(unrated, ExpenseGroupError)
-    assert unrated.failure == ExpenseGroupError.MissingExchangeRate(currency=Currency('RON'))
+    assert unrated.failure == ExpenseGroupError.MissingExchangeRate(currency=CurrencyCode('RON'))
     assert group.summary() == before
 
 

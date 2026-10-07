@@ -19,7 +19,7 @@ use eranos::cooperative::block_on;
 use eranos::error::{ExpenseError, ExpenseGroupError, TransferError};
 use eranos::expense::ExpenseBuilder;
 use eranos::{
-    Balance, CalendarDate, Category, CategoryId, CategoryTotal, Cost, Currency, CurrencyRate,
+    Balance, CalendarDate, Category, CategoryId, CategoryTotal, Cost, CurrencyCode, CurrencyRate,
     Email, ExchangeRate, Expense, ExpenseGroup, ExpenseId, ExpenseItem, ExpenseShares,
     ExpenseSplit, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
     MemberShare, Money, Parts, PaymentAccount, PaymentAccountDetails, PaymentAccountKind,
@@ -270,11 +270,11 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
-    Ok(Money::parse(text, Currency::EUR)?)
+    Ok(Money::parse(text, CurrencyCode::EUR)?)
 }
 
 fn ron(text: &str) -> Result<Money, Box<dyn Error>> {
-    Ok(Money::parse(text, Currency::RON)?)
+    Ok(Money::parse(text, CurrencyCode::RON)?)
 }
 
 /// A date of the trip, in October 2026.
@@ -327,7 +327,7 @@ fn message<Value, Failure: Display>(result: &Result<Value, Failure>) -> String {
 
 /// The sum of `amounts`, all in `currency`.
 fn sum(
-    currency: Currency,
+    currency: CurrencyCode,
     amounts: impl IntoIterator<Item = Money>,
 ) -> Result<Money, Box<dyn Error>> {
     amounts
@@ -375,7 +375,7 @@ fn print_categories(group: &ExpenseGroup) {
 
 /// Every expense and transfer in a currency `shown` accepts, as entered and
 /// in the group currency.
-fn print_entries(group: &ExpenseGroup, shown: impl Fn(Currency) -> bool) {
+fn print_entries(group: &ExpenseGroup, shown: impl Fn(CurrencyCode) -> bool) {
     let expenses = group
         .expenses()
         .filter(|expense| shown(expense.amount().currency()))
@@ -405,7 +405,7 @@ fn print_entries(group: &ExpenseGroup, shown: impl Fn(Currency) -> bool) {
 
 fn the_group() -> Result<ExpenseGroup, Box<dyn Error>> {
     section("1. The group");
-    let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
         .description("A week by the Atlantic")
         .language(Language::parse("pt-pt")?)
         .build()?;
@@ -996,9 +996,9 @@ fn another_currency(
          cash. An entry in another currency carries the rate into the group currency, how\n\
          many EUR one RON is worth, and is converted once, when it is entered:"
     );
-    print_entries(group, |currency| Currency::EUR != currency);
+    print_entries(group, |currency| CurrencyCode::EUR != currency);
     let transfer = group.transfer(cash).ok_or("the cash was recorded")?;
-    let converted = ExchangeRate::parse("0.2011")?.convert(ron("250.00")?, Currency::EUR)?;
+    let converted = ExchangeRate::parse("0.2011")?.convert(ron("250.00")?, CurrencyCode::EUR)?;
     println!(
         "Bob's transfer, at {} (\"{}\"), counts as {}.\n\
          A conversion rounds half away from zero: 250.00 RON at 0.2011 is 50.275 EUR,\n\
@@ -1009,7 +1009,7 @@ fn another_currency(
         transfer.note().unwrap_or_default(),
         group
             .transfer_amount(cash)
-            .unwrap_or_else(|| Money::zero(Currency::EUR)),
+            .unwrap_or_else(|| Money::zero(CurrencyCode::EUR)),
     );
 
     assert_eq!(converted, eur("50.28")?);
@@ -1089,7 +1089,7 @@ fn replace_and_remove(
                 previous.amount(),
                 group
                     .expense(seafood)
-                    .map_or_else(|| Money::zero(Currency::EUR), Expense::amount),
+                    .map_or_else(|| Money::zero(CurrencyCode::EUR), Expense::amount),
                 group
                     .expense(seafood)
                     .and_then(Expense::description)
@@ -1110,7 +1110,7 @@ fn replace_and_remove(
                 replaced.amount(),
                 group
                     .transfer(first)
-                    .map_or_else(|| Money::zero(Currency::EUR), Transfer::amount),
+                    .map_or_else(|| Money::zero(CurrencyCode::EUR), Transfer::amount),
                 group
                     .transfer(first)
                     .and_then(Transfer::note)
@@ -1195,7 +1195,7 @@ fn edits(
     assert_eq!(
         unrated,
         Err(ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::RON
+            currency: CurrencyCode::RON
         })
     );
     assert_eq!(group.summary(), &before);
@@ -1319,14 +1319,20 @@ fn summary(
     );
     for member in summary.members() {
         let by_category = sum(
-            Currency::EUR,
+            CurrencyCode::EUR,
             summary
                 .member_category_totals(member.member())
                 .map(CategoryTotal::total),
         )?;
         assert_eq!(by_category, member.share());
     }
-    assert!(sum(Currency::EUR, summary.members().map(|member| member.net()))?.is_zero());
+    assert!(
+        sum(
+            CurrencyCode::EUR,
+            summary.members().map(|member| member.net())
+        )?
+        .is_zero()
+    );
     Ok(())
 }
 
@@ -1362,10 +1368,13 @@ fn removing_a_category(
 
 fn new_currency(group: &mut ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
     section("10. A new currency");
-    let missing = group.change_currency(Currency::RON, &[]);
+    let missing = group.change_currency(CurrencyCode::RON, &[]);
     group.change_currency(
-        Currency::RON,
-        &[CurrencyRate::new(Currency::EUR, ExchangeRate::parse("5")?)],
+        CurrencyCode::RON,
+        &[CurrencyRate::new(
+            CurrencyCode::EUR,
+            ExchangeRate::parse("5")?,
+        )],
     )?;
     println!(
         "Home again, the group moves its books to RON. The change needs a rate into RON\n\
@@ -1385,10 +1394,10 @@ fn new_currency(group: &mut ExpenseGroup, people: People) -> Result<(), Box<dyn 
     assert_eq!(
         missing,
         Err(ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::EUR
+            currency: CurrencyCode::EUR
         })
     );
-    assert_eq!(group.currency(), Currency::RON);
+    assert_eq!(group.currency(), CurrencyCode::RON);
     assert_eq!(group.summary().total_spent(), ron("6114.50")?);
     assert_eq!(
         group.summary().member(people.dan).balance(),
@@ -1555,7 +1564,7 @@ fn saving_and_loading(
 fn currencies() -> Result<(), Box<dyn Error>> {
     let mut rows = Vec::new();
     for code in ["EUR", "RON", "JPY", "BHD"] {
-        let currency = Currency::from_code(code)?;
+        let currency = CurrencyCode::from_code(code)?;
         rows.push(CurrencyRow {
             code: currency.code(),
             name: currency.name(),
@@ -1566,11 +1575,11 @@ fn currencies() -> Result<(), Box<dyn Error>> {
     println!(
         "Currencies are the {} active ISO 4217 codes with a minor unit; an unknown code is\n\
          refused ({}):",
-        Currency::all().len(),
-        message(&Currency::from_code("XYZ"))
+        CurrencyCode::all().len(),
+        message(&CurrencyCode::from_code("XYZ"))
     );
     print_table(rows, 2);
-    assert_eq!(Currency::from_code("BHD")?.decimal_places(), 3);
+    assert_eq!(CurrencyCode::from_code("BHD")?.decimal_places(), 3);
     Ok(())
 }
 
@@ -1578,9 +1587,9 @@ fn amounts() -> Result<(), Box<dyn Error>> {
     let total = eur("12.34")?.checked_add(eur("0.66")?)?;
     let change = eur("5.00")?.checked_sub(eur("7.50")?)?;
     let mixed = eur("1.00")?.checked_add(ron("1.00")?);
-    let yen = Money::parse("1500", Currency::JPY)?;
-    let dinars = Money::from_minor_units(1_234, Currency::BHD);
-    let nothing = Money::zero(Currency::RON);
+    let yen = Money::parse("1500", CurrencyCode::JPY)?;
+    let dinars = Money::from_minor_units(1_234, CurrencyCode::BHD);
+    let nothing = Money::zero(CurrencyCode::RON);
     let cost = eur("10.00")?.at(ExchangeRate::parse("4.9765")?);
     println!("Amounts are exact minor units in their currency:");
     print_table(
@@ -1599,7 +1608,7 @@ fn amounts() -> Result<(), Box<dyn Error>> {
             },
             ValueRow {
                 input: "1.005 EUR",
-                result: message(&Money::parse("1.005", Currency::EUR)),
+                result: message(&Money::parse("1.005", CurrencyCode::EUR)),
             },
             ValueRow {
                 input: "1500 JPY",
@@ -1793,13 +1802,13 @@ fn sharing(group: ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
 
     let before = block_on(shared.summary());
     let rates = [CurrencyRate::new(
-        Currency::RON,
+        CurrencyCode::RON,
         ExchangeRate::parse("0.2")?,
     )];
     let (waited, reported) = {
         // A report reads the group, holding the shared lock meanwhile.
         let report = block_on(shared.read());
-        let mut change = pin!(shared.change_currency(Currency::EUR, rates));
+        let mut change = pin!(shared.change_currency(CurrencyCode::EUR, rates));
         let waited = change
             .as_mut()
             .poll(&mut Context::from_waker(Waker::noop()))
@@ -1832,7 +1841,7 @@ fn sharing(group: ExpenseGroup, people: People) -> Result<(), Box<dyn Error>> {
     assert!(waited);
     assert_eq!(after, before);
     assert_eq!(reported, after.total_spent());
-    assert_eq!(returned.currency(), Currency::RON);
+    assert_eq!(returned.currency(), CurrencyCode::RON);
     Ok(())
 }
 

@@ -14,7 +14,7 @@ mod error;
 
 use eranos_calendar::{CalendarDate, TimeOfDay};
 use eranos_core::{MemberId, TransferId, text};
-use eranos_money::{Cost, Currency, ExchangeRate, Money, MoneyError};
+use eranos_money::{Cost, CurrencyCode, ExchangeRate, Money, MoneyError};
 use eranos_settlement::Payment;
 
 pub use error::{FromTransferError, TransferError};
@@ -31,11 +31,11 @@ pub use error::{FromTransferError, TransferError};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Money, Transfer};
+/// use eranos::{CurrencyCode, CalendarDate, Money, Transfer};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let repayment = Transfer::builder(bob, ana, Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 24)?)
+/// let repayment = Transfer::builder(bob, ana, Money::parse("30.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 24)?)
 ///     .note("Dinner")
 ///     .build()?;
 /// assert_eq!(repayment.from(), bob);
@@ -170,11 +170,11 @@ impl Transfer {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{CalendarDate, Currency, ExchangeRate, Money, Transfer};
+    /// use eranos::{CalendarDate, CurrencyCode, ExchangeRate, Money, Transfer};
     /// use eranos::id::MemberId;
     ///
     /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-    /// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 24)?);
+    /// let (amount, day) = (Money::parse("30.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 24)?);
     /// let repayment = Transfer::builder(bob, ana, amount, day).build()?;
     /// let rate = ExchangeRate::parse("4.97")?;
     /// assert_eq!(repayment.with_exchange_rate(Some(rate)).cost(), amount.at(rate));
@@ -341,7 +341,7 @@ impl<'de> serde::Deserialize<'de> for Transfer {
 ///
 /// [`MoneyError::Overflow`] when the conversion leaves the range of an
 /// amount.
-pub fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, MoneyError> {
+pub fn resolve_transfer(transfer: &Transfer, currency: CurrencyCode) -> Result<i64, MoneyError> {
     resolve_transfer_at(transfer, transfer.cost().conversion(), currency)
 }
 
@@ -362,7 +362,7 @@ pub fn resolve_transfer(transfer: &Transfer, currency: Currency) -> Result<i64, 
 pub fn resolve_transfer_at(
     transfer: &Transfer,
     conversion: Option<ExchangeRate>,
-    currency: Currency,
+    currency: CurrencyCode,
 ) -> Result<i64, MoneyError> {
     match conversion {
         None => Ok(transfer.amount().minor_units()),

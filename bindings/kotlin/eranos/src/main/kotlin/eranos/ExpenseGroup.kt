@@ -13,7 +13,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * the thread, for code outside a coroutine:
  *
  * ```kotlin
- * val group = ExpenseGroup("Flat", Currency.of("EUR"))
+ * val group = ExpenseGroup("Flat", CurrencyCode.of("EUR"))
  * val ana = group.addBlocking(Member("Ana")) // outside a coroutine
  * val bob = group.add(Member("Bob")) // in a coroutine
  * ```
@@ -34,7 +34,7 @@ public class ExpenseGroup private constructor(
     @Throws(EranosException::class)
     public constructor(
         name: String,
-        currency: Currency,
+        currency: CurrencyCode,
         description: String? = null,
         language: Language? = null,
     ) : this(converting { eranos.internal.ExpenseGroup(NewExpenseGroup(name, currency.code, description, language?.toString())) })
@@ -134,14 +134,14 @@ public class ExpenseGroup private constructor(
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [currencyBlocking] blocks instead.
      */
-    public suspend fun currency(): Currency = converting { Currency.known(handle.currencyAsync(null)) }
+    public suspend fun currency(): CurrencyCode = converting { CurrencyCode.known(handle.currencyAsync(null)) }
 
     /**
      * The group currency, which every total is in.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [currency] waits without blocking it.
      */
-    public fun currencyBlocking(): Currency = converting { Currency.known(handle.currency()) }
+    public fun currencyBlocking(): CurrencyCode = converting { CurrencyCode.known(handle.currency()) }
 
     /**
      * Moves the group to [currency], converting every entry with the rate [rates] gives its currency.
@@ -154,8 +154,8 @@ public class ExpenseGroup private constructor(
      */
     @Throws(EranosException::class, CancellationException::class)
     public suspend fun changeCurrency(
-        currency: Currency,
-        rates: Map<Currency, ExchangeRate>,
+        currency: CurrencyCode,
+        rates: Map<CurrencyCode, ExchangeRate>,
     ): Unit = converting { handle.changeCurrencyAsync(currency.code, rates.generated(), null) }
 
     /**
@@ -168,8 +168,8 @@ public class ExpenseGroup private constructor(
      */
     @Throws(EranosException::class)
     public fun changeCurrencyBlocking(
-        currency: Currency,
-        rates: Map<Currency, ExchangeRate>,
+        currency: CurrencyCode,
+        rates: Map<CurrencyCode, ExchangeRate>,
     ): Unit = converting { handle.changeCurrency(currency.code, rates.generated()) }
 
     /**
@@ -894,4 +894,4 @@ public class ExpenseGroup private constructor(
 }
 
 /** The rates as the generated code takes them: each currency beside its rate into the group currency. */
-private fun Map<Currency, ExchangeRate>.generated(): List<CurrencyRate> = map { (currency, rate) -> CurrencyRate(currency.code, rate.toString()) }
+private fun Map<CurrencyCode, ExchangeRate>.generated(): List<CurrencyRate> = map { (currency, rate) -> CurrencyRate(currency.code, rate.toString()) }

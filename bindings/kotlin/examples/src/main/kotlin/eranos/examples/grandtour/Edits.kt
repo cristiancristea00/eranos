@@ -3,7 +3,7 @@ package eranos.examples.grandtour
 
 import eranos.Balance
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.ExchangeRate
 import eranos.Expense
@@ -55,7 +55,7 @@ internal fun anotherCurrency(
     categories: Categories,
 ) {
     section("5. Another currency")
-    val euro = Currency.of("EUR")
+    val euro = CurrencyCode.of("EUR")
     val rate = ExchangeRate.parse("0.2")
     val parking =
         group.addBlocking(
@@ -141,7 +141,7 @@ private fun replaceAndRemove(
     check(null == group.expenseBlocking(copy))
     check(eur("120.00") == group.transferAmountBlocking(first))
     check(null == group.transferBlocking(mistake))
-    val zero = Money(0, Currency.of("EUR"))
+    val zero = Money(0, CurrencyCode.of("EUR"))
     val dinner = group.expenseBlocking(seafood)
     val apartment = group.transferBlocking(first)
     return listOf(
@@ -215,7 +215,7 @@ internal fun edits(
 
     check(ExpenseFailure.PercentagesDoNotAddUp(9_999) == (unbalanced as? EranosException.Expense)?.failure)
     check(TransferFailure.SameMember == (toHerself as? EranosException.Transfer)?.failure)
-    check(ExpenseGroupFailure.MissingExchangeRate(Currency.of("RON")) == (unrated as? EranosException.ExpenseGroup)?.failure)
+    check(ExpenseGroupFailure.MissingExchangeRate(CurrencyCode.of("RON")) == (unrated as? EranosException.ExpenseGroup)?.failure)
     check(before == group.summaryBlocking())
 }
 

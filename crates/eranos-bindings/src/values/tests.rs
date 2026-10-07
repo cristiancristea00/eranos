@@ -347,7 +347,7 @@ fn balances_and_currencies_read_as_the_library_writes_them() {
     assert_eq!(euro.name, "Euro");
     assert!(is_unknown_currency(&currency_details("XYZ")));
     let all = currencies();
-    assert_eq!(all.len(), eranos::Currency::all().len());
+    assert_eq!(all.len(), eranos::CurrencyCode::all().len());
     assert!(all.contains(&euro));
     assert!(all.windows(2).all(|pair| pair[0].code < pair[1].code));
 }

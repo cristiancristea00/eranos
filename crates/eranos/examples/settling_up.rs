@@ -7,7 +7,7 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money,
+    Balance, CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, MemberId, Money,
     SettlementPlan, SettlementStrategy, Split, Transfer,
 };
 use tabled::settings::object::Columns;
@@ -114,7 +114,7 @@ fn spend(
 ) -> Result<(), Box<dyn Error>> {
     let expense = Expense::builder(
         name,
-        Money::parse(amount, Currency::EUR)?,
+        Money::parse(amount, CurrencyCode::EUR)?,
         payer,
         Split::equal(participants.iter().copied()),
         CalendarDate::new(2026, 9, 20)?,
@@ -239,7 +239,7 @@ fn strategies(group: &ExpenseGroup) -> Result<Counts, Box<dyn Error>> {
 /// returns the number of payments.
 fn festival() -> Result<usize, Box<dyn Error>> {
     section("8. A larger group");
-    let mut group = ExpenseGroup::builder("Festival", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Festival", CurrencyCode::EUR).build()?;
     let mut friends = Vec::new();
     for number in 1..=21 {
         friends.push(group.add_member(Member::builder(format!("Friend {number}")).build()?)?);
@@ -250,7 +250,7 @@ fn festival() -> Result<usize, Box<dyn Error>> {
     for (number, &payer) in (1_i64..).zip(&friends) {
         let expense = Expense::builder(
             "Round",
-            Money::from_minor_units(21 * number * number, Currency::EUR),
+            Money::from_minor_units(21 * number * number, CurrencyCode::EUR),
             payer,
             Split::equal(friends.iter().copied()),
             CalendarDate::new(2026, 9, 18)?,
@@ -280,7 +280,7 @@ fn festival() -> Result<usize, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = ExpenseGroup::builder("Ski week", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Ski week", CurrencyCode::EUR).build()?;
     let mut add = |name| -> Result<MemberId, Box<dyn Error>> {
         Ok(group.add_member(Member::builder(name).build()?)?)
     };

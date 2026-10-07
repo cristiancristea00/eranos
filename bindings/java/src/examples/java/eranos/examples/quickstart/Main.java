@@ -11,7 +11,7 @@ import static eranos.examples.Report.totals;
 import eranos.Balance;
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.Expense;
 import eranos.ExpenseGroup;
@@ -77,7 +77,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        Currency euro = Currency.of("EUR");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         try (ExpenseGroup group = ExpenseGroup.builder("Weekend in Sinaia", euro).build()) {
             title(group.name());
             System.out.print(

@@ -191,15 +191,15 @@ flowchart TD
 Each layer turns the core's records into its language's own kinds of type,
 under the core's names, and every value prints the library's text.
 
-| What            | Swift                            | Kotlin                                | Java                                         | TypeScript                         | C                               | C++                                    | Python                                           |
-| --------------- | -------------------------------- | ------------------------------------- | -------------------------------------------- | ---------------------------------- | ------------------------------- | -------------------------------------- | ------------------------------------------------ |
-| the group       | `final class ExpenseGroup`       | `class ExpenseGroup`, `AutoCloseable` | `final class ExpenseGroup`, `AutoCloseable`  | `class ExpenseGroup`, `Disposable` | `EranosExpenseGroup *`          | `ExpenseGroup`, which only moves       | `class ExpenseGroup`, a context manager          |
-| a read handle   | `ExpenseGroupReader`, `withRead` | `ExpenseGroupReader`, `withRead`      | `ExpenseGroupReader`                         | `ExpenseGroupReader`, `Disposable` | `EranosExpenseGroupReader *`    | `ExpenseGroupReader`                   | `ExpenseGroupReader`, a context manager          |
-| an identifier   | `Member.ID`                      | the value class `MemberId`            | the record `MemberId`                        | the branded string `MemberId`      | text                            | the class `MemberId`                   | the `NewType` `MemberId`                         |
-| a checked value | a struct: `Currency`, `Money`    | a class: `Currency`, `Money`          | `Currency`, a final class; `Money`, a record | a class: `Currency`, `Money`       | an opaque object: `EranosMoney` | `Currency`, a class; `Money`, a struct | `Currency`, a class; `Money`, a frozen dataclass |
-| an entry        | a struct: `Expense`              | a class: `Expense`                    | a final class with a builder                 | an interface: `Expense`            | an opaque object with setters   | a struct: `Expense`                    | a frozen dataclass: `Expense`                    |
-| a variant       | an enum: `Split`                 | a sealed interface: `Split`           | a sealed interface of records                | a union by `kind`: `Split`         | an opaque object with `kind`    | a `std::variant`                       | a union of frozen dataclasses: `Split`           |
-| a failure       | `EranosError`, thrown typed      | `EranosException`, thrown             | `EranosException`, checked                   | `EranosError`, thrown              | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`  | `EranosError`, raised                            |
+| What            | Swift                             | Kotlin                                | Java                                             | TypeScript                         | C                               | C++                                        | Python                                               |
+| --------------- | --------------------------------- | ------------------------------------- | ------------------------------------------------ | ---------------------------------- | ------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| the group       | `final class ExpenseGroup`        | `class ExpenseGroup`, `AutoCloseable` | `final class ExpenseGroup`, `AutoCloseable`      | `class ExpenseGroup`, `Disposable` | `EranosExpenseGroup *`          | `ExpenseGroup`, which only moves           | `class ExpenseGroup`, a context manager              |
+| a read handle   | `ExpenseGroupReader`, `withRead`  | `ExpenseGroupReader`, `withRead`      | `ExpenseGroupReader`                             | `ExpenseGroupReader`, `Disposable` | `EranosExpenseGroupReader *`    | `ExpenseGroupReader`                       | `ExpenseGroupReader`, a context manager              |
+| an identifier   | `Member.ID`                       | the value class `MemberId`            | the record `MemberId`                            | the branded string `MemberId`      | text                            | the class `MemberId`                       | the `NewType` `MemberId`                             |
+| a checked value | a struct: `CurrencyCode`, `Money` | a class: `CurrencyCode`, `Money`      | `CurrencyCode`, a final class; `Money`, a record | a class: `CurrencyCode`, `Money`   | an opaque object: `EranosMoney` | `CurrencyCode`, a class; `Money`, a struct | `CurrencyCode`, a class; `Money`, a frozen dataclass |
+| an entry        | a struct: `Expense`               | a class: `Expense`                    | a final class with a builder                     | an interface: `Expense`            | an opaque object with setters   | a struct: `Expense`                        | a frozen dataclass: `Expense`                        |
+| a variant       | an enum: `Split`                  | a sealed interface: `Split`           | a sealed interface of records                    | a union by `kind`: `Split`         | an opaque object with `kind`    | a `std::variant`                           | a union of frozen dataclasses: `Split`               |
+| a failure       | `EranosError`, thrown typed       | `EranosException`, thrown             | `EranosException`, checked                       | `EranosError`, thrown              | `EranosError *`, returned       | `eranos::Error`, in a `std::expected`      | `EranosError`, raised                                |
 
 ## 4. Calls, threads, and cancellation
 
@@ -368,7 +368,7 @@ Design Guidelines:
 
 - Every entry has an identifier type of its own (`Member.ID`, `Expense.ID`,
   an `Identifier` of the entity), absent on a new entry.
-- A value the library checks is a type that is valid once made: `Currency`,
+- A value the library checks is a type that is valid once made: `CurrencyCode`,
   from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
   `Parts`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`, `IBAN`,
   `Username`, and `Language`, each printing the library's text.
@@ -409,7 +409,7 @@ its code. The layer follows the Kotlin library guidelines:
 - Every entry has an identifier type of its own, a value class
   (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
   checks has an internal constructor and factories that check it
-  (`Currency.of`, `Money.parse`, `CalendarDate.of`), and prints the
+  (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`), and prints the
   library's text.
 - A failure the library reports throws `EranosException`, a subclass per
   module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
@@ -443,7 +443,7 @@ The layer follows Effective Java and Google Java Style:
 
 - Identifiers, amounts, the shares of a split, and the totals are
   records; a value the library checks is a final class with a private
-  constructor and factories that check it (`Currency.of`, `Money.parse`,
+  constructor and factories that check it (`CurrencyCode.of`, `Money.parse`,
   `CalendarDate.of`); an entry is a final class built by a builder, as in
   Rust, and edited through `toBuilder`, which keeps its identifier.
 - An absent value is an empty `Optional`, a variant a record of a sealed
@@ -480,7 +480,7 @@ build. The layer follows the Google TypeScript Style Guide:
 - Every entry has an identifier type of its own, a branded string
   (`MemberId`, `ExpenseId`) that no other text or identifier stands in for,
   absent on a new entry. A value the library checks is a class with
-  factories that check it (`Currency.of`, `Money.parse`, `CalendarDate.of`),
+  factories that check it (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`),
   printing the library's text; entries and totals are read-only interfaces,
   and a variant is a union discriminated by `kind`
   (`{ kind: 'equal', members }`).
@@ -582,7 +582,7 @@ Core Guidelines with the naming rule above:
 
 - A value without an invariant is a struct with public fields (`Money`,
   `Percentage`, `Parts`); a value the library checks is a class with a
-  private constructor and factories that check it (`Currency::of`,
+  private constructor and factories that check it (`CurrencyCode::of`,
   `CalendarDate::of`, `Email::parse`), its fields in one private member;
   every identifier is a class of its own over its text, with `std::hash`.
   A record is a struct whose constructor takes its required fields, and a
@@ -604,7 +604,7 @@ Core Guidelines with the naming rule above:
   on every parameter the function does not move from, and on every member
   function that changes nothing a later call sees; `noexcept`,
   `constexpr`, and `[[nodiscard]]` go wherever they apply.
-- Equality is defaulted wherever it compares every field; `Currency`
+- Equality is defaulted wherever it compares every field; `CurrencyCode`
   compares its code alone. An identifier orders by its text through a
   `<=>` written out, since the defaulted one holds a branch that no
   comparison takes, which the layer's coverage would report as unrun.
@@ -644,7 +644,7 @@ reads its annotations without checking its code, and Ruff leaves it out:
 - Every entry has an identifier type of its own, a `NewType` over `str`
   (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
   checks is a class whose constructor checks it, as `datetime.date`'s
-  does (`Currency('EUR')`, `CalendarDate(2026, 9, 23)`,
+  does (`CurrencyCode('EUR')`, `CalendarDate(2026, 9, 23)`,
   `Email('ana@example.com')`), and prints the library's text. Amounts,
   entries, and totals are frozen dataclasses: an entry takes its fields by
   keyword and is edited with `copy.replace`, which keeps its identifier,

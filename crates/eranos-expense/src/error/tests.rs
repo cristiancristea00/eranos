@@ -40,7 +40,7 @@ impl FromExpenseError for ConvertedExpenseError {
         }
     }
 
-    fn currency_mismatch(expected: Currency, found: Currency, message: String) -> Self {
+    fn currency_mismatch(expected: CurrencyCode, found: CurrencyCode, message: String) -> Self {
         Self {
             method: "currency_mismatch",
             held: format!("{expected} {found}"),
@@ -142,11 +142,11 @@ impl FromExpenseError for ConvertedExpenseError {
 /// library's.
 #[test]
 fn every_failure_of_expense_error_converts_through_the_method_of_its_variant() {
-    let expected_currency = Currency::USD;
-    let found = Currency::EUR;
+    let expected_currency = CurrencyCode::USD;
+    let found = CurrencyCode::EUR;
     let member = MemberId::from_bytes([5; 16]);
-    let expected_money = Money::from_minor_units(200, Currency::EUR);
-    let actual = Money::from_minor_units(100, Currency::EUR);
+    let expected_money = Money::from_minor_units(200, CurrencyCode::EUR);
+    let actual = Money::from_minor_units(100, CurrencyCode::EUR);
     let total_basis_points = 9005;
     let cases = [
         Case {

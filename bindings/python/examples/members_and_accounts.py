@@ -13,7 +13,7 @@ from eranos import (
     PaymentAccount,
     Balance,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     Email,
     EqualSplit,
     EranosError,
@@ -280,7 +280,7 @@ def moving_out(group: ExpenseGroup, flatmates: Flatmates) -> None:
     """
     section('3. A flatmate moves out')
     ana, bob = flatmates.ana, flatmates.bob
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     both = WholeExpenseSplit(EqualSplit((ana, bob)))
     rent = group.add_expense(
         Expense(name='Rent', cost=LocalCost(Money.parse('900.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 9, 1))
@@ -312,7 +312,7 @@ def moving_out(group: ExpenseGroup, flatmates: Flatmates) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = ExpenseGroup.create('Flat 4B', Currency('EUR'))
+    group = ExpenseGroup.create('Flat 4B', CurrencyCode('EUR'))
     title('Flat 4B: members and their accounts')
     print_lines(
         'Ana and Bob share a flat. A member needs only a first name; the last name,',

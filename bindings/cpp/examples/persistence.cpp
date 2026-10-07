@@ -32,7 +32,7 @@ struct ComparisonRow final {
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The balance of @p member in @p summary, as the library writes it, or ? for a member without totals.
 [[nodiscard]] std::string balanceOf(Summary const &summary, MemberId const &member) {
@@ -51,7 +51,7 @@ struct ComparisonRow final {
 /// Runs the example.
 void run() {
     auto const day = must(CalendarDate::of(2026, 9, 23));
-    auto group = must(ExpenseGroup::create("Road trip", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Road trip", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};

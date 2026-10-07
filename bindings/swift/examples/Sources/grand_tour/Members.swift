@@ -6,7 +6,7 @@ import Report
 
 func theGroup() throws(EranosError) -> ExpenseGroup {
     section("1. The group")
-    let group = try ExpenseGroup(name: "Lisbon", currency: Currency(code: "EUR"), description: "A week by the Atlantic", language: Language("pt-pt"))
+    let group = try ExpenseGroup(name: "Lisbon", currency: CurrencyCode(code: "EUR"), description: "A week by the Atlantic", language: Language("pt-pt"))
     let blank = Result { () throws(EranosError) in try group.rename(to: "   ") }
     try group.rename(to: "Lisbon and Porto")
     try group.changeDescription(to: "A week by the Atlantic, with a day in Porto")

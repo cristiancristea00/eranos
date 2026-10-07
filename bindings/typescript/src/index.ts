@@ -5,10 +5,10 @@
  * Call {@link init} with the WebAssembly module first, once, before any other call:
  *
  * ```ts
- * import { Currency, ExpenseGroup, init } from 'eranos';
+ * import { CurrencyCode, ExpenseGroup, init } from 'eranos';
  *
  * await init(new URL('eranos/eranos_web.wasm', import.meta.url));
- * const group = ExpenseGroup.create('Flat', Currency.of('EUR'));
+ * const group = ExpenseGroup.create('Flat', CurrencyCode.of('EUR'));
  * ```
  *
  * @packageDocumentation
@@ -17,7 +17,7 @@
 export { CalendarDate, TimeOfDay } from './calendar.js';
 export { Email, Iban, Language, PhoneNumber, Username } from './contact.js';
 export type { CallOptions } from './converting.js';
-export { Currency } from './currency.js';
+export { CurrencyCode } from './currency_code.js';
 export {
     type PaymentAccount,
     type PaymentAccountDetails,

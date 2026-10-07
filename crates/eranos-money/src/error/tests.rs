@@ -32,7 +32,7 @@ impl FromMoneyError for ConvertedMoneyError {
         }
     }
 
-    fn too_many_decimals(currency: Currency, allowed: u8, message: String) -> Self {
+    fn too_many_decimals(currency: CurrencyCode, allowed: u8, message: String) -> Self {
         Self {
             method: "too_many_decimals",
             held: format!("{currency} {allowed}"),
@@ -40,7 +40,7 @@ impl FromMoneyError for ConvertedMoneyError {
         }
     }
 
-    fn currency_mismatch(left: Currency, right: Currency, message: String) -> Self {
+    fn currency_mismatch(left: CurrencyCode, right: CurrencyCode, message: String) -> Self {
         Self {
             method: "currency_mismatch",
             held: format!("{left} {right}"),
@@ -94,10 +94,10 @@ impl FromMoneyError for ConvertedMoneyError {
 /// library's.
 #[test]
 fn every_failure_of_money_error_converts_through_the_method_of_its_variant() {
-    let currency = Currency::EUR;
+    let currency = CurrencyCode::EUR;
     let allowed = 4;
-    let left = Currency::EUR;
-    let right = Currency::RON;
+    let left = CurrencyCode::EUR;
+    let right = CurrencyCode::RON;
     let cases = [
         Case {
             error: MoneyError::InvalidAmount,

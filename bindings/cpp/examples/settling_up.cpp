@@ -130,7 +130,7 @@ struct StrategyRow final {
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the Rust example gives them.
 void spend(ExpenseGroup &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
-    static_cast<void>(must(group.addExpense(Expense(name, LocalCost{must(Money::parse(amount, must(Currency::of("EUR"))))}, EqualSplit{{payer}},
+    static_cast<void>(must(group.addExpense(Expense(name, LocalCost{must(Money::parse(amount, must(CurrencyCode::of("EUR"))))}, EqualSplit{{payer}},
                                                     WholeExpenseSplit{EqualSplit{std::move(members)}}, must(CalendarDate::of(2026, 9, 20))))));
 }
 
@@ -237,7 +237,7 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
 /// strategy's plan it took; returns the number of payments.
 [[nodiscard]] std::size_t festival() {
     section("8. A larger group");
-    auto const euro = must(Currency::of("EUR"));
+    auto const euro = must(CurrencyCode::of("EUR"));
     auto group = must(ExpenseGroup::create("Festival", euro));
     std::vector<MemberId> friends;
     friends.reserve(FRIENDS);
@@ -272,7 +272,7 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
 
 /// Runs the example.
 void run() {
-    auto group = must(ExpenseGroup::create("Ski week", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Ski week", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const carol = must(group.addMember(Member("Carol")));

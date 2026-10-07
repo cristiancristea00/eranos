@@ -5,7 +5,7 @@ package eranos.examples.restaurantbill
 
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.Expense
 import eranos.ExpenseGroup
@@ -60,7 +60,7 @@ private data class TipRow(
 }
 
 /** The amount written [text], in euros. */
-private fun eur(text: String): Money = Money.parse(text, Currency.of("EUR"))
+private fun eur(text: String): Money = Money.parse(text, CurrencyCode.of("EUR"))
 
 /** The receipt: every line with the members who had it. */
 private fun receipt(
@@ -96,7 +96,7 @@ private fun consumed(
 
 /** Prints the report of the dinner. */
 fun main() {
-    ExpenseGroup("Dinner at Caru' cu Bere", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Dinner at Caru' cu Bere", CurrencyCode.of("EUR")).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val carol = group.addBlocking(Member("Carol"))

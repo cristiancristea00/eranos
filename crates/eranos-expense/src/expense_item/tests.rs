@@ -4,7 +4,7 @@
 //! shares a line, and keep the last split setter in force, on a new item and
 //! on one edited through `to_builder`.
 
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 
 use super::*;
 
@@ -15,7 +15,7 @@ const ANA: MemberId = MemberId::from_bytes([1; 16]);
 const BOB: MemberId = MemberId::from_bytes([2; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 /// Three beers at 4.50, shared by Ana and Bob.

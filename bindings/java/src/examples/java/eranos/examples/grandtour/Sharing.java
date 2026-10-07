@@ -7,7 +7,7 @@ import static eranos.examples.grandtour.Tour.october;
 import static eranos.examples.grandtour.Tour.ron;
 
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
@@ -73,18 +73,19 @@ final class Sharing {
         printTable(PaymentRow.HEADERS, rows, 2);
 
         Summary before = group.summaryAsync().join();
-        Map<Currency, ExchangeRate> rates = Map.of(Currency.of("RON"), ExchangeRate.parse("0.2"));
+        Map<CurrencyCode, ExchangeRate> rates =
+                Map.of(CurrencyCode.of("RON"), ExchangeRate.parse("0.2"));
         // A report reads the group, holding the shared lock meanwhile, so the change waits for
         // it; a new read would wait behind the change, so the report reads through its own
         // handle.
         ExpenseGroupReader report = group.readAsync().join();
-        CompletableFuture<Void> change = group.changeCurrencyAsync(Currency.of("EUR"), rates);
+        CompletableFuture<Void> change = group.changeCurrencyAsync(CurrencyCode.of("EUR"), rates);
         Money reported = report.summary().totalSpent();
         // Cancelling the future cancels the waiting change, which leaves the group as it was.
         check(change.cancel(true));
         report.close();
         Summary after = group.summaryAsync().join();
-        Currency currency = group.currencyAsync().join();
+        CurrencyCode currency = group.currencyAsync().join();
         System.out.print(
                 """
                 While a report reads the group, a change of its currency to EUR waits for the
@@ -103,6 +104,6 @@ final class Sharing {
         check(change.isCancelled());
         check(before.equals(after));
         check(reported.equals(after.totalSpent()));
-        check(Currency.of("RON").equals(currency));
+        check(CurrencyCode.of("RON").equals(currency));
     }
 }

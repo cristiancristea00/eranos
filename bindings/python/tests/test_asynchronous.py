@@ -8,7 +8,7 @@ import pytest
 from conftest import Flat
 from eranos import (
     Category,
-    Currency,
+    CurrencyCode,
     CurrencyRate,
     ExchangeRate,
     ExpenseGroup,
@@ -101,8 +101,8 @@ def test_every_asynchronous_change_of_the_details_does_what_its_synchronous_form
         await group.set_language_async(None)
         assert group.description() is None
         assert group.language() is None
-        await group.change_currency_async(Currency('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))])
-        assert group.currency() == Currency('RON')
+        await group.change_currency_async(CurrencyCode('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))])
+        assert group.currency() == CurrencyCode('RON')
         with await ExpenseGroup.load_async(group.save()) as loaded:
             assert loaded.save() == group.save()
 
@@ -169,7 +169,7 @@ def test_a_change_waiting_behind_a_reader_is_cancelled_and_leaves_the_group_as_i
     async def change() -> None:
         reader = await flat.group.read_async()
         changing = asyncio.create_task(
-            flat.group.change_currency_async(Currency('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))]), eager_start=True
+            flat.group.change_currency_async(CurrencyCode('RON'), [CurrencyRate(flat.euro, ExchangeRate('5'))]), eager_start=True
         )
         await asyncio.sleep(0)
         assert not changing.done()

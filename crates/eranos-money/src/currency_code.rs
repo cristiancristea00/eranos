@@ -11,7 +11,7 @@ use iso4217_static::Currency as IsoCurrency;
 
 use crate::error::MoneyError;
 
-/// An active ISO 4217 currency, such as [`Currency::EUR`].
+/// An active ISO 4217 currency, such as [`CurrencyCode::EUR`].
 ///
 /// Every active code with a minor unit has a constant; precious metals,
 /// special drawing rights, and testing codes (minor unit "N.A.") do not. The
@@ -20,19 +20,19 @@ use crate::error::MoneyError;
 /// # Examples
 ///
 /// ```
-/// use eranos::Currency;
+/// use eranos::CurrencyCode;
 ///
-/// let currency = Currency::from_code("ron")?;
-/// assert_eq!(currency, Currency::RON);
+/// let currency = CurrencyCode::from_code("ron")?;
+/// assert_eq!(currency, CurrencyCode::RON);
 /// assert_eq!(currency.code(), "RON");
-/// assert_eq!(Currency::JPY.decimal_places(), 0);
-/// assert_eq!(Currency::BHD.decimal_places(), 3);
-/// assert_eq!(Currency::EUR.name(), "Euro");
-/// assert_eq!(Currency::EUR.numeric_code(), 978);
+/// assert_eq!(CurrencyCode::JPY.decimal_places(), 0);
+/// assert_eq!(CurrencyCode::BHD.decimal_places(), 3);
+/// assert_eq!(CurrencyCode::EUR.name(), "Euro");
+/// assert_eq!(CurrencyCode::EUR.numeric_code(), 978);
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Currency {
+pub struct CurrencyCode {
     iso: IsoCurrency,
     /// The minor unit of `iso`: `lookup` refuses a code without one, so
     /// `decimal_places` needs no fallback.
@@ -41,13 +41,13 @@ pub struct Currency {
 
 // Written out: `IsoCurrency` orders by its numeric code, and currencies order
 // by their three-letter code.
-impl Ord for Currency {
+impl Ord for CurrencyCode {
     fn cmp(&self, other: &Self) -> Ordering {
         self.code().cmp(other.code())
     }
 }
 
-impl PartialOrd for Currency {
+impl PartialOrd for CurrencyCode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -57,7 +57,7 @@ impl PartialOrd for Currency {
 /// the crate is compiled, and `all`, which lists them in the order given.
 macro_rules! currencies {
     ($($code:ident)+) => {
-        impl Currency {
+        impl CurrencyCode {
             $(
                 #[doc = concat!("The currency with ISO 4217 code `", stringify!($code), "`.")]
                 pub const $code: Self = Self::lookup(stringify!($code)).expect(concat!(
@@ -72,7 +72,7 @@ macro_rules! currencies {
             /// A function rather than a constant: `ALL` is the Albanian lek.
             #[must_use]
             pub const fn all() -> &'static [Self] {
-                const EVERY_CURRENCY: &[Currency] = &[$(Currency::$code),+];
+                const EVERY_CURRENCY: &[CurrencyCode] = &[$(CurrencyCode::$code),+];
                 EVERY_CURRENCY
             }
         }
@@ -81,7 +81,7 @@ macro_rules! currencies {
 
 mod iso4217;
 
-impl Currency {
+impl CurrencyCode {
     /// Looks up an ISO 4217 code, ignoring ASCII case and surrounding
     /// whitespace.
     ///
@@ -152,19 +152,19 @@ impl Currency {
     }
 }
 
-impl fmt::Debug for Currency {
+impl fmt::Debug for CurrencyCode {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.code())
     }
 }
 
-impl fmt::Display for Currency {
+impl fmt::Display for CurrencyCode {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.code())
     }
 }
 
-impl FromStr for Currency {
+impl FromStr for CurrencyCode {
     type Err = MoneyError;
 
     fn from_str(code: &str) -> Result<Self, Self::Err> {
@@ -173,14 +173,14 @@ impl FromStr for Currency {
 }
 
 #[cfg(feature = "serde")]
-impl serde::Serialize for Currency {
+impl serde::Serialize for CurrencyCode {
     fn serialize<S: serde::Serializer>(&self, serialiser: S) -> Result<S::Ok, S::Error> {
         serialiser.serialize_str(self.code())
     }
 }
 
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Currency {
+impl<'de> serde::Deserialize<'de> for CurrencyCode {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
         eranos_core::serde_text::deserialise(deserialiser, "an ISO 4217 currency code")
     }

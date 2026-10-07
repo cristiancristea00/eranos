@@ -7,7 +7,7 @@ import {
     type Expense,
     type ExpenseId,
     type ExpenseGroup,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     ExpenseError,
     ExpenseGroupError,
@@ -46,7 +46,7 @@ const statusColumns: Columns<StatusRow> = [
 
 export function anotherCurrency(group: ExpenseGroup, people: People, categories: Categories): void {
     section('5. Another currency');
-    const euro = Currency.of('EUR');
+    const euro = CurrencyCode.of('EUR');
     const rate = ExchangeRate.parse('0.2');
     const parking = group.addExpenseSync({
         name: 'Airport parking',
@@ -116,7 +116,7 @@ function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categ
     assert.equal(group.expenseSync(copy), undefined);
     assert.ok(eur('120.00').equals(group.transferAmountSync(first) ?? eur('0')));
     assert.equal(group.transferSync(mistake), undefined);
-    const zero = new Money(0n, Currency.of('EUR'));
+    const zero = new Money(0n, CurrencyCode.of('EUR'));
     const corrected = group.expenseSync(seafood);
     const apartment = group.transferSync(first);
     return [
@@ -195,7 +195,7 @@ export function edits(group: ExpenseGroup, people: People, categories: Categorie
     assert.deepEqual(unbalanced.failure, { kind: 'percentagesDoNotAddUp', totalBasisPoints: 9_999 });
     assert.ok(toHerself instanceof TransferError && 'sameMember' === toHerself.failure.kind);
     assert.ok(unrated instanceof ExpenseGroupError);
-    assert.deepEqual(unrated.failure, { kind: 'missingExchangeRate', currency: Currency.of('RON') });
+    assert.deepEqual(unrated.failure, { kind: 'missingExchangeRate', currency: CurrencyCode.of('RON') });
     assert.deepEqual(group.summarySync(), before);
 }
 

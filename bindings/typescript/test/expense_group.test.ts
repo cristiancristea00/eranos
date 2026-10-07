@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     ExpenseGroup,
     ExpenseGroupError,
@@ -182,7 +182,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         group.setLanguageSync(Language.parse('ro'));
         assert.equal(group.descriptionSync(), 'Shared flat');
         assert.equal(group.languageSync()?.toString(), 'ro');
-        const lei = Currency.of('RON');
+        const lei = CurrencyCode.of('RON');
         group.changeCurrencySync(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
         assert.ok(group.summarySync().totalSpent.equals(new Money(15_000n, lei)));
@@ -238,7 +238,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         await group.clearLanguage();
         assert.equal(group.descriptionSync(), undefined);
         assert.equal(group.languageSync(), undefined);
-        const lei = Currency.of('RON');
+        const lei = CurrencyCode.of('RON');
         await group.changeCurrency(lei, [{ currency: flat.euro, rate: ExchangeRate.parse('5') }]);
         assert.equal(group.currencySync(), lei);
         await assert.rejects(group.removeMember(flat.ana), ExpenseGroupError);
@@ -249,7 +249,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
      * start an app from another group.
      */
     void it('starts a group with what it is given and loads only its saved form', async () => {
-        const euro = Currency.of('EUR');
+        const euro = CurrencyCode.of('EUR');
         assert.throws(
             () => ExpenseGroup.create(' ', euro),
             (error: unknown) =>
@@ -352,11 +352,11 @@ void describe('every call of the group, synchronous and asynchronous, and every 
 
     /** A destroyed group that still answered would read memory the library freed. */
     void it('answers no more once destroyed', () => {
-        const group = ExpenseGroup.create('Trip', Currency.of('EUR'));
+        const group = ExpenseGroup.create('Trip', CurrencyCode.of('EUR'));
         group.destroy();
         group.destroy();
         assert.throws(() => group.nameSync());
-        const disposed = ExpenseGroup.create('Trip', Currency.of('EUR'));
+        const disposed = ExpenseGroup.create('Trip', CurrencyCode.of('EUR'));
         disposed[Symbol.dispose]();
         assert.throws(() => disposed.nameSync());
     });

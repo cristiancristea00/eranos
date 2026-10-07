@@ -6,7 +6,7 @@
 
 import { Language } from './contact.js';
 import { type CallOptions, awaiting, calling } from './converting.js';
-import { Currency } from './currency.js';
+import { CurrencyCode } from './currency_code.js';
 import {
     type Category,
     type Expense,
@@ -59,7 +59,7 @@ export interface ExpenseGroupOptions {
 /** The rate into a new group currency of an amount in `currency`. */
 export interface CurrencyRate {
     /** The currency the rate converts from. */
-    readonly currency: Currency;
+    readonly currency: CurrencyCode;
     /** The rate. */
     readonly rate: ExchangeRate;
 }
@@ -73,7 +73,7 @@ export interface CurrencyRate {
  * page's one thread would never end:
  *
  * ```ts
- * const group = ExpenseGroup.create('Flat', Currency.of('EUR'));
+ * const group = ExpenseGroup.create('Flat', CurrencyCode.of('EUR'));
  * const ana = group.addMemberSync({ firstName: 'Ana' });
  * const bob = await group.addMember({ firstName: 'Bob' });
  * ```
@@ -96,7 +96,7 @@ export class ExpenseGroup implements Disposable {
      * @returns The group
      * @throws {@link ExpenseGroupError} with the failure `emptyName` for a blank name
      */
-    static create(name: string, currency: Currency, options?: ExpenseGroupOptions): ExpenseGroup {
+    static create(name: string, currency: CurrencyCode, options?: ExpenseGroupOptions): ExpenseGroup {
         const group = internal.NewExpenseGroup.create({
             name,
             currency: currency.code,
@@ -262,8 +262,8 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the currency
      */
-    async currency(options?: CallOptions): Promise<Currency> {
-        return Currency.known(await awaiting((signal) => this.handle.currencyAsync(undefined, signal), options));
+    async currency(options?: CallOptions): Promise<CurrencyCode> {
+        return CurrencyCode.known(await awaiting((signal) => this.handle.currencyAsync(undefined, signal), options));
     }
 
     /**
@@ -274,8 +274,8 @@ export class ExpenseGroup implements Disposable {
      *
      * @returns The currency
      */
-    currencySync(): Currency {
-        return Currency.known(calling(() => this.handle.currency()));
+    currencySync(): CurrencyCode {
+        return CurrencyCode.known(calling(() => this.handle.currency()));
     }
 
     /**
@@ -293,7 +293,7 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the call's end
      */
-    async changeCurrency(currency: Currency, rates: readonly CurrencyRate[], options?: CallOptions): Promise<void> {
+    async changeCurrency(currency: CurrencyCode, rates: readonly CurrencyRate[], options?: CallOptions): Promise<void> {
         await awaiting((signal) => this.handle.changeCurrencyAsync(currency.code, generatedRates(rates), undefined, signal), options);
     }
 
@@ -309,7 +309,7 @@ export class ExpenseGroup implements Disposable {
      *   `unexpectedExchangeRate` for a rate of the new group currency, and `duplicateExchangeRate` for a currency given two
      *   rates
      */
-    changeCurrencySync(currency: Currency, rates: readonly CurrencyRate[]): void {
+    changeCurrencySync(currency: CurrencyCode, rates: readonly CurrencyRate[]): void {
         calling(() => {
             this.handle.changeCurrency(currency.code, generatedRates(rates));
         });

@@ -134,7 +134,7 @@ pub struct CurrencyDetails {
 
 impl CurrencyDetails {
     /// The details of `currency`.
-    pub(crate) fn from_library(currency: library::Currency) -> Self {
+    pub(crate) fn from_library(currency: library::CurrencyCode) -> Self {
         Self {
             code: currency.code().to_owned(),
             name: currency.name().to_owned(),
@@ -150,8 +150,8 @@ impl CurrencyDetails {
 ///
 /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency) for
 /// a code that names no currency with minor units.
-pub(crate) fn currency(code: &str) -> Result<library::Currency, EranosError> {
-    Ok(library::Currency::from_code(code)?)
+pub(crate) fn currency(code: &str) -> Result<library::CurrencyCode, EranosError> {
+    Ok(library::CurrencyCode::from_code(code)?)
 }
 
 /// The exchange rate written `text`.

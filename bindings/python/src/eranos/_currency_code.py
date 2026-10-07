@@ -11,7 +11,7 @@ from eranos._internal import eranos as generated
 
 @final
 @functools.total_ordering
-class Currency:
+class CurrencyCode:
     """
     A currency with minor units, as ISO 4217 lists it: the only currencies an amount can be in.
 
@@ -40,7 +40,7 @@ class Currency:
         self._decimal_places = details.decimal_places
 
     @classmethod
-    def all(cls) -> tuple[Currency, ...]:
+    def all(cls) -> tuple[CurrencyCode, ...]:
         """
         List every currency with minor units, by code.
 
@@ -82,7 +82,7 @@ class Currency:
             Whether the two are equal.
 
         """
-        return isinstance(other, Currency) and self._code == other.code
+        return isinstance(other, CurrencyCode) and self._code == other.code
 
     @override
     def __hash__(self) -> int:
@@ -95,7 +95,7 @@ class Currency:
         """
         return hash(self._code)
 
-    def __lt__(self, other: Currency) -> bool:
+    def __lt__(self, other: CurrencyCode) -> bool:
         """
         Tell whether this currency's code comes before other's.
 
@@ -114,10 +114,10 @@ class Currency:
         Write the call that makes the currency.
 
         Returns:
-            The text, such as ``"Currency('EUR')"``.
+            The text, such as ``"CurrencyCode('EUR')"``.
 
         """
-        return f'Currency({self._code!r})'
+        return f'CurrencyCode({self._code!r})'
 
     @override
     def __str__(self) -> str:

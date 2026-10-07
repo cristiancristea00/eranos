@@ -20,7 +20,7 @@ public class ExchangeRate internal constructor(
     @Throws(EranosException::class)
     public fun convert(
         amount: Money,
-        currency: Currency,
+        currency: CurrencyCode,
     ): Money = converting { exchangeRateConvert(text, amount.generated, currency.code).converted() }
 
     /** Whether [other] is of the same class, with the same text. */

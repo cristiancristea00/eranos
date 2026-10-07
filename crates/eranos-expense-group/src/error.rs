@@ -2,7 +2,7 @@
 //! language tag.
 
 use eranos_core::{CategoryId, ExpenseId, MemberId, TransferId};
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 
 use crate::FORMAT;
 
@@ -53,7 +53,7 @@ pub enum ExpenseGroupError {
     #[error("an exchange rate from {currency} into the group currency is required")]
     MissingExchangeRate {
         /// The currency without a rate.
-        currency: Currency,
+        currency: CurrencyCode,
     },
     /// An entry in the group currency has a converted cost; only a local
     /// cost is in the group currency.
@@ -63,7 +63,7 @@ pub enum ExpenseGroupError {
     #[error("two exchange rates were given for {currency}")]
     DuplicateExchangeRate {
         /// The repeated currency.
-        currency: Currency,
+        currency: CurrencyCode,
     },
     /// A member with this ID already exists.
     #[error("member {0} already exists")]
@@ -132,13 +132,13 @@ pub trait FromExpenseGroupError: Sized {
     fn empty_name(message: String) -> Self;
 
     /// The value for [`ExpenseGroupError::MissingExchangeRate`].
-    fn missing_exchange_rate(currency: Currency, message: String) -> Self;
+    fn missing_exchange_rate(currency: CurrencyCode, message: String) -> Self;
 
     /// The value for [`ExpenseGroupError::UnexpectedExchangeRate`].
     fn unexpected_exchange_rate(message: String) -> Self;
 
     /// The value for [`ExpenseGroupError::DuplicateExchangeRate`].
-    fn duplicate_exchange_rate(currency: Currency, message: String) -> Self;
+    fn duplicate_exchange_rate(currency: CurrencyCode, message: String) -> Self;
 
     /// The value for [`ExpenseGroupError::DuplicateMember`].
     fn duplicate_member(member: MemberId, message: String) -> Self;

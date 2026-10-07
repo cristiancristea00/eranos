@@ -5,7 +5,7 @@ package eranos.examples.quickstart
 import eranos.Balance
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.Expense
 import eranos.ExpenseGroup
 import eranos.ExpenseSplit
@@ -64,7 +64,7 @@ private data class PaymentRow(
 
 /** Prints the report of the weekend trip. */
 fun main() {
-    val euro = Currency.of("EUR")
+    val euro = CurrencyCode.of("EUR")
     ExpenseGroup("Weekend in Sinaia", euro).use { group ->
         title(group.nameBlocking())
         println(

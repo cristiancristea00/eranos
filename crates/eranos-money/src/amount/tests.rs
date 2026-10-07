@@ -8,11 +8,11 @@ use super::*;
 use proptest::prelude::*;
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn parse_euros(text: &str) -> Result<Money, MoneyError> {
-    Money::parse(text, Currency::EUR)
+    Money::parse(text, CurrencyCode::EUR)
 }
 
 /// Whole prices such as `12` would be stored off by a power of ten.
@@ -23,13 +23,13 @@ fn whole_numbers_parse_to_minor_units() {
     assert_eq!(parse_euros("0"), Ok(euros(0)));
     // No decimals.
     assert_eq!(
-        Money::parse("1500", Currency::JPY),
-        Ok(Money::from_minor_units(1_500, Currency::JPY))
+        Money::parse("1500", CurrencyCode::JPY),
+        Ok(Money::from_minor_units(1_500, CurrencyCode::JPY))
     );
     // Three decimals.
     assert_eq!(
-        Money::parse("7", Currency::BHD),
-        Ok(Money::from_minor_units(7_000, Currency::BHD))
+        Money::parse("7", CurrencyCode::BHD),
+        Ok(Money::from_minor_units(7_000, CurrencyCode::BHD))
     );
 }
 
@@ -42,17 +42,17 @@ fn short_fractions_are_padded_to_the_minor_unit() {
     assert_eq!(parse_euros("0.05"), Ok(euros(5)));
     // Three decimals.
     assert_eq!(
-        Money::parse("1.2", Currency::BHD),
-        Ok(Money::from_minor_units(1_200, Currency::BHD))
+        Money::parse("1.2", CurrencyCode::BHD),
+        Ok(Money::from_minor_units(1_200, CurrencyCode::BHD))
     );
     assert_eq!(
-        Money::parse("1.234", Currency::BHD),
-        Ok(Money::from_minor_units(1_234, Currency::BHD))
+        Money::parse("1.234", CurrencyCode::BHD),
+        Ok(Money::from_minor_units(1_234, CurrencyCode::BHD))
     );
     // Four decimals.
     assert_eq!(
-        Money::parse("1.2345", Currency::CLF),
-        Ok(Money::from_minor_units(12_345, Currency::CLF))
+        Money::parse("1.2345", CurrencyCode::CLF),
+        Ok(Money::from_minor_units(12_345, CurrencyCode::CLF))
     );
 }
 
@@ -113,7 +113,7 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
         parse_euros("12.345"),
         Err(MoneyError::TooManyDecimals {
             allowed: 2,
-            currency: Currency::EUR
+            currency: CurrencyCode::EUR
         })
     );
     // Trailing zeros count.
@@ -121,32 +121,32 @@ fn extra_decimals_are_rejected_with_the_allowed_count() {
         parse_euros("12.340"),
         Err(MoneyError::TooManyDecimals {
             allowed: 2,
-            currency: Currency::EUR
+            currency: CurrencyCode::EUR
         })
     );
     // No decimals: any fraction is too many.
     for text in ["1.0", "1.5"] {
         assert_eq!(
-            Money::parse(text, Currency::JPY),
+            Money::parse(text, CurrencyCode::JPY),
             Err(MoneyError::TooManyDecimals {
                 allowed: 0,
-                currency: Currency::JPY
+                currency: CurrencyCode::JPY
             })
         );
     }
     // Three and four decimals.
     assert_eq!(
-        Money::parse("1.2345", Currency::BHD),
+        Money::parse("1.2345", CurrencyCode::BHD),
         Err(MoneyError::TooManyDecimals {
             allowed: 3,
-            currency: Currency::BHD
+            currency: CurrencyCode::BHD
         })
     );
     assert_eq!(
-        Money::parse("1.23456", Currency::CLF),
+        Money::parse("1.23456", CurrencyCode::CLF),
         Err(MoneyError::TooManyDecimals {
             allowed: 4,
-            currency: Currency::CLF
+            currency: CurrencyCode::CLF
         })
     );
 }
@@ -159,8 +159,8 @@ fn amounts_beyond_the_i64_range_overflow() {
     assert_eq!(parse_euros("92233720368547758.07"), Ok(euros(i64::MAX)));
     assert_eq!(parse_euros("-92233720368547758.07"), Ok(euros(-i64::MAX)));
     assert_eq!(
-        Money::parse("9223372036854775807", Currency::JPY),
-        Ok(Money::from_minor_units(i64::MAX, Currency::JPY))
+        Money::parse("9223372036854775807", CurrencyCode::JPY),
+        Ok(Money::from_minor_units(i64::MAX, CurrencyCode::JPY))
     );
     // One minor unit more.
     assert_eq!(
@@ -168,7 +168,7 @@ fn amounts_beyond_the_i64_range_overflow() {
         Err(MoneyError::Overflow)
     );
     assert_eq!(
-        Money::parse("9223372036854775808", Currency::JPY),
+        Money::parse("9223372036854775808", CurrencyCode::JPY),
         Err(MoneyError::Overflow)
     );
     // Far beyond.
@@ -197,24 +197,24 @@ fn display_shows_the_decimal_amount_and_code() {
     assert_eq!(euros(10_000).to_string(), "100.00 EUR");
     // No decimals.
     assert_eq!(
-        Money::from_minor_units(1_500, Currency::JPY).to_string(),
+        Money::from_minor_units(1_500, CurrencyCode::JPY).to_string(),
         "1500 JPY"
     );
     assert_eq!(
-        Money::from_minor_units(-1_500, Currency::JPY).to_string(),
+        Money::from_minor_units(-1_500, CurrencyCode::JPY).to_string(),
         "-1500 JPY"
     );
     // Three and four decimals.
     assert_eq!(
-        Money::from_minor_units(1_234, Currency::BHD).to_string(),
+        Money::from_minor_units(1_234, CurrencyCode::BHD).to_string(),
         "1.234 BHD"
     );
     assert_eq!(
-        Money::from_minor_units(1, Currency::BHD).to_string(),
+        Money::from_minor_units(1, CurrencyCode::BHD).to_string(),
         "0.001 BHD"
     );
     assert_eq!(
-        Money::from_minor_units(12_345, Currency::CLF).to_string(),
+        Money::from_minor_units(12_345, CurrencyCode::CLF).to_string(),
         "1.2345 CLF"
     );
 }
@@ -227,7 +227,7 @@ fn display_handles_the_extremes() {
     assert_eq!(euros(i64::MAX).to_string(), "92233720368547758.07 EUR");
     // No decimals.
     assert_eq!(
-        Money::from_minor_units(i64::MIN, Currency::JPY).to_string(),
+        Money::from_minor_units(i64::MIN, CurrencyCode::JPY).to_string(),
         "-9223372036854775808 JPY"
     );
 }
@@ -236,7 +236,7 @@ fn display_handles_the_extremes() {
 #[test]
 fn sign_checks_follow_the_minor_units() {
     // Zero.
-    let zero = Money::zero(Currency::EUR);
+    let zero = Money::zero(CurrencyCode::EUR);
     assert_eq!(zero, euros(0));
     assert!(zero.is_zero() && !zero.is_positive() && !zero.is_negative());
     // One minor unit either side of zero.
@@ -248,11 +248,11 @@ fn sign_checks_follow_the_minor_units() {
 #[test]
 fn accessors_return_the_parts() {
     // Minor units and currency.
-    let amount = Money::from_minor_units(1_234, Currency::RON);
+    let amount = Money::from_minor_units(1_234, CurrencyCode::RON);
     assert_eq!(amount.minor_units(), 1_234);
-    assert_eq!(amount.currency(), Currency::RON);
+    assert_eq!(amount.currency(), CurrencyCode::RON);
     // The same minor units in another currency is another amount.
-    assert_ne!(amount, Money::from_minor_units(1_234, Currency::EUR));
+    assert_ne!(amount, Money::from_minor_units(1_234, CurrencyCode::EUR));
 }
 
 /// Totals and balances would be computed wrongly.
@@ -278,28 +278,28 @@ fn checked_arithmetic_adds_and_subtracts_same_currency_amounts() {
 /// Euros and dollars would be added as if they were the same currency.
 #[test]
 fn mixed_currencies_are_rejected() {
-    let dollars = Money::from_minor_units(100, Currency::USD);
+    let dollars = Money::from_minor_units(100, CurrencyCode::USD);
     // Addition and subtraction name both currencies in order.
     assert_eq!(
         euros(100).checked_add(dollars),
         Err(MoneyError::CurrencyMismatch {
-            left: Currency::EUR,
-            right: Currency::USD
+            left: CurrencyCode::EUR,
+            right: CurrencyCode::USD
         })
     );
     assert_eq!(
         dollars.checked_sub(euros(100)),
         Err(MoneyError::CurrencyMismatch {
-            left: Currency::USD,
-            right: Currency::EUR
+            left: CurrencyCode::USD,
+            right: CurrencyCode::EUR
         })
     );
     // The currencies are checked before the range.
     assert_eq!(
         euros(i64::MAX).checked_add(dollars),
         Err(MoneyError::CurrencyMismatch {
-            left: Currency::EUR,
-            right: Currency::USD
+            left: CurrencyCode::EUR,
+            right: CurrencyCode::USD
         })
     );
 }
@@ -345,9 +345,9 @@ proptest! {
     #[test]
     fn display_then_parse_round_trips(
         minor_units in any::<i64>(),
-        index in 0..Currency::all().len(),
+        index in 0..CurrencyCode::all().len(),
     ) {
-        let amount = Money::from_minor_units(minor_units, Currency::all()[index]);
+        let amount = Money::from_minor_units(minor_units, CurrencyCode::all()[index]);
         let text = amount.to_string();
         let (number, code) = text.rsplit_once(' ').unwrap();
         prop_assert_eq!(code, amount.currency().code());
@@ -361,8 +361,8 @@ fn the_smallest_amount_parses() {
     // Two decimals and no decimals.
     assert_eq!(parse_euros("-92233720368547758.08"), Ok(euros(i64::MIN)));
     assert_eq!(
-        Money::parse("-9223372036854775808", Currency::JPY),
-        Ok(Money::from_minor_units(i64::MIN, Currency::JPY))
+        Money::parse("-9223372036854775808", CurrencyCode::JPY),
+        Ok(Money::from_minor_units(i64::MIN, CurrencyCode::JPY))
     );
     // One unit further is out of range on both sides.
     assert_eq!(

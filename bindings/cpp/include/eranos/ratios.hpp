@@ -8,7 +8,7 @@
 
 // IWYU pragma: private, include "eranos.hpp"
 
-#include "eranos/currency.hpp"
+#include "eranos/currency_code.hpp"
 #include "eranos/detail/declarations.hpp"
 #include "eranos/error.hpp"
 #include "eranos/money.hpp"
@@ -42,7 +42,7 @@ class ExchangeRate final {
     /// @param amount The amount to convert
     /// @param currency The currency to convert it into
     /// @return The converted amount, rounded half away from zero, or an error of the kind ErrorKind::MONEY for an amount out of range
-    [[nodiscard]] std::expected<Money, Error> convert(Money const &amount, Currency const &currency) const;
+    [[nodiscard]] std::expected<Money, Error> convert(Money const &amount, CurrencyCode const &currency) const;
 
     /// The rate as the library writes it: "4.97".
     ///
@@ -118,7 +118,7 @@ inline std::expected<ExchangeRate, Error> ExchangeRate::parse(std::string_view c
     return detail::expectedOf(detail::EranosExchangeRate::parse(text)).transform(detail::exchangeRateOf);
 }
 
-inline std::expected<Money, Error> ExchangeRate::convert(Money const &amount, Currency const &currency) const {
+inline std::expected<Money, Error> ExchangeRate::convert(Money const &amount, CurrencyCode const &currency) const {
     return detail::expectedOf(detail::EranosExchangeRate::convert(text, *detail::toDetail(amount), currency.code()))
         .transform([](auto const &converted) { return detail::fromDetail(*converted); });
 }

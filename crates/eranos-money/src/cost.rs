@@ -18,20 +18,20 @@ use crate::{ExchangeRate, Money};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Cost, Currency, ExchangeRate, Money};
+/// use eranos::{Cost, CurrencyCode, ExchangeRate, Money};
 ///
 /// // 20.00 EUR in a EUR group.
-/// let museum = Cost::from(Money::parse("20.00", Currency::EUR)?);
+/// let museum = Cost::from(Money::parse("20.00", CurrencyCode::EUR)?);
 /// assert_eq!(museum.exchange_rate(), ExchangeRate::ONE);
 ///
 /// // 400.00 RON in a EUR group, at 1 RON = 0.2 EUR.
 /// let rate = ExchangeRate::parse("0.2")?;
-/// let fuel = Money::parse("400.00", Currency::RON)?.at(rate);
-/// assert_eq!(fuel.amount(), Money::parse("400.00", Currency::RON)?);
+/// let fuel = Money::parse("400.00", CurrencyCode::RON)?.at(rate);
+/// assert_eq!(fuel.amount(), Money::parse("400.00", CurrencyCode::RON)?);
 /// assert_eq!(fuel.exchange_rate(), rate);
 ///
 /// // A corrected amount keeps the rate.
-/// let corrected = fuel.with_amount(Money::parse("450.00", Currency::RON)?);
+/// let corrected = fuel.with_amount(Money::parse("450.00", CurrencyCode::RON)?);
 /// assert_eq!(corrected.exchange_rate(), rate);
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
@@ -64,9 +64,9 @@ impl Cost {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Cost, Currency, ExchangeRate, Money};
+    /// use eranos::{Cost, CurrencyCode, ExchangeRate, Money};
     ///
-    /// let amount = Money::parse("400.00", Currency::RON)?;
+    /// let amount = Money::parse("400.00", CurrencyCode::RON)?;
     /// let rate = ExchangeRate::parse("0.2")?;
     /// assert_eq!(Cost::from_parts(amount, Some(rate)), amount.at(rate));
     /// assert_eq!(Cost::from_parts(amount, None), Cost::Local(amount));
@@ -115,9 +115,9 @@ impl Cost {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Cost, Currency, ExchangeRate, Money};
+    /// use eranos::{Cost, CurrencyCode, ExchangeRate, Money};
     ///
-    /// let dollars = Money::parse("50.00", Currency::BMD)?;
+    /// let dollars = Money::parse("50.00", CurrencyCode::BMD)?;
     /// assert_eq!(dollars.at(ExchangeRate::ONE).conversion(), Some(ExchangeRate::ONE));
     /// assert_eq!(Cost::from(dollars).conversion(), None);
     /// # Ok::<(), eranos::error::MoneyError>(())

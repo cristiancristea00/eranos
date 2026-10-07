@@ -15,13 +15,13 @@ import java.util.stream.Collectors;
  * <p>A currency comes from the library's list, so an amount in one always formats: look one up by
  * its code with {@link #of}, or pick one from {@link #all}.
  */
-public final class Currency {
+public final class CurrencyCode {
     private final String code;
     private final String name;
     private final int numericCode;
     private final int decimalPlaces;
 
-    private Currency(String code, String name, int numericCode, int decimalPlaces) {
+    private CurrencyCode(String code, String name, int numericCode, int decimalPlaces) {
         this.code = code;
         this.name = name;
         this.numericCode = numericCode;
@@ -33,13 +33,15 @@ public final class Currency {
         private Listed() {}
 
         /** Every currency with minor units, by code. */
-        static final List<Currency> ALL =
-                Eranos.currencies().stream().map(Currency::converted).toList();
+        static final List<CurrencyCode> ALL =
+                Eranos.currencies().stream().map(CurrencyCode::converted).toList();
 
         /** The currencies of {@link #ALL} by their codes. */
-        static final Map<String, Currency> BY_CODE =
+        static final Map<String, CurrencyCode> BY_CODE =
                 ALL.stream()
-                        .collect(Collectors.toUnmodifiableMap(Currency::code, Function.identity()));
+                        .collect(
+                                Collectors.toUnmodifiableMap(
+                                        CurrencyCode::code, Function.identity()));
     }
 
     /**
@@ -47,7 +49,7 @@ public final class Currency {
      *
      * @return the currencies
      */
-    public static List<Currency> all() {
+    public static List<CurrencyCode> all() {
         return Listed.ALL;
     }
 
@@ -59,7 +61,7 @@ public final class Currency {
      * @throws EranosException.Money with {@link MoneyFailure.UnknownCurrency} for a code that names
      *     no currency with minor units
      */
-    public static Currency of(String code) throws EranosException {
+    public static CurrencyCode of(String code) throws EranosException {
         return Converting.call(() -> converted(Eranos.currencyDetails(code)));
     }
 
@@ -70,9 +72,9 @@ public final class Currency {
      * @param code the code
      * @return the currency
      */
-    static Currency known(String code) {
-        Currency listed = Listed.BY_CODE.get(code);
-        return null == listed ? new Currency(code, code, 0, 0) : listed;
+    static CurrencyCode known(String code) {
+        CurrencyCode listed = Listed.BY_CODE.get(code);
+        return null == listed ? new CurrencyCode(code, code, 0, 0) : listed;
     }
 
     /**
@@ -81,8 +83,8 @@ public final class Currency {
      * @param details the description
      * @return the currency
      */
-    static Currency converted(CurrencyDetails details) {
-        return new Currency(
+    static CurrencyCode converted(CurrencyDetails details) {
+        return new CurrencyCode(
                 details.code(), details.name(), details.numericCode(), details.decimalPlaces());
     }
 
@@ -124,7 +126,7 @@ public final class Currency {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof Currency currency
+        return other instanceof CurrencyCode currency
                 && code.equals(currency.code)
                 && name.equals(currency.name)
                 && numericCode == currency.numericCode

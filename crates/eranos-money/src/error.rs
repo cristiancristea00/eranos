@@ -1,7 +1,7 @@
 //! The failure of building, reading, or combining an amount, a currency, a
 //! rate, a percentage, or a number of parts.
 
-use crate::Currency;
+use crate::CurrencyCode;
 
 /// An amount, a currency, an exchange rate, a percentage, or a number of
 /// parts that could not be built, read, or computed.
@@ -15,7 +15,7 @@ pub enum MoneyError {
     #[error("{currency} amounts have at most {allowed} decimal places")]
     TooManyDecimals {
         /// The currency of the amount.
-        currency: Currency,
+        currency: CurrencyCode,
         /// The currency's number of decimal places.
         allowed: u8,
     },
@@ -23,9 +23,9 @@ pub enum MoneyError {
     #[error("cannot combine {left} and {right} amounts")]
     CurrencyMismatch {
         /// The currency of the left operand.
-        left: Currency,
+        left: CurrencyCode,
         /// The currency of the right operand.
-        right: Currency,
+        right: CurrencyCode,
     },
     /// A currency code that is not an active ISO 4217 code.
     #[error("unknown currency code")]
@@ -54,10 +54,10 @@ pub trait FromMoneyError: Sized {
     fn invalid_amount(message: String) -> Self;
 
     /// The value for [`MoneyError::TooManyDecimals`].
-    fn too_many_decimals(currency: Currency, allowed: u8, message: String) -> Self;
+    fn too_many_decimals(currency: CurrencyCode, allowed: u8, message: String) -> Self;
 
     /// The value for [`MoneyError::CurrencyMismatch`].
-    fn currency_mismatch(left: Currency, right: Currency, message: String) -> Self;
+    fn currency_mismatch(left: CurrencyCode, right: CurrencyCode, message: String) -> Self;
 
     /// The value for [`MoneyError::UnknownCurrency`].
     fn unknown_currency(message: String) -> Self;

@@ -16,7 +16,7 @@
 #include "eranos/calendar.h"             // IWYU pragma: export
 #include "eranos/category.h"             // IWYU pragma: export
 #include "eranos/contact.h"              // IWYU pragma: export
-#include "eranos/currency.h"             // IWYU pragma: export
+#include "eranos/currency_code.h"        // IWYU pragma: export
 #include "eranos/detail.h"               // IWYU pragma: export
 #include "eranos/error.h"                // IWYU pragma: export
 #include "eranos/expense.h"              // IWYU pragma: export

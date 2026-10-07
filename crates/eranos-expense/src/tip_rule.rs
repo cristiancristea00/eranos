@@ -15,12 +15,12 @@ use crate::error::ExpenseError;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Money, Percentage, TipRule, TipDistribution};
+/// use eranos::{CurrencyCode, Money, Percentage, TipRule, TipDistribution};
 ///
 /// let ten_per_cent = TipRule::percentage(Percentage::parse("10")?);
 /// assert_eq!(ten_per_cent.distribution(), TipDistribution::Proportional);
 ///
-/// let round_up = TipRule::fixed(Money::parse("5.00", Currency::EUR)?).distributed(TipDistribution::Equal);
+/// let round_up = TipRule::fixed(Money::parse("5.00", CurrencyCode::EUR)?).distributed(TipDistribution::Equal);
 /// assert_eq!(round_up.distribution(), TipDistribution::Equal);
 ///
 /// assert_eq!(TipRule::default(), TipRule::percentage(Percentage::ZERO));
@@ -90,11 +90,11 @@ impl TipRule {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Currency, Money, Percentage, TipRule};
+    /// use eranos::{CurrencyCode, Money, Percentage, TipRule};
     ///
-    /// let bill = Money::parse("90.00", Currency::EUR)?;
+    /// let bill = Money::parse("90.00", CurrencyCode::EUR)?;
     /// let tip = TipRule::percentage(Percentage::parse("10")?);
-    /// assert_eq!(tip.amount_on(bill)?, Money::parse("9.00", Currency::EUR)?);
+    /// assert_eq!(tip.amount_on(bill)?, Money::parse("9.00", CurrencyCode::EUR)?);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn amount_on(self, amount: Money) -> Result<Money, ExpenseError> {

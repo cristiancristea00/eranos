@@ -112,7 +112,7 @@ namespace eranos {
 class CalendarDate;
 class Cancellation;
 class CategoryId;
-class Currency;
+class CurrencyCode;
 class Email;
 class Error;
 class ExchangeRate;

@@ -1,7 +1,7 @@
 //! Creating groups.
 
 use eranos_core::{ExpenseGroupId, text};
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 
 use crate::error::ExpenseGroupError;
 use crate::{ExpenseGroup, Language};
@@ -11,13 +11,13 @@ use crate::{ExpenseGroup, Language};
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseGroupBuilder {
     name: String,
-    currency: Currency,
+    currency: CurrencyCode,
     description: Option<String>,
     language: Option<Language>,
 }
 
 impl ExpenseGroupBuilder {
-    pub(super) const fn new(name: String, currency: Currency) -> Self {
+    pub(super) const fn new(name: String, currency: CurrencyCode) -> Self {
         Self {
             name,
             currency,

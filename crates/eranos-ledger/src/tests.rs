@@ -18,7 +18,7 @@ fn category(number: u8) -> CategoryId {
 }
 
 const fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 /// The pair of `from` owing or paying `to`.
@@ -85,7 +85,7 @@ fn applied(ledger: &mut Ledger, change: impl FnOnce(&mut Delta)) -> Result<(), M
 fn an_expense_moves_every_total_by_its_shares() {
     let (ana, bob) = (member(1), member(2));
     let food = category(1);
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let dinner = expense(3000, ana, &[share(ana, 1000), share(bob, 2000)]);
     applied(&mut ledger, |delta| delta.add_expense(&dinner, food, 1)).unwrap();
 
@@ -109,7 +109,7 @@ fn an_expense_moves_every_total_by_its_shares() {
 #[test]
 fn removing_an_entry_restores_the_ledger_exactly() {
     let (ana, bob) = (member(1), member(2));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let first = expense(3000, ana, &[share(ana, 1500), share(bob, 1500)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&first, CategoryId::UNCATEGORISED, 1);
@@ -138,7 +138,7 @@ fn removing_an_entry_restores_the_ledger_exactly() {
         delta.add_expense(&first, CategoryId::UNCATEGORISED, -1);
     })
     .unwrap();
-    assert_eq!(ledger, Ledger::new(Currency::EUR));
+    assert_eq!(ledger, Ledger::new(CurrencyCode::EUR));
     assert_eq!(ledger.summary().members().len(), 0);
     assert_eq!(ledger.summary().category_totals().len(), 0);
 }
@@ -148,7 +148,7 @@ fn removing_an_entry_restores_the_ledger_exactly() {
 #[test]
 fn a_transfer_moves_balances_but_not_spending() {
     let (ana, bob) = (member(1), member(2));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let lunch = expense(2000, ana, &[share(ana, 1000), share(bob, 1000)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&lunch, CategoryId::UNCATEGORISED, 1);
@@ -177,14 +177,14 @@ fn moving_a_category_equals_filing_its_expenses_there_from_the_start() {
     let (food, fuel) = (category(1), category(2));
     let lunch = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
     let taxi = expense(600, bob, &[share(ana, 600)]);
-    let mut moved = Ledger::new(Currency::EUR);
+    let mut moved = Ledger::new(CurrencyCode::EUR);
     applied(&mut moved, |delta| {
         delta.add_expense(&lunch, food, 1);
         delta.add_expense(&taxi, fuel, 1);
     })
     .unwrap();
     moved.move_category(food, fuel);
-    let mut filed = Ledger::new(Currency::EUR);
+    let mut filed = Ledger::new(CurrencyCode::EUR);
     applied(&mut filed, |delta| {
         delta.add_expense(&lunch, fuel, 1);
         delta.add_expense(&taxi, fuel, 1);
@@ -230,7 +230,7 @@ fn pair_debts_net_in_both_directions() {
     // Bob owes Ana 5.00, and Ana owes Bob 3.00.
     delta.add_debt(pair(bob, ana), 500);
     delta.add_debt(pair(ana, bob), 300);
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     ledger.apply(&delta).unwrap();
     // Ana, the lower member, owes Bob −2.00: Bob owes Ana 2.00.
     assert_eq!(ledger.pairs().get(&pair(ana, bob)), Some(&-200));
@@ -242,7 +242,7 @@ fn pair_debts_net_in_both_directions() {
 #[test]
 fn an_overflowing_change_is_refused_whole() {
     let (ana, bob) = (member(1), member(2));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let big = expense(i64::MAX, ana, &[share(bob, i64::MAX)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&big, CategoryId::UNCATEGORISED, 1);
@@ -262,7 +262,7 @@ fn an_overflowing_change_is_refused_whole() {
     );
     assert_eq!(ledger, before);
     // So would a single entry below −i64::MAX, which could not be negated.
-    let mut empty = Ledger::new(Currency::EUR);
+    let mut empty = Ledger::new(CurrencyCode::EUR);
     assert_eq!(
         applied(&mut empty, |delta| delta.add_transfer(
             pair(ana, bob),
@@ -336,10 +336,10 @@ fn every_value_is_range_checked() {
             ..Delta::default()
         },
     ]);
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     for delta in &deltas {
         assert_eq!(ledger.apply(delta), Err(MoneyError::Overflow), "{delta:?}");
-        assert_eq!(ledger, Ledger::new(Currency::EUR));
+        assert_eq!(ledger, Ledger::new(CurrencyCode::EUR));
     }
 }
 
@@ -348,7 +348,7 @@ fn every_value_is_range_checked() {
 #[test]
 fn a_balance_reads_the_sign_of_the_net() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let taxi = expense(1200, ana, &[share(bob, 1200)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&taxi, CategoryId::UNCATEGORISED, 1);
@@ -376,7 +376,7 @@ fn a_balance_reads_the_sign_of_the_net() {
 fn member_category_totals_list_only_that_member() {
     let (ana, bob) = (member(1), member(2));
     let (food, fuel) = (category(1), category(2));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let lunch = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
     applied(&mut ledger, |delta| delta.add_expense(&lunch, food, 1)).unwrap();
     let taxi = expense(600, bob, &[share(ana, 600)]);
@@ -416,7 +416,7 @@ fn member_category_totals_list_only_that_member() {
 fn member_category_totals_list_a_member_between_others_whole() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
     let (food, fuel) = (category(1), category(2));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let everyone = [share(ana, 200), share(bob, 200), share(carol, 200)];
     applied(&mut ledger, |delta| {
         delta.add_expense(&expense(600, ana, &everyone), CategoryId::UNCATEGORISED, 1);
@@ -475,7 +475,7 @@ struct MemberNet {
 #[test]
 fn a_member_summary_names_its_member() {
     let (ana, bob, carol) = (member(1), member(2), member(3));
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     let shares = expense(1000, ana, &[share(ana, 500), share(bob, 500)]);
     applied(&mut ledger, |delta| {
         delta.add_expense(&shares, CategoryId::UNCATEGORISED, 1);

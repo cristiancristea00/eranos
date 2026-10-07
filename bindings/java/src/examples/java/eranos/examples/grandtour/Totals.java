@@ -22,7 +22,7 @@ import eranos.Category;
 import eranos.CategoryId;
 import eranos.CategoryTotal;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.ExpenseGroup;
@@ -175,8 +175,8 @@ final class Totals {
 
     static void newCurrency(ExpenseGroup group, People people) throws EranosException {
         section("10. A new currency");
-        Currency euro = Currency.of("EUR");
-        Currency leu = Currency.of("RON");
+        CurrencyCode euro = CurrencyCode.of("EUR");
+        CurrencyCode leu = CurrencyCode.of("RON");
         Optional<EranosException> missing = refusal(() -> group.changeCurrency(leu, Map.of()));
         group.changeCurrency(leu, Map.of(euro, ExchangeRate.parse("5")));
         System.out.print(

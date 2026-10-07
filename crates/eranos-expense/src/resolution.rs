@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use eranos_core::MemberId;
 use eranos_ledger::{Debt, MemberPair, MemberShare, ResolvedExpense};
 use eranos_money::allocation::{allocate, rotation};
-use eranos_money::{Currency, ExchangeRate, Money, MoneyError};
+use eranos_money::{CurrencyCode, ExchangeRate, Money, MoneyError};
 
 use crate::split::Share;
 use crate::{Expense, ExpenseSplit, TipDistribution};
@@ -40,7 +40,7 @@ const PASS_DEBTS: u64 = 2 << 32;
 /// amount.
 pub fn resolve_expense(
     expense: &Expense,
-    currency: Currency,
+    currency: CurrencyCode,
 ) -> Result<ResolvedExpense, MoneyError> {
     resolve_expense_at(expense, expense.cost().conversion(), currency)
 }
@@ -61,7 +61,7 @@ pub fn resolve_expense(
 pub fn resolve_expense_at(
     expense: &Expense,
     conversion: Option<ExchangeRate>,
-    currency: Currency,
+    currency: CurrencyCode,
 ) -> Result<ResolvedExpense, MoneyError> {
     let seed = expense.id().to_bytes();
     let pass = |number: u64| rotation(seed, number);
@@ -177,7 +177,7 @@ struct PaidAndConsumed {
 fn convert(
     amount: Money,
     rate: Option<ExchangeRate>,
-    currency: Currency,
+    currency: CurrencyCode,
 ) -> Result<Option<i64>, MoneyError> {
     rate.map(|rate| Ok(rate.convert(amount, currency)?.minor_units()))
         .transpose()

@@ -7,7 +7,7 @@ from typing import ClassVar, final, override
 from eranos import (
     CalendarDate,
     ConvertedCost,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     ExpenseGroup,
     Language,
@@ -79,10 +79,10 @@ def _truth(value: bool) -> str:
 
 def _currencies() -> None:
     """Print a few currencies with what the library knows of them, and the code it refuses."""
-    listed = [Currency(code) for code in ('EUR', 'RON', 'JPY', 'BHD')]
-    unknown = refusal(lambda: Currency('XYZ'))
+    listed = [CurrencyCode(code) for code in ('EUR', 'RON', 'JPY', 'BHD')]
+    unknown = refusal(lambda: CurrencyCode('XYZ'))
     print_lines(
-        f'Currencies are the {len(Currency.all())} active ISO 4217 codes with a minor unit; an unknown code is',
+        f'Currencies are the {len(CurrencyCode.all())} active ISO 4217 codes with a minor unit; an unknown code is',
         f'refused ({message(unknown)}):',
     )
     print_table(
@@ -93,7 +93,7 @@ def _currencies() -> None:
         ],
         2,
     )
-    assert Currency('BHD').decimal_places == 3
+    assert CurrencyCode('BHD').decimal_places == 3
 
 
 def _amounts() -> None:
@@ -101,9 +101,9 @@ def _amounts() -> None:
     total = eur('12.34').plus(eur('0.66'))
     change = eur('5.00').minus(eur('7.50'))
     mixed = refusal(lambda: eur('1.00').plus(ron('1.00')))
-    yen = Money.parse('1500', Currency('JPY'))
-    dinars = Money(1_234, Currency('BHD'))
-    nothing = Money(0, Currency('RON'))
+    yen = Money.parse('1500', CurrencyCode('JPY'))
+    dinars = Money(1_234, CurrencyCode('BHD'))
+    nothing = Money(0, CurrencyCode('RON'))
     cost = ConvertedCost(eur('10.00'), ExchangeRate('4.9765'))
     doubled = copy.replace(cost, amount=eur('20.00'))
     print_lines('Amounts are exact minor units in their currency:')

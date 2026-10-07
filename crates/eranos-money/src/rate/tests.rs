@@ -13,7 +13,7 @@ fn rate(text: &str) -> ExchangeRate {
 }
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 /// Rates typed from a bank statement would be refused or misread.
@@ -194,20 +194,20 @@ fn display_writes_the_exact_decimal() {
 #[test]
 fn convert_rounds_to_the_nearest_minor_unit() {
     // 10.00 EUR at 4.9765 is 49.765 RON, rounded up.
-    let ten_euros = Money::parse("10.00", Currency::EUR).unwrap();
+    let ten_euros = Money::parse("10.00", CurrencyCode::EUR).unwrap();
     assert_eq!(
-        rate("4.9765").convert(ten_euros, Currency::RON),
-        Ok(Money::parse("49.77", Currency::RON).unwrap())
+        rate("4.9765").convert(ten_euros, CurrencyCode::RON),
+        Ok(Money::parse("49.77", CurrencyCode::RON).unwrap())
     );
     // A refund rounds the same way, away from zero.
     assert_eq!(
-        rate("4.9765").convert(euros(-1_000), Currency::RON),
-        Ok(Money::parse("-49.77", Currency::RON).unwrap())
+        rate("4.9765").convert(euros(-1_000), CurrencyCode::RON),
+        Ok(Money::parse("-49.77", CurrencyCode::RON).unwrap())
     );
     // Zero stays zero.
     assert_eq!(
-        rate("4.9765").convert(euros(0), Currency::RON),
-        Ok(Money::zero(Currency::RON))
+        rate("4.9765").convert(euros(0), CurrencyCode::RON),
+        Ok(Money::zero(CurrencyCode::RON))
     );
 }
 
@@ -217,25 +217,25 @@ fn convert_rounds_to_the_nearest_minor_unit() {
 fn exact_halves_round_away_from_zero() {
     // Halves.
     let half = rate("0.5");
-    assert_eq!(half.convert(euros(1), Currency::EUR), Ok(euros(1)));
-    assert_eq!(half.convert(euros(-1), Currency::EUR), Ok(euros(-1)));
-    assert_eq!(half.convert(euros(3), Currency::EUR), Ok(euros(2)));
-    assert_eq!(half.convert(euros(-3), Currency::EUR), Ok(euros(-2)));
+    assert_eq!(half.convert(euros(1), CurrencyCode::EUR), Ok(euros(1)));
+    assert_eq!(half.convert(euros(-1), CurrencyCode::EUR), Ok(euros(-1)));
+    assert_eq!(half.convert(euros(3), CurrencyCode::EUR), Ok(euros(2)));
+    assert_eq!(half.convert(euros(-3), CurrencyCode::EUR), Ok(euros(-2)));
     // Just below and just above a half.
     assert_eq!(
-        rate("0.4999").convert(euros(1), Currency::EUR),
+        rate("0.4999").convert(euros(1), CurrencyCode::EUR),
         Ok(euros(0))
     );
     assert_eq!(
-        rate("0.4999").convert(euros(-1), Currency::EUR),
+        rate("0.4999").convert(euros(-1), CurrencyCode::EUR),
         Ok(euros(0))
     );
     assert_eq!(
-        rate("0.5001").convert(euros(1), Currency::EUR),
+        rate("0.5001").convert(euros(1), CurrencyCode::EUR),
         Ok(euros(1))
     );
     assert_eq!(
-        rate("0.5001").convert(euros(-1), Currency::EUR),
+        rate("0.5001").convert(euros(-1), CurrencyCode::EUR),
         Ok(euros(-1))
     );
 }
@@ -246,33 +246,42 @@ fn exact_halves_round_away_from_zero() {
 fn convert_scales_between_decimal_places() {
     // No decimals into two: 1000 JPY at 0.0061 is 6.10 EUR.
     assert_eq!(
-        rate("0.0061").convert(Money::from_minor_units(1_000, Currency::JPY), Currency::EUR),
+        rate("0.0061").convert(
+            Money::from_minor_units(1_000, CurrencyCode::JPY),
+            CurrencyCode::EUR
+        ),
         Ok(euros(610))
     );
     // Two decimals into none: 10.00 EUR at 162.5 is 1625 JPY, and 0.01 EUR
     // is 1.625 JPY, rounded to 2.
     assert_eq!(
-        rate("162.5").convert(euros(1_000), Currency::JPY),
-        Ok(Money::from_minor_units(1_625, Currency::JPY))
+        rate("162.5").convert(euros(1_000), CurrencyCode::JPY),
+        Ok(Money::from_minor_units(1_625, CurrencyCode::JPY))
     );
     assert_eq!(
-        rate("162.5").convert(euros(1), Currency::JPY),
-        Ok(Money::from_minor_units(2, Currency::JPY))
+        rate("162.5").convert(euros(1), CurrencyCode::JPY),
+        Ok(Money::from_minor_units(2, CurrencyCode::JPY))
     );
     // Two decimals into three: 10.00 EUR at 0.41 is 4.100 BHD.
     assert_eq!(
-        rate("0.41").convert(euros(1_000), Currency::BHD),
-        Ok(Money::from_minor_units(4_100, Currency::BHD))
+        rate("0.41").convert(euros(1_000), CurrencyCode::BHD),
+        Ok(Money::from_minor_units(4_100, CurrencyCode::BHD))
     );
     // Three decimals into two: 1.234 BHD at 2.4 is 2.9616 EUR, rounded down.
     assert_eq!(
-        rate("2.4").convert(Money::from_minor_units(1_234, Currency::BHD), Currency::EUR),
+        rate("2.4").convert(
+            Money::from_minor_units(1_234, CurrencyCode::BHD),
+            CurrencyCode::EUR
+        ),
         Ok(euros(296))
     );
     // No decimals into four: 1 JPY at 1 is 1.0000 CLF.
     assert_eq!(
-        rate("1").convert(Money::from_minor_units(1, Currency::JPY), Currency::CLF),
-        Ok(Money::from_minor_units(10_000, Currency::CLF))
+        rate("1").convert(
+            Money::from_minor_units(1, CurrencyCode::JPY),
+            CurrencyCode::CLF
+        ),
+        Ok(Money::from_minor_units(10_000, CurrencyCode::CLF))
     );
 }
 
@@ -282,23 +291,23 @@ fn convert_scales_between_decimal_places() {
 fn conversions_out_of_range_overflow() {
     // The converted amount does not fit.
     assert_eq!(
-        rate("2").convert(euros(i64::MAX), Currency::EUR),
+        rate("2").convert(euros(i64::MAX), CurrencyCode::EUR),
         Err(MoneyError::Overflow)
     );
     assert_eq!(
-        rate("2").convert(euros(i64::MIN), Currency::EUR),
+        rate("2").convert(euros(i64::MIN), CurrencyCode::EUR),
         Err(MoneyError::Overflow)
     );
     // The intermediate product does not fit.
     let largest = ExchangeRate::from_decimal(u64::MAX, 0).unwrap();
     assert_eq!(
-        largest.convert(euros(i64::MAX), Currency::BHD),
+        largest.convert(euros(i64::MAX), CurrencyCode::BHD),
         Err(MoneyError::Overflow)
     );
     // The largest amount at rate 1 fits.
     assert_eq!(
-        rate("1").convert(euros(i64::MAX), Currency::USD),
-        Ok(Money::from_minor_units(i64::MAX, Currency::USD))
+        rate("1").convert(euros(i64::MAX), CurrencyCode::USD),
+        Ok(Money::from_minor_units(i64::MAX, CurrencyCode::USD))
     );
 }
 
@@ -334,11 +343,11 @@ proptest! {
     #[test]
     fn a_rate_of_one_keeps_the_amount(
         minor_units in any::<i64>(),
-        source_index in 0..Currency::all().len(),
+        source_index in 0..CurrencyCode::all().len(),
         target_choice in any::<prop::sample::Index>(),
     ) {
-        let source = Currency::all()[source_index];
-        let targets: Vec<Currency> = Currency::all()
+        let source = CurrencyCode::all()[source_index];
+        let targets: Vec<CurrencyCode> = CurrencyCode::all()
             .iter()
             .copied()
             .filter(|currency| currency.decimal_places() == source.decimal_places())
@@ -356,7 +365,7 @@ proptest! {
 #[test]
 fn a_currency_rate_keeps_its_currency_and_rate() {
     let rate = ExchangeRate::parse("4.97").unwrap();
-    let pair = CurrencyRate::new(Currency::EUR, rate);
-    assert_eq!(pair.currency(), Currency::EUR);
+    let pair = CurrencyRate::new(CurrencyCode::EUR, rate);
+    assert_eq!(pair.currency(), CurrencyCode::EUR);
     assert_eq!(pair.rate(), rate);
 }

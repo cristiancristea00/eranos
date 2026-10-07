@@ -14,7 +14,7 @@ use eranos_core::cooperative::{Cooperative, Pacer};
 use eranos_core::{CategoryId, ExpenseGroupId, MemberId};
 use eranos_expense::Expense;
 use eranos_member::Member;
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 use eranos_transfer::Transfer;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -28,7 +28,7 @@ struct ExpenseGroupView<'group> {
     format: u32,
     id: ExpenseGroupId,
     name: &'group str,
-    currency: Currency,
+    currency: CurrencyCode,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<&'group str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -58,12 +58,12 @@ struct ExpenseGroupView<'group> {
 ///
 /// ```
 /// use eranos::error::ExpenseGroupError;
-/// use eranos::{Currency, ExpenseGroup};
+/// use eranos::{CurrencyCode, ExpenseGroup};
 /// # // The facade re-exports `SavedExpenseGroup` only with its own `serde` feature,
 /// # // which a test of this crate alone does not turn on.
 /// use eranos_expense_group::SavedExpenseGroup;
 ///
-/// let group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
+/// let group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR).build()?;
 /// let json = serde_json::to_string(&group)?;
 ///
 /// // A file this version wrote loads.
@@ -83,7 +83,7 @@ pub struct SavedExpenseGroup {
     format: u32,
     id: ExpenseGroupId,
     name: String,
-    currency: Currency,
+    currency: CurrencyCode,
     #[serde(default)]
     description: Option<String>,
     #[serde(default)]
@@ -180,12 +180,12 @@ impl SavedExpenseGroup {
     ///
     /// ```
     /// use eranos::cooperative::block_on;
-    /// use eranos::{Currency, ExpenseGroup};
+    /// use eranos::{CurrencyCode, ExpenseGroup};
     /// # // The facade re-exports `SavedExpenseGroup` only with its own `serde` feature,
     /// # // which a test of this crate alone does not turn on.
     /// use eranos_expense_group::SavedExpenseGroup;
     ///
-    /// let group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
+    /// let group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR).build()?;
     /// let saved: SavedExpenseGroup = serde_json::from_str(&serde_json::to_string(&group)?)?;
     ///
     /// // Awaited like any future; `block_on` runs it on this thread.

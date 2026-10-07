@@ -12,7 +12,7 @@ from eranos import (
     CategoryId,
     CategoryTotal,
     ConvertedCost,
-    Currency,
+    CurrencyCode,
     CurrencyRate,
     ExchangeRate,
     ExpenseError,
@@ -104,7 +104,7 @@ def test_each_strategy_settles_every_balance(flat: Flat) -> None:
 
 def test_a_change_of_currency_converts_every_entry(flat: Flat) -> None:
     """A change of currency that left an entry unconverted, or took a rate it was not given, would mix currencies in the totals."""
-    lei = Currency('RON')
+    lei = CurrencyCode('RON')
     with pytest.raises(ExpenseGroupError) as missing:
         flat.group.change_currency(lei, [])
     assert missing.value.failure == ExpenseGroupError.MissingExchangeRate(currency=flat.euro)
@@ -142,10 +142,10 @@ def test_a_saved_group_loads_as_it_was_saved(flat: Flat) -> None:
 def test_every_error_holds_what_its_failure_holds(flat: Flat) -> None:
     """An error that lost what it holds would leave an app unable to say which entry, amount, or category the library refused."""
     uneven = copy.replace(flat.expense('Uneven', flat.ana, ()), split=WholeExpenseSplit(AmountsSplit((MemberAmount(flat.ana, flat.euros(1000)),))))
-    foreign = copy.replace(uneven, split=WholeExpenseSplit(AmountsSplit((MemberAmount(flat.ana, Money(3000, Currency('RON'))),))))
+    foreign = copy.replace(uneven, split=WholeExpenseSplit(AmountsSplit((MemberAmount(flat.ana, Money(3000, CurrencyCode('RON'))),))))
     with pytest.raises(ExpenseError) as currencies:
         flat.group.add_expense(foreign)
-    assert currencies.value.failure == ExpenseError.CurrencyMismatch(expected=flat.euro, found=Currency('RON'))
+    assert currencies.value.failure == ExpenseError.CurrencyMismatch(expected=flat.euro, found=CurrencyCode('RON'))
     with pytest.raises(ExpenseError) as amounts:
         flat.group.add_expense(uneven)
     assert amounts.value.failure == ExpenseError.AmountsDoNotAddUp(expected=flat.euros(3000), actual=flat.euros(1000))

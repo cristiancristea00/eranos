@@ -5,7 +5,7 @@
 //! settlement's payment identical to ones built by hand.
 
 use eranos_ledger::{Delta, Ledger, MemberPair};
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 use eranos_settlement::SettlementStrategy;
 
 use super::*;
@@ -16,7 +16,7 @@ const BOB: MemberId = MemberId::from_bytes([2; 16]);
 const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn september_24() -> CalendarDate {
@@ -183,7 +183,7 @@ fn a_payment_becomes_the_transfer_that_records_it() {
     // settlement has him pay back.
     let mut delta = Delta::default();
     delta.add_transfer(MemberPair { from: ANA, to: BOB }, 3_000, 1);
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     ledger.apply(&delta).unwrap();
     let settlement = eranos_settlement::settle(SettlementStrategy::Greedy, &ledger).unwrap();
     let payment = &settlement.payments()[0];
@@ -205,18 +205,18 @@ fn a_payment_becomes_the_transfer_that_records_it() {
 fn a_transfer_converts_into_the_group_currency() {
     // In the group currency, the amount is taken as is.
     assert_eq!(
-        resolve_transfer(&repayment().build().unwrap(), Currency::EUR),
+        resolve_transfer(&repayment().build().unwrap(), CurrencyCode::EUR),
         Ok(3_000)
     );
     // In a foreign currency, the rate converts it.
     let cash = repayment()
         .cost(
-            Money::from_minor_units(10_000, Currency::RON)
+            Money::from_minor_units(10_000, CurrencyCode::RON)
                 .at(ExchangeRate::parse("0.2011").unwrap()),
         )
         .build()
         .unwrap();
-    assert_eq!(resolve_transfer(&cash, Currency::EUR), Ok(2_011));
+    assert_eq!(resolve_transfer(&cash, CurrencyCode::EUR), Ok(2_011));
 }
 
 /// A currency change converts each transfer at its new rate before the
@@ -226,17 +226,17 @@ fn a_transfer_converts_into_the_group_currency() {
 fn converting_at_a_rate_converts_the_transfer_at_that_rate() {
     let rate = ExchangeRate::parse("0.2011").unwrap();
     let local = repayment()
-        .cost(Money::from_minor_units(10_000, Currency::RON))
+        .cost(Money::from_minor_units(10_000, CurrencyCode::RON))
         .build()
         .unwrap();
     let converted = local.clone().with_exchange_rate(Some(rate));
     assert_eq!(
-        resolve_transfer_at(&local, Some(rate), Currency::EUR),
-        resolve_transfer(&converted, Currency::EUR)
+        resolve_transfer_at(&local, Some(rate), CurrencyCode::EUR),
+        resolve_transfer(&converted, CurrencyCode::EUR)
     );
     assert_eq!(
-        resolve_transfer_at(&converted, None, Currency::RON),
-        resolve_transfer(&local, Currency::RON)
+        resolve_transfer_at(&converted, None, CurrencyCode::RON),
+        resolve_transfer(&local, CurrencyCode::RON)
     );
 }
 

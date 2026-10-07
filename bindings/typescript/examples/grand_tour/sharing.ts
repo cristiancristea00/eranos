@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type ExpenseGroup, Currency, ExchangeRate, SettlementStrategy } from '../../src/index.js';
+import { type ExpenseGroup, CurrencyCode, ExchangeRate, SettlementStrategy } from '../../src/index.js';
 import { printLines, printTable, section } from '../report.js';
 import { type People, october, paymentColumns, ron } from './tour.js';
 
@@ -40,12 +40,12 @@ export async function sharing(group: ExpenseGroup, people: People): Promise<void
     }
 
     const before = await group.summary();
-    const rates = [{ currency: Currency.of('RON'), rate: ExchangeRate.parse('0.2') }];
+    const rates = [{ currency: CurrencyCode.of('RON'), rate: ExchangeRate.parse('0.2') }];
     // A report reads the group, holding the shared lock meanwhile, so the change waits for it; a new read would wait
     // behind the change, so the report reads through its own handle.
     const report = await group.read();
     const cancelling = new AbortController();
-    const change = group.changeCurrency(Currency.of('EUR'), rates, { signal: cancelling.signal });
+    const change = group.changeCurrency(CurrencyCode.of('EUR'), rates, { signal: cancelling.signal });
     const reported = report.summary().totalSpent;
     // Aborting the signal cancels the waiting change, which leaves the group as it was.
     cancelling.abort();

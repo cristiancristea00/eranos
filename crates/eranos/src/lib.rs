@@ -13,27 +13,27 @@
 //!
 //! ```
 //! use eranos::{
-//!     Balance, Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
+//!     Balance, CurrencyCode, CalendarDate, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
 //!     Split, TipRule,
 //! };
 //!
-//! let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
+//! let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR).build()?;
 //! let ana = group.add_member(Member::builder("Ana").build()?)?;
 //! let bob = group.add_member(Member::builder("Bob").build()?)?;
 //! let carol = group.add_member(Member::builder("Carol").build()?)?;
 //!
 //! // Ana paid dinner for three, plus a 10 % tip.
-//! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+//! let (amount, day) = (Money::parse("90.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
 //! let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), day)
 //!     .tip(TipRule::percentage(Percentage::parse("10")?))
 //!     .build()?;
 //! group.add_expense(dinner)?;
 //!
 //! let summary = group.summary();
-//! assert_eq!(summary.total_spent(), Money::parse("99.00", Currency::EUR)?);
+//! assert_eq!(summary.total_spent(), Money::parse("99.00", CurrencyCode::EUR)?);
 //! assert_eq!(
 //!     summary.member(bob).balance(),
-//!     Balance::Owes(Money::parse("33.00", Currency::EUR)?)
+//!     Balance::Owes(Money::parse("33.00", CurrencyCode::EUR)?)
 //! );
 //!
 //! // Bob and Carol each pay Ana back.
@@ -79,16 +79,16 @@
 //! ```
 //! use eranos::cooperative::block_on;
 //! use eranos::{
-//!     CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, SettlementStrategy, SharedExpenseGroup,
+//!     CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, Money, SettlementStrategy, SharedExpenseGroup,
 //!     Split,
 //! };
 //!
-//! let shared = SharedExpenseGroup::new(ExpenseGroup::builder("Flat", Currency::EUR).build()?);
+//! let shared = SharedExpenseGroup::new(ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?);
 //! let ana = block_on(shared.add_member(Member::builder("Ana").build()?))?;
 //! let bob = block_on(shared.add_member(Member::builder("Bob").build()?))?;
 //!
 //! // Ana pays the rent; a clone shares the group, as another task would.
-//! let (amount, day) = (Money::parse("900.00", Currency::EUR)?, CalendarDate::new(2026, 10, 1)?);
+//! let (amount, day) = (Money::parse("900.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 10, 1)?);
 //! let rent = Expense::builder("Rent", amount, ana, Split::equal([ana, bob]), day).build()?;
 //! let other = shared.clone();
 //! block_on(other.add_expense(rent))?;
@@ -251,7 +251,9 @@ pub mod money {
     //! add up.
 
     #[doc(inline)]
-    pub use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
+    pub use eranos_money::{
+        Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money, Parts, Percentage,
+    };
 }
 pub mod settlement {
     //! Settling up: turning balances into payments between members.
@@ -290,7 +292,7 @@ pub use member::{
     Username,
 };
 #[doc(no_inline)]
-pub use money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
+pub use money::{Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
 #[doc(no_inline)]
 pub use settlement::{Payment, SettlementPlan, SettlementStrategy};
 #[doc(no_inline)]

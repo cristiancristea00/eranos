@@ -7,7 +7,7 @@ import {
     type Cost,
     type ExpenseGroup,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     Language,
     Money,
@@ -47,25 +47,25 @@ const valueColumns: Columns<ValueRow> = [
 
 function currencies(): void {
     const rows = ['EUR', 'RON', 'JPY', 'BHD'].map((code): CurrencyRow => {
-        const currency = Currency.of(code);
+        const currency = CurrencyCode.of(code);
         return { code: currency.code, name: currency.name, numericCode: currency.numericCode, decimalPlaces: currency.decimalPlaces };
     });
-    const unknown = refusal(() => Currency.of('XYZ'));
+    const unknown = refusal(() => CurrencyCode.of('XYZ'));
     printLines(
-        `Currencies are the ${String(Currency.all().length)} active ISO 4217 codes with a minor unit; an unknown code is`,
+        `Currencies are the ${String(CurrencyCode.all().length)} active ISO 4217 codes with a minor unit; an unknown code is`,
         `refused (${message(unknown)}):`,
     );
     printTable(currencyColumns, rows, 2);
-    assert.equal(Currency.of('BHD').decimalPlaces, 3);
+    assert.equal(CurrencyCode.of('BHD').decimalPlaces, 3);
 }
 
 function amounts(): void {
     const total = eur('12.34').plus(eur('0.66'));
     const change = eur('5.00').minus(eur('7.50'));
     const mixed = refusal(() => eur('1.00').plus(ron('1.00')));
-    const yen = Money.parse('1500', Currency.of('JPY'));
-    const dinars = new Money(1_234n, Currency.of('BHD'));
-    const nothing = new Money(0n, Currency.of('RON'));
+    const yen = Money.parse('1500', CurrencyCode.of('JPY'));
+    const dinars = new Money(1_234n, CurrencyCode.of('BHD'));
+    const nothing = new Money(0n, CurrencyCode.of('RON'));
     const cost: Cost = { kind: 'converted', amount: eur('10.00'), rate: ExchangeRate.parse('4.9765') };
     const doubled: Cost = { kind: 'converted', amount: eur('20.00'), rate: rate(cost) };
     printLines('Amounts are exact minor units in their currency:');

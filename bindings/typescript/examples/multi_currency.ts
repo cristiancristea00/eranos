@@ -10,7 +10,7 @@ import {
     type MemberId,
     type Split,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     ExpenseGroup,
     Money,
@@ -109,21 +109,21 @@ function expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     const both: Split = { kind: 'equal', members: [ana, bob] };
     group.addExpenseSync({
         name: 'Fuel',
-        cost: { kind: 'converted', amount: Money.parse('400.00', Currency.of('RON')), rate: ExchangeRate.parse('0.2') },
+        cost: { kind: 'converted', amount: Money.parse('400.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
         payers: { kind: 'equal', members: [ana] },
         split: { kind: 'whole', split: both },
         date: CalendarDate.of(2026, 8, 1),
     });
     group.addExpenseSync({
         name: 'Dinner',
-        cost: { kind: 'converted', amount: Money.parse('24000.00', Currency.of('HUF')), rate: ExchangeRate.parse('0.0025') },
+        cost: { kind: 'converted', amount: Money.parse('24000.00', CurrencyCode.of('HUF')), rate: ExchangeRate.parse('0.0025') },
         payers: { kind: 'equal', members: [bob] },
         split: { kind: 'whole', split: both },
         date: CalendarDate.of(2026, 8, 2),
     });
     group.addExpenseSync({
         name: 'Ferry',
-        cost: { kind: 'local', amount: Money.parse('60.00', Currency.of('EUR')) },
+        cost: { kind: 'local', amount: Money.parse('60.00', CurrencyCode.of('EUR')) },
         payers: { kind: 'equal', members: [bob] },
         split: { kind: 'whole', split: both },
         date: CalendarDate.of(2026, 8, 3),
@@ -140,7 +140,7 @@ function repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     group.addTransferSync({
         from: ana,
         to: bob,
-        cost: { kind: 'converted', amount: Money.parse('100.00', Currency.of('RON')), rate: ExchangeRate.parse('0.2') },
+        cost: { kind: 'converted', amount: Money.parse('100.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
         date: CalendarDate.of(2026, 8, 4),
         note: 'Cash at the border',
     });
@@ -158,9 +158,9 @@ function newCurrency(group: ExpenseGroup): void {
         'currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies',
         'take the new rate; entries already in RON become local costs, at 1.',
     );
-    group.changeCurrencySync(Currency.of('RON'), [
-        { currency: Currency.of('EUR'), rate: ExchangeRate.parse('5') },
-        { currency: Currency.of('HUF'), rate: ExchangeRate.parse('0.0125') },
+    group.changeCurrencySync(CurrencyCode.of('RON'), [
+        { currency: CurrencyCode.of('EUR'), rate: ExchangeRate.parse('5') },
+        { currency: CurrencyCode.of('HUF'), rate: ExchangeRate.parse('0.0125') },
     ]);
     printEntries(group);
     printLines(`In ${group.currencySync().toString()}, the trip cost ${group.summarySync().totalSpent.toString()}, and everyone is still settled:`);
@@ -168,8 +168,8 @@ function newCurrency(group: ExpenseGroup): void {
 }
 
 await load();
-const euro = Currency.of('EUR');
-const leu = Currency.of('RON');
+const euro = CurrencyCode.of('EUR');
+const leu = CurrencyCode.of('RON');
 using group = ExpenseGroup.create('Danube road trip', euro);
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });

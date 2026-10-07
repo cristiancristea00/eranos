@@ -6,7 +6,7 @@ package eranos.examples.multicurrency
 import eranos.Balance
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.ExchangeRate
 import eranos.Expense
 import eranos.ExpenseGroup
@@ -122,7 +122,7 @@ private fun expenses(
     group.addBlocking(
         Expense(
             "Fuel",
-            Cost.Converted(Money.parse("400.00", Currency.of("RON")), ExchangeRate.parse("0.2")),
+            Cost.Converted(Money.parse("400.00", CurrencyCode.of("RON")), ExchangeRate.parse("0.2")),
             Split.Equal(listOf(ana)),
             both,
             CalendarDate.of(year = 2026, month = 8, day = 1),
@@ -131,7 +131,7 @@ private fun expenses(
     group.addBlocking(
         Expense(
             "Dinner",
-            Cost.Converted(Money.parse("24000.00", Currency.of("HUF")), ExchangeRate.parse("0.0025")),
+            Cost.Converted(Money.parse("24000.00", CurrencyCode.of("HUF")), ExchangeRate.parse("0.0025")),
             Split.Equal(listOf(bob)),
             both,
             CalendarDate.of(year = 2026, month = 8, day = 2),
@@ -140,7 +140,7 @@ private fun expenses(
     group.addBlocking(
         Expense(
             "Ferry",
-            Cost.Local(Money.parse("60.00", Currency.of("EUR"))),
+            Cost.Local(Money.parse("60.00", CurrencyCode.of("EUR"))),
             Split.Equal(listOf(bob)),
             both,
             CalendarDate.of(year = 2026, month = 8, day = 3),
@@ -165,7 +165,7 @@ private fun repayment(
         Transfer(
             ana,
             bob,
-            Cost.Converted(Money.parse("100.00", Currency.of("RON")), ExchangeRate.parse("0.2")),
+            Cost.Converted(Money.parse("100.00", CurrencyCode.of("RON")), ExchangeRate.parse("0.2")),
             CalendarDate.of(year = 2026, month = 8, day = 4),
             note = "Cash at the border",
         ),
@@ -189,8 +189,8 @@ private fun newCurrency(group: ExpenseGroup) {
         """.trimIndent(),
     )
     group.changeCurrencyBlocking(
-        Currency.of("RON"),
-        mapOf(Currency.of("EUR") to ExchangeRate.parse("5"), Currency.of("HUF") to ExchangeRate.parse("0.0125")),
+        CurrencyCode.of("RON"),
+        mapOf(CurrencyCode.of("EUR") to ExchangeRate.parse("5"), CurrencyCode.of("HUF") to ExchangeRate.parse("0.0125")),
     )
     printEntries(group)
     println("In ${group.currencyBlocking()}, the trip cost ${group.summaryBlocking().totalSpent}, and everyone is still settled:")
@@ -199,8 +199,8 @@ private fun newCurrency(group: ExpenseGroup) {
 
 /** Prints the report of the road trip across currencies. */
 fun main() {
-    val euro = Currency.of("EUR")
-    val leu = Currency.of("RON")
+    val euro = CurrencyCode.of("EUR")
+    val leu = CurrencyCode.of("RON")
     ExpenseGroup("Danube road trip", euro).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))

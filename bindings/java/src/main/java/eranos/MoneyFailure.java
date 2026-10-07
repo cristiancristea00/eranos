@@ -13,7 +13,7 @@ public sealed interface MoneyFailure {
      * @param currency the currency
      * @param allowed how many decimal places the currency has
      */
-    record TooManyDecimals(Currency currency, long allowed) implements MoneyFailure {
+    record TooManyDecimals(CurrencyCode currency, long allowed) implements MoneyFailure {
         /**
          * The failure of these components.
          *
@@ -31,7 +31,7 @@ public sealed interface MoneyFailure {
      * @param left the currency of the first amount
      * @param right the currency of the second amount
      */
-    record CurrencyMismatch(Currency left, Currency right) implements MoneyFailure {
+    record CurrencyMismatch(CurrencyCode left, CurrencyCode right) implements MoneyFailure {
         /**
          * The failure of these components.
          *

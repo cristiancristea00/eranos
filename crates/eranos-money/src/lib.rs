@@ -15,14 +15,14 @@
 pub mod allocation;
 mod amount;
 mod cost;
-mod currency;
+mod currency_code;
 mod error;
 mod rate;
 mod ratio;
 
 pub use amount::Money;
 pub use cost::{Cost, FromCost};
-pub use currency::Currency;
+pub use currency_code::CurrencyCode;
 pub use error::{FromMoneyError, MoneyError};
 pub use rate::{CurrencyRate, ExchangeRate};
 pub use ratio::{Parts, Percentage};

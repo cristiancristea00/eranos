@@ -3,7 +3,7 @@ package eranos.examples.grandtour;
 import eranos.CalendarDate;
 import eranos.CategoryId;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.ExpenseGroup;
@@ -59,11 +59,11 @@ final class Tour {
     }
 
     static Money eur(String text) throws EranosException {
-        return Money.parse(text, Currency.of("EUR"));
+        return Money.parse(text, CurrencyCode.of("EUR"));
     }
 
     static Money ron(String text) throws EranosException {
-        return Money.parse(text, Currency.of("RON"));
+        return Money.parse(text, CurrencyCode.of("RON"));
     }
 
     /** A date of the trip, in October 2026. */
@@ -115,7 +115,7 @@ final class Tour {
     }
 
     /** The sum of {@code amounts}, all in {@code currency}. */
-    static Money sum(Currency currency, List<Money> amounts) throws EranosException {
+    static Money sum(CurrencyCode currency, List<Money> amounts) throws EranosException {
         Money total = new Money(0, currency);
         for (Money amount : amounts) {
             total = total.plus(amount);

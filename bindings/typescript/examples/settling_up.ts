@@ -8,7 +8,7 @@ import {
     type MemberId,
     type SettlementPlan,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExpenseGroup,
     Money,
     SettlementStrategy,
@@ -102,7 +102,7 @@ function strategyName(strategy: SettlementStrategy): string {
 function spend(group: ExpenseGroup, name: string, amount: string, payer: MemberId, members: MemberId[]): void {
     group.addExpenseSync({
         name,
-        cost: { kind: 'local', amount: Money.parse(amount, Currency.of('EUR')) },
+        cost: { kind: 'local', amount: Money.parse(amount, CurrencyCode.of('EUR')) },
         payers: { kind: 'equal', members: [payer] },
         split: { kind: 'whole', split: { kind: 'equal', members } },
         date: CalendarDate.of(2026, 9, 20),
@@ -203,7 +203,7 @@ function strategies(group: ExpenseGroup): Counts {
  */
 function festival(): number {
     section('8. A larger group');
-    const euro = Currency.of('EUR');
+    const euro = CurrencyCode.of('EUR');
     using group = ExpenseGroup.create('Festival', euro);
     const friends: MemberId[] = [];
     for (let number = 1; 21 >= number; number += 1) {
@@ -237,7 +237,7 @@ function festival(): number {
 }
 
 await load();
-using group = ExpenseGroup.create('Ski week', Currency.of('EUR'));
+using group = ExpenseGroup.create('Ski week', CurrencyCode.of('EUR'));
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 const carol = group.addMemberSync({ firstName: 'Carol' });

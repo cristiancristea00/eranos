@@ -7,7 +7,7 @@
 use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
-use eranos::{Currency, MemberId};
+use eranos::{CurrencyCode, MemberId};
 
 use super::*;
 use crate::expense_group::ExpenseGroupHandle;
@@ -24,7 +24,7 @@ struct Flat {
 }
 
 fn flat() -> Flat {
-    let mut group = ExpenseGroup::builder("Flat", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group
@@ -37,14 +37,14 @@ fn flat() -> Flat {
         .add_category(eranos::Category::new("Food").unwrap())
         .unwrap();
     let day = eranos::CalendarDate::new(2026, 9, 23).unwrap();
-    let cost = eranos::Money::from_minor_units(3_000, Currency::EUR);
+    let cost = eranos::Money::from_minor_units(3_000, CurrencyCode::EUR);
     let split = eranos::Split::equal([ana, bob]);
     let dinner = eranos::Expense::builder("Dinner", cost, ana, split, day)
         .category(food)
         .build()
         .unwrap();
     let dinner = group.add_expense(dinner).unwrap();
-    let paid = eranos::Money::from_minor_units(1_000, Currency::EUR);
+    let paid = eranos::Money::from_minor_units(1_000, CurrencyCode::EUR);
     let repayment = eranos::Transfer::builder(bob, ana, paid, day)
         .build()
         .unwrap();

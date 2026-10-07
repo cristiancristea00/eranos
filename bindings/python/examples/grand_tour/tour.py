@@ -16,7 +16,7 @@ from eranos import (
     CategoryId,
     ConvertedCost,
     Cost,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     Expense,
     ExpenseGroup,
@@ -182,7 +182,7 @@ def eur(text: str) -> Money:
         The amount.
 
     """
-    return Money.parse(text, Currency('EUR'))
+    return Money.parse(text, CurrencyCode('EUR'))
 
 
 def ron(text: str) -> Money:
@@ -196,7 +196,7 @@ def ron(text: str) -> Money:
         The amount.
 
     """
-    return Money.parse(text, Currency('RON'))
+    return Money.parse(text, CurrencyCode('RON'))
 
 
 def october(day: int) -> CalendarDate:
@@ -381,7 +381,7 @@ def _transfer_row(group: ExpenseGroup, transfer: Transfer) -> EntryRow:
     )
 
 
-def print_entries(group: ExpenseGroup, shown: Callable[[Currency], bool]) -> None:
+def print_entries(group: ExpenseGroup, shown: Callable[[CurrencyCode], bool]) -> None:
     """
     Print every expense and transfer in a currency shown accepts, as entered and in the group currency.
 

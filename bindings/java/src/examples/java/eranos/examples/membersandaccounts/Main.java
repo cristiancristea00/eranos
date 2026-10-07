@@ -8,7 +8,7 @@ import static eranos.examples.Report.totals;
 import eranos.Balance;
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.Email;
 import eranos.EranosException;
 import eranos.Expense;
@@ -225,7 +225,7 @@ public final class Main {
 
     private static void movingOut(ExpenseGroup group, Flatmates flatmates) throws EranosException {
         section("3. A flatmate moves out");
-        Currency euro = Currency.of("EUR");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         MemberId ana = flatmates.ana();
         MemberId bob = flatmates.bob();
         ExpenseSplit both = new ExpenseSplit.Whole(new Split.Equal(List.of(ana, bob)));
@@ -281,7 +281,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        try (ExpenseGroup group = ExpenseGroup.builder("Flat 4B", Currency.of("EUR")).build()) {
+        try (ExpenseGroup group = ExpenseGroup.builder("Flat 4B", CurrencyCode.of("EUR")).build()) {
             System.out.println("Flat 4B: members and their accounts");
             System.out.println("═══════════════════════════════════");
             System.out.print(

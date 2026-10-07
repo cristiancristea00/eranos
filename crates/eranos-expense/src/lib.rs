@@ -46,16 +46,16 @@ use eranos_money::{Cost, ExchangeRate, Money};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Expense, Money, Percentage, Split, TipRule};
+/// use eranos::{CurrencyCode, CalendarDate, Expense, Money, Percentage, Split, TipRule};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob, carol) = (MemberId::generate(), MemberId::generate(), MemberId::generate());
-/// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+/// let (amount, date) = (Money::parse("90.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
 /// let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), date)
 ///     .tip(TipRule::percentage(Percentage::parse("10")?))
 ///     .build()?;
-/// assert_eq!(dinner.tip_amount(), Money::parse("9.00", Currency::EUR)?);
-/// assert_eq!(dinner.total(), Money::parse("99.00", Currency::EUR)?);
+/// assert_eq!(dinner.tip_amount(), Money::parse("9.00", CurrencyCode::EUR)?);
+/// assert_eq!(dinner.total(), Money::parse("99.00", CurrencyCode::EUR)?);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -258,11 +258,11 @@ impl Expense {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{CalendarDate, Currency, ExchangeRate, Expense, Money, Split};
+    /// use eranos::{CalendarDate, CurrencyCode, ExchangeRate, Expense, Money, Split};
     /// use eranos::id::MemberId;
     ///
     /// let ana = MemberId::generate();
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let (amount, day) = (Money::parse("20.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
     /// let museum = Expense::builder("Museum", amount, ana, Split::equal([ana]), day).build()?;
     /// let rate = ExchangeRate::parse("4.97")?;
     /// assert_eq!(museum.with_exchange_rate(Some(rate)).cost(), amount.at(rate));
@@ -292,11 +292,11 @@ impl Expense {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{CalendarDate, CategoryId, Currency, Expense, Money, Split};
+    /// use eranos::{CalendarDate, CategoryId, CurrencyCode, Expense, Money, Split};
     /// use eranos::id::MemberId;
     ///
     /// let (ana, food) = (MemberId::generate(), CategoryId::generate());
-    /// let (amount, day) = (Money::parse("12.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let (amount, day) = (Money::parse("12.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
     /// let lunch = Expense::builder("Lunch", amount, ana, Split::equal([ana]), day)
     ///     .category(food)
     ///     .build()?;

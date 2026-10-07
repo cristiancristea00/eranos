@@ -3,7 +3,7 @@
 package eranos.examples.grandtour
 
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.ExchangeRate
 import eranos.Expense
 import eranos.ExpenseGroup
@@ -56,12 +56,12 @@ internal suspend fun sharing(
         printTable(PaymentRow.HEADERS, rows, numbersFrom = 2)
 
         val before = group.summary()
-        val rates = mapOf(Currency.of("RON") to ExchangeRate.parse("0.2"))
+        val rates = mapOf(CurrencyCode.of("RON") to ExchangeRate.parse("0.2"))
         // A report reads the group, holding the shared lock meanwhile, so the change waits for it; a new read would wait
         // behind the change, so the report reads through its own handle.
         val report = group.read()
         // Started at once, the change runs until it waits for the report's lock.
-        val change = launch(start = CoroutineStart.UNDISPATCHED) { group.changeCurrency(Currency.of("EUR"), rates) }
+        val change = launch(start = CoroutineStart.UNDISPATCHED) { group.changeCurrency(CurrencyCode.of("EUR"), rates) }
         val reported = report.summary().totalSpent
         // Cancelling the coroutine cancels the waiting change, which leaves the group as it was.
         change.cancel()
@@ -83,5 +83,5 @@ internal suspend fun sharing(
         check(change.isCancelled)
         check(before == after)
         check(reported == after.totalSpent)
-        check(Currency.of("RON") == currency)
+        check(CurrencyCode.of("RON") == currency)
     }

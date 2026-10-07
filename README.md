@@ -36,26 +36,26 @@ library itself is plain Rust with no I/O and no async runtime.
 
 ```rust
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
+    Balance, CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
     Split, TipRule,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
     let carol = group.add_member(Member::builder("Carol").build()?)?;
 
     // Ana paid dinner for three, plus a 10 % tip.
-    let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    let (amount, day) = (Money::parse("90.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
     let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), day)
         .tip(TipRule::percentage(Percentage::parse("10")?))
         .build()?;
     group.add_expense(dinner)?;
 
     let summary = group.summary();
-    assert_eq!(summary.total_spent(), Money::parse("99.00", Currency::EUR)?);
-    assert_eq!(summary.member(bob).balance(), Balance::Owes(Money::parse("33.00", Currency::EUR)?));
+    assert_eq!(summary.total_spent(), Money::parse("99.00", CurrencyCode::EUR)?);
+    assert_eq!(summary.member(bob).balance(), Balance::Owes(Money::parse("33.00", CurrencyCode::EUR)?));
 
     // Bob and Carol each pay Ana back 33.00.
     let settlement = group.settlement(SettlementStrategy::MinimumTransfers)?;

@@ -8,7 +8,7 @@
 
 // IWYU pragma: private, include "eranos.hpp"
 
-#include "eranos/currency.hpp"
+#include "eranos/currency_code.hpp"
 #include "eranos/detail/declarations.hpp"
 #include "eranos/error.hpp"
 
@@ -27,7 +27,7 @@ struct Money final {
     ///
     /// @param minorUnits The amount in minor units: cents for the euro, none for the yen
     /// @param currency The currency
-    Money(std::int64_t const minorUnits, Currency currency) noexcept : minorUnits(minorUnits), currency(std::move(currency)) {}
+    Money(std::int64_t const minorUnits, CurrencyCode currency) noexcept : minorUnits(minorUnits), currency(std::move(currency)) {}
 
     /// The amount written @p text in @p currency: "12.50", "12.5", or "-3".
     ///
@@ -35,13 +35,13 @@ struct Money final {
     /// @param currency The currency
     /// @return The amount, or an error of the kind ErrorKind::MONEY for text that is not an amount of the currency, and ErrorKind::INVALID_TEXT for
     ///   text that is not UTF-8
-    [[nodiscard]] static std::expected<Money, Error> parse(std::string_view const text, Currency const &currency);
+    [[nodiscard]] static std::expected<Money, Error> parse(std::string_view const text, CurrencyCode const &currency);
 
     /// The amount in minor units: cents for the euro, none for the yen.
     std::int64_t minorUnits;
 
     /// The currency.
-    Currency currency;
+    CurrencyCode currency;
 
     /// This amount plus @p other.
     ///
@@ -75,7 +75,7 @@ namespace detail {
 
 } // namespace detail
 
-inline std::expected<Money, Error> Money::parse(std::string_view const text, Currency const &currency) {
+inline std::expected<Money, Error> Money::parse(std::string_view const text, CurrencyCode const &currency) {
     return detail::expectedOf(detail::EranosMoney::parse(text, currency.code())).transform([](auto const &amount) {
         return detail::fromDetail(*amount);
     });

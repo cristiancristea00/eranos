@@ -27,7 +27,7 @@ fn day() -> CalendarDate {
 }
 
 fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn person(name: &str) -> Member {
@@ -45,7 +45,7 @@ fn shared_by(amount: Money, payer: MemberId, participants: &[MemberId]) -> Expen
 /// seventeenth: seventeen open balances, so the exact solver yields once,
 /// holding the shared lock.
 fn owed_by_a_hub() -> ExpenseGroup {
-    let mut group = ExpenseGroup::builder("Club", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Club", CurrencyCode::EUR)
         .build()
         .unwrap();
     let hub = group.add_member(person("Hub")).unwrap();
@@ -61,7 +61,7 @@ fn owed_by_a_hub() -> ExpenseGroup {
 /// A group of 2 100 expenses, so a currency change yields twice, holding
 /// the exclusive lock.
 fn busy() -> ExpenseGroup {
-    let mut group = ExpenseGroup::builder("Office", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Office", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
@@ -77,7 +77,7 @@ fn busy() -> ExpenseGroup {
 /// The rates that move [`busy`] to lei.
 fn lei() -> [CurrencyRate; 1] {
     [CurrencyRate::new(
-        Currency::EUR,
+        CurrencyCode::EUR,
         ExchangeRate::parse("5").unwrap(),
     )]
 }
@@ -86,7 +86,7 @@ fn lei() -> [CurrencyRate; 1] {
 #[derive(Debug, PartialEq)]
 struct Contents {
     name: String,
-    currency: Currency,
+    currency: CurrencyCode,
     description: Option<String>,
     language: Option<Language>,
     members: Vec<Member>,
@@ -163,7 +163,7 @@ struct Trip {
 }
 
 fn trip() -> Trip {
-    let mut group = ExpenseGroup::builder("Trip", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR)
         .description("Autumn")
         .build()
         .unwrap();
@@ -335,8 +335,8 @@ fn every_change_does_what_the_group_does() {
     block_on(shared.set_language(portuguese.clone()));
     group.set_language(portuguese);
     assert_eq!(
-        block_on(shared.change_currency(Currency::RON, lei())),
-        group.change_currency(Currency::RON, &lei())
+        block_on(shared.change_currency(CurrencyCode::RON, lei())),
+        group.change_currency(CurrencyCode::RON, &lei())
     );
 
     assert_eq!(shared_contents(&shared), contents_of(&group));
@@ -395,14 +395,14 @@ fn a_dropped_call_changes_nothing_and_releases_the_lock() {
     {
         // The change holds the exclusive lock at its first yield, and a
         // read waits for it.
-        let mut change = pin!(shared.change_currency(Currency::RON, lei()));
+        let mut change = pin!(shared.change_currency(CurrencyCode::RON, lei()));
         assert!(change.as_mut().poll(&mut context).is_pending());
         let mut read = pin!(shared.currency());
         assert!(read.as_mut().poll(&mut context).is_pending());
     }
     assert_eq!(
         pin!(shared.currency()).poll(&mut context),
-        Poll::Ready(Currency::EUR)
+        Poll::Ready(CurrencyCode::EUR)
     );
     assert_eq!(shared_contents(&shared), before);
 }
@@ -414,7 +414,7 @@ fn a_dropped_call_changes_nothing_and_releases_the_lock() {
 fn debug_never_locks() {
     let shared = SharedExpenseGroup::new(busy());
     let mut context = Context::from_waker(Waker::noop());
-    let mut change = pin!(shared.change_currency(Currency::RON, lei()));
+    let mut change = pin!(shared.change_currency(CurrencyCode::RON, lei()));
     assert!(change.as_mut().poll(&mut context).is_pending());
     assert_eq!(format!("{shared:?}"), "SharedExpenseGroup { .. }");
 }
@@ -437,7 +437,7 @@ fn every_call_is_send_static_and_small() {
         size_of_call(&shared.name()),
         size_of_call(&shared.set_name("Club")),
         size_of_call(&shared.currency()),
-        size_of_call(&shared.change_currency(Currency::RON, lei())),
+        size_of_call(&shared.change_currency(CurrencyCode::RON, lei())),
         size_of_call(&shared.description()),
         size_of_call(&shared.set_description("Weekly")),
         size_of_call(&shared.language()),
@@ -513,7 +513,7 @@ fn trying_the_lock_fails_as_busy_while_another_call_holds_it() {
     let mut context = Context::from_waker(Waker::noop());
     let office = SharedExpenseGroup::new(busy());
     {
-        let mut change = pin!(office.change_currency(Currency::RON, lei()));
+        let mut change = pin!(office.change_currency(CurrencyCode::RON, lei()));
         assert!(change.as_mut().poll(&mut context).is_pending());
         assert!(office.is_locked());
         assert_eq!(office.try_read().map(|_| ()), Err(ExpenseGroupError::Busy));

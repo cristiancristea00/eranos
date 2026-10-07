@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type PaymentAccount, Currency, Email, ExpenseGroup, ExpenseGroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
+import { type PaymentAccount, CurrencyCode, Email, ExpenseGroup, ExpenseGroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
 import { type Categories, type People, cell, outcome, refusalColumns } from './tour.js';
 
@@ -48,7 +48,7 @@ const checkColumns: Columns<CheckRow> = [
 
 export function theGroup(): ExpenseGroup {
     section('1. The group');
-    const group = ExpenseGroup.create('Lisbon', Currency.of('EUR'), { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
+    const group = ExpenseGroup.create('Lisbon', CurrencyCode.of('EUR'), { description: 'A week by the Atlantic', language: Language.parse('pt-pt') });
     const blank = refusal(() => {
         group.setNameSync('   ');
     });

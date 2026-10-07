@@ -72,7 +72,7 @@ pub(crate) fn currency(group: &ExpenseGroup) -> String {
 /// A currency change, in the library's values.
 pub(crate) struct CurrencyChange {
     /// The new group currency.
-    pub(crate) currency: eranos::Currency,
+    pub(crate) currency: eranos::CurrencyCode,
     /// The rate into it of every other currency in use.
     pub(crate) rates: Vec<eranos::CurrencyRate>,
 }

@@ -7,14 +7,14 @@
 
 use super::*;
 
-use crate::Currency;
+use crate::CurrencyCode;
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn lei(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::RON)
+    Money::from_minor_units(minor_units, CurrencyCode::RON)
 }
 
 fn rate(text: &str) -> ExchangeRate {
@@ -52,7 +52,7 @@ fn at_converts_an_amount_at_its_rate() {
 /// US dollar group, would be taken for a local cost and refused.
 #[test]
 fn a_conversion_at_one_is_not_a_local_cost() {
-    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
+    let bermudian_dollars = Money::from_minor_units(5_000, CurrencyCode::BMD);
     let pegged = bermudian_dollars.at(ExchangeRate::ONE);
     assert_ne!(pegged, Cost::from(bermudian_dollars));
     assert_eq!(pegged.exchange_rate(), ExchangeRate::ONE);
@@ -133,7 +133,7 @@ impl FromCost for ConvertedCost {
 #[test]
 fn a_cost_converts_through_the_method_of_its_variant() {
     let rate = ExchangeRate::parse("0.2").unwrap();
-    let lei = Money::from_minor_units(5_000, Currency::RON);
+    let lei = Money::from_minor_units(5_000, CurrencyCode::RON);
     assert_eq!(
         ConvertedCost::from_cost(lei.at(rate)),
         ConvertedCost::Converted { amount: lei, rate }

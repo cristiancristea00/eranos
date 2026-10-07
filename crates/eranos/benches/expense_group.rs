@@ -14,8 +14,8 @@ use std::iter;
 
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
 use eranos::{
-    CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup, Member, MemberId,
-    Money, Split, Transfer,
+    CalendarDate, CurrencyCode, CurrencyRate, ExchangeRate, Expense, ExpenseGroup, Member,
+    MemberId, Money, Split, Transfer,
 };
 
 /// The numbers of expenses measured: a busy year of a household, and ten.
@@ -24,7 +24,7 @@ const SIZES: [usize; 2] = [1_000, 10_000];
 /// A group of six with `size` expenses shared by everyone, every tenth of
 /// them in RON at a fixed rate, and a transfer for every tenth expense.
 fn group(size: usize) -> ExpenseGroup {
-    let mut group = ExpenseGroup::builder("Benchmark", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Benchmark", CurrencyCode::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     let members: Vec<MemberId> = iter::repeat_with(|| {
@@ -42,9 +42,9 @@ fn group(size: usize) -> ExpenseGroup {
     for (index, &payer) in (0_i64..).zip(members.iter().cycle()).take(size) {
         let minor_units = 100 + (index % 9_973) * 7;
         let cost = if 0 == index % 10 {
-            Money::from_minor_units(minor_units, Currency::RON).at(rate)
+            Money::from_minor_units(minor_units, CurrencyCode::RON).at(rate)
         } else {
-            Money::from_minor_units(minor_units, Currency::EUR).into()
+            Money::from_minor_units(minor_units, CurrencyCode::EUR).into()
         };
         let expense = Expense::builder("Expense", cost, payer, Split::equal(members.clone()), day)
             .build()
@@ -61,7 +61,7 @@ fn group(size: usize) -> ExpenseGroup {
                 let transfer = Transfer::builder(
                     payer,
                     recipient,
-                    Money::from_minor_units(minor_units / 2, Currency::EUR),
+                    Money::from_minor_units(minor_units / 2, CurrencyCode::EUR),
                     day,
                 )
                 .build()
@@ -77,7 +77,7 @@ fn group(size: usize) -> ExpenseGroup {
 
 fn currency_changes(criterion: &mut Criterion) {
     let rates = [CurrencyRate::new(
-        Currency::EUR,
+        CurrencyCode::EUR,
         ExchangeRate::parse("4.97").unwrap_or_else(|error| panic!("{error}")),
     )];
     let mut benchmark = criterion.benchmark_group("expense_group/change currency");
@@ -92,7 +92,7 @@ fn currency_changes(criterion: &mut Criterion) {
                 // section.
                 bencher.iter_batched_ref(
                     || template.clone(),
-                    |group| black_box(group.change_currency(Currency::RON, &rates).ok()),
+                    |group| black_box(group.change_currency(CurrencyCode::RON, &rates).ok()),
                     BatchSize::LargeInput,
                 );
             },

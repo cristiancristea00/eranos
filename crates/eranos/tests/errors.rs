@@ -13,8 +13,8 @@ use eranos::error::{
     TransferError,
 };
 use eranos::{
-    CalendarDate, CategoryId, Currency, Email, ExchangeRate, ExpenseId, Iban, Language, MemberId,
-    Money, Parts, Percentage, PhoneNumber, TimeOfDay, TransferId,
+    CalendarDate, CategoryId, CurrencyCode, Email, ExchangeRate, ExpenseId, Iban, Language,
+    MemberId, Money, Parts, Percentage, PhoneNumber, TimeOfDay, TransferId,
 };
 
 /// The member every example message names.
@@ -33,7 +33,7 @@ struct Expected<Error> {
 }
 
 const fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 /// Every `IdError` variant, with its exact message.
@@ -63,8 +63,8 @@ fn money_errors() -> Vec<Expected<MoneyError>> {
     vec![
         Expected {
             error: MoneyError::CurrencyMismatch {
-                left: Currency::EUR,
-                right: Currency::USD,
+                left: CurrencyCode::EUR,
+                right: CurrencyCode::USD,
             },
             message: "cannot combine EUR and USD amounts",
         },
@@ -90,7 +90,7 @@ fn money_errors() -> Vec<Expected<MoneyError>> {
         },
         Expected {
             error: MoneyError::TooManyDecimals {
-                currency: Currency::JPY,
+                currency: CurrencyCode::JPY,
                 allowed: 0,
             },
             message: "JPY amounts have at most 0 decimal places",
@@ -203,8 +203,8 @@ fn expense_errors() -> Vec<Expected<ExpenseError>> {
         },
         Expected {
             error: ExpenseError::CurrencyMismatch {
-                expected: Currency::EUR,
-                found: Currency::USD,
+                expected: CurrencyCode::EUR,
+                found: CurrencyCode::USD,
             },
             message: "expected an amount in EUR, found one in USD",
         },
@@ -303,7 +303,7 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
         },
         Expected {
             error: ExpenseGroupError::DuplicateExchangeRate {
-                currency: Currency::USD,
+                currency: CurrencyCode::USD,
             },
             message: "two exchange rates were given for USD",
         },
@@ -333,7 +333,7 @@ fn group_errors() -> Vec<Expected<ExpenseGroupError>> {
         },
         Expected {
             error: ExpenseGroupError::MissingExchangeRate {
-                currency: Currency::USD,
+                currency: CurrencyCode::USD,
             },
             message: "an exchange rate from USD into the group currency is required",
         },
@@ -578,17 +578,17 @@ fn rejected_input_never_appears_in_a_message() {
     // Amounts, ratios, and rates.
     assert_not_echoed(
         "12,345",
-        &Money::parse("12,345", Currency::EUR).unwrap_err(),
+        &Money::parse("12,345", CurrencyCode::EUR).unwrap_err(),
     );
     assert_not_echoed(
         "12.345",
-        &Money::parse("12.345", Currency::EUR).unwrap_err(),
+        &Money::parse("12.345", CurrencyCode::EUR).unwrap_err(),
     );
     assert_not_echoed("33.333", &Percentage::parse("33.333").unwrap_err());
     assert_not_echoed("0.001", &Parts::parse("0.001").unwrap_err());
     assert_not_echoed("4,9765", &ExchangeRate::parse("4,9765").unwrap_err());
     // Codes, dates, identifiers, and tags.
-    assert_not_echoed("XYZ", &Currency::from_code("XYZ").unwrap_err());
+    assert_not_echoed("XYZ", &CurrencyCode::from_code("XYZ").unwrap_err());
     assert_not_echoed(
         "2026-02-30",
         &CalendarDate::parse("2026-02-30").unwrap_err(),

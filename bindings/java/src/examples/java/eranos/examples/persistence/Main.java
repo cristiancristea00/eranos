@@ -8,7 +8,7 @@ import static eranos.examples.Report.totals;
 
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.Expense;
 import eranos.ExpenseGroup;
@@ -64,7 +64,7 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        Currency euro = Currency.of("EUR");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         CalendarDate day = CalendarDate.of(2026, 9, 23);
         try (ExpenseGroup group = ExpenseGroup.builder("Road trip", euro).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());

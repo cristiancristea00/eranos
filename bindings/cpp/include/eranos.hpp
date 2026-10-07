@@ -17,7 +17,7 @@
 #include "eranos/calendar.hpp"             // IWYU pragma: export
 #include "eranos/category.hpp"             // IWYU pragma: export
 #include "eranos/contact.hpp"              // IWYU pragma: export
-#include "eranos/currency.hpp"             // IWYU pragma: export
+#include "eranos/currency_code.hpp"        // IWYU pragma: export
 #include "eranos/error.hpp"                // IWYU pragma: export
 #include "eranos/expense.hpp"              // IWYU pragma: export
 #include "eranos/expense_group.hpp"        // IWYU pragma: export

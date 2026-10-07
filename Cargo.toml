@@ -97,7 +97,7 @@ icu_properties = { version = "2.3", default-features = false, features = ["compi
 # Pinned exactly: a release that changes the list changes which saved amounts
 # load and what they mean, so it arrives only with an eranos release
 # (docs/DEVELOPMENT.md § 3.2). Without the default `serde` feature: eranos
-# serialises the code itself. Its type stays inside `Currency`, so replacing
+# serialises the code itself. Its type stays inside `CurrencyCode`, so replacing
 # it is not a breaking change.
 iso4217-static = { version = "=0.2.4", default-features = false }
 # Calendar dates and times of day, and the ISO 8601 parser behind

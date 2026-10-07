@@ -156,7 +156,7 @@ func synchronousChangesToEntriesAndDetailsTakeEffect() throws {
     #expect(try group.language() == Language("ro"))
     try group.changeLanguage(to: nil)
     #expect(try nil == group.language())
-    let lei = try Currency(code: "RON")
+    let lei = try CurrencyCode(code: "RON")
     try group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try group.summary().totalSpent == Money(minorUnits: 15_000, currency: lei))
 }
@@ -202,7 +202,7 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     #expect(try await "ro" == group.language()?.description)
     try await group.changeDescription(to: nil)
     #expect(try await nil == group.description())
-    let lei = try Currency(code: "RON")
+    let lei = try CurrencyCode(code: "RON")
     try await group.changeCurrency(to: lei, rates: [flat.euro: ExchangeRate(parsing: "5")])
     #expect(try await group.currency() == lei)
 }
@@ -211,7 +211,7 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
 /// not the saved form, would start an app from another group than the user made.
 @Test
 func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
-    let euro = try Currency(code: "EUR")
+    let euro = try CurrencyCode(code: "EUR")
     let plain = try ExpenseGroup(name: "Trip", currency: euro)
     #expect(try await nil == plain.description())
     #expect(try await nil == plain.language())

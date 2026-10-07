@@ -6,7 +6,7 @@ from eranos import (
     PaymentAccountError,
     CalendarDate,
     CalendarError,
-    Currency,
+    CurrencyCode,
     Email,
     ExchangeRate,
     Iban,
@@ -25,32 +25,32 @@ from eranos import (
 
 def test_a_currency_holds_what_the_library_knows_of_it() -> None:
     """A currency whose details came out wrong would format every amount in it wrongly."""
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     assert euro.code == 'EUR'
     assert euro.name == 'Euro'
     assert euro.numeric_code == 978
     assert euro.decimal_places == 2
-    assert Currency('JPY').decimal_places == 0
-    assert euro == Currency('EUR')
-    assert euro != Currency('JPY')
+    assert CurrencyCode('JPY').decimal_places == 0
+    assert euro == CurrencyCode('EUR')
+    assert euro != CurrencyCode('JPY')
     assert euro != 'EUR'
-    assert hash(euro) == hash(Currency('EUR'))
-    assert euro < Currency('JPY')
-    assert repr(euro) == "Currency('EUR')"
+    assert hash(euro) == hash(CurrencyCode('EUR'))
+    assert euro < CurrencyCode('JPY')
+    assert repr(euro) == "CurrencyCode('EUR')"
     assert str(euro) == 'EUR'
 
 
 def test_every_currency_the_library_lists_is_listed_by_code() -> None:
     """A list that missed a currency or came out of order would hide one from the currency pickers of an app."""
-    listed = Currency.all()
+    listed = CurrencyCode.all()
     assert list(listed) == sorted(listed)
-    assert Currency('EUR') in listed
+    assert CurrencyCode('EUR') in listed
 
 
 def test_a_code_the_library_does_not_list_is_refused() -> None:
     """A code the library does not list, taken, would make an amount no call can format."""
     with pytest.raises(MoneyError) as refused:
-        Currency('XYZ')
+        CurrencyCode('XYZ')
     assert refused.value.failure == MoneyError.UnknownCurrency()
     assert str(refused.value) == 'unknown currency code'
 
@@ -58,12 +58,12 @@ def test_a_code_the_library_does_not_list_is_refused() -> None:
 def test_text_that_is_not_utf8_is_refused_before_the_library_sees_it() -> None:
     """Text with a lone surrogate, passed on, would reach the library as text it cannot hold."""
     with pytest.raises(UnicodeEncodeError):
-        Currency('\ud800')
+        CurrencyCode('\ud800')
 
 
 def test_an_amount_parses_and_formats_as_the_library_writes_it() -> None:
     """An amount that parsed or formatted otherwise than the library does would show one number in an app and store another."""
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     price = Money.parse('12.5', euro)
     assert price == Money(1250, euro)
     assert str(price) == '12.50 EUR'
@@ -77,8 +77,8 @@ def test_an_amount_parses_and_formats_as_the_library_writes_it() -> None:
 
 def test_amounts_in_one_currency_add_and_subtract() -> None:
     """Arithmetic that mixed currencies or wrapped around would put a wrong total in a report."""
-    euro = Currency('EUR')
-    lei = Currency('RON')
+    euro = CurrencyCode('EUR')
+    lei = CurrencyCode('RON')
     assert Money(1000, euro).plus(Money(250, euro)) == Money(1250, euro)
     assert Money(1000, euro).minus(Money(250, euro)) == Money(750, euro)
     with pytest.raises(MoneyError) as mixed:
@@ -94,8 +94,8 @@ def test_amounts_in_one_currency_add_and_subtract() -> None:
 
 def test_a_rate_parses_and_converts_as_the_library_does() -> None:
     """A rate that parsed or converted otherwise than the library does would change the share of every converted expense."""
-    euro = Currency('EUR')
-    lei = Currency('RON')
+    euro = CurrencyCode('EUR')
+    lei = CurrencyCode('RON')
     rate = ExchangeRate('4.970')
     assert str(rate) == '4.97'
     assert rate == ExchangeRate('4.97')

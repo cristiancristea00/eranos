@@ -10,7 +10,7 @@ import {
     type ExpenseItem,
     type MemberId,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExpenseGroup,
     Money,
     Parts,
@@ -58,7 +58,7 @@ const tipColumns: Columns<TipRow> = [
 
 /** The amount written `text`, in euros. */
 function eur(text: string): Money {
-    return Money.parse(text, Currency.of('EUR'));
+    return Money.parse(text, CurrencyCode.of('EUR'));
 }
 
 /** The receipt: every line with the members who had it. */
@@ -96,7 +96,7 @@ function consumed(shares: ExpenseShares | undefined, member: MemberId): Money | 
 }
 
 await load();
-using group = ExpenseGroup.create("Dinner at Caru' cu Bere", Currency.of('EUR'));
+using group = ExpenseGroup.create("Dinner at Caru' cu Bere", CurrencyCode.of('EUR'));
 const ana = group.addMemberSync({ firstName: 'Ana' });
 const bob = group.addMemberSync({ firstName: 'Bob' });
 const carol = group.addMemberSync({ firstName: 'Carol' });

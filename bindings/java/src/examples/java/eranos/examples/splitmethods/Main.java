@@ -8,7 +8,7 @@ import static eranos.examples.Report.totals;
 
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.Expense;
 import eranos.ExpenseGroup;
@@ -72,7 +72,7 @@ public final class Main {
     }
 
     private static Money eur(String text) throws EranosException {
-        return Money.parse(text, Currency.of("EUR"));
+        return Money.parse(text, CurrencyCode.of("EUR"));
     }
 
     /**
@@ -309,7 +309,7 @@ public final class Main {
      */
     public static void main(String[] arguments) throws EranosException {
         try (ExpenseGroup group =
-                ExpenseGroup.builder("Family holiday", Currency.of("EUR")).build()) {
+                ExpenseGroup.builder("Family holiday", CurrencyCode.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             CalendarDate day = CalendarDate.of(2026, 7, 14);

@@ -57,7 +57,7 @@ struct TotalRow final {
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The family and the day every expense happened.
 struct Family final {
@@ -214,7 +214,7 @@ void totals(ExpenseGroup const &group) {
 
 /// Runs the example.
 void run() {
-    auto group = must(ExpenseGroup::create("Family holiday", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Family holiday", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
     auto const mia = must(group.addMember(Member("Mia")));

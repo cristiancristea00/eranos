@@ -1,10 +1,10 @@
-/// @file eranos/currency.hpp
+/// @file eranos/currency_code.hpp
 /// The currencies of the ISO 4217 list, with what the library knows of each.
 ///
 /// A part of eranos.hpp, which includes every part and then the conversions their functions call: include eranos.hpp.
 
-#ifndef ERANOS_CURRENCY_HPP
-#define ERANOS_CURRENCY_HPP
+#ifndef ERANOS_CURRENCY_CODE_HPP
+#define ERANOS_CURRENCY_CODE_HPP
 
 // IWYU pragma: private, include "eranos.hpp"
 
@@ -25,26 +25,26 @@ namespace eranos {
 
 namespace detail {
 
-[[nodiscard]] inline Currency currencyOf(EranosCurrencyDetails const &details);
-[[nodiscard]] inline Currency listedCurrency(std::string_view const code);
+[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details);
+[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code);
 
 } // namespace detail
 
 /// A currency of the ISO 4217 list, with what the library knows of it: only the library's list makes one, so an amount
 /// in it always formats.
-class Currency final {
+class CurrencyCode final {
   public:
     /// The currency of the ISO 4217 code @p code: "EUR".
     ///
     /// @param code The ISO 4217 code
     /// @return The currency, or an error of the kind ErrorKind::MONEY for a code the library does not list, and ErrorKind::INVALID_TEXT for text that
     ///   is not UTF-8
-    [[nodiscard]] static std::expected<Currency, Error> of(std::string_view const code);
+    [[nodiscard]] static std::expected<CurrencyCode, Error> of(std::string_view const code);
 
     /// Every currency the library lists, by code.
     ///
     /// @return The currencies
-    [[nodiscard]] static std::vector<Currency> all();
+    [[nodiscard]] static std::vector<CurrencyCode> all();
 
     /// The ISO 4217 code: "EUR".
     ///
@@ -71,19 +71,21 @@ class Currency final {
     /// @param left A currency
     /// @param right Another currency
     /// @return Whether they are the same currency
-    [[nodiscard]] friend bool operator==(Currency const &left, Currency const &right) noexcept { return left.fields.code == right.fields.code; }
+    [[nodiscard]] friend bool operator==(CurrencyCode const &left, CurrencyCode const &right) noexcept {
+        return left.fields.code == right.fields.code;
+    }
 
     /// How two currencies order, by code.
     ///
     /// @param left A currency
     /// @param right Another currency
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(Currency const &left, Currency const &right) noexcept {
+    [[nodiscard]] friend std::strong_ordering operator<=>(CurrencyCode const &left, CurrencyCode const &right) noexcept {
         return left.fields.code <=> right.fields.code;
     }
 
   private:
-    friend Currency detail::currencyOf(detail::EranosCurrencyDetails const &details);
+    friend CurrencyCode detail::currencyOf(detail::EranosCurrencyDetails const &details);
 
     /// What the library knows of the currency.
     struct Fields final {
@@ -93,20 +95,20 @@ class Currency final {
         std::int32_t decimalPlaces;
     };
 
-    explicit Currency(Fields fields) noexcept : fields(std::move(fields)) {}
+    explicit CurrencyCode(Fields fields) noexcept : fields(std::move(fields)) {}
 
     Fields fields;
 };
 
-inline std::expected<Currency, Error> Currency::of(std::string_view const code) {
+inline std::expected<CurrencyCode, Error> CurrencyCode::of(std::string_view const code) {
     return detail::expectedOf(detail::EranosCurrencyDetails::of(code)).transform([](std::unique_ptr<detail::EranosCurrencyDetails> const &details) {
         return detail::currencyOf(*details);
     });
 }
 
-inline std::vector<Currency> Currency::all() {
+inline std::vector<CurrencyCode> CurrencyCode::all() {
     auto const list = detail::EranosCurrencyDetailsList::all();
-    std::vector<Currency> result;
+    std::vector<CurrencyCode> result;
     result.reserve(list->len());
     for (std::size_t index = 0; index < list->len(); ++index) {
         result.push_back(detail::currencyOf(*list->get(index)));
@@ -116,4 +118,4 @@ inline std::vector<Currency> Currency::all() {
 
 } // namespace eranos
 
-#endif // ERANOS_CURRENCY_HPP
+#endif // ERANOS_CURRENCY_CODE_HPP

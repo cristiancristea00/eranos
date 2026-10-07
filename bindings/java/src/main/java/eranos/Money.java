@@ -13,7 +13,7 @@ import java.util.Objects;
  * @param minorUnits the amount in minor units: cents for the euro, none for the yen
  * @param currency the currency
  */
-public record Money(long minorUnits, Currency currency) {
+public record Money(long minorUnits, CurrencyCode currency) {
     /**
      * The amount of {@code minorUnits} minor units of {@code currency}.
      *
@@ -34,7 +34,7 @@ public record Money(long minorUnits, Currency currency) {
      *     decimal number, and {@link MoneyFailure.TooManyDecimals} for more decimal places than the
      *     currency has
      */
-    public static Money parse(String text, Currency currency) throws EranosException {
+    public static Money parse(String text, CurrencyCode currency) throws EranosException {
         return Converting.call(() -> converted(Eranos.moneyParse(text, currency.code())));
     }
 
@@ -45,7 +45,7 @@ public record Money(long minorUnits, Currency currency) {
      * @return the amount
      */
     static Money converted(eranos.internal.Money money) {
-        return new Money(money.minorUnits(), Currency.known(money.currency()));
+        return new Money(money.minorUnits(), CurrencyCode.known(money.currency()));
     }
 
     /**

@@ -13,7 +13,7 @@ use std::iter;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, MemberParts, Money, Parts,
+    CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, MemberId, MemberParts, Money, Parts,
     SettlementStrategy, Split,
 };
 
@@ -30,7 +30,7 @@ fn expense(minor_units: i64, payer: MemberId, members: &[MemberId]) -> Expense {
     let day = CalendarDate::new(2026, 9, 23).unwrap_or_else(|error| panic!("{error}"));
     Expense::builder(
         "Expense",
-        Money::from_minor_units(minor_units, Currency::EUR),
+        Money::from_minor_units(minor_units, CurrencyCode::EUR),
         payer,
         parts(members),
         day,
@@ -55,7 +55,7 @@ struct Household {
 /// A household of six with `EXISTING` expenses, each paid by the next member
 /// in turn.
 fn household() -> Household {
-    let mut group = ExpenseGroup::builder("Benchmark", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Benchmark", CurrencyCode::EUR)
         .build()
         .unwrap_or_else(|error| panic!("{error}"));
     let members: Vec<MemberId> = iter::repeat_with(|| {
@@ -85,7 +85,7 @@ fn mutations(criterion: &mut Criterion) {
     // A new version of `added`, so it replaces `added` under its identifier.
     let replacement = added
         .to_builder()
-        .cost(Money::from_minor_units(54_321, Currency::EUR))
+        .cost(Money::from_minor_units(54_321, CurrencyCode::EUR))
         .paid_by(second)
         .split(parts(&[first, second, reader]))
         .build()

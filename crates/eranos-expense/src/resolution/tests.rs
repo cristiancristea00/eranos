@@ -29,7 +29,7 @@ fn entry(number: u8) -> ExpenseId {
 }
 
 fn eur(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn day() -> CalendarDate {
@@ -105,7 +105,7 @@ fn a_single_payer_is_owed_every_other_share() {
     )
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&taxi, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&taxi, entry(1)), CurrencyCode::EUR).unwrap();
 
     // 10.00 among three is 3.34 + 3.33 + 3.33.
     let consumed: Vec<i64> = rows(&resolved).iter().map(|row| row.share).collect();
@@ -138,7 +138,7 @@ fn a_proportional_tip_follows_the_shares() {
     .tip(TipRule::percentage(Percentage::parse("10").unwrap()))
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&dinner, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&dinner, entry(1)), CurrencyCode::EUR).unwrap();
 
     // 60.00 + 6.00 and 30.00 + 3.00; Ana paid the 99.00 total.
     assert_eq!(
@@ -165,7 +165,7 @@ fn an_equal_tip_ignores_the_shares() {
     .tip(TipRule::percentage(Percentage::parse("10").unwrap()).distributed(TipDistribution::Equal))
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&dinner, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&dinner, entry(1)), CurrencyCode::EUR).unwrap();
 
     assert_eq!(
         rows(&resolved),
@@ -189,7 +189,7 @@ fn items_divide_by_their_own_splits() {
         .tip(TipRule::fixed(eur(210)))
         .build()
         .unwrap();
-    let resolved = resolve_expense(&identified(&bill, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&bill, entry(1)), CurrencyCode::EUR).unwrap();
 
     // Ana: 12.00 + 4.50 = 16.50 plus 16.50/21 of the 2.10 tip (1.65).
     // Bob: 4.50 plus 0.45 of tip; Bob paid the 23.10 total.
@@ -217,7 +217,7 @@ fn several_payers_are_each_owed_their_proportion() {
     )
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&hotel, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&hotel, entry(1)), CurrencyCode::EUR).unwrap();
 
     // Ana's 60.00 covers 15.00 of each share, Bob's 40.00 the other 10.00.
     assert_eq!(
@@ -257,12 +257,12 @@ fn a_foreign_expense_converts_its_total_once() {
     )
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&museum, entry(1)), Currency::RON).unwrap();
+    let resolved = resolve_expense(&identified(&museum, entry(1)), CurrencyCode::RON).unwrap();
 
     // 10.00 EUR × 4.9765 = 49.765 RON, rounded half up to 49.77.
     assert_eq!(
         resolved.shares.total(),
-        Money::from_minor_units(4977, Currency::RON)
+        Money::from_minor_units(4977, CurrencyCode::RON)
     );
     let consumed: Vec<i64> = rows(&resolved).iter().map(|row| row.share).collect();
     assert_eq!(consumed.iter().sum::<i64>(), 4977);
@@ -285,12 +285,12 @@ fn resolving_at_a_rate_resolves_the_expense_at_that_rate() {
     );
     let converted = local.clone().with_exchange_rate(Some(rate));
     assert_eq!(
-        resolve_expense_at(&local, Some(rate), Currency::RON),
-        resolve_expense(&converted, Currency::RON)
+        resolve_expense_at(&local, Some(rate), CurrencyCode::RON),
+        resolve_expense(&converted, CurrencyCode::RON)
     );
     assert_eq!(
-        resolve_expense_at(&converted, None, Currency::EUR),
-        resolve_expense(&local, Currency::EUR)
+        resolve_expense_at(&converted, None, CurrencyCode::EUR),
+        resolve_expense(&local, CurrencyCode::EUR)
     );
 }
 
@@ -301,15 +301,18 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
     let ana = member(1);
     let lunch = Expense::builder(
         "Lunch",
-        Money::from_minor_units(3000, Currency::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
+        Money::from_minor_units(3000, CurrencyCode::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
         ana,
         Split::equal([ana]),
         day(),
     )
-    .tip(TipRule::fixed(Money::from_minor_units(300, Currency::JPY)))
+    .tip(TipRule::fixed(Money::from_minor_units(
+        300,
+        CurrencyCode::JPY,
+    )))
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&lunch, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&lunch, entry(1)), CurrencyCode::EUR).unwrap();
 
     // 3 300 JPY × 0.0061 = 20.13 EUR, of which one eleventh is tip.
     assert_eq!(resolved.shares.total(), eur(2013));
@@ -321,7 +324,7 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
 #[test]
 fn a_conversion_at_one_converts_a_pegged_currency() {
     let ana = member(1);
-    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
+    let bermudian_dollars = Money::from_minor_units(5_000, CurrencyCode::BMD);
     // At 1, the amount is taken as is.
     let pegged = Expense::builder(
         "Ferry",
@@ -332,10 +335,10 @@ fn a_conversion_at_one_converts_a_pegged_currency() {
     )
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&pegged, entry(1)), Currency::USD).unwrap();
+    let resolved = resolve_expense(&identified(&pegged, entry(1)), CurrencyCode::USD).unwrap();
     assert_eq!(
         resolved.shares.total(),
-        Money::from_minor_units(5_000, Currency::USD)
+        Money::from_minor_units(5_000, CurrencyCode::USD)
     );
 }
 
@@ -346,7 +349,7 @@ fn a_conversion_out_of_range_is_an_overflow() {
     let ana = member(1);
     let huge = Expense::builder(
         "Huge",
-        Money::from_minor_units(i64::MAX / 2, Currency::JPY)
+        Money::from_minor_units(i64::MAX / 2, CurrencyCode::JPY)
             .at(ExchangeRate::parse("1000").unwrap()),
         ana,
         Split::equal([ana]),
@@ -355,7 +358,7 @@ fn a_conversion_out_of_range_is_an_overflow() {
     .build()
     .unwrap();
     assert_eq!(
-        resolve_expense(&identified(&huge, entry(1)), Currency::EUR),
+        resolve_expense(&identified(&huge, entry(1)), CurrencyCode::EUR),
         Err(MoneyError::Overflow)
     );
 }
@@ -368,14 +371,14 @@ fn a_payer_converted_to_nothing_is_owed_nothing() {
     // 2 JPY paid 1 + 1 at 0.0061 EUR per JPY is 1 cent in total.
     let sweets = Expense::builder_with_payers(
         "Sweets",
-        Money::from_minor_units(2, Currency::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
+        Money::from_minor_units(2, CurrencyCode::JPY).at(ExchangeRate::parse("0.0061").unwrap()),
         Split::equal([ana, bob]),
         Split::equal([ana, bob]),
         day(),
     )
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&sweets, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&sweets, entry(1)), CurrencyCode::EUR).unwrap();
     assert_eq!(resolved.shares.total(), eur(1));
     let paid: Vec<i64> = rows(&resolved).iter().map(|row| row.paid).collect();
     assert_eq!(paid.iter().sum::<i64>(), 1);
@@ -401,7 +404,7 @@ fn the_leftover_cent_rotates_with_the_expense_id() {
         .build()
         .unwrap();
     let carrier = |id: ExpenseId| {
-        let resolved = resolve_expense(&identified(&expense, id), Currency::EUR).unwrap();
+        let resolved = resolve_expense(&identified(&expense, id), CurrencyCode::EUR).unwrap();
         rows(&resolved)
             .iter()
             .find(|row| 34 == row.share)
@@ -433,7 +436,7 @@ fn random_expense(
     };
     let cost = match foreign {
         None => Cost::from(eur(amount)),
-        Some((mantissa, scale)) => Money::from_minor_units(amount, Currency::JPY)
+        Some((mantissa, scale)) => Money::from_minor_units(amount, CurrencyCode::JPY)
             .at(ExchangeRate::from_decimal(mantissa, scale).unwrap()),
     };
     let mut builder = Expense::builder_with_payers(
@@ -471,7 +474,7 @@ proptest! {
         id in any::<[u8; 16]>(),
     ) {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, equal_tip, foreign);
-        let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), Currency::EUR).unwrap();
+        let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), CurrencyCode::EUR).unwrap();
         let total = resolved.shares.total().minor_units();
         prop_assert_eq!(rows(&resolved).iter().map(|row| row.paid).sum::<i64>(), total);
         prop_assert_eq!(rows(&resolved).iter().map(|row| row.share).sum::<i64>(), total);
@@ -494,7 +497,7 @@ proptest! {
         id in any::<[u8; 16]>(),
     ) {
         let expense = random_expense(amount, &participant_parts, &payer_parts, tip_basis_points, false, foreign);
-        let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), Currency::EUR).unwrap();
+        let resolved = resolve_expense(&identified(&expense, ExpenseId::from_bytes(id)), CurrencyCode::EUR).unwrap();
         let nets = debt_nets(&resolved);
         for Row { member, paid, share } in rows(&resolved) {
             prop_assert_eq!(nets.get(&member).copied().unwrap_or(0), paid - share);
@@ -526,7 +529,7 @@ fn the_rotation_of_every_pass_is_pinned() {
     .tip(TipRule::fixed(eur(2)).distributed(TipDistribution::Equal))
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&itemised, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&itemised, entry(1)), CurrencyCode::EUR).unwrap();
     assert_eq!(
         rows(&resolved),
         vec![row(ana, 151, 101), row(bob, 152, 100), row(carol, 0, 102)]
@@ -544,14 +547,14 @@ fn the_rotation_of_every_pass_is_pinned() {
     // A conversion's re-division: 300 JPY at 0.00673 is 2.02 EUR among three.
     let foreign = Expense::builder(
         "Pinned",
-        Money::from_minor_units(300, Currency::JPY).at(ExchangeRate::parse("0.00673").unwrap()),
+        Money::from_minor_units(300, CurrencyCode::JPY).at(ExchangeRate::parse("0.00673").unwrap()),
         ana,
         Split::equal([ana, bob, carol]),
         day(),
     )
     .build()
     .unwrap();
-    let converted = resolve_expense(&identified(&foreign, entry(2)), Currency::EUR).unwrap();
+    let converted = resolve_expense(&identified(&foreign, entry(2)), CurrencyCode::EUR).unwrap();
     assert_eq!(
         rows(&converted),
         vec![row(ana, 202, 67), row(bob, 0, 68), row(carol, 0, 67)]
@@ -574,7 +577,7 @@ fn the_rotation_of_every_pass_is_pinned() {
     .build()
     .unwrap();
     assert_eq!(
-        resolve_expense(&identified(&hotel, entry(3)), Currency::EUR)
+        resolve_expense(&identified(&hotel, entry(3)), CurrencyCode::EUR)
             .unwrap()
             .debts,
         vec![
@@ -613,7 +616,7 @@ fn a_zero_portion_is_no_debt() {
     )
     .build()
     .unwrap();
-    let resolved = resolve_expense(&identified(&snack, entry(1)), Currency::EUR).unwrap();
+    let resolved = resolve_expense(&identified(&snack, entry(1)), CurrencyCode::EUR).unwrap();
     assert_eq!(
         resolved.debts,
         vec![debt(carol, ana, 98), debt(dan, ana, 1), debt(carol, bob, 1)]

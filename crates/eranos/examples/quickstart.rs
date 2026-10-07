@@ -7,7 +7,7 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money,
+    Balance, CalendarDate, CurrencyCode, Expense, ExpenseGroup, Member, MemberId, Money,
     SettlementStrategy, Split,
 };
 use tabled::settings::object::Columns;
@@ -73,7 +73,7 @@ fn names(group: &ExpenseGroup, members: impl IntoIterator<Item = MemberId>) -> S
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = ExpenseGroup::builder("Weekend in Sinaia", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Weekend in Sinaia", CurrencyCode::EUR).build()?;
     println!("{}", group.name());
     println!("{}", "═".repeat(group.name().chars().count()));
     println!(
@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
          equally."
     );
     let friday = CalendarDate::new(2026, 9, 25)?;
-    let eur = |text| Money::parse(text, Currency::EUR);
+    let eur = |text| Money::parse(text, CurrencyCode::EUR);
     let everyone = Split::equal([ana, bob, carol]);
     let cabin = Expense::builder("Cabin", eur("240.00")?, ana, everyone.clone(), friday);
     let groceries = Expense::builder("Groceries", eur("60.00")?, bob, everyone, friday);
@@ -160,11 +160,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Carol (100.00).
     assert_eq!(
         summary.total_spent(),
-        Money::parse("300.00", Currency::EUR)?
+        Money::parse("300.00", CurrencyCode::EUR)?
     );
     assert_eq!(
         summary.member(ana).balance(),
-        Balance::GetsBack(Money::parse("140.00", Currency::EUR)?)
+        Balance::GetsBack(Money::parse("140.00", CurrencyCode::EUR)?)
     );
     assert_eq!(settlement.len(), 2);
     Ok(())

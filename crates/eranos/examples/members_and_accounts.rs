@@ -9,8 +9,8 @@ use std::error::Error;
 
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    Balance, CalendarDate, Currency, Email, Expense, ExpenseGroup, Iban, Member, MemberId, Money,
-    PaymentAccount, PaymentAccountDetails, PhoneNumber, Split, Username,
+    Balance, CalendarDate, CurrencyCode, Email, Expense, ExpenseGroup, Iban, Member, MemberId,
+    Money, PaymentAccount, PaymentAccountDetails, PhoneNumber, Split, Username,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -203,7 +203,7 @@ fn moving_out(group: &mut ExpenseGroup, flatmates: Flatmates) -> Result<(), Box<
     let Flatmates { ana, bob } = flatmates;
     let rent = Expense::builder(
         "Rent",
-        Money::parse("900.00", Currency::EUR)?,
+        Money::parse("900.00", CurrencyCode::EUR)?,
         ana,
         Split::equal([ana, bob]),
         CalendarDate::new(2026, 9, 1)?,
@@ -219,7 +219,7 @@ fn moving_out(group: &mut ExpenseGroup, flatmates: Flatmates) -> Result<(), Box<
 
     let utilities = Expense::builder(
         "Utilities",
-        Money::parse("60.00", Currency::EUR)?,
+        Money::parse("60.00", CurrencyCode::EUR)?,
         ana,
         Split::equal([ana, bob]),
         CalendarDate::new(2026, 10, 1)?,
@@ -249,14 +249,14 @@ fn moving_out(group: &mut ExpenseGroup, flatmates: Flatmates) -> Result<(), Box<
     ));
     assert_eq!(
         group.summary().member(bob).balance(),
-        Balance::Owes(Money::parse("450.00", Currency::EUR)?)
+        Balance::Owes(Money::parse("450.00", CurrencyCode::EUR)?)
     );
     assert!(group.expense(rent).is_some());
     Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = ExpenseGroup::builder("Flat 4B", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Flat 4B", CurrencyCode::EUR).build()?;
     println!("Flat 4B: members and their accounts");
     println!("═══════════════════════════════════");
     println!(

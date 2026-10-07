@@ -11,8 +11,8 @@ import Testing
 /// trap an app instead of printing.
 @Test
 func aValueTheLibraryNeverSendsStillPrints() {
-    let unlisted = Eranos.Currency(known: "XYZ")
-    #expect(unlisted == Eranos.Currency(unlisted: "XYZ"))
+    let unlisted = Eranos.CurrencyCode(known: "XYZ")
+    #expect(unlisted == Eranos.CurrencyCode(unlisted: "XYZ"))
     #expect("5 XYZ" == Eranos.Money(minorUnits: 5, currency: unlisted).description)
     #expect("-1 bp" == Eranos.Percentage(known: -1).description)
     #expect("0/100" == Eranos.Parts(known: 0).description)

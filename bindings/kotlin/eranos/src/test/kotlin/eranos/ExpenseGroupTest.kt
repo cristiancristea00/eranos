@@ -155,7 +155,7 @@ class ExpenseGroupTest {
         assertEquals("Cash", group.removeBlocking(cash).note)
 
         group.renameBlocking("Home")
-        val lei = Currency.of("RON")
+        val lei = CurrencyCode.of("RON")
         group.changeCurrencyBlocking(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
         group.setDescriptionBlocking(null)
         group.setLanguageBlocking(null)
@@ -197,7 +197,7 @@ class ExpenseGroupTest {
             assertEquals("Cash", group.remove(cash).note)
 
             group.rename("Home")
-            val lei = Currency.of("RON")
+            val lei = CurrencyCode.of("RON")
             group.changeCurrency(lei, mapOf(flat.euro to ExchangeRate.parse("5")))
             group.setDescription("Shared flat")
             group.setLanguage(Language.parse("ro"))
@@ -214,7 +214,7 @@ class ExpenseGroupTest {
     @Test
     fun aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() =
         runTest {
-            val euro = Currency.of("EUR")
+            val euro = CurrencyCode.of("EUR")
             val plain = ExpenseGroup("Trip", euro)
             assertNull(plain.description())
             assertNull(plain.language())
@@ -311,7 +311,7 @@ class ExpenseGroupTest {
      */
     @Test
     fun aClosedGroupAnswersNoMore() {
-        val group = ExpenseGroup("Trip", Currency.of("EUR"))
+        val group = ExpenseGroup("Trip", CurrencyCode.of("EUR"))
         group.close()
         group.close()
         assertThrows<IllegalStateException> { group.nameBlocking() }

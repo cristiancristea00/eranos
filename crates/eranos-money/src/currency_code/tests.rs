@@ -16,7 +16,7 @@ const CURRENCY_COUNT: usize = 165;
 /// `all` and the constants.
 #[test]
 fn all_matches_every_iso4217_static_code_with_a_minor_unit() {
-    let listed: BTreeSet<&str> = Currency::all()
+    let listed: BTreeSet<&str> = CurrencyCode::all()
         .iter()
         .map(|currency| currency.code())
         .collect();
@@ -37,14 +37,14 @@ fn all_matches_every_iso4217_static_code_with_a_minor_unit() {
 #[test]
 fn lookup_finds_only_exact_codes_with_a_minor_unit() {
     // An exact code with a minor unit.
-    assert_eq!(Currency::lookup("EUR"), Some(Currency::EUR));
+    assert_eq!(CurrencyCode::lookup("EUR"), Some(CurrencyCode::EUR));
     // Codes without a minor unit.
     for code in ["XAU", "XDR", "XTS", "XXX"] {
-        assert_eq!(Currency::lookup(code), None, "{code}");
+        assert_eq!(CurrencyCode::lookup(code), None, "{code}");
     }
     // Text that is not an exact code; `from_code` trims and uppercases first.
     for code in ["XYZ", "eur", " EUR", "EURO", "€"] {
-        assert_eq!(Currency::lookup(code), None, "{code:?}");
+        assert_eq!(CurrencyCode::lookup(code), None, "{code:?}");
     }
 }
 
@@ -52,7 +52,7 @@ fn lookup_finds_only_exact_codes_with_a_minor_unit() {
 #[test]
 fn every_code_is_three_uppercase_ascii_letters() {
     // Shape of every code.
-    for currency in Currency::all() {
+    for currency in CurrencyCode::all() {
         let code = currency.code();
         assert_eq!(code.len(), 3, "{code}");
         assert!(code.bytes().all(|byte| byte.is_ascii_uppercase()), "{code}");
@@ -64,7 +64,7 @@ fn every_code_is_three_uppercase_ascii_letters() {
 #[test]
 fn every_currency_has_at_most_4_decimal_places() {
     // Decimal places of every currency.
-    for &currency in Currency::all() {
+    for &currency in CurrencyCode::all() {
         assert!(4 >= currency.decimal_places(), "{currency}");
     }
 }
@@ -74,14 +74,18 @@ fn every_currency_has_at_most_4_decimal_places() {
 fn lookup_ignores_case_and_surrounding_whitespace() {
     // Letter case.
     for code in ["EUR", "eur", "Eur", "eUr"] {
-        assert_eq!(Currency::from_code(code), Ok(Currency::EUR), "{code}");
+        assert_eq!(
+            CurrencyCode::from_code(code),
+            Ok(CurrencyCode::EUR),
+            "{code}"
+        );
     }
     // Surrounding whitespace.
-    assert_eq!(Currency::from_code(" RON "), Ok(Currency::RON));
-    assert_eq!(Currency::from_code("\tusd\n"), Ok(Currency::USD));
+    assert_eq!(CurrencyCode::from_code(" RON "), Ok(CurrencyCode::RON));
+    assert_eq!(CurrencyCode::from_code("\tusd\n"), Ok(CurrencyCode::USD));
     // The first and the last code of the table.
-    assert_eq!(Currency::from_code("aed"), Ok(Currency::AED));
-    assert_eq!(Currency::from_code("zwg"), Ok(Currency::ZWG));
+    assert_eq!(CurrencyCode::from_code("aed"), Ok(CurrencyCode::AED));
+    assert_eq!(CurrencyCode::from_code("zwg"), Ok(CurrencyCode::ZWG));
 }
 
 /// An amount would be recorded in a currency that does not exist.
@@ -91,7 +95,7 @@ fn unknown_codes_are_rejected() {
     // precious metals, special drawing rights, and testing codes.
     for code in ["XYZ", "ABC", "XAU", "XDR", "XTS", "XXX"] {
         assert_eq!(
-            Currency::from_code(code),
+            CurrencyCode::from_code(code),
             Err(MoneyError::UnknownCurrency),
             "{code}"
         );
@@ -99,7 +103,7 @@ fn unknown_codes_are_rejected() {
     // Three bytes that are not three letters.
     for code in ["€", "E1R", "E R", "12A"] {
         assert_eq!(
-            Currency::from_code(code),
+            CurrencyCode::from_code(code),
             Err(MoneyError::UnknownCurrency),
             "{code}"
         );
@@ -112,7 +116,7 @@ fn short_and_long_codes_are_rejected() {
     // Too short.
     for code in ["", "   ", "E", "EU"] {
         assert_eq!(
-            Currency::from_code(code),
+            CurrencyCode::from_code(code),
             Err(MoneyError::UnknownCurrency),
             "{code:?}"
         );
@@ -120,7 +124,7 @@ fn short_and_long_codes_are_rejected() {
     // Too long.
     for code in ["EURO", "EUR EUR", "E UR", "ＥＵＲ"] {
         assert_eq!(
-            Currency::from_code(code),
+            CurrencyCode::from_code(code),
             Err(MoneyError::UnknownCurrency),
             "{code:?}"
         );
@@ -162,14 +166,14 @@ fn decimal_places_follow_iso_4217() {
     for DecimalPlaces { codes, places } in tables {
         for code in codes {
             assert_eq!(
-                Currency::from_code(code).map(Currency::decimal_places),
+                CurrencyCode::from_code(code).map(CurrencyCode::decimal_places),
                 Ok(places),
                 "{code}"
             );
         }
     }
     // Every other currency has two.
-    let others: Vec<&Currency> = Currency::all()
+    let others: Vec<&CurrencyCode> = CurrencyCode::all()
         .iter()
         .filter(|currency| {
             let code = currency.code();
@@ -189,7 +193,7 @@ fn decimal_places_follow_iso_4217() {
 /// of order.
 #[test]
 fn all_lists_every_currency_in_code_order() {
-    let every_currency = Currency::all();
+    let every_currency = CurrencyCode::all();
     // One entry per currency, strictly increasing by code and by ordering.
     assert_eq!(every_currency.len(), CURRENCY_COUNT);
     assert!(
@@ -199,12 +203,12 @@ fn all_lists_every_currency_in_code_order() {
     );
     assert!(every_currency.windows(2).all(|pair| pair[0] < pair[1]));
     // Ordering is by code: 978 and 840 in numeric order would put USD first.
-    assert!(Currency::AED < Currency::EUR && Currency::EUR < Currency::ZWG);
-    assert!(Currency::EUR < Currency::USD);
-    assert_eq!(Currency::EUR.cmp(&Currency::EUR), Ordering::Equal);
+    assert!(CurrencyCode::AED < CurrencyCode::EUR && CurrencyCode::EUR < CurrencyCode::ZWG);
+    assert!(CurrencyCode::EUR < CurrencyCode::USD);
+    assert_eq!(CurrencyCode::EUR.cmp(&CurrencyCode::EUR), Ordering::Equal);
     // Every code looks up its own currency.
     for &currency in every_currency {
-        assert_eq!(Currency::from_code(currency.code()), Ok(currency));
+        assert_eq!(CurrencyCode::from_code(currency.code()), Ok(currency));
     }
 }
 
@@ -213,13 +217,13 @@ fn all_lists_every_currency_in_code_order() {
 #[test]
 fn the_constant_all_is_the_albanian_lek() {
     // The constant and the lookup agree.
-    assert_eq!(Currency::ALL.code(), "ALL");
-    assert_eq!(Currency::ALL.decimal_places(), 2);
-    assert_eq!(Currency::from_code("all"), Ok(Currency::ALL));
+    assert_eq!(CurrencyCode::ALL.code(), "ALL");
+    assert_eq!(CurrencyCode::ALL.decimal_places(), 2);
+    assert_eq!(CurrencyCode::from_code("all"), Ok(CurrencyCode::ALL));
     // `all()` lists the lek once, among the other currencies.
-    let leks = Currency::all()
+    let leks = CurrencyCode::all()
         .iter()
-        .filter(|&&currency| Currency::ALL == currency)
+        .filter(|&&currency| CurrencyCode::ALL == currency)
         .count();
     assert_eq!(leks, 1);
 }
@@ -228,15 +232,15 @@ fn the_constant_all_is_the_albanian_lek() {
 #[test]
 fn debug_and_display_print_the_code() {
     // Display.
-    assert_eq!(Currency::EUR.to_string(), "EUR");
+    assert_eq!(CurrencyCode::EUR.to_string(), "EUR");
     // Debug.
-    assert_eq!(format!("{:?}", Currency::JPY), "JPY");
-    assert_eq!(format!("{:?}", Some(Currency::BHD)), "Some(BHD)");
+    assert_eq!(format!("{:?}", CurrencyCode::JPY), "JPY");
+    assert_eq!(format!("{:?}", Some(CurrencyCode::BHD)), "Some(BHD)");
 }
 
 /// A currency and its ISO 4217 name.
 struct CurrencyName {
-    currency: Currency,
+    currency: CurrencyCode,
     name: &'static str,
 }
 
@@ -247,32 +251,32 @@ fn names_are_the_trimmed_iso_4217_names() {
     // A few names.
     for CurrencyName { currency, name } in [
         CurrencyName {
-            currency: Currency::EUR,
+            currency: CurrencyCode::EUR,
             name: "Euro",
         },
         CurrencyName {
-            currency: Currency::GBP,
+            currency: CurrencyCode::GBP,
             name: "Pound Sterling",
         },
         CurrencyName {
-            currency: Currency::USD,
+            currency: CurrencyCode::USD,
             name: "US Dollar",
         },
         CurrencyName {
-            currency: Currency::KMF,
+            currency: CurrencyCode::KMF,
             name: "Comorian Franc",
         },
         CurrencyName {
-            currency: Currency::TOP,
+            currency: CurrencyCode::TOP,
             name: "Pa’anga",
         },
     ] {
         assert_eq!(currency.name(), name, "{currency}");
     }
     // Two codes can share a name.
-    assert_eq!(Currency::VED.name(), Currency::VES.name());
+    assert_eq!(CurrencyCode::VED.name(), CurrencyCode::VES.name());
     // Every name is present and trimmed.
-    for currency in Currency::all() {
+    for currency in CurrencyCode::all() {
         let name = currency.name();
         assert!(!name.is_empty(), "{currency}");
         assert_eq!(name, name.trim(), "{currency}");
@@ -281,7 +285,7 @@ fn names_are_the_trimmed_iso_4217_names() {
 
 /// A currency and its ISO 4217 number.
 struct CurrencyNumber {
-    currency: Currency,
+    currency: CurrencyCode,
     number: u16,
 }
 
@@ -292,26 +296,26 @@ fn numeric_codes_are_the_iso_4217_numbers() {
     // A few numbers, including one ISO writes with leading zeros.
     for CurrencyNumber { currency, number } in [
         CurrencyNumber {
-            currency: Currency::EUR,
+            currency: CurrencyCode::EUR,
             number: 978,
         },
         CurrencyNumber {
-            currency: Currency::USD,
+            currency: CurrencyCode::USD,
             number: 840,
         },
         CurrencyNumber {
-            currency: Currency::ALL,
+            currency: CurrencyCode::ALL,
             number: 8,
         },
         CurrencyNumber {
-            currency: Currency::JPY,
+            currency: CurrencyCode::JPY,
             number: 392,
         },
     ] {
         assert_eq!(currency.numeric_code(), number, "{currency}");
     }
     // Every number has at most three digits and leads back to its code.
-    for &currency in Currency::all() {
+    for &currency in CurrencyCode::all() {
         let number = currency.numeric_code();
         assert!((1..=999).contains(&number), "{currency}");
         assert_eq!(
@@ -326,12 +330,12 @@ fn numeric_codes_are_the_iso_4217_numbers() {
 #[test]
 fn minor_units_per_major_is_ten_to_the_decimal_places() {
     // One per decimal-place count.
-    assert_eq!(Currency::JPY.minor_units_per_major(), 1);
-    assert_eq!(Currency::EUR.minor_units_per_major(), 100);
-    assert_eq!(Currency::BHD.minor_units_per_major(), 1_000);
-    assert_eq!(Currency::CLF.minor_units_per_major(), 10_000);
+    assert_eq!(CurrencyCode::JPY.minor_units_per_major(), 1);
+    assert_eq!(CurrencyCode::EUR.minor_units_per_major(), 100);
+    assert_eq!(CurrencyCode::BHD.minor_units_per_major(), 1_000);
+    assert_eq!(CurrencyCode::CLF.minor_units_per_major(), 10_000);
     // Every currency.
-    for &currency in Currency::all() {
+    for &currency in CurrencyCode::all() {
         let expected = 10_i64.pow(u32::from(currency.decimal_places()));
         assert_eq!(currency.minor_units_per_major(), expected, "{currency}");
     }
@@ -342,8 +346,11 @@ fn minor_units_per_major_is_ten_to_the_decimal_places() {
 #[test]
 fn from_str_parses_like_from_code() {
     // Known and unknown codes.
-    assert_eq!(" chf ".parse::<Currency>(), Ok(Currency::CHF));
-    assert_eq!("XYZ".parse::<Currency>(), Err(MoneyError::UnknownCurrency));
+    assert_eq!(" chf ".parse::<CurrencyCode>(), Ok(CurrencyCode::CHF));
+    assert_eq!(
+        "XYZ".parse::<CurrencyCode>(),
+        Err(MoneyError::UnknownCurrency)
+    );
 }
 
 /// Saved amounts would load in the wrong currency, or an unknown one.
@@ -351,17 +358,20 @@ fn from_str_parses_like_from_code() {
 #[test]
 fn currencies_serialise_as_their_code() {
     // Round trip.
-    assert_eq!(serde_json::to_string(&Currency::EUR).unwrap(), "\"EUR\"");
     assert_eq!(
-        serde_json::from_str::<Currency>("\"EUR\"").unwrap(),
-        Currency::EUR
+        serde_json::to_string(&CurrencyCode::EUR).unwrap(),
+        "\"EUR\""
+    );
+    assert_eq!(
+        serde_json::from_str::<CurrencyCode>("\"EUR\"").unwrap(),
+        CurrencyCode::EUR
     );
     // Deserialising looks the code up like parsing.
     assert_eq!(
-        serde_json::from_str::<Currency>("\"ron\"").unwrap(),
-        Currency::RON
+        serde_json::from_str::<CurrencyCode>("\"ron\"").unwrap(),
+        CurrencyCode::RON
     );
-    assert!(serde_json::from_str::<Currency>("\"XYZ\"").is_err());
+    assert!(serde_json::from_str::<CurrencyCode>("\"XYZ\"").is_err());
     // Only strings are codes.
-    assert!(serde_json::from_str::<Currency>("978").is_err());
+    assert!(serde_json::from_str::<CurrencyCode>("978").is_err());
 }

@@ -7,7 +7,7 @@ from typing import Self, final
 
 from eranos._contact import Language
 from eranos._crossing import optional
-from eranos._currency import Currency
+from eranos._currency_code import CurrencyCode
 from eranos._entries import (
     Category,
     Expense,
@@ -45,7 +45,7 @@ from eranos._totals import (
 class CurrencyRate:
     """The rate into a new group currency of an amount in currency."""
 
-    currency: Currency
+    currency: CurrencyCode
     """The currency the rate converts from."""
 
     rate: ExchangeRate
@@ -63,7 +63,7 @@ class ExpenseGroup:
     group's lock; its twin, whose name ends in ``_async``, is a coroutine that waits for the lock without blocking the
     event loop, and cancelling its task cancels the call, which leaves the group as it was::
 
-        group = ExpenseGroup.create('Flat', Currency('EUR'))
+        group = ExpenseGroup.create('Flat', CurrencyCode('EUR'))
         ana = group.add_member(Member(first_name='Ana'))
         bob = await group.add_member_async(Member(first_name='Bob'))
 
@@ -84,7 +84,7 @@ class ExpenseGroup:
         self._handle: generated.ExpenseGroup | None = handle
 
     @classmethod
-    def create(cls, name: str, currency: Currency, *, description: str | None = None, language: Language | None = None) -> Self:
+    def create(cls, name: str, currency: CurrencyCode, *, description: str | None = None, language: Language | None = None) -> Self:
         """
         Make a group with no members and no entries, called name, whose totals are in currency.
 
@@ -401,7 +401,7 @@ class ExpenseGroup:
         with library_errors():
             return category_of(await self._generated().remove_category_async(category_id, None))
 
-    def currency(self) -> Currency:
+    def currency(self) -> CurrencyCode:
         """
         Read the group currency, which every total is in.
 
@@ -412,9 +412,9 @@ class ExpenseGroup:
 
         """
         with library_errors():
-            return Currency(self._generated().currency())
+            return CurrencyCode(self._generated().currency())
 
-    async def currency_async(self) -> Currency:
+    async def currency_async(self) -> CurrencyCode:
         """
         Read the group currency, which every total is in.
 
@@ -426,9 +426,9 @@ class ExpenseGroup:
 
         """
         with library_errors():
-            return Currency(await self._generated().currency_async(None))
+            return CurrencyCode(await self._generated().currency_async(None))
 
-    def change_currency(self, currency: Currency, rates: Iterable[CurrencyRate]) -> None:
+    def change_currency(self, currency: CurrencyCode, rates: Iterable[CurrencyRate]) -> None:
         """
         Move the group to currency, converting every entry with the rate rates give its currency.
 
@@ -444,7 +444,7 @@ class ExpenseGroup:
         with library_errors():
             self._generated().change_currency(currency.code, _generated_rates(rates))
 
-    async def change_currency_async(self, currency: Currency, rates: Iterable[CurrencyRate]) -> None:
+    async def change_currency_async(self, currency: CurrencyCode, rates: Iterable[CurrencyRate]) -> None:
         """
         Move the group to currency, converting every entry with the rate rates give its currency.
 

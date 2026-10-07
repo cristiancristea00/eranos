@@ -11,7 +11,7 @@ import static eranos.examples.grandtour.Tour.refusal;
 
 import eranos.Category;
 import eranos.CategoryId;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.Email;
 import eranos.EranosException;
 import eranos.ExpenseGroup;
@@ -47,7 +47,7 @@ final class Members {
     static ExpenseGroup theGroup() throws EranosException {
         section("1. The group");
         ExpenseGroup group =
-                ExpenseGroup.builder("Lisbon", Currency.of("EUR"))
+                ExpenseGroup.builder("Lisbon", CurrencyCode.of("EUR"))
                         .description("A week by the Atlantic")
                         .language(Language.parse("pt-pt"))
                         .build();

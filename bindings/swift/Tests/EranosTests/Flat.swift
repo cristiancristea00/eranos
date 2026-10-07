@@ -9,13 +9,13 @@ struct Flat {
     let bob: Member.ID
     let day: CalendarDate
     let dinner: Expense.ID
-    let euro: Currency
+    let euro: CurrencyCode
     let food: Category.ID
     let group: ExpenseGroup
     let repayment: Transfer.ID
 
     init() throws {
-        euro = try Currency(code: "EUR")
+        euro = try CurrencyCode(code: "EUR")
         day = try CalendarDate(year: 2026, month: 9, day: 23)
         group = try ExpenseGroup(name: "Flat", currency: euro, description: "Rent", language: Language("pt-pt"))
         ana = try group.add(Member(firstName: "Ana"))

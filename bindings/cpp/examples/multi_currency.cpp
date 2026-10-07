@@ -65,7 +65,9 @@ struct BalanceRow final {
 };
 
 /// The amount @p text of @p code.
-[[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) { return must(Money::parse(text, must(Currency::of(code)))); }
+[[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) {
+    return must(Money::parse(text, must(CurrencyCode::of(code))));
+}
 
 /// The amount of @p cost, as entered.
 [[nodiscard]] Money amountOf(Cost const &cost) {
@@ -160,10 +162,10 @@ void newCurrency(ExpenseGroup &group) {
     printLine("Changing the group currency needs a rate into the new currency for every other\n"
               "currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n"
               "take the new rate; entries already in RON become local costs, at 1.");
-    must(group.changeCurrency(must(Currency::of("RON")), std::array{
-                                                             CurrencyRate(must(Currency::of("EUR")), must(ExchangeRate::parse("5"))),
-                                                             CurrencyRate(must(Currency::of("HUF")), must(ExchangeRate::parse("0.0125"))),
-                                                         }));
+    must(group.changeCurrency(must(CurrencyCode::of("RON")), std::array{
+                                                                 CurrencyRate(must(CurrencyCode::of("EUR")), must(ExchangeRate::parse("5"))),
+                                                                 CurrencyRate(must(CurrencyCode::of("HUF")), must(ExchangeRate::parse("0.0125"))),
+                                                             }));
     printEntries(group);
     std::println("In {}, the trip cost {}, and everyone is still settled:", group.currency().code(), group.summary().totalSpent.toString());
     printBalances(group);
@@ -171,7 +173,7 @@ void newCurrency(ExpenseGroup &group) {
 
 /// Runs the example.
 void run() {
-    auto group = must(ExpenseGroup::create("Danube road trip", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Danube road trip", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
 

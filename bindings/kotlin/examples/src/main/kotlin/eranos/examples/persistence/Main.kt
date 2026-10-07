@@ -4,7 +4,7 @@ package eranos.examples.persistence
 
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.Expense
 import eranos.ExpenseGroup
@@ -38,7 +38,7 @@ private data class ComparisonRow(
 
 /** Prints the report of the road trip saved and loaded. */
 fun main() {
-    val euro = Currency.of("EUR")
+    val euro = CurrencyCode.of("EUR")
     val day = CalendarDate.of(year = 2026, month = 9, day = 23)
     ExpenseGroup("Road trip", euro).use { group ->
         val ana = group.addBlocking(Member("Ana"))

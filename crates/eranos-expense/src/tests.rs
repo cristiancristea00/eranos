@@ -7,7 +7,7 @@
 //! replaced cost's rate only when the new cost has one, and keep the way a
 //! cost is shared through `FromExpenseSplit`.
 
-use eranos_money::{Currency, Percentage};
+use eranos_money::{CurrencyCode, Percentage};
 
 use super::*;
 
@@ -18,7 +18,7 @@ const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 const DAN: MemberId = MemberId::from_bytes([4; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -336,7 +336,7 @@ fn an_item_in_another_currency_is_rejected() {
     // A dollar line on a euro receipt.
     let dollars = ExpenseItem::builder(
         "Pizza",
-        Money::from_minor_units(9_000, Currency::USD),
+        Money::from_minor_units(9_000, CurrencyCode::USD),
         [ANA],
     )
     .build()
@@ -344,8 +344,8 @@ fn an_item_in_another_currency_is_rejected() {
     assert_eq!(
         dinner().paid_by(ANA).items([dollars]).build(),
         Err(ExpenseError::CurrencyMismatch {
-            expected: Currency::EUR,
-            found: Currency::USD
+            expected: CurrencyCode::EUR,
+            found: CurrencyCode::USD
         })
     );
 }
@@ -461,12 +461,12 @@ fn an_invalid_fixed_tip_is_rejected() {
         Err(ExpenseError::NegativeTip)
     );
     // Another currency.
-    let dollars = Money::from_minor_units(100, Currency::USD);
+    let dollars = Money::from_minor_units(100, CurrencyCode::USD);
     assert_eq!(
         builder().tip(TipRule::fixed(dollars)).build(),
         Err(ExpenseError::CurrencyMismatch {
-            expected: Currency::EUR,
-            found: Currency::USD
+            expected: CurrencyCode::EUR,
+            found: CurrencyCode::USD
         })
     );
 }

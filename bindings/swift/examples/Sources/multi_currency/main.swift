@@ -34,9 +34,9 @@ struct BalanceRow: TableRow {
     }
 }
 
-let euro = try Currency(code: "EUR")
-let forint = try Currency(code: "HUF")
-let leu = try Currency(code: "RON")
+let euro = try CurrencyCode(code: "EUR")
+let forint = try CurrencyCode(code: "HUF")
+let leu = try CurrencyCode(code: "RON")
 
 /// The first name of `member` in `group`, or `?` for one the group does not hold.
 func name(_ group: ExpenseGroup, _ member: Member.ID) throws(EranosError) -> String {

@@ -3,7 +3,7 @@
 package eranos.examples.grandtour
 
 import eranos.Category
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.Email
 import eranos.EranosException
 import eranos.ExpenseGroup
@@ -60,7 +60,7 @@ private data class CheckRow(
 
 internal fun theGroup(): ExpenseGroup {
     section("1. The group")
-    val group = ExpenseGroup("Lisbon", Currency.of("EUR"), "A week by the Atlantic", Language.parse("pt-pt"))
+    val group = ExpenseGroup("Lisbon", CurrencyCode.of("EUR"), "A week by the Atlantic", Language.parse("pt-pt"))
     val blank = refusal { group.renameBlocking("   ") }
     group.renameBlocking("Lisbon and Porto")
     group.setDescriptionBlocking("A week by the Atlantic, with a day in Porto")

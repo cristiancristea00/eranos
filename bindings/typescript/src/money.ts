@@ -5,7 +5,7 @@
  */
 
 import { calling } from './converting.js';
-import { Currency } from './currency.js';
+import { CurrencyCode } from './currency_code.js';
 import * as internal from './internal/eranos.js';
 
 /**
@@ -25,7 +25,7 @@ export class Money {
         /** The amount in minor units: cents for the euro, none for the yen. */
         readonly minorUnits: bigint,
         /** The currency. */
-        readonly currency: Currency,
+        readonly currency: CurrencyCode,
     ) {}
 
     /**
@@ -37,7 +37,7 @@ export class Money {
      * @throws {@link MoneyError} with the failure `invalidAmount` for text that is not a decimal number, and
      *   `tooManyDecimals` for more decimal places than the currency has
      */
-    static parse(text: string, currency: Currency): Money {
+    static parse(text: string, currency: CurrencyCode): Money {
         return Money.converted(calling(() => internal.moneyParse(text, currency.code)));
     }
 
@@ -47,7 +47,7 @@ export class Money {
      * @internal
      */
     static converted(money: internal.Money): Money {
-        return new Money(money.minorUnits, Currency.known(money.currency));
+        return new Money(money.minorUnits, CurrencyCode.known(money.currency));
     }
 
     /**

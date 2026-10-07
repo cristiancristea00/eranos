@@ -10,7 +10,7 @@ from eranos import (
     AmountsSplit,
     Category,
     ConvertedCost,
-    Currency,
+    CurrencyCode,
     Email,
     EqualSplit,
     ExchangeRate,
@@ -54,7 +54,7 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
     """An expense that came back from the group otherwise than it went in would change what an app shows after a save."""
     lunch = Expense(
         name='Lunch',
-        cost=ConvertedCost(Money(5000, Currency('RON')), ExchangeRate('0.2')),
+        cost=ConvertedCost(Money(5000, CurrencyCode('RON')), ExchangeRate('0.2')),
         payers=PercentagesSplit((MemberPercentage(flat.ana, Percentage(5000)), MemberPercentage(flat.bob, Percentage(5000)))),
         split=WholeExpenseSplit(PartsSplit((MemberParts(flat.ana, Parts(100)), MemberParts(flat.bob, Parts(50))))),
         date=flat.day,
@@ -86,7 +86,7 @@ def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> Non
     cash = Transfer(
         sender=flat.ana,
         receiver=flat.bob,
-        cost=ConvertedCost(Money(1000, Currency('RON')), ExchangeRate('0.2')),
+        cost=ConvertedCost(Money(1000, CurrencyCode('RON')), ExchangeRate('0.2')),
         date=flat.day,
         time=TimeOfDay(9, 5),
         note='Cash',

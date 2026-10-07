@@ -9,7 +9,7 @@ import static eranos.examples.Report.totals;
 import eranos.Balance;
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
@@ -138,7 +138,7 @@ public final class Main {
                 Expense.builder(
                                 "Fuel",
                                 new Cost.Converted(
-                                        Money.parse("400.00", Currency.of("RON")),
+                                        Money.parse("400.00", CurrencyCode.of("RON")),
                                         ExchangeRate.parse("0.2")),
                                 new Split.Equal(List.of(ana)),
                                 both,
@@ -148,7 +148,7 @@ public final class Main {
                 Expense.builder(
                                 "Dinner",
                                 new Cost.Converted(
-                                        Money.parse("24000.00", Currency.of("HUF")),
+                                        Money.parse("24000.00", CurrencyCode.of("HUF")),
                                         ExchangeRate.parse("0.0025")),
                                 new Split.Equal(List.of(bob)),
                                 both,
@@ -157,7 +157,7 @@ public final class Main {
         group.addExpense(
                 Expense.builder(
                                 "Ferry",
-                                new Cost.Local(Money.parse("60.00", Currency.of("EUR"))),
+                                new Cost.Local(Money.parse("60.00", CurrencyCode.of("EUR"))),
                                 new Split.Equal(List.of(bob)),
                                 both,
                                 CalendarDate.of(2026, 8, 3))
@@ -179,7 +179,7 @@ public final class Main {
                                 ana,
                                 bob,
                                 new Cost.Converted(
-                                        Money.parse("100.00", Currency.of("RON")),
+                                        Money.parse("100.00", CurrencyCode.of("RON")),
                                         ExchangeRate.parse("0.2")),
                                 CalendarDate.of(2026, 8, 4))
                         .note("Cash at the border")
@@ -202,10 +202,10 @@ public final class Main {
                 take the new rate; entries already in RON become local costs, at 1.
                 """);
         group.changeCurrency(
-                Currency.of("RON"),
+                CurrencyCode.of("RON"),
                 Map.of(
-                        Currency.of("EUR"), ExchangeRate.parse("5"),
-                        Currency.of("HUF"), ExchangeRate.parse("0.0125")));
+                        CurrencyCode.of("EUR"), ExchangeRate.parse("5"),
+                        CurrencyCode.of("HUF"), ExchangeRate.parse("0.0125")));
         printEntries(group);
         System.out.printf(
                 "In %s, the trip cost %s, and everyone is still settled:%n",
@@ -220,8 +220,8 @@ public final class Main {
      * @throws EranosException if the library refuses a value the example gives it
      */
     public static void main(String[] arguments) throws EranosException {
-        Currency euro = Currency.of("EUR");
-        Currency leu = Currency.of("RON");
+        CurrencyCode euro = CurrencyCode.of("EUR");
+        CurrencyCode leu = CurrencyCode.of("RON");
         try (ExpenseGroup group = ExpenseGroup.builder("Danube road trip", euro).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());

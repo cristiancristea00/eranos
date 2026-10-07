@@ -5,7 +5,7 @@
 //! `all_matches_every_iso4217_static_code_with_a_minor_unit` names a code the
 //! crate has and this list lacks.
 
-use super::Currency;
+use super::CurrencyCode;
 
 currencies! {
     AED AFN ALL AMD AOA ARS AUD AWG AZN

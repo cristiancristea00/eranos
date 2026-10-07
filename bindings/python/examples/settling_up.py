@@ -11,7 +11,7 @@ from typing import ClassVar, assert_never, final, override
 from eranos import (
     Balance,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     Expense,
     ExpenseGroup,
@@ -178,7 +178,7 @@ def spend(group: ExpenseGroup, name: str, amount: str, payer: MemberId, members:
     group.add_expense(
         Expense(
             name=name,
-            cost=LocalCost(Money.parse(amount, Currency('EUR'))),
+            cost=LocalCost(Money.parse(amount, CurrencyCode('EUR'))),
             payers=EqualSplit((payer,)),
             split=WholeExpenseSplit(EqualSplit(members)),
             date=CalendarDate(2026, 9, 20),
@@ -317,7 +317,7 @@ def festival() -> int:
 
     """
     section('8. A larger group')
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Festival', euro)
     friends = tuple(group.add_member(Member(first_name=f'Friend {number}')) for number in range(1, 22))
     # Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's balance is 21·i² - 3311
@@ -349,7 +349,7 @@ def festival() -> int:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = ExpenseGroup.create('Ski week', Currency('EUR'))
+    group = ExpenseGroup.create('Ski week', CurrencyCode('EUR'))
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     carol = group.add_member(Member(first_name='Carol'))

@@ -12,7 +12,7 @@ use std::thread;
 use std::time::Duration;
 
 use eranos::cooperative::block_on;
-use eranos::{Currency, MemberId};
+use eranos::{CurrencyCode, MemberId};
 
 use super::*;
 use crate::calendar::CalendarDate;
@@ -169,7 +169,7 @@ fn library_day() -> eranos::CalendarDate {
 /// more: with 16, seventeen open balances, so the exact settlement yields
 /// once, holding the shared lock; with 63, a table the solver cannot hold.
 fn owed_by_a_hub(payers: i64) -> ExpenseGroupHandle {
-    let mut group = ExpenseGroup::builder("Club", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Club", CurrencyCode::EUR)
         .build()
         .unwrap();
     let hub = group
@@ -179,7 +179,7 @@ fn owed_by_a_hub(payers: i64) -> ExpenseGroupHandle {
         let payer = group
             .add_member(eranos::Member::builder("Payer").build().unwrap())
             .unwrap();
-        let amount = eranos::Money::from_minor_units(minor_units, Currency::EUR);
+        let amount = eranos::Money::from_minor_units(minor_units, CurrencyCode::EUR);
         let split = eranos::Split::equal([hub]);
         let expense = eranos::Expense::builder("Share", amount, payer, split, library_day())
             .build()
@@ -192,7 +192,7 @@ fn owed_by_a_hub(payers: i64) -> ExpenseGroupHandle {
 /// A group of 1 100 expenses, so a currency change yields once, holding the
 /// exclusive lock.
 fn busy() -> ExpenseGroupHandle {
-    let mut group = ExpenseGroup::builder("Office", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Office", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group
@@ -202,7 +202,7 @@ fn busy() -> ExpenseGroupHandle {
         .add_member(eranos::Member::builder("Bob").build().unwrap())
         .unwrap();
     for _ in 0..1_100 {
-        let amount = eranos::Money::from_minor_units(100, Currency::EUR);
+        let amount = eranos::Money::from_minor_units(100, CurrencyCode::EUR);
         let split = eranos::Split::equal([ana, bob]);
         let expense = eranos::Expense::builder("Coffee", amount, ana, split, library_day())
             .build()

@@ -7,7 +7,7 @@ import {
     type Balance,
     type Split,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExpenseGroup,
     Money,
     SettlementStrategy,
@@ -61,7 +61,7 @@ const paymentColumns: Columns<PaymentRow> = [
 ];
 
 await load();
-const euro = Currency.of('EUR');
+const euro = CurrencyCode.of('EUR');
 const group = ExpenseGroup.create('Weekend in Sinaia', euro);
 title(group.nameSync());
 printLines(

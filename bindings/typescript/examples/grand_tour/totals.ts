@@ -8,7 +8,7 @@ import {
     type ExpenseGroup,
     type MemberId,
     type Summary,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     ExpenseGroupError,
     Money,
@@ -159,8 +159,8 @@ export function removingACategory(group: ExpenseGroup, categories: Categories): 
 
 export function newCurrency(group: ExpenseGroup, people: People): void {
     section('10. A new currency');
-    const euro = Currency.of('EUR');
-    const leu = Currency.of('RON');
+    const euro = CurrencyCode.of('EUR');
+    const leu = CurrencyCode.of('RON');
     const missing = refusal(() => {
         group.changeCurrencySync(leu, []);
     });

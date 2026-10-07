@@ -4,7 +4,7 @@ import dataclasses
 from typing import final, override
 
 from eranos._checked import CheckedText
-from eranos._currency import Currency
+from eranos._currency_code import CurrencyCode
 from eranos._errors import library_errors
 from eranos._internal import eranos as generated
 from eranos._money import Money, generated_money, money_of
@@ -30,7 +30,7 @@ class ExchangeRate(CheckedText):
         with library_errors():
             super().__init__(generated.exchange_rate_parse(text))
 
-    def convert(self, amount: Money, currency: Currency) -> Money:
+    def convert(self, amount: Money, currency: CurrencyCode) -> Money:
         """
         Convert amount at this rate into currency, rounded to its minor unit, halves away from zero.
 

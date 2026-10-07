@@ -9,7 +9,7 @@ import asyncio
 import contextlib
 
 from eranos import (
-    Currency,
+    CurrencyCode,
     CurrencyRate,
     EqualSplit,
     ExchangeRate,
@@ -81,11 +81,11 @@ async def sharing(group: ExpenseGroup, people: People) -> None:
         )
 
     before = await group.summary_async()
-    rates = (CurrencyRate(Currency('RON'), ExchangeRate('0.2')),)
+    rates = (CurrencyRate(CurrencyCode('RON'), ExchangeRate('0.2')),)
     # A report reads the group, holding the shared lock meanwhile, so the change waits for it; a new read would wait
     # behind the change, so the report reads through its own handle.
     report = await group.read_async()
-    change = asyncio.create_task(group.change_currency_async(Currency('EUR'), rates), eager_start=True)
+    change = asyncio.create_task(group.change_currency_async(CurrencyCode('EUR'), rates), eager_start=True)
     await asyncio.sleep(0)
     waited = not change.done()
     reported = report.summary().total_spent
@@ -112,4 +112,4 @@ async def sharing(group: ExpenseGroup, people: People) -> None:
     assert change.cancelled()
     assert after == before
     assert reported == after.total_spent
-    assert currency == Currency('RON')
+    assert currency == CurrencyCode('RON')

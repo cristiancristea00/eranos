@@ -4,7 +4,7 @@ package eranos.examples.grandtour
 import eranos.Balance
 import eranos.CategoryId
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.EranosException
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
@@ -145,8 +145,8 @@ internal fun newCurrency(
     people: People,
 ) {
     section("10. A new currency")
-    val euro = Currency.of("EUR")
-    val leu = Currency.of("RON")
+    val euro = CurrencyCode.of("EUR")
+    val leu = CurrencyCode.of("RON")
     val missing = refusal { group.changeCurrencyBlocking(leu, emptyMap()) }
     group.changeCurrencyBlocking(leu, mapOf(euro to ExchangeRate.parse("5")))
     println(

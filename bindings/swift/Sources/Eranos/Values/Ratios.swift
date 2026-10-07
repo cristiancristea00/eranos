@@ -23,7 +23,7 @@ public struct ExchangeRate: Hashable, Sendable, CustomStringConvertible {
     ///
     /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/overflow`` for a result
     ///   out of range.
-    public func convert(_ amount: Money, into currency: Currency) throws(EranosError) -> Money {
+    public func convert(_ amount: Money, into currency: CurrencyCode) throws(EranosError) -> Money {
         let converted = try converting {
             try EranosGenerated.exchangeRateConvert(rate: description, amount: amount.generated, code: currency.code)
         }

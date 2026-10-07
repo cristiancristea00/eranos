@@ -68,8 +68,8 @@ public extension ExpenseGroup {
     ///
     /// - Throws: On wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
-    func currency() throws(EranosError) -> Currency {
-        try converting { Currency(known: try handle.currency()) }
+    func currency() throws(EranosError) -> CurrencyCode {
+        try converting { CurrencyCode(known: try handle.currency()) }
     }
 
     /// The group currency, which every total is in.
@@ -78,9 +78,9 @@ public extension ExpenseGroup {
     /// which leaves the group as it was.
     ///
     /// - Throws: ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func currency() async throws(EranosError) -> Currency {
+    func currency() async throws(EranosError) -> CurrencyCode {
         try await converting { [handle] cancellation in
-            Currency(known: try await handle.currencyAsync(cancellation: cancellation))
+            CurrencyCode(known: try await handle.currencyAsync(cancellation: cancellation))
         }
     }
 
@@ -91,7 +91,7 @@ public extension ExpenseGroup {
     ///   a currency in use without a rate, and ``ExpenseGroupFailure/unexpectedExchangeRate`` for a rate of
     ///   the new group currency; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy``
     ///   while another call holds the lock.
-    func changeCurrency(to currency: Currency, rates: [Currency: ExchangeRate]) throws(EranosError) {
+    func changeCurrency(to currency: CurrencyCode, rates: [CurrencyCode: ExchangeRate]) throws(EranosError) {
         try converting { try handle.changeCurrency(currency: currency.code, rates: rates.map { CurrencyRate(currency: $0.key.code, rate: $0.value.description) }) }
     }
 
@@ -104,7 +104,7 @@ public extension ExpenseGroup {
     /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/missingExchangeRate(_:)`` for
     ///   a currency in use without a rate, and ``ExpenseGroupFailure/unexpectedExchangeRate`` for a rate of
     ///   the new group currency; ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func changeCurrency(to currency: Currency, rates: [Currency: ExchangeRate]) async throws(EranosError) {
+    func changeCurrency(to currency: CurrencyCode, rates: [CurrencyCode: ExchangeRate]) async throws(EranosError) {
         try await converting { [handle] cancellation in
             try await handle.changeCurrencyAsync(currency: currency.code, rates: rates.map { CurrencyRate(currency: $0.key.code, rate: $0.value.description) }, cancellation: cancellation)
         }

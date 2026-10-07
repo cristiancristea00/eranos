@@ -7,7 +7,7 @@
 //! members were listed in; a conversion through `FromSplit` keeps the way of
 //! dividing and its shares.
 
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 use proptest::prelude::*;
 
 use super::*;
@@ -18,7 +18,7 @@ const BOB: MemberId = MemberId::from_bytes([2; 16]);
 const CAROL: MemberId = MemberId::from_bytes([3; 16]);
 
 fn euros(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn per_cent(text: &str) -> Percentage {
@@ -299,7 +299,7 @@ fn percentages_must_add_up_to_exactly_100() {
 #[test]
 fn amounts_in_another_currency_are_rejected() {
     // A dollar share of a euro total.
-    let dollars = Money::from_minor_units(500, Currency::USD);
+    let dollars = Money::from_minor_units(500, CurrencyCode::USD);
     let split = Split::amounts([
         MemberAmount::new(ANA, euros(500)),
         MemberAmount::new(BOB, dollars),
@@ -307,8 +307,8 @@ fn amounts_in_another_currency_are_rejected() {
     assert_eq!(
         split.validate(euros(1_000)),
         Err(ExpenseError::CurrencyMismatch {
-            expected: Currency::EUR,
-            found: Currency::USD
+            expected: CurrencyCode::EUR,
+            found: CurrencyCode::USD
         })
     );
 }

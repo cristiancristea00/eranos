@@ -112,9 +112,9 @@ public sealed interface ExpenseFailure {
     /** An amount inside the expense is in a different currency. */
     public class CurrencyMismatch(
         /** The expense's currency. */
-        public val expected: Currency,
+        public val expected: CurrencyCode,
         /** The currency of the amount inside it. */
-        public val found: Currency,
+        public val found: CurrencyCode,
     ) : ExpenseFailure {
         /** Whether [other] is of the same class, with the same [expected] and [found]. */
         override fun equals(other: Any?): Boolean = other is CurrencyMismatch && expected == other.expected && found == other.found
@@ -229,7 +229,7 @@ internal fun GeneratedExpenseFailure.converted(): ExpenseFailure =
     when (this) {
         GeneratedExpenseFailure.EmptyName -> ExpenseFailure.EmptyName
         GeneratedExpenseFailure.NonPositiveAmount -> ExpenseFailure.NonPositiveAmount
-        is GeneratedExpenseFailure.CurrencyMismatch -> ExpenseFailure.CurrencyMismatch(Currency.known(expected), Currency.known(found))
+        is GeneratedExpenseFailure.CurrencyMismatch -> ExpenseFailure.CurrencyMismatch(CurrencyCode.known(expected), CurrencyCode.known(found))
         GeneratedExpenseFailure.EmptySplit -> ExpenseFailure.EmptySplit
         is GeneratedExpenseFailure.DuplicateMember -> ExpenseFailure.DuplicateMember(MemberId(member))
         is GeneratedExpenseFailure.NonPositiveShare -> ExpenseFailure.NonPositiveShare(MemberId(member))
@@ -269,7 +269,7 @@ public sealed interface ExpenseGroupFailure {
      */
     public class MissingExchangeRate(
         /** The currency without a rate. */
-        public val currency: Currency,
+        public val currency: CurrencyCode,
     ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [currency]. */
         override fun equals(other: Any?): Boolean = other is MissingExchangeRate && currency == other.currency
@@ -287,7 +287,7 @@ public sealed interface ExpenseGroupFailure {
     /** The same currency appears twice among the rates of a currency change. */
     public class DuplicateExchangeRate(
         /** The currency that appears twice. */
-        public val currency: Currency,
+        public val currency: CurrencyCode,
     ) : ExpenseGroupFailure {
         /** Whether [other] is of the same class, with the same [currency]. */
         override fun equals(other: Any?): Boolean = other is DuplicateExchangeRate && currency == other.currency
@@ -484,9 +484,9 @@ internal fun GeneratedExpenseGroupFailure.converted(): ExpenseGroupFailure =
     when (this) {
         is GeneratedExpenseGroupFailure.UnsupportedFormat -> ExpenseGroupFailure.UnsupportedFormat(format)
         GeneratedExpenseGroupFailure.EmptyName -> ExpenseGroupFailure.EmptyName
-        is GeneratedExpenseGroupFailure.MissingExchangeRate -> ExpenseGroupFailure.MissingExchangeRate(Currency.known(currency))
+        is GeneratedExpenseGroupFailure.MissingExchangeRate -> ExpenseGroupFailure.MissingExchangeRate(CurrencyCode.known(currency))
         GeneratedExpenseGroupFailure.UnexpectedExchangeRate -> ExpenseGroupFailure.UnexpectedExchangeRate
-        is GeneratedExpenseGroupFailure.DuplicateExchangeRate -> ExpenseGroupFailure.DuplicateExchangeRate(Currency.known(currency))
+        is GeneratedExpenseGroupFailure.DuplicateExchangeRate -> ExpenseGroupFailure.DuplicateExchangeRate(CurrencyCode.known(currency))
         is GeneratedExpenseGroupFailure.DuplicateMember -> ExpenseGroupFailure.DuplicateMember(MemberId(member))
         is GeneratedExpenseGroupFailure.UnknownMember -> ExpenseGroupFailure.UnknownMember(MemberId(member))
         is GeneratedExpenseGroupFailure.ArchivedMember -> ExpenseGroupFailure.ArchivedMember(MemberId(member))
@@ -551,7 +551,7 @@ public sealed interface MoneyFailure {
     /** An amount with more decimal places than its currency has. */
     public class TooManyDecimals(
         /** The currency. */
-        public val currency: Currency,
+        public val currency: CurrencyCode,
         /** How many decimal places the currency has. */
         public val allowed: Long,
     ) : MoneyFailure {
@@ -568,9 +568,9 @@ public sealed interface MoneyFailure {
     /** Arithmetic between amounts of two different currencies. */
     public class CurrencyMismatch(
         /** The currency of the first amount. */
-        public val left: Currency,
+        public val left: CurrencyCode,
         /** The currency of the second amount. */
-        public val right: Currency,
+        public val right: CurrencyCode,
     ) : MoneyFailure {
         /** Whether [other] is of the same class, with the same [left] and [right]. */
         override fun equals(other: Any?): Boolean = other is CurrencyMismatch && left == other.left && right == other.right
@@ -602,8 +602,8 @@ public sealed interface MoneyFailure {
 internal fun GeneratedMoneyFailure.converted(): MoneyFailure =
     when (this) {
         GeneratedMoneyFailure.InvalidAmount -> MoneyFailure.InvalidAmount
-        is GeneratedMoneyFailure.TooManyDecimals -> MoneyFailure.TooManyDecimals(Currency.known(currency), allowed)
-        is GeneratedMoneyFailure.CurrencyMismatch -> MoneyFailure.CurrencyMismatch(Currency.known(left), Currency.known(right))
+        is GeneratedMoneyFailure.TooManyDecimals -> MoneyFailure.TooManyDecimals(CurrencyCode.known(currency), allowed)
+        is GeneratedMoneyFailure.CurrencyMismatch -> MoneyFailure.CurrencyMismatch(CurrencyCode.known(left), CurrencyCode.known(right))
         GeneratedMoneyFailure.UnknownCurrency -> MoneyFailure.UnknownCurrency
         GeneratedMoneyFailure.InvalidExchangeRate -> MoneyFailure.InvalidExchangeRate
         GeneratedMoneyFailure.InvalidParts -> MoneyFailure.InvalidParts

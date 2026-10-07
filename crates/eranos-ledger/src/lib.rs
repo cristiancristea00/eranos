@@ -18,7 +18,7 @@ use std::collections::btree_map::Entry;
 use std::fmt;
 
 use eranos_core::{CategoryId, MemberId};
-use eranos_money::{Currency, Money, MoneyError};
+use eranos_money::{CurrencyCode, Money, MoneyError};
 
 /// The group's running totals, in the group currency.
 ///
@@ -28,24 +28,24 @@ use eranos_money::{Currency, Money, MoneyError};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Balance, Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Split};
+/// use eranos::{Balance, CurrencyCode, CalendarDate, Expense, ExpenseGroup, Member, Money, Split};
 ///
-/// let mut group = ExpenseGroup::builder("Weekend", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Weekend", CurrencyCode::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
-/// let (amount, day) = (Money::parse("30.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+/// let (amount, day) = (Money::parse("30.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
 /// group.add_expense(Expense::builder("Groceries", amount, ana, Split::equal([ana, bob]), day).build()?)?;
 ///
 /// let summary = group.summary();
-/// assert_eq!(summary.total_spent(), Money::parse("30.00", Currency::EUR)?);
-/// assert_eq!(summary.member(ana).paid(), Money::parse("30.00", Currency::EUR)?);
-/// assert_eq!(summary.member(ana).balance(), Balance::GetsBack(Money::parse("15.00", Currency::EUR)?));
-/// assert_eq!(summary.member(bob).balance(), Balance::Owes(Money::parse("15.00", Currency::EUR)?));
+/// assert_eq!(summary.total_spent(), Money::parse("30.00", CurrencyCode::EUR)?);
+/// assert_eq!(summary.member(ana).paid(), Money::parse("30.00", CurrencyCode::EUR)?);
+/// assert_eq!(summary.member(ana).balance(), Balance::GetsBack(Money::parse("15.00", CurrencyCode::EUR)?));
+/// assert_eq!(summary.member(bob).balance(), Balance::Owes(Money::parse("15.00", CurrencyCode::EUR)?));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Summary {
-    currency: Currency,
+    currency: CurrencyCode,
     total_spent: i64,
     // In the three maps, rows whose values are all zero are removed, so two
     // summaries with the same totals compare equal however they were
@@ -56,7 +56,7 @@ pub struct Summary {
 }
 
 impl Summary {
-    const fn new(currency: Currency) -> Self {
+    const fn new(currency: CurrencyCode) -> Self {
         Self {
             currency,
             total_spent: 0,
@@ -152,7 +152,7 @@ impl Summary {
 pub struct MemberSummary {
     member: MemberId,
     totals: Totals,
-    currency: Currency,
+    currency: CurrencyCode,
 }
 
 impl MemberSummary {
@@ -279,13 +279,13 @@ pub trait FromBalance: Sized {
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Split};
+/// use eranos::{CurrencyCode, CalendarDate, Expense, ExpenseGroup, Member, Money, Split};
 ///
-/// let mut group = ExpenseGroup::builder("Trip", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let carol = group.add_member(Member::builder("Carol").build()?)?;
-/// let (amount, day) = (Money::parse("10.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+/// let (amount, day) = (Money::parse("10.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
 /// let everyone = Split::equal([ana, bob, carol]);
 /// let taxi = group.add_expense(Expense::builder("Taxi", amount, ana, everyone, day).build()?)?;
 ///
@@ -551,7 +551,7 @@ pub struct Ledger {
 impl Ledger {
     /// Returns an empty ledger in `currency`.
     #[must_use]
-    pub const fn new(currency: Currency) -> Self {
+    pub const fn new(currency: CurrencyCode) -> Self {
         Self {
             summary: Summary::new(currency),
             pairs: BTreeMap::new(),
@@ -566,7 +566,7 @@ impl Ledger {
 
     /// The group currency, which every total is in.
     #[must_use]
-    pub const fn currency(&self) -> Currency {
+    pub const fn currency(&self) -> CurrencyCode {
         self.summary.currency
     }
 

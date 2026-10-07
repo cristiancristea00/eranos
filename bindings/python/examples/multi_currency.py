@@ -13,7 +13,7 @@ from eranos import (
     CalendarDate,
     ConvertedCost,
     Cost,
-    Currency,
+    CurrencyCode,
     CurrencyRate,
     EqualSplit,
     ExchangeRate,
@@ -198,7 +198,7 @@ def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     group.add_expense(
         Expense(
             name='Fuel',
-            cost=ConvertedCost(Money.parse('400.00', Currency('RON')), ExchangeRate('0.2')),
+            cost=ConvertedCost(Money.parse('400.00', CurrencyCode('RON')), ExchangeRate('0.2')),
             payers=EqualSplit((ana,)),
             split=both,
             date=CalendarDate(2026, 8, 1),
@@ -207,7 +207,7 @@ def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     group.add_expense(
         Expense(
             name='Dinner',
-            cost=ConvertedCost(Money.parse('24000.00', Currency('HUF')), ExchangeRate('0.0025')),
+            cost=ConvertedCost(Money.parse('24000.00', CurrencyCode('HUF')), ExchangeRate('0.0025')),
             payers=EqualSplit((bob,)),
             split=both,
             date=CalendarDate(2026, 8, 2),
@@ -216,7 +216,7 @@ def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     group.add_expense(
         Expense(
             name='Ferry',
-            cost=LocalCost(Money.parse('60.00', Currency('EUR'))),
+            cost=LocalCost(Money.parse('60.00', CurrencyCode('EUR'))),
             payers=EqualSplit((bob,)),
             split=both,
             date=CalendarDate(2026, 8, 3),
@@ -243,7 +243,7 @@ def repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     cash = Transfer(
         sender=ana,
         receiver=bob,
-        cost=ConvertedCost(Money.parse('100.00', Currency('RON')), ExchangeRate('0.2')),
+        cost=ConvertedCost(Money.parse('100.00', CurrencyCode('RON')), ExchangeRate('0.2')),
         date=CalendarDate(2026, 8, 4),
         note='Cash at the border',
     )
@@ -270,8 +270,8 @@ def new_currency(group: ExpenseGroup) -> None:
         'take the new rate; entries already in RON become local costs, at 1.',
     )
     group.change_currency(
-        Currency('RON'),
-        (CurrencyRate(Currency('EUR'), ExchangeRate('5')), CurrencyRate(Currency('HUF'), ExchangeRate('0.0125'))),
+        CurrencyCode('RON'),
+        (CurrencyRate(CurrencyCode('EUR'), ExchangeRate('5')), CurrencyRate(CurrencyCode('HUF'), ExchangeRate('0.0125'))),
     )
     print_entries(group)
     print_lines(f'In {group.currency()}, the trip cost {group.summary().total_spent}, and everyone is still settled:')
@@ -280,7 +280,7 @@ def new_currency(group: ExpenseGroup) -> None:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Danube road trip', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
@@ -306,7 +306,7 @@ def main() -> None:
 
     new_currency(group)
     # 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
-    assert group.summary().total_spent == Money.parse('1000.00', Currency('RON'))
+    assert group.summary().total_spent == Money.parse('1000.00', CurrencyCode('RON'))
     assert balance(group, bob) == SettledBalance()
 
 

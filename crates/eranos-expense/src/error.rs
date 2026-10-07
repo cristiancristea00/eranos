@@ -1,7 +1,7 @@
 //! The failure of building an expense or one of its items.
 
 use eranos_core::MemberId;
-use eranos_money::{Currency, Money};
+use eranos_money::{CurrencyCode, Money};
 
 /// An [`Expense`](crate::Expense) or [`ExpenseItem`](crate::ExpenseItem) whose parts do not
 /// fit together.
@@ -18,9 +18,9 @@ pub enum ExpenseError {
     #[error("expected an amount in {expected}, found one in {found}")]
     CurrencyMismatch {
         /// The expense currency.
-        expected: Currency,
+        expected: CurrencyCode,
         /// The currency of the offending amount.
-        found: Currency,
+        found: CurrencyCode,
     },
     /// A split lists no member.
     #[error("a split needs at least one member")]
@@ -86,7 +86,7 @@ pub trait FromExpenseError: Sized {
     fn non_positive_amount(message: String) -> Self;
 
     /// The value for [`ExpenseError::CurrencyMismatch`].
-    fn currency_mismatch(expected: Currency, found: Currency, message: String) -> Self;
+    fn currency_mismatch(expected: CurrencyCode, found: CurrencyCode, message: String) -> Self;
 
     /// The value for [`ExpenseError::EmptySplit`].
     fn empty_split(message: String) -> Self;

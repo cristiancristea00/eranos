@@ -10,16 +10,16 @@ import Testing
 /// show an app another amount than the group holds.
 @Test
 func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
-    let euro = try Currency(code: "EUR")
+    let euro = try CurrencyCode(code: "EUR")
     #expect("EUR" == euro.code)
     #expect("Euro" == euro.name)
     #expect(978 == euro.numericCode)
     #expect(2 == euro.decimalPlaces)
     #expect("EUR" == euro.description)
-    #expect(Currency.all.contains(euro))
-    #expect(Currency(known: "EUR") == euro)
+    #expect(CurrencyCode.all.contains(euro))
+    #expect(CurrencyCode(known: "EUR") == euro)
     #expect(throws: EranosError.money(.unknownCurrency, detail: "unknown currency code")) {
-        try Currency(code: "XYZ")
+        try CurrencyCode(code: "XYZ")
     }
 
     let price = try Money(parsing: "12.5", in: euro)
@@ -27,7 +27,7 @@ func currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws {
     #expect("12.50 EUR" == price.description)
     #expect(try price.adding(Money(minorUnits: 50, currency: euro)) == Money(minorUnits: 1_300, currency: euro))
     #expect(try price.subtracting(Money(minorUnits: 50, currency: euro)) == Money(minorUnits: 1_200, currency: euro))
-    let lei = try Currency(code: "RON")
+    let lei = try CurrencyCode(code: "RON")
     #expect {
         try price.adding(Money(minorUnits: 1, currency: lei))
     } throws: { error in
@@ -51,8 +51,8 @@ func ratesPercentagesAndPartsReadAndWriteAsTheLibraryDoes() throws {
     let rate = try ExchangeRate(parsing: "4.970")
     #expect("4.97" == rate.description)
     #expect(rate == ExchangeRate(known: "4.97"))
-    let lei = try Currency(code: "RON")
-    let euro = try Currency(code: "EUR")
+    let lei = try CurrencyCode(code: "RON")
+    let euro = try CurrencyCode(code: "EUR")
     #expect(try ExchangeRate(parsing: "0.25").convert(Money(minorUnits: 2, currency: lei), into: euro) == Money(minorUnits: 1, currency: euro))
     #expect(throws: EranosError.self) {
         try ExchangeRate(parsing: "0")

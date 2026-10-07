@@ -4,9 +4,9 @@ Split and settle shared expenses: the eranos library for Python.
 A group holds its members, categories, expenses, and transfers, and adds them up into balances and the payments that
 settle them. Every amount is a whole number of minor units, and every division adds up exactly::
 
-    from eranos import CalendarDate, Currency, EqualSplit, Expense, ExpenseGroup, LocalCost, Member, Money, WholeExpenseSplit
+    from eranos import CalendarDate, CurrencyCode, EqualSplit, Expense, ExpenseGroup, LocalCost, Member, Money, WholeExpenseSplit
 
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Flat', euro)
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
@@ -27,7 +27,7 @@ and its twin, whose name ends in ``_async``, is a coroutine. What the library re
 
 from eranos._calendar import CalendarDate, TimeOfDay
 from eranos._contact import Email, Iban, Language, PhoneNumber, Username
-from eranos._currency import Currency
+from eranos._currency_code import CurrencyCode
 from eranos._entries import (
     PaymentAccount,
     PaymentAccountDetails,
@@ -143,7 +143,7 @@ __all__ = [
     'ContactFailure',
     'ConvertedCost',
     'Cost',
-    'Currency',
+    'CurrencyCode',
     'CurrencyRate',
     'Email',
     'EqualSplit',

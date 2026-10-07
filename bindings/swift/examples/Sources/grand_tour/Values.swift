@@ -7,25 +7,25 @@ import Report
 func currencies() throws(EranosError) {
     var rows: [CurrencyRow] = []
     for code in ["EUR", "RON", "JPY", "BHD"] {
-        let currency = try Currency(code: code)
+        let currency = try CurrencyCode(code: code)
         rows.append(CurrencyRow(code: currency.code, name: currency.name, numericCode: currency.numericCode, decimalPlaces: currency.decimalPlaces))
     }
-    let unknown = Result { () throws(EranosError) in try Currency(code: "XYZ") }
+    let unknown = Result { () throws(EranosError) in try CurrencyCode(code: "XYZ") }
     print("""
-        Currencies are the \(Currency.all.count) active ISO 4217 codes with a minor unit; an unknown code is
+        Currencies are the \(CurrencyCode.all.count) active ISO 4217 codes with a minor unit; an unknown code is
         refused (\(message(unknown))):
         """)
     printTable(rows, numbersFrom: 2)
-    expect(3, try Currency(code: "BHD").decimalPlaces, "the dinar's decimal places")
+    expect(3, try CurrencyCode(code: "BHD").decimalPlaces, "the dinar's decimal places")
 }
 
 func amounts() throws(EranosError) {
     let total = try eur("12.34").adding(eur("0.66"))
     let change = try eur("5.00").subtracting(eur("7.50"))
     let mixed = Result { () throws(EranosError) in try eur("1.00").adding(ron("1.00")) }
-    let yen = try Money(parsing: "1500", in: Currency(code: "JPY"))
-    let dinars = Money(minorUnits: 1_234, currency: try Currency(code: "BHD"))
-    let nothing = Money(minorUnits: 0, currency: try Currency(code: "RON"))
+    let yen = try Money(parsing: "1500", in: CurrencyCode(code: "JPY"))
+    let dinars = Money(minorUnits: 1_234, currency: try CurrencyCode(code: "BHD"))
+    let nothing = Money(minorUnits: 0, currency: try CurrencyCode(code: "RON"))
     let cost = Cost.converted(try eur("10.00"), rate: try ExchangeRate(parsing: "4.9765"))
     let doubled = Cost.converted(try eur("20.00"), rate: try rate(of: cost))
     print("Amounts are exact minor units in their currency:")

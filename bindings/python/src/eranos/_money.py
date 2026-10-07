@@ -6,7 +6,7 @@ from typing import final, override
 # The module of errors, not its function: its conversions make amounts, so whichever of this module and it is imported
 # first finds the other partly run.
 from eranos import _errors
-from eranos._currency import Currency
+from eranos._currency_code import CurrencyCode
 from eranos._internal import eranos as generated
 
 
@@ -23,11 +23,11 @@ class Money:
     minor_units: int
     """The amount in minor units, cents for the euro and none for the yen."""
 
-    currency: Currency
+    currency: CurrencyCode
     """The currency."""
 
     @classmethod
-    def parse(cls, text: str, currency: Currency) -> Money:
+    def parse(cls, text: str, currency: CurrencyCode) -> Money:
         """
         Parse the amount written text in currency: ``"12.50"``, ``"12.5"``, or ``"-3"``.
 
@@ -102,7 +102,7 @@ def money_of(value: generated.Money) -> Money:
         The amount.
 
     """
-    return Money(value.minor_units, Currency(value.currency))
+    return Money(value.minor_units, CurrencyCode(value.currency))
 
 
 def generated_money(money: Money) -> generated.Money:

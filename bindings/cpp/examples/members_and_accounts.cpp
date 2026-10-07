@@ -16,7 +16,7 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The two flatmates.
 struct Flatmates final {
@@ -223,7 +223,7 @@ void movingOut(ExpenseGroup &group, Flatmates const &flatmates) {
 
 /// Runs the example.
 void run() {
-    auto group = must(ExpenseGroup::create("Flat 4B", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Flat 4B", must(CurrencyCode::of("EUR"))));
     printLine("Flat 4B: members and their accounts\n"
               "═══════════════════════════════════");
     printLine("Ana and Bob share a flat. A member needs only a first name; the last name,\n"

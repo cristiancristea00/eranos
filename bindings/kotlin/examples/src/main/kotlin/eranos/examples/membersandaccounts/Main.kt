@@ -5,7 +5,7 @@ package eranos.examples.membersandaccounts
 import eranos.Balance
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.Email
 import eranos.EranosException
 import eranos.Expense
@@ -204,7 +204,7 @@ private fun movingOut(
     section("3. A flatmate moves out")
     val ana = flatmates.ana
     val bob = flatmates.bob
-    val euro = Currency.of("EUR")
+    val euro = CurrencyCode.of("EUR")
     val both = ExpenseSplit.Whole(Split.Equal(listOf(ana, bob)))
     val rent =
         group.addBlocking(
@@ -246,7 +246,7 @@ private fun movingOut(
 
 /** Prints the report of the flat's members. */
 fun main() {
-    ExpenseGroup("Flat 4B", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Flat 4B", CurrencyCode.of("EUR")).use { group ->
         println("Flat 4B: members and their accounts")
         println("═══════════════════════════════════")
         println(

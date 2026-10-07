@@ -63,7 +63,7 @@ struct Counts: Equatable {
     let direct: Int
 }
 
-let euro = try Currency(code: "EUR")
+let euro = try CurrencyCode(code: "EUR")
 
 /// The name of `strategy` as the apps show it.
 func strategyName(_ strategy: SettlementStrategy) -> String {

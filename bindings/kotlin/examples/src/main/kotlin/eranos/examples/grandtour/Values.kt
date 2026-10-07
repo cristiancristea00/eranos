@@ -4,7 +4,7 @@ package eranos.examples.grandtour
 
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
 import eranos.Language
@@ -46,27 +46,27 @@ private data class ValueRow(
 internal fun currencies() {
     val rows =
         listOf("EUR", "RON", "JPY", "BHD").map { code ->
-            val currency = Currency.of(code)
+            val currency = CurrencyCode.of(code)
             CurrencyRow(code = currency.code, name = currency.name, numericCode = currency.numericCode, decimalPlaces = currency.decimalPlaces)
         }
-    val unknown = refusal { Currency.of("XYZ") }
+    val unknown = refusal { CurrencyCode.of("XYZ") }
     println(
         """
-        Currencies are the ${Currency.all.size} active ISO 4217 codes with a minor unit; an unknown code is
+        Currencies are the ${CurrencyCode.all.size} active ISO 4217 codes with a minor unit; an unknown code is
         refused (${message(unknown)}):
         """.trimIndent(),
     )
     printTable(CurrencyRow.HEADERS, rows, numbersFrom = 2)
-    check(3 == Currency.of("BHD").decimalPlaces)
+    check(3 == CurrencyCode.of("BHD").decimalPlaces)
 }
 
 internal fun amounts() {
     val total = eur("12.34") + eur("0.66")
     val change = eur("5.00") - eur("7.50")
     val mixed = refusal { eur("1.00") + ron("1.00") }
-    val yen = Money.parse("1500", Currency.of("JPY"))
-    val dinars = Money(1_234, Currency.of("BHD"))
-    val nothing = Money(0, Currency.of("RON"))
+    val yen = Money.parse("1500", CurrencyCode.of("JPY"))
+    val dinars = Money(1_234, CurrencyCode.of("BHD"))
+    val nothing = Money(0, CurrencyCode.of("RON"))
     val cost = Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"))
     val doubled = Cost.Converted(eur("20.00"), rate(cost))
     println("Amounts are exact minor units in their currency:")

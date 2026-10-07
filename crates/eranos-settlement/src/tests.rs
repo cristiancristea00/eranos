@@ -8,7 +8,7 @@ use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
 use eranos_ledger::Delta;
-use eranos_money::Currency;
+use eranos_money::CurrencyCode;
 
 use super::*;
 
@@ -37,7 +37,7 @@ fn ledger() -> Ledger {
         300,
         1,
     );
-    let mut ledger = Ledger::new(Currency::RON);
+    let mut ledger = Ledger::new(CurrencyCode::RON);
     ledger.apply(&delta).unwrap();
     ledger
 }
@@ -57,7 +57,7 @@ fn owed_by_a_hub(creditors: u8) -> Ledger {
             1,
         );
     }
-    let mut ledger = Ledger::new(Currency::EUR);
+    let mut ledger = Ledger::new(CurrencyCode::EUR);
     ledger.apply(&delta).unwrap();
     ledger
 }
@@ -85,14 +85,14 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
                         from: member(3),
                         to: member(1),
                     },
-                    amount: Money::from_minor_units(500, Currency::RON),
+                    amount: Money::from_minor_units(500, CurrencyCode::RON),
                 },
                 Payment {
                     members: MemberPair {
                         from: member(4),
                         to: member(2),
                     },
-                    amount: Money::from_minor_units(300, Currency::RON),
+                    amount: Money::from_minor_units(300, CurrencyCode::RON),
                 },
             ]
         );
@@ -104,7 +104,7 @@ fn every_strategy_pays_in_the_group_currency_in_order() {
 #[test]
 fn a_kept_settlement_lasts_until_it_is_cleared() {
     let mut kept = Settlements::default();
-    let empty = Ledger::new(Currency::RON);
+    let empty = Ledger::new(CurrencyCode::RON);
     for strategy in SettlementStrategy::all() {
         // The first request computes the plan; later ones return it.
         let first = kept.get(strategy, &ledger()).unwrap();
@@ -185,7 +185,7 @@ fn all_lists_every_strategy_in_declaration_order() {
 fn a_settled_ledger_has_no_payments() {
     for strategy in SettlementStrategy::all() {
         assert!(
-            settle(strategy, &Ledger::new(Currency::EUR))
+            settle(strategy, &Ledger::new(CurrencyCode::EUR))
                 .unwrap()
                 .is_empty()
         );

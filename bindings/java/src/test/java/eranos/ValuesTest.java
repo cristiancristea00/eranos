@@ -21,17 +21,17 @@ class ValuesTest {
      */
     @Test
     void currenciesAndAmountsReadAndWriteAsTheLibraryDoes() throws EranosException {
-        Currency euro = Currency.of("EUR");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         assertEquals("EUR", euro.code());
         assertEquals("Euro", euro.name());
         assertEquals("EUR", euro.toString());
         assertEquals(978, euro.numericCode());
         assertEquals(2, euro.decimalPlaces());
-        assertTrue(Currency.all().contains(euro));
-        Currency lei = Currency.of("RON");
-        assertValue(euro, Currency.known("EUR"), lei);
+        assertTrue(CurrencyCode.all().contains(euro));
+        CurrencyCode lei = CurrencyCode.of("RON");
+        assertValue(euro, CurrencyCode.known("EUR"), lei);
         EranosException.Money unknown =
-                assertThrows(EranosException.Money.class, () -> Currency.of("XYZ"));
+                assertThrows(EranosException.Money.class, () -> CurrencyCode.of("XYZ"));
         assertEquals(new MoneyFailure.UnknownCurrency(), unknown.failure());
         assertEquals("unknown currency code", unknown.getMessage());
 
@@ -61,8 +61,8 @@ class ValuesTest {
         ExchangeRate rate = ExchangeRate.parse("4.970");
         assertEquals("4.97", rate.toString());
         assertValue(rate, ExchangeRate.parse("4.97"), ExchangeRate.parse("5"));
-        Currency lei = Currency.of("RON");
-        Currency euro = Currency.of("EUR");
+        CurrencyCode lei = CurrencyCode.of("RON");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         assertEquals(
                 new Money(1, euro), ExchangeRate.parse("0.25").convert(new Money(2, lei), euro));
         assertThrows(EranosException.Money.class, () -> ExchangeRate.parse("0"));
@@ -183,7 +183,7 @@ class ValuesTest {
      */
     @Test
     void aValueTheLibraryNeverSendsStillPrints() {
-        Currency unlisted = Currency.known("XYZ");
+        CurrencyCode unlisted = CurrencyCode.known("XYZ");
         assertEquals("XYZ", unlisted.code());
         assertEquals("XYZ", unlisted.name());
         assertEquals(0, unlisted.numericCode());

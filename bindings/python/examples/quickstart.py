@@ -11,7 +11,7 @@ from typing import ClassVar, final, override
 from eranos import (
     Balance,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     Expense,
     GetsBackBalance,
@@ -96,7 +96,7 @@ class PaymentRow(Row):
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Weekend in Sinaia', euro)
     title(group.name())
     print_lines(

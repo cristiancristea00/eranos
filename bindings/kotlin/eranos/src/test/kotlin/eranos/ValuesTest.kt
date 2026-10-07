@@ -17,16 +17,16 @@ class ValuesTest {
      */
     @Test
     fun currenciesAndAmountsReadAndWriteAsTheLibraryDoes() {
-        val euro = Currency.of("EUR")
+        val euro = CurrencyCode.of("EUR")
         assertEquals("EUR", euro.code)
         assertEquals("Euro", euro.name)
         assertEquals("EUR", euro.toString())
         assertEquals(978, euro.numericCode)
         assertEquals(2, euro.decimalPlaces)
-        assertTrue(euro in Currency.all)
-        val lei = Currency.of("RON")
-        assertValue(euro, Currency.known("EUR"), lei)
-        val unknown = assertThrows<EranosException.Money> { Currency.of("XYZ") }
+        assertTrue(euro in CurrencyCode.all)
+        val lei = CurrencyCode.of("RON")
+        assertValue(euro, CurrencyCode.known("EUR"), lei)
+        val unknown = assertThrows<EranosException.Money> { CurrencyCode.of("XYZ") }
         assertEquals(MoneyFailure.UnknownCurrency, unknown.failure)
         assertEquals("unknown currency code", unknown.message)
 
@@ -51,8 +51,8 @@ class ValuesTest {
         val rate = ExchangeRate.parse("4.970")
         assertEquals("4.97", rate.toString())
         assertValue(rate, ExchangeRate.parse("4.97"), ExchangeRate.parse("5"))
-        val lei = Currency.of("RON")
-        val euro = Currency.of("EUR")
+        val lei = CurrencyCode.of("RON")
+        val euro = CurrencyCode.of("EUR")
         assertEquals(Money(1, euro), ExchangeRate.parse("0.25").convert(Money(2, lei), euro))
         assertThrows<EranosException.Money> { ExchangeRate.parse("0") }
         assertThrows<EranosException.Money> { ExchangeRate.parse("2").convert(Money(Long.MAX_VALUE, lei), euro) }
@@ -162,7 +162,7 @@ class ValuesTest {
      */
     @Test
     fun aValueTheLibraryNeverSendsStillPrints() {
-        val unlisted = Currency.known("XYZ")
+        val unlisted = CurrencyCode.known("XYZ")
         assertEquals("XYZ", unlisted.code)
         assertEquals("XYZ", unlisted.name)
         assertEquals(0, unlisted.numericCode)

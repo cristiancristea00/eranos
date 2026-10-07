@@ -10,7 +10,7 @@ import eranos.Balance;
 import eranos.Category;
 import eranos.CategoryId;
 import eranos.CategoryTotal;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
@@ -301,7 +301,8 @@ final class Tables {
      * Every expense and transfer in a currency {@code shown} accepts, as entered and in the group
      * currency.
      */
-    static void printEntries(ExpenseGroup group, Predicate<Currency> shown) throws EranosException {
+    static void printEntries(ExpenseGroup group, Predicate<CurrencyCode> shown)
+            throws EranosException {
         Money zero = new Money(0, group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {

@@ -94,7 +94,7 @@ public enum ExpenseFailure: Sendable, Hashable {
     case nonPositiveAmount
 
     /// An amount inside the expense is in a different currency.
-    case currencyMismatch(expected: Currency, found: Currency)
+    case currencyMismatch(expected: CurrencyCode, found: CurrencyCode)
 
     /// A split lists no member.
     case emptySplit
@@ -138,7 +138,7 @@ extension ExpenseFailure {
         case .nonPositiveAmount:
             self = .nonPositiveAmount
         case let .currencyMismatch(expected, found):
-            self = .currencyMismatch(expected: Currency(known: expected), found: Currency(known: found))
+            self = .currencyMismatch(expected: CurrencyCode(known: expected), found: CurrencyCode(known: found))
         case .emptySplit:
             self = .emptySplit
         case let .duplicateMember(member):
@@ -176,14 +176,14 @@ public enum ExpenseGroupFailure: Sendable, Hashable {
 
     /// An entry in another currency than the group's has no exchange rate into the group currency:
     /// its cost is local, or a currency change gave no rate for its currency.
-    case missingExchangeRate(Currency)
+    case missingExchangeRate(CurrencyCode)
 
     /// An entry in the group currency has a converted cost; only a local cost is in the group
     /// currency.
     case unexpectedExchangeRate
 
     /// The same currency appears twice among the rates of a currency change.
-    case duplicateExchangeRate(Currency)
+    case duplicateExchangeRate(CurrencyCode)
 
     /// A member with this ID already exists.
     case duplicateMember(Member.ID)
@@ -236,11 +236,11 @@ extension ExpenseGroupFailure {
         case .emptyName:
             self = .emptyName
         case let .missingExchangeRate(currency):
-            self = .missingExchangeRate(Currency(known: currency))
+            self = .missingExchangeRate(CurrencyCode(known: currency))
         case .unexpectedExchangeRate:
             self = .unexpectedExchangeRate
         case let .duplicateExchangeRate(currency):
-            self = .duplicateExchangeRate(Currency(known: currency))
+            self = .duplicateExchangeRate(CurrencyCode(known: currency))
         case let .duplicateMember(member):
             self = .duplicateMember(Member.ID(rawValue: member))
         case let .unknownMember(member):
@@ -324,10 +324,10 @@ public enum MoneyFailure: Sendable, Hashable {
     case invalidAmount
 
     /// An amount with more decimal places than its currency has.
-    case tooManyDecimals(currency: Currency, allowed: Int)
+    case tooManyDecimals(currency: CurrencyCode, allowed: Int)
 
     /// Arithmetic between amounts of two different currencies.
-    case currencyMismatch(left: Currency, right: Currency)
+    case currencyMismatch(left: CurrencyCode, right: CurrencyCode)
 
     /// A currency code that is not an active ISO 4217 code.
     case unknownCurrency
@@ -351,9 +351,9 @@ extension MoneyFailure {
         case .invalidAmount:
             self = .invalidAmount
         case let .tooManyDecimals(currency, allowed):
-            self = .tooManyDecimals(currency: Currency(known: currency), allowed: Int(allowed))
+            self = .tooManyDecimals(currency: CurrencyCode(known: currency), allowed: Int(allowed))
         case let .currencyMismatch(left, right):
-            self = .currencyMismatch(left: Currency(known: left), right: Currency(known: right))
+            self = .currencyMismatch(left: CurrencyCode(known: left), right: CurrencyCode(known: right))
         case .unknownCurrency:
             self = .unknownCurrency
         case .invalidExchangeRate:

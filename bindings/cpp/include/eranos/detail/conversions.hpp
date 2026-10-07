@@ -12,7 +12,7 @@
 #include "eranos/calendar.hpp"
 #include "eranos/category.hpp"
 #include "eranos/contact.hpp"
-#include "eranos/currency.hpp"
+#include "eranos/currency_code.hpp"
 #include "eranos/error.hpp"
 #include "eranos/expense.hpp"
 #include "eranos/expense_group.hpp"
@@ -260,13 +260,13 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The currency of @p details.
-[[nodiscard]] inline Currency currencyOf(EranosCurrencyDetails const &details) {
-    return Currency(
+[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details) {
+    return CurrencyCode(
         {.code = details.code(), .name = details.name(), .numericCode = details.numeric_code(), .decimalPlaces = details.decimal_places()});
 }
 
 /// The currency of the ISO 4217 code @p code, which the library wrote.
-[[nodiscard]] inline Currency listedCurrency(std::string_view const code) {
+[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code) {
     // A code the library wrote is one it lists.
     return currencyOf(*known(EranosCurrencyDetails::of(code)));
 }

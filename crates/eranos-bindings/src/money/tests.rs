@@ -120,7 +120,7 @@ fn rates_and_currency_details_convert() {
         })
     ));
     assert_eq!(
-        CurrencyDetails::from_library(library::Currency::EUR),
+        CurrencyDetails::from_library(library::CurrencyCode::EUR),
         CurrencyDetails {
             code: "EUR".to_owned(),
             name: "Euro".to_owned(),

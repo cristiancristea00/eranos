@@ -10,7 +10,7 @@ from eranos import (
     CalendarDate,
     Category,
     CategoryId,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     Expense,
     ExpenseId,
@@ -34,7 +34,7 @@ class Flat:
     group: ExpenseGroup
     """The group."""
 
-    euro: Currency
+    euro: CurrencyCode
     """The group currency."""
 
     day: CalendarDate
@@ -95,7 +95,7 @@ def flat() -> Iterator[Flat]:
         The flat, whose group is freed after the test.
 
     """
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     day = CalendarDate(2026, 9, 23)
     with ExpenseGroup.create('Flat', euro, description='Rent', language=Language('pt-pt')) as group:
         ana = group.add_member(Member(first_name='Ana'))

@@ -3,7 +3,7 @@
 use std::fmt;
 
 use crate::error::MoneyError;
-use crate::{Cost, Currency, ExchangeRate};
+use crate::{Cost, CurrencyCode, ExchangeRate};
 
 /// An amount of money: a whole number of minor units (cents) in one currency.
 ///
@@ -16,28 +16,28 @@ use crate::{Cost, Currency, ExchangeRate};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Money};
+/// use eranos::{CurrencyCode, Money};
 ///
-/// let price = Money::parse("12.34", Currency::EUR)?;
+/// let price = Money::parse("12.34", CurrencyCode::EUR)?;
 /// assert_eq!(price.minor_units(), 1234);
 /// assert_eq!(price.to_string(), "12.34 EUR");
 ///
-/// let tip = Money::from_minor_units(166, Currency::EUR);
-/// assert_eq!(price.checked_add(tip)?, Money::parse("14.00", Currency::EUR)?);
+/// let tip = Money::from_minor_units(166, CurrencyCode::EUR);
+/// assert_eq!(price.checked_add(tip)?, Money::parse("14.00", CurrencyCode::EUR)?);
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Money {
     minor_units: i64,
-    currency: Currency,
+    currency: CurrencyCode,
 }
 
 impl Money {
     /// Returns `minor_units` of `currency`: `from_minor_units(1234,
-    /// Currency::EUR)` is 12.34 EUR.
+    /// CurrencyCode::EUR)` is 12.34 EUR.
     #[must_use]
-    pub const fn from_minor_units(minor_units: i64, currency: Currency) -> Self {
+    pub const fn from_minor_units(minor_units: i64, currency: CurrencyCode) -> Self {
         Self {
             minor_units,
             currency,
@@ -46,7 +46,7 @@ impl Money {
 
     /// Returns zero in `currency`.
     #[must_use]
-    pub const fn zero(currency: Currency) -> Self {
+    pub const fn zero(currency: CurrencyCode) -> Self {
         Self::from_minor_units(0, currency)
     }
 
@@ -66,15 +66,15 @@ impl Money {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Currency, Money};
+    /// use eranos::{CurrencyCode, Money};
     ///
-    /// assert_eq!(Money::parse("1500", Currency::JPY)?.minor_units(), 1500);
-    /// assert_eq!(Money::parse("0.5", Currency::EUR)?.minor_units(), 50);
-    /// assert!(Money::parse("0.505", Currency::EUR).is_err());
-    /// assert!(Money::parse("1,50", Currency::EUR).is_err());
+    /// assert_eq!(Money::parse("1500", CurrencyCode::JPY)?.minor_units(), 1500);
+    /// assert_eq!(Money::parse("0.5", CurrencyCode::EUR)?.minor_units(), 50);
+    /// assert!(Money::parse("0.505", CurrencyCode::EUR).is_err());
+    /// assert!(Money::parse("1,50", CurrencyCode::EUR).is_err());
     /// # Ok::<(), eranos::error::MoneyError>(())
     /// ```
-    pub fn parse(text: &str, currency: Currency) -> Result<Self, MoneyError> {
+    pub fn parse(text: &str, currency: CurrencyCode) -> Result<Self, MoneyError> {
         let text = text.trim();
         let (negative, unsigned) = text
             .strip_prefix('-')
@@ -120,7 +120,7 @@ impl Money {
 
     /// The currency.
     #[must_use]
-    pub const fn currency(self) -> Currency {
+    pub const fn currency(self) -> CurrencyCode {
         self.currency
     }
 
@@ -151,10 +151,10 @@ impl Money {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Currency, ExchangeRate, Money};
+    /// use eranos::{CurrencyCode, ExchangeRate, Money};
     ///
     /// // Fuel paid in RON, for a group in EUR: 1 RON = 0.2 EUR.
-    /// let fuel = Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?);
+    /// let fuel = Money::parse("400.00", CurrencyCode::RON)?.at(ExchangeRate::parse("0.2")?);
     /// assert_eq!(fuel.exchange_rate(), ExchangeRate::parse("0.2")?);
     /// # Ok::<(), eranos::error::MoneyError>(())
     /// ```

@@ -3,7 +3,7 @@
 //! outside the group, or let a refusal of the library through as a success
 //! would give every binding the same wrong answer.
 
-use eranos::{CategoryId, Currency, ExpenseGroup, ExpenseId, MemberId, TransferId};
+use eranos::{CategoryId, CurrencyCode, ExpenseGroup, ExpenseId, MemberId, TransferId};
 
 use crate::calendar::CalendarDate;
 use crate::expense::{Expense, ExpenseSplit, Split};
@@ -101,7 +101,7 @@ fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
 }
 
 fn flat() -> Flat {
-    let mut group = ExpenseGroup::builder("Flat", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = operations::add_member(&mut group, &new_member("Ana")).unwrap();

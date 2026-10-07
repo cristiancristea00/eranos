@@ -74,11 +74,11 @@ struct PaymentRow final {
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// Runs the example.
 void run() {
-    auto group = must(ExpenseGroup::create("Weekend in Sinaia", must(Currency::of("EUR"))));
+    auto group = must(ExpenseGroup::create("Weekend in Sinaia", must(CurrencyCode::of("EUR"))));
     title(group.name());
     std::println("Three friends rent a cabin and buy groceries. The group keeps its books in {}, so\n"
                  "every total, balance, and payment below is in {}.",

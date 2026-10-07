@@ -8,7 +8,7 @@ import static eranos.examples.Report.title;
 
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.Expense;
 import eranos.ExpenseGroup;
@@ -91,7 +91,7 @@ public final class Main {
 
     /** The amount written {@code text}, in euros. */
     private static Money eur(String text) throws EranosException {
-        return Money.parse(text, Currency.of("EUR"));
+        return Money.parse(text, CurrencyCode.of("EUR"));
     }
 
     /** The receipt: every line with the members who had it. */
@@ -158,7 +158,7 @@ public final class Main {
      */
     public static void main(String[] arguments) throws EranosException {
         try (ExpenseGroup group =
-                ExpenseGroup.builder("Dinner at Caru' cu Bere", Currency.of("EUR")).build()) {
+                ExpenseGroup.builder("Dinner at Caru' cu Bere", CurrencyCode.of("EUR")).build()) {
             MemberId ana = group.addMember(Member.builder("Ana").build());
             MemberId bob = group.addMember(Member.builder("Bob").build());
             MemberId carol = group.addMember(Member.builder("Carol").build());

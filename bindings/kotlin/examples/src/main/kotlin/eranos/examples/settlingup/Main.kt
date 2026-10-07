@@ -5,7 +5,7 @@ package eranos.examples.settlingup
 import eranos.Balance
 import eranos.CalendarDate
 import eranos.Cost
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.Expense
 import eranos.ExpenseGroup
 import eranos.ExpenseSplit
@@ -106,7 +106,7 @@ private fun spend(
     group.addBlocking(
         Expense(
             name,
-            Cost.Local(Money.parse(amount, Currency.of("EUR"))),
+            Cost.Local(Money.parse(amount, CurrencyCode.of("EUR"))),
             Split.Equal(listOf(payer)),
             ExpenseSplit.Whole(Split.Equal(participants)),
             CalendarDate.of(year = 2026, month = 9, day = 20),
@@ -222,7 +222,7 @@ private fun strategies(group: ExpenseGroup): Counts {
  */
 private fun festival(): Int {
     section("8. A larger group")
-    return ExpenseGroup("Festival", Currency.of("EUR")).use { group ->
+    return ExpenseGroup("Festival", CurrencyCode.of("EUR")).use { group ->
         val friends = (1..21).map { number -> group.addBlocking(Member("Friend $number")) }
         // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
         // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
@@ -231,7 +231,7 @@ private fun festival(): Int {
             group.addBlocking(
                 Expense(
                     "Round",
-                    Cost.Local(Money(21 * number * number, Currency.of("EUR"))),
+                    Cost.Local(Money(21 * number * number, CurrencyCode.of("EUR"))),
                     Split.Equal(listOf(payer)),
                     ExpenseSplit.Whole(Split.Equal(friends)),
                     CalendarDate.of(year = 2026, month = 9, day = 18),
@@ -258,7 +258,7 @@ private fun festival(): Int {
 
 /** Prints the report of the ski week. */
 fun main() {
-    ExpenseGroup("Ski week", Currency.of("EUR")).use { group ->
+    ExpenseGroup("Ski week", CurrencyCode.of("EUR")).use { group ->
         val ana = group.addBlocking(Member("Ana"))
         val bob = group.addBlocking(Member("Bob"))
         val carol = group.addBlocking(Member("Carol"))

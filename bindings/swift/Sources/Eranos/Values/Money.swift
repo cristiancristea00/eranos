@@ -9,7 +9,7 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
     public let minorUnits: Int64
 
     /// The currency.
-    public let currency: Currency
+    public let currency: CurrencyCode
 
     /// The amount as the library writes it: "12.50 EUR".
     public var description: String {
@@ -21,7 +21,7 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
     }
 
     /// The amount of `minorUnits` minor units of `currency`.
-    public init(minorUnits: Int64, currency: Currency) {
+    public init(minorUnits: Int64, currency: CurrencyCode) {
         self.minorUnits = minorUnits
         self.currency = currency
     }
@@ -31,13 +31,13 @@ public struct Money: Hashable, Sendable, CustomStringConvertible {
     /// - Throws: ``EranosError/money(_:detail:)`` with ``MoneyFailure/invalidAmount`` for text
     ///   that is not a decimal number, and ``MoneyFailure/tooManyDecimals(currency:allowed:)``
     ///   for more decimal places than the currency has.
-    public init(parsing text: String, in currency: Currency) throws(EranosError) {
+    public init(parsing text: String, in currency: CurrencyCode) throws(EranosError) {
         let money = try converting { try EranosGenerated.moneyParse(text: text, code: currency.code) }
         self.init(money)
     }
 
     init(_ money: EranosGenerated.Money) {
-        self.init(minorUnits: money.minorUnits, currency: Currency(known: money.currency))
+        self.init(minorUnits: money.minorUnits, currency: CurrencyCode(known: money.currency))
     }
 
     /// This amount plus `other`.

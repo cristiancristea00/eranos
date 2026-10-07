@@ -19,7 +19,7 @@ import {
     type Member,
     type Split,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     Email,
     ExchangeRate,
     ExpenseError,
@@ -52,7 +52,7 @@ interface Expenses {
  * cost, split, and tip.
  */
 function expenses(flat: Flat): Expenses {
-    const lei = Currency.of('RON');
+    const lei = CurrencyCode.of('RON');
     const taxi: Expense = {
         name: 'Taxi',
         cost: { kind: 'converted', amount: new Money(5_000n, lei), rate: ExchangeRate.parse('0.2') },
@@ -126,7 +126,7 @@ void describe('the expenses, members, categories, and transfers', () => {
     /** The tip, total, and members an app shows for an expense would differ from those the group records when it adds it. */
     void it("tells an expense's tip, total, and members", () => {
         const flat = new Flat();
-        const lei = Currency.of('RON');
+        const lei = CurrencyCode.of('RON');
         const { dinner, taxi } = expenses(flat);
         assert.ok(expenseTipAmount(taxi).equals(new Money(500n, lei)));
         assert.ok(expenseTotal(taxi).equals(new Money(5_500n, lei)));
@@ -171,7 +171,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         const stored = flat.group.memberSync(id);
         assert.deepEqual(stored, { ...carol, id });
 
-        const lei = Currency.of('RON');
+        const lei = CurrencyCode.of('RON');
         const cash = {
             from: flat.bob,
             to: flat.ana,

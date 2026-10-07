@@ -33,7 +33,7 @@ use eranos_core::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId, t
 use eranos_expense::{Expense, resolve_expense, resolve_expense_at};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
 use eranos_member::Member;
-use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
+use eranos_money::{Cost, CurrencyCode, CurrencyRate, ExchangeRate, Money};
 use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy, Settlements};
 use eranos_transfer::{Transfer, resolve_transfer, resolve_transfer_at};
 
@@ -59,15 +59,15 @@ const ENTRIES_PER_YIELD: u64 = 1_024;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, SettlementStrategy, Split};
+/// use eranos::{CurrencyCode, CalendarDate, Expense, ExpenseGroup, Member, Money, SettlementStrategy, Split};
 ///
-/// let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let carol = group.add_member(Member::builder("Carol").build()?)?;
 ///
 /// let day = CalendarDate::new(2026, 9, 23)?;
-/// let eur = |text| Money::parse(text, Currency::EUR);
+/// let eur = |text| Money::parse(text, CurrencyCode::EUR);
 /// let everyone = Split::equal([ana, bob, carol]);
 /// group.add_expense(Expense::builder("Hotel", eur("300.00")?, ana, everyone.clone(), day).build()?)?;
 /// group.add_expense(Expense::builder("Dinner", eur("60.00")?, bob, everyone, day).build()?)?;
@@ -82,7 +82,7 @@ const ENTRIES_PER_YIELD: u64 = 1_024;
 pub struct ExpenseGroup {
     id: ExpenseGroupId,
     name: String,
-    currency: Currency,
+    currency: CurrencyCode,
     description: Option<String>,
     language: Option<Language>,
     members: BTreeMap<MemberId, MemberRecord>,
@@ -124,14 +124,14 @@ impl ExpenseGroup {
     /// Starts a group with its required name and currency.
     ///
     /// Every total, balance, and settlement is in the group currency.
-    pub fn builder(name: impl Into<String>, currency: Currency) -> ExpenseGroupBuilder {
+    pub fn builder(name: impl Into<String>, currency: CurrencyCode) -> ExpenseGroupBuilder {
         ExpenseGroupBuilder::new(name.into(), currency)
     }
 
     fn new(
         id: ExpenseGroupId,
         name: String,
-        currency: Currency,
+        currency: CurrencyCode,
         description: Option<String>,
         language: Option<Language>,
     ) -> Self {
@@ -177,7 +177,7 @@ impl ExpenseGroup {
     // --- Currency ------------------------------------------------------------
 
     /// The currency of every total, balance, and settlement.
-    pub const fn currency(&self) -> Currency {
+    pub const fn currency(&self) -> CurrencyCode {
         self.currency
     }
 
@@ -204,22 +204,22 @@ impl ExpenseGroup {
     ///
     /// ```
     /// use eranos::{
-    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup, Member, Money, Split,
+    ///     CalendarDate, CurrencyCode, CurrencyRate, ExchangeRate, Expense, ExpenseGroup, Member, Money, Split,
     /// };
     ///
-    /// let mut group = ExpenseGroup::builder("Trip", Currency::EUR).build()?;
+    /// let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR).build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?)?;
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let (amount, day) = (Money::parse("20.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
     /// group.add_expense(Expense::builder("Museum", amount, ana, Split::equal([ana]), day).build()?)?;
     ///
-    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
-    /// group.change_currency(Currency::RON, &[rate])?;
-    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
+    /// let rate = CurrencyRate::new(CurrencyCode::EUR, ExchangeRate::parse("4.97")?);
+    /// group.change_currency(CurrencyCode::RON, &[rate])?;
+    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", CurrencyCode::RON)?);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn change_currency(
         &mut self,
-        currency: Currency,
+        currency: CurrencyCode,
         rates: &[CurrencyRate],
     ) -> Result<(), ExpenseGroupError> {
         self.change_currency_async(currency, rates).complete()
@@ -242,23 +242,23 @@ impl ExpenseGroup {
     /// ```
     /// use eranos::cooperative::block_on;
     /// use eranos::{
-    ///     CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup, Member, Money, Split,
+    ///     CalendarDate, CurrencyCode, CurrencyRate, ExchangeRate, Expense, ExpenseGroup, Member, Money, Split,
     /// };
     ///
-    /// let mut group = ExpenseGroup::builder("Trip", Currency::EUR).build()?;
+    /// let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR).build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?)?;
-    /// let (amount, day) = (Money::parse("20.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let (amount, day) = (Money::parse("20.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
     /// group.add_expense(Expense::builder("Museum", amount, ana, Split::equal([ana]), day).build()?)?;
     ///
     /// // Awaited like any future; `block_on` runs it on this thread.
-    /// let rate = CurrencyRate::new(Currency::EUR, ExchangeRate::parse("4.97")?);
-    /// block_on(group.change_currency_async(Currency::RON, &[rate]))?;
-    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", Currency::RON)?);
+    /// let rate = CurrencyRate::new(CurrencyCode::EUR, ExchangeRate::parse("4.97")?);
+    /// block_on(group.change_currency_async(CurrencyCode::RON, &[rate]))?;
+    /// assert_eq!(group.summary().total_spent(), Money::parse("99.40", CurrencyCode::RON)?);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn change_currency_async(
         &mut self,
-        currency: Currency,
+        currency: CurrencyCode,
         rates: &[CurrencyRate],
     ) -> Cooperative<impl Future<Output = Result<(), ExpenseGroupError>> + Send> {
         Cooperative::new(self.change_currency_paced(currency, rates))
@@ -268,7 +268,7 @@ impl ExpenseGroup {
     /// [`change_currency_async`](Self::change_currency_async).
     async fn change_currency_paced(
         &mut self,
-        currency: Currency,
+        currency: CurrencyCode,
         rates: &[CurrencyRate],
     ) -> Result<(), ExpenseGroupError> {
         if currency == self.currency {
@@ -287,7 +287,7 @@ impl ExpenseGroup {
                 });
             }
         }
-        let rate_for = |source: Currency| -> Result<Option<ExchangeRate>, ExpenseGroupError> {
+        let rate_for = |source: CurrencyCode| -> Result<Option<ExchangeRate>, ExpenseGroupError> {
             if source == currency {
                 Ok(None)
             } else {
@@ -864,14 +864,14 @@ impl ExpenseGroup {
     ///
     /// ```
     /// use eranos::cooperative::block_on;
-    /// use eranos::{CalendarDate, Currency, ExpenseGroup, Member, Money, SettlementStrategy, Transfer};
+    /// use eranos::{CalendarDate, CurrencyCode, ExpenseGroup, Member, Money, SettlementStrategy, Transfer};
     ///
-    /// let mut group = ExpenseGroup::builder("Flat", Currency::EUR).build()?;
+    /// let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?;
     /// let ana = group.add_member(Member::builder("Ana").build()?)?;
     /// let bob = group.add_member(Member::builder("Bob").build()?)?;
     /// let day = CalendarDate::new(2026, 9, 23)?;
     /// // Bob paid Ana 20.00 too much.
-    /// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", Currency::EUR)?, day).build()?)?;
+    /// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", CurrencyCode::EUR)?, day).build()?)?;
     ///
     /// // Awaited like any future; `block_on` runs it on this thread.
     /// let settlement = block_on(group.settlement_async(SettlementStrategy::MinimumTransfers))?;

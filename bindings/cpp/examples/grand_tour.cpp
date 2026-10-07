@@ -394,10 +394,10 @@ struct ValueRow final {
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money eur(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
+[[nodiscard]] Money eur(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The amount @p text of lei.
-[[nodiscard]] Money ron(std::string_view const text) { return must(Money::parse(text, must(Currency::of("RON")))); }
+[[nodiscard]] Money ron(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("RON")))); }
 
 /// A date of the trip, in October 2026.
 [[nodiscard]] CalendarDate october(std::int32_t const day) { return must(CalendarDate::of(2026, 10, day)); }
@@ -420,7 +420,7 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 }
 
 /// The sum of @p amounts, all in @p currency.
-[[nodiscard]] Money sum(Currency const &currency, std::vector<Money> const &amounts) {
+[[nodiscard]] Money sum(CurrencyCode const &currency, std::vector<Money> const &amounts) {
     Money total(0, currency);
     for (auto const &amount : amounts) {
         total = must(total.plus(amount));
@@ -481,7 +481,7 @@ void printCategories(ExpenseGroup const &group) {
 }
 
 /// Prints every expense and transfer of @p group in a currency @p shown accepts, as entered and in the group currency.
-void printEntries(ExpenseGroup const &group, std::function<bool(Currency const &)> const &shown) {
+void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode const &)> const &shown) {
     auto const zero = Money(0, group.currency()).toString();
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
@@ -516,7 +516,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(Currency const &
 /// Creates the group, renames it, and prints its details.
 [[nodiscard]] ExpenseGroup theGroup() {
     section("1. The group");
-    auto group = must(ExpenseGroup::create("Lisbon", must(Currency::of("EUR")),
+    auto group = must(ExpenseGroup::create("Lisbon", must(CurrencyCode::of("EUR")),
                                            ExpenseGroupOptions{.description = "A week by the Atlantic", .language = must(Language::parse("pt-pt"))}));
     auto const blank = refusal(group.setName("   "));
     must(group.setName("Lisbon and Porto"));
@@ -925,7 +925,7 @@ void printFado(ExpenseGroup const &group, Expense const &fado) {
 /// Adds the airport parking in RON and Bob's repayment in cash, and shows how they convert.
 void anotherCurrency(ExpenseGroup &group, People const &people, Categories const &categories) {
     section("5. Another currency");
-    auto const euro = must(Currency::of("EUR"));
+    auto const euro = must(CurrencyCode::of("EUR"));
     auto const rate = must(ExchangeRate::parse("0.2"));
     auto const parking =
         must(group.addExpense(inCategory(Expense("Airport parking", ConvertedCost{.amount = ron("250.00"), .rate = rate}, EqualSplit{{people.ana}},
@@ -938,7 +938,7 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
     printLine("Back at the Bucharest airport, Ana paid the parking in RON and Bob paid her back in\n"
               "cash. An entry in another currency carries the rate into the group currency, how\n"
               "many EUR one RON is worth, and is converted once, when it is entered:");
-    printEntries(group, [&](Currency const &currency) { return euro.code() != currency.code(); });
+    printEntries(group, [&](CurrencyCode const &currency) { return euro.code() != currency.code(); });
     auto const transfer = must(group.transfer(cash)).value();
     auto const converted = must(must(ExchangeRate::parse("0.2011")).convert(ron("250.00"), euro));
     std::println("Bob's transfer, at {} (\"{}\"), counts as {}.\n"
@@ -1180,8 +1180,8 @@ void removingACategory(ExpenseGroup &group, Categories const &categories) {
 /// Moves the books of @p group to RON, which a missing rate first refuses.
 void newCurrency(ExpenseGroup &group, People const &people) {
     section("10. A new currency");
-    auto const euro = must(Currency::of("EUR"));
-    auto const leu = must(Currency::of("RON"));
+    auto const euro = must(CurrencyCode::of("EUR"));
+    auto const leu = must(CurrencyCode::of("RON"));
     auto const missing = refusal(group.changeCurrency(leu, {}));
     must(group.changeCurrency(leu, std::array{CurrencyRate(euro, must(ExchangeRate::parse("5")))}));
     std::println("Home again, the group moves its books to RON. The change needs a rate into RON\n"
@@ -1189,7 +1189,7 @@ void newCurrency(ExpenseGroup &group, People const &people) {
                  "  error: {}\n"
                  "Entries in EUR take the new rate, and the RON parking and cash become local:",
                  message(missing));
-    printEntries(group, [](Currency const &) { return true; });
+    printEntries(group, [](CurrencyCode const &) { return true; });
     std::println("Each entry keeps its currency and converts at the new rate. At 5 every share\n"
                  "converts exactly, so each balance is five times what it was. The trip cost\n"
                  "{}:",
@@ -1326,7 +1326,7 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
 void currencies() {
     std::vector<CurrencyRow> rows;
     for (auto const *const code : {"EUR", "RON", "JPY", "BHD"}) {
-        auto const currency = must(Currency::of(code));
+        auto const currency = must(CurrencyCode::of(code));
         rows.push_back({
             .code = currency.code(),
             .name = currency.name(),
@@ -1334,12 +1334,12 @@ void currencies() {
             .decimalPlaces = std::to_string(currency.decimalPlaces()),
         });
     }
-    auto const unknown = refusal(Currency::of("XYZ"));
+    auto const unknown = refusal(CurrencyCode::of("XYZ"));
     std::println("Currencies are the {} active ISO 4217 codes with a minor unit; an unknown code is\n"
                  "refused ({}):",
-                 Currency::all().size(), message(unknown));
+                 CurrencyCode::all().size(), message(unknown));
     printTable(rows, 2);
-    check(3 == must(Currency::of("BHD")).decimalPlaces(), "the dinar has three decimal places");
+    check(3 == must(CurrencyCode::of("BHD")).decimalPlaces(), "the dinar has three decimal places");
 }
 
 /// Prints what amounts do: sums, differences, refusals, minor units, and a cost's rate kept for another amount.
@@ -1347,9 +1347,9 @@ void amounts() {
     auto const sumOf = must(eur("12.34").plus(eur("0.66")));
     auto const change = must(eur("5.00").minus(eur("7.50")));
     auto const mixed = refusal(eur("1.00").plus(ron("1.00")));
-    auto const yen = must(Money::parse("1500", must(Currency::of("JPY"))));
-    Money const dinars(1'234, must(Currency::of("BHD")));
-    Money const nothing(0, must(Currency::of("RON")));
+    auto const yen = must(Money::parse("1500", must(CurrencyCode::of("JPY"))));
+    Money const dinars(1'234, must(CurrencyCode::of("BHD")));
+    Money const nothing(0, must(CurrencyCode::of("RON")));
     ConvertedCost const cost{.amount = eur("10.00"), .rate = must(ExchangeRate::parse("4.9765"))};
     ConvertedCost const doubled{.amount = eur("20.00"), .rate = cost.rate};
     printLine("Amounts are exact minor units in their currency:");
@@ -1361,7 +1361,7 @@ void amounts() {
                 .result = std::format("{}, negative: {}", change.toString(), (0 > change.minorUnits ? "true" : "false")),
             },
             {.input = "1.00 EUR + 1.00 RON", .result = message(mixed)},
-            {.input = "1.005 EUR", .result = message(refusal(Money::parse("1.005", must(Currency::of("EUR")))))},
+            {.input = "1.005 EUR", .result = message(refusal(Money::parse("1.005", must(CurrencyCode::of("EUR")))))},
             {.input = "1500 JPY", .result = std::format("{}, {} minor units", yen.toString(), yen.minorUnits)},
             {.input = "1234 minor units of BHD", .result = dinars.toString()},
             {.input = "zero RON", .result = std::format("{}, zero: {}", nothing.toString(), (0 == nothing.minorUnits ? "true" : "false"))},
@@ -1470,12 +1470,12 @@ void sharing(ExpenseGroup &group, People const &people) {
     }
 
     auto const before = must(group.summaryAsync().get());
-    std::vector<CurrencyRate> const rates{CurrencyRate(must(Currency::of("RON")), must(ExchangeRate::parse("0.2")))};
+    std::vector<CurrencyRate> const rates{CurrencyRate(must(CurrencyCode::of("RON")), must(ExchangeRate::parse("0.2")))};
     // A report reads the group, holding the shared lock meanwhile, so the change waits for it; a new read would wait
     // behind the change, so the report reads through its own handle.
     auto report = must(group.readAsync().get());
     Cancellation cancellation;
-    auto change = group.changeCurrencyAsync(must(Currency::of("EUR")), rates, &cancellation);
+    auto change = group.changeCurrencyAsync(must(CurrencyCode::of("EUR")), rates, &cancellation);
     auto const reported = must(report.summary()).totalSpent;
     // Cancelling stops the waiting change, which leaves the group as it was.
     cancellation.cancel();

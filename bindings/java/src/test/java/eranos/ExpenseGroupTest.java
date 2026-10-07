@@ -211,7 +211,7 @@ class ExpenseGroupTest {
         group.setLanguage(Language.parse("ro"));
         assertEquals(Optional.of("Shared flat"), group.description());
         assertEquals(Optional.of(Language.parse("ro")), group.language());
-        Currency lei = Currency.of("RON");
+        CurrencyCode lei = CurrencyCode.of("RON");
         group.changeCurrency(lei, Map.of(flat.euro, ExchangeRate.parse("5")));
         assertEquals(lei, group.currency());
         assertEquals(new Money(15_000, lei), group.summary().totalSpent());
@@ -282,7 +282,7 @@ class ExpenseGroupTest {
         group.clearLanguageAsync().join();
         assertEquals(Optional.empty(), group.description());
         assertEquals(Optional.empty(), group.language());
-        Currency lei = Currency.of("RON");
+        CurrencyCode lei = CurrencyCode.of("RON");
         group.changeCurrencyAsync(lei, Map.of(flat.euro, ExchangeRate.parse("5"))).join();
         assertEquals(lei, group.currency());
         CompletionException refused =
@@ -297,7 +297,7 @@ class ExpenseGroupTest {
      */
     @Test
     void aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() throws EranosException {
-        Currency euro = Currency.of("EUR");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         ExpenseGroup plain = ExpenseGroup.builder("Trip", euro).build();
         assertEquals(Optional.empty(), plain.description());
         assertEquals(Optional.empty(), plain.language());
@@ -384,7 +384,7 @@ class ExpenseGroupTest {
      */
     @Test
     void aClosedGroupAnswersNoMore() throws EranosException {
-        ExpenseGroup group = ExpenseGroup.builder("Trip", Currency.of("EUR")).build();
+        ExpenseGroup group = ExpenseGroup.builder("Trip", CurrencyCode.of("EUR")).build();
         group.close();
         group.close();
         assertThrows(IllegalStateException.class, group::name);

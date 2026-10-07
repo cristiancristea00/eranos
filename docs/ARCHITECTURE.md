@@ -101,7 +101,7 @@ flowchart TD
     CONTACT["eranos-contact<br/>Email, PhoneNumber"]
     LEDGER["eranos-ledger<br/>Summary, Balance, ExpenseShares<br/>(+ Ledger, Delta)"]
     CALENDAR["eranos-calendar<br/>CalendarDate, TimeOfDay"]
-    MONEY["eranos-money<br/>Money, Currency, Cost, rates, ratios<br/>(+ allocation)"]
+    MONEY["eranos-money<br/>Money, CurrencyCode, Cost, rates, ratios<br/>(+ allocation)"]
     CORE["eranos-core<br/>identifiers, cooperative futures<br/>(+ text rules, pacer)"]
     MACROS["eranos-glue-macros<br/>the proc macros the binding core<br/>and the UniFFI crates invoke"]
     GLUE["eranos-glue<br/>the model of the group calls;<br/>the code written from it"]
@@ -180,7 +180,8 @@ flowchart TD
  │ eranos-ledger          Summary, Balance, ExpenseShares (+ Ledger, Delta)    │
  │ eranos-calendar        CalendarDate, TimeOfDay                              │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ eranos-money           Money, Currency, Cost, rates, ratios (+ allocation)  │
+ │ eranos-money           Money, CurrencyCode, Cost, rates, ratios             │
+ │                        (+ allocation)                                       │
  ├─────────────────────────────────────────────────────────────────────────────┤
  │ eranos-core            identifiers and cooperative futures (+ text, pacer)  │
  ├─────────────────────────────────────────────────────────────────────────────┤
@@ -215,7 +216,7 @@ flowchart TD
 | `eranos-contact`         | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                                   | core; icu_properties, rlibphonenumber                                                                                  |
 | `eranos-ledger`          | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
 | `eranos-calendar`        | `CalendarDate`, `TimeOfDay`, `CalendarError`                                                                                                                                                                                             | core; jiff                                                                                                             |
-| `eranos-money`           | `Money`, `Currency`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                                           | core; iso4217-static                                                                                                   |
+| `eranos-money`           | `Money`, `CurrencyCode`, `Cost`, `ExchangeRate`, `CurrencyRate`, `Percentage`, `Parts`, `MoneyError`; `allocation`                                                                                                                       | core; iso4217-static                                                                                                   |
 | `eranos-core`            | the five identifiers, `IdError`, `Cooperative`, `block_on`; `text`, `serde_text`, `yield_now`, `Pacer`                                                                                                                                   | uuid                                                                                                                   |
 | `eranos-glue-macros`     | the proc macros `calls`, which writes the forms of the binding core's group calls, and `mirrored`, `uniffi_objects`, and `uniffi_mirror`, each over eranos-glue                                                                          | eranos-glue; syn                                                                                                       |
 | `eranos-glue`            | the model of the group calls and of the mirrored records, and the code written from it: the group handle's and the read handle's forms, the table and mirror macros, the UniFFI objects' methods and copies, the C bridge                | proc-macro2, quote, syn                                                                                                |
@@ -279,15 +280,15 @@ cannot be removed.
 
 ## 4. Money and rounding
 
-- `Money` is `i64` minor units plus a `Currency`. `Currency` covers every
-  active ISO 4217 code with a minor unit (165 codes, from the SIX "List One"
-  published 2026-01-01, which `iso4217-static` 0.2.4 is generated from),
-  with the ISO number of decimal places: 0 for JPY, 2 for EUR, 3 for BHD, 4
-  for CLF. Precious metals, drawing rights, and test codes have no minor
-  unit and are not currencies here. `Currency` holds the crate's value and
-  its minor unit, read once when a code is looked up, so no crate type is
-  part of the API; it also gives each currency's ISO English name and
-  numeric code.
+- `Money` is `i64` minor units plus a `CurrencyCode`. `CurrencyCode` covers
+  every active ISO 4217 code with a minor unit (165 codes, from the SIX
+  "List One" published 2026-01-01, which `iso4217-static` 0.2.4 is generated
+  from), with the ISO number of decimal places: 0 for JPY, 2 for EUR, 3 for
+  BHD, 4 for CLF. Precious metals, drawing rights, and test codes have no
+  minor unit and are not currencies here. `CurrencyCode` holds the crate's
+  value and its minor unit, read once when a code is looked up, so no crate
+  type is part of the API; it also gives each currency's ISO English name
+  and numeric code.
 - `ExchangeRate` is an exact positive decimal (`mantissa / 10^scale`, up to
   18 decimal places) meaning "one unit of the entry's currency is this many
   units of the group's". Conversion multiplies in checked `i128` and rounds
@@ -518,7 +519,7 @@ contact details.
 
 With the `serde` feature, `ExpenseGroup` and every type it stores serialise
 and deserialise: its entries, members, and categories, the identifiers, and
-the values inside them, such as `Money`, `Currency`, `ExchangeRate`,
+the values inside them, such as `Money`, `CurrencyCode`, `ExchangeRate`,
 `CalendarDate`, and `Language`. `SavedExpenseGroup` only deserialises. What
 a group derives (`Summary`, `SettlementPlan`, `ExpenseShares`, and the types
 they hold), the builders, the errors, `CurrencyRate`, and

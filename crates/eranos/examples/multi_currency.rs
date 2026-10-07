@@ -8,7 +8,7 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
+    Balance, CalendarDate, CurrencyCode, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
     ExpenseShares, Member, MemberId, Money, Split, Transfer,
 };
 use tabled::settings::object::Columns;
@@ -119,7 +119,7 @@ fn expenses(group: &mut ExpenseGroup, ana: MemberId, bob: MemberId) -> Result<()
     group.add_expense(
         Expense::builder(
             "Fuel",
-            Money::parse("400.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
+            Money::parse("400.00", CurrencyCode::RON)?.at(ExchangeRate::parse("0.2")?),
             ana,
             both.clone(),
             CalendarDate::new(2026, 8, 1)?,
@@ -129,7 +129,7 @@ fn expenses(group: &mut ExpenseGroup, ana: MemberId, bob: MemberId) -> Result<()
     group.add_expense(
         Expense::builder(
             "Dinner",
-            Money::parse("24000.00", Currency::HUF)?.at(ExchangeRate::parse("0.0025")?),
+            Money::parse("24000.00", CurrencyCode::HUF)?.at(ExchangeRate::parse("0.0025")?),
             bob,
             both.clone(),
             CalendarDate::new(2026, 8, 2)?,
@@ -139,7 +139,7 @@ fn expenses(group: &mut ExpenseGroup, ana: MemberId, bob: MemberId) -> Result<()
     group.add_expense(
         Expense::builder(
             "Ferry",
-            Money::parse("60.00", Currency::EUR)?,
+            Money::parse("60.00", CurrencyCode::EUR)?,
             bob,
             both,
             CalendarDate::new(2026, 8, 3)?,
@@ -160,7 +160,7 @@ fn repayment(group: &mut ExpenseGroup, ana: MemberId, bob: MemberId) -> Result<(
     let cash = Transfer::builder(
         ana,
         bob,
-        Money::parse("100.00", Currency::RON)?.at(ExchangeRate::parse("0.2")?),
+        Money::parse("100.00", CurrencyCode::RON)?.at(ExchangeRate::parse("0.2")?),
         CalendarDate::new(2026, 8, 4)?,
     )
     .note("Cash at the border")
@@ -183,10 +183,10 @@ fn new_currency(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
          take the new rate; entries already in RON become local costs, at 1."
     );
     group.change_currency(
-        Currency::RON,
+        CurrencyCode::RON,
         &[
-            CurrencyRate::new(Currency::EUR, ExchangeRate::parse("5")?),
-            CurrencyRate::new(Currency::HUF, ExchangeRate::parse("0.0125")?),
+            CurrencyRate::new(CurrencyCode::EUR, ExchangeRate::parse("5")?),
+            CurrencyRate::new(CurrencyCode::HUF, ExchangeRate::parse("0.0125")?),
         ],
     )?;
     print_entries(group);
@@ -200,7 +200,7 @@ fn new_currency(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = ExpenseGroup::builder("Danube road trip", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Danube road trip", CurrencyCode::EUR).build()?;
     let ana = group.add_member(Member::builder("Ana").build()?)?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;
 
@@ -223,7 +223,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     print_balances(&group);
     assert_eq!(
         group.summary().member(bob).balance(),
-        Balance::GetsBack(Money::parse("20.00", Currency::EUR)?)
+        Balance::GetsBack(Money::parse("20.00", CurrencyCode::EUR)?)
     );
 
     repayment(&mut group, ana, bob)?;
@@ -233,7 +233,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 400 RON of fuel, 300 of dinner, 300 of ferry; still settled.
     assert_eq!(
         group.summary().total_spent(),
-        Money::parse("1000.00", Currency::RON)?
+        Money::parse("1000.00", CurrencyCode::RON)?
     );
     assert_eq!(group.summary().member(bob).balance(), Balance::Settled);
     Ok(())

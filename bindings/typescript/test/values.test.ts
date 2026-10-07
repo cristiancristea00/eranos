@@ -10,7 +10,7 @@ import {
     CalendarDate,
     CalendarError,
     ContactError,
-    Currency,
+    CurrencyCode,
     Email,
     ExchangeRate,
     Iban,
@@ -52,17 +52,17 @@ function assertRefused(call: () => unknown, type: new (...parameters: never[]) =
 void describe('the currencies, amounts, ratios, dates, times, contact details, and identifiers', () => {
     /** A currency, an amount, or a check that read or wrote another way than the library's would show an app another amount than the group holds. */
     void it('reads and writes currencies and amounts as the library does', () => {
-        const euro = Currency.of('EUR');
+        const euro = CurrencyCode.of('EUR');
         assert.equal(euro.code, 'EUR');
         assert.equal(euro.name, 'Euro');
         assert.equal(euro.toString(), 'EUR');
         assert.equal(euro.numericCode, 978);
         assert.equal(euro.decimalPlaces, 2);
-        assert.ok(Currency.all().includes(euro));
-        assert.equal(Currency.of('EUR'), euro);
-        assert.equal(Currency.known('EUR'), euro);
-        assertRefused(() => Currency.of('XYZ'), MoneyError, { kind: 'unknownCurrency' }, 'unknown currency code');
-        const lei = Currency.of('RON');
+        assert.ok(CurrencyCode.all().includes(euro));
+        assert.equal(CurrencyCode.of('EUR'), euro);
+        assert.equal(CurrencyCode.known('EUR'), euro);
+        assertRefused(() => CurrencyCode.of('XYZ'), MoneyError, { kind: 'unknownCurrency' }, 'unknown currency code');
+        const lei = CurrencyCode.of('RON');
 
         const price = Money.parse('12.5', euro);
         assert.ok(price.equals(new Money(1_250n, euro)));
@@ -83,8 +83,8 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(rate.toString(), '4.97');
         assert.ok(rate.equals(ExchangeRate.parse('4.97')));
         assert.ok(!rate.equals(ExchangeRate.parse('5')));
-        const lei = Currency.of('RON');
-        const euro = Currency.of('EUR');
+        const lei = CurrencyCode.of('RON');
+        const euro = CurrencyCode.of('EUR');
         assert.ok(ExchangeRate.parse('0.25').convert(new Money(2n, lei), euro).equals(new Money(1n, euro)));
         assertRefused(() => ExchangeRate.parse('0'), MoneyError);
         assertRefused(() => ExchangeRate.parse('2').convert(new Money(9_223_372_036_854_775_807n, lei), euro), MoneyError);
@@ -190,7 +190,7 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
 
     /** A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of printing. */
     void it('prints a value the library never sends', () => {
-        const unlisted = Currency.known('XYZ');
+        const unlisted = CurrencyCode.known('XYZ');
         assert.equal(unlisted.code, 'XYZ');
         assert.equal(unlisted.name, 'XYZ');
         assert.equal(unlisted.numericCode, 0);

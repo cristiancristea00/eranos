@@ -43,7 +43,7 @@ struct PaymentRow: TableRow {
 }
 
 func main() throws(EranosError) {
-    let euro = try Currency(code: "EUR")
+    let euro = try CurrencyCode(code: "EUR")
     let group = try ExpenseGroup(name: "Weekend in Sinaia", currency: euro)
     title(try group.name())
     print("""

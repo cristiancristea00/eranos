@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use crate::allocation::divide_rounding_half_away;
 use crate::error::MoneyError;
-use crate::{Currency, Money};
+use crate::{CurrencyCode, Money};
 
 /// The most decimal places an [`ExchangeRate`] may have.
 const MAX_SCALE: u8 = 18;
@@ -20,12 +20,12 @@ const MAX_SCALE: u8 = 18;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, ExchangeRate, Money};
+/// use eranos::{CurrencyCode, ExchangeRate, Money};
 ///
 /// // 1 EUR = 4.9765 RON
 /// let rate = ExchangeRate::parse("4.9765")?;
-/// let converted = rate.convert(Money::parse("10.00", Currency::EUR)?, Currency::RON)?;
-/// assert_eq!(converted, Money::parse("49.77", Currency::RON)?); // 49.765 rounds half up
+/// let converted = rate.convert(Money::parse("10.00", CurrencyCode::EUR)?, CurrencyCode::RON)?;
+/// assert_eq!(converted, Money::parse("49.77", CurrencyCode::RON)?); // 49.765 rounds half up
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -111,7 +111,7 @@ impl ExchangeRate {
     ///
     /// [`MoneyError::Overflow`] when the converted amount does not fit in
     /// 64-bit minor units.
-    pub fn convert(self, amount: Money, target: Currency) -> Result<Money, MoneyError> {
+    pub fn convert(self, amount: Money, target: CurrencyCode) -> Result<Money, MoneyError> {
         let source_places = i32::from(amount.currency().decimal_places());
         let target_places = i32::from(target.decimal_places());
         // amount × mantissa × 10^(target − source) / 10^scale, with the
@@ -174,7 +174,7 @@ impl<'de> serde::Deserialize<'de> for ExchangeRate {
 /// needs one for every currency in use: `ExpenseGroup::change_currency`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CurrencyRate {
-    currency: Currency,
+    currency: CurrencyCode,
     rate: ExchangeRate,
 }
 
@@ -182,13 +182,13 @@ impl CurrencyRate {
     /// The rate that converts `currency`: one unit of it is worth `rate`
     /// units of the target currency.
     #[must_use]
-    pub const fn new(currency: Currency, rate: ExchangeRate) -> Self {
+    pub const fn new(currency: CurrencyCode, rate: ExchangeRate) -> Self {
         Self { currency, rate }
     }
 
     /// The currency the rate converts.
     #[must_use]
-    pub const fn currency(self) -> Currency {
+    pub const fn currency(self) -> CurrencyCode {
         self.currency
     }
 

@@ -8,7 +8,7 @@ from typing import Any, final
 
 # The modules of currencies and amounts, not their classes: each calls into the library through library_errors, so
 # whichever of this module and theirs is imported first finds the other partly run.
-from eranos import _currency, _money
+from eranos import _currency_code, _money
 from eranos._identifiers import CategoryId, ExpenseId, MemberId, TransferId
 from eranos._internal import eranos as generated
 
@@ -262,7 +262,7 @@ class MoneyError(EranosError):
     class TooManyDecimals:
         """An amount with more decimal places than its currency has."""
 
-        currency: _currency.Currency
+        currency: _currency_code.CurrencyCode
         """The currency."""
 
         allowed: int
@@ -273,10 +273,10 @@ class MoneyError(EranosError):
     class CurrencyMismatch:
         """Arithmetic between amounts of two different currencies."""
 
-        left: _currency.Currency
+        left: _currency_code.CurrencyCode
         """The currency of the first amount."""
 
-        right: _currency.Currency
+        right: _currency_code.CurrencyCode
         """The currency of the second amount."""
 
     @final
@@ -377,10 +377,10 @@ class ExpenseError(EranosError):
     class CurrencyMismatch:
         """An amount inside the expense is in a different currency."""
 
-        expected: _currency.Currency
+        expected: _currency_code.CurrencyCode
         """The expense's currency."""
 
-        found: _currency.Currency
+        found: _currency_code.CurrencyCode
         """The currency of the amount inside it."""
 
     @final
@@ -580,7 +580,7 @@ class ExpenseGroupError(EranosError):
         Its cost is local, or a currency change gave no rate for its currency.
         """
 
-        currency: _currency.Currency
+        currency: _currency_code.CurrencyCode
         """The currency without a rate."""
 
     @final
@@ -593,7 +593,7 @@ class ExpenseGroupError(EranosError):
     class DuplicateExchangeRate:
         """The same currency appears twice among the rates of a currency change."""
 
-        currency: _currency.Currency
+        currency: _currency_code.CurrencyCode
         """The currency that appears twice."""
 
     @final
@@ -836,10 +836,10 @@ _CONTACT_FAILURES: dict[generated.ContactFailure, ContactFailure] = {
 _MONEY_FAILURES: dict[type[object], Callable[[Any], MoneyFailure]] = {
     generated.MoneyFailure.INVALID_AMOUNT: lambda _: MoneyError.InvalidAmount(),
     generated.MoneyFailure.TOO_MANY_DECIMALS: lambda failure: MoneyError.TooManyDecimals(
-        currency=_currency.Currency(failure.currency), allowed=failure.allowed
+        currency=_currency_code.CurrencyCode(failure.currency), allowed=failure.allowed
     ),
     generated.MoneyFailure.CURRENCY_MISMATCH: lambda failure: MoneyError.CurrencyMismatch(
-        left=_currency.Currency(failure.left), right=_currency.Currency(failure.right)
+        left=_currency_code.CurrencyCode(failure.left), right=_currency_code.CurrencyCode(failure.right)
     ),
     generated.MoneyFailure.UNKNOWN_CURRENCY: lambda _: MoneyError.UnknownCurrency(),
     generated.MoneyFailure.INVALID_EXCHANGE_RATE: lambda _: MoneyError.InvalidExchangeRate(),
@@ -856,7 +856,7 @@ _EXPENSE_FAILURES: dict[type[object], Callable[[Any], ExpenseFailure]] = {
     generated.ExpenseFailure.EMPTY_NAME: lambda _: ExpenseError.EmptyName(),
     generated.ExpenseFailure.NON_POSITIVE_AMOUNT: lambda _: ExpenseError.NonPositiveAmount(),
     generated.ExpenseFailure.CURRENCY_MISMATCH: lambda failure: ExpenseError.CurrencyMismatch(
-        expected=_currency.Currency(failure.expected), found=_currency.Currency(failure.found)
+        expected=_currency_code.CurrencyCode(failure.expected), found=_currency_code.CurrencyCode(failure.found)
     ),
     generated.ExpenseFailure.EMPTY_SPLIT: lambda _: ExpenseError.EmptySplit(),
     generated.ExpenseFailure.DUPLICATE_MEMBER: lambda failure: ExpenseError.DuplicateMember(member=MemberId(failure.member)),
@@ -890,11 +890,11 @@ _EXPENSE_GROUP_FAILURES: dict[type[object], Callable[[Any], ExpenseGroupFailure]
     generated.ExpenseGroupFailure.UNSUPPORTED_FORMAT: lambda failure: ExpenseGroupError.UnsupportedFormat(format=failure.format),
     generated.ExpenseGroupFailure.EMPTY_NAME: lambda _: ExpenseGroupError.EmptyName(),
     generated.ExpenseGroupFailure.MISSING_EXCHANGE_RATE: lambda failure: ExpenseGroupError.MissingExchangeRate(
-        currency=_currency.Currency(failure.currency)
+        currency=_currency_code.CurrencyCode(failure.currency)
     ),
     generated.ExpenseGroupFailure.UNEXPECTED_EXCHANGE_RATE: lambda _: ExpenseGroupError.UnexpectedExchangeRate(),
     generated.ExpenseGroupFailure.DUPLICATE_EXCHANGE_RATE: lambda failure: ExpenseGroupError.DuplicateExchangeRate(
-        currency=_currency.Currency(failure.currency)
+        currency=_currency_code.CurrencyCode(failure.currency)
     ),
     generated.ExpenseGroupFailure.DUPLICATE_MEMBER: lambda failure: ExpenseGroupError.DuplicateMember(member=MemberId(failure.member)),
     generated.ExpenseGroupFailure.UNKNOWN_MEMBER: lambda failure: ExpenseGroupError.UnknownMember(member=MemberId(failure.member)),

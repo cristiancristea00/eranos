@@ -2,7 +2,7 @@
 //! from them. A strategy converted to another, or a payment with its members
 //! swapped, would ask the wrong member to pay.
 
-use eranos::{CalendarDate, Currency, ExpenseGroup, Member, Money, Transfer};
+use eranos::{CalendarDate, CurrencyCode, ExpenseGroup, Member, Money, Transfer};
 
 use super::*;
 
@@ -26,7 +26,7 @@ fn every_strategy_converts_both_ways() {
 /// changed, or under another strategy.
 #[test]
 fn a_settlement_keeps_every_payment() {
-    let mut group = ExpenseGroup::builder("Flat", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group
@@ -37,9 +37,14 @@ fn a_settlement_keeps_every_payment() {
         .unwrap();
     let day = CalendarDate::new(2026, 10, 1).unwrap();
     // Bob paid Ana 20.00 too much, so Ana owes it back.
-    let transfer = Transfer::builder(bob, ana, Money::from_minor_units(2_000, Currency::EUR), day)
-        .build()
-        .unwrap();
+    let transfer = Transfer::builder(
+        bob,
+        ana,
+        Money::from_minor_units(2_000, CurrencyCode::EUR),
+        day,
+    )
+    .build()
+    .unwrap();
     group.add_transfer(transfer).unwrap();
     let settlement = group
         .settlement(library::SettlementStrategy::Greedy)

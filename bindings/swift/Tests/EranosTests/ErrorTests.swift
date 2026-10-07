@@ -29,8 +29,8 @@ private func id<Entity>(_ text: String) -> Identifier<Entity> {
 }
 
 /// The currency of `code`.
-private func known(_ code: String) -> Eranos.Currency {
-    Eranos.Currency(known: code)
+private func known(_ code: String) -> Eranos.CurrencyCode {
+    Eranos.CurrencyCode(known: code)
 }
 
 /// Every failure the generated code can report, with every reason of a refused IBAN.

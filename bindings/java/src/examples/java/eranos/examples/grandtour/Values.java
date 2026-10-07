@@ -11,7 +11,7 @@ import static eranos.examples.grandtour.Tour.ron;
 
 import eranos.CalendarDate;
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.ExpenseGroup;
@@ -40,7 +40,7 @@ final class Values {
     static void currencies() throws EranosException {
         List<CurrencyRow> rows = new ArrayList<>();
         for (String code : List.of("EUR", "RON", "JPY", "BHD")) {
-            Currency currency = Currency.of(code);
+            CurrencyCode currency = CurrencyCode.of(code);
             rows.add(
                     new CurrencyRow(
                             currency.code(),
@@ -48,24 +48,24 @@ final class Values {
                             currency.numericCode(),
                             currency.decimalPlaces()));
         }
-        Optional<EranosException> unknown = refusal(() -> Currency.of("XYZ"));
+        Optional<EranosException> unknown = refusal(() -> CurrencyCode.of("XYZ"));
         System.out.print(
                 """
                 Currencies are the %d active ISO 4217 codes with a minor unit; an unknown code is
                 refused (%s):
                 """
-                        .formatted(Currency.all().size(), message(unknown)));
+                        .formatted(CurrencyCode.all().size(), message(unknown)));
         printTable(CurrencyRow.HEADERS, rows, 2);
-        check(3 == Currency.of("BHD").decimalPlaces());
+        check(3 == CurrencyCode.of("BHD").decimalPlaces());
     }
 
     static void amounts() throws EranosException {
         Money total = eur("12.34").plus(eur("0.66"));
         Money change = eur("5.00").minus(eur("7.50"));
         Optional<EranosException> mixed = refusal(() -> eur("1.00").plus(ron("1.00")));
-        Money yen = Money.parse("1500", Currency.of("JPY"));
-        Money dinars = new Money(1_234, Currency.of("BHD"));
-        Money nothing = new Money(0, Currency.of("RON"));
+        Money yen = Money.parse("1500", CurrencyCode.of("JPY"));
+        Money dinars = new Money(1_234, CurrencyCode.of("BHD"));
+        Money nothing = new Money(0, CurrencyCode.of("RON"));
         Cost cost = new Cost.Converted(eur("10.00"), ExchangeRate.parse("4.9765"));
         Cost doubled = new Cost.Converted(eur("20.00"), rate(cost));
         System.out.println("Amounts are exact minor units in their currency:");

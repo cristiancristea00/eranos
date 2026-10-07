@@ -17,10 +17,10 @@
 
 use eranos::cooperative::block_on;
 use eranos::{
-    CalendarDate, CategoryTotal, Cost, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
-    ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money,
-    Parts, Percentage, SettlementStrategy, Split, TipDistribution, TipRule, Transfer,
-    error::ExpenseGroupError,
+    CalendarDate, CategoryTotal, Cost, CurrencyCode, CurrencyRate, ExchangeRate, Expense,
+    ExpenseGroup, ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts,
+    MemberPercentage, Money, Parts, Percentage, SettlementStrategy, Split, TipDistribution,
+    TipRule, Transfer, error::ExpenseGroupError,
 };
 use proptest::prelude::*;
 
@@ -126,7 +126,7 @@ impl SplitRecipe {
 /// mantissa and scale.
 #[derive(Debug, Clone, Copy)]
 struct ForeignRecipe {
-    currency: Currency,
+    currency: CurrencyCode,
     mantissa: u64,
     scale: u8,
 }
@@ -194,7 +194,8 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
             0.3,
             (0_u8..3, 1_u64..100_000, 0_u8..5).prop_map(|(currency, mantissa, scale)| {
                 ForeignRecipe {
-                    currency: [Currency::JPY, Currency::BHD, Currency::RON][usize::from(currency)],
+                    currency: [CurrencyCode::JPY, CurrencyCode::BHD, CurrencyCode::RON]
+                        [usize::from(currency)],
                     mantissa,
                     scale,
                 }
@@ -217,7 +218,7 @@ impl ExpenseRecipe {
     fn build(&self, members: &[MemberId]) -> Expense {
         let currency = self
             .foreign
-            .map_or(Currency::EUR, |foreign| foreign.currency);
+            .map_or(CurrencyCode::EUR, |foreign| foreign.currency);
         let rate = self.foreign.map(ForeignRecipe::rate);
         let money = |minor_units| Money::from_minor_units(minor_units, currency);
         let cost = |amount: Money| rate.map_or_else(|| Cost::from(amount), |rate| amount.at(rate));
@@ -328,7 +329,7 @@ fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
             Transfer::builder(
                 ids[transfer.from],
                 ids[transfer.to],
-                Money::from_minor_units(transfer.amount, Currency::EUR),
+                Money::from_minor_units(transfer.amount, CurrencyCode::EUR),
                 day(),
             )
             .build()
@@ -344,7 +345,7 @@ fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
 
 /// A group of `members` without entries; clones of it share its identifier.
 fn base(members: &[Member]) -> ExpenseGroup {
-    let mut group = ExpenseGroup::builder("Random", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Random", CurrencyCode::EUR)
         .build()
         .unwrap();
     for member in members {
@@ -436,14 +437,14 @@ proptest! {
         let mut awaited = computed.clone();
         let rate = |text| ExchangeRate::parse(text).unwrap();
         let rates = [
-            CurrencyRate::new(Currency::BHD, rate("2.65")),
-            CurrencyRate::new(Currency::EUR, rate("1.1")),
-            CurrencyRate::new(Currency::JPY, rate("0.0067")),
-            CurrencyRate::new(Currency::RON, rate("0.22")),
+            CurrencyRate::new(CurrencyCode::BHD, rate("2.65")),
+            CurrencyRate::new(CurrencyCode::EUR, rate("1.1")),
+            CurrencyRate::new(CurrencyCode::JPY, rate("0.0067")),
+            CurrencyRate::new(CurrencyCode::RON, rate("0.22")),
         ];
         prop_assert_eq!(
-            block_on(awaited.change_currency_async(Currency::USD, &rates)),
-            computed.change_currency(Currency::USD, &rates)
+            block_on(awaited.change_currency_async(CurrencyCode::USD, &rates)),
+            computed.change_currency(CurrencyCode::USD, &rates)
         );
         prop_assert_eq!(&awaited, &computed);
         prop_assert_eq!(awaited.summary(), computed.summary());

@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  * the group as it was:
  *
  * <pre>{@code
- * ExpenseGroup group = ExpenseGroup.builder("Flat", Currency.of("EUR")).build();
+ * ExpenseGroup group = ExpenseGroup.builder("Flat", CurrencyCode.of("EUR")).build();
  * MemberId ana = group.addMember(Member.builder("Ana").build());
  * CompletableFuture<MemberId> bob = group.addMemberAsync(Member.builder("Bob").build());
  * }</pre>
@@ -43,7 +43,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @param currency the group currency
      * @return the builder
      */
-    public static Builder builder(String name, Currency currency) {
+    public static Builder builder(String name, CurrencyCode currency) {
         return new Builder(name, currency);
     }
 
@@ -196,8 +196,8 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * @return the currency
      */
-    public Currency currency() {
-        return Converting.callUnfailing(() -> Currency.known(handle.currency()));
+    public CurrencyCode currency() {
+        return Converting.callUnfailing(() -> CurrencyCode.known(handle.currency()));
     }
 
     /**
@@ -208,8 +208,8 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * @return a future of the currency
      */
-    public CompletableFuture<Currency> currencyAsync() {
-        return Converting.future(handle.currencyAsync(null), value -> Currency.known(value));
+    public CompletableFuture<CurrencyCode> currencyAsync() {
+        return Converting.future(handle.currencyAsync(null), value -> CurrencyCode.known(value));
     }
 
     /**
@@ -225,7 +225,7 @@ public final class ExpenseGroup implements AutoCloseable {
      *     a currency in use without a rate, and {@link ExpenseGroupFailure.UnexpectedExchangeRate}
      *     for a rate of the new group currency
      */
-    public void changeCurrency(Currency currency, Map<Currency, ExchangeRate> rates)
+    public void changeCurrency(CurrencyCode currency, Map<CurrencyCode, ExchangeRate> rates)
             throws EranosException {
         Converting.run(() -> handle.changeCurrency(currency.code(), rates(rates)));
     }
@@ -246,7 +246,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return a future of the call's end
      */
     public CompletableFuture<Void> changeCurrencyAsync(
-            Currency currency, Map<Currency, ExchangeRate> rates) {
+            CurrencyCode currency, Map<CurrencyCode, ExchangeRate> rates) {
         return Converting.future(
                 handle.changeCurrencyAsync(currency.code(), rates(rates), null), _ -> null);
     }
@@ -1348,7 +1348,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @param rates the rates
      * @return the generated rates
      */
-    private static List<CurrencyRate> rates(Map<Currency, ExchangeRate> rates) {
+    private static List<CurrencyRate> rates(Map<CurrencyCode, ExchangeRate> rates) {
         return rates.entrySet().stream()
                 .map(rate -> new CurrencyRate(rate.getKey().code(), rate.getValue().toString()))
                 .toList();
@@ -1357,11 +1357,11 @@ public final class ExpenseGroup implements AutoCloseable {
     /** A builder of a new group, whose every setter replaces what was set before. */
     public static final class Builder {
         private final String name;
-        private final Currency currency;
+        private final CurrencyCode currency;
         private String description;
         private Language language;
 
-        private Builder(String name, Currency currency) {
+        private Builder(String name, CurrencyCode currency) {
             this.name = Objects.requireNonNull(name, "name");
             this.currency = Objects.requireNonNull(currency, "currency");
         }

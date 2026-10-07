@@ -19,7 +19,7 @@ use proptest::prelude::*;
 use super::*;
 
 fn eur(text: &str) -> Money {
-    Money::parse(text, Currency::EUR).unwrap()
+    Money::parse(text, CurrencyCode::EUR).unwrap()
 }
 
 fn day() -> CalendarDate {
@@ -40,7 +40,7 @@ struct Trip {
 
 /// A group with three members, in creation order.
 fn trip() -> Trip {
-    let mut group = ExpenseGroup::builder("Trip", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
@@ -138,23 +138,27 @@ fn assert_unchanged<T: std::fmt::Debug>(
 /// identifier of its own.
 #[test]
 fn a_new_group_starts_empty() {
-    let group = ExpenseGroup::builder("  Lisbon ", Currency::EUR)
+    let group = ExpenseGroup::builder("  Lisbon ", CurrencyCode::EUR)
         .description(" ")
         .language(Language::parse("pt-PT").unwrap())
         .build()
         .unwrap();
-    let other = ExpenseGroup::builder("Lisbon", Currency::EUR)
+    let other = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
         .build()
         .unwrap();
     assert_ne!(group.id(), other.id());
     assert_eq!(group.name(), "Lisbon");
     assert_eq!(group.description(), None);
-    assert_eq!(group.currency(), Currency::EUR);
+    assert_eq!(group.currency(), CurrencyCode::EUR);
     assert_eq!(group.language().map(Language::as_str), Some("pt-PT"));
     assert_eq!(group.members().len(), 0);
     assert_eq!(group.summary().total_spent(), eur("0"));
     // A blank name is refused.
-    assert!(ExpenseGroup::builder(" ", Currency::EUR).build().is_err());
+    assert!(
+        ExpenseGroup::builder(" ", CurrencyCode::EUR)
+            .build()
+            .is_err()
+    );
 }
 
 /// Group details change without touching entries or totals.
@@ -526,7 +530,7 @@ fn an_expense_must_fit_the_group() {
     // must not have one, even at a rate of 1.
     let foreign = Expense::builder(
         "Taxi",
-        Money::parse("50.00", Currency::RON).unwrap(),
+        Money::parse("50.00", CurrencyCode::RON).unwrap(),
         ana,
         Split::equal([ana, bob]),
         day(),
@@ -536,7 +540,7 @@ fn an_expense_must_fit_the_group() {
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::RON,
+            currency: CurrencyCode::RON,
         },
         |group| group.add_expense(foreign.clone()),
     );
@@ -651,7 +655,7 @@ fn transfers_move_balances_exactly() {
     assert_eq!(group.transfer(repayment).map(Transfer::from), Some(bob));
 
     // A cash repayment in another currency converts with its rate.
-    let lei = Money::parse("50.00", Currency::RON).unwrap();
+    let lei = Money::parse("50.00", CurrencyCode::RON).unwrap();
     let cash = edited_transfer(&group, repayment, |builder| {
         builder
             .cost(lei.at(ExchangeRate::parse("0.2").unwrap()))
@@ -749,7 +753,7 @@ fn settlements_are_cached_until_a_balance_changes() {
 fn an_asynchronous_settlement_fills_the_cache_the_synchronous_call_reads() {
     // Sixteen members each paid a different amount for a seventeenth:
     // seventeen open balances, so the exact solver yields once.
-    let mut group = ExpenseGroup::builder("Club", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Club", CurrencyCode::EUR)
         .build()
         .unwrap();
     let hub = group.add_member(person("Hub")).unwrap();
@@ -798,7 +802,7 @@ fn a_currency_change_reconverts_every_entry() {
         .unwrap();
     let foreign = Expense::builder(
         "Taxi",
-        Money::parse("50.00", Currency::RON)
+        Money::parse("50.00", CurrencyCode::RON)
             .unwrap()
             .at(ExchangeRate::parse("0.2").unwrap()),
         bob,
@@ -812,26 +816,26 @@ fn a_currency_change_reconverts_every_entry() {
     let eur_to_ron = ExchangeRate::parse("5").unwrap();
 
     // Moving to the current currency does nothing.
-    group.change_currency(Currency::EUR, &[]).unwrap();
+    group.change_currency(CurrencyCode::EUR, &[]).unwrap();
     // Every currency in use needs exactly one rate.
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::EUR,
+            currency: CurrencyCode::EUR,
         },
-        |group| group.change_currency(Currency::RON, &[]),
+        |group| group.change_currency(CurrencyCode::RON, &[]),
     );
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::DuplicateExchangeRate {
-            currency: Currency::EUR,
+            currency: CurrencyCode::EUR,
         },
         |group| {
             group.change_currency(
-                Currency::RON,
+                CurrencyCode::RON,
                 &[
-                    CurrencyRate::new(Currency::EUR, eur_to_ron),
-                    CurrencyRate::new(Currency::EUR, eur_to_ron),
+                    CurrencyRate::new(CurrencyCode::EUR, eur_to_ron),
+                    CurrencyRate::new(CurrencyCode::EUR, eur_to_ron),
                 ],
             )
         },
@@ -839,13 +843,13 @@ fn a_currency_change_reconverts_every_entry() {
 
     group
         .change_currency(
-            Currency::RON,
-            &[CurrencyRate::new(Currency::EUR, eur_to_ron)],
+            CurrencyCode::RON,
+            &[CurrencyRate::new(CurrencyCode::EUR, eur_to_ron)],
         )
         .unwrap();
-    assert_eq!(group.currency(), Currency::RON);
+    assert_eq!(group.currency(), CurrencyCode::RON);
     // 10.00 EUR became 50.00 RON; the RON taxi is now local.
-    let ron = |text| Money::parse(text, Currency::RON).unwrap();
+    let ron = |text| Money::parse(text, CurrencyCode::RON).unwrap();
     assert_eq!(group.summary().total_spent(), ron("100.00"));
     assert_eq!(
         group.expense(local).map(Expense::cost),
@@ -876,12 +880,12 @@ fn a_currency_change_changes_nothing_until_it_completes() {
     for _ in 0..100 {
         group.add_transfer(transfer(bob, ana, "0.50")).unwrap();
     }
-    let rates = [CurrencyRate::new(Currency::EUR, two())];
+    let rates = [CurrencyRate::new(CurrencyCode::EUR, two())];
     let mut context = Context::from_waker(Waker::noop());
     for yields in 1..=2 {
         let mut changed = group.clone();
         {
-            let call = changed.change_currency_async(Currency::RON, &rates);
+            let call = changed.change_currency_async(CurrencyCode::RON, &rates);
             let mut call = pin!(call.into_future());
             for _ in 0..yields {
                 assert!(call.as_mut().poll(&mut context).is_pending());
@@ -893,17 +897,17 @@ fn a_currency_change_changes_nothing_until_it_completes() {
 
     // Polled to the end, it yields twice and converts every entry.
     {
-        let call = group.change_currency_async(Currency::RON, &rates);
+        let call = group.change_currency_async(CurrencyCode::RON, &rates);
         let mut call = pin!(call.into_future());
         for _ in 0..2 {
             assert!(call.as_mut().poll(&mut context).is_pending());
         }
         assert_eq!(call.as_mut().poll(&mut context), Poll::Ready(Ok(())));
     }
-    assert_eq!(group.currency(), Currency::RON);
+    assert_eq!(group.currency(), CurrencyCode::RON);
     assert_eq!(
         group.summary().total_spent(),
-        Money::parse("4000.00", Currency::RON).unwrap()
+        Money::parse("4000.00", CurrencyCode::RON).unwrap()
     );
     assert_eq!(group.ledger, rebuilt(&group));
 }
@@ -923,14 +927,14 @@ fn a_transfer_cost_must_suit_the_group_currency() {
         Transfer::builder(
             ana,
             bob,
-            Money::parse("100.00", Currency::RON).unwrap(),
+            Money::parse("100.00", CurrencyCode::RON).unwrap(),
             day(),
         )
         .build()
         .unwrap()
     };
     let missing = ExpenseGroupError::MissingExchangeRate {
-        currency: Currency::RON,
+        currency: CurrencyCode::RON,
     };
     assert_unchanged(&mut group, &missing, |group| group.add_transfer(lei()));
     let rated = Transfer::builder(
@@ -959,11 +963,11 @@ fn a_transfer_cost_must_suit_the_group_currency() {
 /// dollars.
 #[test]
 fn a_pegged_currency_needs_its_rate_even_at_par() {
-    let mut group = ExpenseGroup::builder("Bermuda", Currency::USD)
+    let mut group = ExpenseGroup::builder("Bermuda", CurrencyCode::USD)
         .build()
         .unwrap();
     let ana = group.add_member(person("Ana")).unwrap();
-    let bermudian_dollars = Money::from_minor_units(5_000, Currency::BMD);
+    let bermudian_dollars = Money::from_minor_units(5_000, CurrencyCode::BMD);
     let ferry = |cost: Cost| {
         Expense::builder("Ferry", cost, ana, Split::equal([ana]), day())
             .build()
@@ -972,7 +976,7 @@ fn a_pegged_currency_needs_its_rate_even_at_par() {
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::BMD,
+            currency: CurrencyCode::BMD,
         },
         |group| group.add_expense(ferry(Cost::from(bermudian_dollars))),
     );
@@ -981,7 +985,7 @@ fn a_pegged_currency_needs_its_rate_even_at_par() {
         .unwrap();
     assert_eq!(
         group.summary().total_spent(),
-        Money::from_minor_units(5_000, Currency::USD)
+        Money::from_minor_units(5_000, CurrencyCode::USD)
     );
 }
 
@@ -1020,7 +1024,7 @@ fn an_overflowing_expense_is_refused() {
         ..
     } = trip();
     let huge = || {
-        let amount = Money::from_minor_units(i64::MAX, Currency::EUR);
+        let amount = Money::from_minor_units(i64::MAX, CurrencyCode::EUR);
         Expense::builder("Huge", amount, ana, Split::equal([bob]), day())
             .build()
             .unwrap()
@@ -1063,7 +1067,7 @@ const HUGE: i64 = 9_000_000_000_000_000_000;
 const EXTRA: i64 = 1_000_000_000_000_000_000;
 
 fn cents(minor_units: i64) -> Money {
-    Money::from_minor_units(minor_units, Currency::EUR)
+    Money::from_minor_units(minor_units, CurrencyCode::EUR)
 }
 
 fn paid_for(amount: Money, payer: MemberId, participant: MemberId) -> Expense {
@@ -1078,7 +1082,7 @@ fn sent(from: MemberId, to: MemberId, amount: Money) -> Transfer {
 
 /// `HUGE` in lei: out of range once converted at two euros per leu.
 fn huge_in_lei() -> Money {
-    Money::from_minor_units(HUGE, Currency::RON)
+    Money::from_minor_units(HUGE, CurrencyCode::RON)
 }
 
 fn two() -> ExchangeRate {
@@ -1087,7 +1091,10 @@ fn two() -> ExchangeRate {
 
 /// Moves the group to lei at 2 lei per euro.
 fn doubled(group: &mut ExpenseGroup) -> Result<(), ExpenseGroupError> {
-    group.change_currency(Currency::RON, &[CurrencyRate::new(Currency::EUR, two())])
+    group.change_currency(
+        CurrencyCode::RON,
+        &[CurrencyRate::new(CurrencyCode::EUR, two())],
+    )
 }
 
 /// A currency change needs a rate for the currency of every transfer as
@@ -1106,7 +1113,7 @@ fn a_currency_change_needs_a_rate_for_every_transfer_too() {
     let cash = Transfer::builder(
         bob,
         ana,
-        Money::parse("100", Currency::HUF)
+        Money::parse("100", CurrencyCode::HUF)
             .unwrap()
             .at(ExchangeRate::parse("0.0025").unwrap()),
         day(),
@@ -1118,13 +1125,13 @@ fn a_currency_change_needs_a_rate_for_every_transfer_too() {
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::HUF,
+            currency: CurrencyCode::HUF,
         },
         |group| {
             group.change_currency(
-                Currency::RON,
+                CurrencyCode::RON,
                 &[CurrencyRate::new(
-                    Currency::EUR,
+                    CurrencyCode::EUR,
                     ExchangeRate::parse("5").unwrap(),
                 )],
             )
@@ -1356,7 +1363,7 @@ fn apply(
     categories: &[CategoryId],
     operation: &Operation,
 ) -> bool {
-    let money = |amount| Money::from_minor_units(amount, Currency::EUR);
+    let money = |amount| Money::from_minor_units(amount, CurrencyCode::EUR);
     let expense_at =
         |current: &ExpenseGroup, position: usize| current.expenses().map(Expense::id).nth(position);
     let transfer_at = |current: &ExpenseGroup, position: usize| {
@@ -1438,7 +1445,7 @@ proptest! {
     /// the group untouched, and every settlement clears every balance.
     #[test]
     fn random_changes_keep_the_group_consistent(operations in proptest::collection::vec(operation(), 1..40)) {
-        let mut group = ExpenseGroup::builder("Random", Currency::EUR).build().unwrap();
+        let mut group = ExpenseGroup::builder("Random", CurrencyCode::EUR).build().unwrap();
         let members: Vec<MemberId> = ["Ana", "Bob", "Carol", "Dan", "Eve"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
         let mut categories = vec![CategoryId::UNCATEGORISED];
         for name in ["Food", "Fuel"] {

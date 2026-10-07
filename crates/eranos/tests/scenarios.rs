@@ -10,7 +10,7 @@
 )]
 
 use eranos::{
-    Balance, CalendarDate, Category, CategoryId, Currency, CurrencyRate, ExchangeRate, Expense,
+    Balance, CalendarDate, Category, CategoryId, CurrencyCode, CurrencyRate, ExchangeRate, Expense,
     ExpenseGroup, ExpenseItem, Member, MemberId, MemberParts, MemberPercentage, MemberShare, Money,
     Parts, Percentage, SettlementStrategy, Split, TipDistribution, TipRule, Transfer,
     error::ExpenseGroupError,
@@ -19,7 +19,7 @@ use eranos::{
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
 fn eur(text: &str) -> Money {
-    Money::parse(text, Currency::EUR).unwrap()
+    Money::parse(text, CurrencyCode::EUR).unwrap()
 }
 
 fn day(day: u8) -> CalendarDate {
@@ -78,7 +78,7 @@ struct Weekend {
 
 /// Four friends, four expenses, one per split method.
 fn weekend() -> Weekend {
-    let mut group = ExpenseGroup::builder("Weekend in Brașov", Currency::EUR)
+    let mut group = ExpenseGroup::builder("Weekend in Brașov", CurrencyCode::EUR)
         .build()
         .unwrap();
     let ana = group.add_member(member("Ana")).unwrap();
@@ -311,7 +311,7 @@ fn recording_a_settlement_settles_everyone() -> TestResult {
 /// tip distributions differ exactly as documented.
 #[test]
 fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
-    let mut group = ExpenseGroup::builder("Dinner", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Dinner", CurrencyCode::EUR).build()?;
     let ana = group.add_member(member("Ana"))?;
     let bob = group.add_member(member("Bob"))?;
     let carol = group.add_member(member("Carol"))?;
@@ -373,10 +373,10 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
 /// currency change re-converts everything.
 #[test]
 fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
-    let mut group = ExpenseGroup::builder("Bucharest", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Bucharest", CurrencyCode::EUR).build()?;
     let ana = group.add_member(member("Ana"))?;
     let bob = group.add_member(member("Bob"))?;
-    let ron = |text| Money::parse(text, Currency::RON);
+    let ron = |text| Money::parse(text, CurrencyCode::RON);
 
     // 500.00 RON at 0.2 EUR is 100.00 EUR, split in two.
     let hostel = Expense::builder(
@@ -422,14 +422,17 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
     assert_eq!(
         group.add_expense(unrated),
         Err(ExpenseGroupError::MissingExchangeRate {
-            currency: Currency::RON
+            currency: CurrencyCode::RON
         })
     );
 
     // Moving the group to RON needs the EUR → RON rate for the train.
     group.change_currency(
-        Currency::RON,
-        &[CurrencyRate::new(Currency::EUR, ExchangeRate::parse("5")?)],
+        CurrencyCode::RON,
+        &[CurrencyRate::new(
+            CurrencyCode::EUR,
+            ExchangeRate::parse("5")?,
+        )],
     )?;
     assert_eq!(group.summary().total_spent(), ron("700.00")?);
     assert_eq!(group.summary().member(ana).balance(), Balance::Settled);
@@ -441,7 +444,7 @@ fn a_multi_currency_trip_totals_in_the_group_currency() -> TestResult {
 /// their entries exist.
 #[test]
 fn a_flatmate_moves_out() -> TestResult {
-    let mut group = ExpenseGroup::builder("Flat 4B", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Flat 4B", CurrencyCode::EUR).build()?;
     let ana = group.add_member(member("Ana"))?;
     let bob = group.add_member(member("Bob"))?;
     let rent = group.add_expense(

@@ -13,7 +13,7 @@ from typing import ClassVar, final, override
 
 from eranos import (
     CalendarDate,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     Expense,
     ExpenseShares,
@@ -110,7 +110,7 @@ def euros(text: str) -> Money:
         The amount.
 
     """
-    return Money.parse(text, Currency('EUR'))
+    return Money.parse(text, CurrencyCode('EUR'))
 
 
 def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[ExpenseItem, ...]:
@@ -234,7 +234,7 @@ def tip_row(group: ExpenseGroup, member: MemberId, ordered: ExpenseShares, by_co
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    group = ExpenseGroup.create("Dinner at Caru' cu Bere", Currency('EUR'))
+    group = ExpenseGroup.create("Dinner at Caru' cu Bere", CurrencyCode('EUR'))
     ana = group.add_member(Member(first_name='Ana'))
     bob = group.add_member(Member(first_name='Bob'))
     carol = group.add_member(Member(first_name='Carol'))

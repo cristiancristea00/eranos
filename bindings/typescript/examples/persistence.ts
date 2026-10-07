@@ -7,7 +7,7 @@ import {
     type MemberId,
     type Summary,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExpenseGroup,
     Money,
     Percentage,
@@ -36,7 +36,7 @@ function balance(member: MemberId, summary: Summary): string {
 }
 
 await load();
-const euro = Currency.of('EUR');
+const euro = CurrencyCode.of('EUR');
 const day = CalendarDate.of(2026, 9, 23);
 using group = ExpenseGroup.create('Road trip', euro);
 const ana = group.addMemberSync({ firstName: 'Ana' });

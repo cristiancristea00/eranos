@@ -8,7 +8,7 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseGroup, ExpenseId, Member, MemberAmount, MemberId,
+    CalendarDate, CurrencyCode, Expense, ExpenseGroup, ExpenseId, Member, MemberAmount, MemberId,
     MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage, Split,
 };
 use tabled::settings::object::Columns;
@@ -40,7 +40,7 @@ struct TotalRow {
 }
 
 fn eur(text: &str) -> Result<Money, Box<dyn Error>> {
-    Ok(Money::parse(text, Currency::EUR)?)
+    Ok(Money::parse(text, CurrencyCode::EUR)?)
 }
 
 /// Prints a section heading with a line under it.
@@ -330,7 +330,7 @@ fn totals(group: &ExpenseGroup) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut group = ExpenseGroup::builder("Family holiday", Currency::EUR).build()?;
+    let mut group = ExpenseGroup::builder("Family holiday", CurrencyCode::EUR).build()?;
     let family = Family {
         ana: group.add_member(Member::builder("Ana").build()?)?,
         bob: group.add_member(Member::builder("Bob").build()?)?,

@@ -6,7 +6,7 @@
 
 import { Language } from './contact.js';
 import { calling } from './converting.js';
-import { Currency } from './currency.js';
+import { CurrencyCode } from './currency_code.js';
 import {
     type Category,
     type Expense,
@@ -89,8 +89,8 @@ export class ExpenseGroupReader implements Disposable {
      * @returns The currency
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
      */
-    currency(): Currency {
-        return Currency.known(calling(() => this.handle.currency()));
+    currency(): CurrencyCode {
+        return CurrencyCode.known(calling(() => this.handle.currency()));
     }
 
     /**

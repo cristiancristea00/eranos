@@ -34,7 +34,7 @@ struct TipRow: TableRow {
     }
 }
 
-let euro = try Currency(code: "EUR")
+let euro = try CurrencyCode(code: "EUR")
 
 /// The amount written `text`, in euros.
 func eur(_ text: String) throws(EranosError) -> Money {

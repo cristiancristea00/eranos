@@ -8,7 +8,7 @@ import org.junit.jupiter.api.fail
 
 /** A group of two with a category, an expense, and a transfer, and the identifiers the group gave them. */
 internal class Flat {
-    val euro: Currency = Currency.of("EUR")
+    val euro: CurrencyCode = CurrencyCode.of("EUR")
     val day: CalendarDate = CalendarDate.of(2026, 9, 23)
     val group: ExpenseGroup = ExpenseGroup("Flat", euro, "Rent", Language.parse("pt-pt"))
     val ana: MemberId = group.addBlocking(Member("Ana"))

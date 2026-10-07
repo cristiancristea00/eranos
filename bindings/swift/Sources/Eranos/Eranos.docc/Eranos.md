@@ -47,7 +47,7 @@ cancels the call, which leaves the group as it was.
 
 ### Values
 
-- ``Currency``
+- ``CurrencyCode``
 - ``Money``
 - ``ExchangeRate``
 - ``Percentage``

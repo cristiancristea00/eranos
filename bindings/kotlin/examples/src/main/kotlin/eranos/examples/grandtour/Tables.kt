@@ -4,7 +4,7 @@ package eranos.examples.grandtour
 
 import eranos.Balance
 import eranos.CategoryId
-import eranos.Currency
+import eranos.CurrencyCode
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
 import eranos.Money
@@ -129,7 +129,7 @@ internal fun printCategories(group: ExpenseGroup) {
 /** Every expense and transfer in a currency [shown] accepts, as entered and in the group currency. */
 internal fun printEntries(
     group: ExpenseGroup,
-    shown: (Currency) -> Boolean,
+    shown: (CurrencyCode) -> Boolean,
 ) {
     val zero = Money(0, group.currencyBlocking())
     val expenses =

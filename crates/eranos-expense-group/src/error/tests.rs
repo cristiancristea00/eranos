@@ -98,7 +98,7 @@ impl FromExpenseGroupError for ConvertedExpenseGroupError {
         }
     }
 
-    fn missing_exchange_rate(currency: Currency, message: String) -> Self {
+    fn missing_exchange_rate(currency: CurrencyCode, message: String) -> Self {
         Self {
             method: "missing_exchange_rate",
             held: format!("{currency}"),
@@ -114,7 +114,7 @@ impl FromExpenseGroupError for ConvertedExpenseGroupError {
         }
     }
 
-    fn duplicate_exchange_rate(currency: Currency, message: String) -> Self {
+    fn duplicate_exchange_rate(currency: CurrencyCode, message: String) -> Self {
         Self {
             method: "duplicate_exchange_rate",
             held: format!("{currency}"),
@@ -250,7 +250,7 @@ impl FromExpenseGroupError for ConvertedExpenseGroupError {
 )]
 fn every_failure_of_group_error_converts_through_the_method_of_its_variant() {
     let format = 11;
-    let currency = Currency::EUR;
+    let currency = CurrencyCode::EUR;
     let member = MemberId::from_bytes([1; 16]);
     let expenses = vec![ExpenseId::from_bytes([11; 16])];
     let transfers = vec![TransferId::from_bytes([14; 16])];

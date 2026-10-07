@@ -36,7 +36,7 @@ public class ExpenseGroupReader internal constructor(
      *
      * @throws IllegalStateException after [close].
      */
-    public fun currency(): Currency = converting { Currency.known(handle.currency()) }
+    public fun currency(): CurrencyCode = converting { CurrencyCode.known(handle.currency()) }
 
     /**
      * The group's description.

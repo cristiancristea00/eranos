@@ -5,7 +5,7 @@ import Report
 
 func anotherCurrency(_ group: ExpenseGroup, _ people: People, _ categories: Categories) throws(EranosError) {
     section("5. Another currency")
-    let euro = try Currency(code: "EUR")
+    let euro = try CurrencyCode(code: "EUR")
     let rate = try ExchangeRate(parsing: "0.2")
     let parking = try group.add(
         Expense(
@@ -91,7 +91,7 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     expect(try eur("120.00"), try group.amount(of: first), "Dan's corrected transfer")
     let mistaken = try group.transfer(withID: mistake)
     precondition(nil == mistaken, "the mistake is removed")
-    let zero = Money(minorUnits: 0, currency: try Currency(code: "EUR"))
+    let zero = Money(minorUnits: 0, currency: try CurrencyCode(code: "EUR"))
     let dinner = try group.expense(withID: seafood)
     let apartment = try group.transfer(withID: first)
     return [
@@ -153,7 +153,7 @@ func edits(_ group: ExpenseGroup, _ people: People, _ categories: Categories, _ 
     guard case .failure(.transfer(.sameMember, _)) = toHerself else {
         preconditionFailure("a transfer is between two members")
     }
-    let leu = try Currency(code: "RON")
+    let leu = try CurrencyCode(code: "RON")
     guard case .failure(.expenseGroup(.missingExchangeRate(leu), _)) = unrated else {
         preconditionFailure("an amount in RON needs a rate")
     }

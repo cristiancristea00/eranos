@@ -10,7 +10,7 @@
 
 #include "eranos/category.hpp"
 #include "eranos/contact.hpp"
-#include "eranos/currency.hpp"
+#include "eranos/currency_code.hpp"
 #include "eranos/detail/declarations.hpp"
 #include "eranos/error.hpp"
 #include "eranos/expense.hpp"
@@ -46,10 +46,10 @@ struct CurrencyRate final {
     ///
     /// @param currency The ISO 4217 code of the currency the rate converts from.
     /// @param rate The rate, as a decimal.
-    CurrencyRate(Currency currency, ExchangeRate rate) noexcept : currency(std::move(currency)), rate(std::move(rate)) {}
+    CurrencyRate(CurrencyCode currency, ExchangeRate rate) noexcept : currency(std::move(currency)), rate(std::move(rate)) {}
 
     /// The ISO 4217 code of the currency the rate converts from.
-    Currency currency;
+    CurrencyCode currency;
 
     /// The rate, as a decimal.
     ExchangeRate rate;
@@ -103,7 +103,7 @@ class ExpenseGroup final {
     /// @return The group, or an error of the kind ErrorKind::EXPENSE_GROUP for a blank name, ErrorKind::LANGUAGE for a language that is not a tag,
     /// and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<ExpenseGroup, Error> create(std::string_view const name, Currency const &currency,
+    [[nodiscard]] static std::expected<ExpenseGroup, Error> create(std::string_view const name, CurrencyCode const &currency,
                                                                    ExpenseGroupOptions const &options = {});
 
     /// The group saved as @p json, which save() wrote.
@@ -215,7 +215,7 @@ class ExpenseGroup final {
     /// The ISO 4217 code of the group currency. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @return The result
-    [[nodiscard]] Currency currency() const;
+    [[nodiscard]] CurrencyCode currency() const;
 
     /// The asynchronous form of currency(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
     /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, and its future then holds an error of the
@@ -223,7 +223,7 @@ class ExpenseGroup final {
     ///
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
-    [[nodiscard]] std::future<std::expected<Currency, Error>> currencyAsync(Cancellation const *const cancellation = nullptr) const;
+    [[nodiscard]] std::future<std::expected<CurrencyCode, Error>> currencyAsync(Cancellation const *const cancellation = nullptr) const;
 
     /// Moves the group to currency, with a rate into it for every other currency its entries use. Blocks the calling thread while another call holds
     /// the group's lock.
@@ -231,7 +231,7 @@ class ExpenseGroup final {
     /// @param currency The currency
     /// @param rates The rates
     /// @return Nothing, or the error the library refuses the call with; its kind names the module that refused it
-    [[nodiscard]] std::expected<void, Error> changeCurrency(Currency const &currency, std::span<CurrencyRate const> const rates);
+    [[nodiscard]] std::expected<void, Error> changeCurrency(CurrencyCode const &currency, std::span<CurrencyRate const> const rates);
 
     /// The asynchronous form of changeCurrency(): it runs on the group's worker thread, in the order of the calls, without blocking the calling
     /// thread; cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, and its future then holds an
@@ -241,7 +241,7 @@ class ExpenseGroup final {
     /// @param rates The rates
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the end of the call, or of the error the call ends with
-    [[nodiscard]] std::future<std::expected<void, Error>> changeCurrencyAsync(Currency const &currency, std::span<CurrencyRate const> const rates,
+    [[nodiscard]] std::future<std::expected<void, Error>> changeCurrencyAsync(CurrencyCode const &currency, std::span<CurrencyRate const> const rates,
                                                                               Cancellation const *const cancellation = nullptr);
 
     /// Every expense, in the order they were created. Blocks the calling thread while another call holds the group's lock.
@@ -726,7 +726,7 @@ namespace detail {
 
 } // namespace detail
 
-inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(std::string_view const name, Currency const &currency,
+inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(std::string_view const name, CurrencyCode const &currency,
                                                                ExpenseGroupOptions const &options) {
     return detail::expectedOf(detail::EranosNewExpenseGroup::create(name, currency.code()))
         .and_then([&options](std::unique_ptr<detail::EranosNewExpenseGroup> details) {
@@ -841,19 +841,19 @@ inline std::future<std::expected<Category, Error>> ExpenseGroup::removeCategoryA
         [](detail::EranosCategoryOutcome const &done) { return detail::fromDetail(*done.value()); });
 }
 
-inline Currency ExpenseGroup::currency() const { return detail::listedCurrency(detail::waited(handle->currency())); }
+inline CurrencyCode ExpenseGroup::currency() const { return detail::listedCurrency(detail::waited(handle->currency())); }
 
-inline std::future<std::expected<Currency, Error>> ExpenseGroup::currencyAsync(Cancellation const *const cancellation) const {
-    return detail::launch<Currency>([&](auto callback) { handle->currency_async(detail::handleOf(cancellation), std::move(callback)); },
-                                    [](detail::EranosTextOutcome const &done) { return detail::listedCurrency(*done.value()); });
+inline std::future<std::expected<CurrencyCode, Error>> ExpenseGroup::currencyAsync(Cancellation const *const cancellation) const {
+    return detail::launch<CurrencyCode>([&](auto callback) { handle->currency_async(detail::handleOf(cancellation), std::move(callback)); },
+                                        [](detail::EranosTextOutcome const &done) { return detail::listedCurrency(*done.value()); });
 }
 
-inline std::expected<void, Error> ExpenseGroup::changeCurrency(Currency const &currency, std::span<CurrencyRate const> const rates) {
+inline std::expected<void, Error> ExpenseGroup::changeCurrency(CurrencyCode const &currency, std::span<CurrencyRate const> const rates) {
     return detail::expectedOf(handle->change_currency(currency.code(), *detail::toDetail(rates)));
 }
 
-inline std::future<std::expected<void, Error>> ExpenseGroup::changeCurrencyAsync(Currency const &currency, std::span<CurrencyRate const> const rates,
-                                                                                 Cancellation const *const cancellation) {
+inline std::future<std::expected<void, Error>>
+ExpenseGroup::changeCurrencyAsync(CurrencyCode const &currency, std::span<CurrencyRate const> const rates, Cancellation const *const cancellation) {
     return detail::launch<void>(
         [&](auto callback) {
             handle->change_currency_async(currency.code(), *detail::toDetail(rates), detail::handleOf(cancellation), std::move(callback));

@@ -10,7 +10,7 @@
 
 #include "eranos/category.hpp"
 #include "eranos/contact.hpp"
-#include "eranos/currency.hpp"
+#include "eranos/currency_code.hpp"
 #include "eranos/detail/declarations.hpp"
 #include "eranos/error.hpp"
 #include "eranos/expense.hpp"
@@ -53,7 +53,7 @@ class ExpenseGroupReader final {
     /// The ISO 4217 code of the group currency.
     ///
     /// @return The result, or an error of the kind ErrorKind::RELEASED after release()
-    [[nodiscard]] std::expected<Currency, Error> currency() const;
+    [[nodiscard]] std::expected<CurrencyCode, Error> currency() const;
 
     /// Every expense, in the order they were created.
     ///
@@ -167,7 +167,7 @@ inline std::expected<std::optional<Category>, Error> ExpenseGroupReader::categor
     return detail::expectedOf(handle->category(id.value())).transform([](auto const &value) { return detail::optionalRecord<Category>(value); });
 }
 
-inline std::expected<Currency, Error> ExpenseGroupReader::currency() const {
+inline std::expected<CurrencyCode, Error> ExpenseGroupReader::currency() const {
     return detail::expectedOf(handle->currency()).transform([](std::string const &code) { return detail::listedCurrency(code); });
 }
 

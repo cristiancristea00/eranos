@@ -28,7 +28,7 @@ use std::sync::OnceLock;
 use eranos_core::MemberId;
 use eranos_core::cooperative::Cooperative;
 use eranos_ledger::{Ledger, MemberPair};
-use eranos_money::{Currency, Money};
+use eranos_money::{CurrencyCode, Money};
 
 pub use error::{FromSettlementError, SettlementError};
 
@@ -43,14 +43,14 @@ pub use error::{FromSettlementError, SettlementError};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, ExpenseGroup, Member, Money, SettlementStrategy, Transfer};
+/// use eranos::{CurrencyCode, CalendarDate, ExpenseGroup, Member, Money, SettlementStrategy, Transfer};
 ///
-/// let mut group = ExpenseGroup::builder("Flat", Currency::EUR).build()?;
+/// let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?;
 /// let ana = group.add_member(Member::builder("Ana").build()?)?;
 /// let bob = group.add_member(Member::builder("Bob").build()?)?;
 /// let day = CalendarDate::new(2026, 9, 23)?;
 /// // Bob paid Ana 20.00 too much.
-/// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", Currency::EUR)?, day).build()?)?;
+/// group.add_transfer(Transfer::builder(bob, ana, Money::parse("20.00", CurrencyCode::EUR)?, day).build()?)?;
 ///
 /// for strategy in SettlementStrategy::all() {
 ///     let settlement = group.settlement(strategy)?;
@@ -229,7 +229,7 @@ struct Flow {
 
 impl Flow {
     /// The payment this flow makes, in `currency`.
-    const fn into_payment(self, currency: Currency) -> Payment {
+    const fn into_payment(self, currency: CurrencyCode) -> Payment {
         Payment {
             members: self.members,
             amount: Money::from_minor_units(self.amount, currency),

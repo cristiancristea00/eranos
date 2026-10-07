@@ -12,7 +12,7 @@ from typing import ClassVar, final, override
 
 from eranos import (
     CalendarDate,
-    Currency,
+    CurrencyCode,
     EqualSplit,
     Expense,
     ExpenseGroup,
@@ -69,7 +69,7 @@ def balance(member: MemberId, summary: Summary) -> str:
 
 def main() -> None:
     """Print the report, checking its key numbers."""
-    euro = Currency('EUR')
+    euro = CurrencyCode('EUR')
     day = CalendarDate(2026, 9, 23)
     group = ExpenseGroup.create('Road trip', euro)
     ana = group.add_member(Member(first_name='Ana'))

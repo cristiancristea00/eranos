@@ -83,7 +83,7 @@ template <typename Identifier> void checkIdentifier(Check &check, std::string_vi
 class Flat final {
   public:
     Flat()
-        : euro(Currency::of("EUR").value()), day(CalendarDate::of(2026, 9, 23).value()),
+        : euro(CurrencyCode::of("EUR").value()), day(CalendarDate::of(2026, 9, 23).value()),
           group(ExpenseGroup::create("Flat", euro, ExpenseGroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
           ana(group.addMember(Member("Ana")).value()), bob(group.addMember(Member("Bob")).value()), food(group.addCategory(Category("Food")).value()),
           dinner(group.addExpense(dinnerExpense()).value()), repayment(group.addTransfer(Transfer(bob, ana, LocalCost{euros(1'000)}, day)).value()) {}
@@ -96,7 +96,7 @@ class Flat final {
         return {std::move(name), LocalCost{euros(3'000)}, EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}}, day};
     }
 
-    Currency euro;
+    CurrencyCode euro;
     CalendarDate day;
     ExpenseGroup group;
     MemberId ana;
@@ -118,37 +118,37 @@ class Flat final {
 
 /// A currency whose details came out wrong would format every amount in it wrongly.
 void aCurrencyHoldsWhatTheLibraryKnowsOfIt(Check &check) {
-    auto const euro = Currency::of("EUR").value();
-    auto const yen = Currency::of("JPY").value();
+    auto const euro = CurrencyCode::of("EUR").value();
+    auto const yen = CurrencyCode::of("JPY").value();
     check.that("EUR" == euro.code() && 2 == euro.decimalPlaces() && "Euro" == euro.name() && 978 == euro.numericCode(), "the euro's details");
     check.that(0 == yen.decimalPlaces(), "the yen has no decimal places");
-    checkValue(check, euro, Currency::of("EUR").value(), yen, "currencies compare by code");
+    checkValue(check, euro, CurrencyCode::of("EUR").value(), yen, "currencies compare by code");
     check.that(euro < yen && !(yen < euro), "currencies order by code");
 }
 
 /// A list that missed a currency or came out of order would hide one from the currency pickers of an app.
 void everyCurrencyTheLibraryListsIsListedByCode(Check &check) {
-    auto const all = Currency::all();
+    auto const all = CurrencyCode::all();
     check.that(std::ranges::is_sorted(all), "the currencies are in the order of their codes");
-    check.that(std::ranges::contains(all, Currency::of("EUR").value()), "the euro is listed");
+    check.that(std::ranges::contains(all, CurrencyCode::of("EUR").value()), "the euro is listed");
 }
 
 /// A code the library does not list, taken, would make an amount no call can format.
 void aCodeTheLibraryDoesNotListIsRefused(Check &check) {
-    auto const unknown = refusal(Currency::of("XYZ"));
+    auto const unknown = refusal(CurrencyCode::of("XYZ"));
     check.that(isFailure(unknown, ErrorKind::MONEY, Failure::MONEY_UNKNOWN_CURRENCY), "an unknown code is refused");
     check.that(unknown.has_value() && "unknown currency code" == unknown.value().message(), "the message names the failure, not the code");
 }
 
 /// Bytes that are not UTF-8, passed on, would reach the library as text it cannot hold.
 void textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt(Check &check) {
-    auto const refused = refusal(Currency::of("\xff"));
+    auto const refused = refusal(CurrencyCode::of("\xff"));
     check.that(isFailure(refused, ErrorKind::INVALID_TEXT, std::nullopt), "the bytes are refused as text");
 }
 
 /// An amount that parsed or formatted otherwise than the library does would show one number in an app and store another.
 void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) {
-    auto const euro = Currency::of("EUR").value();
+    auto const euro = CurrencyCode::of("EUR").value();
     auto const price = Money::parse("12.5", euro).value();
     check.that(price.currency == euro && 1'250 == price.minorUnits, "12.5 is 1250 cents");
     check.that("12.50 EUR" == price.toString(), "the amount formats with its currency");
@@ -162,8 +162,8 @@ void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) {
 
 /// Arithmetic that mixed currencies or wrapped around would put a wrong total in a report.
 void amountsInOneCurrencyAddAndSubtract(Check &check) {
-    auto const euro = Currency::of("EUR").value();
-    auto const lei = Currency::of("RON").value();
+    auto const euro = CurrencyCode::of("EUR").value();
+    auto const lei = CurrencyCode::of("RON").value();
     check.that(Money(1'000, euro).plus(Money(250, euro)) == Money(1'250, euro), "10.00 EUR and 2.50 EUR make 12.50 EUR");
     check.that(Money(1'000, euro).minus(Money(250, euro)) == Money(750, euro), "10.00 EUR less 2.50 EUR is 7.50 EUR");
     auto const mixed = refusal(Money(1, euro).plus(Money(1, lei)));
@@ -175,8 +175,8 @@ void amountsInOneCurrencyAddAndSubtract(Check &check) {
 
 /// A rate that parsed or converted otherwise than the library does would change the share of every converted expense.
 void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) {
-    auto const euro = Currency::of("EUR").value();
-    auto const lei = Currency::of("RON").value();
+    auto const euro = CurrencyCode::of("EUR").value();
+    auto const lei = CurrencyCode::of("RON").value();
     auto const rate = ExchangeRate::parse("4.970").value();
     check.that("4.97" == rate.toString(), "the rate is written without trailing zeros");
     checkValue(check, rate, ExchangeRate::parse("4.97").value(), ExchangeRate::parse("5").value(), "rates compare by value");
@@ -263,7 +263,7 @@ void everyIdentifierComparesAndHashesByItsText(Check &check) {
 
 /// A record or an alternative whose comparison left a field out would merge two entries an app holds apart.
 void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
-    auto const euro = Currency::of("EUR").value();
+    auto const euro = CurrencyCode::of("EUR").value();
     MemberId const ana("0199a000-0000-7000-8000-000000000001");
     MemberId const bob("0199a000-0000-7000-8000-000000000002");
     CategoryId const food("0199a000-0000-7000-8000-000000000003");
@@ -336,7 +336,7 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     checkValue(check, payment, Payment(bob, ana, one), Payment(ana, bob, one), "payments compare by direction");
     checkValue(check, SettlementPlan({payment}, SettlementStrategy::GREEDY), SettlementPlan({payment}, SettlementStrategy::GREEDY),
                SettlementPlan({payment}, SettlementStrategy::DIRECT), "settlements compare by strategy too");
-    checkValue(check, CurrencyRate(euro, rate), CurrencyRate(euro, rate), CurrencyRate(Currency::of("RON").value(), rate), "currency rates");
+    checkValue(check, CurrencyRate(euro, rate), CurrencyRate(euro, rate), CurrencyRate(CurrencyCode::of("RON").value(), rate), "currency rates");
 }
 
 // --- Entries through the group -----------------------------------------------------------------------------------------
@@ -344,7 +344,7 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
 /// An expense that came back from the group otherwise than it went in would change what an app shows after a save.
 void anExpenseReadsBackAsItWasAdded(Check &check) {
     Flat flat;
-    auto const lei = Currency::of("RON").value();
+    auto const lei = CurrencyCode::of("RON").value();
     Expense lunch("Lunch", ConvertedCost{.amount = Money(5'000, lei), .rate = ExchangeRate::parse("0.2").value()},
                   PercentagesSplit{{MemberPercentage(flat.ana, Percentage{5'000}), MemberPercentage(flat.bob, Percentage{5'000})}},
                   WholeExpenseSplit{PartsSplit{{MemberParts(flat.ana, Parts{100}), MemberParts(flat.bob, Parts{50})}}}, flat.day);
@@ -372,8 +372,8 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
 /// A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save.
 void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
     Flat flat;
-    Transfer cash(flat.ana, flat.bob, ConvertedCost{.amount = Money(1'000, Currency::of("RON").value()), .rate = ExchangeRate::parse("0.2").value()},
-                  flat.day);
+    Transfer cash(flat.ana, flat.bob,
+                  ConvertedCost{.amount = Money(1'000, CurrencyCode::of("RON").value()), .rate = ExchangeRate::parse("0.2").value()}, flat.day);
     cash.time = TimeOfDay::of(9, 5).value();
     cash.note = "Cash";
     cash.id = flat.group.addTransfer(cash).value();
@@ -557,7 +557,7 @@ void everyStrategyConvertsToTheGeneratedOneAndBack(Check &check) {
 /// A change of currency that left an entry unconverted, or took a rate it was not given, would mix currencies in the totals.
 void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
     Flat flat;
-    auto const lei = Currency::of("RON").value();
+    auto const lei = CurrencyCode::of("RON").value();
     auto const missing = refusal(flat.group.changeCurrency(lei, {}));
     check.that(isFailure(missing, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MISSING_EXCHANGE_RATE) && "EUR" == missing.value().currency(),
                "the euro needs a rate");
@@ -606,7 +606,7 @@ void everyErrorHoldsWhatItsFailureHolds(Check &check) {
                    amounts.value().expectedAmount() == flat.euros(3'000),
                "the amounts and what they should add up to");
     auto foreign = uneven;
-    foreign.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, Money(3'000, Currency::of("RON").value()))}}};
+    foreign.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, Money(3'000, CurrencyCode::of("RON").value()))}}};
     auto const currencies = refusal(flat.group.addExpense(foreign));
     check.that(isFailure(currencies, ErrorKind::EXPENSE, Failure::EXPENSE_CURRENCY_MISMATCH) && "EUR" == currencies.value().expectedCurrency() &&
                    "RON" == currencies.value().foundCurrency(),
@@ -697,8 +697,8 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) {
     group.clearDescriptionAsync().get().value();
     group.clearLanguageAsync().get().value();
     check.that(!group.description().has_value() && !group.language().has_value(), "the details cleared");
-    group.changeCurrencyAsync(Currency::of("RON").value(), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())}).get().value();
-    check.that(group.currency() == Currency::of("RON").value(), "the currency changed");
+    group.changeCurrencyAsync(CurrencyCode::of("RON").value(), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())}).get().value();
+    check.that(group.currency() == CurrencyCode::of("RON").value(), "the currency changed");
     auto const loaded = ExpenseGroup::loadAsync(group.save()).get().value();
     check.that(loaded.save() == group.save(), "a group loaded on a thread of its own");
 }
@@ -752,8 +752,8 @@ void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check
     Flat flat;
     auto reader = flat.group.read();
     Cancellation cancellation;
-    auto changing = flat.group.changeCurrencyAsync(Currency::of("RON").value(), std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())},
-                                                   &cancellation);
+    auto changing = flat.group.changeCurrencyAsync(CurrencyCode::of("RON").value(),
+                                                   std::array{CurrencyRate(flat.euro, ExchangeRate::parse("5").value())}, &cancellation);
     check.that(!cancellation.isCancelled(), "a cancellation starts uncancelled");
     cancellation.cancel();
     check.that(cancellation.isCancelled(), "and is cancelled once cancelled");

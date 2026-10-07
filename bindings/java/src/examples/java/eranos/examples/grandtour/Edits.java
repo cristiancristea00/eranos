@@ -15,7 +15,7 @@ import static eranos.examples.grandtour.Tour.refusal;
 import static eranos.examples.grandtour.Tour.ron;
 
 import eranos.Cost;
-import eranos.Currency;
+import eranos.CurrencyCode;
 import eranos.EranosException;
 import eranos.ExchangeRate;
 import eranos.Expense;
@@ -56,7 +56,7 @@ final class Edits {
     static void anotherCurrency(ExpenseGroup group, People people, Categories categories)
             throws EranosException {
         section("5. Another currency");
-        Currency euro = Currency.of("EUR");
+        CurrencyCode euro = CurrencyCode.of("EUR");
         ExchangeRate rate = ExchangeRate.parse("0.2");
         ExpenseId parking =
                 group.addExpense(
@@ -168,7 +168,7 @@ final class Edits {
         check(group.expense(copy).isEmpty());
         check(Optional.of(eur("120.00")).equals(group.transferAmount(first)));
         check(group.transfer(mistake).isEmpty());
-        Money zero = new Money(0, Currency.of("EUR"));
+        Money zero = new Money(0, CurrencyCode.of("EUR"));
         Optional<Expense> dinner = group.expense(seafood);
         Optional<Transfer> apartment = group.transfer(first);
         return List.of(
@@ -267,7 +267,7 @@ final class Edits {
                                         .map(EranosException.Transfer.class::cast)
                                         .map(EranosException.Transfer::failure)));
         check(
-                Optional.of(new ExpenseGroupFailure.MissingExchangeRate(Currency.of("RON")))
+                Optional.of(new ExpenseGroupFailure.MissingExchangeRate(CurrencyCode.of("RON")))
                         .equals(groupFailure(unrated)));
         check(before.equals(group.summary()));
     }

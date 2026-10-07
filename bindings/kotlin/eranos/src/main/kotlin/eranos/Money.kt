@@ -15,7 +15,7 @@ public class Money(
     /** The amount in minor units: cents for the euro, none for the yen. */
     public val minorUnits: Long,
     /** The currency. */
-    public val currency: Currency,
+    public val currency: CurrencyCode,
 ) {
     /** The amount as the generated code holds it. */
     internal val generated: eranos.internal.Money
@@ -64,10 +64,10 @@ public class Money(
         @Throws(EranosException::class)
         public fun parse(
             text: String,
-            currency: Currency,
+            currency: CurrencyCode,
         ): Money = converting { moneyParse(text, currency.code).converted() }
     }
 }
 
 /** The amount the generated code holds as [this]. */
-internal fun eranos.internal.Money.converted(): Money = Money(minorUnits, Currency.known(currency))
+internal fun eranos.internal.Money.converted(): Money = Money(minorUnits, CurrencyCode.known(currency))

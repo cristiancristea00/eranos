@@ -23,7 +23,7 @@ class EntriesTest {
      * #dinner}, every kind of cost, split, and tip.
      */
     private static Expense taxi(Flat flat) throws EranosException {
-        Currency lei = Currency.of("RON");
+        CurrencyCode lei = CurrencyCode.of("RON");
         return Expense.builder(
                         "Taxi",
                         new Cost.Converted(new Money(5_000, lei), ExchangeRate.parse("0.2")),
@@ -112,7 +112,7 @@ class EntriesTest {
     @Test
     void anExpenseTellsItsTipTotalAndMembers() throws EranosException {
         Flat flat = new Flat();
-        Currency lei = Currency.of("RON");
+        CurrencyCode lei = CurrencyCode.of("RON");
         Expense taxi = taxi(flat);
         assertEquals(new Money(500, lei), taxi.tipAmount());
         assertEquals(new Money(5_500, lei), taxi.total());
@@ -233,7 +233,7 @@ class EntriesTest {
         assertEquals(Optional.empty(), plain.phone());
         assertEquals(List.of(), Member.builder("Dan").build().accounts());
 
-        Currency lei = Currency.of("RON");
+        CurrencyCode lei = CurrencyCode.of("RON");
         Transfer cash =
                 Transfer.builder(
                                 flat.bob,

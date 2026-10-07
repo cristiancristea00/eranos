@@ -13,7 +13,7 @@ use eranos_core::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId};
 use eranos_expense::Expense;
 use eranos_ledger::{ExpenseShares, Summary};
 use eranos_member::Member;
-use eranos_money::{Currency, CurrencyRate, Money};
+use eranos_money::{CurrencyCode, CurrencyRate, Money};
 use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy};
 use eranos_transfer::Transfer;
 
@@ -48,9 +48,9 @@ use crate::{ExpenseGroup, ExpenseGroupError, Language};
 ///
 /// ```
 /// use eranos::cooperative::block_on;
-/// use eranos::{Currency, ExpenseGroup, Member, SharedExpenseGroup};
+/// use eranos::{CurrencyCode, ExpenseGroup, Member, SharedExpenseGroup};
 ///
-/// let shared = SharedExpenseGroup::new(ExpenseGroup::builder("Flat", Currency::EUR).build()?);
+/// let shared = SharedExpenseGroup::new(ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?);
 /// let other = shared.clone();
 ///
 /// // A change through one clone is read through the other.
@@ -104,7 +104,7 @@ impl SharedExpenseGroup {
 
     /// The currency of every total, balance, and settlement, as
     /// [`ExpenseGroup::currency`] returns it.
-    pub fn currency(&self) -> impl Future<Output = Currency> + Send + 'static {
+    pub fn currency(&self) -> impl Future<Output = CurrencyCode> + Send + 'static {
         self.read_with(ExpenseGroup::currency)
     }
 
@@ -120,7 +120,7 @@ impl SharedExpenseGroup {
     /// As for [`ExpenseGroup::change_currency`].
     pub fn change_currency(
         &self,
-        currency: Currency,
+        currency: CurrencyCode,
         rates: impl Into<Vec<CurrencyRate>>,
     ) -> impl Future<Output = Result<(), ExpenseGroupError>> + Send + 'static {
         let group = Arc::clone(&self.group);

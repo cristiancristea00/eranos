@@ -14,7 +14,7 @@ class EntriesTest {
      * amounts, with a percentage tip: between them, every kind of cost, split, and tip.
      */
     private fun expenses(flat: Flat): Expenses {
-        val lei = Currency.of("RON")
+        val lei = CurrencyCode.of("RON")
         val taxi =
             Expense(
                 name = "Taxi",
@@ -76,7 +76,7 @@ class EntriesTest {
     @Test
     fun anExpenseTellsItsTipTotalAndMembers() {
         val flat = Flat()
-        val lei = Currency.of("RON")
+        val lei = CurrencyCode.of("RON")
         val expenses = expenses(flat)
         assertEquals(Money(500, lei), expenses.taxi.tipAmount())
         assertEquals(Money(5_500, lei), expenses.taxi.total())
@@ -127,7 +127,7 @@ class EntriesTest {
         assertValue(amounts.shares[0], MemberAmount(flat.bob, flat.euros(1)), MemberAmount(flat.ana, flat.euros(1)))
 
         assertValue(expenses.dinner.cost, Cost.Local(flat.euros(3_000)), Cost.Local(flat.euros(1)))
-        assertEquals(Money(5_000, Currency.of("RON")), expenses.taxi.cost.amount)
+        assertEquals(Money(5_000, CurrencyCode.of("RON")), expenses.taxi.cost.amount)
         assertValue(
             expenses.taxi.cost,
             Cost.Converted(expenses.taxi.cost.amount, ExchangeRate.parse("0.2")),
@@ -141,8 +141,8 @@ class EntriesTest {
         assertEquals(1, ExpenseItem("Bread", flat.euros(1), equal).quantity)
         assertValue(
             present(expenses.taxi.tip),
-            TipRule(TipValue.Fixed(Money(500, Currency.of("RON"))), TipDistribution.EQUAL),
-            TipRule(TipValue.Fixed(Money(500, Currency.of("RON")))),
+            TipRule(TipValue.Fixed(Money(500, CurrencyCode.of("RON"))), TipDistribution.EQUAL),
+            TipRule(TipValue.Fixed(Money(500, CurrencyCode.of("RON")))),
         )
         assertEquals(TipDistribution.PROPORTIONAL, present(expenses.dinner.tip).distribution)
         assertValue(
@@ -189,7 +189,7 @@ class EntriesTest {
             PaymentAccountDetails.Username(Username.parse("dan.pays")),
         )
 
-        val lei = Currency.of("RON")
+        val lei = CurrencyCode.of("RON")
         val cash =
             Transfer(
                 from = flat.bob,

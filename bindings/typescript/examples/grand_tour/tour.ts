@@ -8,7 +8,7 @@ import {
     type ExpenseGroup,
     type MemberId,
     CalendarDate,
-    Currency,
+    CurrencyCode,
     ExchangeRate,
     Money,
     expenseTotal,
@@ -108,11 +108,11 @@ const categoryColumns: Columns<CategoryRow> = [
 ];
 
 export function eur(text: string): Money {
-    return Money.parse(text, Currency.of('EUR'));
+    return Money.parse(text, CurrencyCode.of('EUR'));
 }
 
 export function ron(text: string): Money {
-    return Money.parse(text, Currency.of('RON'));
+    return Money.parse(text, CurrencyCode.of('RON'));
 }
 
 /** A date of the trip, in October 2026. */
@@ -139,7 +139,7 @@ export function outcome<Value>(make: () => Value, shown: (value: Value) => strin
 }
 
 /** The sum of `amounts`, all in `currency`. */
-export function sum(currency: Currency, amounts: readonly Money[]): Money {
+export function sum(currency: CurrencyCode, amounts: readonly Money[]): Money {
     return amounts.reduce((total, amount) => total.plus(amount), new Money(0n, currency));
 }
 
@@ -191,7 +191,7 @@ export function printCategories(group: ExpenseGroup): void {
 }
 
 /** Every expense and transfer in a currency `shown` accepts, as entered and in the group currency. */
-export function printEntries(group: ExpenseGroup, shown: (currency: Currency) => boolean): void {
+export function printEntries(group: ExpenseGroup, shown: (currency: CurrencyCode) => boolean): void {
     const zero = new Money(0n, group.currencySync());
     const expenses = group
         .expensesSync()

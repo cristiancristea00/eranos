@@ -4,7 +4,7 @@ internal import EranosGenerated
 ///
 /// A currency comes from the library's list, so an amount in one always formats: create one from
 /// its code with ``init(code:)``, or pick one from ``all``.
-public struct Currency: Hashable, Sendable, CustomStringConvertible {
+public struct CurrencyCode: Hashable, Sendable, CustomStringConvertible {
     /// Every currency with minor units, by code.
     public static let all: [Self] = EranosGenerated.currencies().map(Self.init)
 
