@@ -20,7 +20,7 @@ use eranos::{
     CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, ExpenseGroup,
     ExpenseItem, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
     Money, Parts, PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy,
-    Split, TimeOfDay, Tip, TipDistribution, Transfer, Username,
+    Split, TimeOfDay, TipDistribution, TipRule, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -96,7 +96,9 @@ fn trip() -> Trip {
     .description("Tasca")
     .time(TimeOfDay::new(20, 30).unwrap())
     .category(food)
-    .tip(Tip::percentage(Percentage::parse("12.5").unwrap()).distributed(TipDistribution::Equal))
+    .tip(
+        TipRule::percentage(Percentage::parse("12.5").unwrap()).distributed(TipDistribution::Equal),
+    )
     .build()
     .unwrap();
     group.add_expense(bill).unwrap();

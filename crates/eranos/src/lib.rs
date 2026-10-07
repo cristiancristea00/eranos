@@ -14,7 +14,7 @@
 //! ```
 //! use eranos::{
 //!     Balance, Currency, CalendarDate, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
-//!     Split, Tip,
+//!     Split, TipRule,
 //! };
 //!
 //! let mut group = ExpenseGroup::builder("Lisbon", Currency::EUR).build()?;
@@ -25,7 +25,7 @@
 //! // Ana paid dinner for three, plus a 10 % tip.
 //! let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
 //! let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), day)
-//!     .tip(Tip::percentage(Percentage::parse("10")?))
+//!     .tip(TipRule::percentage(Percentage::parse("10")?))
 //!     .build()?;
 //! group.add_expense(dinner)?;
 //!
@@ -48,7 +48,7 @@
 //! # Money is exact
 //!
 //! Amounts are whole numbers of minor units ([`Money`]), never floats. Every
-//! division, whether a [`Split`] among members, a [`Tip`], an [`ExpenseItem`] of an
+//! division, whether a [`Split`] among members, a [`TipRule`], an [`ExpenseItem`] of an
 //! itemised bill, or a conversion at an [`ExchangeRate`], hands out its
 //! leftover minor units by the largest-remainder method, so the parts always
 //! add up to the whole. Ties rotate with the expense's identifier: over many
@@ -191,7 +191,7 @@ pub mod expense {
     #[doc(inline)]
     pub use eranos_expense::{
         Expense, ExpenseBuilder, ExpenseItem, ExpenseItemBuilder, ExpenseSplit, MemberAmount,
-        MemberParts, MemberPercentage, Split, Tip, TipDistribution, TipValue,
+        MemberParts, MemberPercentage, Split, TipDistribution, TipRule, TipValue,
     };
 }
 pub mod expense_group {
@@ -272,8 +272,8 @@ pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
 #[doc(no_inline)]
 pub use expense::{
-    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
-    TipDistribution, TipValue,
+    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split,
+    TipDistribution, TipRule, TipValue,
 };
 #[cfg(feature = "serde")]
 #[doc(no_inline)]

@@ -35,7 +35,7 @@ class EntriesTest {
                         ),
                     ),
                 date = flat.day,
-                tip = Tip(TipValue.Fixed(Money(500, lei)), TipDistribution.EQUAL),
+                tip = TipRule(TipValue.Fixed(Money(500, lei)), TipDistribution.EQUAL),
                 time = TimeOfDay.of(9, 5),
                 category = flat.food,
                 description = "To the airport",
@@ -47,7 +47,7 @@ class EntriesTest {
                 payers = Split.Amounts(listOf(MemberAmount(flat.ana, flat.euros(3_300)))),
                 split = ExpenseSplit.Whole(Split.Equal(listOf(flat.ana, flat.bob))),
                 date = flat.day,
-                tip = Tip(TipValue.Percentage(Percentage.ofBasisPoints(1_000))),
+                tip = TipRule(TipValue.Percentage(Percentage.ofBasisPoints(1_000))),
             )
         return Expenses(dinner, taxi)
     }
@@ -84,8 +84,8 @@ class EntriesTest {
         assertEquals(flat.euros(300), expenses.dinner.tipAmount())
         val unreadable = expenses.taxi.copy(payers = Split.Equal(listOf(MemberId("nobody"))))
         assertThrows<EranosException.Id> { unreadable.members() }
-        assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = Tip(TipValue.Fixed(flat.euros(1)))).tipAmount() }
-        assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = Tip(TipValue.Fixed(Money(-1, lei)))).total() }
+        assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = TipRule(TipValue.Fixed(flat.euros(1)))).tipAmount() }
+        assertThrows<EranosException.Expense> { expenses.taxi.copy(tip = TipRule(TipValue.Fixed(Money(-1, lei)))).total() }
         assertEquals(listOf(TipDistribution.PROPORTIONAL, TipDistribution.EQUAL), TipDistribution.entries)
         for (distribution in TipDistribution.entries) {
             assertEquals(distribution, distribution.generated.converted())
@@ -141,8 +141,8 @@ class EntriesTest {
         assertEquals(1, ExpenseItem("Bread", flat.euros(1), equal).quantity)
         assertValue(
             present(expenses.taxi.tip),
-            Tip(TipValue.Fixed(Money(500, Currency.of("RON"))), TipDistribution.EQUAL),
-            Tip(TipValue.Fixed(Money(500, Currency.of("RON")))),
+            TipRule(TipValue.Fixed(Money(500, Currency.of("RON"))), TipDistribution.EQUAL),
+            TipRule(TipValue.Fixed(Money(500, Currency.of("RON")))),
         )
         assertEquals(TipDistribution.PROPORTIONAL, present(expenses.dinner.tip).distribution)
         assertValue(

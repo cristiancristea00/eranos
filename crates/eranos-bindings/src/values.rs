@@ -288,7 +288,7 @@ pub fn username_parse(text: &str) -> Result<String, EranosError> {
 /// # Errors
 ///
 /// The errors of the cost's and the tip's conversions, and those of
-/// [`Tip::amount_on`](eranos::expense::Tip::amount_on).
+/// [`TipRule::amount_on`](eranos::expense::TipRule::amount_on).
 pub fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError> {
     Ok(Money::from_library(tip_amount(expense)?))
 }
@@ -344,7 +344,7 @@ fn tip_amount(expense: &Expense) -> Result<library::Money, EranosError> {
     let amount = expense.cost.to_library()?.amount();
     let tip = match &expense.tip {
         Some(tip) => tip.to_library()?,
-        None => expenses::Tip::default(),
+        None => expenses::TipRule::default(),
     };
     Ok(tip.amount_on(amount)?)
 }

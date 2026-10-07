@@ -27,7 +27,7 @@ library itself is plain Rust with no I/O and no async runtime.
 | Cost            | `Cost`               | An amount in the group currency, or in another one at a fixed exchange rate       |
 | Split           | `Split`              | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
 | Item            | `ExpenseItem`        | A receipt line of an itemised expense, with its own quantity and split            |
-| Tip             | `Tip`                | A percentage or a fixed amount on top, shared proportionally or equally           |
+| Tip             | `TipRule`            | A percentage or a fixed amount on top, shared proportionally or equally           |
 | Transfer        | `Transfer`           | Money one member paid another, such as a repayment                                |
 | Summary         | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |
 | Settlement plan | `SettlementPlan`     | The payments that bring every balance to zero                                     |
@@ -37,7 +37,7 @@ library itself is plain Rust with no I/O and no async runtime.
 ```rust
 use eranos::{
     Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, Percentage, SettlementStrategy,
-    Split, Tip,
+    Split, TipRule,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Ana paid dinner for three, plus a 10 % tip.
     let (amount, day) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
     let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), day)
-        .tip(Tip::percentage(Percentage::parse("10")?))
+        .tip(TipRule::percentage(Percentage::parse("10")?))
         .build()?;
     group.add_expense(dinner)?;
 

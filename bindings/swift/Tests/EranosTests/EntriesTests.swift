@@ -30,7 +30,7 @@ private struct Expenses {
                 )
             ]),
             date: flat.day,
-            tip: Tip(value: .fixed(Money(minorUnits: 500, currency: lei)), distribution: .equal),
+            tip: TipRule(value: .fixed(Money(minorUnits: 500, currency: lei)), distribution: .equal),
             time: TimeOfDay(hour: 9, minute: 5),
             category: flat.food,
             description: "To the airport"
@@ -41,7 +41,7 @@ private struct Expenses {
             payers: .amounts([MemberAmount(member: flat.ana, amount: flat.euros(3_300))]),
             split: .whole(.equal([flat.ana, flat.bob])),
             date: flat.day,
-            tip: Tip(value: .percentage(Percentage(basisPoints: 1_000)))
+            tip: TipRule(value: .percentage(Percentage(basisPoints: 1_000)))
         )
     }
 }

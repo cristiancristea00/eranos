@@ -24,7 +24,7 @@ from eranos import (
     PercentageTip,
     SettlementStrategy,
     Summary,
-    Tip,
+    TipRule,
     WholeExpenseSplit,
 )
 from examples.report import Row, names, print_lines, print_table, refusal, section, title, totals
@@ -90,7 +90,7 @@ def main() -> None:
             payers=EqualSplit((bob,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob))),
             date=day,
-            tip=Tip(PercentageTip(Percentage.parse('10'))),
+            tip=TipRule(PercentageTip(Percentage.parse('10'))),
         )
     )
 

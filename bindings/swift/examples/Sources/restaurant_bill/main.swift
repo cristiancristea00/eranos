@@ -113,7 +113,7 @@ func main() throws(EranosError) {
             payers: .equal([ana]),
             split: .itemised(try receipt(ana, bob, carol)),
             date: day,
-            tip: Tip(value: .percentage(try Percentage(parsing: "10")), distribution: distribution)
+            tip: TipRule(value: .percentage(try Percentage(parsing: "10")), distribution: distribution)
         )
     }
     let untipped = Expense(name: "Dinner", cost: .local(try eur("54.00")), payers: .equal([ana]), split: .itemised(try receipt(ana, bob, carol)), date: day)

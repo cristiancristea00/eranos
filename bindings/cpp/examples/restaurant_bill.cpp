@@ -133,7 +133,7 @@ void run() {
     auto const bill = [&](std::optional<TipDistribution> const distribution) {
         Expense expense("Dinner", LocalCost{euros("54.00")}, EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)}, day);
         if (distribution.has_value()) {
-            expense.tip = Tip(PercentageTipValue{must(Percentage::parse("10"))}, *distribution);
+            expense.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, *distribution);
         }
         return expense;
     };

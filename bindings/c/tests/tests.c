@@ -770,12 +770,13 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
               ERANOS_TIP_VALUE_KIND_PERCENTAGE == eranosTipValueKind(tenPercent) && eranosTipValueBasisPoints(tenPercent, &basisPoints) &&
                   1'000 == basisPoints && nullptr == eranosTipValueAmount(tenPercent),
               "a percentage tip holds its basis points");
-    EranosTip *const tip = eranosTipCreate(fixed, ERANOS_TIP_DISTRIBUTION_EQUAL);
-    eranosTipSetValue(tip, tenPercent);
-    eranosTipSetDistribution(tip, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
-    EranosTipValue *const tipValue = eranosTipValue(tip);
+    EranosTipRule *const tip = eranosTipRuleCreate(fixed, ERANOS_TIP_DISTRIBUTION_EQUAL);
+    eranosTipRuleSetValue(tip, tenPercent);
+    eranosTipRuleSetDistribution(tip, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
+    EranosTipValue *const tipValue = eranosTipRuleValue(tip);
     checkThat(check,
-              ERANOS_TIP_DISTRIBUTION_PROPORTIONAL == eranosTipDistribution(tip) && ERANOS_TIP_VALUE_KIND_PERCENTAGE == eranosTipValueKind(tipValue),
+              ERANOS_TIP_DISTRIBUTION_PROPORTIONAL == eranosTipRuleDistribution(tip) &&
+                  ERANOS_TIP_VALUE_KIND_PERCENTAGE == eranosTipValueKind(tipValue),
               "a tip as set");
     EranosCost *const local = eranosCostCreateLocal(twelve);
     EranosMoney *const lei = amountOf(5'000, "RON");
@@ -794,7 +795,7 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
     eranosCostDestroy(local);
     eranosMoneyDestroy(lei);
     eranosTipValueDestroy(tipValue);
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(tenPercent);
     eranosTipValueDestroy(fixed);
     eranosMoneyDestroy(three);
@@ -838,7 +839,7 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosExpenseSplit *const split = eranosExpenseSplitCreateWhole(bob);
     eranosExpenseSetSplit(expense, split);
     EranosTipValue *const tenPercent = eranosTipValueCreatePercentage(1'000);
-    EranosTip *const tip = eranosTipCreate(tenPercent, ERANOS_TIP_DISTRIBUTION_EQUAL);
+    EranosTipRule *const tip = eranosTipRuleCreate(tenPercent, ERANOS_TIP_DISTRIBUTION_EQUAL);
     eranosExpenseSetTip(expense, tip);
     checkThat(check, eranosExpenseId(expense, text) && isText(text, "0199a000-0000-7000-8000-000000000001"), "the identifier as set");
     eranosExpenseName(expense, text);
@@ -851,7 +852,7 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosCost *const readCost = eranosExpenseCost(expense);
     EranosSplit *const readPayers = eranosExpensePayers(expense);
     EranosExpenseSplit *const readSplit = eranosExpenseSplit(expense);
-    EranosTip *const readTip = eranosExpenseTip(expense);
+    EranosTipRule *const readTip = eranosExpenseTip(expense);
     checkThat(check,
               isAmount(eranosCostAmount(readCost), 4'000, "EUR") && listsMembers(eranosSplitMembers(readPayers), "bob", nullptr) &&
                   ERANOS_EXPENSE_SPLIT_KIND_WHOLE == eranosExpenseSplitKind(readSplit) && nullptr != readTip,
@@ -890,11 +891,11 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, isKind(eranosExpenseCreate("\xff", cost, bob, split, never, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
     eranosCostDestroy(strange);
     eranosMoneyDestroy(unlisted);
-    eranosTipDestroy(readTip);
+    eranosTipRuleDestroy(readTip);
     eranosExpenseSplitDestroy(readSplit);
     eranosSplitDestroy(readPayers);
     eranosCostDestroy(readCost);
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(tenPercent);
     eranosExpenseSplitDestroy(split);
     eranosSplitDestroy(bob);
@@ -1107,7 +1108,7 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosExpenseSplitDestroy(nullptr);
     eranosExpenseItemDestroy(nullptr);
     eranosExpenseItemListDestroy(nullptr);
-    eranosTipDestroy(nullptr);
+    eranosTipRuleDestroy(nullptr);
     eranosTipValueDestroy(nullptr);
     eranosCancellationDestroy(nullptr);
     eranosCurrencyRateDestroy(nullptr);

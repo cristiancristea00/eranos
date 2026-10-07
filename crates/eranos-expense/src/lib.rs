@@ -16,7 +16,7 @@ mod error;
 mod expense_item;
 mod resolution;
 mod split;
-mod tip;
+mod tip_rule;
 
 use std::collections::BTreeSet;
 
@@ -24,7 +24,7 @@ pub use error::{ExpenseError, FromExpenseError};
 pub use expense_item::{ExpenseItem, ExpenseItemBuilder};
 pub use resolution::{resolve_expense, resolve_expense_at};
 pub use split::{FromSplit, MemberAmount, MemberParts, MemberPercentage, Split};
-pub use tip::{FromTipDistribution, FromTipValue, Tip, TipDistribution, TipValue};
+pub use tip_rule::{FromTipDistribution, FromTipValue, TipDistribution, TipRule, TipValue};
 
 use eranos_calendar::{CalendarDate, TimeOfDay};
 use eranos_core::{CategoryId, ExpenseId, MemberId, text};
@@ -46,13 +46,13 @@ use eranos_money::{Cost, ExchangeRate, Money};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, CalendarDate, Expense, Money, Percentage, Split, Tip};
+/// use eranos::{Currency, CalendarDate, Expense, Money, Percentage, Split, TipRule};
 /// use eranos::id::MemberId;
 ///
 /// let (ana, bob, carol) = (MemberId::generate(), MemberId::generate(), MemberId::generate());
 /// let (amount, date) = (Money::parse("90.00", Currency::EUR)?, CalendarDate::new(2026, 9, 23)?);
 /// let dinner = Expense::builder("Dinner", amount, ana, Split::equal([ana, bob, carol]), date)
-///     .tip(Tip::percentage(Percentage::parse("10")?))
+///     .tip(TipRule::percentage(Percentage::parse("10")?))
 ///     .build()?;
 /// assert_eq!(dinner.tip_amount(), Money::parse("9.00", Currency::EUR)?);
 /// assert_eq!(dinner.total(), Money::parse("99.00", Currency::EUR)?);
@@ -71,7 +71,7 @@ pub struct Expense {
     split: ExpenseSplit,
     date: CalendarDate,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_default_tip"))]
-    tip: Tip,
+    tip: TipRule,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     exchange_rate: Option<ExchangeRate>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -228,9 +228,9 @@ impl Expense {
         self.date
     }
 
-    /// The tip: [`Tip::default`], no tip, unless another was set.
+    /// The tip: [`TipRule::default`], no tip, unless another was set.
     #[must_use]
-    pub const fn tip(&self) -> Tip {
+    pub const fn tip(&self) -> TipRule {
         self.tip
     }
 
@@ -392,7 +392,7 @@ pub struct ExpenseBuilder {
     payers: Split,
     split: ExpenseSplit,
     date: CalendarDate,
-    tip: Tip,
+    tip: TipRule,
     time: Option<TimeOfDay>,
     category: CategoryId,
     description: Option<String>,
@@ -455,8 +455,8 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Replaces the tip; [`Tip::default`] removes it.
-    pub const fn tip(mut self, tip: Tip) -> Self {
+    /// Replaces the tip; [`TipRule::default`] removes it.
+    pub const fn tip(mut self, tip: TipRule) -> Self {
         self.tip = tip;
         self
     }
@@ -572,7 +572,7 @@ fn starting(
         payers,
         split,
         date,
-        tip: Tip::default(),
+        tip: TipRule::default(),
         time: None,
         category: CategoryId::UNCATEGORISED,
         description: None,
@@ -581,8 +581,8 @@ fn starting(
 
 /// Whether `tip` is the default, which the serialised form leaves out.
 #[cfg(feature = "serde")]
-fn is_default_tip(tip: &Tip) -> bool {
-    *tip == Tip::default()
+fn is_default_tip(tip: &TipRule) -> bool {
+    *tip == TipRule::default()
 }
 
 /// Whether `category` is the built-in one, which the serialised form leaves
@@ -603,7 +603,7 @@ struct ExpenseRecord {
     split: ExpenseSplit,
     date: CalendarDate,
     #[serde(default)]
-    tip: Tip,
+    tip: TipRule,
     #[serde(default)]
     exchange_rate: Option<ExchangeRate>,
     #[serde(default)]

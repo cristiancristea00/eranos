@@ -44,7 +44,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::expense::MemberParts>();
         assert_send_and_sync::<eranos::expense::MemberPercentage>();
         assert_send_and_sync::<eranos::expense::Split>();
-        assert_send_and_sync::<eranos::expense::Tip>();
+        assert_send_and_sync::<eranos::expense::TipRule>();
         assert_send_and_sync::<eranos::expense::TipDistribution>();
         assert_send_and_sync::<eranos::expense::TipValue>();
         // Groups, and how they are built and loaded.

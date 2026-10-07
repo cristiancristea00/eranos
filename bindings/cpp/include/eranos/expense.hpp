@@ -95,12 +95,12 @@ struct FixedTipValue final {
 using TipValue = std::variant<PercentageTipValue, FixedTipValue>;
 
 /// A tip on top of an expense's amount.
-struct Tip final {
+struct TipRule final {
     /// The record of its fields.
     ///
     /// @param value How the tip is expressed.
     /// @param distribution How the tip is shared among the participants.
-    Tip(TipValue value, TipDistribution const distribution) noexcept : value(std::move(value)), distribution(distribution) {}
+    TipRule(TipValue value, TipDistribution const distribution) noexcept : value(std::move(value)), distribution(distribution) {}
 
     /// How the tip is expressed.
     TipValue value;
@@ -113,7 +113,7 @@ struct Tip final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Tip const &left, Tip const &right) noexcept = default;
+    [[nodiscard]] friend bool operator==(TipRule const &left, TipRule const &right) noexcept = default;
 };
 
 /// An amount in the group currency.
@@ -207,7 +207,7 @@ struct Expense final {
     CalendarDate date;
 
     /// The tip on top of the amount.
-    std::optional<Tip> tip;
+    std::optional<TipRule> tip;
 
     /// The time of day it was bought.
     std::optional<TimeOfDay> time;
@@ -252,8 +252,8 @@ namespace detail {
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value);
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value);
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(TipValue const &value);
-[[nodiscard]] inline Tip fromDetail(EranosTip const &value);
-[[nodiscard]] inline std::unique_ptr<EranosTip> toDetail(Tip const &value);
+[[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value);
+[[nodiscard]] inline std::unique_ptr<EranosTipRule> toDetail(TipRule const &value);
 [[nodiscard]] inline Cost fromDetail(EranosCost const &value);
 [[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value);
 [[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value);

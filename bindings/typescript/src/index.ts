@@ -31,7 +31,7 @@ export {
     type MemberParts,
     type MemberPercentage,
     type Split,
-    type Tip,
+    type TipRule,
     type TipValue,
     type Transfer,
     TipDistribution,

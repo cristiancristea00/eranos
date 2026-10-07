@@ -314,16 +314,16 @@ impl FromTipDistribution for TipDistribution {
 /// A tip on top of an expense, covered by its payers.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Tip {
+pub struct TipRule {
     /// How the tip is expressed.
     pub value: TipValue,
     /// How the tip is shared.
     pub distribution: TipDistribution,
 }
 
-impl Tip {
+impl TipRule {
     /// The record of `tip`.
-    pub(crate) fn from_library(tip: library::Tip) -> Self {
+    pub(crate) fn from_library(tip: library::TipRule) -> Self {
         Self {
             value: TipValue::from_tip_value(tip.value()),
             distribution: TipDistribution::from_tip_distribution(tip.distribution()),
@@ -338,12 +338,12 @@ impl Tip {
     /// for a fixed tip in an unknown currency, and
     /// [`MoneyFailure::InvalidPercentage`](crate::MoneyFailure::InvalidPercentage)
     /// for a negative percentage.
-    pub(crate) fn to_library(&self) -> Result<library::Tip, EranosError> {
+    pub(crate) fn to_library(&self) -> Result<library::TipRule, EranosError> {
         let tip = match &self.value {
             TipValue::Percentage { basis_points } => {
-                library::Tip::percentage(percentage(*basis_points)?)
+                library::TipRule::percentage(percentage(*basis_points)?)
             }
-            TipValue::Fixed { amount } => library::Tip::fixed(amount.to_library()?),
+            TipValue::Fixed { amount } => library::TipRule::fixed(amount.to_library()?),
         };
         Ok(tip.distributed(self.distribution.to_library()))
     }
@@ -367,7 +367,7 @@ pub struct Expense {
     /// The day it was bought.
     pub date: CalendarDate,
     /// The tip on top of the amount.
-    pub tip: Option<Tip>,
+    pub tip: Option<TipRule>,
     /// The time of day it was bought.
     pub time: Option<TimeOfDay>,
     /// The category, as its identifier; absent for the built-in one.
@@ -388,7 +388,7 @@ impl Expense {
             payers: Split::from_split(expense.payers()),
             split: ExpenseSplit::from_expense_split(expense.split()),
             date: CalendarDate::from_library(expense.date()),
-            tip: (tip != library::Tip::default()).then(|| Tip::from_library(tip)),
+            tip: (tip != library::TipRule::default()).then(|| TipRule::from_library(tip)),
             time: expense.time().map(TimeOfDay::from_library),
             category: (CategoryId::UNCATEGORISED != category).then(|| category.to_string()),
             description: expense.description().map(str::to_owned),
@@ -460,7 +460,7 @@ impl Expense {
     ) -> Result<library::ExpenseBuilder, EranosError> {
         let tip = match &self.tip {
             Some(tip) => tip.to_library()?,
-            None => library::Tip::default(),
+            None => library::TipRule::default(),
         };
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
         let category = match &self.category {

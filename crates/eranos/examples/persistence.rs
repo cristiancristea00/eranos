@@ -9,7 +9,7 @@ use std::error::Error;
 
 use eranos::{
     Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, Money, Percentage,
-    SavedExpenseGroup, SettlementStrategy, Split, Tip,
+    SavedExpenseGroup, SettlementStrategy, Split, TipRule,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             Split::equal([ana, bob]),
             CalendarDate::new(2026, 9, 23)?,
         )
-        .tip(Tip::percentage(Percentage::parse("10")?))
+        .tip(TipRule::percentage(Percentage::parse("10")?))
         .build()?,
     )?;
 

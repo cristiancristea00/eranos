@@ -20,7 +20,7 @@ public final class Expense {
     private final Split payers;
     private final ExpenseSplit split;
     private final CalendarDate date;
-    private final Tip tip;
+    private final TipRule tip;
     private final TimeOfDay time;
     private final CategoryId category;
     private final String description;
@@ -82,7 +82,7 @@ public final class Expense {
                         Conversions.converted(expense.payers()),
                         Conversions.converted(expense.split()),
                         CalendarDate.converted(expense.date()))
-                .tip(null == expense.tip() ? null : Tip.converted(expense.tip()))
+                .tip(null == expense.tip() ? null : TipRule.converted(expense.tip()))
                 .time(null == expense.time() ? null : TimeOfDay.converted(expense.time()))
                 .category(null == expense.category() ? null : new CategoryId(expense.category()))
                 .description(expense.description())
@@ -178,7 +178,7 @@ public final class Expense {
      *
      * @return the tip, if the expense has one
      */
-    public Optional<Tip> tip() {
+    public Optional<TipRule> tip() {
         return Optional.ofNullable(tip);
     }
 
@@ -285,7 +285,7 @@ public final class Expense {
         private Split payers;
         private ExpenseSplit split;
         private CalendarDate date;
-        private Tip tip;
+        private TipRule tip;
         private TimeOfDay time;
         private CategoryId category;
         private String description;
@@ -362,7 +362,7 @@ public final class Expense {
          * @param tip the tip, or {@code null}
          * @return this builder
          */
-        public Builder tip(Tip tip) {
+        public Builder tip(TipRule tip) {
             this.tip = tip;
             return this;
         }

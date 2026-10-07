@@ -19,7 +19,7 @@ use eranos::cooperative::block_on;
 use eranos::{
     CalendarDate, CategoryTotal, Cost, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
     ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money,
-    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
+    Parts, Percentage, SettlementStrategy, Split, TipDistribution, TipRule, Transfer,
     error::ExpenseGroupError,
 };
 use proptest::prelude::*;
@@ -149,7 +149,7 @@ struct ExpenseItemRecipe {
 /// A tip: fixed in minor units or a percentage in basis points, and shared
 /// equally or in proportion.
 #[derive(Debug, Clone, Copy)]
-struct TipRecipe {
+struct TipRuleRecipe {
     fixed: bool,
     value: u32,
     equal: bool,
@@ -161,7 +161,7 @@ struct ExpenseRecipe {
     payers: SplitRecipe,
     split: SplitRecipe,
     items: Option<Vec<ExpenseItemRecipe>>,
-    tip: Option<TipRecipe>,
+    tip: Option<TipRuleRecipe>,
     foreign: Option<ForeignRecipe>,
 }
 
@@ -184,7 +184,7 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
         split_recipe(),
         split_recipe(),
         proptest::option::of((any::<bool>(), 0_u32..3_000, any::<bool>()).prop_map(
-            |(fixed, value, equal)| TipRecipe {
+            |(fixed, value, equal)| TipRuleRecipe {
                 fixed,
                 value,
                 equal,
@@ -250,9 +250,9 @@ impl ExpenseRecipe {
         let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some(recipe) = self.tip {
             let tip = if recipe.fixed {
-                Tip::fixed(money(i64::from(recipe.value)))
+                TipRule::fixed(money(i64::from(recipe.value)))
             } else {
-                Tip::percentage(Percentage::from_basis_points(recipe.value))
+                TipRule::percentage(Percentage::from_basis_points(recipe.value))
             };
             let distribution = if recipe.equal {
                 TipDistribution::Equal

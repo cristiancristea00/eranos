@@ -7,7 +7,7 @@
 use eranos::MemberId;
 
 use super::*;
-use crate::expense::{ExpenseItem, MemberAmount, Tip, TipDistribution, TipValue};
+use crate::expense::{ExpenseItem, MemberAmount, TipDistribution, TipRule, TipValue};
 use crate::money::Cost;
 use crate::{
     CalendarFailure, ContactFailure, ExpenseFailure, IdFailure, LanguageFailure, MoneyFailure,
@@ -68,7 +68,7 @@ fn dinner() -> Expense {
             month: 9,
             day: 23,
         },
-        tip: Some(Tip {
+        tip: Some(TipRule {
             value: TipValue::Percentage {
                 basis_points: 1_000,
             },
@@ -445,7 +445,7 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     assert!(is_unknown_currency(&expense_tip_amount(&unknown)));
     assert!(is_unknown_currency(&expense_total(&unknown)));
     let negative = Expense {
-        tip: Some(Tip {
+        tip: Some(TipRule {
             value: TipValue::Percentage { basis_points: -1 },
             distribution: TipDistribution::Equal,
         }),
@@ -464,7 +464,7 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
         );
     }
     let fixed_in_lei = Expense {
-        tip: Some(Tip {
+        tip: Some(TipRule {
             value: TipValue::Fixed { amount: lei(100) },
             distribution: TipDistribution::Equal,
         }),
@@ -481,7 +481,7 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
         cost: Cost::Local {
             amount: euros(i64::MAX),
         },
-        tip: Some(Tip {
+        tip: Some(TipRule {
             value: TipValue::Fixed { amount: euros(1) },
             distribution: TipDistribution::Equal,
         }),

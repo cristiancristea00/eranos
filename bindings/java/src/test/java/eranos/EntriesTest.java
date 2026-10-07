@@ -46,7 +46,7 @@ class EntriesTest {
                                                                         Parts.ofHundredths(50)))),
                                                 2))),
                         flat.day)
-                .tip(new Tip(new TipValue.Fixed(new Money(500, lei)), TipDistribution.EQUAL))
+                .tip(new TipRule(new TipValue.Fixed(new Money(500, lei)), TipDistribution.EQUAL))
                 .time(TimeOfDay.of(9, 5))
                 .category(flat.food)
                 .description("To the airport")
@@ -64,7 +64,7 @@ class EntriesTest {
                         new Split.Amounts(List.of(new MemberAmount(flat.ana, flat.euros(3_300)))),
                         new ExpenseSplit.Whole(new Split.Equal(List.of(flat.ana, flat.bob))),
                         flat.day)
-                .tip(new Tip(new TipValue.Percentage(Percentage.ofBasisPoints(1_000))))
+                .tip(new TipRule(new TipValue.Percentage(Percentage.ofBasisPoints(1_000))))
                 .build();
     }
 
@@ -125,14 +125,14 @@ class EntriesTest {
                 EranosException.Expense.class,
                 () ->
                         taxi.toBuilder()
-                                .tip(new Tip(new TipValue.Fixed(flat.euros(1))))
+                                .tip(new TipRule(new TipValue.Fixed(flat.euros(1))))
                                 .build()
                                 .tipAmount());
         assertThrows(
                 EranosException.Expense.class,
                 () ->
                         taxi.toBuilder()
-                                .tip(new Tip(new TipValue.Fixed(new Money(-1, lei))))
+                                .tip(new TipRule(new TipValue.Fixed(new Money(-1, lei))))
                                 .build()
                                 .total());
         assertEquals(
@@ -189,7 +189,7 @@ class EntriesTest {
                         .quantity());
         assertEquals(
                 TipDistribution.PROPORTIONAL,
-                new Tip(new TipValue.Fixed(flat.euros(1))).distribution());
+                new TipRule(new TipValue.Fixed(flat.euros(1))).distribution());
     }
 
     /**

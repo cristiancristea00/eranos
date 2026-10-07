@@ -183,7 +183,7 @@ fn a_taken_records_constructor_takes_its_required_fields() {
                 date: EranosCalendarDate,
                 distribution: EranosTipDistribution,
                 name: &DiplomatStr,
-                tip: &EranosTip
+                tip: &EranosTipRule
             ) -> Result<Box<Self>, Box<EranosError>> {
                 Ok(Box::new(Self(eranos_bindings::Expense {
                     id: None,
@@ -389,13 +389,13 @@ fn a_taken_record_copies_its_records_and_lists() {
 #[test]
 fn a_constructor_without_text_cannot_fail_and_a_default_holds() {
     let named = named();
-    let tip = methods(&named["EranosTip"]);
+    let tip = methods(&named["EranosTipRule"]);
     assert_eq!(
         code(&tip, "create"),
         syn::parse2::<syn::ImplItemFn>(quote! {
             #[must_use]
             pub fn create(distribution: EranosTipDistribution, value: &EranosMoney) -> Box<Self> {
-                Box::new(Self(eranos_bindings::Tip {
+                Box::new(Self(eranos_bindings::TipRule {
                     distribution: distribution.into(),
                     value: value.0.clone()
                 }))

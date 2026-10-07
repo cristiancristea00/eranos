@@ -92,7 +92,7 @@ flowchart TD
     BINDINGS["eranos-bindings<br/>records, EranosError, ExpenseGroupHandle,<br/>ExpenseGroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
     EXPENSE_GROUP["eranos-expense-group<br/>ExpenseGroup, ExpenseGroupBuilder, Language, SavedExpenseGroup,<br/>SharedExpenseGroup"]
-    EXPENSE["eranos-expense<br/>Expense, Split, ExpenseItem, Tip<br/>(+ resolve_expense)"]
+    EXPENSE["eranos-expense<br/>Expense, Split, ExpenseItem, TipRule<br/>(+ resolve_expense)"]
     TRANSFER["eranos-transfer<br/>Transfer (+ resolve_transfer)"]
     MEMBER["eranos-member<br/>Member"]
     CATEGORY["eranos-category<br/>Category"]
@@ -166,7 +166,8 @@ flowchart TD
  │ eranos-expense-group   ExpenseGroup, ExpenseGroupBuilder, Language,         │
  │                        SavedExpenseGroup, SharedExpenseGroup                │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ eranos-expense         Expense, Split, ExpenseItem, Tip (+ resolve_expense) │
+ │ eranos-expense         Expense, Split, ExpenseItem, TipRule                 │
+ │                        (+ resolve_expense)                                  │
  │ eranos-transfer        Transfer (+ resolve_transfer)                        │
  │ eranos-member          Member                                               │
  │ eranos-category        Category                                             │
@@ -205,7 +206,7 @@ flowchart TD
 | `eranos-bindings`        | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewExpenseGroup`, `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, the value helpers; the trait that lists the group calls     | `eranos` with `serde`, the twelve internal crates for their conversion traits, and eranos-glue-macros; serde_json      |
 | `eranos`                 | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                                              | the twelve crates below                                                                                                |
 | `eranos-expense-group`   | `ExpenseGroup`, `ExpenseGroupBuilder`, `Language`, `SavedExpenseGroup`, `SharedExpenseGroup`, `ExpenseGroupReadGuard`, `ExpenseGroupWriteGuard`, `ExpenseGroupError`, `LanguageError`                                                    | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core                      |
-| `eranos-expense`         | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `ExpenseItem`, `ExpenseItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                        | calendar, core, ledger, money                                                                                          |
+| `eranos-expense`         | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `ExpenseItem`, `ExpenseItemBuilder`, `TipRule`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                    | calendar, core, ledger, money                                                                                          |
 | `eranos-transfer`        | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                                       | calendar, core, money, settlement                                                                                      |
 | `eranos-member`          | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                                                 | account, contact, core                                                                                                 |
 | `eranos-category`        | `Category`, `CategoryError`                                                                                                                                                                                                              | core; icu_casemap, icu_normalizer                                                                                      |
@@ -551,7 +552,7 @@ never the derived totals:
   array `[member, value]`. Absent optional fields are omitted, and so are the
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), and a tip equal to
-  `Tip::default()`, no tip at all. Keys follow the field order of
+  `TipRule::default()`, no tip at all. Keys follow the field order of
   [AGENTS.md](../AGENTS.md): `format` and `id` first, then the fields that
   describe the value in their natural order, the optional ones after the
   required, and a group's collections last.

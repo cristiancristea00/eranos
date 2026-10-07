@@ -28,7 +28,7 @@ public struct Expense: Hashable, Sendable {
     public var date: CalendarDate
 
     /// The tip on top of the amount.
-    public var tip: Tip?
+    public var tip: TipRule?
 
     /// The time of day it was bought.
     public var time: TimeOfDay?
@@ -61,7 +61,7 @@ public struct Expense: Hashable, Sendable {
         payers: Split,
         split: ExpenseSplit,
         date: CalendarDate,
-        tip: Tip? = nil,
+        tip: TipRule? = nil,
         time: TimeOfDay? = nil,
         category: Category.ID? = nil,
         description: String? = nil
@@ -84,7 +84,7 @@ public struct Expense: Hashable, Sendable {
             payers: Split(expense.payers),
             split: ExpenseSplit(expense.split),
             date: CalendarDate(expense.date),
-            tip: expense.tip.map(Tip.init),
+            tip: expense.tip.map(TipRule.init),
             time: expense.time.map(TimeOfDay.init),
             category: expense.category.map { Category.ID(rawValue: $0) },
             description: expense.description
@@ -218,14 +218,14 @@ public struct ExpenseItem: Hashable, Sendable {
 }
 
 /// A tip on top of an expense's amount, which its payers cover.
-public struct Tip: Hashable, Sendable {
+public struct TipRule: Hashable, Sendable {
     /// How the tip is expressed.
     public var value: TipValue
 
     /// How the tip is shared among the participants.
     public var distribution: TipDistribution
 
-    var generated: EranosGenerated.Tip {
+    var generated: EranosGenerated.TipRule {
         .init(value: value.generated, distribution: distribution.generated)
     }
 
@@ -236,7 +236,7 @@ public struct Tip: Hashable, Sendable {
         self.distribution = distribution
     }
 
-    init(_ tip: EranosGenerated.Tip) {
+    init(_ tip: EranosGenerated.TipRule) {
         self.init(value: TipValue(tip.value), distribution: TipDistribution(tip.distribution))
     }
 }

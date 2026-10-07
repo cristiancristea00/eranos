@@ -10,8 +10,8 @@ use eranos_bindings::{
     LanguageFailure, Member, MemberAmount, MemberCategoryTotals, MemberFailure, MemberParts,
     MemberPercentage, MemberShare, MemberSummary, Money, MoneyFailure, NewExpenseGroup, Payment,
     PaymentAccount, PaymentAccountDetails, PaymentAccountFailure, SettlementFailure,
-    SettlementPlan, SettlementStrategy, Split, Summary, TimeOfDay, Tip, TipDistribution, TipValue,
-    Transfer, TransferFailure,
+    SettlementPlan, SettlementStrategy, Split, Summary, TimeOfDay, TipDistribution, TipRule,
+    TipValue, Transfer, TransferFailure,
 };
 
 eranos_bindings::mirrors!(::eranos_glue_macros::uniffi_mirror);

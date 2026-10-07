@@ -265,7 +265,7 @@ pub(crate) fn username_parse(text: &str) -> Result<String, EranosError> {
 /// # Errors
 ///
 /// The errors of the cost's and the tip's conversions, and those of
-/// the library's `Tip::amount_on`.
+/// the library's `TipRule::amount_on`.
 #[uniffi::export]
 pub(crate) fn expense_tip_amount(expense: &Expense) -> Result<Money, EranosError> {
     eranos_bindings::expense_tip_amount(expense)

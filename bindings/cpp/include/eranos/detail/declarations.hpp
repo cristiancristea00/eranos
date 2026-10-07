@@ -87,8 +87,8 @@
 #include "eranos/detail/EranosTextList.hpp"
 #include "eranos/detail/EranosTextOutcome.hpp"
 #include "eranos/detail/EranosTimeOfDay.hpp"
-#include "eranos/detail/EranosTip.hpp"
 #include "eranos/detail/EranosTipDistribution.hpp"
+#include "eranos/detail/EranosTipRule.hpp"
 #include "eranos/detail/EranosTipValue.hpp"
 #include "eranos/detail/EranosTipValueKind.hpp"
 #include "eranos/detail/EranosTransfer.hpp"
@@ -161,7 +161,7 @@ struct PercentagesSplit;
 struct SettledBalance;
 struct SettlementPlan;
 struct Summary;
-struct Tip;
+struct TipRule;
 struct Transfer;
 struct UsernamePaymentAccountDetails;
 struct WholeExpenseSplit;

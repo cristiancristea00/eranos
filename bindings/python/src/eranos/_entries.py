@@ -195,7 +195,7 @@ class TipDistribution(enum.Enum):
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
-class Tip:
+class TipRule:
     """A tip on an expense: what it is worth and how it divides."""
 
     value: TipValue
@@ -250,7 +250,7 @@ class Expense:
     date: CalendarDate
     """The day it happened."""
 
-    tip: Tip | None = None
+    tip: TipRule | None = None
     """Its tip, or none."""
 
     time: TimeOfDay | None = None
@@ -532,7 +532,7 @@ def item_of(value: generated.ExpenseItem) -> ExpenseItem:
     return ExpenseItem(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=value.quantity)
 
 
-def generated_tip(tip: Tip) -> generated.Tip:
+def generated_tip(tip: TipRule) -> generated.TipRule:
     """
     Convert tip into the tip the generated module holds.
 
@@ -550,7 +550,7 @@ def generated_tip(tip: Tip) -> generated.Tip:
             value = variant(generated.TipValue, generated.TipValue.FIXED(generated_money(amount)))
         case _:
             assert_never(tip.value)
-    return generated.Tip(value=value, distribution=generated.TipDistribution[tip.distribution.name])
+    return generated.TipRule(value=value, distribution=generated.TipDistribution[tip.distribution.name])
 
 
 _TIP_VALUES: dict[type[object], Callable[[Any], TipValue]] = {
@@ -560,7 +560,7 @@ _TIP_VALUES: dict[type[object], Callable[[Any], TipValue]] = {
 """The tip's value of each case of the generated tip's value, by its class."""
 
 
-def tip_of(value: generated.Tip) -> Tip:
+def tip_of(value: generated.TipRule) -> TipRule:
     """
     Convert the tip the generated module holds as value.
 
@@ -571,7 +571,7 @@ def tip_of(value: generated.Tip) -> Tip:
         The tip.
 
     """
-    return Tip(_TIP_VALUES[type(value.value)](value.value), TipDistribution[value.distribution.name])
+    return TipRule(_TIP_VALUES[type(value.value)](value.value), TipDistribution[value.distribution.name])
 
 
 def generated_expense_split(split: ExpenseSplit) -> generated.ExpenseSplit:

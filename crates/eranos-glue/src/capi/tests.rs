@@ -55,7 +55,7 @@ pub struct ExpenseItem {
 
 /// A tip.
 #[mirrored]
-pub struct Tip {
+pub struct TipRule {
     /// How it is shared.
     pub distribution: TipDistribution,
     /// The amount.
@@ -161,7 +161,7 @@ pub struct Expense {
     /// The name.
     pub name: String,
     /// The tip.
-    pub tip: Tip,
+    pub tip: TipRule,
     /// The fallback.
     pub fallback: Option<TipDistribution>,
     /// The items.

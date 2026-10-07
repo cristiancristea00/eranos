@@ -10,31 +10,31 @@ use crate::error::ExpenseError;
 /// or equally.
 ///
 /// The payers cover the amount plus the tip. An expense without a tip has
-/// [`Tip::default`], 0 % shared proportionally, which needs no currency.
+/// [`TipRule::default`], 0 % shared proportionally, which needs no currency.
 ///
 /// # Examples
 ///
 /// ```
-/// use eranos::{Currency, Money, Percentage, Tip, TipDistribution};
+/// use eranos::{Currency, Money, Percentage, TipRule, TipDistribution};
 ///
-/// let ten_per_cent = Tip::percentage(Percentage::parse("10")?);
+/// let ten_per_cent = TipRule::percentage(Percentage::parse("10")?);
 /// assert_eq!(ten_per_cent.distribution(), TipDistribution::Proportional);
 ///
-/// let round_up = Tip::fixed(Money::parse("5.00", Currency::EUR)?).distributed(TipDistribution::Equal);
+/// let round_up = TipRule::fixed(Money::parse("5.00", Currency::EUR)?).distributed(TipDistribution::Equal);
 /// assert_eq!(round_up.distribution(), TipDistribution::Equal);
 ///
-/// assert_eq!(Tip::default(), Tip::percentage(Percentage::ZERO));
+/// assert_eq!(TipRule::default(), TipRule::percentage(Percentage::ZERO));
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Tip {
+pub struct TipRule {
     value: TipValue,
     #[cfg_attr(feature = "serde", serde(default))]
     distribution: TipDistribution,
 }
 
-impl Tip {
+impl TipRule {
     /// A tip of `rate` of the expense's amount, rounded half up to the minor
     /// unit and shared proportionally.
     #[must_use]
@@ -90,10 +90,10 @@ impl Tip {
     /// # Examples
     ///
     /// ```
-    /// use eranos::{Currency, Money, Percentage, Tip};
+    /// use eranos::{Currency, Money, Percentage, TipRule};
     ///
     /// let bill = Money::parse("90.00", Currency::EUR)?;
-    /// let tip = Tip::percentage(Percentage::parse("10")?);
+    /// let tip = TipRule::percentage(Percentage::parse("10")?);
     /// assert_eq!(tip.amount_on(bill)?, Money::parse("9.00", Currency::EUR)?);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -120,14 +120,14 @@ impl Tip {
     }
 }
 
-impl Default for Tip {
+impl Default for TipRule {
     /// No tip: 0 % of the amount, shared proportionally.
     fn default() -> Self {
         Self::percentage(Percentage::ZERO)
     }
 }
 
-/// How a [`Tip`] is expressed.
+/// How a [`TipRule`] is expressed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
@@ -142,7 +142,7 @@ pub enum TipValue {
     Fixed(Money),
 }
 
-/// How a [`Tip`] is shared among an expense's participants.
+/// How a [`TipRule`] is shared among an expense's participants.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(
     feature = "serde",

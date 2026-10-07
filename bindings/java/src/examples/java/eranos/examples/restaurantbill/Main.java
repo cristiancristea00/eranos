@@ -24,8 +24,8 @@ import eranos.Money;
 import eranos.Parts;
 import eranos.Percentage;
 import eranos.Split;
-import eranos.Tip;
 import eranos.TipDistribution;
+import eranos.TipRule;
 import eranos.TipValue;
 import eranos.examples.Report.Row;
 
@@ -125,7 +125,7 @@ public final class Main {
                         new Split.Equal(List.of(ana)),
                         new ExpenseSplit.Itemised(receipt(ana, bob, carol)),
                         day)
-                .tip(new Tip(new TipValue.Percentage(Percentage.parse("10")), distribution))
+                .tip(new TipRule(new TipValue.Percentage(Percentage.parse("10")), distribution))
                 .build();
     }
 

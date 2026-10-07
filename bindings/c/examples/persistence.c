@@ -46,9 +46,9 @@ static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCal
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
     EranosTipValue *const value = eranosTipValueCreatePercentage(basisPoints);
-    EranosTip *const tip = eranosTipCreate(value, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
+    EranosTipRule *const tip = eranosTipRuleCreate(value, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
     eranosExpenseSetTip(expense, tip);
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(value);
     return expense;
 }

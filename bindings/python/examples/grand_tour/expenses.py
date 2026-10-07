@@ -27,7 +27,7 @@ from eranos import (
     PercentageTip,
     Split,
     TimeOfDay,
-    Tip,
+    TipRule,
     TipDistribution,
     TipValue,
     WholeExpenseSplit,
@@ -424,7 +424,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
             payers=AmountsSplit((MemberAmount(carol, eur('39.40')), MemberAmount(dan, eur('20.00')))),
             split=ItemisedExpenseSplit(_fado_items(people)),
             date=october(4),
-            tip=Tip(PercentageTip(Percentage.parse('10'))),
+            tip=TipRule(PercentageTip(Percentage.parse('10'))),
             time=TimeOfDay(22, 15),
             category=categories.food,
             description='Tasca do Chico',
@@ -437,7 +437,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
             payers=EqualSplit((dan,)),
             split=WholeExpenseSplit(EqualSplit((ana, bob, carol, dan, eva))),
             date=october(5),
-            tip=Tip(FixedTip(eur('5.00')), TipDistribution.EQUAL),
+            tip=TipRule(FixedTip(eur('5.00')), TipDistribution.EQUAL),
             category=categories.transport,
         )
     )

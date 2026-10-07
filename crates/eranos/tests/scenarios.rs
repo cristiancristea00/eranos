@@ -12,7 +12,7 @@
 use eranos::{
     Balance, CalendarDate, Category, CategoryId, Currency, CurrencyRate, ExchangeRate, Expense,
     ExpenseGroup, ExpenseItem, Member, MemberId, MemberParts, MemberPercentage, MemberShare, Money,
-    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
+    Parts, Percentage, SettlementStrategy, Split, TipDistribution, TipRule, Transfer,
     error::ExpenseGroupError,
 };
 
@@ -138,7 +138,7 @@ fn weekend() -> Weekend {
             ]),
             day(20),
         )
-        .tip(Tip::percentage(Percentage::parse("10").unwrap()))
+        .tip(TipRule::percentage(Percentage::parse("10").unwrap()))
         .category(food),
     ];
     for expense in expenses {
@@ -340,7 +340,7 @@ fn an_itemised_bill_charges_each_member_for_their_items() -> TestResult {
     // 30 + 15 + 4.50 + 10.50 = 60.00: Ana 31.50, Bob 20.00, Carol 8.50.
     let bill = |distribution| -> Result<Expense, eranos::error::ExpenseError> {
         Expense::itemised_builder("Bill", eur("60.00"), carol, items()?, day(23))
-            .tip(Tip::fixed(eur("6.00")).distributed(distribution))
+            .tip(TipRule::fixed(eur("6.00")).distributed(distribution))
             .build()
     };
 

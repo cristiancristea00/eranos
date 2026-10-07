@@ -29,7 +29,7 @@ from eranos import (
     PartsSplit,
     Percentage,
     PercentageTip,
-    Tip,
+    TipRule,
     TipDistribution,
 )
 from examples.report import Row, names, print_lines, print_table, refusal, section, title
@@ -201,7 +201,7 @@ def bill(untipped: Expense, distribution: TipDistribution) -> Expense:
         The dinner with its tip.
 
     """
-    return copy.replace(untipped, tip=Tip(PercentageTip(Percentage.parse('10')), distribution))
+    return copy.replace(untipped, tip=TipRule(PercentageTip(Percentage.parse('10')), distribution))
 
 
 def tip_row(group: ExpenseGroup, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> TipRow:

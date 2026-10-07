@@ -22,7 +22,7 @@ import eranos.SettlementPlan;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
-import eranos.Tip;
+import eranos.TipRule;
 import eranos.TipValue;
 import eranos.examples.Report.Row;
 
@@ -85,7 +85,7 @@ public final class Main {
                                     new Split.Equal(List.of(bob)),
                                     both,
                                     day)
-                            .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
+                            .tip(new TipRule(new TipValue.Percentage(Percentage.parse("10"))))
                             .build());
 
             title("Road trip: saving and loading a group");

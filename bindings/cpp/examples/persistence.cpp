@@ -57,7 +57,7 @@ void run() {
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
     static_cast<void>(must(group.addExpense(Expense("Fuel", LocalCost{euros("70.00")}, EqualSplit{{ana}}, both, day))));
     Expense lunch("Lunch", LocalCost{euros("30.00")}, EqualSplit{{bob}}, both, day);
-    lunch.tip = Tip(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
+    lunch.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
     static_cast<void>(must(group.addExpense(lunch)));
 
     title("Road trip: saving and loading a group");

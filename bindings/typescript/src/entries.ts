@@ -285,7 +285,7 @@ export type TipValue =
       };
 
 /** A tip on top of an expense's amount, which its payers cover. */
-export interface Tip {
+export interface TipRule {
     /** How the tip is expressed. */
     readonly value: TipValue;
     /** How the tip is shared among the participants: in proportion to each share unless given. */
@@ -297,7 +297,7 @@ export interface Tip {
  *
  * @internal
  */
-export function convertedTip(tip: internal.Tip): Tip {
+export function convertedTipRule(tip: internal.TipRule): TipRule {
     return { value: convertedTipValue(tip.value), distribution: convertedTipDistribution(tip.distribution) };
 }
 
@@ -326,8 +326,8 @@ function convertedTipDistribution(distribution: internal.TipDistribution): TipDi
  *
  * @internal
  */
-export function generatedTip(tip: Tip): internal.Tip {
-    return internal.Tip.create({
+export function generatedTipRule(tip: TipRule): internal.TipRule {
+    return internal.TipRule.create({
         value: generatedTipValue(tip.value),
         distribution: generatedTipDistribution(tip.distribution ?? TipDistribution.PROPORTIONAL),
     });
@@ -373,7 +373,7 @@ export interface Expense {
     /** The day it was bought. */
     readonly date: CalendarDate;
     /** The tip on top of the amount. */
-    readonly tip?: Tip;
+    readonly tip?: TipRule;
     /** The time of day it was bought. */
     readonly time?: TimeOfDay;
     /** The category; absent for the built-in one. */
@@ -395,7 +395,7 @@ export function convertedExpense(expense: internal.Expense): Expense {
         payers: convertedSplit(expense.payers),
         split: convertedExpenseSplit(expense.split),
         date: CalendarDate.converted(expense.date),
-        ...(undefined === expense.tip ? {} : { tip: convertedTip(expense.tip) }),
+        ...(undefined === expense.tip ? {} : { tip: convertedTipRule(expense.tip) }),
         ...(undefined === expense.time ? {} : { time: TimeOfDay.converted(expense.time) }),
         ...(undefined === expense.category ? {} : { category: categoryId(expense.category) }),
         ...(undefined === expense.description ? {} : { description: expense.description }),
@@ -415,7 +415,7 @@ export function generatedExpense(expense: Expense): internal.Expense {
         payers: generatedSplit(expense.payers),
         split: generatedExpenseSplit(expense.split),
         date: expense.date.generated(),
-        ...(undefined === expense.tip ? {} : { tip: generatedTip(expense.tip) }),
+        ...(undefined === expense.tip ? {} : { tip: generatedTipRule(expense.tip) }),
         ...(undefined === expense.time ? {} : { time: expense.time.generated() }),
         ...(undefined === expense.category ? {} : { category: expense.category }),
         ...(undefined === expense.description ? {} : { description: expense.description }),

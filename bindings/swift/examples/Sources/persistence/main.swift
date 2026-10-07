@@ -30,7 +30,7 @@ func main() throws(EranosError) {
             payers: .equal([bob]),
             split: .whole(.equal([ana, bob])),
             date: day,
-            tip: Tip(value: .percentage(try Percentage(parsing: "10")))
+            tip: TipRule(value: .percentage(try Percentage(parsing: "10")))
         )
     )
 

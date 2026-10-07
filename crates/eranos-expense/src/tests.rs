@@ -63,7 +63,7 @@ fn full_expense() -> Expense {
             MemberPercentage::new(BOB, per_cent("25")),
             MemberPercentage::new(CAROL, per_cent("25")),
         ]))
-        .tip(Tip::percentage(per_cent("10")))
+        .tip(TipRule::percentage(per_cent("10")))
         .time(TimeOfDay::new(20, 30).unwrap())
         .category(CategoryId::from_bytes([9; 16]))
         .description("Birthday")
@@ -108,7 +108,7 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
     // category and no tip.
     assert_eq!(expense.description(), None);
     assert_eq!(expense.category(), CategoryId::UNCATEGORISED);
-    assert_eq!(expense.tip(), Tip::default());
+    assert_eq!(expense.tip(), TipRule::default());
     assert_eq!(expense.time(), None);
     // Without a tip, the total is the amount.
     assert_eq!(expense.total(), euros(9_000));
@@ -354,7 +354,11 @@ fn an_item_in_another_currency_is_rejected() {
 /// once in the tip itself.
 #[test]
 fn the_participants_divide_the_amount_before_the_tip() {
-    let tipped = || dinner().paid_by(ANA).tip(Tip::percentage(per_cent("10")));
+    let tipped = || {
+        dinner()
+            .paid_by(ANA)
+            .tip(TipRule::percentage(per_cent("10")))
+    };
     // Shares of the 90.00 amount.
     let split = Split::amounts([
         MemberAmount::new(ANA, euros(4_500)),
@@ -387,7 +391,7 @@ fn the_payers_cover_the_amount_plus_the_tip() {
     let tipped = || {
         dinner()
             .split(Split::equal([ANA, BOB]))
-            .tip(Tip::percentage(per_cent("10")))
+            .tip(TipRule::percentage(per_cent("10")))
     };
     // Payments adding up to the 99.00 total.
     let payers = Split::amounts([
@@ -416,7 +420,7 @@ fn the_payers_cover_the_amount_plus_the_tip() {
 /// the one entered.
 #[test]
 fn total_and_tip_amount_include_the_tip() {
-    let tipped = |tip: Tip| {
+    let tipped = |tip: TipRule| {
         dinner()
             .paid_by(ANA)
             .split(Split::equal([ANA, BOB]))
@@ -425,21 +429,25 @@ fn total_and_tip_amount_include_the_tip() {
             .unwrap()
     };
     // A percentage tip.
-    let expense = tipped(Tip::percentage(per_cent("10")));
-    assert_eq!(expense.tip(), Tip::percentage(per_cent("10")));
+    let expense = tipped(TipRule::percentage(per_cent("10")));
+    assert_eq!(expense.tip(), TipRule::percentage(per_cent("10")));
     assert_eq!(expense.tip_amount(), euros(900));
     assert_eq!(expense.total(), euros(9_900));
     // A fixed tip.
-    let fixed_tip_expense = tipped(Tip::fixed(euros(500)));
+    let fixed_tip_expense = tipped(TipRule::fixed(euros(500)));
     assert_eq!(fixed_tip_expense.tip_amount(), euros(500));
     assert_eq!(fixed_tip_expense.total(), euros(9_500));
     // A zero tip.
-    let zero_tip_expense = tipped(Tip::fixed(euros(0)));
+    let zero_tip_expense = tipped(TipRule::fixed(euros(0)));
     assert_eq!(zero_tip_expense.tip_amount(), euros(0));
     assert_eq!(zero_tip_expense.total(), euros(9_000));
     // A cleared tip.
-    let cleared_tip_expense = expense.to_builder().tip(Tip::default()).build().unwrap();
-    assert_eq!(cleared_tip_expense.tip(), Tip::default());
+    let cleared_tip_expense = expense
+        .to_builder()
+        .tip(TipRule::default())
+        .build()
+        .unwrap();
+    assert_eq!(cleared_tip_expense.tip(), TipRule::default());
     assert_eq!(cleared_tip_expense.total(), euros(9_000));
 }
 
@@ -449,13 +457,13 @@ fn an_invalid_fixed_tip_is_rejected() {
     let builder = || dinner().paid_by(ANA).split(Split::equal([ANA]));
     // Negative.
     assert_eq!(
-        builder().tip(Tip::fixed(euros(-100))).build(),
+        builder().tip(TipRule::fixed(euros(-100))).build(),
         Err(ExpenseError::NegativeTip)
     );
     // Another currency.
     let dollars = Money::from_minor_units(100, Currency::USD);
     assert_eq!(
-        builder().tip(Tip::fixed(dollars)).build(),
+        builder().tip(TipRule::fixed(dollars)).build(),
         Err(ExpenseError::CurrencyMismatch {
             expected: Currency::EUR,
             found: Currency::USD
@@ -480,12 +488,12 @@ fn a_total_out_of_range_is_rejected() {
     assert!(largest().build().is_ok());
     // A fixed tip on top of it.
     assert_eq!(
-        largest().tip(Tip::fixed(euros(1))).build(),
+        largest().tip(TipRule::fixed(euros(1))).build(),
         Err(ExpenseError::Overflow)
     );
     // A percentage tip that does not fit on its own.
     assert_eq!(
-        largest().tip(Tip::percentage(per_cent("200"))).build(),
+        largest().tip(TipRule::percentage(per_cent("200"))).build(),
         Err(ExpenseError::Overflow)
     );
 }
@@ -749,7 +757,7 @@ fn expenses_round_trip_through_serde() {
     // A fixed zero tip is not the default, so it is written.
     let zero_tip = itemised
         .to_builder()
-        .tip(Tip::fixed(euros(0)))
+        .tip(TipRule::fixed(euros(0)))
         .build()
         .unwrap();
     let zero_tip_json = serde_json::to_string(&zero_tip).unwrap();

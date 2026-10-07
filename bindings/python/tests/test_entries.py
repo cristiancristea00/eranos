@@ -40,7 +40,7 @@ from eranos import (
     PhoneNumber,
     SettledBalance,
     TimeOfDay,
-    Tip,
+    TipRule,
     TipDistribution,
     Transfer,
     TransferId,
@@ -58,7 +58,7 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
         payers=PercentagesSplit((MemberPercentage(flat.ana, Percentage(5000)), MemberPercentage(flat.bob, Percentage(5000)))),
         split=WholeExpenseSplit(PartsSplit((MemberParts(flat.ana, Parts(100)), MemberParts(flat.bob, Parts(50))))),
         date=flat.day,
-        tip=Tip(PercentageTip(Percentage(1000))),
+        tip=TipRule(PercentageTip(Percentage(1000))),
         time=TimeOfDay(13, 15),
         category=flat.food,
         description='By the sea',
@@ -73,7 +73,7 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
         payers=AmountsSplit((MemberAmount(flat.bob, flat.euros(3300)),)),
         split=ItemisedExpenseSplit((pizza, wine)),
         date=flat.day,
-        tip=Tip(FixedTip(flat.euros(300)), TipDistribution.EQUAL),
+        tip=TipRule(FixedTip(flat.euros(300)), TipDistribution.EQUAL),
     )
     receipt_id = flat.group.add_expense(receipt)
     assert flat.group.expense(receipt_id) == copy.replace(receipt, id=receipt_id)
@@ -188,7 +188,7 @@ def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
     assert PartsSplit((MemberParts(flat.ana, Parts(100)),)).members == (flat.ana,)
     assert PercentagesSplit((MemberPercentage(flat.bob, Percentage(10000)),)).members == (flat.bob,)
     assert AmountsSplit((MemberAmount(flat.bob, flat.euros(100)),)).members == (flat.bob,)
-    dinner = copy.replace(flat.expense('Dinner', flat.ana, (flat.bob,)), tip=Tip(PercentageTip(Percentage(1000)), TipDistribution.EQUAL))
+    dinner = copy.replace(flat.expense('Dinner', flat.ana, (flat.bob,)), tip=TipRule(PercentageTip(Percentage(1000)), TipDistribution.EQUAL))
     assert dinner.total() == flat.euros(3300)
     assert dinner.tip_amount() == flat.euros(300)
     assert dinner.members() == tuple(sorted((flat.ana, flat.bob)))
@@ -202,4 +202,4 @@ def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
 
 def test_a_tip_without_a_distribution_is_shared_in_proportion() -> None:
     """A tip whose sharing defaulted otherwise than the library's would divide the same bill differently in a Python app."""
-    assert Tip(PercentageTip(Percentage(1000))).distribution is TipDistribution.PROPORTIONAL
+    assert TipRule(PercentageTip(Percentage(1000))).distribution is TipDistribution.PROPORTIONAL

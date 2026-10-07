@@ -77,7 +77,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<MemberPercentage>();
         assert_send_and_sync::<NewExpenseGroup>();
         assert_send_and_sync::<Split>();
-        assert_send_and_sync::<Tip>();
+        assert_send_and_sync::<TipRule>();
         assert_send_and_sync::<TipDistribution>();
         assert_send_and_sync::<TipValue>();
         assert_send_and_sync::<Transfer>();

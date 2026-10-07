@@ -13,8 +13,8 @@ import eranos.Parts
 import eranos.Percentage
 import eranos.Split
 import eranos.TimeOfDay
-import eranos.Tip
 import eranos.TipDistribution
+import eranos.TipRule
 import eranos.TipValue
 
 /** The groceries, shared equally by Ana, Bob, and Carol. */
@@ -144,7 +144,7 @@ internal fun fadoItemByItem(
         Split.Amounts(listOf(MemberAmount(people.carol, eur("39.40")), MemberAmount(people.dan, eur("20.00")))),
         ExpenseSplit.Itemised(fadoItems(people)),
         october(4),
-        tip = Tip(TipValue.Percentage(Percentage.parse("10"))),
+        tip = TipRule(TipValue.Percentage(Percentage.parse("10"))),
         time = TimeOfDay.of(hour = 22, minute = 15),
         category = categories.food,
         description = "Tasca do Chico",
@@ -161,6 +161,6 @@ internal fun tourWithATip(
         Split.Equal(listOf(people.dan)),
         ExpenseSplit.Whole(Split.Equal(listOf(people.ana, people.bob, people.carol, people.dan, people.eva))),
         october(5),
-        tip = Tip(TipValue.Fixed(eur("5.00")), TipDistribution.EQUAL),
+        tip = TipRule(TipValue.Fixed(eur("5.00")), TipDistribution.EQUAL),
         category = categories.transport,
     )

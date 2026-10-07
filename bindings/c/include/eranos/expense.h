@@ -12,8 +12,8 @@
 #include "EranosExpenseList.h"
 #include "EranosExpenseSplit.h"
 #include "EranosExpenseSplitKind.h"
-#include "EranosTip.h"
 #include "EranosTipDistribution.h"
+#include "EranosTipRule.h"
 #include "EranosTipValue.h"
 #include "EranosTipValueKind.h"
 #include "eranos/calendar.h"
@@ -239,13 +239,13 @@ static inline void eranosExpenseSetDate(EranosExpense *const expense, EranosCale
 ///
 /// @param expense The expense
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosTip *eranosExpenseTip(EranosExpense const *const expense) { return EranosExpense_tip(expense); }
+[[nodiscard]] static inline EranosTipRule *eranosExpenseTip(EranosExpense const *const expense) { return EranosExpense_tip(expense); }
 
 /// Sets the tip on top of the amount.
 ///
 /// @param expense The expense
 /// @param tip The tip on top of the amount
-static inline void eranosExpenseSetTip(EranosExpense *const expense, EranosTip const *const tip) { EranosExpense_set_tip(expense, tip); }
+static inline void eranosExpenseSetTip(EranosExpense *const expense, EranosTipRule const *const tip) { EranosExpense_set_tip(expense, tip); }
 
 /// Clears the tip on top of the amount.
 ///
@@ -601,49 +601,51 @@ static inline void eranosExpenseItemListDestroy(EranosExpenseItemList *const lis
 }
 
 /// A tip on top of an expense's amount.
-typedef struct EranosTip EranosTip;
+typedef struct EranosTipRule EranosTipRule;
 
 /// A new tip of its required fields; every other field starts absent, empty, or at its default.
 ///
 /// @param value How the tip is expressed
 /// @param distribution How the tip is shared among the participants
 /// @return The tip, which the caller destroys
-[[nodiscard]] static inline EranosTip *eranosTipCreate(EranosTipValue const *const value, EranosTipDistribution const distribution) {
-    return EranosTip_create(value, distribution);
+[[nodiscard]] static inline EranosTipRule *eranosTipRuleCreate(EranosTipValue const *const value, EranosTipDistribution const distribution) {
+    return EranosTipRule_create(value, distribution);
 }
 
 /// How the tip is expressed.
 ///
 /// @param tip The tip
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosTipValue *eranosTipValue(EranosTip const *const tip) { return EranosTip_value(tip); }
+[[nodiscard]] static inline EranosTipValue *eranosTipRuleValue(EranosTipRule const *const tip) { return EranosTipRule_value(tip); }
 
 /// Sets how the tip is expressed.
 ///
 /// @param tip The tip
 /// @param value How the tip is expressed
-static inline void eranosTipSetValue(EranosTip *const tip, EranosTipValue const *const value) { EranosTip_set_value(tip, value); }
+static inline void eranosTipRuleSetValue(EranosTipRule *const tip, EranosTipValue const *const value) { EranosTipRule_set_value(tip, value); }
 
 /// How the tip is shared among the participants.
 ///
 /// @param tip The tip
 /// @return How the tip is shared among the participants
-[[nodiscard]] static inline EranosTipDistribution eranosTipDistribution(EranosTip const *const tip) { return EranosTip_distribution(tip); }
+[[nodiscard]] static inline EranosTipDistribution eranosTipRuleDistribution(EranosTipRule const *const tip) {
+    return EranosTipRule_distribution(tip);
+}
 
 /// Sets how the tip is shared among the participants.
 ///
 /// @param tip The tip
 /// @param distribution How the tip is shared among the participants
-static inline void eranosTipSetDistribution(EranosTip *const tip, EranosTipDistribution const distribution) {
-    EranosTip_set_distribution(tip, distribution);
+static inline void eranosTipRuleSetDistribution(EranosTipRule *const tip, EranosTipDistribution const distribution) {
+    EranosTipRule_set_distribution(tip, distribution);
 }
 
 /// Destroys @p tip; destroying nullptr does nothing, as free() does.
 ///
 /// @param tip The tip, which no call uses after this one, or nullptr
-static inline void eranosTipDestroy(EranosTip *const tip) {
+static inline void eranosTipRuleDestroy(EranosTipRule *const tip) {
     if (nullptr != tip) {
-        EranosTip_destroy(tip);
+        EranosTipRule_destroy(tip);
     }
 }
 

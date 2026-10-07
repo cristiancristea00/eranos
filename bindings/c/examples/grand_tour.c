@@ -1120,10 +1120,10 @@ static char const *divided(EranosSplit const *const split) {
 static Line tipOf(EranosExpense const *const expense) {
     EranosMoney *amount = nullptr;
     must(eranosExpenseTipAmount(expense, &amount));
-    EranosTip *const tip = eranosExpenseTip(expense);
+    EranosTipRule *const tip = eranosExpenseTip(expense);
     Line line = {};
     if (0 != eranosMoneyMinorUnits(amount) && nullptr != tip) {
-        EranosTipValue *const value = eranosTipValue(tip);
+        EranosTipValue *const value = eranosTipRuleValue(tip);
         int32_t basisPoints = 0;
         if (eranosTipValueBasisPoints(value, &basisPoints)) {
             EranosText *const text = eranosTextCreate();
@@ -1136,7 +1136,7 @@ static Line tipOf(EranosExpense const *const expense) {
         }
         eranosTipValueDestroy(value);
     }
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosMoneyDestroy(amount);
     return line;
 }
@@ -1266,9 +1266,9 @@ static EranosExpenseItemList *fadoItems(People const *const people) {
 
 /// Gives @p expense a tip of @p value, shared by @p distribution; destroys @p value.
 static void tipWith(EranosExpense *const expense, EranosTipValue *const value, EranosTipDistribution const distribution) {
-    EranosTip *const tip = eranosTipCreate(value, distribution);
+    EranosTipRule *const tip = eranosTipRuleCreate(value, distribution);
     eranosExpenseSetTip(expense, tip);
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(value);
 }
 
@@ -1428,9 +1428,9 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     must(eranosCalendarDateFormat(eranosExpenseDate(fado), text));
     Line const date = textLine(text);
     Line const place = eranosExpenseDescription(fado, text) ? textLine(text) : lineOf("%s", "");
-    EranosTip *const tip = eranosExpenseTip(fado);
+    EranosTipRule *const tip = eranosExpenseTip(fado);
     check(nullptr != tip, "the fado night has a tip");
-    EranosTipValue *const value = eranosTipValue(tip);
+    EranosTipValue *const value = eranosTipRuleValue(tip);
     int32_t basisPoints = 0;
     Line rule = {};
     if (eranosTipValueBasisPoints(value, &basisPoints)) {
@@ -1439,7 +1439,8 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     } else {
         rule = moneyLine(eranosTipValueAmount(value));
     }
-    char const *const shared = ERANOS_TIP_DISTRIBUTION_EQUAL == eranosTipDistribution(tip) ? "equally" : "in proportion to what each member ordered";
+    char const *const shared =
+        ERANOS_TIP_DISTRIBUTION_EQUAL == eranosTipRuleDistribution(tip) ? "equally" : "in proportion to what each member ordered";
     EranosMoney *amount = nullptr;
     must(eranosExpenseTipAmount(fado, &amount));
     Line const tipAmount = moneyLine(amount);
@@ -1451,7 +1452,7 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     printItems(group, id);
     printLine("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
     eranosTipValueDestroy(value);
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosTextDestroy(text);
     eranosExpenseDestroy(fado);
 }

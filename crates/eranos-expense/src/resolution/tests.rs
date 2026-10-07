@@ -13,7 +13,7 @@ use eranos_money::{Cost, Parts, Percentage};
 use proptest::prelude::*;
 
 use super::*;
-use crate::{ExpenseItem, MemberAmount, MemberParts, Split, Tip, TipDistribution};
+use crate::{ExpenseItem, MemberAmount, MemberParts, Split, TipDistribution, TipRule};
 
 /// `expense` under the identifier `id`, which seeds its tie rotation.
 fn identified(expense: &Expense, id: ExpenseId) -> Expense {
@@ -135,7 +135,7 @@ fn a_proportional_tip_follows_the_shares() {
         ]),
         day(),
     )
-    .tip(Tip::percentage(Percentage::parse("10").unwrap()))
+    .tip(TipRule::percentage(Percentage::parse("10").unwrap()))
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&dinner, entry(1)), Currency::EUR).unwrap();
@@ -162,7 +162,7 @@ fn an_equal_tip_ignores_the_shares() {
         ]),
         day(),
     )
-    .tip(Tip::percentage(Percentage::parse("10").unwrap()).distributed(TipDistribution::Equal))
+    .tip(TipRule::percentage(Percentage::parse("10").unwrap()).distributed(TipDistribution::Equal))
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&dinner, entry(1)), Currency::EUR).unwrap();
@@ -186,7 +186,7 @@ fn items_divide_by_their_own_splits() {
         .build()
         .unwrap();
     let bill = Expense::itemised_builder("Bill", eur(2100), bob, [pizza, beer], day())
-        .tip(Tip::fixed(eur(210)))
+        .tip(TipRule::fixed(eur(210)))
         .build()
         .unwrap();
     let resolved = resolve_expense(&identified(&bill, entry(1)), Currency::EUR).unwrap();
@@ -306,7 +306,7 @@ fn a_foreign_tip_is_part_of_the_converted_total() {
         Split::equal([ana]),
         day(),
     )
-    .tip(Tip::fixed(Money::from_minor_units(300, Currency::JPY)))
+    .tip(TipRule::fixed(Money::from_minor_units(300, Currency::JPY)))
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&lunch, entry(1)), Currency::EUR).unwrap();
@@ -450,7 +450,8 @@ fn random_expense(
             TipDistribution::Proportional
         };
         builder = builder.tip(
-            Tip::percentage(Percentage::from_basis_points(basis_points)).distributed(distribution),
+            TipRule::percentage(Percentage::from_basis_points(basis_points))
+                .distributed(distribution),
         );
     }
     builder.build().unwrap()
@@ -522,7 +523,7 @@ fn the_rotation_of_every_pass_is_pinned() {
         items,
         day(),
     )
-    .tip(Tip::fixed(eur(2)).distributed(TipDistribution::Equal))
+    .tip(TipRule::fixed(eur(2)).distributed(TipDistribution::Equal))
     .build()
     .unwrap();
     let resolved = resolve_expense(&identified(&itemised, entry(1)), Currency::EUR).unwrap();

@@ -24,7 +24,7 @@ use eranos::{
     ExpenseSplit, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
     MemberShare, Money, Parts, PaymentAccount, PaymentAccountDetails, PaymentAccountKind,
     Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup, Split,
-    TimeOfDay, Tip, TipDistribution, TipValue, Transfer, Username,
+    TimeOfDay, TipDistribution, TipRule, TipValue, Transfer, Username,
 };
 use tabled::settings::formatting::AlignmentStrategy;
 use tabled::settings::object::Columns;
@@ -775,7 +775,7 @@ fn fado_night(people: People, categories: Categories) -> Result<ExpenseBuilder, 
     .category(categories.food)
     .description("Tasca do Chico")
     .time(TimeOfDay::new(22, 15)?)
-    .tip(Tip::percentage(Percentage::parse("10")?)))
+    .tip(TipRule::percentage(Percentage::parse("10")?)))
 }
 
 /// Adds one expense for every way of dividing one.
@@ -857,7 +857,7 @@ fn add_expenses(
         october(5)?,
     )
     .category(categories.transport)
-    .tip(Tip::fixed(eur("5.00")?).distributed(TipDistribution::Equal));
+    .tip(TipRule::fixed(eur("5.00")?).distributed(TipDistribution::Equal));
     let groceries = group.add_expense(groceries.build()?)?;
     let apartment = group.add_expense(apartment.build()?)?;
     let seafood = group.add_expense(seafood.build()?)?;

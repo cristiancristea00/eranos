@@ -27,8 +27,8 @@ import eranos.Parts;
 import eranos.Percentage;
 import eranos.Split;
 import eranos.TimeOfDay;
-import eranos.Tip;
 import eranos.TipDistribution;
+import eranos.TipRule;
 import eranos.TipValue;
 import eranos.examples.grandtour.Tables.ItemRow;
 import eranos.examples.grandtour.Tables.ShareRow;
@@ -152,7 +152,7 @@ final class Expenses {
                                         new MemberAmount(people.dan(), eur("20.00")))),
                         new ExpenseSplit.Itemised(fadoItems(people)),
                         october(4))
-                .tip(new Tip(new TipValue.Percentage(Percentage.parse("10"))))
+                .tip(new TipRule(new TipValue.Percentage(Percentage.parse("10"))))
                 .time(TimeOfDay.of(22, 15))
                 .category(categories.food())
                 .description("Tasca do Chico")
@@ -282,7 +282,7 @@ final class Expenses {
                                                                 people.eva()))),
                                         october(5))
                                 .tip(
-                                        new Tip(
+                                        new TipRule(
                                                 new TipValue.Fixed(eur("5.00")),
                                                 TipDistribution.EQUAL))
                                 .category(categories.transport())

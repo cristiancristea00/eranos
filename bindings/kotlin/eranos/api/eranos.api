@@ -246,10 +246,10 @@ public final class eranos/ExchangeRate$Companion {
 }
 
 public final class eranos/Expense {
-	public synthetic fun <init> (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/Tip;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/Tip;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun copy-pwbgqOI (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/Tip;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;)Leranos/Expense;
-	public static synthetic fun copy-pwbgqOI$default (Leranos/Expense;Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/Tip;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Leranos/Expense;
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun copy-pwbgqOI (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;)Leranos/Expense;
+	public static synthetic fun copy-pwbgqOI$default (Leranos/Expense;Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Leranos/Expense;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCategory-EwbX1to ()Ljava/lang/String;
 	public final fun getCost ()Leranos/Cost;
@@ -260,7 +260,7 @@ public final class eranos/Expense {
 	public final fun getPayers ()Leranos/Split;
 	public final fun getSplit ()Leranos/ExpenseSplit;
 	public final fun getTime ()Leranos/TimeOfDay;
-	public final fun getTip ()Leranos/Tip;
+	public final fun getTip ()Leranos/TipRule;
 	public fun hashCode ()I
 	public final fun members ()Ljava/util/List;
 	public final fun tipAmount ()Leranos/Money;
@@ -1170,7 +1170,15 @@ public final class eranos/TimeOfDay$Companion {
 	public final fun parse (Ljava/lang/String;)Leranos/TimeOfDay;
 }
 
-public final class eranos/Tip {
+public final class eranos/TipDistribution : java/lang/Enum {
+	public static final field EQUAL Leranos/TipDistribution;
+	public static final field PROPORTIONAL Leranos/TipDistribution;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Leranos/TipDistribution;
+	public static fun values ()[Leranos/TipDistribution;
+}
+
+public final class eranos/TipRule {
 	public fun <init> (Leranos/TipValue;Leranos/TipDistribution;)V
 	public synthetic fun <init> (Leranos/TipValue;Leranos/TipDistribution;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
@@ -1178,14 +1186,6 @@ public final class eranos/Tip {
 	public final fun getValue ()Leranos/TipValue;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final class eranos/TipDistribution : java/lang/Enum {
-	public static final field EQUAL Leranos/TipDistribution;
-	public static final field PROPORTIONAL Leranos/TipDistribution;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Leranos/TipDistribution;
-	public static fun values ()[Leranos/TipDistribution;
 }
 
 public abstract interface class eranos/TipValue {

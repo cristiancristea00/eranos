@@ -14,7 +14,7 @@ import eranos.Money
 import eranos.Percentage
 import eranos.SettlementStrategy
 import eranos.Split
-import eranos.Tip
+import eranos.TipRule
 import eranos.TipValue
 import eranos.examples.Row
 import eranos.examples.names
@@ -52,7 +52,7 @@ fun main() {
                 Split.Equal(listOf(bob)),
                 both,
                 day,
-                tip = Tip(TipValue.Percentage(Percentage.parse("10"))),
+                tip = TipRule(TipValue.Percentage(Percentage.parse("10"))),
             ),
         )
 

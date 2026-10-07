@@ -540,11 +540,13 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Tip fromDetail(EranosTip const &value) { return {detail::fromDetail(*value.value()), detail::fromDetail(value.distribution())}; }
+[[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value) {
+    return {detail::fromDetail(*value.value()), detail::fromDetail(value.distribution())};
+}
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTip> toDetail(Tip const &value) {
-    return EranosTip::create(*detail::toDetail(value.value), detail::toDetail(value.distribution));
+[[nodiscard]] inline std::unique_ptr<EranosTipRule> toDetail(TipRule const &value) {
+    return EranosTipRule::create(*detail::toDetail(value.value), detail::toDetail(value.distribution));
 }
 
 /// The alternative of @p value.
@@ -610,7 +612,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     Expense result(value.name(), detail::fromDetail(*value.cost()), detail::fromDetail(*value.payers()), detail::fromDetail(*value.split()),
                    detail::calendarDateOf(value.date()));
     result.id = detail::optionalId<ExpenseId>(value.id());
-    result.tip = detail::optionalRecord<Tip>(value.tip());
+    result.tip = detail::optionalRecord<TipRule>(value.tip());
     result.time = detail::optionalTime(value.time());
     result.category = detail::optionalId<CategoryId>(value.category());
     result.description = value.description();

@@ -109,7 +109,7 @@ func fadoNight(_ people: People, _ categories: Categories) throws(EranosError) -
         payers: .amounts([MemberAmount(member: people.carol, amount: try eur("39.40")), MemberAmount(member: people.dan, amount: try eur("20.00"))]),
         split: .itemised(try fadoItems(people)),
         date: try october(4),
-        tip: Tip(value: .percentage(try Percentage(parsing: "10"))),
+        tip: TipRule(value: .percentage(try Percentage(parsing: "10"))),
         time: try TimeOfDay(hour: 22, minute: 15),
         category: categories.food,
         description: "Tasca do Chico"
@@ -197,7 +197,7 @@ func addExpenses(_ group: ExpenseGroup, _ people: People, _ categories: Categori
             payers: .equal([people.dan]),
             split: .whole(.equal([people.ana, people.bob, people.carol, people.dan, people.eva])),
             date: try october(5),
-            tip: Tip(value: .fixed(try eur("5.00")), distribution: .equal),
+            tip: TipRule(value: .fixed(try eur("5.00")), distribution: .equal),
             category: categories.transport
         )
     )

@@ -127,9 +127,9 @@ static EranosExpense *tippedBillOf(Friends const *const friends, EranosTipDistri
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
     EranosTipValue *const value = eranosTipValueCreatePercentage(basisPoints);
-    EranosTip *const tip = eranosTipCreate(value, distribution);
+    EranosTipRule *const tip = eranosTipRuleCreate(value, distribution);
     eranosExpenseSetTip(expense, tip);
-    eranosTipDestroy(tip);
+    eranosTipRuleDestroy(tip);
     eranosTipValueDestroy(value);
     return expense;
 }

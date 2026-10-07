@@ -829,11 +829,11 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
     fadoNight.category = categories.food;
     fadoNight.description = "Tasca do Chico";
     fadoNight.time = must(TimeOfDay::of(22, 15));
-    fadoNight.tip = Tip(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
+    fadoNight.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
     Expense ride("Tuk-tuk tour", LocalCost{eur("45.00")}, EqualSplit{{people.dan}},
                  WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan, people.eva}}}, october(5));
     ride.category = categories.transport;
-    ride.tip = Tip(FixedTipValue{eur("5.00")}, TipDistribution::EQUAL);
+    ride.tip = TipRule(FixedTipValue{eur("5.00")}, TipDistribution::EQUAL);
     // The group gives each expense its identifier as it adds it: an initialiser of Expenses would add them in the order of
     // its fields, not this one.
     auto const groceries =

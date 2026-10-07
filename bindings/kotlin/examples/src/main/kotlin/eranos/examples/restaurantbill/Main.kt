@@ -19,8 +19,8 @@ import eranos.Money
 import eranos.Parts
 import eranos.Percentage
 import eranos.Split
-import eranos.Tip
 import eranos.TipDistribution
+import eranos.TipRule
 import eranos.TipValue
 import eranos.examples.Row
 import eranos.examples.names
@@ -140,7 +140,7 @@ fun main() {
                 Split.Equal(listOf(ana)),
                 ExpenseSplit.Itemised(receipt(ana, bob, carol)),
                 day,
-                tip = Tip(TipValue.Percentage(Percentage.parse("10")), distribution),
+                tip = TipRule(TipValue.Percentage(Percentage.parse("10")), distribution),
             )
         }
         val untipped = Expense("Dinner", Cost.Local(eur("54.00")), Split.Equal(listOf(ana)), ExpenseSplit.Itemised(receipt(ana, bob, carol)), day)

@@ -223,7 +223,7 @@ fn dinner() -> Expense {
             month: 9,
             day: 23,
         },
-        tip: Some(Tip {
+        tip: Some(TipRule {
             value: TipValue::Percentage {
                 basis_points: 1_000,
             },
@@ -333,7 +333,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
         },
         Refusal {
             record: Expense {
-                tip: Some(Tip {
+                tip: Some(TipRule {
                     value: TipValue::Percentage { basis_points: -1 },
                     distribution: TipDistribution::Equal,
                 }),
@@ -507,11 +507,11 @@ fn an_item_converts_both_ways_and_refuses_bad_lines() {
 #[test]
 fn tips_convert_both_ways_and_refuse_what_does_not_convert() {
     let tips = [
-        Tip {
+        TipRule {
             value: TipValue::Fixed { amount: euros(500) },
             distribution: TipDistribution::Equal,
         },
-        Tip {
+        TipRule {
             value: TipValue::Percentage {
                 basis_points: 1_250,
             },
@@ -519,14 +519,14 @@ fn tips_convert_both_ways_and_refuse_what_does_not_convert() {
         },
     ];
     for tip in tips {
-        assert_eq!(tip.to_library().map(Tip::from_library), Ok(tip));
+        assert_eq!(tip.to_library().map(TipRule::from_library), Ok(tip));
     }
-    let negative = Tip {
+    let negative = TipRule {
         value: TipValue::Percentage { basis_points: -1 },
         distribution: TipDistribution::Equal,
     };
     assert!(invalid_percentage(&negative.to_library().unwrap_err()));
-    let unknown = Tip {
+    let unknown = TipRule {
         value: TipValue::Fixed {
             amount: unknown_money(),
         },

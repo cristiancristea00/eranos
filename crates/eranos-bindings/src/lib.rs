@@ -50,8 +50,8 @@ pub use error::{
     PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 pub use expense::{
-    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
-    TipDistribution, TipValue,
+    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split,
+    TipDistribution, TipRule, TipValue,
 };
 pub use expense_group::{ExpenseGroupHandle, NewExpenseGroup};
 pub use flat::{ErrorKind, FailureKind, FlatError, IbanReasonKind, Payload};

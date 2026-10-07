@@ -8,14 +8,14 @@ import java.util.Objects;
  * @param value how the tip is expressed
  * @param distribution how the tip is shared among the participants
  */
-public record Tip(TipValue value, TipDistribution distribution) {
+public record TipRule(TipValue value, TipDistribution distribution) {
     /**
      * The tip of {@code value}, shared by {@code distribution}.
      *
      * @param value how the tip is expressed
      * @param distribution how the tip is shared among the participants
      */
-    public Tip {
+    public TipRule {
         Objects.requireNonNull(value, "value");
         Objects.requireNonNull(distribution, "distribution");
     }
@@ -25,7 +25,7 @@ public record Tip(TipValue value, TipDistribution distribution) {
      *
      * @param value how the tip is expressed
      */
-    public Tip(TipValue value) {
+    public TipRule(TipValue value) {
         this(value, TipDistribution.PROPORTIONAL);
     }
 
@@ -35,8 +35,8 @@ public record Tip(TipValue value, TipDistribution distribution) {
      * @param tip the generated tip
      * @return the tip
      */
-    static Tip converted(eranos.internal.Tip tip) {
-        return new Tip(
+    static TipRule converted(eranos.internal.TipRule tip) {
+        return new TipRule(
                 Conversions.converted(tip.value()), TipDistribution.converted(tip.distribution()));
     }
 
@@ -45,7 +45,7 @@ public record Tip(TipValue value, TipDistribution distribution) {
      *
      * @return the generated tip
      */
-    eranos.internal.Tip generated() {
-        return new eranos.internal.Tip(Conversions.generated(value), distribution.generated());
+    eranos.internal.TipRule generated() {
+        return new eranos.internal.TipRule(Conversions.generated(value), distribution.generated());
     }
 }

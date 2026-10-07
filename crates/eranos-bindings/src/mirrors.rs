@@ -53,7 +53,7 @@ macro_rules! mirrors {
         $crate::mirror_split!($($callback)+);
         $crate::mirror_summary!($($callback)+);
         $crate::mirror_time_of_day!($($callback)+);
-        $crate::mirror_tip!($($callback)+);
+        $crate::mirror_tip_rule!($($callback)+);
         $crate::mirror_tip_distribution!($($callback)+);
         $crate::mirror_tip_value!($($callback)+);
         $crate::mirror_transfer!($($callback)+);

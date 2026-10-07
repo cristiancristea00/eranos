@@ -35,7 +35,7 @@ cancels the call, which leaves the group as it was.
 - ``Split``
 - ``ExpenseSplit``
 - ``ExpenseItem``
-- ``Tip``
+- ``TipRule``
 
 ### Totals and settlements
 

@@ -287,8 +287,8 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     checkValue(check, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{500}},
                "percentage tips");
     checkValue(check, FixedTipValue{one}, FixedTipValue{one}, FixedTipValue{two}, "fixed tips");
-    Tip const tip(FixedTipValue{one}, TipDistribution::EQUAL);
-    checkValue(check, tip, Tip(FixedTipValue{one}, TipDistribution::EQUAL), Tip(FixedTipValue{one}, TipDistribution::PROPORTIONAL), "tips");
+    TipRule const tip(FixedTipValue{one}, TipDistribution::EQUAL);
+    checkValue(check, tip, TipRule(FixedTipValue{one}, TipDistribution::EQUAL), TipRule(FixedTipValue{one}, TipDistribution::PROPORTIONAL), "tips");
     checkValue(check, LocalCost{one}, LocalCost{one}, LocalCost{two}, "local costs");
     auto const rate = ExchangeRate::parse("0.2").value();
     checkValue(check, ConvertedCost{.amount = one, .rate = rate}, ConvertedCost{.amount = one, .rate = rate},
@@ -348,7 +348,7 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
     Expense lunch("Lunch", ConvertedCost{.amount = Money(5'000, lei), .rate = ExchangeRate::parse("0.2").value()},
                   PercentagesSplit{{MemberPercentage(flat.ana, Percentage{5'000}), MemberPercentage(flat.bob, Percentage{5'000})}},
                   WholeExpenseSplit{PartsSplit{{MemberParts(flat.ana, Parts{100}), MemberParts(flat.bob, Parts{50})}}}, flat.day);
-    lunch.tip = Tip(PercentageTipValue{Percentage{1'000}}, TipDistribution::PROPORTIONAL);
+    lunch.tip = TipRule(PercentageTipValue{Percentage{1'000}}, TipDistribution::PROPORTIONAL);
     lunch.time = TimeOfDay::of(13, 15).value();
     lunch.category = flat.food;
     lunch.description = "By the sea";
@@ -361,7 +361,7 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
         "Receipt", LocalCost{flat.euros(3'000)}, AmountsSplit{{MemberAmount(flat.bob, flat.euros(3'300))}},
         ItemisedExpenseSplit{{pizza, ExpenseItem("Wine", flat.euros(600), PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}})}},
         flat.day);
-    receipt.tip = Tip(FixedTipValue{flat.euros(300)}, TipDistribution::EQUAL);
+    receipt.tip = TipRule(FixedTipValue{flat.euros(300)}, TipDistribution::EQUAL);
     receipt.id = flat.group.addExpense(receipt).value();
     check.that(flat.group.expense(receipt.id.value()) == receipt, "an itemised receipt with a fixed tip reads back unchanged");
     auto const expenses = flat.group.expenses();
@@ -468,7 +468,7 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) {
     Split const split = EqualSplit{{flat.bob, flat.ana}};
     check.that(participants(split) == std::vector<MemberId>{flat.bob, flat.ana}, "a split's participants, in the order it lists them");
     auto dinner = flat.expense("Dinner", flat.ana, {flat.bob});
-    dinner.tip = Tip(PercentageTipValue{Percentage{1'000}}, TipDistribution::EQUAL);
+    dinner.tip = TipRule(PercentageTipValue{Percentage{1'000}}, TipDistribution::EQUAL);
     check.that(participants(dinner) == std::vector<MemberId>{flat.ana, flat.bob},
                "the payer and the participants, in the order of their identifiers");
     check.that(tipAmount(dinner) == flat.euros(300) && total(dinner) == flat.euros(3'300), "a tip of 10 % on 30.00 EUR");

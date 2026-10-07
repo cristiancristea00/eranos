@@ -9,7 +9,7 @@ use std::error::Error;
 
 use eranos::{
     CalendarDate, Currency, Expense, ExpenseGroup, ExpenseItem, ExpenseShares, Member, MemberId,
-    MemberParts, MemberShare, Money, Parts, Percentage, Split, Tip, TipDistribution,
+    MemberParts, MemberShare, Money, Parts, Percentage, Split, TipDistribution, TipRule,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -151,7 +151,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let bill = |distribution| -> Result<Expense, Box<dyn Error>> {
         Ok(
             Expense::itemised_builder("Dinner", eur("54.00")?, ana, receipt(ana, bob, carol)?, day)
-                .tip(Tip::percentage(Percentage::parse("10")?).distributed(distribution))
+                .tip(TipRule::percentage(Percentage::parse("10")?).distributed(distribution))
                 .build()?,
         )
     };

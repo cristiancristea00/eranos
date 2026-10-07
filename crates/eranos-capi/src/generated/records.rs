@@ -572,12 +572,15 @@ pub mod ffi {
 
         /// The tip on top of the amount.
         #[must_use]
-        pub fn tip(&self) -> Option<Box<EranosTip>> {
-            self.0.tip.clone().map(|value| Box::new(EranosTip(value)))
+        pub fn tip(&self) -> Option<Box<EranosTipRule>> {
+            self.0
+                .tip
+                .clone()
+                .map(|value| Box::new(EranosTipRule(value)))
         }
 
         /// Sets the tip on top of the amount.
-        pub fn set_tip(&mut self, tip: &EranosTip) {
+        pub fn set_tip(&mut self, tip: &EranosTipRule) {
             self.0.tip = Some(tip.0.clone());
         }
 
@@ -2017,16 +2020,27 @@ pub mod ffi {
         }
     }
 
+    /// How a tip is shared among the participants.
+    #[derive(Debug)]
+    #[diplomat::enum_convert(eranos_bindings::TipDistribution)]
+    pub enum EranosTipDistribution {
+        /// In proportion to each participant's share of the amount.
+        Proportional,
+        /// The same for every participant.
+        Equal,
+    }
+
     /// A tip on top of an expense, covered by its payers.
     #[diplomat::opaque_mut]
     #[derive(Debug)]
-    pub struct EranosTip(pub(crate) eranos_bindings::Tip);
+    pub struct EranosTipRule(pub(crate) eranos_bindings::TipRule);
 
-    impl EranosTip {
-        /// A tip of its required fields; every other field starts absent, empty, or at its default.
+    impl EranosTipRule {
+        /// A tip rule of its required fields; every other field starts absent, empty, or at its
+        /// default.
         #[must_use]
         pub fn create(value: &EranosTipValue, distribution: EranosTipDistribution) -> Box<Self> {
-            Box::new(Self(eranos_bindings::Tip {
+            Box::new(Self(eranos_bindings::TipRule {
                 value: value.0.clone(),
                 distribution: distribution.into(),
             }))
@@ -2053,16 +2067,6 @@ pub mod ffi {
         pub fn set_distribution(&mut self, distribution: EranosTipDistribution) {
             self.0.distribution = distribution.into();
         }
-    }
-
-    /// How a tip is shared among the participants.
-    #[derive(Debug)]
-    #[diplomat::enum_convert(eranos_bindings::TipDistribution)]
-    pub enum EranosTipDistribution {
-        /// In proportion to each participant's share of the amount.
-        Proportional,
-        /// The same for every participant.
-        Equal,
     }
 
     /// How a tip is expressed.

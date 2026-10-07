@@ -25,7 +25,7 @@ public class Expense internal constructor(
     /** The day it was bought. */
     public val date: CalendarDate,
     /** The tip on top of the amount. */
-    public val tip: Tip?,
+    public val tip: TipRule?,
     /** The time of day it was bought. */
     public val time: TimeOfDay?,
     /** The category; `null` for the built-in one. */
@@ -40,7 +40,7 @@ public class Expense internal constructor(
         payers: Split,
         split: ExpenseSplit,
         date: CalendarDate,
-        tip: Tip? = null,
+        tip: TipRule? = null,
         time: TimeOfDay? = null,
         category: CategoryId? = null,
         description: String? = null,
@@ -69,7 +69,7 @@ public class Expense internal constructor(
         payers: Split = this.payers,
         split: ExpenseSplit = this.split,
         date: CalendarDate = this.date,
-        tip: Tip? = this.tip,
+        tip: TipRule? = this.tip,
         time: TimeOfDay? = this.time,
         category: CategoryId? = this.category,
         description: String? = this.description,
@@ -276,28 +276,28 @@ public class ExpenseItem(
 internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem = ExpenseItem(name, unitPrice.converted(), split.converted(), quantity)
 
 /** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]. */
-public class Tip(
+public class TipRule(
     /** How the tip is expressed. */
     public val value: TipValue,
     /** How the tip is shared among the participants: in proportion to each share unless given. */
     public val distribution: TipDistribution = TipDistribution.PROPORTIONAL,
 ) {
     /** The tip as the generated code holds it. */
-    internal val generated: eranos.internal.Tip
-        get() = eranos.internal.Tip(value.generated, distribution.generated)
+    internal val generated: eranos.internal.TipRule
+        get() = eranos.internal.TipRule(value.generated, distribution.generated)
 
     /** Whether [other] is of the same class, with the same [value] and [distribution]. */
-    override fun equals(other: Any?): Boolean = other is Tip && value == other.value && distribution == other.distribution
+    override fun equals(other: Any?): Boolean = other is TipRule && value == other.value && distribution == other.distribution
 
     /** A hash of what [equals] compares. */
     override fun hashCode(): Int = hashOf(value, distribution)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Tip(value=$value, distribution=$distribution)"
+    override fun toString(): String = "TipRule(value=$value, distribution=$distribution)"
 }
 
 /** The tip the generated code holds as [this]. */
-internal fun eranos.internal.Tip.converted(): Tip = Tip(value.converted(), distribution.converted())
+internal fun eranos.internal.TipRule.converted(): TipRule = TipRule(value.converted(), distribution.converted())
 
 /** How a tip is expressed. */
 public sealed interface TipValue {
