@@ -15,7 +15,8 @@ use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{
     CategoryFailure, EranosError, ExpenseFailure, ExpenseGroupFailure, IdFailure, LanguageFailure,
-    MemberFailure, MoneyFailure, TransferFailure, identifier_generate,
+    MemberFailure, MoneyFailure, TransferFailure, category_id_uncategorised, identifier_generate,
+    tip_rule_none,
 };
 
 /// A group of two with a category, an expense, and a transfer, and the
@@ -75,9 +76,9 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
             month: 9,
             day: 23,
         },
-        tip: None,
+        tip: tip_rule_none(),
         time: None,
-        category: None,
+        category: category_id_uncategorised(),
         description: None,
     }
 }
@@ -108,7 +109,7 @@ fn flat() -> Flat {
     let bob = operations::add_member(&mut group, &new_member("Bob")).unwrap();
     let food = operations::add_category(&mut group, &new_category("Food")).unwrap();
     let dinner = Expense {
-        category: Some(food.clone()),
+        category: food.clone(),
         ..new_expense("Dinner", &ana, &[&ana, &bob])
     };
     let dinner = operations::add_expense(&mut group, &dinner).unwrap();

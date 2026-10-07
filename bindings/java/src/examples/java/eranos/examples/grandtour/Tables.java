@@ -8,7 +8,6 @@ import static eranos.examples.grandtour.Tour.rate;
 
 import eranos.Balance;
 import eranos.Category;
-import eranos.CategoryId;
 import eranos.CategoryTotal;
 import eranos.CurrencyCode;
 import eranos.EranosException;
@@ -241,11 +240,6 @@ final class Tables {
         }
     }
 
-    /** The identifier of the built-in category, which the group lists first. */
-    static Optional<CategoryId> builtInCategory(ExpenseGroup group) {
-        return group.categories().stream().findFirst().map(Category::id);
-    }
-
     static void printBalances(ExpenseGroup group) {
         Summary summary = group.summary();
         Money zero = new Money(0, group.currency());
@@ -277,16 +271,11 @@ final class Tables {
 
     static void printCategories(ExpenseGroup group) throws EranosException {
         List<Expense> expenses = group.expenses();
-        Optional<CategoryId> builtIn = builtInCategory(group);
         List<CategoryRow> rows = new ArrayList<>();
         for (CategoryTotal total : group.summary().categoryTotals()) {
             long count =
                     expenses.stream()
-                            .filter(
-                                    expense ->
-                                            expense.category()
-                                                    .or(() -> builtIn)
-                                                    .equals(Optional.of(total.category())))
+                            .filter(expense -> expense.category().equals(total.category()))
                             .count();
             rows.add(
                     new CategoryRow(

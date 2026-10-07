@@ -31,8 +31,8 @@ func how(_ expense: Expense) throws(EranosError) -> String {
     let count = expense.payers.members.count
     let payers = 1 == count ? "" : ", \(count) payers"
     var tip = ""
-    if try 0 != expense.tipAmount().minorUnits, let value = expense.tip?.value {
-        tip = switch value {
+    if try 0 != expense.tipAmount().minorUnits {
+        tip = switch expense.tip.value {
         case let .percentage(rate):
             ", \(rate) tip"
         case let .fixed(amount):
@@ -211,21 +211,17 @@ func consumed(_ group: ExpenseGroup, _ id: Expense.ID, _ member: Member.ID) thro
 
 /// Prints how the fado night's tip was shared, and its receipt.
 func printFado(_ group: ExpenseGroup, _ fado: Expense) throws(EranosError) {
-    let rule = switch fado.tip?.value {
-    case let .percentage(rate)?:
+    let rule = switch fado.tip.value {
+    case let .percentage(rate):
         "\(rate)"
-    case let .fixed(amount)?:
+    case let .fixed(amount):
         "\(amount)"
-    case nil:
-        "a tip"
     }
-    let shared = switch fado.tip?.distribution {
-    case .proportional?:
+    let shared = switch fado.tip.distribution {
+    case .proportional:
         "in proportion to what each member ordered"
-    case .equal?:
+    case .equal:
         "equally"
-    case nil:
-        "another way"
     }
     print("""
         The groceries' 10.00 EUR did not divide into thirds, so one member consumed the

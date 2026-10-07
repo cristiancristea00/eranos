@@ -117,7 +117,8 @@ static inline void eranosCostDestroy(EranosCost *const cost) {
 typedef struct EranosExpense EranosExpense;
 
 /// A new expense of its required fields under the identifier @p id, such as the key an app's own store gives it; every other field starts absent,
-/// empty, or at its default. eranosExpenseCreate() generates the identifier instead.
+/// empty, or at its default: the tip at the no-tip rule and the category at the built-in one. eranosExpenseCreate() generates the identifier
+/// instead.
 ///
 /// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
 ///   text
@@ -138,7 +139,7 @@ typedef struct EranosExpense EranosExpense;
 }
 
 /// A new expense of its required fields under an identifier generated when it is called, which eranosExpenseCreateWithId() takes instead; every
-/// other field starts absent, empty, or at its default.
+/// other field starts absent, empty, or at its default: the tip at the no-tip rule and the category at the built-in one.
 ///
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param cost What it cost
@@ -252,22 +253,17 @@ static inline void eranosExpenseSetSplit(EranosExpense *const expense, EranosExp
 /// @param date The day it was bought
 static inline void eranosExpenseSetDate(EranosExpense *const expense, EranosCalendarDate const date) { EranosExpense_set_date(expense, date); }
 
-/// The tip on top of the amount.
+/// The tip on top of the amount: the no-tip rule, which eranosTipRuleCreateNone() makes, for an expense without one.
 ///
 /// @param expense The expense
-/// @return A copy of the value, which the caller destroys, or nullptr when there is none
+/// @return A copy of the value, which the caller destroys
 [[nodiscard]] static inline EranosTipRule *eranosExpenseTip(EranosExpense const *const expense) { return EranosExpense_tip(expense); }
 
-/// Sets the tip on top of the amount.
+/// Sets the tip on top of the amount: the no-tip rule, which eranosTipRuleCreateNone() makes, for an expense without one.
 ///
 /// @param expense The expense
 /// @param tip The tip on top of the amount
 static inline void eranosExpenseSetTip(EranosExpense *const expense, EranosTipRule const *const tip) { EranosExpense_set_tip(expense, tip); }
-
-/// Clears the tip on top of the amount.
-///
-/// @param expense The expense
-static inline void eranosExpenseClearTip(EranosExpense *const expense) { EranosExpense_clear_tip(expense); }
 
 /// The time of day it was bought.
 ///
@@ -290,33 +286,26 @@ static inline void eranosExpenseSetTime(EranosExpense *const expense, EranosTime
 /// @param expense The expense
 static inline void eranosExpenseClearTime(EranosExpense *const expense) { EranosExpense_clear_time(expense); }
 
-/// The category's identifier; absent for the built-in one. Writes it, if present; absent otherwise.
+/// The category's identifier: the built-in one's, which eranosIdentifierUncategorised() writes, until it is given another.
 ///
 /// @param expense The expense
-/// @param category Receives the category's identifier; absent for the built-in one, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosExpenseCategory(EranosExpense const *const expense, EranosText *const category) {
+/// @param category Receives the category's identifier, replacing what it held
+static inline void eranosExpenseCategory(EranosExpense const *const expense, EranosText *const category) {
     eranosDetailClear(category);
-    bool const present = EranosExpense_category(expense, category).is_ok;
+    EranosExpense_category(expense, category);
     eranosDetailFinish(category);
-    return present;
 }
 
-/// Sets the category's identifier; absent for the built-in one.
+/// Sets the category's identifier: the built-in one's, which eranosIdentifierUncategorised() writes, until it is given another.
 ///
 /// @param expense The expense
-/// @param category The category's identifier; absent for the built-in one, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param category The category's identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseSetCategory(EranosExpense *const expense, char const *const category) {
     EranosExpense_set_category_result const result = EranosExpense_set_category(expense, eranosDetailView(category));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
-
-/// Clears the category's identifier; absent for the built-in one.
-///
-/// @param expense The expense
-static inline void eranosExpenseClearCategory(EranosExpense *const expense) { EranosExpense_clear_category(expense); }
 
 /// A longer description. Writes it, if present; absent otherwise.
 ///
@@ -628,6 +617,11 @@ typedef struct EranosTipRule EranosTipRule;
 [[nodiscard]] static inline EranosTipRule *eranosTipRuleCreate(EranosTipValue const *const value, EranosTipDistribution const distribution) {
     return EranosTipRule_create(value, distribution);
 }
+
+/// The no-tip rule, which an expense without a tip has: 0 % of the amount, shared proportionally.
+///
+/// @return The tip, which the caller destroys
+[[nodiscard]] static inline EranosTipRule *eranosTipRuleCreateNone(void) { return EranosTipRule_none(); }
 
 /// How the tip is expressed.
 ///

@@ -654,9 +654,9 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline Expense fromDetail(EranosExpense const &value) noexcept {
     Expense result(ExpenseId(value.id()), value.name(), detail::fromDetail(*value.cost()), detail::fromDetail(*value.payers()),
                    detail::fromDetail(*value.split()), detail::calendarDateOf(value.date()));
-    result.tip = detail::optionalRecord<TipRule>(value.tip());
+    result.tip = detail::fromDetail(*value.tip());
     result.time = detail::optionalTime(value.time());
-    result.category = detail::optionalId<CategoryId>(value.category());
+    result.category = CategoryId(value.category());
     result.description = value.description();
     return result;
 }
@@ -671,14 +671,11 @@ template <typename Value, typename Argument, typename Start, typename Convert>
             });
         })
         .and_then([&value](std::unique_ptr<EranosExpense> result) noexcept {
-            if (value.tip) {
-                result->set_tip(*detail::toDetail(*value.tip));
-            }
+            result->set_tip(*detail::toDetail(value.tip));
             if (value.time) {
                 result->set_time(detail::toDetail(*value.time));
             }
-            return setIfPresent(std::move(result), value.category,
-                                [](EranosExpense &record, CategoryId const &id) noexcept { return record.set_category(id.value()); });
+            return expectedOf(result->set_category(value.category.value())).transform([&result] noexcept { return std::move(result); });
         })
         .and_then([&value](std::unique_ptr<EranosExpense> result) noexcept {
             return setIfPresent(std::move(result), value.description,

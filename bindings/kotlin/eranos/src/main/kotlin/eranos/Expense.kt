@@ -3,6 +3,7 @@ package eranos
 import eranos.internal.expenseMembers
 import eranos.internal.expenseTipAmount
 import eranos.internal.expenseTotal
+import eranos.internal.tipRuleNone
 
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
@@ -10,8 +11,8 @@ import eranos.internal.expenseTotal
  * An expense has its identifier from the moment it is made: the app's own, such as the key of its own store, or a generated
  * one. To change an expense, read it from the group, [copy] it with the changes, and pass the copy to [ExpenseGroup.replace].
  *
- * @constructor An expense of [cost] on [date], that [payers] paid and [split] shares, under the identifier [id]; the
- *   constructor without [id] generates one.
+ * @constructor An expense of [cost] on [date], that [payers] paid and [split] shares, under the identifier [id], with no tip
+ *   and in the built-in category unless given others; the constructor without [id] generates one.
  */
 @Suppress("LongParameterList") // An expense has the library's fields; the public constructors default the optional ones.
 public class Expense(
@@ -27,18 +28,18 @@ public class Expense(
     public val split: ExpenseSplit,
     /** The day it was bought. */
     public val date: CalendarDate,
-    /** The tip on top of the amount. */
-    public val tip: TipRule? = null,
+    /** The tip on top of the amount: [TipRule.NONE] for an expense without one. */
+    public val tip: TipRule = TipRule.NONE,
     /** The time of day it was bought. */
     public val time: TimeOfDay? = null,
-    /** The category; `null` for the built-in one. */
-    public val category: CategoryId? = null,
+    /** The category: the built-in one, [CategoryId.UNCATEGORISED], until the expense is given another. */
+    public val category: CategoryId = CategoryId.UNCATEGORISED,
     /** A longer description. */
     public val description: String? = null,
 ) {
     /**
-     * An expense of [cost] on [date], that [payers] paid and [split] shares, under an identifier [ExpenseId.generate] makes;
-     * the constructor with [id] takes the app's.
+     * An expense of [cost] on [date], that [payers] paid and [split] shares, under an identifier [ExpenseId.generate] makes,
+     * with no tip and in the built-in category unless given others; the constructor with [id] takes the app's.
      */
     public constructor(
         name: String,
@@ -46,9 +47,9 @@ public class Expense(
         payers: Split,
         split: ExpenseSplit,
         date: CalendarDate,
-        tip: TipRule? = null,
+        tip: TipRule = TipRule.NONE,
         time: TimeOfDay? = null,
-        category: CategoryId? = null,
+        category: CategoryId = CategoryId.UNCATEGORISED,
         description: String? = null,
     ) : this(ExpenseId.generate(), name, cost, payers, split, date, tip, time, category, description)
 
@@ -62,9 +63,9 @@ public class Expense(
                 payers.generated,
                 split.generated,
                 date.generated,
-                tip?.generated,
+                tip.generated,
                 time?.generated,
-                category?.value,
+                category.value,
                 description,
             )
 
@@ -75,9 +76,9 @@ public class Expense(
         payers: Split = this.payers,
         split: ExpenseSplit = this.split,
         date: CalendarDate = this.date,
-        tip: TipRule? = this.tip,
+        tip: TipRule = this.tip,
         time: TimeOfDay? = this.time,
-        category: CategoryId? = this.category,
+        category: CategoryId = this.category,
         description: String? = this.description,
     ): Expense = Expense(id, name, cost, payers, split, date, tip, time, category, description)
 
@@ -142,9 +143,9 @@ internal fun eranos.internal.Expense.converted(): Expense =
         payers.converted(),
         split.converted(),
         date.converted(),
-        tip?.converted(),
+        tip.converted(),
         time?.converted(),
-        category?.let(::CategoryId),
+        CategoryId(category),
         description,
     )
 
@@ -281,7 +282,7 @@ public class ExpenseItem(
 /** The line the generated code holds as [this]. */
 internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem = ExpenseItem(name, unitPrice.converted(), split.converted(), quantity)
 
-/** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]. */
+/** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]; [NONE] is no tip. */
 public class TipRule(
     /** How the tip is expressed. */
     public val value: TipValue,
@@ -300,6 +301,12 @@ public class TipRule(
 
     /** A description of every field, for logs. */
     override fun toString(): String = "TipRule(value=$value, distribution=$distribution)"
+
+    /** The no-tip rule. */
+    public companion object {
+        /** No tip: 0 % of the amount, shared proportionally, which an expense has until it is given another tip. */
+        public val NONE: TipRule = tipRuleNone().converted()
+    }
 }
 
 /** The tip the generated code holds as [this]. */

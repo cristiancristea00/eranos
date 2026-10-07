@@ -30,6 +30,7 @@ library refuses raises an ``EranosError``.
 from eranos._calendar import CalendarDate, TimeOfDay
 from eranos._contact import Email, Iban, Language, PhoneNumber, Username
 from eranos._currency_code import CurrencyCode
+from eranos import _entries
 from eranos._entries import (
     PaymentAccount,
     PaymentAccountDetails,
@@ -124,7 +125,7 @@ from eranos._totals import (
 
 
 # ruff: disable[non-empty-init-module]
-# Autodoc documents an identifier only where the module it documents gives the identifier's docstring.
+# Autodoc documents a name only where the module it documents gives the name's docstring.
 ExpenseGroupId = _identifiers.ExpenseGroupId
 """The identifier of a group: the text the app gives it, or one ``generate_expense_group_id`` returns, a UUID v7 in lowercase hyphenated form."""
 
@@ -135,7 +136,15 @@ CategoryId = _identifiers.CategoryId
 """
 The identifier of a category: the text the app gives it, or one ``generate_category_id`` returns, a UUID v7 in lowercase hyphenated form.
 
-The built-in category's is the nil UUID in that form, and the group lists that category before every other, whatever their identifiers.
+The built-in category's, ``UNCATEGORISED``, is the nil UUID in that form, and the group lists that category before every other,
+whatever their identifiers.
+"""
+
+UNCATEGORISED = _identifiers.UNCATEGORISED
+"""
+The identifier of the built-in category, Uncategorised, which every group has and every expense is in until it is given another.
+
+The library fixes it: the nil UUID in lowercase hyphenated form, ``00000000-0000-0000-0000-000000000000``.
 """
 
 ExpenseId = _identifiers.ExpenseId
@@ -143,10 +152,20 @@ ExpenseId = _identifiers.ExpenseId
 
 TransferId = _identifiers.TransferId
 """The identifier of a transfer: the text the app gives it, or one ``generate_transfer_id`` returns, a UUID v7 in lowercase hyphenated form."""
+
+NO_TIP = _entries.NO_TIP
+"""
+The no-tip rule, which an expense without a tip has.
+
+It is 0 % of the expense's amount, shared in proportion to each participant's share. An expense's tip starts at it; a 0 % tip
+shared equally is another rule, which the expense keeps.
+"""
 # ruff: enable[non-empty-init-module]
 
 
 __all__ = [
+    'NO_TIP',
+    'UNCATEGORISED',
     'AmountsSplit',
     'Balance',
     'CalendarDate',

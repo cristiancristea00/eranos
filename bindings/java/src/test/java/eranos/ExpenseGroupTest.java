@@ -34,6 +34,7 @@ class ExpenseGroupTest {
         List<Category> categories = group.categories();
         assertEquals(
                 List.of("Uncategorised", "Food"), categories.stream().map(Category::name).toList());
+        assertEquals(CategoryId.UNCATEGORISED, categories.get(0).id());
         assertEquals(Optional.of(categories.get(1)), group.category(flat.food));
         assertEquals(flat.euro, group.currency());
         List<Expense> expenses = group.expenses();

@@ -86,11 +86,6 @@ func rate(of cost: Cost) throws(EranosError) -> ExchangeRate {
     }
 }
 
-/// The identifier of the built-in category, which the group lists first.
-func builtInCategory(_ group: ExpenseGroup) throws(EranosError) -> Category.ID? {
-    try group.categories().first?.id
-}
-
 func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     let summary = try group.summary()
     let zero = Money(minorUnits: 0, currency: try group.currency())
@@ -115,12 +110,11 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
 
 func printCategories(_ group: ExpenseGroup) throws(EranosError) {
     let expenses = try group.expenses()
-    let builtIn = try builtInCategory(group)
     printTable(
         try group.summary().categoryTotals.map { total throws(EranosError) in
             CategoryRow(
                 name: try group.category(withID: total.category)?.name ?? "?",
-                expenses: expenses.filter { expense in (expense.category ?? builtIn) == total.category }.count,
+                expenses: expenses.filter { expense in expense.category == total.category }.count,
                 total: total.total
             )
         },

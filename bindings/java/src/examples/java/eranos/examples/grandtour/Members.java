@@ -3,7 +3,6 @@ package eranos.examples.grandtour;
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
-import static eranos.examples.grandtour.Tables.builtInCategory;
 import static eranos.examples.grandtour.Tour.cell;
 import static eranos.examples.grandtour.Tour.groupFailure;
 import static eranos.examples.grandtour.Tour.message;
@@ -206,7 +205,7 @@ final class Members {
         CategoryId transport = group.addCategory(new Category("Transport"));
         Optional<EranosException> homonym = refusal(() -> group.addCategory(new Category("FOOD")));
         group.replaceCategory(group.category(transport).orElseThrow().renamed("Getting around"));
-        Category other = group.categories().getFirst().renamed("Other");
+        Category other = group.category(CategoryId.UNCATEGORISED).orElseThrow().renamed("Other");
         Optional<EranosException> builtIn = refusal(() -> group.replaceCategory(other));
         System.out.print(
                 """
@@ -234,15 +233,8 @@ final class Members {
         check(Optional.of("Getting around").equals(group.category(transport).map(Category::name)));
         check("lodging".equals(lodging.value()));
         check(
-                List.of(
-                                builtInCategory(group),
-                                Optional.of(food),
-                                Optional.of(transport),
-                                Optional.of(lodging))
-                        .equals(
-                                group.categories().stream()
-                                        .map(category -> Optional.of(category.id()))
-                                        .toList()));
+                List.of(CategoryId.UNCATEGORISED, food, transport, lodging)
+                        .equals(group.categories().stream().map(Category::id).toList()));
         return new Categories(food, lodging, transport);
     }
 }

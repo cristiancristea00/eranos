@@ -428,9 +428,6 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
     return total;
 }
 
-/// The identifier of the built-in category, which the group lists first.
-[[nodiscard]] CategoryId builtInCategory(ExpenseGroup const &group) noexcept { return group.categories().at(0).id; }
-
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
 void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
@@ -465,12 +462,11 @@ void printBalances(ExpenseGroup const &group) noexcept {
 /// Prints what @p group spent per category, and on how many expenses.
 void printCategories(ExpenseGroup const &group) noexcept {
     auto const expenses = group.expenses();
-    auto const builtIn = builtInCategory(group);
     std::vector<CategoryRow> rows;
     for (auto const &total : group.summary().categoryTotals) {
         auto const category = must(group.category(total.category));
-        auto const count = std::count_if(expenses.begin(), expenses.end(),
-                                         [&](Expense const &expense) noexcept { return total.category == expense.category.value_or(builtIn); });
+        auto const count =
+            std::count_if(expenses.begin(), expenses.end(), [&](Expense const &expense) noexcept { return total.category == expense.category; });
         rows.push_back({
             .name = category.has_value() ? category->name : "?",
             .expenses = std::to_string(count),
@@ -665,7 +661,7 @@ void validation(ExpenseGroup &group) noexcept {
     auto stored = must(group.category(transport)).value();
     stored.name = "Getting around";
     static_cast<void>(must(group.replaceCategory(stored)));
-    auto uncategorised = group.categories().at(0);
+    auto uncategorised = must(group.category(CategoryId::uncategorised())).value();
     uncategorised.name = "Other";
     auto const builtIn = refusal(group.replaceCategory(uncategorised));
     std::vector<std::string> names;
@@ -698,7 +694,7 @@ void validation(ExpenseGroup &group) noexcept {
     for (auto const &category : group.categories()) {
         order.push_back(category.id);
     }
-    check(order == std::vector{uncategorised.id, food, transport, lodging}, "lodging follows the generated identifiers");
+    check(order == std::vector{CategoryId::uncategorised(), food, transport, lodging}, "lodging follows the generated identifiers");
     return {.food = food, .lodging = lodging, .transport = transport};
 }
 
@@ -730,10 +726,10 @@ void validation(ExpenseGroup &group) noexcept {
     auto const count = must(participants(expense.payers)).size();
     auto const payers = 1 == count ? std::string() : std::format(", {} payers", count);
     std::string tip;
-    if (0 != must(tipAmount(expense)).minorUnits && expense.tip.has_value()) {
-        auto const *const fixed = std::get_if<FixedTipValue>(&expense.tip->value);
+    if (0 != must(tipAmount(expense)).minorUnits) {
+        auto const *const fixed = std::get_if<FixedTipValue>(&expense.tip.value);
         tip = std::format(
-            ", {} tip", (nullptr == fixed ? must(std::get<PercentageTipValue>(expense.tip->value).percentage.toString()) : fixed->amount.toString()));
+            ", {} tip", (nullptr == fixed ? must(std::get<PercentageTipValue>(expense.tip.value).percentage.toString()) : fixed->amount.toString()));
     }
     return split + payers + tip;
 }
@@ -884,7 +880,7 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
 
 /// Prints how the fado night's tip was shared, and its receipt.
 void printFado(ExpenseGroup const &group, Expense const &fado) noexcept {
-    auto const &tip = fado.tip.value();
+    auto const &tip = fado.tip;
     auto const *const fixed = std::get_if<FixedTipValue>(&tip.value);
     auto const rule = nullptr == fixed ? must(std::get<PercentageTipValue>(tip.value).percentage.toString()) : fixed->amount.toString();
     auto const *const shared = TipDistribution::EQUAL == tip.distribution ? "equally" : "in proportion to what each member ordered";
@@ -1128,7 +1124,7 @@ void summary(ExpenseGroup const &group, People const &people, Categories const &
     printLine("The spending per category:");
     printCategories(group);
     printLine("And each member's consumption per category:");
-    auto const builtIn = builtInCategory(group);
+    auto const builtIn = CategoryId::uncategorised();
     Money const zero(0, group.currency());
     std::vector<MemberCategoryRow> rows;
     for (auto const &member : group.members()) {
@@ -1171,7 +1167,7 @@ void summary(ExpenseGroup const &group, People const &people, Categories const &
 void removingACategory(ExpenseGroup &group, Categories const &categories) noexcept {
     section("9. Removing a category");
     auto const removed = must(group.removeCategory(categories.transport));
-    auto const uncategorised = builtInCategory(group);
+    auto const uncategorised = CategoryId::uncategorised();
     auto const builtIn = refusal(group.removeCategory(uncategorised));
     std::println("Removing {} moves its expenses to Uncategorised and the category\n"
                  "totals with them; no balance changes. The built-in category cannot be removed:\n"

@@ -434,18 +434,12 @@ static void addValueRow(Table *const table, ValueRow const *const row) { tableAd
     return line;
 }
 
-/// The identifier of the built-in category, which the group lists first.
-[[nodiscard]] static Id builtInCategory(EranosExpenseGroup const *const group) {
-    EranosCategoryList *categories = nullptr;
-    must(eranosExpenseGroupCategories(group, &categories));
-    EranosCategory *const first = eranosCategoryListGet(categories, 0);
-    check(nullptr != first, "every group has the built-in category");
+/// The identifier of the built-in category, which every group has.
+[[nodiscard]] static Id builtInCategory(void) {
     EranosText *const text = eranosTextCreate();
-    eranosCategoryId(first, text);
+    eranosIdentifierUncategorised(text);
     Id const id = idOf(text);
     eranosTextDestroy(text);
-    eranosCategoryDestroy(first);
-    eranosCategoryListDestroy(categories);
     return id;
 }
 
@@ -598,16 +592,16 @@ static void printBalances(EranosExpenseGroup const *const group) {
     eranosSummaryDestroy(summary);
 }
 
-/// How many expenses of @p group are in @p category, those without one counting as in @p builtIn.
-[[nodiscard]] static size_t expensesIn(EranosExpenseGroup const *const group, char const *const category, Id const builtIn) {
+/// How many expenses of @p group are in @p category.
+[[nodiscard]] static size_t expensesIn(EranosExpenseGroup const *const group, char const *const category) {
     EranosExpenseList *expenses = nullptr;
     must(eranosExpenseGroupExpenses(group, &expenses));
     EranosText *const text = eranosTextCreate();
     size_t count = 0;
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
-        char const *const own = eranosExpenseCategory(expense, text) ? eranosTextData(text) : builtIn.text;
-        if (0 == strcmp(own, category)) {
+        eranosExpenseCategory(expense, text);
+        if (0 == strcmp(eranosTextData(text), category)) {
             ++count;
         }
         eranosExpenseDestroy(expense);
@@ -634,7 +628,6 @@ static void printBalances(EranosExpenseGroup const *const group) {
 
 /// Prints what @p group spent per category, and on how many expenses.
 static void printCategories(EranosExpenseGroup const *const group) {
-    Id const builtIn = builtInCategory(group);
     EranosSummary *const summary = summaryOf(group);
     EranosCategoryTotalList *const totals = eranosSummaryCategoryTotals(summary);
     Table *const table = categoryTable(1);
@@ -644,7 +637,7 @@ static void printCategories(EranosExpenseGroup const *const group) {
         eranosCategoryTotalCategory(total, text);
         addCategoryRow(table, &(CategoryRow){
                                   .name = categoryName(group, eranosTextData(text)),
-                                  .expenses = lineOf("%zu", expensesIn(group, eranosTextData(text), builtIn)),
+                                  .expenses = lineOf("%zu", expensesIn(group, eranosTextData(text))),
                                   .total = moneyLine(eranosCategoryTotalTotal(total)),
                               });
         eranosCategoryTotalDestroy(total);
@@ -1115,7 +1108,7 @@ static void validation(EranosExpenseGroup *const group) {
     Id const transport = addCategory(group, nullptr, "Transport");
     EranosError *const homonym = categoryRefusal(group, "FOOD");
     must(renamed(group, transport, "Getting around"));
-    Id const uncategorised = builtInCategory(group);
+    Id const uncategorised = builtInCategory();
     EranosError *const builtIn = renamed(group, uncategorised, "Other");
     Line const names = categoryNames(group);
     printFormatted("Every group has the built-in Uncategorised; this one adds Food, Lodging, under the\n"
@@ -1158,13 +1151,13 @@ static void validation(EranosExpenseGroup *const group) {
     unreachable();
 }
 
-/// The tip of @p expense, as ", 10% tip" or ", 5.00 EUR tip", or nothing when it has none.
+/// The tip of @p expense, as ", 10% tip" or ", 5.00 EUR tip", or nothing when it comes to zero.
 [[nodiscard]] static Line tipOf(EranosExpense const *const expense) {
     EranosMoney *amount = nullptr;
     must(eranosExpenseTipAmount(expense, &amount));
     EranosTipRule *const tip = eranosExpenseTip(expense);
     Line line = {};
-    if (0 != eranosMoneyMinorUnits(amount) && nullptr != tip) {
+    if (0 != eranosMoneyMinorUnits(amount)) {
         EranosTipValue *const value = eranosTipRuleValue(tip);
         int32_t basisPoints = 0;
         if (eranosTipValueBasisPoints(value, &basisPoints)) {
@@ -1471,7 +1464,6 @@ static void printFado(EranosExpenseGroup const *const group, Id const id) {
     Line const date = textLine(text);
     Line const place = eranosExpenseDescription(fado, text) ? textLine(text) : lineOf("%s", "");
     EranosTipRule *const tip = eranosExpenseTip(fado);
-    check(nullptr != tip, "the fado night has a tip");
     EranosTipValue *const value = eranosTipRuleValue(tip);
     int32_t basisPoints = 0;
     Line rule = {};
@@ -1892,7 +1884,7 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
 
 /// Prints each member's consumption per category.
 static void printMemberCategories(EranosExpenseGroup const *const group, Categories const *const categories) {
-    Id const builtIn = builtInCategory(group);
+    Id const builtIn = builtInCategory();
     Line const zero = zeroOf(group);
     EranosSummary *const summary = summaryOf(group);
     EranosMemberList *members = nullptr;
@@ -1977,7 +1969,7 @@ static void summary(EranosExpenseGroup const *const group, People const *const p
     EranosMemberSummary *const eva = memberTotals(group, people->eva);
     check(isBalance(eranosMemberSummaryBalance(eva), ERANOS_BALANCE_KIND_OWES, 4'260), "Eva owes 42.60 EUR");
     EranosCategoryTotalList *const categoryTotals = eranosSummaryCategoryTotals(totals);
-    Id const builtIn = builtInCategory(group);
+    Id const builtIn = builtInCategory();
     check(isMinorUnits(categoryTotal(categoryTotals, categories->food.text), 17'440), "the food came to 174.40 EUR");
     check(isMinorUnits(categoryTotal(categoryTotals, categories->lodging.text), 80'000), "the lodging came to 800.00 EUR");
     check(isMinorUnits(categoryTotal(categoryTotals, categories->transport.text), 18'850), "getting around came to 188.50 EUR");
@@ -2001,7 +1993,8 @@ static void summary(EranosExpenseGroup const *const group, People const *const p
     bool found = false;
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
-        found = found || (eranosExpenseCategory(expense, text) && 0 == strcmp(eranosTextData(text), category.text));
+        eranosExpenseCategory(expense, text);
+        found = found || 0 == strcmp(eranosTextData(text), category.text);
         eranosExpenseDestroy(expense);
     }
     eranosTextDestroy(text);
@@ -2014,7 +2007,7 @@ static void removingACategory(EranosExpenseGroup *const group, Categories const 
     section("9. Removing a category");
     EranosCategory *removed = nullptr;
     must(eranosExpenseGroupRemoveCategory(group, categories->transport.text, &removed));
-    Id const uncategorised = builtInCategory(group);
+    Id const uncategorised = builtInCategory();
     EranosCategory *kept = nullptr;
     EranosError *const builtIn = eranosExpenseGroupRemoveCategory(group, uncategorised.text, &kept);
     check(isFailure(builtIn, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_BUILT_IN_CATEGORY) && nullptr == kept,

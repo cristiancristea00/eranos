@@ -14,6 +14,7 @@ import {
     type ExpenseId,
     type MemberId,
     type TransferId,
+    UNCATEGORISED,
     categoryId,
     expenseId,
     generateCategoryId,
@@ -306,6 +307,11 @@ export interface TipRule {
     readonly distribution?: TipDistribution;
 }
 
+/** No tip: 0 % of the amount, shared in proportion to each share, which an expense has until it is given another tip. */
+// The literal, since a module constant is evaluated before `init` loads the WebAssembly module; a test holds it to the
+// library's.
+export const NO_TIP: TipRule = { value: { kind: 'percentage', percentage: Percentage.known(0) }, distribution: TipDistribution.PROPORTIONAL };
+
 /**
  * The tip the generated code holds as `tip`.
  *
@@ -387,27 +393,28 @@ export interface Expense {
     readonly split: ExpenseSplit;
     /** The day it was bought. */
     readonly date: CalendarDate;
-    /** The tip on top of the amount. */
-    readonly tip?: TipRule;
+    /** The tip on top of the amount: {@link NO_TIP} for an expense without one. */
+    readonly tip: TipRule;
     /** The time of day it was bought. */
     readonly time?: TimeOfDay;
-    /** The category; absent for the built-in one. */
-    readonly category?: CategoryId;
+    /** The category: the built-in one, {@link UNCATEGORISED}, until the expense is given another. */
+    readonly category: CategoryId;
     /** A longer description. */
     readonly description?: string;
 }
 
 /**
  * The expense that `fields` describe, under an identifier this call generates; a `{ id, … }` literal takes the app's own
- * instead.
+ * instead, and names the tip and the category, which this call fills in when `fields` leave them out: {@link NO_TIP} and
+ * {@link UNCATEGORISED}.
  *
- * @param fields - Every field of the expense but its identifier
+ * @param fields - Every field of the expense but its identifier, the tip and the category optional
  * @returns The expense
  */
-export function createExpense(fields: Omit<Expense, 'id'>): Expense {
+export function createExpense(fields: Omit<Expense, 'id' | 'tip' | 'category'> & Partial<Pick<Expense, 'tip' | 'category'>>): Expense {
     // The generated identifier comes last, so that an `id` the fields carry at run time, which `Omit` lets through, does not
-    // replace it.
-    return { ...fields, id: generateExpenseId() };
+    // replace it; a tip or a category the fields carry as `undefined` at run time takes its default.
+    return { ...fields, tip: fields.tip ?? NO_TIP, category: fields.category ?? UNCATEGORISED, id: generateExpenseId() };
 }
 
 /**
@@ -423,9 +430,9 @@ export function convertedExpense(expense: internal.Expense): Expense {
         payers: convertedSplit(expense.payers),
         split: convertedExpenseSplit(expense.split),
         date: CalendarDate.converted(expense.date),
-        ...(undefined === expense.tip ? {} : { tip: convertedTipRule(expense.tip) }),
+        tip: convertedTipRule(expense.tip),
         ...(undefined === expense.time ? {} : { time: TimeOfDay.converted(expense.time) }),
-        ...(undefined === expense.category ? {} : { category: categoryId(expense.category) }),
+        category: categoryId(expense.category),
         ...(undefined === expense.description ? {} : { description: expense.description }),
     };
 }
@@ -443,9 +450,9 @@ export function generatedExpense(expense: Expense): internal.Expense {
         payers: generatedSplit(expense.payers),
         split: generatedExpenseSplit(expense.split),
         date: expense.date.generated(),
-        ...(undefined === expense.tip ? {} : { tip: generatedTipRule(expense.tip) }),
+        tip: generatedTipRule(expense.tip),
         ...(undefined === expense.time ? {} : { time: expense.time.generated() }),
-        ...(undefined === expense.category ? {} : { category: expense.category }),
+        category: expense.category,
         ...(undefined === expense.description ? {} : { description: expense.description }),
     });
 }

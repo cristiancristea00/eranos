@@ -14,25 +14,24 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
     print("The spending per category:")
     try printCategories(group)
     print("And each member's consumption per category:")
-    let builtIn = try builtInCategory(group)
     let zero = Money(minorUnits: 0, currency: try group.currency())
     printTable(
         try group.members().map { member in
             let totals = summary.memberCategoryTotals.first { totals in totals.member == member.id }?.totals ?? []
-            let total = { (category: Category.ID?) in totals.first { total in total.category == category }?.total ?? zero }
+            let total = { (category: Category.ID) in totals.first { total in total.category == category }?.total ?? zero }
             return MemberCategoryRow(
                 name: member.firstName,
                 food: total(categories.food),
                 lodging: total(categories.lodging),
                 transport: total(categories.transport),
-                uncategorised: total(builtIn)
+                uncategorised: total(.uncategorised)
             )
         },
         numbersFrom: 1
     )
 
     let member = { (id: Member.ID) in totals(of: id, in: summary) }
-    let category = { (id: Category.ID?) in summary.categoryTotals.first { total in total.category == id }?.total }
+    let category = { (id: Category.ID) in summary.categoryTotals.first { total in total.category == id }?.total }
     expect(try eur("1222.90"), summary.totalSpent, "the total spent")
     expect(try eur("890.00"), member(people.ana)?.paid, "what Ana paid")
     expect(try eur("140.00"), member(people.ana)?.received, "what Ana received")
@@ -42,7 +41,7 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
     expect(try eur("174.40"), category(categories.food), "the food")
     expect(try eur("800.00"), category(categories.lodging), "the lodging")
     expect(try eur("188.50"), category(categories.transport), "the transport")
-    expect(try eur("60.00"), category(builtIn), "the uncategorised spending")
+    expect(try eur("60.00"), category(.uncategorised), "the uncategorised spending")
     for totals in summary.members {
         let byCategory = summary.memberCategoryTotals.first { entry in entry.member == totals.member }?.totals ?? []
         expect(try sum(zero.currency, byCategory.map(\.total)), totals.share, "a member's consumption by category")
@@ -54,10 +53,7 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
 func removingACategory(_ group: ExpenseGroup, _ categories: Categories) throws(EranosError) {
     section("9. Removing a category")
     let removed = try group.remove(categories.transport)
-    guard let uncategorised = try builtInCategory(group) else {
-        preconditionFailure("every group has the built-in category")
-    }
-    let builtIn = Result { () throws(EranosError) in try group.remove(uncategorised) }
+    let builtIn = Result { () throws(EranosError) in try group.remove(Category.ID.uncategorised) }
     print("""
         Removing \(removed.name) moves its expenses to Uncategorised and the category
         totals with them; no balance changes. The built-in category cannot be removed:
@@ -70,7 +66,7 @@ func removingACategory(_ group: ExpenseGroup, _ categories: Categories) throws(E
     }
     let transport = try group.category(withID: categories.transport)
     precondition(nil == transport, "Transport is removed")
-    expect(try eur("248.50"), try group.summary().categoryTotals.first { total in total.category == uncategorised }?.total, "the uncategorised spending")
+    expect(try eur("248.50"), try group.summary().categoryTotals.first { total in Category.ID.uncategorised == total.category }?.total, "the uncategorised spending")
     let moved = try group.expenses().allSatisfy { expense in expense.category != categories.transport }
     precondition(moved, "no expense is in Transport")
 }

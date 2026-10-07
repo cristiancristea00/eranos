@@ -231,6 +231,17 @@ class ValuesTest {
     }
 
     /**
+     * A built-in category's identifier other than the library's would name a category no group holds: an expense filed under
+     * it would be refused, and a total looked up by it would find none.
+     */
+    @Test
+    fun theBuiltInCategoryIsIdentifiedByTheNilUuid() {
+        val text = "00000000-0000-0000-0000-000000000000"
+        assertEquals(text, CategoryId.UNCATEGORISED.value)
+        assertEquals(CategoryId.UNCATEGORISED, CategoryId.parse(text))
+    }
+
+    /**
      * A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of
      * printing.
      */

@@ -30,14 +30,14 @@ public struct Expense: Hashable, Sendable {
     /// The day it was bought.
     public var date: CalendarDate
 
-    /// The tip on top of the amount.
-    public var tip: TipRule?
+    /// The tip on top of the amount: ``TipRule/noTip`` for an expense without one.
+    public var tip: TipRule
 
     /// The time of day it was bought.
     public var time: TimeOfDay?
 
-    /// The category; absent for the built-in one.
-    public var category: Category.ID?
+    /// The category: the built-in one, ``Identifier/uncategorised``, until it is given another.
+    public var category: Category.ID
 
     /// A longer description.
     public var description: String?
@@ -50,9 +50,9 @@ public struct Expense: Hashable, Sendable {
             payers: payers.generated,
             split: split.generated,
             date: date.generated,
-            tip: tip?.generated,
+            tip: tip.generated,
             time: time?.generated,
-            category: category?.rawValue,
+            category: category.rawValue,
             description: description
         )
     }
@@ -67,9 +67,9 @@ public struct Expense: Hashable, Sendable {
         payers: Split,
         split: ExpenseSplit,
         date: CalendarDate,
-        tip: TipRule? = nil,
+        tip: TipRule = .noTip,
         time: TimeOfDay? = nil,
-        category: Category.ID? = nil,
+        category: Category.ID = .uncategorised,
         description: String? = nil
     ) {
         self.id = id
@@ -93,9 +93,9 @@ public struct Expense: Hashable, Sendable {
         payers: Split,
         split: ExpenseSplit,
         date: CalendarDate,
-        tip: TipRule? = nil,
+        tip: TipRule = .noTip,
         time: TimeOfDay? = nil,
-        category: Category.ID? = nil,
+        category: Category.ID = .uncategorised,
         description: String? = nil
     ) {
         self.init(
@@ -120,9 +120,9 @@ public struct Expense: Hashable, Sendable {
             payers: Split(expense.payers),
             split: ExpenseSplit(expense.split),
             date: CalendarDate(expense.date),
-            tip: expense.tip.map(TipRule.init),
+            tip: TipRule(expense.tip),
             time: expense.time.map(TimeOfDay.init),
-            category: expense.category.map { Category.ID(rawValue: $0) },
+            category: Category.ID(rawValue: expense.category),
             description: expense.description
         )
     }
@@ -254,6 +254,10 @@ public struct ExpenseItem: Hashable, Sendable {
 
 /// A tip on top of an expense's amount, which its payers cover.
 public struct TipRule: Hashable, Sendable {
+    /// No tip: 0 % of the amount, shared proportionally, which an expense has until it is given
+    /// another tip.
+    public static let noTip = Self(EranosGenerated.tipRuleNone())
+
     /// How the tip is expressed.
     public var value: TipValue
 

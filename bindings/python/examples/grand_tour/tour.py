@@ -242,22 +242,6 @@ def cell(lines: Iterable[str]) -> str:
     return '\n'.join(lines)
 
 
-def built_in_category(group: ExpenseGroup) -> CategoryId:
-    """
-    Find the identifier of the built-in category, which the group lists first.
-
-    Args:
-        group: The group.
-
-    Returns:
-        The identifier.
-
-    """
-    built_in = group.categories()[0].id
-    assert built_in is not None, 'every category a group holds has an identifier'
-    return built_in
-
-
 def _balance_row(member: Member, summary: Summary, zero: Money) -> BalanceRow:
     """
     Write the row of member among the balances.
@@ -300,14 +284,12 @@ def print_categories(group: ExpenseGroup) -> None:
 
     """
     expenses = group.expenses()
-    built_in = built_in_category(group)
     print_table(
         CategoryRow,
         [
             CategoryRow(
                 name='?' if (category := group.category(total.category)) is None else category.name,
-                # An expense in the built-in category names none.
-                expenses=sum(1 for expense in expenses if (expense.category or built_in) == total.category),
+                expenses=sum(1 for expense in expenses if expense.category == total.category),
                 total=total.total,
             )
             for total in group.summary().category_totals

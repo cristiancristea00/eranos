@@ -71,14 +71,14 @@ fn dinner() -> Expense {
             month: 9,
             day: 23,
         },
-        tip: Some(TipRule {
+        tip: TipRule {
             value: TipValue::Percentage {
                 basis_points: 1_000,
             },
             distribution: TipDistribution::Proportional,
-        }),
+        },
         time: None,
-        category: None,
+        category: category_id_uncategorised(),
         description: None,
     }
 }
@@ -150,6 +150,16 @@ fn generated_identifiers_are_distinct_and_valid() {
         assert_eq!(generated.chars().nth(14), Some('7'));
         assert_eq!(generated.to_lowercase(), generated);
     }
+}
+
+/// An app that left an expense in the built-in category would name another
+/// category than the one every group has, or one the identifier rules
+/// refuse.
+#[test]
+fn the_built_in_category_is_named_by_the_nil_uuid() {
+    let uncategorised = category_id_uncategorised();
+    assert_eq!(uncategorised, "00000000-0000-0000-0000-000000000000");
+    assert_eq!(identifier_parse(&uncategorised), Ok(uncategorised.clone()));
 }
 
 /// Amounts would be read or written another way than the library's, or a
@@ -485,6 +495,21 @@ fn contact_and_account_details_parse_as_the_library_does() {
     ));
 }
 
+/// An app that left an expense without a tip would give it a tip, or one
+/// shared another way than the library's own expense without a tip.
+#[test]
+fn the_no_tip_rule_is_zero_per_cent_shared_proportionally() {
+    let none = tip_rule_none();
+    assert_eq!(
+        none,
+        TipRule {
+            value: TipValue::Percentage { basis_points: 0 },
+            distribution: TipDistribution::Proportional,
+        }
+    );
+    assert_eq!(none.to_library(), Ok(expenses::TipRule::NONE));
+}
+
 /// The tip and the total the apps show for an expense would differ from
 /// what the group records when it adds the expense.
 #[test]
@@ -492,7 +517,7 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     assert_eq!(expense_tip_amount(&dinner()), Ok(euros(300)));
     assert_eq!(expense_total(&dinner()), Ok(euros(3_300)));
     let untipped = Expense {
-        tip: None,
+        tip: tip_rule_none(),
         ..dinner()
     };
     assert_eq!(expense_tip_amount(&untipped), Ok(euros(0)));
@@ -507,10 +532,10 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
     assert!(is_unknown_currency(&expense_tip_amount(&unknown)));
     assert!(is_unknown_currency(&expense_total(&unknown)));
     let negative = Expense {
-        tip: Some(TipRule {
+        tip: TipRule {
             value: TipValue::Percentage { basis_points: -1 },
             distribution: TipDistribution::Equal,
-        }),
+        },
         ..dinner()
     };
     for refused in [expense_tip_amount(&negative), expense_total(&negative)] {
@@ -526,10 +551,10 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
         );
     }
     let fixed_in_lei = Expense {
-        tip: Some(TipRule {
+        tip: TipRule {
             value: TipValue::Fixed { amount: lei(100) },
             distribution: TipDistribution::Equal,
-        }),
+        },
         ..dinner()
     };
     assert!(matches!(
@@ -543,10 +568,10 @@ fn an_expense_derives_its_tip_and_total_as_the_group_does() {
         cost: Cost::Local {
             amount: euros(i64::MAX),
         },
-        tip: Some(TipRule {
+        tip: TipRule {
             value: TipValue::Fixed { amount: euros(1) },
             distribution: TipDistribution::Equal,
-        }),
+        },
         ..dinner()
     };
     assert!(matches!(

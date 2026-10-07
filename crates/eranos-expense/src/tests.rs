@@ -125,7 +125,7 @@ fn a_minimal_expense_keeps_its_fields_and_defaults() {
     // category and no tip.
     assert_eq!(expense.description(), None);
     assert_eq!(expense.category(), CategoryId::UNCATEGORISED);
-    assert_eq!(expense.tip(), TipRule::default());
+    assert_eq!(expense.tip(), TipRule::NONE);
     assert_eq!(expense.time(), None);
     // Without a tip, the total is the amount.
     assert_eq!(expense.total(), euros(9_000));
@@ -459,12 +459,8 @@ fn total_and_tip_amount_include_the_tip() {
     assert_eq!(zero_tip_expense.tip_amount(), euros(0));
     assert_eq!(zero_tip_expense.total(), euros(9_000));
     // A cleared tip.
-    let cleared_tip_expense = expense
-        .to_builder()
-        .tip(TipRule::default())
-        .build()
-        .unwrap();
-    assert_eq!(cleared_tip_expense.tip(), TipRule::default());
+    let cleared_tip_expense = expense.to_builder().tip(TipRule::NONE).build().unwrap();
+    assert_eq!(cleared_tip_expense.tip(), TipRule::NONE);
     assert_eq!(cleared_tip_expense.total(), euros(9_000));
 }
 

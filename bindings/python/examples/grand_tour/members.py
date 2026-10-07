@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import ClassVar, assert_never, final, override
 
 from eranos import (
+    UNCATEGORISED,
     PaymentAccount,
     Category,
     CurrencyCode,
@@ -321,8 +322,10 @@ def add_categories(group: ExpenseGroup) -> Categories:
     stored = group.category(transport)
     assert stored is not None, 'Transport was added'
     group.replace_category(copy.replace(stored, name='Getting around'))
-    uncategorised = group.categories()[0]
-    built_in = refusal(lambda: group.replace_category(copy.replace(uncategorised, name='Other')))
+    uncategorised = group.category(UNCATEGORISED)
+    assert uncategorised is not None, 'every group has the built-in category'
+    other = copy.replace(uncategorised, name='Other')
+    built_in = refusal(lambda: group.replace_category(other))
     listed = ', '.join(category.name for category in group.categories())
     print_lines(
         'Every group has the built-in Uncategorised; this one adds Food, Lodging, under the',
@@ -348,5 +351,5 @@ def add_categories(group: ExpenseGroup) -> Categories:
     assert renamed is not None
     assert renamed.name == 'Getting around'
     assert lodging == 'lodging'
-    assert [category.id for category in group.categories()] == [uncategorised.id, food, transport, lodging]
+    assert [category.id for category in group.categories()] == [UNCATEGORISED, food, transport, lodging]
     return Categories(food=food, lodging=lodging, transport=transport)

@@ -12,8 +12,9 @@ import java.util.Optional;
  * <p>An expense has an identifier from the moment its builder starts: the one given to {@link
  * #builder(ExpenseId, String, Cost, Split, ExpenseSplit, CalendarDate)}, or one that {@link
  * #builder(String, Cost, Split, ExpenseSplit, CalendarDate)} generates, and keeps it through every
- * edit. To change an expense, read it from the group, edit it through {@link #toBuilder}, and pass
- * the result to {@link ExpenseGroup#replaceExpense}.
+ * edit. Its builder starts it without a tip, {@link TipRule#NONE}, and in the built-in category,
+ * {@link CategoryId#UNCATEGORISED}. To change an expense, read it from the group, edit it through
+ * {@link #toBuilder}, and pass the result to {@link ExpenseGroup#replaceExpense}.
  */
 public final class Expense {
     private final ExpenseId id;
@@ -109,9 +110,9 @@ public final class Expense {
                         Conversions.converted(expense.payers()),
                         Conversions.converted(expense.split()),
                         CalendarDate.converted(expense.date()))
-                .tip(null == expense.tip() ? null : TipRule.converted(expense.tip()))
+                .tip(TipRule.converted(expense.tip()))
                 .time(null == expense.time() ? null : TimeOfDay.converted(expense.time()))
-                .category(null == expense.category() ? null : new CategoryId(expense.category()))
+                .category(new CategoryId(expense.category()))
                 .description(expense.description())
                 .build();
     }
@@ -129,9 +130,9 @@ public final class Expense {
                 Conversions.generated(payers),
                 Conversions.generated(split),
                 date.generated(),
-                null == tip ? null : tip.generated(),
+                tip.generated(),
                 null == time ? null : time.generated(),
-                null == category ? null : category.value(),
+                category.value(),
                 description);
     }
 
@@ -203,10 +204,10 @@ public final class Expense {
     /**
      * The tip on top of the amount.
      *
-     * @return the tip, if the expense has one
+     * @return the tip: {@link TipRule#NONE} for an expense without one
      */
-    public Optional<TipRule> tip() {
-        return Optional.ofNullable(tip);
+    public TipRule tip() {
+        return tip;
     }
 
     /**
@@ -232,10 +233,11 @@ public final class Expense {
     /**
      * The category.
      *
-     * @return the category, empty for the built-in one
+     * @return the category: the built-in one's, {@link CategoryId#UNCATEGORISED}, until the expense
+     *     is given another
      */
-    public Optional<CategoryId> category() {
-        return Optional.ofNullable(category);
+    public CategoryId category() {
+        return category;
     }
 
     /**
@@ -268,9 +270,9 @@ public final class Expense {
                 && payers.equals(expense.payers)
                 && split.equals(expense.split)
                 && date.equals(expense.date)
-                && Objects.equals(tip, expense.tip)
+                && tip.equals(expense.tip)
                 && Objects.equals(time, expense.time)
-                && Objects.equals(category, expense.category)
+                && category.equals(expense.category)
                 && Objects.equals(description, expense.description);
     }
 
@@ -312,9 +314,9 @@ public final class Expense {
         private Split payers;
         private ExpenseSplit split;
         private CalendarDate date;
-        private TipRule tip;
+        private TipRule tip = TipRule.NONE;
         private TimeOfDay time;
-        private CategoryId category;
+        private CategoryId category = CategoryId.UNCATEGORISED;
         private String description;
 
         private Builder(
@@ -394,13 +396,14 @@ public final class Expense {
         }
 
         /**
-         * Sets the tip; {@code null} leaves the expense without one.
+         * Sets the tip; {@link TipRule#NONE}, which the builder starts at, leaves the expense
+         * without one.
          *
-         * @param tip the tip, or {@code null}
+         * @param tip the tip
          * @return this builder
          */
         public Builder tip(TipRule tip) {
-            this.tip = tip;
+            this.tip = Objects.requireNonNull(tip, "tip");
             return this;
         }
 
@@ -416,13 +419,14 @@ public final class Expense {
         }
 
         /**
-         * Sets the category; {@code null} leaves the expense in the built-in one.
+         * Sets the category; {@link CategoryId#UNCATEGORISED}, which the builder starts at, leaves
+         * the expense in the built-in one.
          *
-         * @param category the category, or {@code null}
+         * @param category the category
          * @return this builder
          */
         public Builder category(CategoryId category) {
-            this.category = category;
+            this.category = Objects.requireNonNull(category, "category");
             return this;
         }
 

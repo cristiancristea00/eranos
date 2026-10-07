@@ -8,10 +8,12 @@ import {
     convertedCategory,
     convertedExpense,
     convertedMember,
+    convertedTipRule,
     convertedTransfer,
     generatedCategory,
     generatedExpense,
     generatedMember,
+    generatedTipRule,
     generatedTransfer,
 } from '../src/entries.js';
 import {
@@ -26,11 +28,13 @@ import {
     Iban,
     IdError,
     Money,
+    NO_TIP,
     Parts,
     Percentage,
     PhoneNumber,
     TimeOfDay,
     TipDistribution,
+    UNCATEGORISED,
     Username,
     createCategory,
     createExpense,
@@ -46,6 +50,7 @@ import {
     parseTransferId,
     splitMembers,
 } from '../src/index.js';
+import * as internal from '../src/internal/eranos.js';
 import { Flat } from './flat.js';
 
 /** The two expenses of {@link expenses}. */
@@ -130,6 +135,46 @@ void describe('the expenses, members, categories, and transfers', () => {
             assert.equal(stored.category, expense.category);
             assert.equal(stored.description, expense.description);
         }
+    });
+
+    /**
+     * An expense without a tip or a category that read back with either left out, or with another value than the library's
+     * no tip and built-in category, would show an app a tip or a category it never set; constants that named another rule or
+     * another category than the library's would make an app's check for either miss.
+     */
+    void it("reads back an expense without a tip or a category under the library's no tip and built-in category", () => {
+        const flat = new Flat();
+        assert.equal(UNCATEGORISED, internal.categoryIdUncategorised());
+        assert.equal(flat.group.categoriesSync()[0]?.id, UNCATEGORISED);
+        assert.deepEqual(NO_TIP, convertedTipRule(internal.tipRuleNone()));
+        assert.deepEqual(generatedTipRule(NO_TIP), internal.tipRuleNone());
+        const taxi = flat.expense('Taxi', flat.ana, [flat.ana, flat.bob]);
+        assert.equal(taxi.tip, NO_TIP);
+        assert.equal(taxi.category, UNCATEGORISED);
+        const stored = flat.group.expenseSync(flat.group.addExpenseSync(taxi));
+        assert.ok(undefined !== stored);
+        assert.deepEqual(stored.tip, NO_TIP);
+        assert.equal(stored.category, UNCATEGORISED);
+        assert.deepEqual(stored, convertedExpense(generatedExpense(taxi)));
+        // Plain JavaScript can pass `undefined` where the types leave a field out.
+        const untyped = { ...taxi, tip: undefined, category: undefined } as unknown as Parameters<typeof createExpense>[0];
+        const filled = createExpense(untyped);
+        assert.deepEqual(filled, { ...taxi, id: filled.id });
+    });
+
+    /**
+     * A tip of 0 % set on purpose that read back as another rule than no tip when it is shared in proportion, or as no tip
+     * when it is shared equally, would show an app another tip than the one it set.
+     */
+    void it('reads back a tip of 0 % as the rule it is', () => {
+        const flat = new Flat();
+        const zero = { kind: 'percentage', percentage: Percentage.ofBasisPoints(0) } as const;
+        const proportional = { ...flat.expense('Water', flat.ana, [flat.ana]), tip: { value: zero, distribution: TipDistribution.PROPORTIONAL } };
+        assert.deepEqual(flat.group.expenseSync(flat.group.addExpenseSync(proportional))?.tip, NO_TIP);
+        const equal = { ...flat.expense('Bread', flat.ana, [flat.ana]), tip: { value: zero, distribution: TipDistribution.EQUAL } };
+        const stored = flat.group.expenseSync(flat.group.addExpenseSync(equal))?.tip;
+        assert.deepEqual(stored, equal.tip);
+        assert.notDeepEqual(stored, NO_TIP);
     });
 
     /** The tip, total, and members an app shows for an expense would differ from those the group records when it adds it. */

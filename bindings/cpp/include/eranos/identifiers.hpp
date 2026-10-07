@@ -146,6 +146,15 @@ class CategoryId final {
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
     [[nodiscard]] static std::expected<CategoryId, Error> parse(std::string_view const text) noexcept;
 
+    /// The identifier of the built-in category, Uncategorised, which every group has and every expense is in until it is given another: the text
+    /// of the nil UUID, `00000000-0000-0000-0000-000000000000`.
+    ///
+    /// @return The identifier
+    [[nodiscard]] static inline constexpr CategoryId uncategorised() noexcept {
+        // The library's text, written out so that the function is constexpr; a test holds the two equal.
+        return CategoryId("00000000-0000-0000-0000-000000000000");
+    }
+
     /// The identifier's text, as it was given or generated.
     ///
     /// @return The text

@@ -14,6 +14,13 @@ import java.util.Objects;
  */
 public record CategoryId(String value) {
     /**
+     * The identifier of the built-in category, Uncategorised, which every group has and every
+     * expense is in until it is given another: the text of the nil UUID, {@code
+     * 00000000-0000-0000-0000-000000000000}.
+     */
+    public static final CategoryId UNCATEGORISED = new CategoryId(Eranos.categoryIdUncategorised());
+
+    /**
      * The identifier written {@code value}, as it is: the library checks it when a call carries it.
      *
      * @param value the identifier's text

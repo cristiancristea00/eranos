@@ -67,12 +67,13 @@ pub use reader::ExpenseGroupReader;
 pub use settlement::{Payment, SettlementPlan, SettlementStrategy};
 pub use transfer::Transfer;
 pub use values::{
-    balance_format, calendar_date_format, calendar_date_parse, currencies, currency_details,
-    email_parse, exchange_rate_convert, exchange_rate_parse, expense_members, expense_tip_amount,
-    expense_total, iban_country_code, iban_parse, identifier_generate, identifier_parse,
-    language_parse, money_add, money_format, money_parse, money_subtract, parts_format,
-    parts_parse, percentage_format, percentage_parse, phone_number_international,
-    phone_number_parse, split_members, time_of_day_format, time_of_day_parse, username_parse,
+    balance_format, calendar_date_format, calendar_date_parse, category_id_uncategorised,
+    currencies, currency_details, email_parse, exchange_rate_convert, exchange_rate_parse,
+    expense_members, expense_tip_amount, expense_total, iban_country_code, iban_parse,
+    identifier_generate, identifier_parse, language_parse, money_add, money_format, money_parse,
+    money_subtract, parts_format, parts_parse, percentage_format, percentage_parse,
+    phone_number_international, phone_number_parse, split_members, time_of_day_format,
+    time_of_day_parse, tip_rule_none, username_parse,
 };
 
 /// The identifier `text`, as it is.

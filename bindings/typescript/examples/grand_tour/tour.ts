@@ -148,11 +148,6 @@ export function rate(cost: Cost): ExchangeRate {
     return 'converted' === cost.kind ? cost.rate : ExchangeRate.parse('1');
 }
 
-/** The identifier of the built-in category, which the group lists first. */
-export function builtInCategory(group: ExpenseGroup): CategoryId | undefined {
-    return group.categoriesSync()[0]?.id;
-}
-
 export function printBalances(group: ExpenseGroup): void {
     const summary = group.summarySync();
     const zero = new Money(0n, group.currencySync());
@@ -178,12 +173,11 @@ export function printBalances(group: ExpenseGroup): void {
 
 export function printCategories(group: ExpenseGroup): void {
     const expenses = group.expensesSync();
-    const builtIn = builtInCategory(group);
     printTable(
         categoryColumns,
         group.summarySync().categoryTotals.map((total) => ({
             name: group.categorySync(total.category)?.name ?? '?',
-            expenses: expenses.filter((expense) => (expense.category ?? builtIn) === total.category).length,
+            expenses: expenses.filter((expense) => expense.category === total.category).length,
             total: total.total,
         })),
         1,

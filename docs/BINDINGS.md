@@ -128,7 +128,11 @@ flowchart TD
   invisible from Java, and JavaScript has one number type. A record is
   checked by the library's rules on its way in, so a bad value, a number
   too large for its field included, is a typed error and never wraps into
-  another value.
+  another value. A value the library always holds is never optional in a
+  record: an expense's `category` and `tip` read back as the library
+  holds them, the built-in category's identifier and the no-tip rule (0 %
+  shared proportionally) when the expense has no other, and a record to
+  add or replace sets them as given.
 - **Identity is given or generated.** Every entry and every new group
   carries an identifier from the moment it is made: the app's own, any
   text the library accepts, such as the key of its store, or a generated
@@ -186,7 +190,9 @@ flowchart TD
 - **The value helpers.** Free functions parse and write every value as the
   library does (identifiers, amounts, rates, percentages, parts, dates,
   times, language tags, balances, currencies, and contact and account
-  details), so every text a binding shows is the library's.
+  details), so every text a binding shows is the library's, and give the
+  values an expense starts at: `category_id_uncategorised`, the built-in
+  category's identifier, and `tip_rule_none`, the no-tip rule.
 - **Shapes every generator takes.** The types keep to what UniFFI 0.29,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
@@ -338,10 +344,14 @@ and times, amounts, lists of text, and the value helpers stay hand-written
 beside them. Diplomat carries opaque
 objects, plain structs, and C-like enums, so a record, a list, and an enum
 with data is an opaque object: a record has a constructor of its required
-fields, a getter of every field, and, for an entry, a setter of each; a
-list has `len` and `get`, and `create` and `push` when a caller builds
-one; an enum with data has `kind`, a constructor per variant, and a getter
-per field. A date and a time of day are plain structs. Text crosses as
+fields, which starts every other field absent, empty, or at its default
+(an item's quantity at 1, an expense's tip at the no-tip rule and its
+category at the built-in one), a getter of every field, and, for an entry,
+a setter of each; a list has `len` and `get`, and `create` and `push` when
+a caller builds one; an enum with data has `kind`, a constructor per
+variant, and a getter per field. The no-tip rule is `EranosTipRule`'s
+`none`, and the built-in category's identifier `EranosIdentifier`'s
+`uncategorised`. A date and a time of day are plain structs. Text crosses as
 bytes, which the bridge checks are UTF-8, reporting `InvalidText`
 otherwise, and text a call returns is written into a `DiplomatWrite`. An
 error crosses as the binding core's `FlatError`: a kind, a failure, the
@@ -388,6 +398,12 @@ Design Guidelines:
   (`Member(firstName:)`, which calls the first with `.generate()`); so has
   the group, `ExpenseGroup(id:name:currency:description:language:)` and
   `ExpenseGroup(name:currency:description:language:)`.
+- An expense's `tip` and `category` are never optional. `TipRule.noTip`,
+  the no-tip rule, named so since `.none` reads as `Optional.none`, and
+  `Category.ID.uncategorised`, the built-in category's identifier, are
+  static members read once from the core's value helpers; both
+  initialisers default to them, and an expense without another tip or
+  category reads back with them.
 - A value the library checks is a type that is valid once made: `CurrencyCode`,
   from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
   `Parts`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`, `IBAN`,
@@ -432,7 +448,11 @@ its code. The layer follows the Kotlin library guidelines:
   first, with no default, and a secondary constructor without it
   generates it (`Member(id, "Ana")` and `Member("Ana")`); so does the
   group, `ExpenseGroup(id, name, currency)` and
-  `ExpenseGroup(name, currency)`. A value the library checks has
+  `ExpenseGroup(name, currency)`. The companion values
+  `CategoryId.UNCATEGORISED` and `TipRule.NONE`, which the core's helpers
+  give, are the built-in category's identifier and the no-tip rule, and
+  both of `Expense`'s constructors default its `category` and `tip`, which
+  are never `null`, to them. A value the library checks has
   an internal constructor and factories that check it (`CurrencyCode.of`,
   `Money.parse`, `CalendarDate.of`), and prints the library's text.
 - A failure the library reports throws `EranosException`, a subclass per
@@ -477,6 +497,11 @@ The layer follows Effective Java and Google Java Style:
   `ExpenseGroup.builder(name, currency)`). The builders, their `id`, and
   `Category`'s constructor refuse a `null` identifier with
   `Objects.requireNonNull`, so a null never reaches the generated code.
+  The built-in category's identifier and the no-tip rule are the static
+  finals `CategoryId.UNCATEGORISED` and `TipRule.NONE`, which the core's
+  helpers give; `Expense`'s builder starts the category and the tip at
+  them, its `category` and `tip` refuse a `null` the same way, and
+  `Expense.category()` and `tip()` return the values, not an `Optional`.
 - An absent value is an empty `Optional`, a variant a record of a sealed
   interface, and a failure the library reports a checked
   `EranosException`, a subclass per module holding the module's failure.
@@ -514,7 +539,14 @@ build. The layer follows the Google TypeScript Style Guide:
   its siblings make. Every entry's `id` is required: a `{ id, … }` literal
   takes it, and `createMember({ firstName, … })`, `createCategory`,
   `createExpense`, and `createTransfer` return the record under a
-  generated one. `ExpenseGroup.create(name, currency, options?)` generates
+  generated one. An expense's `tip` and `category` are required as well:
+  a `{ id, … }` literal names both, `createExpense` fills in `NO_TIP` and
+  `UNCATEGORISED` when its fields leave them out, and an expense read back
+  carries them for an expense without another tip or category. The two
+  constants are literals, since a module constant is evaluated before
+  `init` loads the module, and a test holds them to the core's
+  `tip_rule_none` and `category_id_uncategorised`.
+  `ExpenseGroup.create(name, currency, options?)` generates
   the group's, and `ExpenseGroup.createWithId(id, name, currency, options?)`
   takes it. A value the library checks is a class with factories that
   check it (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`),
@@ -593,6 +625,11 @@ another enum draws `-Wenum-compare`. The layer writes C23's `nullptr`;
   (`eranosMemberCreateWithId(id, firstName, &member)`); the `id` getter
   writes it unconditionally, and `eranosIdentifierGenerate` writes a new
   one.
+- An expense starts at the no-tip rule, which `eranosTipRuleCreateNone`
+  makes, and in the built-in category, whose identifier
+  `eranosIdentifierUncategorised` writes; its tip and category getters
+  always give one, and setting these values is how a caller removes an
+  expense's tip or moves it back to the built-in category.
 - Text goes in as UTF-8 ended by a NUL, nullptr reading as empty text, and
   comes back in an `EranosText`, which the call replaces and ends with a
   NUL; a buffer of Diplomat's grows or ends the program, as the library's
@@ -635,7 +672,10 @@ Core Guidelines with the naming rule above:
   (`Member(MemberId id, std::string firstName)`), and an `explicit` one
   without it delegates to the first with `MemberId::generate()`; the
   group has `ExpenseGroup::create(id, name, currency, options)` and
-  `ExpenseGroup::create(name, currency, options)`.
+  `ExpenseGroup::create(name, currency, options)`. An expense's `tip` and
+  `category` are never optional and start at `TipRule::none()` and
+  `CategoryId::uncategorised()`, which write the library's values out so
+  that they are `constexpr`; a test holds them to the bridge's helpers.
 - A call the library can refuse returns a `std::expected` of its value and
   `eranos::Error`, a plain value with the kind, the message, the failure,
   and what the failure holds, which it shares, so copying it cannot throw;
@@ -711,6 +751,12 @@ reads its annotations without checking its code, and Ruff leaves it out:
   keyword and is edited with `copy.replace`, which keeps its identifier,
   and a variant is a union of frozen dataclasses (`EqualSplit`,
   `LocalCost`), which a `match` takes apart.
+- An expense's `tip` and `category` are never optional. `NO_TIP`, the
+  no-tip rule, and `UNCATEGORISED`, the built-in category's identifier,
+  are module constants that `eranos` exports, read once from the core's
+  value helpers when the package loads; the dataclass and `Expense.create`
+  default to them, and an expense without another tip or category reads
+  back with them.
 - A failure the library reports raises an `EranosError`, a subclass per
   module holding the module's failure, a dataclass nested in it
   (`ExpenseGroupError.MemberInUse`), with the library's message; a saved

@@ -12,6 +12,7 @@ import {
     Iban,
     Language,
     PhoneNumber,
+    UNCATEGORISED,
     Username,
     createCategory,
     createMember,
@@ -197,7 +198,7 @@ export function addCategories(group: ExpenseGroup): Categories {
     const stored = group.categorySync(transport);
     assert.ok(undefined !== stored, 'Transport was added');
     group.replaceCategorySync({ ...stored, name: 'Getting around' });
-    const uncategorised = group.categoriesSync()[0];
+    const uncategorised = group.categorySync(UNCATEGORISED);
     assert.ok(undefined !== uncategorised, 'every group has the built-in category');
     const builtIn = refusal(() => group.replaceCategorySync({ ...uncategorised, name: 'Other' }));
     printLines(
@@ -226,7 +227,7 @@ export function addCategories(group: ExpenseGroup): Categories {
     assert.equal(lodging, 'lodging');
     assert.deepEqual(
         group.categoriesSync().map((category) => category.id),
-        [uncategorised.id, food, transport, lodging],
+        [UNCATEGORISED, food, transport, lodging],
     );
     return { food, lodging, transport };
 }

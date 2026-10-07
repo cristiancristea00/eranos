@@ -6,6 +6,7 @@ from collections.abc import Callable
 import pytest
 
 from eranos import (
+    UNCATEGORISED,
     PaymentAccountError,
     CalendarDate,
     CalendarError,
@@ -80,6 +81,12 @@ def test_a_generated_identifier_is_new_and_parses_as_the_library_reads_it() -> N
         assert uuid.UUID(identifier).version == 7
     assert identifiers == sorted(identifiers)
     assert len(set(identifiers)) == len(identifiers)
+
+
+def test_the_built_in_category_is_named_by_the_nil_uuid() -> None:
+    """An app that left an expense in the built-in category would name another category than the one every group has, or one the rules refuse."""
+    assert UNCATEGORISED == '00000000-0000-0000-0000-000000000000'
+    assert parse_category_id(UNCATEGORISED) == UNCATEGORISED
 
 
 def test_a_currency_holds_what_the_library_knows_of_it() -> None:

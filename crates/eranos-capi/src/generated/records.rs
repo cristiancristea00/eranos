@@ -474,9 +474,9 @@ pub mod ffi {
                 payers: payers.0.clone(),
                 split: split.0.clone(),
                 date: date.into(),
-                tip: None,
+                tip: eranos_bindings::tip_rule_none(),
                 time: None,
-                category: None,
+                category: eranos_bindings::category_id_uncategorised(),
                 description: None,
             })))
         }
@@ -555,23 +555,17 @@ pub mod ffi {
             self.0.date = date.into();
         }
 
-        /// The tip on top of the amount.
+        /// The tip on top of the amount: the no-tip rule, `tip_rule_none`, for an expense without
+        /// one.
         #[must_use]
-        pub fn tip(&self) -> Option<Box<EranosTipRule>> {
-            self.0
-                .tip
-                .clone()
-                .map(|value| Box::new(EranosTipRule(value)))
+        pub fn tip(&self) -> Box<EranosTipRule> {
+            Box::new(EranosTipRule(self.0.tip.clone()))
         }
 
-        /// Sets the tip on top of the amount.
+        /// Sets the tip on top of the amount: the no-tip rule, `tip_rule_none`, for an expense
+        /// without one.
         pub fn set_tip(&mut self, tip: &EranosTipRule) {
-            self.0.tip = Some(tip.0.clone());
-        }
-
-        /// Clears the tip on top of the amount.
-        pub fn clear_tip(&mut self) {
-            self.0.tip = None;
+            self.0.tip.clone_from(&tip.0);
         }
 
         /// The time of day it was bought.
@@ -590,25 +584,21 @@ pub mod ffi {
             self.0.time = None;
         }
 
-        /// The category, as its identifier; absent for the built-in one. Writes it, if present;
-        /// absent otherwise.
-        pub fn category(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.category.as_deref())
+        /// The category, as its identifier: the built-in one's, `category_id_uncategorised`, until
+        /// it is given another.
+        pub fn category(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.category);
         }
 
-        /// Sets the category, as its identifier; absent for the built-in one.
+        /// Sets the category, as its identifier: the built-in one's, `category_id_uncategorised`,
+        /// until it is given another.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_category(&mut self, category: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.category = Some(crate::text(category)?);
+            self.0.category = crate::text(category)?;
             Ok(())
-        }
-
-        /// Clears the category, as its identifier; absent for the built-in one.
-        pub fn clear_category(&mut self) {
-            self.0.category = None;
         }
 
         /// A longer description. Writes it, if present; absent otherwise.
@@ -2063,6 +2053,13 @@ pub mod ffi {
         /// Sets how the tip is shared.
         pub fn set_distribution(&mut self, distribution: EranosTipDistribution) {
             self.0.distribution = distribution.into();
+        }
+
+        /// The no-tip rule, which an expense without a tip has: 0 % of the amount, shared
+        /// proportionally.
+        #[must_use]
+        pub fn none() -> Box<Self> {
+            Box::new(Self(eranos_bindings::tip_rule_none()))
         }
     }
 

@@ -13,23 +13,11 @@ import {
     ExpenseGroupError,
     Money,
     SettlementStrategy,
+    UNCATEGORISED,
     createTransfer,
 } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
-import {
-    type Categories,
-    type People,
-    builtInCategory,
-    eur,
-    name,
-    october,
-    paymentColumns,
-    printBalances,
-    printCategories,
-    printEntries,
-    ron,
-    sum,
-} from './tour.js';
+import { type Categories, type People, eur, name, october, paymentColumns, printBalances, printCategories, printEntries, ron, sum } from './tour.js';
 
 /** A member's consumption in each category, as the table of consumption per category prints it. */
 interface MemberCategoryRow {
@@ -67,7 +55,7 @@ function byCategory(summary: Summary, member: MemberId): readonly CategoryTotal[
 }
 
 /** The total of `category` among `categoryTotals`. */
-function total(categoryTotals: readonly CategoryTotal[], category: CategoryId | undefined): Money | undefined {
+function total(categoryTotals: readonly CategoryTotal[], category: CategoryId): Money | undefined {
     return categoryTotals.find((entry) => entry.category === category)?.total;
 }
 
@@ -87,7 +75,6 @@ export function summary(group: ExpenseGroup, people: People, categories: Categor
     printLines('The spending per category:');
     printCategories(group);
     printLines("And each member's consumption per category:");
-    const builtIn = builtInCategory(group);
     const zero = new Money(0n, group.currencySync());
     printTable(
         memberCategoryColumns,
@@ -98,7 +85,7 @@ export function summary(group: ExpenseGroup, people: People, categories: Categor
                 food: total(own, categories.food) ?? zero,
                 lodging: total(own, categories.lodging) ?? zero,
                 transport: total(own, categories.transport) ?? zero,
-                uncategorised: total(own, builtIn) ?? zero,
+                uncategorised: total(own, UNCATEGORISED) ?? zero,
             };
         }),
         1,
@@ -113,7 +100,7 @@ export function summary(group: ExpenseGroup, people: People, categories: Categor
     assert.ok(is(eur('174.40'), total(summary.categoryTotals, categories.food)));
     assert.ok(is(eur('800.00'), total(summary.categoryTotals, categories.lodging)));
     assert.ok(is(eur('188.50'), total(summary.categoryTotals, categories.transport)));
-    assert.ok(is(eur('60.00'), total(summary.categoryTotals, builtIn)));
+    assert.ok(is(eur('60.00'), total(summary.categoryTotals, UNCATEGORISED)));
     for (const found of summary.members) {
         assert.ok(
             is(
@@ -137,9 +124,7 @@ export function summary(group: ExpenseGroup, people: People, categories: Categor
 export function removingACategory(group: ExpenseGroup, categories: Categories): void {
     section('9. Removing a category');
     const removed = group.removeCategorySync(categories.transport);
-    const uncategorised = builtInCategory(group);
-    assert.ok(undefined !== uncategorised, 'every group has the built-in category');
-    const builtIn = refusal(() => group.removeCategorySync(uncategorised));
+    const builtIn = refusal(() => group.removeCategorySync(UNCATEGORISED));
     printLines(
         `Removing ${removed.name} moves its expenses to Uncategorised and the category`,
         'totals with them; no balance changes. The built-in category cannot be removed:',
@@ -149,7 +134,7 @@ export function removingACategory(group: ExpenseGroup, categories: Categories): 
 
     assert.ok(builtIn instanceof ExpenseGroupError && 'builtInCategory' === builtIn.failure.kind);
     assert.equal(group.categorySync(categories.transport), undefined);
-    assert.ok(is(eur('248.50'), total(group.summarySync().categoryTotals, uncategorised)));
+    assert.ok(is(eur('248.50'), total(group.summarySync().categoryTotals, UNCATEGORISED)));
     assert.ok(group.expensesSync().every((expense) => categories.transport !== expense.category));
 }
 

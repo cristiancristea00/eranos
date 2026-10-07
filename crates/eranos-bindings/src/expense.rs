@@ -1,8 +1,8 @@
 //! Expenses, how they divide, their items, and their tips, as the bindings
 //! carry them.
 
+use eranos::MemberId;
 use eranos::error::ExpenseError;
-use eranos::{CategoryId, MemberId};
 use eranos::{expense as library, money};
 use eranos_expense::{FromExpenseSplit, FromSplit, FromTipDistribution, FromTipValue};
 use eranos_money::FromCost;
@@ -365,12 +365,15 @@ pub struct Expense {
     pub split: ExpenseSplit,
     /// The day it was bought.
     pub date: CalendarDate,
-    /// The tip on top of the amount.
-    pub tip: Option<TipRule>,
+    /// The tip on top of the amount: the no-tip rule,
+    /// [`tip_rule_none`](crate::tip_rule_none), for an expense without one.
+    pub tip: TipRule,
     /// The time of day it was bought.
     pub time: Option<TimeOfDay>,
-    /// The category, as its identifier; absent for the built-in one.
-    pub category: Option<String>,
+    /// The category, as its identifier: the built-in one's,
+    /// [`category_id_uncategorised`](crate::category_id_uncategorised), until
+    /// it is given another.
+    pub category: String,
     /// A longer description.
     pub description: Option<String>,
 }
@@ -378,8 +381,6 @@ pub struct Expense {
 impl Expense {
     /// The record of `expense`.
     pub(crate) fn from_library(expense: &library::Expense) -> Self {
-        let category = expense.category();
-        let tip = expense.tip();
         Self {
             id: expense.id().to_string(),
             name: expense.name().to_owned(),
@@ -387,9 +388,9 @@ impl Expense {
             payers: Split::from_split(expense.payers()),
             split: ExpenseSplit::from_expense_split(expense.split()),
             date: CalendarDate::from_library(expense.date()),
-            tip: (tip != library::TipRule::default()).then(|| TipRule::from_library(tip)),
+            tip: TipRule::from_library(expense.tip()),
             time: expense.time().map(TimeOfDay::from_library),
-            category: (CategoryId::UNCATEGORISED != category).then(|| category.to_string()),
+            category: expense.category().to_string(),
             description: expense.description().map(str::to_owned),
         }
     }
@@ -429,7 +430,7 @@ impl Expense {
                 )
             }
         };
-        Ok(self.with_optional_fields(builder)?.build()?)
+        Ok(self.with_other_fields(builder)?.build()?)
     }
 
     /// The library's expense that replaces `existing`, keeping its
@@ -453,24 +454,18 @@ impl Expense {
             ExpenseSplit::Whole { split } => builder.split(split.to_library()?),
             ExpenseSplit::Itemised { items } => builder.items(items_of(items)?),
         };
-        Ok(self.with_optional_fields(builder)?.build()?)
+        Ok(self.with_other_fields(builder)?.build()?)
     }
 
-    /// `builder` with the record's tip, time, category, and description,
-    /// each cleared when the record has none.
-    fn with_optional_fields(
+    /// `builder` with the record's tip, time, category, and description, the
+    /// time and the description cleared when the record has none.
+    fn with_other_fields(
         &self,
         builder: library::ExpenseBuilder,
     ) -> Result<library::ExpenseBuilder, EranosError> {
-        let tip = match &self.tip {
-            Some(tip) => tip.to_library()?,
-            None => library::TipRule::default(),
-        };
+        let tip = self.tip.to_library()?;
         let time = self.time.map(TimeOfDay::to_library).transpose()?;
-        let category = match &self.category {
-            Some(category) => identifier(category)?,
-            None => CategoryId::UNCATEGORISED,
-        };
+        let category = identifier(&self.category)?;
         Ok(builder
             .tip(tip)
             .time(time)

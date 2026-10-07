@@ -10,7 +10,8 @@ use crate::error::ExpenseError;
 /// or equally.
 ///
 /// The payers cover the amount plus the tip. An expense without a tip has
-/// [`TipRule::default`], 0 % shared proportionally, which needs no currency.
+/// [`TipRule::NONE`], 0 % shared proportionally, which needs no currency and
+/// is also [`TipRule::default`].
 ///
 /// # Examples
 ///
@@ -23,7 +24,8 @@ use crate::error::ExpenseError;
 /// let round_up = TipRule::fixed(Money::parse("5.00", CurrencyCode::EUR)?).distributed(TipDistribution::Equal);
 /// assert_eq!(round_up.distribution(), TipDistribution::Equal);
 ///
-/// assert_eq!(TipRule::default(), TipRule::percentage(Percentage::ZERO));
+/// assert_eq!(TipRule::NONE, TipRule::percentage(Percentage::ZERO));
+/// assert_eq!(TipRule::default(), TipRule::NONE);
 /// # Ok::<(), eranos::error::MoneyError>(())
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -35,6 +37,10 @@ pub struct TipRule {
 }
 
 impl TipRule {
+    /// No tip: 0 % of the amount, shared proportionally, which needs no
+    /// currency. An expense has it until it is given another tip.
+    pub const NONE: Self = Self::percentage(Percentage::ZERO);
+
     /// A tip of `rate` of the expense's amount, rounded half up to the minor
     /// unit and shared proportionally.
     #[must_use]
@@ -121,9 +127,9 @@ impl TipRule {
 }
 
 impl Default for TipRule {
-    /// No tip: 0 % of the amount, shared proportionally.
+    /// No tip: [`TipRule::NONE`].
     fn default() -> Self {
-        Self::percentage(Percentage::ZERO)
+        Self::NONE
     }
 }
 

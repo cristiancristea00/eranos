@@ -22,7 +22,7 @@ use crate::money::{Cost, Money};
 use crate::transfer::Transfer;
 use crate::{
     ExpenseGroupFailure, IdFailure, LanguageFailure, MoneyFailure, SettlementFailure,
-    identifier_generate,
+    category_id_uncategorised, identifier_generate, tip_rule_none,
 };
 
 /// A task that counts how often it is woken.
@@ -117,9 +117,9 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
             month: 9,
             day: 23,
         },
-        tip: None,
+        tip: tip_rule_none(),
         time: None,
-        category: None,
+        category: category_id_uncategorised(),
         description: None,
     }
 }
@@ -148,7 +148,7 @@ fn flat() -> Flat {
     let bob = handle.add_member(&new_member("Bob")).unwrap();
     let food = handle.add_category(&new_category("Food")).unwrap();
     let dinner = Expense {
-        category: Some(food.clone()),
+        category: food.clone(),
         ..new_expense("Dinner", &ana, &[&ana, &bob])
     };
     let dinner = handle.add_expense(&dinner).unwrap();

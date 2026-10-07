@@ -88,7 +88,7 @@ function how(expense: Expense): string {
     const count = splitMembers(expense.payers).length;
     const payers = 1 === count ? '' : `, ${String(count)} payers`;
     let tip = '';
-    if (0n !== expenseTipAmount(expense).minorUnits && undefined !== expense.tip) {
+    if (0n !== expenseTipAmount(expense).minorUnits) {
         tip =
             'percentage' === expense.tip.value.kind
                 ? `, ${expense.tip.value.percentage.toString()} tip`
@@ -292,9 +292,8 @@ function consumed(group: ExpenseGroup, id: ExpenseId, member: MemberId): Money |
 /** Prints how the fado night's tip was shared, and its receipt. */
 function printFado(group: ExpenseGroup, fado: Expense): void {
     const tip = fado.tip;
-    const rule = undefined === tip ? 'a tip' : 'percentage' === tip.value.kind ? tip.value.percentage.toString() : tip.value.amount.toString();
-    const shared =
-        undefined === tip ? 'another way' : TipDistribution.EQUAL === tip.distribution ? 'equally' : 'in proportion to what each member ordered';
+    const rule = 'percentage' === tip.value.kind ? tip.value.percentage.toString() : tip.value.amount.toString();
+    const shared = TipDistribution.EQUAL === tip.distribution ? 'equally' : 'in proportion to what each member ordered';
     printLines(
         "The groceries' 10.00 EUR did not divide into thirds, so one member consumed the",
         "leftover cent; the expense's identifier picks which, so it moves from expense to",

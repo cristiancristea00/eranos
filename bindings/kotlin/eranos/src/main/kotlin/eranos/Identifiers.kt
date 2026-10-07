@@ -1,5 +1,6 @@
 package eranos
 
+import eranos.internal.categoryIdUncategorised
 import eranos.internal.identifierGenerate
 import eranos.internal.identifierParse
 import kotlin.jvm.JvmInline
@@ -80,8 +81,14 @@ public value class CategoryId(
     /** The identifier's text. */
     override fun toString(): String = value
 
-    /** The making of a new identifier, and the checked reading of one from its text. */
+    /** The built-in category's identifier, the making of a new identifier, and the checked reading of one from its text. */
     public companion object {
+        /**
+         * The identifier of the built-in category, Uncategorised, which every group has and every expense is in until it is
+         * given another: the text of the nil UUID, `00000000-0000-0000-0000-000000000000`.
+         */
+        public val UNCATEGORISED: CategoryId = CategoryId(categoryIdUncategorised())
+
         /** A new identifier, as [ExpenseGroupId.generate] makes one. */
         public fun generate(): CategoryId = CategoryId(identifierGenerate())
 

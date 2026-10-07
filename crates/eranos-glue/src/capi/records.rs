@@ -30,16 +30,50 @@ struct FieldDefault {
     /// The record's name.
     record: &'static str,
     /// What the field starts at.
-    value: i32,
+    value: Start,
+}
+
+/// What a field that a record's constructor leaves out starts at.
+enum Start {
+    /// The integer.
+    Integer(i32),
+    /// What the core's value helper of this name returns.
+    Helper(&'static str),
+}
+
+impl Start {
+    /// The expression of the value.
+    fn tokens(&self) -> TokenStream {
+        match self {
+            Self::Integer(value) => Literal::i32_unsuffixed(*value).into_token_stream(),
+            Self::Helper(name) => {
+                let helper = format_ident!("{name}");
+                quote!(eranos_bindings::#helper())
+            }
+        }
+    }
 }
 
 /// The fields of a record that start at a value of their own when the
-/// record is created without them: a line of a bill is of one unit.
-const DEFAULTS: [FieldDefault; 1] = [FieldDefault {
-    field: "quantity",
-    record: "ExpenseItem",
-    value: 1,
-}];
+/// record is created without them: an expense has no tip and is in the
+/// built-in category, and a line of a bill is of one unit.
+const DEFAULTS: [FieldDefault; 3] = [
+    FieldDefault {
+        field: "tip",
+        record: "Expense",
+        value: Start::Helper("tip_rule_none"),
+    },
+    FieldDefault {
+        field: "category",
+        record: "Expense",
+        value: Start::Helper("category_id_uncategorised"),
+    },
+    FieldDefault {
+        field: "quantity",
+        record: "ExpenseItem",
+        value: Start::Integer(1),
+    },
+];
 
 /// A field of a record and how it crosses.
 struct Typed<'item> {
@@ -172,7 +206,7 @@ fn default(item: &Mirrored, field: &Field, value: &Value) -> Option<TokenStream>
     DEFAULTS
         .iter()
         .find(|default| item.name == default.record && field.name == default.field)
-        .map(|default| Literal::i32_unsuffixed(default.value).into_token_stream())
+        .map(|default| default.value.tokens())
 }
 
 /// The field `name` of a struct literal, from the parameter of the same
@@ -864,7 +898,8 @@ fn list_of(element: &Ident, taken: bool) -> Named {
 
 /// The methods of the bridge's type `object` that are not a field's, which
 /// call the core's helpers: an expense's tip and total and the members it
-/// names, the members a split names, a balance's text, and the currencies.
+/// names, the members a split names, a balance's text, the currencies, and
+/// the no-tip rule.
 fn extras(object: &Ident) -> TokenStream {
     match object.to_string().as_str() {
         "EranosBalance" => quote! {
@@ -947,6 +982,14 @@ fn extras(object: &Ident) -> TokenStream {
                 eranos_bindings::split_members(&self.0)
                     .map(|members| Box::new(EranosTextList(members)))
                     .map_err(crate::failed)
+            }
+        },
+        "EranosTipRule" => quote! {
+            /// The no-tip rule, which an expense without a tip has: 0 % of the amount, shared
+            /// proportionally.
+            #[must_use]
+            pub fn none() -> Box<Self> {
+                Box::new(Self(eranos_bindings::tip_rule_none()))
             }
         },
         _ => TokenStream::new(),

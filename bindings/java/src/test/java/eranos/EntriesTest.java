@@ -105,7 +105,52 @@ class EntriesTest {
                         .build();
         assertEquals(new Cost.Local(flat.euros(1)), edited.cost());
         assertEquals(CalendarDate.of(2026, 9, 24), edited.date());
-        assertEquals(Optional.empty(), plain.toBuilder().category(null).build().category());
+    }
+
+    /**
+     * An expense built without a tip or a category that carried another tip or category to the
+     * group, or read back with another value than the no-tip rule and the built-in category, would
+     * divide another amount or let an app take the defaults for values it set; a builder that took
+     * {@code null} for either would fail only when the expense reached the group.
+     */
+    @Test
+    void anExpenseStartsWithoutATipInTheBuiltInCategoryAndReadsBackSo() throws EranosException {
+        Flat flat = new Flat();
+        Expense plain = flat.expense("Lunch", flat.ana, List.of(flat.bob));
+        assertEquals(TipRule.NONE, plain.tip());
+        assertEquals(CategoryId.UNCATEGORISED, plain.category());
+        Expense stored = flat.group.expense(flat.group.addExpense(plain)).orElseThrow();
+        assertEquals(TipRule.NONE, stored.tip());
+        assertEquals(CategoryId.UNCATEGORISED, stored.category());
+        assertEquals(flat.euros(0), stored.tipAmount());
+        Expense.Builder builder = plain.toBuilder();
+        assertThrows(NullPointerException.class, () -> builder.tip(null));
+        assertThrows(NullPointerException.class, () -> builder.category(null));
+        assertEquals(plain, builder.build());
+    }
+
+    /**
+     * A tip of 0 % set on purpose that read back as another rule than the no-tip rule when it is
+     * shared proportionally, or as the no-tip rule when it is shared equally, would show an app
+     * another tip than the group holds.
+     */
+    @Test
+    void aZeroTipReadsBackAsTheGroupHoldsIt() throws EranosException {
+        Flat flat = new Flat();
+        Percentage zero = Percentage.ofBasisPoints(0);
+        Expense proportional =
+                flat.expense("Lunch", flat.ana, List.of(flat.bob)).toBuilder()
+                        .tip(new TipRule(new TipValue.Percentage(zero)))
+                        .build();
+        assertEquals(
+                TipRule.NONE,
+                flat.group.expense(flat.group.addExpense(proportional)).orElseThrow().tip());
+        TipRule equal = new TipRule(new TipValue.Percentage(zero), TipDistribution.EQUAL);
+        Expense shared =
+                flat.expense("Lunch", flat.ana, List.of(flat.bob)).toBuilder().tip(equal).build();
+        TipRule stored = flat.group.expense(flat.group.addExpense(shared)).orElseThrow().tip();
+        assertEquals(equal, stored);
+        assertNotEquals(TipRule.NONE, stored);
     }
 
     /**

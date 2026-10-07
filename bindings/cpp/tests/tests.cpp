@@ -4,6 +4,9 @@
 // claim that fails and ends with a failure status when one does.
 
 #include "eranos.hpp"
+// The generated classes whose helpers the tests hold the layer's constants to.
+#include "eranos/detail/EranosIdentifier.d.hpp"
+#include "eranos/detail/EranosTipRule.d.hpp"
 
 #include <algorithm>
 #include <array>
@@ -435,6 +438,26 @@ void anExpenseReadsBackAsItWasAdded(Check &check) noexcept {
     auto const expenses = flat.group.expenses();
     check.that(3 == expenses.size(), "the group holds the dinner, the lunch, and the receipt");
     check.that(!flat.group.expense(ExpenseId("0199a000-0000-7000-8000-00000000ffff")).value().has_value(), "an absent expense is none");
+}
+
+static_assert(TipDistribution::PROPORTIONAL == TipRule::none().distribution, "the no-tip rule is made at compile time");
+static_assert(36 == CategoryId::uncategorised().value().size(), "and so is the built-in category's identifier");
+
+/// An expense the group returned without the built-in category's identifier or the no-tip rule would leave an app unable to tell which category
+/// it is in or what tip it has, and a built-in identifier or a no-tip rule other than the library's would file it under a category the group does
+/// not hold or give it a tip.
+void anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule(Check &check) noexcept {
+    check.that(CategoryId::uncategorised() == CategoryId(detail::EranosIdentifier::uncategorised()),
+               "the built-in category's identifier is the library's");
+    check.that(TipRule::none() == detail::fromDetail(*detail::EranosTipRule::none()), "the no-tip rule is the library's");
+    Flat flat;
+    check.that(flat.group.category(CategoryId::uncategorised()) == flat.group.categories().at(0), "the group holds the built-in category under it");
+    auto taxi = flat.expense("Taxi", flat.ana, {flat.ana, flat.bob});
+    check.that(CategoryId::uncategorised() == taxi.category && TipRule::none() == taxi.tip, "a new expense starts in it, with the no-tip rule");
+    check.that(flat.group.addExpense(taxi) == taxi.id && flat.group.expense(taxi.id) == taxi, "and reads back so from the group");
+    taxi.tip = TipRule(PercentageTipValue{Percentage{0}}, TipDistribution::PROPORTIONAL);
+    check.that(flat.group.replaceExpense(taxi).has_value() && TipRule::none() == flat.group.expense(taxi.id).value().value().tip,
+               "a 0 % tip shared proportionally reads back as the no-tip rule");
 }
 
 /// A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save.
@@ -951,6 +974,10 @@ constexpr std::array TESTS = {
     Test{.name = "everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept", .body = everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept},
     Test{.name = "everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother", .body = everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother},
     Test{.name = "anExpenseReadsBackAsItWasAdded", .body = anExpenseReadsBackAsItWasAdded},
+    Test{
+        .name = "anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule",
+        .body = anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule,
+    },
     Test{.name = "aTransferAndAMemberReadBackAsTheyWereAdded", .body = aTransferAndAMemberReadBackAsTheyWereAdded},
     Test{.name = "replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas", .body = replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas},
     Test{.name = "anEntryTheGroupDoesNotHoldIsNotReplaced", .body = anEntryTheGroupDoesNotHoldIsNotReplaced},

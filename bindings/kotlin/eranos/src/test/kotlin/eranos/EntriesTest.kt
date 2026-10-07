@@ -72,6 +72,48 @@ class EntriesTest {
     }
 
     /**
+     * An expense made without a tip or a category that carried, or read back with, another tip or category than the library's
+     * defaults, or a 0 % tip set explicitly that read back as another rule than no tip, would show the app a tip or a category
+     * nobody gave the expense.
+     */
+    @Test
+    fun anExpenseWithoutATipOrACategoryHasNoTipAndTheBuiltInCategory() {
+        val flat = Flat()
+        val group = flat.group
+        assertEquals(TipRule(TipValue.Percentage(Percentage.ofBasisPoints(0)), TipDistribution.PROPORTIONAL), TipRule.NONE)
+        assertEquals(CategoryId.UNCATEGORISED, group.categoriesBlocking().first().id)
+        val lunch = flat.expense("Lunch", flat.ana, listOf(flat.ana, flat.bob))
+        val supper =
+            Expense(
+                ExpenseId.generate(),
+                "Supper",
+                Cost.Local(flat.euros(2_000)),
+                Split.Equal(listOf(flat.bob)),
+                ExpenseSplit.Whole(Split.Equal(listOf(flat.ana, flat.bob))),
+                flat.day,
+            )
+        val coffee =
+            Expense(
+                "Coffee",
+                Cost.Local(flat.euros(400)),
+                Split.Equal(listOf(flat.ana)),
+                ExpenseSplit.Whole(Split.Equal(listOf(flat.ana, flat.bob))),
+                flat.day,
+                tip = TipRule(TipValue.Percentage(Percentage.ofBasisPoints(0))),
+            )
+        for (expense in listOf(lunch, supper, coffee)) {
+            assertEquals(TipRule.NONE, expense.tip)
+            assertEquals(CategoryId.UNCATEGORISED, expense.category)
+            assertEquals(eranos.internal.tipRuleNone(), expense.generated.tip)
+            assertEquals(eranos.internal.categoryIdUncategorised(), expense.generated.category)
+            assertEquals(flat.euros(0), expense.tipAmount())
+            val stored = present(group.expenseBlocking(group.addBlocking(expense)))
+            assertEquals(TipRule.NONE, stored.tip)
+            assertEquals(CategoryId.UNCATEGORISED, stored.category)
+        }
+    }
+
+    /**
      * The tip, total, and members an app shows for an expense would differ from those the group records when it adds it.
      */
     @Test
@@ -141,11 +183,11 @@ class EntriesTest {
         assertValue(item, ExpenseItem(item.name, item.unitPrice, item.split, 2), ExpenseItem(item.name, item.unitPrice, item.split))
         assertEquals(1, ExpenseItem("Bread", flat.euros(1), equal).quantity)
         assertValue(
-            present(expenses.taxi.tip),
+            expenses.taxi.tip,
             TipRule(TipValue.Fixed(Money(500, CurrencyCode.of("RON"))), TipDistribution.EQUAL),
             TipRule(TipValue.Fixed(Money(500, CurrencyCode.of("RON")))),
         )
-        assertEquals(TipDistribution.PROPORTIONAL, present(expenses.dinner.tip).distribution)
+        assertEquals(TipDistribution.PROPORTIONAL, expenses.dinner.tip.distribution)
         assertValue(
             TipValue.Percentage(Percentage.ofBasisPoints(1)),
             TipValue.Percentage(Percentage.ofBasisPoints(1)),
@@ -290,7 +332,6 @@ class EntriesTest {
         assertEquals(TransferId("zz"), group.addBlocking(cash))
         assertEquals(cash, group.transferBlocking(TransferId("zz")))
 
-        val uncategorised = group.categoriesBlocking().first().id
         val duplicates =
             listOf(
                 Refusal(
@@ -302,8 +343,8 @@ class EntriesTest {
                     failure = ExpenseGroupFailure.DuplicateCategory(CategoryId("-travel")),
                 ),
                 Refusal(
-                    call = { group.addBlocking(Category(uncategorised, "Other")) },
-                    failure = ExpenseGroupFailure.DuplicateCategory(uncategorised),
+                    call = { group.addBlocking(Category(CategoryId.UNCATEGORISED, "Other")) },
+                    failure = ExpenseGroupFailure.DuplicateCategory(CategoryId.UNCATEGORISED),
                 ),
                 Refusal(
                     call = { group.addBlocking(lunch.copy(name = "Dinner")) },

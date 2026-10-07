@@ -102,6 +102,14 @@ struct TipRule final {
     /// @param distribution How the tip is shared among the participants.
     inline constexpr TipRule(TipValue value, TipDistribution const distribution) noexcept : value(std::move(value)), distribution(distribution) {}
 
+    /// The no-tip rule, which an expense without a tip has: 0 % of the amount, shared proportionally.
+    ///
+    /// @return The rule
+    [[nodiscard]] static inline constexpr TipRule none() noexcept {
+        // The library's rule, written out so that the function is constexpr; a test holds the two equal.
+        return {PercentageTipValue{Percentage{0}}, TipDistribution::PROPORTIONAL};
+    }
+
     /// How the tip is expressed.
     TipValue value;
 
@@ -179,7 +187,8 @@ using ExpenseSplit = std::variant<WholeExpenseSplit, ItemisedExpenseSplit>;
 /// An expense: what was bought, what it cost, who paid, and how it divides.
 struct Expense final {
     /// The record of its required fields under the identifier @p id, such as the key an app's own store gives it; the others start absent, empty,
-    /// or at their default. Expense(std::string, Cost, Split, ExpenseSplit, CalendarDate) generates the identifier instead.
+    /// or at their default: the tip at TipRule::none() and the category at CategoryId::uncategorised().
+    /// Expense(std::string, Cost, Split, ExpenseSplit, CalendarDate) generates the identifier instead.
     ///
     /// @param id The identifier, which the app gives: its own, or one ExpenseId::generate() makes.
     /// @param name What was bought.
@@ -191,7 +200,8 @@ struct Expense final {
         : id(std::move(id)), name(std::move(name)), cost(std::move(cost)), payers(std::move(payers)), split(std::move(split)), date(date) {}
 
     /// The record of its required fields under an identifier generated when it is called, which
-    /// Expense(ExpenseId, std::string, Cost, Split, ExpenseSplit, CalendarDate) takes instead; the others start absent, empty, or at their default.
+    /// Expense(ExpenseId, std::string, Cost, Split, ExpenseSplit, CalendarDate) takes instead; the others start absent, empty, or at their default:
+    /// the tip at TipRule::none() and the category at CategoryId::uncategorised().
     ///
     /// @param name What was bought.
     /// @param cost What it cost.
@@ -219,14 +229,14 @@ struct Expense final {
     /// The day it was bought.
     CalendarDate date;
 
-    /// The tip on top of the amount.
-    std::optional<TipRule> tip;
+    /// The tip on top of the amount: TipRule::none() for an expense without one.
+    TipRule tip{TipRule::none()};
 
     /// The time of day it was bought.
     std::optional<TimeOfDay> time;
 
-    /// The category's identifier; absent for the built-in one.
-    std::optional<CategoryId> category;
+    /// The category's identifier: the built-in one's, CategoryId::uncategorised(), until it is given another.
+    CategoryId category{CategoryId::uncategorised()};
 
     /// A longer description.
     std::optional<std::string> description;

@@ -202,8 +202,7 @@ def _how(expense: Expense) -> str:
             assert_never(split)
     count = len(expense.payers.members)
     payers = '' if count == 1 else f', {count} payers'
-    tip = expense.tip
-    worth = '' if tip is None or expense.tip_amount().minor_units == 0 else f', {_worth(tip.value)} tip'
+    worth = '' if expense.tip_amount().minor_units == 0 else f', {_worth(expense.tip.value)} tip'
     return divided + payers + worth
 
 
@@ -488,7 +487,6 @@ def _print_fado(group: ExpenseGroup, fado: Expense) -> None:
 
     """
     tip = fado.tip
-    assert tip is not None, 'the fado night has a tip'
     print_lines(
         "The groceries' 10.00 EUR did not divide into thirds, so one member consumed the",
         "leftover cent; the expense's identifier picks which, so it moves from expense to",

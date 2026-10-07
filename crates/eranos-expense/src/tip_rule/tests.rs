@@ -17,14 +17,16 @@ fn per_cent(text: &str) -> Percentage {
     Percentage::parse(text).unwrap()
 }
 
-/// An expense without a tip would be charged one, or its tip would need a
-/// currency the expense has not given it yet.
+/// An expense without a tip would be charged one, its tip would need a
+/// currency the expense has not given it yet, or the default tip would be
+/// another than no tip.
 #[test]
 fn the_default_tip_is_none_at_all() {
-    let tip = TipRule::default();
+    let tip = TipRule::NONE;
     assert_eq!(tip.value(), TipValue::Percentage(Percentage::ZERO));
     assert_eq!(tip.distribution(), TipDistribution::Proportional);
     assert_eq!(tip.amount_on(euros(9_000)), Ok(euros(0)));
+    assert_eq!(TipRule::default(), TipRule::NONE);
 }
 
 /// Tips entered without choosing a distribution would be shared equally,

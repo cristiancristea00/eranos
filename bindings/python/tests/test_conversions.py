@@ -10,7 +10,7 @@ from typing import Any, final
 
 import pytest
 
-from eranos import EranosError, InvalidJsonError, _entries, _errors, _totals
+from eranos import NO_TIP, UNCATEGORISED, EranosError, InvalidJsonError, _entries, _errors, _totals
 from eranos._errors import library_errors
 from eranos._internal import eranos as generated
 
@@ -143,6 +143,12 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
     assert set(_errors._ERRORS) == {value for value in vars(generated.EranosError).values() if isinstance(value, type)}
     assert [member.name for member in _entries.TipDistribution] == [member.name for member in generated.TipDistribution]
     assert [member.name for member in _totals.SettlementStrategy] == [member.name for member in generated.SettlementStrategy]
+
+
+def test_the_built_in_category_and_the_no_tip_rule_are_the_ones_the_core_gives() -> None:
+    """A constant that differed from the core's would put an expense the app left alone in another category, or give it a tip."""
+    assert generated.category_id_uncategorised() == UNCATEGORISED
+    assert _entries.generated_tip(NO_TIP) == generated.tip_rule_none()
 
 
 def test_every_strategy_converts_into_the_generated_module_and_back() -> None:

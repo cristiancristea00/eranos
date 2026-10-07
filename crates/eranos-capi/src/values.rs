@@ -340,6 +340,13 @@ pub mod ffi {
             crate::write_text(write, &text);
             Ok(())
         }
+
+        /// Writes the identifier of the built-in category, Uncategorised, which every group has and
+        /// every expense is in until it is given another: the text of the nil UUID,
+        /// `00000000-0000-0000-0000-000000000000`.
+        pub fn uncategorised(write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::category_id_uncategorised());
+        }
     }
 
     /// The helpers of language tags. It holds nothing, and nothing makes one.

@@ -1,5 +1,7 @@
 package eranos;
 
+import eranos.internal.Eranos;
+
 import java.util.Objects;
 
 /**
@@ -9,6 +11,12 @@ import java.util.Objects;
  * @param distribution how the tip is shared among the participants
  */
 public record TipRule(TipValue value, TipDistribution distribution) {
+    /**
+     * The no-tip rule, which an expense without a tip has: 0 % of the amount, shared
+     * proportionally.
+     */
+    public static final TipRule NONE = converted(Eranos.tipRuleNone());
+
     /**
      * The tip of {@code value}, shared by {@code distribution}.
      *

@@ -129,6 +129,14 @@ export function categoryId(text: string): CategoryId {
 }
 
 /**
+ * The identifier of the built-in category, Uncategorised, which every group has and every expense is in until it is given
+ * another: the text of the nil UUID, `00000000-0000-0000-0000-000000000000`.
+ */
+// The literal, since a module constant is evaluated before `init` loads the WebAssembly module; a test holds it to the
+// library's.
+export const UNCATEGORISED: CategoryId = categoryId('00000000-0000-0000-0000-000000000000');
+
+/**
  * The category identifier written `text`, as it is: not trimmed, and in its case, checked by the rules every kind of
  * identifier shares.
  *

@@ -10,12 +10,13 @@ keeps its identifier. A variant, such as a split or a cost, is a union of datacl
 import dataclasses
 import enum
 from collections.abc import Callable
-from typing import Any, Self, assert_never, final
+from typing import Any, Final, Self, assert_never, final
 
 from eranos._calendar import CalendarDate, TimeOfDay, date_of, generated_date, generated_time, time_of
 from eranos._contact import Email, Iban, PhoneNumber, Username
 from eranos._errors import library_errors
 from eranos._identifiers import (
+    UNCATEGORISED,
     CategoryId,
     ExpenseId,
     MemberId,
@@ -215,6 +216,53 @@ class TipRule:
     """How the tip divides, in proportion to each participant's share unless given."""
 
 
+# An expense's tip defaults to the core's no-tip rule, which the module converts when it loads, so the tip's conversions
+# come before the expense.
+def generated_tip(tip: TipRule) -> generated.TipRule:
+    """
+    Convert tip into the tip the generated module holds.
+
+    Args:
+        tip: The tip.
+
+    Returns:
+        The generated tip.
+
+    """
+    match tip.value:
+        case PercentageTip(percentage=percentage):
+            value = variant(generated.TipValue, generated.TipValue.PERCENTAGE(percentage.basis_points))
+        case FixedTip(amount=amount):
+            value = variant(generated.TipValue, generated.TipValue.FIXED(generated_money(amount)))
+        case _:
+            assert_never(tip.value)
+    return generated.TipRule(value=value, distribution=generated.TipDistribution[tip.distribution.name])
+
+
+_TIP_VALUES: dict[type[object], Callable[[Any], TipValue]] = {
+    generated.TipValue.PERCENTAGE: lambda value: PercentageTip(Percentage(value.basis_points)),
+    generated.TipValue.FIXED: lambda value: FixedTip(money_of(value.amount)),
+}
+"""The tip's value of each case of the generated tip's value, by its class."""
+
+
+def tip_of(value: generated.TipRule) -> TipRule:
+    """
+    Convert the tip the generated module holds as value.
+
+    Args:
+        value: The generated tip.
+
+    Returns:
+        The tip.
+
+    """
+    return TipRule(_TIP_VALUES[type(value.value)](value.value), TipDistribution[value.distribution.name])
+
+
+NO_TIP: Final[TipRule] = tip_of(generated.tip_rule_none())
+
+
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
 class WholeExpenseSplit:
@@ -264,14 +312,14 @@ class Expense:
     date: CalendarDate
     """The day it happened."""
 
-    tip: TipRule | None = None
-    """Its tip, or none."""
+    tip: TipRule = NO_TIP
+    """Its tip, ``NO_TIP`` for an expense without one."""
 
     time: TimeOfDay | None = None
     """The time of day it happened, or none."""
 
-    category: CategoryId | None = None
-    """Its category, or none for the built-in one."""
+    category: CategoryId = UNCATEGORISED
+    """Its category, the built-in one's identifier, ``UNCATEGORISED``, until it is given another."""
 
     description: str | None = None
     """A longer description, or none."""
@@ -286,9 +334,9 @@ class Expense:
         payers: Split,
         split: ExpenseSplit,
         date: CalendarDate,
-        tip: TipRule | None = None,
+        tip: TipRule = NO_TIP,
         time: TimeOfDay | None = None,
-        category: CategoryId | None = None,
+        category: CategoryId = UNCATEGORISED,
         description: str | None = None,
     ) -> Self:
         """
@@ -303,9 +351,9 @@ class Expense:
             payers: Who paid, and how much each.
             split: How it divides among the members who share it.
             date: The day it happened.
-            tip: Its tip, or none.
+            tip: Its tip, ``NO_TIP`` for an expense without one.
             time: The time of day it happened, or none.
-            category: Its category, or none for the built-in one.
+            category: Its category, the built-in one's identifier, ``UNCATEGORISED``, until it is given another.
             description: A longer description, or none.
 
         Returns:
@@ -340,7 +388,7 @@ class Expense:
 
     def tip_amount(self) -> Money:
         """
-        Work out the tip in the expense's currency, zero without one.
+        Work out the tip in the expense's currency, zero for ``NO_TIP``.
 
         The library refuses a tip the expense cannot have with an ``ExpenseError``.
 
@@ -685,48 +733,6 @@ def item_of(value: generated.ExpenseItem) -> ExpenseItem:
     return ExpenseItem(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=value.quantity)
 
 
-def generated_tip(tip: TipRule) -> generated.TipRule:
-    """
-    Convert tip into the tip the generated module holds.
-
-    Args:
-        tip: The tip.
-
-    Returns:
-        The generated tip.
-
-    """
-    match tip.value:
-        case PercentageTip(percentage=percentage):
-            value = variant(generated.TipValue, generated.TipValue.PERCENTAGE(percentage.basis_points))
-        case FixedTip(amount=amount):
-            value = variant(generated.TipValue, generated.TipValue.FIXED(generated_money(amount)))
-        case _:
-            assert_never(tip.value)
-    return generated.TipRule(value=value, distribution=generated.TipDistribution[tip.distribution.name])
-
-
-_TIP_VALUES: dict[type[object], Callable[[Any], TipValue]] = {
-    generated.TipValue.PERCENTAGE: lambda value: PercentageTip(Percentage(value.basis_points)),
-    generated.TipValue.FIXED: lambda value: FixedTip(money_of(value.amount)),
-}
-"""The tip's value of each case of the generated tip's value, by its class."""
-
-
-def tip_of(value: generated.TipRule) -> TipRule:
-    """
-    Convert the tip the generated module holds as value.
-
-    Args:
-        value: The generated tip.
-
-    Returns:
-        The tip.
-
-    """
-    return TipRule(_TIP_VALUES[type(value.value)](value.value), TipDistribution[value.distribution.name])
-
-
 def generated_expense_split(split: ExpenseSplit) -> generated.ExpenseSplit:
     """
     Convert split into the expense split the generated module holds.
@@ -772,7 +778,7 @@ def generated_expense(expense: Expense) -> generated.Expense:
         payers=generated_split(expense.payers),
         split=generated_expense_split(expense.split),
         date=generated_date(expense.date),
-        tip=None if expense.tip is None else generated_tip(expense.tip),
+        tip=generated_tip(expense.tip),
         time=None if expense.time is None else generated_time(expense.time),
         category=expense.category,
         description=expense.description,
@@ -797,9 +803,9 @@ def expense_of(value: generated.Expense) -> Expense:
         payers=split_of(value.payers),
         split=_EXPENSE_SPLITS[type(value.split)](value.split),
         date=date_of(value.date),
-        tip=None if value.tip is None else tip_of(value.tip),
+        tip=tip_of(value.tip),
         time=None if value.time is None else time_of(value.time),
-        category=None if value.category is None else CategoryId(value.category),
+        category=CategoryId(value.category),
         description=value.description,
     )
 

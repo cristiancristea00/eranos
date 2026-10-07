@@ -6,11 +6,11 @@ use std::collections::BTreeSet;
 
 use eranos::error::MoneyError;
 use eranos::expense as expenses;
-use eranos::{Email, Iban, Language, MemberId, PhoneNumber, Username};
+use eranos::{CategoryId, Email, Iban, Language, MemberId, PhoneNumber, Username};
 use eranos::{calendar, ledger, money as library};
 
 use crate::calendar::{CalendarDate, TimeOfDay};
-use crate::expense::{Expense, ExpenseSplit, Split};
+use crate::expense::{Expense, ExpenseSplit, Split, TipRule};
 use crate::ledger::Balance;
 use crate::money::{CurrencyDetails, Money, currency, exchange_rate, parts, percentage};
 use crate::{EranosError, identifier};
@@ -45,6 +45,14 @@ pub fn identifier_generate() -> String {
 pub fn identifier_parse(text: &str) -> Result<String, EranosError> {
     // A member's identifier stands for every kind, whose rules are the same.
     Ok(identifier::<MemberId>(text)?.as_str().to_owned())
+}
+
+/// The identifier of the built-in category, Uncategorised, which every
+/// group has and every expense is in until it is given another: the text of
+/// the nil UUID, `00000000-0000-0000-0000-000000000000`.
+#[must_use]
+pub fn category_id_uncategorised() -> String {
+    CategoryId::UNCATEGORISED.as_str().to_owned()
 }
 
 // --- Money -------------------------------------------------------------------
@@ -313,6 +321,15 @@ pub fn username_parse(text: &str) -> Result<String, EranosError> {
     Ok(Username::new(text)?.as_str().to_owned())
 }
 
+// --- Tips --------------------------------------------------------------------
+
+/// The no-tip rule, which an expense without a tip has: 0 % of the amount,
+/// shared proportionally.
+#[must_use]
+pub fn tip_rule_none() -> TipRule {
+    TipRule::from_library(expenses::TipRule::NONE)
+}
+
 // --- What an expense derives -------------------------------------------------
 
 /// The tip of `expense`, in its own currency.
@@ -374,11 +391,7 @@ pub fn split_members(split: &Split) -> Result<Vec<String>, EranosError> {
 /// The tip of `expense`, in the library's money.
 fn tip_amount(expense: &Expense) -> Result<library::Money, EranosError> {
     let amount = expense.cost.to_library()?.amount();
-    let tip = match &expense.tip {
-        Some(tip) => tip.to_library()?,
-        None => expenses::TipRule::default(),
-    };
-    Ok(tip.amount_on(amount)?)
+    Ok(expense.tip.to_library()?.amount_on(amount)?)
 }
 
 #[cfg(test)]

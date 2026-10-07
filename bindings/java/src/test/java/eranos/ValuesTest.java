@@ -16,7 +16,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
-/** The currencies, amounts, ratios, dates, times, contact details, and identifiers. */
+/**
+ * The currencies, amounts, ratios, dates, times, contact details, and identifiers, and the values
+ * an expense starts at.
+ */
 class ValuesTest {
     /**
      * A text the identifier rules refuse, the failure that names why, and the library's message.
@@ -251,6 +254,27 @@ class ValuesTest {
             assertEquals(refusal.failure(), refused.failure());
             assertEquals(refusal.message(), refused.getMessage());
         }
+    }
+
+    /**
+     * A built-in category's identifier or a no-tip rule other than the library's would put an
+     * expense the app left in the built-in category into another one, or give an expense the app
+     * left without a tip a tip, or one shared another way than the library's own expense without a
+     * tip.
+     */
+    @Test
+    void theBuiltInCategoryAndTheNoTipRuleAreTheLibrarys() throws EranosException {
+        assertEquals("00000000-0000-0000-0000-000000000000", CategoryId.UNCATEGORISED.value());
+        assertEquals(
+                new CategoryId(eranos.internal.Eranos.categoryIdUncategorised()),
+                CategoryId.UNCATEGORISED);
+        assertEquals(CategoryId.UNCATEGORISED, CategoryId.parse(CategoryId.UNCATEGORISED.value()));
+        assertEquals(
+                new TipRule(
+                        new TipValue.Percentage(Percentage.ofBasisPoints(0)),
+                        TipDistribution.PROPORTIONAL),
+                TipRule.NONE);
+        assertEquals(TipRule.converted(eranos.internal.Eranos.tipRuleNone()), TipRule.NONE);
     }
 
     /**

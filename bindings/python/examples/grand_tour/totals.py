@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import ClassVar, assert_never, final, override
 
 from eranos import (
+    UNCATEGORISED,
     CategoryId,
     CategoryTotal,
     CurrencyCode,
@@ -29,7 +30,6 @@ from examples.grand_tour.tour import (
     Categories,
     PaymentRow,
     People,
-    built_in_category,
     eur,
     name,
     october,
@@ -151,7 +151,7 @@ def _total(category_totals: Iterable[CategoryTotal], category: CategoryId) -> Mo
     return next((entry.total for entry in category_totals if entry.category == category), None)
 
 
-def _consumption_row(member: Member, summary: Summary, categories: Categories, built_in: CategoryId, zero: Money) -> MemberCategoryRow:
+def _consumption_row(member: Member, summary: Summary, categories: Categories, zero: Money) -> MemberCategoryRow:
     """
     Write the row of member among the consumptions per category.
 
@@ -159,7 +159,6 @@ def _consumption_row(member: Member, summary: Summary, categories: Categories, b
         member: The member.
         summary: The group's summary.
         categories: The categories the group adds.
-        built_in: The built-in category.
         zero: Zero in the group currency, for a category the member consumed nothing in.
 
     Returns:
@@ -172,7 +171,7 @@ def _consumption_row(member: Member, summary: Summary, categories: Categories, b
         food=_total(own, categories.food) or zero,
         lodging=_total(own, categories.lodging) or zero,
         transport=_total(own, categories.transport) or zero,
-        uncategorised=_total(own, built_in) or zero,
+        uncategorised=_total(own, UNCATEGORISED) or zero,
     )
 
 
@@ -196,9 +195,8 @@ def summary(group: ExpenseGroup, people: People, categories: Categories) -> None
     print_lines('The spending per category:')
     print_categories(group)
     print_lines("And each member's consumption per category:")
-    built_in = built_in_category(group)
     zero = Money(0, group.currency())
-    print_table(MemberCategoryRow, [_consumption_row(member, summary, categories, built_in, zero) for member in group.members()], 1)
+    print_table(MemberCategoryRow, [_consumption_row(member, summary, categories, zero) for member in group.members()], 1)
 
     assert summary.total_spent == eur('1222.90')
     ana = _member_totals(summary, people.ana)
@@ -210,7 +208,7 @@ def summary(group: ExpenseGroup, people: People, categories: Categories) -> None
     assert _total(summary.category_totals, categories.food) == eur('174.40')
     assert _total(summary.category_totals, categories.lodging) == eur('800.00')
     assert _total(summary.category_totals, categories.transport) == eur('188.50')
-    assert _total(summary.category_totals, built_in) == eur('60.00')
+    assert _total(summary.category_totals, UNCATEGORISED) == eur('60.00')
     for found in summary.members:
         assert _add_up(zero.currency, (entry.total for entry in _by_category(summary, found.member))) == found.share
     assert _add_up(zero.currency, (found.net for found in summary.members)).minor_units == 0
@@ -227,8 +225,7 @@ def removing_a_category(group: ExpenseGroup, categories: Categories) -> None:
     """
     section('9. Removing a category')
     removed = group.remove_category(categories.transport)
-    uncategorised = built_in_category(group)
-    built_in = refusal(lambda: group.remove_category(uncategorised))
+    built_in = refusal(lambda: group.remove_category(UNCATEGORISED))
     print_lines(
         f'Removing {removed.name} moves its expenses to Uncategorised and the category',
         'totals with them; no balance changes. The built-in category cannot be removed:',
@@ -239,7 +236,7 @@ def removing_a_category(group: ExpenseGroup, categories: Categories) -> None:
     assert isinstance(built_in, ExpenseGroupError)
     assert built_in.failure == ExpenseGroupError.BuiltInCategory()
     assert group.category(categories.transport) is None
-    assert _total(group.summary().category_totals, uncategorised) == eur('248.50')
+    assert _total(group.summary().category_totals, UNCATEGORISED) == eur('248.50')
     assert all(expense.category != categories.transport for expense in group.expenses())
 
 

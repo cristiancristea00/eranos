@@ -4,10 +4,13 @@
 //! would reach the library; and an entry to add would lose the identifier
 //! its app gives it.
 
-use eranos::ExpenseId;
+use eranos::{CategoryId, ExpenseId};
 
 use super::*;
-use crate::{CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure, identifier_generate};
+use crate::{
+    CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure, category_id_uncategorised,
+    identifier_generate, tip_rule_none,
+};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal<Record> {
@@ -201,7 +204,7 @@ fn fare() -> ExpenseItem {
 }
 
 /// A dinner that Ana paid, tip included, which Ana and Bob share: every
-/// optional field set.
+/// field set, the tip and the category to other values than their defaults.
 fn dinner() -> Expense {
     Expense {
         id: identifier_generate(),
@@ -223,22 +226,23 @@ fn dinner() -> Expense {
             month: 9,
             day: 23,
         },
-        tip: Some(TipRule {
+        tip: TipRule {
             value: TipValue::Percentage {
                 basis_points: 1_000,
             },
             distribution: TipDistribution::Proportional,
-        }),
+        },
         time: Some(TimeOfDay {
             hour: 20,
             minute: 15,
         }),
-        category: Some(CategoryId::new("category-3").unwrap().to_string()),
+        category: CategoryId::new("category-3").unwrap().to_string(),
         description: Some("A birthday".to_owned()),
     }
 }
 
-/// A taxi fare in lei that Bob paid, itemised: no optional field set.
+/// A taxi fare in lei that Bob paid, itemised: no optional field set, no
+/// tip, and the built-in category.
 fn taxi() -> Expense {
     Expense {
         id: identifier_generate(),
@@ -256,9 +260,9 @@ fn taxi() -> Expense {
             month: 9,
             day: 24,
         },
-        tip: None,
+        tip: tip_rule_none(),
         time: None,
-        category: None,
+        category: category_id_uncategorised(),
         description: None,
     }
 }
@@ -316,7 +320,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
         },
         Refusal {
             record: Expense {
-                category: Some(" nobody".to_owned()),
+                category: " nobody".to_owned(),
                 ..dinner()
             },
             is_expected: surrounding_whitespace,
@@ -333,10 +337,10 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
         },
         Refusal {
             record: Expense {
-                tip: Some(TipRule {
+                tip: TipRule {
                     value: TipValue::Percentage { basis_points: -1 },
                     distribution: TipDistribution::Equal,
-                }),
+                },
                 ..dinner()
             },
             is_expected: invalid_percentage,
@@ -536,13 +540,68 @@ fn tips_convert_both_ways_and_refuse_what_does_not_convert() {
 }
 
 /// An expense added through the bindings would reach the library with a
-/// field changed or dropped, come back without its identifier, or show the
-/// built-in category and the absent tip as values.
+/// field changed or dropped, or come back without its identifier, its tip,
+/// or its category.
 #[test]
 fn an_expense_to_add_converts_both_ways() {
     for record in [dinner(), taxi()] {
         assert_eq!(Expense::from_library(&record.to_new().unwrap()), record);
     }
+}
+
+/// An expense the library holds without a tip or a category would read
+/// back with either left out, or with another value than the library's no
+/// tip and built-in category, so the apps could not tell them from a value
+/// they set.
+#[test]
+fn an_expense_reads_back_no_tip_and_the_built_in_category_by_name() {
+    let expense = library::Expense::builder(
+        "Taxi",
+        money::Money::from_minor_units(5_000, money::CurrencyCode::EUR),
+        ana(),
+        library::Split::equal([ana(), bob()]),
+        eranos::CalendarDate::new(2026, 9, 24).unwrap(),
+    )
+    .build()
+    .unwrap();
+    let record = Expense::from_library(&expense);
+    assert_eq!(
+        record.tip,
+        TipRule {
+            value: TipValue::Percentage { basis_points: 0 },
+            distribution: TipDistribution::Proportional,
+        }
+    );
+    assert_eq!(record.tip, tip_rule_none());
+    assert_eq!(record.category, "00000000-0000-0000-0000-000000000000");
+    assert_eq!(record.category, category_id_uncategorised());
+}
+
+/// A tip of 0 % set on purpose would read back as another rule than the
+/// no-tip rule when it is shared proportionally, or be taken for no tip when
+/// it is shared equally.
+#[test]
+fn a_zero_tip_reads_back_as_set() {
+    let proportional = Expense {
+        tip: TipRule {
+            value: TipValue::Percentage { basis_points: 0 },
+            distribution: TipDistribution::Proportional,
+        },
+        ..taxi()
+    };
+    let stored = proportional.to_new().unwrap();
+    assert_eq!(stored.tip(), library::TipRule::NONE);
+    assert_eq!(Expense::from_library(&stored).tip, tip_rule_none());
+    let equal = Expense {
+        tip: TipRule {
+            value: TipValue::Percentage { basis_points: 0 },
+            distribution: TipDistribution::Equal,
+        },
+        ..taxi()
+    };
+    let read = Expense::from_library(&equal.to_new().unwrap());
+    assert_ne!(read.tip, tip_rule_none());
+    assert_eq!(read, equal);
 }
 
 /// An expense to add would lose the identifier its app gives it, its own or

@@ -95,6 +95,32 @@ static void checkSucceeded(Check *const check, EranosError *const error, char co
     return same;
 }
 
+/// Whether @p tip is the no-tip rule, 0 % of the amount shared proportionally; destroys it.
+[[nodiscard]] static bool isNoTip(EranosTipRule *const tip) {
+    if (nullptr == tip) {
+        return false;
+    }
+    EranosTipValue *const value = eranosTipRuleValue(tip);
+    int32_t basisPoints = -1;
+    bool const same = ERANOS_TIP_VALUE_KIND_PERCENTAGE == eranosTipValueKind(value) && eranosTipValueBasisPoints(value, &basisPoints) &&
+                      0 == basisPoints && ERANOS_TIP_DISTRIBUTION_PROPORTIONAL == eranosTipRuleDistribution(tip);
+    eranosTipValueDestroy(value);
+    eranosTipRuleDestroy(tip);
+    return same;
+}
+
+/// Whether @p expense is in the built-in category, by the identifier eranosIdentifierUncategorised() writes.
+[[nodiscard]] static bool isUncategorised(EranosExpense const *const expense) {
+    EranosText *const category = eranosTextCreate();
+    EranosText *const uncategorised = eranosTextCreate();
+    eranosExpenseCategory(expense, category);
+    eranosIdentifierUncategorised(uncategorised);
+    bool const same = isText(category, eranosTextData(uncategorised));
+    eranosTextDestroy(uncategorised);
+    eranosTextDestroy(category);
+    return same;
+}
+
 /// The list of @p first and, unless nullptr, @p second.
 [[nodiscard]] static EranosTextList *membersOf(char const *const first, char const *const second) {
     EranosTextList *const members = eranosTextListCreate();
@@ -871,8 +897,8 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosExpense *const expense = expenseOf("Dinner", "ana", "ana", "bob");
     eranosExpenseId(expense, text);
     checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new expense has a generated identifier");
-    checkThat(check, !eranosExpenseCategory(expense, text) && !eranosExpenseDescription(expense, text) && nullptr == eranosExpenseTip(expense),
-              "and no category, description, or tip");
+    checkThat(check, isUncategorised(expense) && isNoTip(eranosExpenseTip(expense)), "in the built-in category, with the no-tip rule");
+    checkThat(check, !eranosExpenseDescription(expense, text), "and no description");
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
     checkThat(check, !eranosExpenseTime(expense, &time), "nor time");
     checkSucceeded(check, eranosExpenseSetId(expense, "0199a000-0000-7000-8000-000000000001"), "an identifier is set");
@@ -897,7 +923,8 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000001"), "the identifier as set");
     eranosExpenseName(expense, text);
     checkThat(check, isText(text, "Lunch"), "the name");
-    checkThat(check, eranosExpenseCategory(expense, text) && isText(text, "0199a000-0000-7000-8000-000000000002"), "the category");
+    eranosExpenseCategory(expense, text);
+    checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000002"), "the category");
     checkThat(check, eranosExpenseDescription(expense, text) && isText(text, "By the sea"), "the description");
     checkThat(check, eranosExpenseTime(expense, &time) && 12 == time.hour && 15 == time.minute, "the time");
     EranosCalendarDate const date = eranosExpenseDate(expense);
@@ -908,7 +935,8 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosTipRule *const readTip = eranosExpenseTip(expense);
     checkThat(check,
               isAmount(eranosCostAmount(readCost), 4'000, "EUR") && listsMembers(eranosSplitMembers(readPayers), "bob", nullptr) &&
-                  ERANOS_EXPENSE_SPLIT_KIND_WHOLE == eranosExpenseSplitKind(readSplit) && nullptr != readTip,
+                  ERANOS_EXPENSE_SPLIT_KIND_WHOLE == eranosExpenseSplitKind(readSplit) &&
+                  ERANOS_TIP_DISTRIBUTION_EQUAL == eranosTipRuleDistribution(readTip),
               "the cost, payers, split, and tip");
     EranosMoney *amount = nullptr;
     checkSucceeded(check, eranosExpenseTipAmount(expense, &amount), "the tip's amount");
@@ -932,14 +960,14 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
                   isKind(eranosExpenseSetCategory(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosExpenseSetDescription(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "every text field is text");
-    eranosExpenseClearCategory(expense);
     eranosExpenseClearDescription(expense);
     eranosExpenseClearTime(expense);
-    eranosExpenseClearTip(expense);
-    checkThat(check,
-              !eranosExpenseCategory(expense, text) && !eranosExpenseDescription(expense, text) && !eranosExpenseTime(expense, &time) &&
-                  nullptr == eranosExpenseTip(expense),
-              "every optional field clears");
+    checkThat(check, !eranosExpenseDescription(expense, text) && !eranosExpenseTime(expense, &time), "every optional field clears");
+    EranosTipRule *const none = eranosTipRuleCreateNone();
+    eranosExpenseSetTip(expense, none);
+    eranosIdentifierUncategorised(text);
+    checkSucceeded(check, eranosExpenseSetCategory(expense, eranosTextData(text)), "the built-in category is set back");
+    checkThat(check, isUncategorised(expense) && isNoTip(eranosExpenseTip(expense)), "and so is the no-tip rule, as any other value");
     EranosExpense *receipt = nullptr;
     checkSucceeded(check, eranosExpenseCreateWithId("receipt-17", "Receipt", cost, bob, split, NEXT, &receipt),
                    "an expense under the app's identifier");
@@ -954,6 +982,7 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
               "an identifier is text");
     eranosCostDestroy(strange);
     eranosMoneyDestroy(unlisted);
+    eranosTipRuleDestroy(none);
     eranosTipRuleDestroy(readTip);
     eranosExpenseSplitDestroy(readSplit);
     eranosSplitDestroy(readPayers);
@@ -1445,6 +1474,44 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
     eranosExpenseDestroy(dinner);
     eranosExpenseListDestroy(expenses);
     eranosTextDestroy(text);
+    flatDestroy(flat);
+}
+
+/// An expense the group returned without the built-in category's identifier or the no-tip rule would leave an app unable to tell which category
+/// it is in or what tip it has, and a built-in identifier or a no-tip rule other than the library's would file it under a category the group
+/// does not hold or give it a tip.
+static void anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule(Check *const check) {
+    Flat const flat = flatOf();
+    EranosText *const uncategorised = eranosTextCreate();
+    eranosIdentifierUncategorised(uncategorised);
+    checkThat(check, isText(uncategorised, "00000000-0000-0000-0000-000000000000"), "the built-in category's identifier is the nil UUID");
+    EranosCategory *builtIn = nullptr;
+    checkSucceeded(check, eranosExpenseGroupCategory(flat.group, eranosTextData(uncategorised), &builtIn), "a look for it");
+    checkThat(check, nullptr != builtIn, "finds the built-in category");
+    checkThat(check, isNoTip(eranosTipRuleCreateNone()), "the no-tip rule is 0 % shared proportionally");
+    EranosExpense *const taxi = expenseOf("Taxi", eranosTextData(flat.ana), eranosTextData(flat.ana), eranosTextData(flat.bob));
+    EranosText *const id = eranosTextCreate();
+    checkSucceeded(check, eranosExpenseGroupAddExpense(flat.group, taxi, id), "an expense given neither");
+    EranosExpense *added = nullptr;
+    checkSucceeded(check, eranosExpenseGroupExpense(flat.group, eranosTextData(id), &added), "is found");
+    checkThat(check, isUncategorised(added) && isNoTip(eranosExpenseTip(added)), "in the built-in category, with the no-tip rule");
+    EranosTipValue *const nothing = eranosTipValueCreatePercentage(0);
+    EranosTipRule *const zero = eranosTipRuleCreate(nothing, ERANOS_TIP_DISTRIBUTION_PROPORTIONAL);
+    eranosExpenseSetTip(taxi, zero);
+    EranosExpense *previous = nullptr;
+    checkSucceeded(check, eranosExpenseGroupReplaceExpense(flat.group, taxi, &previous), "an expense given a 0 % tip shared proportionally");
+    EranosExpense *replaced = nullptr;
+    checkSucceeded(check, eranosExpenseGroupExpense(flat.group, eranosTextData(id), &replaced), "is found");
+    checkThat(check, isNoTip(eranosExpenseTip(replaced)), "with the no-tip rule");
+    eranosExpenseDestroy(replaced);
+    eranosExpenseDestroy(previous);
+    eranosTipRuleDestroy(zero);
+    eranosTipValueDestroy(nothing);
+    eranosExpenseDestroy(added);
+    eranosTextDestroy(id);
+    eranosExpenseDestroy(taxi);
+    eranosCategoryDestroy(builtIn);
+    eranosTextDestroy(uncategorised);
     flatDestroy(flat);
 }
 
@@ -2453,6 +2520,10 @@ int main(void) {
         {.body = destroyingNullDoesNothing, .name = "destroyingNullDoesNothing"},
         {.body = aGroupHoldsItsDetailsAndChangesThem, .name = "aGroupHoldsItsDetailsAndChangesThem"},
         {.body = entriesComeAndGoThroughTheGroup, .name = "entriesComeAndGoThroughTheGroup"},
+        {
+            .body = anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule,
+            .name = "anExpenseWithoutACategoryOrATipReadsBackInTheBuiltInOneWithTheNoTipRule",
+        },
         {.body = anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt, .name = "anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt"},
         {.body = anIdentifierThatIsNotOneIsRefusedByEveryLookup, .name = "anIdentifierThatIsNotOneIsRefusedByEveryLookup"},
         {.body = theParticipantsOfASplitAndOfAnExpenseAreTheirMembers, .name = "theParticipantsOfASplitAndOfAnExpenseAreTheirMembers"},

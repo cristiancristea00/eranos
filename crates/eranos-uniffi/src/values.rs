@@ -2,7 +2,7 @@
 //! comes from the library through them.
 
 use eranos_bindings::{
-    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, TimeOfDay,
+    Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, TimeOfDay, TipRule,
 };
 
 /// A new identifier, which any entry or group can take.
@@ -27,6 +27,15 @@ pub(crate) fn identifier_generate() -> String {
 #[uniffi::export]
 pub(crate) fn identifier_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::identifier_parse(text)
+}
+
+/// The identifier of the built-in category, Uncategorised, which every
+/// group has and every expense is in until it is given another: the text of
+/// the nil UUID, `00000000-0000-0000-0000-000000000000`.
+#[must_use]
+#[uniffi::export]
+pub(crate) fn category_id_uncategorised() -> String {
+    eranos_bindings::category_id_uncategorised()
 }
 
 /// The amount written `text` in the currency `code`: "12.50".
@@ -282,6 +291,14 @@ pub(crate) fn iban_country_code(text: &str) -> Result<String, EranosError> {
 #[uniffi::export]
 pub(crate) fn username_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::username_parse(text)
+}
+
+/// The no-tip rule, which an expense without a tip has: 0 % of the amount,
+/// shared proportionally.
+#[must_use]
+#[uniffi::export]
+pub(crate) fn tip_rule_none() -> TipRule {
+    eranos_bindings::tip_rule_none()
 }
 
 /// The tip of `expense`, in its own currency.

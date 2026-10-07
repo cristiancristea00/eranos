@@ -193,7 +193,7 @@ internal fun addCategories(group: ExpenseGroup): Categories {
     val homonym = refusal { group.addBlocking(Category("FOOD")) }
     val renamed = checkNotNull(group.categoryBlocking(transport)) { "Transport was added" }.copy(name = "Getting around")
     group.replaceBlocking(renamed)
-    val other = checkNotNull(group.categoriesBlocking().firstOrNull()) { "every group has the built-in category" }.copy(name = "Other")
+    val other = checkNotNull(group.categoryBlocking(CategoryId.UNCATEGORISED)) { "every group has the built-in category" }.copy(name = "Other")
     val builtIn = refusal { group.replaceBlocking(other) }
     println(
         """
@@ -217,6 +217,6 @@ internal fun addCategories(group: ExpenseGroup): Categories {
     check(ExpenseGroupFailure.BuiltInCategory == (builtIn as? EranosException.ExpenseGroup)?.failure)
     check("Getting around" == group.categoryBlocking(transport)?.name)
     check("lodging" == lodging.value)
-    check(listOf(builtInCategory(group), food, transport, lodging) == group.categoriesBlocking().map { category -> category.id })
+    check(listOf(CategoryId.UNCATEGORISED, food, transport, lodging) == group.categoriesBlocking().map { category -> category.id })
     return Categories(food, lodging, transport)
 }

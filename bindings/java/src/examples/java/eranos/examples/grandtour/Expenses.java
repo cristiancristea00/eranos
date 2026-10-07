@@ -59,9 +59,9 @@ final class Expenses {
         int count = expense.payers().members().size();
         String payers = 1 == count ? "" : ", " + count + " payers";
         String tip = "";
-        if (0 != expense.tipAmount().minorUnits() && expense.tip().isPresent()) {
+        if (0 != expense.tipAmount().minorUnits()) {
             tip =
-                    switch (expense.tip().orElseThrow().value()) {
+                    switch (expense.tip().value()) {
                         case TipValue.Percentage percentage ->
                                 ", " + percentage.percentage() + " tip";
                         case TipValue.Fixed fixed -> ", " + fixed.amount() + " tip";
@@ -304,26 +304,17 @@ final class Expenses {
 
     /** Prints how the fado night's tip was shared, and its receipt. */
     static void printFado(ExpenseGroup group, Expense fado) throws EranosException {
+        TipRule tip = fado.tip();
         String rule =
-                fado.tip()
-                        .map(
-                                tip ->
-                                        switch (tip.value()) {
-                                            case TipValue.Percentage percentage ->
-                                                    percentage.percentage().toString();
-                                            case TipValue.Fixed fixed -> fixed.amount().toString();
-                                        })
-                        .orElse("a tip");
+                switch (tip.value()) {
+                    case TipValue.Percentage percentage -> percentage.percentage().toString();
+                    case TipValue.Fixed fixed -> fixed.amount().toString();
+                };
         String shared =
-                fado.tip()
-                        .map(
-                                tip ->
-                                        switch (tip.distribution()) {
-                                            case PROPORTIONAL ->
-                                                    "in proportion to what each member ordered";
-                                            case EQUAL -> "equally";
-                                        })
-                        .orElse("another way");
+                switch (tip.distribution()) {
+                    case PROPORTIONAL -> "in proportion to what each member ordered";
+                    case EQUAL -> "equally";
+                };
         System.out.print(
                 """
                 The groceries' 10.00 EUR did not divide into thirds, so one member consumed the

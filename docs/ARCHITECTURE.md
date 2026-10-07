@@ -576,7 +576,7 @@ never the derived totals:
   array `[member, value]`. Absent optional fields are omitted, and so are the
   built-in category, an expense's category when it is the built-in one
   (every group has it again when it loads), and a tip equal to
-  `TipRule::default()`, no tip at all. Keys follow the field order of
+  `TipRule::NONE`, no tip at all. Keys follow the field order of
   [AGENTS.md](../AGENTS.md): `format` and `id` first, then the fields that
   describe the value in their natural order, the optional ones after the
   required, and a group's collections last.

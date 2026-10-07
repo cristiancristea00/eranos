@@ -1,6 +1,6 @@
 /// @file eranos/identifiers.h
-/// Identifiers: a new one, the check of one by the rules every kind shares, and lists of them, such as the members of an equal split and the
-/// entries an error names.
+/// Identifiers: a new one, the built-in category's, the check of one by the rules every kind shares, and lists of them, such as the members of an
+/// equal split and the entries an error names.
 
 #ifndef ERANOS_IDENTIFIERS_H
 #define ERANOS_IDENTIFIERS_H
@@ -19,6 +19,16 @@
 static inline void eranosIdentifierGenerate(EranosText *const identifier) {
     eranosDetailClear(identifier);
     EranosIdentifier_generate(identifier);
+    eranosDetailFinish(identifier);
+}
+
+/// Writes the identifier of the built-in category, Uncategorised, which every group has and every expense is in until it is given another: the
+/// text of the nil UUID, `00000000-0000-0000-0000-000000000000`.
+///
+/// @param identifier Receives the identifier, replacing what it held
+static inline void eranosIdentifierUncategorised(EranosText *const identifier) {
+    eranosDetailClear(identifier);
+    EranosIdentifier_uncategorised(identifier);
     eranosDetailFinish(identifier);
 }
 

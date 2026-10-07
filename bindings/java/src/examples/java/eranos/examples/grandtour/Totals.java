@@ -4,7 +4,6 @@ import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
 import static eranos.examples.Report.totals;
-import static eranos.examples.grandtour.Tables.builtInCategory;
 import static eranos.examples.grandtour.Tables.printBalances;
 import static eranos.examples.grandtour.Tables.printCategories;
 import static eranos.examples.grandtour.Tables.printEntries;
@@ -65,10 +64,9 @@ final class Totals {
     }
 
     /** The total of {@code category} among {@code totals}. */
-    private static Optional<Money> total(
-            List<CategoryTotal> totals, Optional<CategoryId> category) {
+    private static Optional<Money> total(List<CategoryTotal> totals, CategoryId category) {
         return totals.stream()
-                .filter(total -> Optional.of(total.category()).equals(category))
+                .filter(total -> total.category().equals(category))
                 .findFirst()
                 .map(CategoryTotal::total);
     }
@@ -87,7 +85,6 @@ final class Totals {
         System.out.println("The spending per category:");
         printCategories(group);
         System.out.println("And each member's consumption per category:");
-        Optional<CategoryId> builtIn = builtInCategory(group);
         Money zero = new Money(0, group.currency());
         List<MemberCategoryRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
@@ -95,10 +92,10 @@ final class Totals {
             rows.add(
                     new MemberCategoryRow(
                             member.firstName(),
-                            total(totals, Optional.of(categories.food())).orElse(zero),
-                            total(totals, Optional.of(categories.lodging())).orElse(zero),
-                            total(totals, Optional.of(categories.transport())).orElse(zero),
-                            total(totals, builtIn).orElse(zero)));
+                            total(totals, categories.food()).orElse(zero),
+                            total(totals, categories.lodging()).orElse(zero),
+                            total(totals, categories.transport()).orElse(zero),
+                            total(totals, CategoryId.UNCATEGORISED).orElse(zero)));
         }
         printTable(MemberCategoryRow.HEADERS, rows, 1);
 
@@ -119,16 +116,10 @@ final class Totals {
                 Optional.of(new Balance.Owes(eur("42.60")))
                         .equals(totals(people.eva(), summary).map(MemberSummary::balance)));
         List<CategoryTotal> categoryTotals = summary.categoryTotals();
-        check(
-                Optional.of(eur("174.40"))
-                        .equals(total(categoryTotals, Optional.of(categories.food()))));
-        check(
-                Optional.of(eur("800.00"))
-                        .equals(total(categoryTotals, Optional.of(categories.lodging()))));
-        check(
-                Optional.of(eur("188.50"))
-                        .equals(total(categoryTotals, Optional.of(categories.transport()))));
-        check(Optional.of(eur("60.00")).equals(total(categoryTotals, builtIn)));
+        check(Optional.of(eur("174.40")).equals(total(categoryTotals, categories.food())));
+        check(Optional.of(eur("800.00")).equals(total(categoryTotals, categories.lodging())));
+        check(Optional.of(eur("188.50")).equals(total(categoryTotals, categories.transport())));
+        check(Optional.of(eur("60.00")).equals(total(categoryTotals, CategoryId.UNCATEGORISED)));
         for (MemberSummary totals : summary.members()) {
             List<Money> amounts =
                     byCategory(summary, totals.member()).stream()
@@ -144,8 +135,8 @@ final class Totals {
             throws EranosException {
         section("9. Removing a category");
         Category removed = group.removeCategory(categories.transport());
-        CategoryId uncategorised = builtInCategory(group).orElseThrow();
-        Optional<EranosException> builtIn = refusal(() -> group.removeCategory(uncategorised));
+        Optional<EranosException> builtIn =
+                refusal(() -> group.removeCategory(CategoryId.UNCATEGORISED));
         System.out.print(
                 """
                 Removing %s moves its expenses to Uncategorised and the category
@@ -159,16 +150,10 @@ final class Totals {
         check(group.category(categories.transport()).isEmpty());
         check(
                 Optional.of(eur("248.50"))
-                        .equals(
-                                total(
-                                        group.summary().categoryTotals(),
-                                        Optional.of(uncategorised))));
+                        .equals(total(group.summary().categoryTotals(), CategoryId.UNCATEGORISED)));
         check(
                 group.expenses().stream()
-                        .noneMatch(
-                                expense ->
-                                        Optional.of(categories.transport())
-                                                .equals(expense.category())));
+                        .noneMatch(expense -> categories.transport().equals(expense.category())));
     }
 
     static void newCurrency(ExpenseGroup group, People people) throws EranosException {

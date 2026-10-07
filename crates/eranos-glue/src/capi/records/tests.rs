@@ -170,7 +170,8 @@ fn a_taken_record_has_every_accessor_in_field_order() {
 }
 
 /// A taken record's constructor takes every required field in order, text
-/// checked, and starts every other at its default.
+/// checked, and starts every other at its default: an expense's tip at what
+/// the core's no-tip helper returns.
 #[test]
 fn a_taken_records_constructor_takes_its_required_fields() {
     let named = named();
@@ -182,8 +183,7 @@ fn a_taken_records_constructor_takes_its_required_fields() {
                 count: i32,
                 date: EranosCalendarDate,
                 distribution: EranosTipDistribution,
-                name: &DiplomatStr,
-                tip: &EranosTipRule
+                name: &DiplomatStr
             ) -> Result<Box<Self>, Box<EranosError>> {
                 Ok(Box::new(Self(eranos_bindings::Expense {
                     id: None,
@@ -192,7 +192,7 @@ fn a_taken_records_constructor_takes_its_required_fields() {
                     date: date.into(),
                     distribution: distribution.into(),
                     name: crate::text(name)?,
-                    tip: tip.0.clone(),
+                    tip: eranos_bindings::tip_rule_none(),
                     fallback: None,
                     items: Vec::new(),
                     limit: None,
@@ -384,12 +384,33 @@ fn a_taken_record_copies_its_records_and_lists() {
     );
 }
 
-/// A constructor that takes no text cannot fail and is `#[must_use]`, and a
-/// field with a default of its own starts at it.
+/// A constructor that takes no text cannot fail and is `#[must_use]`, a
+/// field with a default of its own starts at it, and the no-tip rule has a
+/// constructor of its own.
 #[test]
 fn a_constructor_without_text_cannot_fail_and_a_default_holds() {
     let named = named();
     let tip = methods(&named["EranosTipRule"]);
+    assert_eq!(
+        names(&tip),
+        [
+            "create",
+            "distribution",
+            "set_distribution",
+            "value",
+            "set_value",
+            "none"
+        ]
+    );
+    assert_written(
+        &tip,
+        &[quote! {
+            #[must_use]
+            pub fn none() -> Box<Self> {
+                Box::new(Self(eranos_bindings::tip_rule_none()))
+            }
+        }],
+    );
     assert_eq!(
         code(&tip, "create"),
         syn::parse2::<syn::ImplItemFn>(quote! {

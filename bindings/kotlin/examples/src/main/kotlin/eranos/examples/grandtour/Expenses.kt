@@ -79,10 +79,9 @@ internal fun how(expense: Expense): String {
         if (0L == expense.tipAmount().minorUnits) {
             ""
         } else {
-            when (val value = expense.tip?.value) {
+            when (val value = expense.tip.value) {
                 is TipValue.Percentage -> ", ${value.percentage} tip"
                 is TipValue.Fixed -> ", ${value.amount} tip"
-                null -> ""
             }
         }
     return split + payers + tip
@@ -152,16 +151,14 @@ internal fun printFado(
     fado: Expense,
 ) {
     val rule =
-        when (val value = fado.tip?.value) {
+        when (val value = fado.tip.value) {
             is TipValue.Percentage -> "${value.percentage}"
             is TipValue.Fixed -> "${value.amount}"
-            null -> "a tip"
         }
     val shared =
-        when (fado.tip?.distribution) {
+        when (fado.tip.distribution) {
             TipDistribution.PROPORTIONAL -> "in proportion to what each member ordered"
             TipDistribution.EQUAL -> "equally"
-            null -> "another way"
         }
     println(
         """

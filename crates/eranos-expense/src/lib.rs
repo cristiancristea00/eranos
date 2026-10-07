@@ -72,7 +72,7 @@ pub struct Expense {
     payers: Split,
     split: ExpenseSplit,
     date: CalendarDate,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_default_tip"))]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "is_no_tip"))]
     tip: TipRule,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     exchange_rate: Option<ExchangeRate>,
@@ -322,7 +322,7 @@ impl Expense {
         self.date
     }
 
-    /// The tip: [`TipRule::default`], no tip, unless another was set.
+    /// The tip: [`TipRule::NONE`], no tip, unless another was set.
     #[must_use]
     pub const fn tip(&self) -> TipRule {
         self.tip
@@ -548,7 +548,7 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Replaces the tip; [`TipRule::default`] removes it.
+    /// Replaces the tip; [`TipRule::NONE`] removes it.
     pub const fn tip(mut self, tip: TipRule) -> Self {
         self.tip = tip;
         self
@@ -651,7 +651,7 @@ fn validate_items(items: &[ExpenseItem], amount: Money) -> Result<(), ExpenseErr
 
 /// A builder with the required fields set and every optional one at its
 /// default; the constructors and the serialised form start here.
-fn starting(
+const fn starting(
     id: ExpenseId,
     name: String,
     cost: Cost,
@@ -666,17 +666,17 @@ fn starting(
         payers,
         split,
         date,
-        tip: TipRule::default(),
+        tip: TipRule::NONE,
         time: None,
         category: CategoryId::UNCATEGORISED,
         description: None,
     }
 }
 
-/// Whether `tip` is the default, which the serialised form leaves out.
+/// Whether `tip` is [`TipRule::NONE`], which the serialised form leaves out.
 #[cfg(feature = "serde")]
-fn is_default_tip(tip: &TipRule) -> bool {
-    *tip == TipRule::default()
+fn is_no_tip(tip: &TipRule) -> bool {
+    TipRule::NONE == *tip
 }
 
 /// Whether `category` is the built-in one, which the serialised form leaves

@@ -93,6 +93,26 @@ func anExpenseTellsItsTipTotalAndMembers() throws {
     #expect(TipDistribution.allCases == [.proportional, .equal])
 }
 
+/// An expense built without a tip or a category would start at, or read back as, another tip or
+/// category than the library's defaults, and an app comparing with them would miss the expenses
+/// that have no tip or stay in Uncategorised.
+@Test
+func anExpenseStartsWithoutATipInUncategorisedAndReadsBackSo() throws {
+    let flat = try Flat()
+    #expect("00000000-0000-0000-0000-000000000000" == Category.ID.uncategorised.rawValue)
+    #expect(try Category.ID.uncategorised == flat.group.categories().first?.id)
+    #expect(try TipRule.noTip == TipRule(value: .percentage(Percentage(basisPoints: 0)), distribution: .proportional))
+    let bread = flat.expense("Bread", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
+    #expect(TipRule.noTip == bread.tip)
+    #expect(Category.ID.uncategorised == bread.category)
+    let stored = try #require(try flat.group.expense(withID: try flat.group.add(bread)))
+    #expect(TipRule.noTip == stored.tip)
+    #expect(Category.ID.uncategorised == stored.category)
+    var water = flat.expense("Water", paidBy: flat.bob, sharedBy: [flat.ana, flat.bob])
+    water.tip = TipRule(value: .percentage(try Percentage(basisPoints: 0)))
+    #expect(try TipRule.noTip == flat.group.expense(withID: flat.group.add(water))?.tip)
+}
+
 /// A member or a transfer that converted with a detail changed or dropped, or that the group
 /// stored another way, would pay or reach another person than the app named.
 @Test

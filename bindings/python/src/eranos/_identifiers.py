@@ -8,11 +8,12 @@ they were created. Each is typed apart from other text and from the other entiti
 identifier cannot stand where another's is expected; it converts to its text and back, for storing it, and the library
 checks the text when a call carries it. ``parse_member_id`` and its siblings check text by the same rules before an app
 stores it, and ``generate_member_id`` and its siblings generate one, which every kind draws from the library's one
-generator. The package documents each type where it exports it.
+generator. ``UNCATEGORISED`` is the identifier of the built-in category, which every group has. The package documents
+each type and constant where it exports it.
 
 """
 
-from typing import NewType
+from typing import Final, NewType
 
 # The module of errors, not its function: that module imports the types here before it defines its function, which
 # this module reads only when a check runs.
@@ -25,6 +26,8 @@ ExpenseGroupId = NewType('ExpenseGroupId', str)
 MemberId = NewType('MemberId', str)
 
 CategoryId = NewType('CategoryId', str)
+
+UNCATEGORISED: Final[CategoryId] = CategoryId(generated.category_id_uncategorised())
 
 ExpenseId = NewType('ExpenseId', str)
 

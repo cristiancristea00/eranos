@@ -3,7 +3,6 @@
 package eranos.examples.grandtour
 
 import eranos.Balance
-import eranos.CategoryId
 import eranos.CurrencyCode
 import eranos.ExchangeRate
 import eranos.ExpenseGroup
@@ -82,9 +81,6 @@ internal data class RefusalRow(
     }
 }
 
-/** The identifier of the built-in category, which the group lists first. */
-internal fun builtInCategory(group: ExpenseGroup): CategoryId? = group.categoriesBlocking().firstOrNull()?.id
-
 internal fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     val zero = Money(0, group.currencyBlocking())
@@ -112,13 +108,12 @@ internal fun printBalances(group: ExpenseGroup) {
 
 internal fun printCategories(group: ExpenseGroup) {
     val expenses = group.expensesBlocking()
-    val builtIn = builtInCategory(group)
     printTable(
         CategoryRow.HEADERS,
         group.summaryBlocking().categoryTotals.map { total ->
             CategoryRow(
                 name = group.categoryBlocking(total.category)?.name ?: "?",
-                expenses = expenses.count { expense -> (expense.category ?: builtIn) == total.category },
+                expenses = expenses.count { expense -> expense.category == total.category },
                 total = total.total,
             )
         },

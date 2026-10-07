@@ -6,6 +6,8 @@ import pytest
 
 from conftest import Flat
 from eranos import (
+    NO_TIP,
+    UNCATEGORISED,
     PaymentAccount,
     AmountsSplit,
     Category,
@@ -83,6 +85,55 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
     assert flat.group.expense(receipt.id) == receipt
     assert len(flat.group.expenses()) == 3
     assert flat.group.expense(ExpenseId('0199a000-0000-7000-8000-00000000ffff')) is None
+
+
+def test_an_expense_starts_with_no_tip_in_the_built_in_category(flat: Flat) -> None:
+    """An expense made without a tip or a category that started with either would add to a bill a tip or a category the app never chose."""
+    cost, payers, split = LocalCost(flat.euros(1200)), EqualSplit((flat.ana,)), WholeExpenseSplit(EqualSplit((flat.ana, flat.bob)))
+    created = Expense.create(name='Bus', cost=cost, payers=payers, split=split, date=flat.day)
+    made = Expense(id=created.id, name='Bus', cost=cost, payers=payers, split=split, date=flat.day)
+    assert made == created
+    for expense in (created, made):
+        assert expense.tip == NO_TIP
+        assert expense.category == UNCATEGORISED
+        assert expense.tip_amount() == flat.euros(0)
+        assert expense.total() == flat.euros(1200)
+
+
+def test_an_expense_without_a_tip_or_a_category_reads_back_with_no_tip_in_the_built_in_category(flat: Flat) -> None:
+    """
+    An expense left without a tip or a category that read back with another tip or category would show an app a value it never set.
+
+    The group holds every expense with a tip rule and in a category: the no-tip rule, and the built-in category, which it lists first and
+    which takes the expenses of a category it removes.
+    """
+    taxi = flat.expense('Taxi', flat.ana, (flat.ana, flat.bob))
+    assert flat.group.add_expense(taxi) == taxi.id
+    stored = flat.group.expense(taxi.id)
+    assert stored is not None
+    assert stored.tip == NO_TIP
+    assert stored.category == UNCATEGORISED
+    assert stored == taxi
+    assert flat.group.categories()[0] == Category(id=UNCATEGORISED, name='Uncategorised')
+    assert flat.group.remove_category(flat.food).id == flat.food
+    dinner = flat.group.expense(flat.dinner)
+    assert dinner is not None
+    assert dinner.category == UNCATEGORISED
+
+
+def test_a_zero_tip_reads_back_as_it_was_set(flat: Flat) -> None:
+    """
+    A 0 % tip set on purpose that read back as another rule would change the rule an app shows.
+
+    Shared in proportion, it is the no-tip rule; shared equally, it is a rule of its own, which the group keeps.
+    """
+    proportional = copy.replace(flat.expense('Taxi', flat.ana, (flat.ana, flat.bob)), tip=TipRule(PercentageTip(Percentage(0))))
+    equal = copy.replace(flat.expense('Bus', flat.ana, (flat.ana, flat.bob)), tip=TipRule(PercentageTip(Percentage(0)), TipDistribution.EQUAL))
+    for expense in (proportional, equal):
+        assert flat.group.add_expense(expense) == expense.id
+        assert flat.group.expense(expense.id) == expense
+    assert proportional.tip == NO_TIP
+    assert equal.tip != NO_TIP
 
 
 def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> None:
@@ -326,3 +377,8 @@ def test_the_helpers_read_an_entry_as_the_library_does(flat: Flat) -> None:
 def test_a_tip_without_a_distribution_is_shared_in_proportion() -> None:
     """A tip whose sharing defaulted otherwise than the library's would divide the same bill differently in a Python app."""
     assert TipRule(PercentageTip(Percentage(1000))).distribution is TipDistribution.PROPORTIONAL
+
+
+def test_the_no_tip_rule_is_zero_per_cent_shared_in_proportion() -> None:
+    """An app that left an expense without a tip would give it a tip, or one shared otherwise than the library's own expense without one."""
+    assert TipRule(PercentageTip(Percentage(0)), TipDistribution.PROPORTIONAL) == NO_TIP

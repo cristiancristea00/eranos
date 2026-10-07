@@ -141,7 +141,7 @@ func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
     }
     renamed.name = "Getting around"
     _ = try group.replace(renamed)
-    guard var other = try group.categories().first else {
+    guard var other = try group.category(withID: .uncategorised) else {
         preconditionFailure("every group has the built-in category")
     }
     other.name = "Other"
@@ -169,6 +169,6 @@ func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
     }
     expect("Getting around", try group.category(withID: transport)?.name, "Transport is renamed")
     expect("lodging", lodging.rawValue, "Lodging keeps the app's identifier")
-    expect([other.id, food, transport, lodging], try group.categories().map(\.id), "lodging follows the generated identifiers")
+    expect([.uncategorised, food, transport, lodging], try group.categories().map(\.id), "lodging follows the generated identifiers")
     return Categories(food: food, lodging: lodging, transport: transport)
 }

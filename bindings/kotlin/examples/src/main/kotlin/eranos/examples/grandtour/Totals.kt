@@ -63,7 +63,6 @@ internal fun summary(
     println("The spending per category:")
     printCategories(group)
     println("And each member's consumption per category:")
-    val builtIn = builtInCategory(group)
     val zero = Money(0, group.currencyBlocking())
     printTable(
         MemberCategoryRow.HEADERS,
@@ -73,20 +72,20 @@ internal fun summary(
                     .firstOrNull { entry -> entry.member == member.id }
                     ?.totals
                     .orEmpty()
-            val total = { category: CategoryId? -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
+            val total = { category: CategoryId -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
             MemberCategoryRow(
                 name = member.firstName,
                 food = total(categories.food),
                 lodging = total(categories.lodging),
                 transport = total(categories.transport),
-                uncategorised = total(builtIn),
+                uncategorised = total(CategoryId.UNCATEGORISED),
             )
         },
         numbersFrom = 1,
     )
 
     val member = { id: MemberId -> totals(id, summary) }
-    val category = { id: CategoryId? -> summary.categoryTotals.firstOrNull { total -> total.category == id }?.total }
+    val category = { id: CategoryId -> summary.categoryTotals.firstOrNull { total -> total.category == id }?.total }
     check(eur("1222.90") == summary.totalSpent)
     check(eur("890.00") == member(people.ana)?.paid)
     check(eur("140.00") == member(people.ana)?.received)
@@ -96,7 +95,7 @@ internal fun summary(
     check(eur("174.40") == category(categories.food))
     check(eur("800.00") == category(categories.lodging))
     check(eur("188.50") == category(categories.transport))
-    check(eur("60.00") == category(builtIn))
+    check(eur("60.00") == category(CategoryId.UNCATEGORISED))
     for (totals in summary.members) {
         val byCategory =
             summary.memberCategoryTotals
@@ -114,8 +113,7 @@ internal fun removingACategory(
 ) {
     section("9. Removing a category")
     val removed = group.removeBlocking(categories.transport)
-    val uncategorised = checkNotNull(builtInCategory(group)) { "every group has the built-in category" }
-    val builtIn = refusal { group.removeBlocking(uncategorised) }
+    val builtIn = refusal { group.removeBlocking(CategoryId.UNCATEGORISED) }
     println(
         """
         Removing ${removed.name} moves its expenses to Uncategorised and the category
@@ -132,7 +130,7 @@ internal fun removingACategory(
             group
                 .summaryBlocking()
                 .categoryTotals
-                .firstOrNull { total -> total.category == uncategorised }
+                .firstOrNull { total -> CategoryId.UNCATEGORISED == total.category }
                 ?.total,
     )
     check(group.expensesBlocking().none { expense -> categories.transport == expense.category })
