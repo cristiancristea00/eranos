@@ -32,10 +32,12 @@ typedef struct EranosTransfer EranosTransfer;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The identifier: absent for a transfer to add, present for one the group holds. Writes it, if present; absent otherwise.
+/// The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds. Writes it, if
+/// present; absent otherwise.
 ///
 /// @param transfer The transfer
-/// @param id Receives the identifier: absent for a transfer to add, present for one the group holds, replacing what it held
+/// @param id Receives the identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group
+///   holds, replacing what it held
 /// @return Whether there is one
 [[nodiscard]] static inline bool eranosTransferId(EranosTransfer const *const transfer, EranosText *const id) {
     eranosDetailClear(id);
@@ -44,10 +46,11 @@ typedef struct EranosTransfer EranosTransfer;
     return present;
 }
 
-/// Sets the identifier: absent for a transfer to add, present for one the group holds.
+/// Sets the identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds.
 ///
 /// @param transfer The transfer
-/// @param id The identifier: absent for a transfer to add, present for one the group holds, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param id The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds, as
+///   UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosTransferSetId(EranosTransfer *const transfer, char const *const id) {
@@ -55,7 +58,7 @@ typedef struct EranosTransfer EranosTransfer;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Clears the identifier: absent for a transfer to add, present for one the group holds.
+/// Clears the identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds.
 ///
 /// @param transfer The transfer
 static inline void eranosTransferClearId(EranosTransfer *const transfer) { EranosTransfer_clear_id(transfer); }

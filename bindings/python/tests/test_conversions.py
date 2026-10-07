@@ -173,7 +173,6 @@ def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_na
 
 def test_the_librarys_own_errors_convert_to_the_standard_errors_they_stand_for() -> None:
     """An error a program should not have made that converted to a library error would read as a refusal of valid data."""
-    assert isinstance(converted(generated.EranosError.IdentifierGiven('given')), ValueError)
     assert isinstance(converted(generated.EranosError.IdentifierMissing('missing')), ValueError)
     invalid = converted(generated.EranosError.InvalidJson(2, 3, 'invalid'))
     assert isinstance(invalid, InvalidJsonError)

@@ -17,9 +17,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * }
  * ```
  *
- * A call the program should not make throws the standard exception instead: [IllegalArgumentException] for an entry to add
- * that has an identifier or one to replace that has none, and [IllegalStateException] for a read through an [ExpenseGroupReader]
- * after it is closed. A call whose coroutine is cancelled throws [CancellationException].
+ * A call the program should not make throws the standard exception instead: [IllegalArgumentException] for an entry to
+ * replace that has no identifier, and [IllegalStateException] for a read through an [ExpenseGroupReader] after it is closed. A
+ * call whose coroutine is cancelled throws [CancellationException].
  */
 public sealed class EranosException(
     /** What went wrong, as the library words it. */
@@ -140,7 +140,6 @@ internal fun eranos.internal.EranosException.converted(): Exception =
         is eranos.internal.EranosException.Transfer -> EranosException.Transfer(failure.converted(), detail)
         is eranos.internal.EranosException.ExpenseGroup -> EranosException.ExpenseGroup(failure.converted(), detail)
         is eranos.internal.EranosException.Language -> EranosException.Language(failure.converted(), detail)
-        is eranos.internal.EranosException.IdentifierGiven -> IllegalArgumentException(detail)
         is eranos.internal.EranosException.IdentifierMissing -> IllegalArgumentException(detail)
         is eranos.internal.EranosException.InvalidJson -> EranosException.InvalidJson(line, column, detail)
         is eranos.internal.EranosException.Cancelled -> CancellationException(detail)

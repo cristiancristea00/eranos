@@ -208,14 +208,21 @@ func asynchronousChangesTakeEffectAsTheirSynchronousTwinsDo() async throws {
     #expect(try await group.currency() == lei)
 }
 
-/// A new group that dropped what it starts with, or a saved one that loaded from text that is
-/// not the saved form, would start an app from another group than the user made.
+/// A new group that dropped what it starts with, its identifier included, or started under an
+/// identifier the rules refuse, or a saved one that loaded from text that is not the saved form,
+/// would start an app from another group than the user made.
 @Test
 func aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() async throws {
     let euro = try CurrencyCode(code: "EUR")
     let plain = try ExpenseGroup(name: "Trip", currency: euro)
     #expect(try await nil == plain.description())
     #expect(try await nil == plain.language())
+    let named = try ExpenseGroup(id: ExpenseGroup.ID("flat-12"), name: "Flat", currency: euro)
+    #expect(try await "flat-12" == named.id().rawValue)
+    #expect(try await plain.id() != named.id())
+    #expect(throws: EranosError.id(.controlCharacter, detail: "an identifier cannot contain control characters")) {
+        try ExpenseGroup(id: ExpenseGroup.ID(rawValue: "flat\n12"), name: "Flat", currency: euro)
+    }
     #expect(throws: EranosError.expenseGroup(.emptyName, detail: "the group name must not be empty")) {
         try ExpenseGroup(name: " ", currency: euro)
     }

@@ -1,8 +1,8 @@
 //! Expenses cross the bindings as records. A record converted back and forth
 //! would change how its cost divides; a split, an item, a tip, or an expense
 //! with a value the library refuses, or a number too large for its field,
-//! would reach the library; and an entry to add would take its identifier
-//! from outside the group.
+//! would reach the library; and an entry to add would lose the identifier
+//! its app gives it.
 
 use eranos::ExpenseId;
 
@@ -552,15 +552,30 @@ fn an_expense_to_add_converts_both_ways() {
     }
 }
 
-/// An entry to add that carried an identifier would take it from outside
-/// the group.
+/// An expense to add would lose the identifier its app gives it, take one
+/// the rules refuse, or, without one, not get a generated one.
 #[test]
-fn an_expense_to_add_carries_no_identifier() {
+fn an_expense_to_add_keeps_the_identifier_it_carries() {
+    let id = ExpenseId::new("Ωmega").unwrap();
     let named = Expense {
-        id: Some(ExpenseId::new("expense-4").unwrap().to_string()),
+        id: Some(id.to_string()),
         ..dinner()
     };
-    assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
+    let expense = named.to_new().unwrap();
+    assert_eq!(expense.id(), id);
+    assert_eq!(Expense::from_library(&expense), named);
+    assert_ne!(dinner().to_new().unwrap().id(), id);
+    let padded = Expense {
+        id: Some(" x".to_owned()),
+        ..dinner()
+    };
+    assert!(matches!(
+        padded.to_new(),
+        Err(EranosError::Id {
+            failure: IdFailure::SurroundingWhitespace,
+            ..
+        })
+    ));
 }
 
 /// A replacement would lose the stored expense's identifier, or keep a

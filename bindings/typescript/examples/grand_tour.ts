@@ -32,5 +32,5 @@ removingACategory(group, categories);
 newCurrency(group, people);
 settlingUp(group);
 savingAndLoading(group, people, categories);
-values(group, people);
+values(people);
 await sharing(group, people);

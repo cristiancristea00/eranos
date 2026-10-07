@@ -23,7 +23,7 @@ typedef struct Line {
 /// How many bytes an identifier's text holds, its NUL included: the library refuses an identifier longer than 64 bytes of UTF-8.
 static constexpr size_t ID_SIZE = 65;
 
-/// An identifier the library gave, as its text.
+/// An identifier the app gave or the library generated, as its text.
 typedef struct Id {
     /// The identifier's text, ended by a NUL.
     char text[ID_SIZE];

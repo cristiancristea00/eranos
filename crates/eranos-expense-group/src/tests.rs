@@ -161,6 +161,102 @@ fn a_new_group_starts_empty() {
     );
 }
 
+/// A group from an app's own store would get another identifier than its
+/// key, or keep it after the app asked for a generated one.
+#[test]
+fn a_new_group_takes_the_identifier_it_is_given() {
+    let id = ExpenseGroupId::new("Lisboa · 2026").unwrap();
+    let group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
+        .id(id)
+        .build()
+        .unwrap();
+    assert_eq!(group.id(), id);
+    // The last call wins, and `None` leaves generation to `build`.
+    let generated = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
+        .id(id)
+        .id(None)
+        .build()
+        .unwrap();
+    assert_ne!(generated.id(), id);
+}
+
+/// Entries from an app's own store would be stored under other identifiers
+/// than their keys, or a second entry under a key the group holds would
+/// replace the first.
+#[test]
+fn entries_take_the_identifiers_they_are_given_once() {
+    let mut group = ExpenseGroup::builder("Trip", CurrencyCode::EUR)
+        .build()
+        .unwrap();
+    let (ana_id, bob_id) = (MemberId::new("!a").unwrap(), MemberId::new("zz").unwrap());
+    let ana = Member::builder("Ana").id(ana_id).build().unwrap();
+    assert_eq!(group.add_member(ana), Ok(ana_id));
+    assert_eq!(
+        group.add_member(Member::builder("Bob").id(bob_id).build().unwrap()),
+        Ok(bob_id)
+    );
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::DuplicateMember(ana_id),
+        |group| group.add_member(Member::builder("Anna").id(ana_id).build().unwrap()),
+    );
+    let food_id = CategoryId::new("-food").unwrap();
+    assert_eq!(
+        group.add_category(Category::with_id(food_id, "Food").unwrap()),
+        Ok(food_id)
+    );
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::DuplicateCategory(food_id),
+        |group| group.add_category(Category::with_id(food_id, "Fuel").unwrap()),
+    );
+    let dinner_id = ExpenseId::new("Ωmega").unwrap();
+    let dinner = || {
+        shared("30.00", ana_id, &[ana_id, bob_id])
+            .to_builder()
+            .id(dinner_id)
+            .category(food_id)
+    };
+    assert_eq!(group.add_expense(dinner().build().unwrap()), Ok(dinner_id));
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::DuplicateExpense(dinner_id),
+        |group| group.add_expense(dinner().name("Lunch").build().unwrap()),
+    );
+    let repayment_id = TransferId::new("repayment 1").unwrap();
+    let repayment = || {
+        transfer(bob_id, ana_id, "15.00")
+            .to_builder()
+            .id(repayment_id)
+    };
+    assert_eq!(
+        group.add_transfer(repayment().build().unwrap()),
+        Ok(repayment_id)
+    );
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::DuplicateTransfer(repayment_id),
+        |group| group.add_transfer(repayment().note("Again").build().unwrap()),
+    );
+    // Each is stored under its key, and the books balance.
+    assert_eq!(
+        group.members().map(Member::id).collect::<Vec<_>>(),
+        [ana_id, bob_id]
+    );
+    assert_eq!(group.expense(dinner_id).map(Expense::name), Some("Shared"));
+    assert_eq!(
+        group.transfer(repayment_id).map(Transfer::amount),
+        Some(eur("15.00"))
+    );
+    assert!(
+        group
+            .summary()
+            .members()
+            .all(|member| member.net().is_zero())
+    );
+    assert_eq!(&group.ledger, &rebuilt(&group));
+}
+
 /// Group details change without touching entries or totals.
 #[test]
 fn details_change_in_place() {
@@ -438,6 +534,13 @@ fn the_built_in_category_stays() {
         &mut group,
         &ExpenseGroupError::DuplicateCategory(CategoryId::UNCATEGORISED),
         |group| group.add_category(built_in),
+    );
+    // So is another category under its identifier.
+    let other = Category::with_id(CategoryId::UNCATEGORISED, "Other").unwrap();
+    assert_unchanged(
+        &mut group,
+        &ExpenseGroupError::DuplicateCategory(CategoryId::UNCATEGORISED),
+        |group| group.add_category(other),
     );
     // Its name is taken, in any case.
     assert_unchanged(
@@ -1299,6 +1402,11 @@ struct DrawnParts {
     hundredths: u32,
 }
 
+/// The identifiers an app might give a random entry, outside the shape of a
+/// generated one: before the nil UUID text, after every generated text, and
+/// beyond ASCII. Drawn more than once, one is refused as a duplicate.
+const GIVEN: [&str; 4] = ["-food", "!a", "zz", "Ωmega · 2"];
+
 /// Draws one change to apply to a five-member group.
 #[derive(Debug, Clone)]
 enum Operation {
@@ -1312,6 +1420,7 @@ enum Operation {
         category: usize,
     },
     AddExpense {
+        id: Option<usize>,
         amount: i64,
         payer: usize,
         participants: Vec<DrawnParts>,
@@ -1326,6 +1435,7 @@ enum Operation {
         position: usize,
     },
     AddTransfer {
+        id: Option<usize>,
         from: usize,
         to: usize,
         amount: i64,
@@ -1342,12 +1452,12 @@ fn drawn_parts() -> impl Strategy<Value = DrawnParts> {
 
 fn operation() -> impl Strategy<Value = Operation> {
     prop_oneof![
-        4 => (1_i64..100_000, 0_usize..3, 0_usize..5, proptest::collection::vec(drawn_parts(), 1..5))
-            .prop_map(|(amount, category, payer, participants)| Operation::AddExpense { amount, payer, participants, category }),
+        4 => (proptest::option::of(0..GIVEN.len()), 1_i64..100_000, 0_usize..3, 0_usize..5, proptest::collection::vec(drawn_parts(), 1..5))
+            .prop_map(|(id, amount, category, payer, participants)| Operation::AddExpense { id, amount, payer, participants, category }),
         2 => (0_usize..8, 1_i64..100_000, 0_usize..5)
             .prop_map(|(position, amount, payer)| Operation::ReplaceExpense { position, amount, payer }),
         1 => (0_usize..8).prop_map(|position| Operation::RemoveExpense { position }),
-        2 => (0_usize..5, 0_usize..5, 1_i64..50_000).prop_map(|(from, to, amount)| Operation::AddTransfer { from, to, amount }),
+        2 => (proptest::option::of(0..GIVEN.len()), 0_usize..5, 0_usize..5, 1_i64..50_000).prop_map(|(id, from, to, amount)| Operation::AddTransfer { id, from, to, amount }),
         1 => (0_usize..8).prop_map(|position| Operation::RemoveTransfer { position }),
         1 => (0_usize..5).prop_map(|member| Operation::Archive { member }),
         1 => (0_usize..5).prop_map(|member| Operation::Unarchive { member }),
@@ -1376,6 +1486,7 @@ fn apply(
             group.remove_category(categories[category]).is_ok()
         }
         Operation::AddExpense {
+            id,
             amount,
             payer,
             participants,
@@ -1398,6 +1509,7 @@ fn apply(
                 Split::parts(chosen),
                 day(),
             )
+            .id(id.map(|index| ExpenseId::new(GIVEN[index]).unwrap()))
             .category(categories[category])
             .build()
             .unwrap();
@@ -1425,9 +1537,15 @@ fn apply(
         Operation::RemoveExpense { position } => {
             expense_at(group, position).is_some_and(|id| group.remove_expense(id).is_ok())
         }
-        Operation::AddTransfer { from, to, amount } => {
-            let Ok(transfer) =
-                Transfer::builder(members[from], members[to], money(amount), day()).build()
+        Operation::AddTransfer {
+            id,
+            from,
+            to,
+            amount,
+        } => {
+            let Ok(transfer) = Transfer::builder(members[from], members[to], money(amount), day())
+                .id(id.map(|index| TransferId::new(GIVEN[index]).unwrap()))
+                .build()
             else {
                 return false;
             };
@@ -1445,12 +1563,18 @@ proptest! {
     /// the group untouched, and every settlement clears every balance.
     #[test]
     fn random_changes_keep_the_group_consistent(operations in proptest::collection::vec(operation(), 1..40)) {
-        let mut group = ExpenseGroup::builder("Random", CurrencyCode::EUR).build().unwrap();
-        let members: Vec<MemberId> = ["Ana", "Bob", "Carol", "Dan", "Eve"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
-        let mut categories = vec![CategoryId::UNCATEGORISED];
-        for name in ["Food", "Fuel"] {
-            categories.push(group.add_category(Category::new(name).unwrap()).unwrap());
-        }
+        let mut group = ExpenseGroup::builder("Random", CurrencyCode::EUR).id(ExpenseGroupId::new(GIVEN[3]).unwrap()).build().unwrap();
+        // Members and categories under given and generated identifiers.
+        let mut members: Vec<MemberId> = ["Ana", "Bob", "Carol"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
+        let given = |index: usize| MemberId::new(GIVEN[index]).unwrap();
+        members.push(group.add_member(Member::builder("Dan").id(given(1)).build().unwrap()).unwrap());
+        members.push(group.add_member(Member::builder("Eve").id(given(2)).build().unwrap()).unwrap());
+        let food = Category::with_id(CategoryId::new(GIVEN[0]).unwrap(), "Food").unwrap();
+        let categories = [
+            CategoryId::UNCATEGORISED,
+            group.add_category(food).unwrap(),
+            group.add_category(Category::new("Fuel").unwrap()).unwrap(),
+        ];
         for operation in &operations {
             let before = group.clone();
             if !apply(&mut group, &members, &categories, operation) {
@@ -1465,7 +1589,7 @@ proptest! {
             let mut settled = group.clone();
             let payments = settled.settlement(strategy).unwrap().payments().to_vec();
             for payment in payments {
-                settled.add_transfer(Transfer::from_payment(&payment, day())).unwrap();
+                settled.add_transfer(Transfer::builder_from_payment(&payment, day()).build().unwrap()).unwrap();
             }
             prop_assert!(settled.summary().members().all(|summary| summary.net().is_zero()));
         }

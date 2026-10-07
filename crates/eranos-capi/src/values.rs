@@ -310,6 +310,30 @@ pub mod ffi {
         }
     }
 
+    /// The helpers of identifiers, whose rules every kind of identifier shares. It holds nothing,
+    /// and nothing makes one.
+    #[diplomat::opaque]
+    #[derive(Debug, Clone, Copy)]
+    pub struct EranosIdentifier;
+
+    impl EranosIdentifier {
+        /// Writes the identifier written `text`, as it is: not trimmed, and in its case.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `Id` for text that is not an identifier, with the first rule
+        /// it breaks, and of the kind `InvalidText` for text that is not UTF-8.
+        pub fn parse(
+            text: &DiplomatStr,
+            write: &mut DiplomatWrite,
+        ) -> Result<(), Box<EranosError>> {
+            let text =
+                eranos_bindings::identifier_parse(&crate::text(text)?).map_err(crate::failed)?;
+            crate::write_text(write, &text);
+            Ok(())
+        }
+    }
+
     /// The helpers of language tags. It holds nothing, and nothing makes one.
     #[diplomat::opaque]
     #[derive(Debug, Clone, Copy)]

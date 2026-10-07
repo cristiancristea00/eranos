@@ -32,7 +32,7 @@ struct Transfer final {
     Transfer(MemberId from, MemberId to, Cost cost, CalendarDate const date) noexcept
         : from(std::move(from)), to(std::move(to)), cost(std::move(cost)), date(date) {}
 
-    /// The identifier: absent for a transfer to add, present for one the group holds.
+    /// The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds.
     std::optional<TransferId> id;
 
     /// The identifier of the member who paid.

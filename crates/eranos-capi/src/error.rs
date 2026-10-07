@@ -37,8 +37,6 @@ pub mod ffi {
         ExpenseGroup,
         /// A `LanguageError`, about a language tag.
         Language,
-        /// An entry to add carried an identifier; the group gives a new entry its own.
-        IdentifierGiven,
         /// An entry to replace carried no identifier to find it by.
         IdentifierMissing,
         /// A saved group that is not JSON of the saved form, at `line` and `column`.

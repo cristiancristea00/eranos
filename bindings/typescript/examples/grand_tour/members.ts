@@ -3,7 +3,18 @@
 
 import assert from 'node:assert/strict';
 
-import { type PaymentAccount, CurrencyCode, Email, ExpenseGroup, ExpenseGroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
+import {
+    type PaymentAccount,
+    CurrencyCode,
+    Email,
+    ExpenseGroup,
+    ExpenseGroupError,
+    Iban,
+    Language,
+    PhoneNumber,
+    Username,
+    parseCategoryId,
+} from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
 import { type Categories, type People, cell, outcome, refusalColumns } from './tour.js';
 
@@ -175,7 +186,8 @@ export function members(group: ExpenseGroup): People {
 export function addCategories(group: ExpenseGroup): Categories {
     section('3. Categories');
     const food = group.addCategorySync({ name: 'Food' });
-    const lodging = group.addCategorySync({ name: 'Lodging' });
+    // An app that keeps its categories elsewhere gives them its own keys.
+    const lodging = group.addCategorySync({ id: parseCategoryId('lodging'), name: 'Lodging' });
     const transport = group.addCategorySync({ name: 'Transport' });
     const homonym = refusal(() => group.addCategorySync({ name: 'FOOD' }));
     const stored = group.categorySync(transport);
@@ -185,8 +197,9 @@ export function addCategories(group: ExpenseGroup): Categories {
     assert.ok(undefined !== uncategorised, 'every group has the built-in category');
     const builtIn = refusal(() => group.replaceCategorySync({ ...uncategorised, name: 'Other' }));
     printLines(
-        'Every group has the built-in Uncategorised; this one adds Food, Lodging, and',
-        'Transport, then renames Transport, which keeps its identifier. In identifier order:',
+        'Every group has the built-in Uncategorised; this one adds Food, Lodging, under the',
+        'identifier lodging that the app gives it, and Transport, then renames Transport, which',
+        'keeps its identifier. In identifier order, where lodging follows the generated ones:',
         `  ${group
             .categoriesSync()
             .map((category) => category.name)
@@ -206,5 +219,10 @@ export function addCategories(group: ExpenseGroup): Categories {
     assert.deepEqual(homonym.failure, { kind: 'duplicateCategoryName', existing: food });
     assert.ok(builtIn instanceof ExpenseGroupError && 'builtInCategory' === builtIn.failure.kind);
     assert.equal(group.categorySync(transport)?.name, 'Getting around');
+    assert.equal(lodging, 'lodging');
+    assert.deepEqual(
+        group.categoriesSync().map((category) => category.id),
+        [uncategorised.id, food, transport, lodging],
+    );
     return { food, lodging, transport };
 }

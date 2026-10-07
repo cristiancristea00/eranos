@@ -8,7 +8,9 @@ import eranos.MemberId;
 import eranos.MemberSummary;
 import eranos.Summary;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -159,7 +161,16 @@ public final class Report {
                                     .flatMap(item -> item.split().members().stream())
                                     .toList();
                 };
-        return members.stream().distinct().sorted(Comparator.comparing(MemberId::value)).toList();
+        // The library orders identifiers by the bytes of their UTF-8 text, which String's
+        // compareTo, over UTF-16 code units, does not follow above U+FFFF.
+        return members.stream()
+                .distinct()
+                .sorted(
+                        Comparator.comparing(
+                                (MemberId member) ->
+                                        member.value().getBytes(StandardCharsets.UTF_8),
+                                Arrays::compareUnsigned))
+                .toList();
     }
 
     /**

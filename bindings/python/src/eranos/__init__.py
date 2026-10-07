@@ -90,6 +90,7 @@ from eranos._errors import (
 from eranos._expense_group import CurrencyRate, ExpenseGroup
 from eranos._expense_group_reader import ExpenseGroupReader
 from eranos import _identifiers
+from eranos._identifiers import parse_category_id, parse_expense_group_id, parse_expense_id, parse_member_id, parse_transfer_id
 from eranos._money import Money
 from eranos._ratios import ExchangeRate, Parts, Percentage
 from eranos._totals import (
@@ -112,23 +113,23 @@ from eranos._totals import (
 # ruff: disable[non-empty-init-module]
 # Autodoc documents an identifier only where the module it documents gives the identifier's docstring.
 ExpenseGroupId = _identifiers.ExpenseGroupId
-"""The identifier of a group: the text the library gave it, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of a group: the text the app gives it, or one the library generates, a UUID v7 in lowercase hyphenated form."""
 
 MemberId = _identifiers.MemberId
-"""The identifier of a member: the text the group gave them, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of a member: the text the app gives them, or one the group generates, a UUID v7 in lowercase hyphenated form."""
 
 CategoryId = _identifiers.CategoryId
 """
-The identifier of a category: the text the group gave it, a UUID v7 in lowercase hyphenated form.
+The identifier of a category: the text the app gives it, or one the group generates, a UUID v7 in lowercase hyphenated form.
 
 The built-in category's is the nil UUID in that form, and the group lists that category before every other, whatever their identifiers.
 """
 
 ExpenseId = _identifiers.ExpenseId
-"""The identifier of an expense: the text the group gave it, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of an expense: the text the app gives it, or one the group generates, a UUID v7 in lowercase hyphenated form."""
 
 TransferId = _identifiers.TransferId
-"""The identifier of a transfer: the text the group gave it, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of a transfer: the text the app gives it, or one the group generates, a UUID v7 in lowercase hyphenated form."""
 # ruff: enable[non-empty-init-module]
 
 
@@ -221,4 +222,9 @@ __all__ = [
     'Username',
     'UsernamePaymentAccountDetails',
     'WholeExpenseSplit',
+    'parse_category_id',
+    'parse_expense_group_id',
+    'parse_expense_id',
+    'parse_member_id',
+    'parse_transfer_id',
 ]

@@ -1,5 +1,6 @@
 /// @file eranos/identifiers.hpp
-/// The identifiers of a group and of its members, categories, expenses, and transfers, one type for each.
+/// The identifiers of a group and of its members, categories, expenses, and transfers, one type for each. Each type's parse() returns an error,
+/// which names identifiers, so it is defined with the conversions, after every part.
 ///
 /// A part of eranos.hpp, which includes every part and then the conversions their functions call: include eranos.hpp.
 
@@ -8,10 +9,14 @@
 
 // IWYU pragma: private, include "eranos.hpp"
 
+#include "eranos/detail/declarations.hpp"
+
 #include <compare>
 #include <cstddef>
+#include <expected>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace eranos {
@@ -19,9 +24,9 @@ namespace eranos {
 // Every identifier writes its order out: the defaulted one holds a branch that no comparison takes, which the layer's coverage would report as
 // unrun. std::string compares its characters as unsigned char, even where char is signed, so the order is that of the text's bytes, the library's.
 
-/// The identifier of a group, which the library gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
-/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
-/// identifier cannot stand where another's is expected.
+/// The identifier of a group, which the app gave it or the library generated: text of at most 64 bytes of UTF-8, not empty, without control
+/// characters, and without whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a
+/// type of its own, so one's identifier cannot stand where another's is expected.
 class ExpenseGroupId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
@@ -29,6 +34,13 @@ class ExpenseGroupId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit ExpenseGroupId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
+    ///
+    /// @param text The text
+    /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
+    ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<ExpenseGroupId, Error> parse(std::string_view const text);
 
     /// The identifier's text, as it was given or generated.
     ///
@@ -55,9 +67,9 @@ class ExpenseGroupId final {
     std::string text;
 };
 
-/// The identifier of a member, which the group gave them: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
-/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
-/// identifier cannot stand where another's is expected.
+/// The identifier of a member, which the app gave them or the library generated: text of at most 64 bytes of UTF-8, not empty, without control
+/// characters, and without whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a
+/// type of its own, so one's identifier cannot stand where another's is expected.
 class MemberId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
@@ -65,6 +77,13 @@ class MemberId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit MemberId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
+    ///
+    /// @param text The text
+    /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
+    ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<MemberId, Error> parse(std::string_view const text);
 
     /// The identifier's text, as it was given or generated.
     ///
@@ -89,9 +108,9 @@ class MemberId final {
     std::string text;
 };
 
-/// The identifier of a category, which the group gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
-/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
-/// identifier cannot stand where another's is expected.
+/// The identifier of a category, which the app gave it or the library generated: text of at most 64 bytes of UTF-8, not empty, without control
+/// characters, and without whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a
+/// type of its own, so one's identifier cannot stand where another's is expected.
 class CategoryId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
@@ -99,6 +118,13 @@ class CategoryId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit CategoryId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
+    ///
+    /// @param text The text
+    /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
+    ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<CategoryId, Error> parse(std::string_view const text);
 
     /// The identifier's text, as it was given or generated.
     ///
@@ -125,9 +151,9 @@ class CategoryId final {
     std::string text;
 };
 
-/// The identifier of an expense, which the group gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
-/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
-/// identifier cannot stand where another's is expected.
+/// The identifier of an expense, which the app gave it or the library generated: text of at most 64 bytes of UTF-8, not empty, without control
+/// characters, and without whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a
+/// type of its own, so one's identifier cannot stand where another's is expected.
 class ExpenseId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
@@ -135,6 +161,13 @@ class ExpenseId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit ExpenseId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
+    ///
+    /// @param text The text
+    /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
+    ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<ExpenseId, Error> parse(std::string_view const text);
 
     /// The identifier's text, as it was given or generated.
     ///
@@ -159,9 +192,9 @@ class ExpenseId final {
     std::string text;
 };
 
-/// The identifier of a transfer, which the group gave it: text of at most 64 bytes of UTF-8, not empty, without control characters, and without
-/// whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a type of its own, so one's
-/// identifier cannot stand where another's is expected.
+/// The identifier of a transfer, which the app gave it or the library generated: text of at most 64 bytes of UTF-8, not empty, without control
+/// characters, and without whitespace at either end, which for a generated identifier is a UUID v7 in lowercase hyphenated form; each entity has a
+/// type of its own, so one's identifier cannot stand where another's is expected.
 class TransferId final {
   public:
     /// The identifier written @p text, which the library checks when a call carries it.
@@ -169,6 +202,13 @@ class TransferId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit TransferId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
+    ///
+    /// @param text The text
+    /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
+    ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<TransferId, Error> parse(std::string_view const text);
 
     /// The identifier's text, as it was given or generated.
     ///

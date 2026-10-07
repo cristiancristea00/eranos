@@ -108,14 +108,15 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: absent for a category to add, present for one the group holds or one to
-        /// rename. Writes it, if present; absent otherwise.
+        /// The identifier: the app's own for a category to add, or absent for the library to
+        /// generate one, and present for a category the group holds or one to rename. Writes it, if
+        /// present; absent otherwise.
         pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.id.as_deref())
         }
 
-        /// Sets the identifier: absent for a category to add, present for one the group holds or
-        /// one to rename.
+        /// Sets the identifier: the app's own for a category to add, or absent for the library to
+        /// generate one, and present for a category the group holds or one to rename.
         ///
         /// # Errors
         ///
@@ -125,8 +126,8 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Clears the identifier: absent for a category to add, present for one the group holds or
-        /// one to rename.
+        /// Clears the identifier: the app's own for a category to add, or absent for the library to
+        /// generate one, and present for a category the group holds or one to rename.
         pub fn clear_id(&mut self) {
             self.0.id = None;
         }
@@ -488,14 +489,15 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: absent for an expense to add, present for one the group holds or one to
-        /// replace. Writes it, if present; absent otherwise.
+        /// The identifier: the app's own for an expense to add, or absent for the library to
+        /// generate one, and present for an expense the group holds or one to replace. Writes it,
+        /// if present; absent otherwise.
         pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.id.as_deref())
         }
 
-        /// Sets the identifier: absent for an expense to add, present for one the group holds or
-        /// one to replace.
+        /// Sets the identifier: the app's own for an expense to add, or absent for the library to
+        /// generate one, and present for an expense the group holds or one to replace.
         ///
         /// # Errors
         ///
@@ -505,8 +507,8 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Clears the identifier: absent for an expense to add, present for one the group holds or
-        /// one to replace.
+        /// Clears the identifier: the app's own for an expense to add, or absent for the library to
+        /// generate one, and present for an expense the group holds or one to replace.
         pub fn clear_id(&mut self) {
             self.0.id = None;
         }
@@ -936,14 +938,15 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: absent for a member to add, present for one the group holds or one to
-        /// replace. Writes it, if present; absent otherwise.
+        /// The identifier: the app's own for a member to add, or absent for the library to generate
+        /// one, and present for a member the group holds or one to replace. Writes it, if present;
+        /// absent otherwise.
         pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.id.as_deref())
         }
 
-        /// Sets the identifier: absent for a member to add, present for one the group holds or one
-        /// to replace.
+        /// Sets the identifier: the app's own for a member to add, or absent for the library to
+        /// generate one, and present for a member the group holds or one to replace.
         ///
         /// # Errors
         ///
@@ -953,8 +956,8 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Clears the identifier: absent for a member to add, present for one the group holds or
-        /// one to replace.
+        /// Clears the identifier: the app's own for a member to add, or absent for the library to
+        /// generate one, and present for a member the group holds or one to replace.
         pub fn clear_id(&mut self) {
             self.0.id = None;
         }
@@ -1528,11 +1531,33 @@ pub mod ffi {
             currency: &DiplomatStr,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::NewExpenseGroup {
+                id: None,
                 name: crate::text(name)?,
                 currency: crate::text(currency)?,
                 description: None,
                 language: None,
             })))
+        }
+
+        /// The identifier: the app's own, or absent for the library to generate one. Writes it, if
+        /// present; absent otherwise.
+        pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
+            crate::write_optional(write, self.0.id.as_deref())
+        }
+
+        /// Sets the identifier: the app's own, or absent for the library to generate one.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_id(&mut self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.id = Some(crate::text(id)?);
+            Ok(())
+        }
+
+        /// Clears the identifier: the app's own, or absent for the library to generate one.
+        pub fn clear_id(&mut self) {
+            self.0.id = None;
         }
 
         /// The group's name.
@@ -2157,14 +2182,15 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: absent for a transfer to add, present for one the group holds or one to
-        /// replace. Writes it, if present; absent otherwise.
+        /// The identifier: the app's own for a transfer to add, or absent for the library to
+        /// generate one, and present for a transfer the group holds or one to replace. Writes it,
+        /// if present; absent otherwise.
         pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
             crate::write_optional(write, self.0.id.as_deref())
         }
 
-        /// Sets the identifier: absent for a transfer to add, present for one the group holds or
-        /// one to replace.
+        /// Sets the identifier: the app's own for a transfer to add, or absent for the library to
+        /// generate one, and present for a transfer the group holds or one to replace.
         ///
         /// # Errors
         ///
@@ -2174,8 +2200,8 @@ pub mod ffi {
             Ok(())
         }
 
-        /// Clears the identifier: absent for a transfer to add, present for one the group holds or
-        /// one to replace.
+        /// Clears the identifier: the app's own for a transfer to add, or absent for the library to
+        /// generate one, and present for a transfer the group holds or one to replace.
         pub fn clear_id(&mut self) {
             self.0.id = None;
         }

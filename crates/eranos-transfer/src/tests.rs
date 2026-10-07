@@ -1,8 +1,9 @@
 //! Transfers record repayments between members and move their balances.
 //! These tests keep impossible transfers out (to oneself, of nothing, or of
-//! a negative amount), keep optional details absent rather than blank, and
-//! keep transfers edited through `to_builder` or recorded from a
-//! settlement's payment identical to ones built by hand.
+//! a negative amount), keep optional details absent rather than blank, keep
+//! a transfer's identifier, given or generated, through every edit, and keep
+//! transfers edited through `to_builder` or recorded from a settlement's
+//! payment identical to ones built by hand.
 
 use eranos_ledger::{Delta, Ledger, MemberPair};
 use eranos_money::CurrencyCode;
@@ -187,8 +188,8 @@ fn builder_setters_replace_each_field() {
 }
 
 /// Repayments proposed by the settlement planner would differ from the same
-/// repayments entered by hand, or two recordings of one payment would be
-/// one entry.
+/// repayments entered by hand, two recordings of one payment would be one
+/// entry, or a recorded payment could not take an identifier or a note.
 #[test]
 fn a_payment_becomes_the_transfer_that_records_it() {
     // A transfer from Ana to Bob leaves Bob owing her 30.00, which the
@@ -207,15 +208,25 @@ fn a_payment_becomes_the_transfer_that_records_it() {
     let settlement = eranos_settlement::settle(SettlementStrategy::Greedy, &ledger).unwrap();
     let payment = &settlement.payments()[0];
     // Same fields, no optional details, and an identifier of its own.
-    let transfer = Transfer::from_payment(payment, september_24());
-    assert_eq!(
-        transfer,
-        repayment().with_id(transfer.id()).build().unwrap()
-    );
+    let transfer = Transfer::builder_from_payment(payment, september_24())
+        .build()
+        .unwrap();
+    assert_eq!(transfer, repayment().id(transfer.id()).build().unwrap());
     assert_ne!(
-        Transfer::from_payment(payment, september_24()).id(),
+        Transfer::builder_from_payment(payment, september_24())
+            .build()
+            .unwrap()
+            .id(),
         transfer.id()
     );
+    // An identifier and the optional fields are set as on any transfer.
+    let id = TransferId::new("settled-1").unwrap();
+    let noted = Transfer::builder_from_payment(payment, september_24())
+        .id(id)
+        .note("Dinner")
+        .build()
+        .unwrap();
+    assert_eq!(noted, repayment().id(id).note("Dinner").build().unwrap());
 }
 
 /// A transfer in the group currency would be counted at another amount, or
@@ -267,6 +278,21 @@ fn a_transfer_keeps_its_identifier_through_edits() {
     assert_ne!(full_repayment().id(), transfer.id());
     let edited = transfer.to_builder().note("Lunch").build().unwrap();
     assert_eq!(edited.id(), transfer.id());
+}
+
+/// A transfer from an app's own store would get another identifier than its
+/// key, lose it in an edit, or keep it after the app asked for a generated
+/// one.
+#[test]
+fn a_transfer_takes_the_identifier_it_is_given() {
+    let id = TransferId::new("zz").unwrap();
+    let transfer = repayment().id(id).build().unwrap();
+    assert_eq!(transfer.id(), id);
+    // An edit keeps it.
+    let edited = transfer.to_builder().note("Lunch").build().unwrap();
+    assert_eq!(edited.id(), id);
+    // `None` leaves generation to `build`.
+    assert_ne!(transfer.to_builder().id(None).build().unwrap().id(), id);
 }
 
 /// The exchange rate fixed when a group changes currency would not be

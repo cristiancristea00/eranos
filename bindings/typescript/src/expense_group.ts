@@ -48,8 +48,10 @@ import {
     generatedStrategy,
 } from './totals.js';
 
-/** The details a new group can start with besides its name and currency. */
+/** The identifier and the details a new group can start with besides its name and currency. */
 export interface ExpenseGroupOptions {
+    /** The identifier: the app's own, or absent for the library to generate one. */
+    readonly id?: ExpenseGroupId;
     /** A longer description. */
     readonly description?: string;
     /** The language the apps show the group in. */
@@ -88,16 +90,19 @@ export class ExpenseGroup implements Disposable {
     ) {}
 
     /**
-     * A new group with no members and no entries, called `name`, whose totals are in `currency`.
+     * A new group with no members and no entries, called `name`, whose totals are in `currency`, under the identifier
+     * `options` gives, or a generated one.
      *
      * @param name - The name
      * @param currency - The group currency
-     * @param options - The description and the language, if the group has them
+     * @param options - The identifier, the description, and the language, if the group has them
      * @returns The group
      * @throws {@link ExpenseGroupError} with the failure `emptyName` for a blank name
+     * @throws {@link IdError} for an identifier that is not one
      */
     static create(name: string, currency: CurrencyCode, options?: ExpenseGroupOptions): ExpenseGroup {
         const group = internal.NewExpenseGroup.create({
+            ...(undefined === options?.id ? {} : { id: options.id }),
             name,
             currency: currency.code,
             ...(undefined === options?.description ? {} : { description: options.description }),
@@ -590,13 +595,14 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `member`, who has no identifier yet, and returns the one the group gives them.
+     * Adds `member` under their identifier, or one the library generates when they have none, and returns the identifier.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addMemberSync} does not wait.
      *
-     * Rejects with `TypeError` for a member with an identifier; {@link MemberError} with the failure `emptyFirstName` for a
-     * blank first name; {@link PaymentAccountError} with the failure `emptyName` for an account with a blank name.
+     * Rejects with {@link MemberError} with the failure `emptyFirstName` for a blank first name; {@link PaymentAccountError}
+     * with the failure `emptyName` for an account with a blank name; {@link ExpenseGroupError} with the failure
+     * `duplicateMember` for an identifier another member has; {@link IdError} for an identifier that is not one.
      *
      * @param member - The member
      * @param options - The call's signal
@@ -607,16 +613,17 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `member`, who has no identifier yet, and returns the one the group gives them.
+     * Adds `member` under their identifier, or one the library generates when they have none, and returns the identifier.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addMember} waits for it.
      *
      * @param member - The member
      * @returns The member's identifier
-     * @throws `TypeError` for a member with an identifier
      * @throws {@link MemberError} with the failure `emptyFirstName` for a blank first name
      * @throws {@link PaymentAccountError} with the failure `emptyName` for an account with a blank name
+     * @throws {@link ExpenseGroupError} with the failure `duplicateMember` for an identifier another member has
+     * @throws {@link IdError} for an identifier that is not one
      */
     addMemberSync(member: Member): MemberId {
         return memberId(calling(() => this.handle.addMember(generatedMember(member))));
@@ -820,14 +827,14 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `category`, which has no identifier yet, and returns the one the group gives it.
+     * Adds `category` under its identifier, or one the library generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addCategorySync} does not wait.
      *
-     * Rejects with `TypeError` for a category with an identifier; {@link CategoryError} with the failure `emptyName` for a
-     * blank name; {@link ExpenseGroupError} with the failure `duplicateCategoryName` for a name another category has, compared
-     * caselessly.
+     * Rejects with {@link CategoryError} with the failure `emptyName` for a blank name; {@link ExpenseGroupError} with the
+     * failure `duplicateCategory` for an identifier another category has, and `duplicateCategoryName` for a name another
+     * category has, compared caselessly; {@link IdError} for an identifier that is not one.
      *
      * @param category - The category
      * @param options - The call's signal
@@ -838,17 +845,17 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `category`, which has no identifier yet, and returns the one the group gives it.
+     * Adds `category` under its identifier, or one the library generates when it has none, and returns the identifier.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addCategory} waits for it.
      *
      * @param category - The category
      * @returns The category's identifier
-     * @throws `TypeError` for a category with an identifier
      * @throws {@link CategoryError} with the failure `emptyName` for a blank name
-     * @throws {@link ExpenseGroupError} with the failure `duplicateCategoryName` for a name another category has, compared
-     *   caselessly
+     * @throws {@link ExpenseGroupError} with the failure `duplicateCategory` for an identifier another category has, and
+     *   `duplicateCategoryName` for a name another category has, compared caselessly
+     * @throws {@link IdError} for an identifier that is not one
      */
     addCategorySync(category: Category): CategoryId {
         return categoryId(calling(() => this.handle.addCategory(generatedCategory(category))));
@@ -1017,14 +1024,15 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `expense`, which has no identifier yet, and returns the one the group gives it.
+     * Adds `expense` under its identifier, or one the library generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addExpenseSync} does not wait.
      *
-     * Rejects with `TypeError` for an expense with an identifier; {@link ExpenseError} for an expense that does not build,
-     * such as one whose amounts do not add up; {@link ExpenseGroupError} for one that does not fit the group, such as the failures
-     * `unknownMember` and `archivedMember`; {@link IdError} for an identifier that is not one.
+     * Rejects with {@link ExpenseError} for an expense that does not build, such as one whose amounts do not add up;
+     * {@link ExpenseGroupError} for one that does not fit the group, such as the failures `duplicateExpense` for an
+     * identifier another expense has, `unknownMember`, and `archivedMember`; {@link IdError} for an identifier that is not
+     * one.
      *
      * @param expense - The expense
      * @param options - The call's signal
@@ -1035,17 +1043,16 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `expense`, which has no identifier yet, and returns the one the group gives it.
+     * Adds `expense` under its identifier, or one the library generates when it has none, and returns the identifier.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addExpense} waits for it.
      *
      * @param expense - The expense
      * @returns The expense's identifier
-     * @throws `TypeError` for an expense with an identifier
      * @throws {@link ExpenseError} for an expense that does not build, such as one whose amounts do not add up
-     * @throws {@link ExpenseGroupError} for one that does not fit the group, such as the failures `unknownMember` and
-     *   `archivedMember`
+     * @throws {@link ExpenseGroupError} for one that does not fit the group, such as the failures `duplicateExpense` for an
+     *   identifier another expense has, `unknownMember`, and `archivedMember`
      * @throws {@link IdError} for an identifier that is not one
      */
     addExpenseSync(expense: Expense): ExpenseId {
@@ -1214,14 +1221,14 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `transfer`, which has no identifier yet, and returns the one the group gives it.
+     * Adds `transfer` under its identifier, or one the library generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock without blocking; aborting `options.signal` cancels the call, which leaves the group as it
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addTransferSync} does not wait.
      *
-     * Rejects with `TypeError` for a transfer with an identifier; {@link TransferError} for a transfer that does not build,
-     * such as the failure `sameMember`; {@link ExpenseGroupError} with the failure `unknownMember`; {@link IdError} for an
-     * identifier that is not one.
+     * Rejects with {@link TransferError} for a transfer that does not build, such as the failure `sameMember`;
+     * {@link ExpenseGroupError} with the failure `duplicateTransfer` for an identifier another transfer has, and
+     * `unknownMember`; {@link IdError} for an identifier that is not one.
      *
      * @param transfer - The transfer
      * @param options - The call's signal
@@ -1232,16 +1239,16 @@ export class ExpenseGroup implements Disposable {
     }
 
     /**
-     * Adds `transfer`, which has no identifier yet, and returns the one the group gives it.
+     * Adds `transfer` under its identifier, or one the library generates when it has none, and returns the identifier.
      *
      * Does not wait for the group's lock: while another call holds it, it throws {@link ExpenseGroupError} with the failure
      * `busy`, since a wait on the page's one thread would never end. {@link ExpenseGroup.addTransfer} waits for it.
      *
      * @param transfer - The transfer
      * @returns The transfer's identifier
-     * @throws `TypeError` for a transfer with an identifier
      * @throws {@link TransferError} for a transfer that does not build, such as the failure `sameMember`
-     * @throws {@link ExpenseGroupError} with the failure `unknownMember`
+     * @throws {@link ExpenseGroupError} with the failure `duplicateTransfer` for an identifier another transfer has, and
+     *   `unknownMember`
      * @throws {@link IdError} for an identifier that is not one
      */
     addTransferSync(transfer: Transfer): TransferId {

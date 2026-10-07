@@ -1,6 +1,7 @@
 /**
  * The entries of a group: its members, categories, expenses, and transfers, and the splits, costs, and tips they hold.
- * Every entry is a plain object; one to add has no `id`, and one the group holds has the `id` it gave.
+ * Every entry is a plain object: one to add has the `id` the app gives it, or none, for the library to generate one, and one
+ * the group holds has its `id`.
  *
  * @packageDocumentation
  */
@@ -356,11 +357,15 @@ function generatedTipDistribution(distribution: TipDistribution): internal.TipDi
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * A new expense has no `id`; {@link ExpenseGroup.addExpense} gives it one. To change an expense, read it from the group, spread
- * it into a new object with the changes, and pass that to {@link ExpenseGroup.replaceExpense}.
+ * A new expense has the `id` the app gives it, or none, and then {@link ExpenseGroup.addExpense} generates one. To change an
+ * expense, read it from the group, spread it into a new object with the changes, and pass that to
+ * {@link ExpenseGroup.replaceExpense}.
  */
 export interface Expense {
-    /** The identifier: absent for an expense to add, present for one the group holds. */
+    /**
+     * The identifier: the app's own for an expense to add, or absent for the library to generate one, and present for an
+     * expense the group holds or one to replace.
+     */
     readonly id?: ExpenseId;
     /** What was bought. */
     readonly name: string;
@@ -503,10 +508,13 @@ function generatedPaymentAccountDetails(details: PaymentAccountDetails): interna
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * A new member has no `id`; {@link ExpenseGroup.addMember} gives them one.
+ * A new member has the `id` the app gives them, or none, and then {@link ExpenseGroup.addMember} generates one.
  */
 export interface Member {
-    /** The identifier: absent for a member to add, present for one the group holds. */
+    /**
+     * The identifier: the app's own for a member to add, or absent for the library to generate one, and present for a member
+     * the group holds or one to replace.
+     */
     readonly id?: MemberId;
     /** The first name. */
     readonly firstName: string;
@@ -557,11 +565,14 @@ export function generatedMember(member: Member): internal.Member {
 /**
  * A label the group gives expenses: "Food".
  *
- * A new category has no `id`; {@link ExpenseGroup.addCategory} gives it one. The built-in category, Uncategorised, holds every
- * expense without another.
+ * A new category has the `id` the app gives it, or none, and then {@link ExpenseGroup.addCategory} generates one. The
+ * built-in category, Uncategorised, holds every expense without another.
  */
 export interface Category {
-    /** The identifier: absent for a category to add, present for one the group holds. */
+    /**
+     * The identifier: the app's own for a category to add, or absent for the library to generate one, and present for a
+     * category the group holds or one to rename.
+     */
     readonly id?: CategoryId;
     /** The name, which no other category of the group shares. */
     readonly name: string;
@@ -588,10 +599,13 @@ export function generatedCategory(category: Category): internal.Category {
 /**
  * Money one member paid another, such as a repayment.
  *
- * A new transfer has no `id`; {@link ExpenseGroup.addTransfer} gives it one.
+ * A new transfer has the `id` the app gives it, or none, and then {@link ExpenseGroup.addTransfer} generates one.
  */
 export interface Transfer {
-    /** The identifier: absent for a transfer to add, present for one the group holds. */
+    /**
+     * The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for a
+     * transfer the group holds or one to replace.
+     */
     readonly id?: TransferId;
     /** The member who paid. */
     readonly from: MemberId;

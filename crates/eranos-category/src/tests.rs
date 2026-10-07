@@ -3,8 +3,8 @@
 //! These tests keep names trimmed and present, keep the built-in category
 //! the same everywhere, keep the folded name that uniqueness is checked on
 //! the same for names that differ only in case, in any script, or in the
-//! encoding of an accent, and keep a category's identifier through a rename
-//! and a save.
+//! encoding of an accent, and keep a category's identifier, given or
+//! generated, through a rename and a save.
 
 use super::*;
 
@@ -186,6 +186,24 @@ fn a_rename_keeps_the_identifier() {
     assert_eq!(food.renamed(" "), Err(CategoryError::EmptyName));
 }
 
+/// A category from an app's own store would get another identifier than
+/// its key, keep a stray space in its name, or be accepted without a name.
+#[test]
+fn a_category_takes_the_identifier_it_is_given() {
+    let id = CategoryId::new("-food").unwrap();
+    let food = Category::with_id(id, " Food ").unwrap();
+    assert_eq!(food.id(), id);
+    assert_eq!(food.name(), "Food");
+    // A rename keeps it.
+    assert_eq!(food.renamed("Groceries").unwrap().id(), id);
+    // The name is checked as `new` checks it.
+    assert_eq!(Category::with_id(id, "\t"), Err(CategoryError::EmptyName));
+    // The built-in category's identifier is accepted here; a group refuses
+    // to add a second category under it.
+    let other = Category::with_id(CategoryId::UNCATEGORISED, "Other").unwrap();
+    assert_eq!(other.id(), CategoryId::UNCATEGORISED);
+}
+
 /// Saved categories would fail to load, load under another identifier, or
 /// load with a blank name.
 #[cfg(feature = "serde")]
@@ -201,6 +219,14 @@ fn categories_round_trip_through_serde() {
     assert_eq!(serde_json::from_str::<Category>(&padded).unwrap(), food);
     let blank = format!(r#"{{"id":"{}","name":" "}}"#, food.id());
     assert!(serde_json::from_str::<Category>(&blank).is_err());
+    // An identifier given from outside reads back as it was written.
+    let lodging = Category::with_id(CategoryId::new("lodging").unwrap(), "Lodging").unwrap();
+    let lodging_json = serde_json::to_string(&lodging).unwrap();
+    assert_eq!(lodging_json, r#"{"id":"lodging","name":"Lodging"}"#);
+    assert_eq!(
+        serde_json::from_str::<Category>(&lodging_json).unwrap(),
+        lodging
+    );
     // The identifier is required.
     assert!(serde_json::from_str::<Category>(r#"{"name":"Food"}"#).is_err());
 }

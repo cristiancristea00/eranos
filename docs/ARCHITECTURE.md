@@ -257,10 +257,12 @@ Entities are immutable values built by builders (`Member::builder`,
 `Expense::builder`, …) and edited through `to_builder`; the group validates
 every value it receives. A builder's constructor takes every required value:
 an expense has four, for one payer or several and for a whole split or
-items, and an item two, for an equal split or any other. Every member,
-category, expense, and transfer carries its identifier, generated when it
-is built and kept by `to_builder`, so an edit stays the same entry: `add_*`
-refuses an identifier the group already holds, and `replace_*` finds the
+items, and an item two, for an equal split or any other. The group and
+every member, category, expense, and transfer carry an identifier: the one
+an app gives the builder's `id`, or `Category::with_id`, such as the key of
+its own store, or one generated when the value is built. `to_builder` keeps
+it, so an edit stays the same entry: `add_*` refuses an identifier the
+group already holds, Uncategorised's included, and `replace_*` finds the
 entry to replace by it.
 
 An **identifier** (`ExpenseGroupId`, `MemberId`, `CategoryId`, `ExpenseId`,
@@ -518,7 +520,7 @@ ledger's range.
 | `PaymentAccountError` | `PaymentAccount::new`, `Iban::parse` (with the `IbanError` reason), `Username::new`                                                                                                                                            |
 | `ContactError`        | `Email::parse`, `PhoneNumber::parse`                                                                                                                                                                                           |
 | `MemberError`         | `MemberBuilder::build`                                                                                                                                                                                                         |
-| `CategoryError`       | `Category::new`, `Category::renamed`                                                                                                                                                                                           |
+| `CategoryError`       | `Category::new`, `Category::with_id`, `Category::renamed`                                                                                                                                                                      |
 | `LanguageError`       | `Language::parse`                                                                                                                                                                                                              |
 | `ExpenseError`        | `ExpenseBuilder::build`, `ExpenseItemBuilder::build`                                                                                                                                                                           |
 | `TransferError`       | `TransferBuilder::build`                                                                                                                                                                                                       |
@@ -577,11 +579,13 @@ never the derived totals:
 - Loading replays the entries through the `add_*` methods: members (all
   unarchived first), categories, expenses, transfers, then the `archived`
   list, because an expense may reference a member archived after it was
-  added. A hand-edited or corrupted file is refused, never loaded
-  inconsistently. Deserialising an `ExpenseGroup` reports the refusal as the
-  deserialiser's error; deserialising a `SavedExpenseGroup` and calling
-  `into_expense_group` reports it as an `ExpenseGroupError`, so an app can
-  tell a newer file from a damaged one. An entry that could never have been
+  added. The group and every entry take their saved identifiers through
+  the builders' `id` and `Category::with_id`, as an app gives its own, so
+  a load generates none. A hand-edited or corrupted file is refused, never
+  loaded inconsistently. Deserialising an `ExpenseGroup` reports the
+  refusal as the deserialiser's error; deserialising a `SavedExpenseGroup`
+  and calling `into_expense_group` reports it as an `ExpenseGroupError`, so
+  an app can tell a newer file from a damaged one. An entry that could never have been
   built fails the read in both cases, since every entity deserialises
   through its validating constructor. `into_expense_group_async` replays the
   same steps, yielding once per 1 024 of them; it owns the saved form, so a

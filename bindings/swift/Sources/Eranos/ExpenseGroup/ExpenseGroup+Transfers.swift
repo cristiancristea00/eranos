@@ -68,11 +68,13 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `transfer`, which has no identifier yet, and returns the one the group gives it.
+    /// Adds `transfer` under its identifier, or one the library generates when it has none, and
+    /// returns the identifier.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for a transfer with an identifier,
-    ///   ``EranosError/transfer(_:detail:)`` for one that does not build, such as
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
+    ///   ``EranosError/transfer(_:detail:)`` for a transfer that does not build, such as
     ///   ``TransferFailure/sameMember``, and ``EranosError/expenseGroup(_:detail:)`` with
+    ///   ``ExpenseGroupFailure/duplicateTransfer(_:)`` for an identifier the group holds, or
     ///   ``ExpenseGroupFailure/unknownMember(_:)``; on wasm, ``EranosError/expenseGroup(_:detail:)`` with
     ///   ``ExpenseGroupFailure/busy`` while another call holds the lock.
     @discardableResult
@@ -80,14 +82,16 @@ public extension ExpenseGroup {
         try converting { Transfer.ID(rawValue: try handle.addTransfer(transfer: transfer.generated)) }
     }
 
-    /// Adds `transfer`, which has no identifier yet, and returns the one the group gives it.
+    /// Adds `transfer` under its identifier, or one the library generates when it has none, and
+    /// returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for a transfer with an identifier,
-    ///   ``EranosError/transfer(_:detail:)`` for one that does not build, such as
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
+    ///   ``EranosError/transfer(_:detail:)`` for a transfer that does not build, such as
     ///   ``TransferFailure/sameMember``, and ``EranosError/expenseGroup(_:detail:)`` with
+    ///   ``ExpenseGroupFailure/duplicateTransfer(_:)`` for an identifier the group holds, or
     ///   ``ExpenseGroupFailure/unknownMember(_:)``; ``EranosError/cancelled(detail:)`` when the task is
     ///   cancelled first.
     @discardableResult

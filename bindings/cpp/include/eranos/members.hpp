@@ -80,7 +80,7 @@ struct Member final {
     /// @param firstName The first name.
     explicit Member(std::string firstName) noexcept : firstName(std::move(firstName)) {}
 
-    /// The identifier: absent for a member to add, present for one the group holds.
+    /// The identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds.
     std::optional<MemberId> id;
 
     /// The first name.

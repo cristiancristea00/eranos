@@ -593,7 +593,8 @@ fn members(group: &mut ExpenseGroup) -> Result<People, Box<dyn Error>> {
 fn categories(group: &mut ExpenseGroup) -> Result<Categories, Box<dyn Error>> {
     section("3. Categories");
     let food = group.add_category(Category::new("Food")?)?;
-    let lodging = group.add_category(Category::new("Lodging")?)?;
+    // An app that keeps its categories elsewhere gives them its own keys.
+    let lodging = group.add_category(Category::with_id(CategoryId::new("lodging")?, "Lodging")?)?;
     let transport = group.add_category(Category::new("Transport")?)?;
     let homonym = group.add_category(Category::new("FOOD")?);
     let renamed = group
@@ -607,8 +608,9 @@ fn categories(group: &mut ExpenseGroup) -> Result<Categories, Box<dyn Error>> {
         .renamed("Other")?;
     let built_in = group.replace_category(other);
     println!(
-        "Every group has the built-in Uncategorised; this one adds Food, Lodging, and\n\
-         Transport, then renames Transport, which keeps its identifier. In identifier order:\n  \
+        "Every group has the built-in Uncategorised; this one adds Food, Lodging, under the\n\
+         identifier lodging that the app gives it, and Transport, then renames Transport, which\n\
+         keeps its identifier. In identifier order, where lodging follows the generated ones:\n  \
          {}\n\
          Names are compared caselessly, and the built-in category keeps its name:",
         group
@@ -639,6 +641,11 @@ fn categories(group: &mut ExpenseGroup) -> Result<Categories, Box<dyn Error>> {
     assert_eq!(
         group.category(transport).map(Category::name),
         Some("Getting around")
+    );
+    assert_eq!(lodging.as_str(), "lodging");
+    assert_eq!(
+        group.categories().map(Category::id).collect::<Vec<_>>(),
+        [CategoryId::UNCATEGORISED, food, transport, lodging]
     );
     Ok(Categories {
         food,
@@ -1460,7 +1467,7 @@ fn settling_up(group: &mut ExpenseGroup) -> Result<(), Box<dyn Error>> {
         2,
     );
     for payment in plan.payments() {
-        group.add_transfer(Transfer::from_payment(payment, october(7)?))?;
+        group.add_transfer(Transfer::builder_from_payment(payment, october(7)?).build()?)?;
     }
     println!("Each payment, once made, is recorded as a transfer, and every balance is settled:");
     print_balances(group);

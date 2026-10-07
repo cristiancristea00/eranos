@@ -1,18 +1,20 @@
 //! Transfers between members, as the bindings carry them.
 
+use eranos::TransferId;
 use eranos::transfer as library;
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::money::Cost;
-use crate::{EranosError, check_new, identifier};
+use crate::{EranosError, identifier, identifier_to_add};
 
 /// Money one member paid another, such as a repayment.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Transfer {
-    /// The identifier: absent for a transfer to add, present for one the
-    /// group holds or one to replace.
+    /// The identifier: the app's own for a transfer to add, or absent for the
+    /// library to generate one, and present for a transfer the group holds or
+    /// one to replace.
     pub id: Option<String>,
     /// The member who paid, as their identifier.
     pub from: String,
@@ -42,22 +44,23 @@ impl Transfer {
         }
     }
 
-    /// The library's transfer, for a record to add: it gets a new
-    /// identifier.
+    /// The library's transfer, for a record to add: under the record's
+    /// identifier, or a generated one when it has none.
     ///
     /// # Errors
     ///
-    /// [`EranosError::IdentifierGiven`] when the record has an identifier,
-    /// the errors of the fields' conversions, and those of
+    /// An [`EranosError::Id`] for an identifier the rules refuse, the errors
+    /// of the fields' conversions, and those of
     /// [`TransferBuilder::build`](library::TransferBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Transfer, EranosError> {
-        check_new(self.id.as_deref())?;
+        let id: Option<TransferId> = identifier_to_add(self.id.as_deref())?;
         let builder = library::Transfer::builder(
             identifier(&self.from)?,
             identifier(&self.to)?,
             self.cost.to_library()?,
             self.date.to_library()?,
-        );
+        )
+        .id(id);
         Ok(self.with_optional_fields(builder)?.build()?)
     }
 

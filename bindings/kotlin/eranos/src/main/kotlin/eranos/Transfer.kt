@@ -3,12 +3,13 @@ package eranos
 /**
  * Money one member paid another, such as a repayment.
  *
- * A new transfer has no identifier; [ExpenseGroup.add] gives it one. To change a transfer, read it from the group, [copy] it with
- * the changes, and pass the copy to [ExpenseGroup.replace].
+ * A transfer to add carries the identifier the app gives it, such as the key of its own store, or none, and then
+ * [ExpenseGroup.add] generates one. To change a transfer, read it from the group, [copy] it with the changes, and pass the
+ * copy to [ExpenseGroup.replace].
  */
-@Suppress("LongParameterList") // A transfer has the library's fields; the public constructor defaults the optional ones.
-public class Transfer internal constructor(
-    /** The identifier: `null` for a transfer to add, set for one the group holds. */
+@Suppress("LongParameterList") // A transfer has the library's fields; the public constructors default the optional ones.
+public class Transfer(
+    /** The identifier: the app's own or `null` for a transfer to add, and set for one the group holds. */
     public val id: TransferId?,
     /** The member who paid. */
     public val from: MemberId,
@@ -19,11 +20,11 @@ public class Transfer internal constructor(
     /** The day it was paid. */
     public val date: CalendarDate,
     /** The time of day it was paid. */
-    public val time: TimeOfDay?,
+    public val time: TimeOfDay? = null,
     /** A note on the transfer. */
-    public val note: String?,
+    public val note: String? = null,
 ) {
-    /** A transfer to add, of [cost] on [date], from one member to another. */
+    /** A transfer to add, of [cost] on [date], from one member to another, under an identifier the group generates. */
     public constructor(
         from: MemberId,
         to: MemberId,

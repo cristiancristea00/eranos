@@ -1,6 +1,7 @@
 // What every port prints its report with: the headings and the tables of the Rust examples, and the loading of the
 // module the ports run in.
 
+import { Buffer } from 'node:buffer';
 import { readFile } from 'node:fs/promises';
 
 import {
@@ -86,7 +87,15 @@ export function names(group: ExpenseGroup, members: readonly MemberId[]): string
 /** Every member who shares the cost of `split`, once each, in the order of their identifiers. */
 export function participants(split: ExpenseSplit): MemberId[] {
     const members = 'itemised' === split.kind ? split.items.flatMap((item) => splitMembers(item.split)) : splitMembers(split.split);
-    return [...new Set(members)].sort();
+    return [...new Set(members)].sort(identifierOrder);
+}
+
+/**
+ * The order of the identifiers `first` and `second` that the library sorts by: by their bytes of UTF-8. The default order
+ * of `sort`, by UTF-16 code units, would put a character above U+FFFF before one from U+E000 to U+FFFF.
+ */
+function identifierOrder(first: string, second: string): number {
+    return Buffer.compare(Buffer.from(first, 'utf8'), Buffer.from(second, 'utf8'));
 }
 
 /** What the library refuses `change` with, or `undefined` for a change it accepts. */

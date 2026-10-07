@@ -7,6 +7,7 @@ package eranos;
 import static eranos.Flat.assertValue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -277,9 +278,10 @@ class EntriesTest {
         assertEquals(Optional.of(trip), storedTravel.id());
         assertValue(storedTravel, storedTravel.renamed("Travel"), storedTravel.renamed("Trips"));
 
-        IllegalArgumentException given =
-                assertThrows(IllegalArgumentException.class, () -> flat.group.addMember(stored));
-        assertEquals("an entry to add must not carry an identifier", given.getMessage());
+        EranosException.ExpenseGroup again =
+                assertThrows(
+                        EranosException.ExpenseGroup.class, () -> flat.group.addMember(stored));
+        assertEquals(new ExpenseGroupFailure.DuplicateMember(id), again.failure());
         IllegalArgumentException missing =
                 assertThrows(IllegalArgumentException.class, () -> flat.group.replaceMember(carol));
         assertEquals("an entry to replace must carry its identifier", missing.getMessage());
@@ -288,6 +290,69 @@ class EntriesTest {
                     account.details(),
                     Conversions.converted(Conversions.generated(account.details())));
         }
+    }
+
+    /**
+     * An entry added under another identifier than the one the app gave it, a second entry added
+     * under an identifier the group holds, or an identifier the rules refuse let through would
+     * leave the app's own store pointing at another entry.
+     */
+    @Test
+    void anEntryKeepsTheIdentifierTheAppGivesIt() throws EranosException {
+        Flat flat = new Flat();
+        ExpenseGroup group = flat.group;
+
+        MemberId carol = MemberId.parse("carol");
+        Member member = Member.builder("Carol").id(carol).build();
+        assertEquals(carol, group.addMember(member));
+        assertEquals(
+                Optional.of(carol), group.member(carol).orElseThrow().toBuilder().build().id());
+        EranosException.ExpenseGroup memberAgain =
+                assertThrows(
+                        EranosException.ExpenseGroup.class,
+                        () -> group.addMember(Member.builder("Caroline").id(carol).build()));
+        assertEquals(new ExpenseGroupFailure.DuplicateMember(carol), memberAgain.failure());
+        MemberId generated = group.addMember(member.toBuilder().id(null).build());
+        assertNotEquals(carol, generated);
+
+        CategoryId travel = CategoryId.parse("travel");
+        assertEquals(travel, group.addCategory(new Category(travel, "Travel")));
+        assertEquals(Optional.of(travel), group.category(travel).orElseThrow().id());
+        EranosException.ExpenseGroup categoryAgain =
+                assertThrows(
+                        EranosException.ExpenseGroup.class,
+                        () -> group.addCategory(new Category(travel, "Trips")));
+        assertEquals(new ExpenseGroupFailure.DuplicateCategory(travel), categoryAgain.failure());
+
+        ExpenseId lunch = ExpenseId.parse("lunch");
+        Expense expense =
+                flat.expense("Lunch", flat.ana, List.of(flat.bob)).toBuilder().id(lunch).build();
+        assertEquals(lunch, group.addExpense(expense));
+        assertEquals(Optional.of(lunch), group.expense(lunch).orElseThrow().id());
+        EranosException.ExpenseGroup expenseAgain =
+                assertThrows(EranosException.ExpenseGroup.class, () -> group.addExpense(expense));
+        assertEquals(new ExpenseGroupFailure.DuplicateExpense(lunch), expenseAgain.failure());
+
+        TransferId cash = TransferId.parse("cash");
+        Transfer transfer =
+                Transfer.builder(flat.bob, flat.ana, new Cost.Local(flat.euros(100)), flat.day)
+                        .id(cash)
+                        .build();
+        assertEquals(cash, group.addTransfer(transfer));
+        assertEquals(Optional.of(cash), group.transfer(cash).orElseThrow().id());
+        EranosException.ExpenseGroup transferAgain =
+                assertThrows(EranosException.ExpenseGroup.class, () -> group.addTransfer(transfer));
+        assertEquals(new ExpenseGroupFailure.DuplicateTransfer(cash), transferAgain.failure());
+
+        String json = group.save();
+        assertEquals(json, ExpenseGroup.load(json).save());
+        EranosException.Id refused =
+                assertThrows(
+                        EranosException.Id.class,
+                        () ->
+                                group.addMember(
+                                        Member.builder("Dan").id(new MemberId(" x")).build()));
+        assertEquals(new IdFailure.SurroundingWhitespace(), refused.failure());
     }
 
     /**

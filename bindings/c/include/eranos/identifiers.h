@@ -1,14 +1,30 @@
 /// @file eranos/identifiers.h
-/// Lists of identifiers: the members of an equal split, and the entries an error names.
+/// Identifiers: the check of one by the rules every kind shares, and lists of them, such as the members of an equal split and the entries an error
+/// names.
 
 #ifndef ERANOS_IDENTIFIERS_H
 #define ERANOS_IDENTIFIERS_H
 
+#include "EranosIdentifier.h"
 #include "EranosTextList.h"
 #include "eranos/detail.h"
 #include "eranos/text.h"
 
 #include <stddef.h>
+
+/// Writes the identifier written `text`, as it is: not trimmed, and in its case. Every kind of identifier, of a group, a member, a category, an
+/// expense, or a transfer, follows the same rules.
+///
+/// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param identifier Receives the identifier, replacing what it held
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ID for text that
+///   is not an identifier, with the first rule it breaks, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosIdentifierParse(char const *const text, EranosText *const identifier) {
+    eranosDetailClear(identifier);
+    EranosIdentifier_parse_result const result = EranosIdentifier_parse(eranosDetailView(text), identifier);
+    eranosDetailFinish(identifier);
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
 
 /// A list of text: identifiers, for the most part.
 typedef struct EranosTextList EranosTextList;

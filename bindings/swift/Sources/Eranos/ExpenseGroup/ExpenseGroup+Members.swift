@@ -70,25 +70,29 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `member`, who has no identifier yet, and returns the one the group gives them.
+    /// Adds `member` under their identifier, or one the library generates when they have none, and
+    /// returns the identifier.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for a member with an identifier, and
-    ///   ``EranosError/member(_:detail:)`` with ``MemberFailure/emptyFirstName`` for a blank first
-    ///   name; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateMember(_:)`` for one
+    ///   the group holds, and ``EranosError/member(_:detail:)`` with ``MemberFailure/emptyFirstName``
+    ///   for a blank first name; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another
     ///   call holds the lock.
     @discardableResult
     func add(_ member: Member) throws(EranosError) -> Member.ID {
         try converting { Member.ID(rawValue: try handle.addMember(member: member.generated)) }
     }
 
-    /// Adds `member`, who has no identifier yet, and returns the one the group gives them.
+    /// Adds `member` under their identifier, or one the library generates when they have none, and
+    /// returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for a member with an identifier, and
-    ///   ``EranosError/member(_:detail:)`` with ``MemberFailure/emptyFirstName`` for a blank first
-    ///   name; ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateMember(_:)`` for one
+    ///   the group holds, and ``EranosError/member(_:detail:)`` with ``MemberFailure/emptyFirstName``
+    ///   for a blank first name; ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     @discardableResult
     func add(_ member: Member) async throws(EranosError) -> Member.ID {
         try await converting { [handle] cancellation in

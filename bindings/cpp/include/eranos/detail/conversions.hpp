@@ -123,6 +123,36 @@ inline std::optional<TransferId> const &Error::transfer() const noexcept { retur
 
 inline std::optional<std::vector<TransferId>> const &Error::transfers() const noexcept { return fields->transfers; }
 
+inline std::expected<ExpenseGroupId, Error> ExpenseGroupId::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
+        return ExpenseGroupId(std::move(identifier));
+    });
+}
+
+inline std::expected<MemberId, Error> MemberId::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
+        return MemberId(std::move(identifier));
+    });
+}
+
+inline std::expected<CategoryId, Error> CategoryId::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
+        return CategoryId(std::move(identifier));
+    });
+}
+
+inline std::expected<ExpenseId, Error> ExpenseId::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
+        return ExpenseId(std::move(identifier));
+    });
+}
+
+inline std::expected<TransferId, Error> TransferId::parse(std::string_view const text) {
+    return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
+        return TransferId(std::move(identifier));
+    });
+}
+
 } // namespace eranos
 
 namespace eranos::detail {
@@ -325,7 +355,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 /// The language written @p text, which the library wrote.
 [[nodiscard]] inline Language languageOf(std::string text) noexcept { return Language(std::move(text)); }
 
-/// The error kind of @p value. The two enumerations list their 18 values in one order, which the generator of both
+/// The error kind of @p value. The two enumerations list their 17 values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
 /// as every other does.
 [[nodiscard]] inline ErrorKind fromDetail(EranosErrorKind const value) noexcept { return static_cast<ErrorKind>(std::to_underlying(value.AsFFI())); }

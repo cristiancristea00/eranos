@@ -6,6 +6,7 @@ import eranos.ExpenseSplit
 import eranos.MemberId
 import eranos.MemberSummary
 import eranos.Summary
+import java.util.Arrays
 
 /** Prints [title] with a double line under it, as an example opens. */
 fun title(title: String) {
@@ -72,7 +73,11 @@ fun participants(split: ExpenseSplit): List<MemberId> {
             is ExpenseSplit.Whole -> split.split.members
             is ExpenseSplit.Itemised -> split.items.flatMap { item -> item.split.members }
         }
-    return members.distinct().sortedBy { member -> member.value }
+    // The library orders identifiers by their UTF-8 bytes; the order of `String` compares UTF-16 code units, which puts a
+    // character above U+FFFF before one from U+E000 to U+FFFF.
+    return members.distinct().sortedWith { first, second ->
+        Arrays.compareUnsigned(first.value.encodeToByteArray(), second.value.encodeToByteArray())
+    }
 }
 
 /** The totals of [member] in [summary]. */

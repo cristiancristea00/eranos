@@ -1,4 +1,6 @@
-"""Check the values the library checks and writes: currencies, amounts, ratios, dates, times, contacts, and accounts."""
+"""Check the values the library checks and writes: identifiers, currencies, amounts, ratios, dates, times, contacts, and accounts."""
+
+from collections.abc import Callable
 
 import pytest
 
@@ -10,6 +12,7 @@ from eranos import (
     Email,
     ExchangeRate,
     Iban,
+    IdError,
     Language,
     LanguageError,
     Money,
@@ -20,7 +23,33 @@ from eranos import (
     TimeOfDay,
     Username,
     ContactError,
+    parse_category_id,
+    parse_expense_group_id,
+    parse_expense_id,
+    parse_member_id,
+    parse_transfer_id,
 )
+
+
+def test_an_identifier_parses_as_the_library_reads_it() -> None:
+    """An app would store an identifier the library refuses, see its text changed, or not learn which rule the text broke."""
+    parsers: tuple[Callable[[str], str], ...] = (parse_expense_group_id, parse_member_id, parse_category_id, parse_expense_id, parse_transfer_id)
+    # The limit counts bytes of UTF-8: 32 letters é fill it, and 33 pass it.
+    refused = {
+        '': IdError.Empty(),
+        'x' * 65: IdError.TooLong(),
+        'é' * 33: IdError.TooLong(),
+        'a\tb': IdError.ControlCharacter(),
+        ' x': IdError.SurroundingWhitespace(),
+    }
+    for parse in parsers:
+        # Kept as it is, case and inner spaces included.
+        for text in ('-food', '!a', 'zz', 'Lisboa · 2026', 'é' * 32):
+            assert parse(text) == text, text
+        for text, failure in refused.items():
+            with pytest.raises(IdError) as refusal:
+                parse(text)
+            assert refusal.value.failure == failure, text
 
 
 def test_a_currency_holds_what_the_library_knows_of_it() -> None:

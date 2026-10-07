@@ -1,9 +1,9 @@
 //! Members are the people every expense and balance names. These tests keep
 //! the required first name present and trimmed, keep optional details absent
 //! rather than blank, keep contact details and accounts settable and
-//! clearable, keep a member's identifier through every edit and save, and
-//! keep edits made through `to_builder` from touching the member they were
-//! copied from.
+//! clearable, keep a member's identifier, given or generated, through every
+//! edit and save, and keep edits made through `to_builder` from touching the
+//! member they were copied from.
 
 use eranos_payment_account::{Iban, Username};
 
@@ -146,6 +146,25 @@ fn a_member_keeps_its_identifier_through_edits() {
     assert_ne!(ana().id(), member.id());
     let renamed = member.to_builder().first_name("Anna").build().unwrap();
     assert_eq!(renamed.id(), member.id());
+}
+
+/// A member from an app's own store would get another identifier than its
+/// key, lose it in an edit, or keep it after the app asked for a generated
+/// one.
+#[test]
+fn a_member_takes_the_identifier_it_is_given() {
+    let id = MemberId::new("!a").unwrap();
+    let member = Member::builder("Ana").id(id).build().unwrap();
+    assert_eq!(member.id(), id);
+    // An edit keeps it.
+    let renamed = member.to_builder().first_name("Anna").build().unwrap();
+    assert_eq!(renamed.id(), id);
+    // The last call wins, and `None` leaves generation to `build`.
+    let other = MemberId::new("zz").unwrap();
+    assert_eq!(member.to_builder().id(other).build().unwrap().id(), other);
+    let generated = member.to_builder().id(None).build().unwrap();
+    assert_ne!(generated.id(), id);
+    assert_eq!(generated.first_name(), "Ana");
 }
 
 /// Editing a copy of a member would change the member shown elsewhere.

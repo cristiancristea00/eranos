@@ -47,6 +47,7 @@
 #include "eranos/detail/EranosFlagOutcome.hpp"
 #include "eranos/detail/EranosIban.hpp"
 #include "eranos/detail/EranosIbanReason.hpp"
+#include "eranos/detail/EranosIdentifier.hpp"
 #include "eranos/detail/EranosLanguage.hpp"
 #include "eranos/detail/EranosMember.hpp"
 #include "eranos/detail/EranosMemberAmount.hpp"

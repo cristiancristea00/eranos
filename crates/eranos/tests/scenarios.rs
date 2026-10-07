@@ -295,7 +295,7 @@ fn recording_a_settlement_settles_everyone() -> TestResult {
         } = weekend();
         let plan = group.settlement(strategy)?.clone();
         for payment in plan.payments() {
-            group.add_transfer(Transfer::from_payment(payment, day(21)))?;
+            group.add_transfer(Transfer::builder_from_payment(payment, day(21)).build()?)?;
         }
         for member in [ana, bob, carol, dan] {
             assert_eq!(group.summary().member(member).balance(), Balance::Settled);

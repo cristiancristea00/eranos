@@ -26,7 +26,7 @@ struct Category final {
     /// @param name The name, which no other category of the group shares.
     explicit Category(std::string name) noexcept : name(std::move(name)) {}
 
-    /// The identifier: absent for a category to add, present for one the group holds.
+    /// The identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group holds.
     std::optional<CategoryId> id;
 
     /// The name, which no other category of the group shares.

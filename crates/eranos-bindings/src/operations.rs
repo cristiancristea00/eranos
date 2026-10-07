@@ -34,7 +34,7 @@ pub(crate) fn category(group: &ExpenseGroup, id: &str) -> Result<Option<Category
     Ok(group.category(id).map(Category::from_library))
 }
 
-/// Adds `category`, returning its new identifier.
+/// Adds `category`, returning its identifier.
 pub(crate) fn add_category(
     group: &mut ExpenseGroup,
     category: &Category,
@@ -126,7 +126,7 @@ pub(crate) fn expense_shares(
     Ok(group.expense_shares(id).map(ExpenseShares::from_library))
 }
 
-/// Adds `expense`, returning its new identifier.
+/// Adds `expense`, returning its identifier.
 pub(crate) fn add_expense(
     group: &mut ExpenseGroup,
     expense: &Expense,
@@ -180,7 +180,7 @@ pub(crate) fn is_archived(group: &ExpenseGroup, id: &str) -> Result<bool, Eranos
     Ok(group.is_archived(id))
 }
 
-/// Adds `member`, returning their new identifier.
+/// Adds `member`, returning their identifier.
 pub(crate) fn add_member(group: &mut ExpenseGroup, member: &Member) -> Result<String, EranosError> {
     let member = member.to_new()?;
     group
@@ -273,7 +273,7 @@ pub(crate) fn transfer_amount(
     Ok(group.transfer_amount(id).map(Money::from_library))
 }
 
-/// Adds `transfer`, returning its new identifier.
+/// Adds `transfer`, returning its identifier.
 pub(crate) fn add_transfer(
     group: &mut ExpenseGroup,
     transfer: &Transfer,

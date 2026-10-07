@@ -20,8 +20,9 @@ pub use error::{CategoryError, FromCategoryError};
 /// Every group defines its own categories; names are unique within a group
 /// under Unicode canonical caseless matching, so `Food` and `FOOD`, `Straße`
 /// and `STRASSE`, and a composed and a decomposed `Café` are one name, and so
-/// are `Maße` and `Masse`. A category gets its identifier when it is
-/// created, and [`renamed`](Self::renamed) keeps it. Every group also has the
+/// are `Maße` and `Masse`. A category gets the identifier given to
+/// [`with_id`](Self::with_id), or a generated one from [`new`](Self::new),
+/// and [`renamed`](Self::renamed) keeps it. Every group also has the
 /// built-in "Uncategorised" category, [`CategoryId::UNCATEGORISED`], which
 /// cannot be renamed or removed.
 ///
@@ -60,6 +61,33 @@ impl Category {
         })
     }
 
+    /// Returns a category named `name`, trimmed, under the identifier `id`,
+    /// such as the key an app's own store gives it.
+    ///
+    /// A group refuses to add a category under an identifier it already
+    /// holds, [`CategoryId::UNCATEGORISED`] included.
+    ///
+    /// # Errors
+    ///
+    /// [`CategoryError::EmptyName`] when the name is blank.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Category, CategoryId};
+    ///
+    /// let lodging = Category::with_id(CategoryId::new("lodging")?, " Lodging ")?;
+    /// assert_eq!(lodging.id().as_str(), "lodging");
+    /// assert_eq!(lodging.name(), "Lodging");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn with_id(id: CategoryId, name: impl Into<String>) -> Result<Self, CategoryError> {
+        Ok(Self {
+            id,
+            name: text::required(name, CategoryError::EmptyName)?,
+        })
+    }
+
     /// Returns the built-in category every group has, "Uncategorised", under
     /// [`CategoryId::UNCATEGORISED`].
     ///
@@ -90,10 +118,7 @@ impl Category {
     ///
     /// [`CategoryError::EmptyName`] when the name is blank.
     pub fn renamed(&self, name: impl Into<String>) -> Result<Self, CategoryError> {
-        Ok(Self {
-            id: self.id,
-            name: text::required(name, CategoryError::EmptyName)?,
-        })
+        Self::with_id(self.id, name)
     }
 
     /// The identifier.
@@ -141,22 +166,13 @@ struct CategoryRecord {
     name: String,
 }
 
-/// Builds the category `record` describes, with the name check of
-/// `Category::new`.
-#[cfg(feature = "serde")]
-fn from_record(record: CategoryRecord) -> Result<Category, CategoryError> {
-    Ok(Category {
-        id: record.id,
-        name: text::required(record.name, CategoryError::EmptyName)?,
-    })
-}
-
 // Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
 // from the private record would appear on the facade's page for `Category`.
 #[cfg(feature = "serde")]
 impl<'de> serde::Deserialize<'de> for Category {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        from_record(CategoryRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
+        let record = CategoryRecord::deserialize(deserialiser)?;
+        Self::with_id(record.id, record.name).map_err(serde::de::Error::custom)
     }
 }
 

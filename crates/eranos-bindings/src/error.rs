@@ -120,12 +120,6 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
-    /// An entry to add carried an identifier; the group gives a new entry its
-    /// own.
-    IdentifierGiven {
-        /// What went wrong.
-        detail: String,
-    },
     /// An entry to replace carried no identifier to find it by.
     IdentifierMissing {
         /// What went wrong.
@@ -155,13 +149,6 @@ pub enum EranosError {
 }
 
 impl EranosError {
-    /// The error of the case `IdentifierGiven`.
-    pub(crate) fn identifier_given() -> Self {
-        Self::IdentifierGiven {
-            detail: "an entry to add must not carry an identifier".to_owned(),
-        }
-    }
-
     /// The error of the case `IdentifierMissing`.
     pub(crate) fn identifier_missing() -> Self {
         Self::IdentifierMissing {
@@ -218,7 +205,6 @@ impl EranosError {
             | Self::Transfer { detail, .. }
             | Self::ExpenseGroup { detail, .. }
             | Self::Language { detail, .. }
-            | Self::IdentifierGiven { detail, .. }
             | Self::IdentifierMissing { detail, .. }
             | Self::InvalidJson { detail, .. }
             | Self::Cancelled { detail, .. }

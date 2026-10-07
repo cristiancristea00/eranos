@@ -2,15 +2,17 @@ internal import EranosGenerated
 
 /// Something bought for the group: what it cost, who paid, and how it divides.
 ///
-/// A new expense has no identifier; `ExpenseGroup.add(_:)` gives it one. To change an expense,
-/// read it from the group, change its properties, and pass it to `ExpenseGroup.replace(_:)`.
+/// An expense to add carries the identifier the app gives it, or none, and then
+/// `ExpenseGroup.add(_:)` returns one the library generates. To change an expense, read it from
+/// the group, change its properties, and pass it to `ExpenseGroup.replace(_:)`.
 public struct Expense: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of an expense.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
 
-    /// The identifier: absent for an expense to add, present for one the group holds.
-    public private(set) var id: ID?
+    /// The identifier: the app's own for an expense to add, or absent for the library to generate
+    /// one, and present for an expense the group holds or one to replace.
+    public var id: ID?
 
     /// What was bought.
     public var name: String
@@ -54,8 +56,10 @@ public struct Expense: Hashable, Sendable {
         )
     }
 
-    /// An expense to add, of `cost`, that `payers` paid and `split` shares, on `date`.
+    /// An expense to add, of `cost`, that `payers` paid and `split` shares, on `date`, under `id`,
+    /// or one the library generates.
     public init(
+        id: ID? = nil,
         name: String,
         cost: Cost,
         payers: Split,
@@ -66,6 +70,7 @@ public struct Expense: Hashable, Sendable {
         category: Category.ID? = nil,
         description: String? = nil
     ) {
+        self.id = id
         self.name = name
         self.cost = cost
         self.payers = payers
@@ -79,6 +84,7 @@ public struct Expense: Hashable, Sendable {
 
     init(_ expense: EranosGenerated.Expense) {
         self.init(
+            id: expense.id.map { ID(rawValue: $0) },
             name: expense.name,
             cost: Cost(expense.cost),
             payers: Split(expense.payers),
@@ -89,7 +95,6 @@ public struct Expense: Hashable, Sendable {
             category: expense.category.map { Category.ID(rawValue: $0) },
             description: expense.description
         )
-        id = expense.id.map { ID(rawValue: $0) }
     }
 
     /// The total, amount and tip, in the expense's own currency: what its payers paid.

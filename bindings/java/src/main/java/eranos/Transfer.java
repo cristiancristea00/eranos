@@ -6,9 +6,10 @@ import java.util.Optional;
 /**
  * Money one member paid another, such as a repayment.
  *
- * <p>A new transfer has no identifier; {@link ExpenseGroup#addTransfer} gives it one. To change a
- * transfer, read it from the group, edit it through {@link #toBuilder}, and pass the result to
- * {@link ExpenseGroup#replaceTransfer}.
+ * <p>A new transfer takes the identifier the app gives it through {@link Builder#id}, or none, and
+ * then {@link ExpenseGroup#addTransfer} generates one. To change a transfer, read it from the
+ * group, edit it through {@link #toBuilder}, and pass the result to {@link
+ * ExpenseGroup#replaceTransfer}.
  */
 public final class Transfer {
     private final TransferId id;
@@ -89,7 +90,7 @@ public final class Transfer {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for a transfer to add
+     * @return the identifier, empty for a transfer to add under one the group generates
      */
     public Optional<TransferId> id() {
         return Optional.ofNullable(id);
@@ -187,7 +188,7 @@ public final class Transfer {
 
     /** A builder of a transfer, whose every setter replaces what was set before. */
     public static final class Builder {
-        private final TransferId id;
+        private TransferId id;
         private MemberId from;
         private MemberId to;
         private Cost cost;
@@ -196,8 +197,19 @@ public final class Transfer {
         private String note;
 
         private Builder(TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate date) {
+            id(id).from(from).to(to).cost(cost).date(date);
+        }
+
+        /**
+         * Sets the identifier; {@code null} leaves it to the group to generate one when it adds the
+         * transfer.
+         *
+         * @param id the identifier, or {@code null}
+         * @return this builder
+         */
+        public Builder id(TransferId id) {
             this.id = id;
-            from(from).to(to).cost(cost).date(date);
+            return this;
         }
 
         /**

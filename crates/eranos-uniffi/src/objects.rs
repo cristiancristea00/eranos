@@ -24,10 +24,12 @@ pub(crate) struct ExpenseGroup {
 
 #[uniffi::export]
 impl ExpenseGroup {
-    /// A new group with no members and no entries.
+    /// A new group with no members and no entries, under the identifier
+    /// `group` gives, or a generated one.
     ///
     /// # Errors
     ///
+    /// An `EranosError::Id` for an identifier the rules refuse,
     /// `MoneyFailure::UnknownCurrency`,
     /// `ExpenseGroupFailure::EmptyName`, and
     /// `LanguageFailure::InvalidLanguage`.

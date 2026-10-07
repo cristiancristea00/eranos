@@ -3,9 +3,10 @@
 
 use eranos::category as categories;
 use eranos::member as library;
+use eranos::{CategoryId, MemberId};
 use eranos_payment_account::FromPaymentAccountDetails;
 
-use crate::{EranosError, check_new};
+use crate::{EranosError, identifier_to_add};
 
 /// Where a member can be paid, without its label.
 #[eranos_glue_macros::mirrored]
@@ -93,8 +94,9 @@ impl PaymentAccount {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Member {
-    /// The identifier: absent for a member to add, present for one the
-    /// group holds or one to replace.
+    /// The identifier: the app's own for a member to add, or absent for the
+    /// library to generate one, and present for a member the group holds or
+    /// one to replace.
     pub id: Option<String>,
     /// The first name.
     pub first_name: String,
@@ -126,18 +128,18 @@ impl Member {
         }
     }
 
-    /// The library's member, for a record to add: they get a new
-    /// identifier.
+    /// The library's member, for a record to add: under the record's
+    /// identifier, or a generated one when it has none.
     ///
     /// # Errors
     ///
-    /// [`EranosError::IdentifierGiven`] when the record has an identifier, the
-    /// errors of the fields' conversions, and
+    /// An [`EranosError::Id`] for an identifier the rules refuse, the errors
+    /// of the fields' conversions, and
     /// [`MemberFailure::EmptyFirstName`](crate::MemberFailure::EmptyFirstName)
     /// for a blank first name.
     pub(crate) fn to_new(&self) -> Result<library::Member, EranosError> {
-        check_new(self.id.as_deref())?;
-        self.filled(library::Member::builder(self.first_name.clone()))
+        let id: Option<MemberId> = identifier_to_add(self.id.as_deref())?;
+        self.filled(library::Member::builder(self.first_name.clone()).id(id))
     }
 
     /// The library's member that replaces `existing`, keeping their
@@ -184,8 +186,9 @@ impl Member {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Category {
-    /// The identifier: absent for a category to add, present for one the
-    /// group holds or one to rename.
+    /// The identifier: the app's own for a category to add, or absent for the
+    /// library to generate one, and present for a category the group holds or
+    /// one to rename.
     pub id: Option<String>,
     /// The name, which no other category of the group shares.
     pub name: String,
@@ -200,17 +203,21 @@ impl Category {
         }
     }
 
-    /// The library's category, for a record to add: it gets a new
-    /// identifier.
+    /// The library's category, for a record to add: under the record's
+    /// identifier, or a generated one when it has none.
     ///
     /// # Errors
     ///
-    /// [`EranosError::IdentifierGiven`] when the record has an identifier, and
+    /// An [`EranosError::Id`] for an identifier the rules refuse, and
     /// [`CategoryFailure::EmptyName`](crate::CategoryFailure::EmptyName) for a
     /// blank name.
     pub(crate) fn to_new(&self) -> Result<categories::Category, EranosError> {
-        check_new(self.id.as_deref())?;
-        Ok(categories::Category::new(self.name.clone())?)
+        let id: Option<CategoryId> = identifier_to_add(self.id.as_deref())?;
+        let name = self.name.clone();
+        Ok(match id {
+            Some(id) => categories::Category::with_id(id, name),
+            None => categories::Category::new(name),
+        }?)
     }
 
     /// `existing` renamed to the record's name, keeping its identifier.

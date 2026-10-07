@@ -56,6 +56,7 @@ public final class eranos/CalendarFailure$InvalidTime : eranos/CalendarFailure {
 
 public final class eranos/Category {
 	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun copy (Ljava/lang/String;)Leranos/Category;
 	public static synthetic fun copy$default (Leranos/Category;Ljava/lang/String;ILjava/lang/Object;)Leranos/Category;
 	public fun equals (Ljava/lang/Object;)Z
@@ -76,6 +77,7 @@ public final class eranos/CategoryFailure$EmptyName : eranos/CategoryFailure {
 }
 
 public final class eranos/CategoryId {
+	public static final field Companion Leranos/CategoryId$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/CategoryId;
 	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
@@ -87,6 +89,10 @@ public final class eranos/CategoryId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/CategoryId$Companion {
+	public final fun parse-QR7iAcY (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class eranos/CategoryTotal {
@@ -248,6 +254,8 @@ public final class eranos/ExchangeRate$Companion {
 public final class eranos/Expense {
 	public synthetic fun <init> (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun copy-pwbgqOI (Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;)Leranos/Expense;
 	public static synthetic fun copy-pwbgqOI$default (Leranos/Expense;Ljava/lang/String;Leranos/Cost;Leranos/Split;Leranos/ExpenseSplit;Leranos/CalendarDate;Leranos/TipRule;Leranos/TimeOfDay;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Leranos/Expense;
 	public fun equals (Ljava/lang/Object;)Z
@@ -383,6 +391,8 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public synthetic fun <init> (Leranos/internal/ExpenseGroup;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Leranos/CurrencyCode;Ljava/lang/String;Leranos/Language;)V
 	public synthetic fun <init> (Ljava/lang/String;Leranos/CurrencyCode;Ljava/lang/String;Leranos/Language;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/CurrencyCode;Ljava/lang/String;Leranos/Language;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/CurrencyCode;Ljava/lang/String;Leranos/Language;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun add-0hE0xxQ (Leranos/Member;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun add-7Es_YNE (Leranos/Expense;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun add-9ElBL2U (Leranos/Category;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -622,6 +632,7 @@ public final class eranos/ExpenseGroupFailure$UnsupportedFormat : eranos/Expense
 }
 
 public final class eranos/ExpenseGroupId {
+	public static final field Companion Leranos/ExpenseGroupId$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/ExpenseGroupId;
 	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
@@ -633,6 +644,10 @@ public final class eranos/ExpenseGroupId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseGroupId$Companion {
+	public final fun parse-oxDQ1YM (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
@@ -659,6 +674,7 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 }
 
 public final class eranos/ExpenseId {
+	public static final field Companion Leranos/ExpenseId$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/ExpenseId;
 	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
@@ -670,6 +686,10 @@ public final class eranos/ExpenseId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/ExpenseId$Companion {
+	public final fun parse-E54-VVg (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class eranos/ExpenseItem {
@@ -826,6 +846,8 @@ public final class eranos/LanguageFailure$InvalidLanguage : eranos/LanguageFailu
 public final class eranos/Member {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Email;Leranos/PhoneNumber;Ljava/util/List;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Email;Leranos/PhoneNumber;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/Email;Leranos/PhoneNumber;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/Email;Leranos/PhoneNumber;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun copy (Ljava/lang/String;Ljava/lang/String;Leranos/Email;Leranos/PhoneNumber;Ljava/util/List;)Leranos/Member;
 	public static synthetic fun copy$default (Leranos/Member;Ljava/lang/String;Ljava/lang/String;Leranos/Email;Leranos/PhoneNumber;Ljava/util/List;ILjava/lang/Object;)Leranos/Member;
 	public fun equals (Ljava/lang/Object;)Z
@@ -867,6 +889,7 @@ public final class eranos/MemberFailure$EmptyFirstName : eranos/MemberFailure {
 }
 
 public final class eranos/MemberId {
+	public static final field Companion Leranos/MemberId$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/MemberId;
 	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
@@ -878,6 +901,10 @@ public final class eranos/MemberId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/MemberId$Companion {
+	public final fun parse-NfwCWDA (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class eranos/MemberParts {
@@ -1231,6 +1258,8 @@ public final class eranos/TipValue$Percentage : eranos/TipValue {
 public final class eranos/Transfer {
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun copy-uomQ3Uc (Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;)Leranos/Transfer;
 	public static synthetic fun copy-uomQ3Uc$default (Leranos/Transfer;Ljava/lang/String;Ljava/lang/String;Leranos/Cost;Leranos/CalendarDate;Leranos/TimeOfDay;Ljava/lang/String;ILjava/lang/Object;)Leranos/Transfer;
 	public fun equals (Ljava/lang/Object;)Z
@@ -1263,6 +1292,7 @@ public final class eranos/TransferFailure$SameMember : eranos/TransferFailure {
 }
 
 public final class eranos/TransferId {
+	public static final field Companion Leranos/TransferId$Companion;
 	public static final synthetic fun box-impl (Ljava/lang/String;)Leranos/TransferId;
 	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
@@ -1274,6 +1304,10 @@ public final class eranos/TransferId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class eranos/TransferId$Companion {
+	public final fun parse-hoS3jnY (Ljava/lang/String;)Ljava/lang/String;
 }
 
 public final class eranos/Username {

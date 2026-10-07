@@ -1,9 +1,12 @@
 package eranos;
 
+import eranos.internal.Eranos;
+
 import java.util.Objects;
 
 /**
- * The identifier of a member: the text the group gave them, a UUID v7 in lowercase hyphenated form.
+ * The identifier of a member: the text the app gave them, or a UUID v7 in lowercase hyphenated form
+ * that the library generated.
  *
  * <p>Its text follows the rules of every identifier, on {@link ExpenseGroupId}.
  *
@@ -11,12 +14,26 @@ import java.util.Objects;
  */
 public record MemberId(String value) {
     /**
-     * The identifier written {@code value}.
+     * The identifier written {@code value}, as it is: the library checks it when a call carries it.
      *
      * @param value the identifier's text
      */
     public MemberId {
         Objects.requireNonNull(value, "value");
+    }
+
+    /**
+     * The identifier written {@code text}, checked by the rules of every identifier: not trimmed,
+     * and in its case.
+     *
+     * @param text the identifier's text
+     * @return the identifier
+     * @throws EranosException.Id with the first rule the text breaks: {@link IdFailure.Empty},
+     *     {@link IdFailure.TooLong} for more than 64 bytes of UTF-8, {@link
+     *     IdFailure.ControlCharacter}, and {@link IdFailure.SurroundingWhitespace}
+     */
+    public static MemberId parse(String text) throws EranosException {
+        return Converting.call(() -> new MemberId(Eranos.identifierParse(text)));
     }
 
     /**

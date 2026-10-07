@@ -81,6 +81,33 @@ template <typename Identifier> void checkIdentifier(Check &check, std::string_vi
     check.that("0199a000-0000-7000-8000-000000000001" == first.value(), what);
 }
 
+/// Text that is not an identifier, and the failure the library refuses it with.
+struct RefusedText final {
+    Failure failure;
+    std::string text;
+};
+
+/// Text that breaks each rule of identifiers, with the failure of the rule.
+[[nodiscard]] std::array<RefusedText, 4> refusedTexts() {
+    return {
+        RefusedText{.failure = Failure::ID_EMPTY, .text = ""},
+        RefusedText{.failure = Failure::ID_TOO_LONG, .text = std::string(65, 'a')},
+        RefusedText{.failure = Failure::ID_CONTROL_CHARACTER, .text = "a\tb"},
+        RefusedText{.failure = Failure::ID_SURROUNDING_WHITESPACE, .text = " ana"},
+    };
+}
+
+/// Checks the parse() of an identifier type: text the rules accept comes back as it is written, byte for byte and in its case, and text
+/// they refuse is refused with the first rule it breaks.
+template <typename Identifier> void checkParse(Check &check, std::string_view const what) {
+    check.that(Identifier("Ana-1") == Identifier::parse("Ana-1"), what);
+    check.that(Identifier("caf\u00e9 \u2615") == Identifier::parse("caf\u00e9 \u2615"), what);
+    for (auto const &[failure, text] : refusedTexts()) {
+        check.that(isFailure(refusal(Identifier::parse(text)), ErrorKind::ID, failure), what);
+    }
+    check.that(isFailure(refusal(Identifier::parse("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), what);
+}
+
 /// A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them.
 class Flat final {
   public:
@@ -262,6 +289,16 @@ void everyIdentifierComparesAndHashesByItsText(Check &check) {
     checkIdentifier<TransferId>(check, "a transfer's identifier");
 }
 
+/// An identifier kept otherwise than it was written, trimmed or in another case, would no longer match the key the app gave, and text the library
+/// refuses, taken, would fail every call that carries it.
+void everyIdentifierIsCheckedAndKeptAsItIsWritten(Check &check) {
+    checkParse<ExpenseGroupId>(check, "a group's identifier");
+    checkParse<MemberId>(check, "a member's identifier");
+    checkParse<CategoryId>(check, "a category's identifier");
+    checkParse<ExpenseId>(check, "an expense's identifier");
+    checkParse<TransferId>(check, "a transfer's identifier");
+}
+
 // --- Records and alternatives ------------------------------------------------------------------------------------------
 
 /// A record or an alternative whose comparison left a field out would merge two entries an app holds apart.
@@ -423,8 +460,48 @@ void replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas(Check &check) {
     check.that(flat.group.replaceCategory(meals) == food && flat.group.category(flat.food) == meals, "a category");
     auto const missing = refusal(flat.group.replaceExpense(flat.expense("Snack", flat.ana, {flat.ana})));
     check.that(isFailure(missing, ErrorKind::IDENTIFIER_MISSING, std::nullopt), "an entry to replace names its identifier");
-    auto const given = refusal(flat.group.addExpense(lunch));
-    check.that(isFailure(given, ErrorKind::IDENTIFIER_GIVEN, std::nullopt), "an entry to add has none");
+    auto const duplicate = refusal(flat.group.addExpense(lunch));
+    check.that(isFailure(duplicate, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXPENSE),
+               "an entry to add takes no identifier the group holds");
+    Member dan("Dan");
+    dan.id = MemberId(" x");
+    check.that(isFailure(refusal(flat.group.addMember(dan)), ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "nor one the library refuses");
+}
+
+/// An entry the group kept under another identifier than the app gave it would break the app's link to its own record, and a second entry under
+/// one identifier would stand for the first in every lookup.
+void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check &check) {
+    Flat flat;
+    Member carla("Carla");
+    carla.id = MemberId::parse("carla").value();
+    check.that(flat.group.addMember(carla) == carla.id.value() && flat.group.member(carla.id.value()).value() == carla, "a member keeps it");
+    auto const memberTwice = refusal(flat.group.addMember(carla));
+    check.that(isFailure(memberTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_MEMBER) && memberTwice.value().member() == carla.id,
+               "a second member under it is refused");
+    Category lodging("Lodging");
+    lodging.id = CategoryId::parse("lodging").value();
+    check.that(flat.group.addCategory(lodging) == lodging.id.value() && flat.group.category(lodging.id.value()).value() == lodging,
+               "a category keeps it");
+    lodging.name = "Rooms";
+    auto const categoryTwice = refusal(flat.group.addCategory(lodging));
+    check.that(isFailure(categoryTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_CATEGORY) &&
+                   categoryTwice.value().category() == lodging.id,
+               "a second category under it is refused, whatever its name");
+    auto receipt = flat.expense("Receipt", flat.ana, {flat.ana, flat.bob});
+    receipt.id = ExpenseId::parse("receipt-17").value();
+    check.that(flat.group.addExpense(receipt) == receipt.id.value() && flat.group.expense(receipt.id.value()).value() == receipt,
+               "an expense keeps it");
+    auto const expenseTwice = refusal(flat.group.addExpense(receipt));
+    check.that(isFailure(expenseTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXPENSE) &&
+                   expenseTwice.value().expense() == receipt.id,
+               "a second expense under it is refused");
+    Transfer cash(flat.ana, flat.bob, LocalCost{flat.euros(500)}, flat.day);
+    cash.id = TransferId::parse("payment-3").value();
+    check.that(flat.group.addTransfer(cash) == cash.id.value() && flat.group.transfer(cash.id.value()).value() == cash, "a transfer keeps it");
+    auto const transferTwice = refusal(flat.group.addTransfer(cash));
+    check.that(isFailure(transferTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_TRANSFER) &&
+                   transferTwice.value().transfer() == cash.id,
+               "a second transfer under it is refused");
 }
 
 /// A removal that returned something else, or left the entry behind, would let an app show a deleted entry.
@@ -484,7 +561,8 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) {
 
 // --- The group ---------------------------------------------------------------------------------------------------------
 
-/// A group whose details did not change as asked would show an app a name or a language the user replaced.
+/// A group that started without the identifier and the details it was given, or whose details did not change as asked, would show an app a name
+/// or a language the user replaced.
 void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
     Flat flat;
     check.that(!flat.group.id().value().empty(), "the group has an identifier");
@@ -505,6 +583,10 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
     check.that(!trip.description().has_value() && !trip.language().has_value(), "a group made without options has neither");
     check.that(isFailure(refusal(ExpenseGroup::create(" ", flat.euro)), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME),
                "a group needs a name");
+    auto const home = ExpenseGroup::create("Home", flat.euro, ExpenseGroupOptions{.id = ExpenseGroupId::parse("home").value()}).value();
+    check.that(ExpenseGroupId("home") == home.id(), "a group under the app's identifier keeps it");
+    auto const refused = refusal(ExpenseGroup::create("Home", flat.euro, ExpenseGroupOptions{.id = ExpenseGroupId(" x")}));
+    check.that(isFailure(refused, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "an identifier the library refuses");
 }
 
 /// Totals that did not add up would tell a member they owe what they do not.
@@ -600,23 +682,11 @@ void aSavedGroupLoadsAsItWasSaved(Check &check) {
     check.that("unsupported group format 4: this version reads format 3" == newer.value().message(), "the format it reads");
 }
 
-/// Text that is not an identifier, and the failure the library refuses it with.
-struct RefusedText final {
-    Failure failure;
-    std::string text;
-};
-
 /// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses it with
 /// the failure of the rule it breaks, which converts from the generated failure by its number.
 void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check &check) {
     Flat const flat;
-    std::array const refused = {
-        RefusedText{.failure = Failure::ID_EMPTY, .text = ""},
-        RefusedText{.failure = Failure::ID_TOO_LONG, .text = std::string(65, 'a')},
-        RefusedText{.failure = Failure::ID_CONTROL_CHARACTER, .text = "a\tb"},
-        RefusedText{.failure = Failure::ID_SURROUNDING_WHITESPACE, .text = " ana"},
-    };
-    for (auto const &[failure, text] : refused) {
+    for (auto const &[failure, text] : refusedTexts()) {
         check.that(isFailure(refusal(flat.group.category(CategoryId(text))), ErrorKind::ID, failure), "a category");
         check.that(isFailure(refusal(flat.group.expense(ExpenseId(text))), ErrorKind::ID, failure), "an expense");
         check.that(isFailure(refusal(flat.group.expenseShares(ExpenseId(text))), ErrorKind::ID, failure), "an expense's shares");
@@ -834,10 +904,12 @@ constexpr std::array TESTS = {
     Test{.name = "datesAndTimesAreCheckedWhenMade", .body = datesAndTimesAreCheckedWhenMade},
     Test{.name = "contactsAndAccountsAreCheckedAndMadeCanonical", .body = contactsAndAccountsAreCheckedAndMadeCanonical},
     Test{.name = "everyIdentifierComparesAndHashesByItsText", .body = everyIdentifierComparesAndHashesByItsText},
+    Test{.name = "everyIdentifierIsCheckedAndKeptAsItIsWritten", .body = everyIdentifierIsCheckedAndKeptAsItIsWritten},
     Test{.name = "everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother", .body = everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother},
     Test{.name = "anExpenseReadsBackAsItWasAdded", .body = anExpenseReadsBackAsItWasAdded},
     Test{.name = "aTransferAndAMemberReadBackAsTheyWereAdded", .body = aTransferAndAMemberReadBackAsTheyWereAdded},
     Test{.name = "replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas", .body = replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas},
+    Test{.name = "anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt", .body = anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt},
     Test{.name = "removingAnEntryReturnsItAndForgetsIt", .body = removingAnEntryReturnsItAndForgetsIt},
     Test{.name = "aMemberInUseIsNotRemoved", .body = aMemberInUseIsNotRemoved},
     Test{.name = "anArchivedMemberJoinsNoNewExpense", .body = anArchivedMemberJoinsNoNewExpense},

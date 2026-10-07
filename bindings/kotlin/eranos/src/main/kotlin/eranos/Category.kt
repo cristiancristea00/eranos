@@ -3,16 +3,16 @@ package eranos
 /**
  * A label the group gives expenses: "Food".
  *
- * A new category has no identifier; [ExpenseGroup.add] gives it one. The built-in category, Uncategorised, holds every expense
- * without another.
+ * A category to add carries the identifier the app gives it, such as the key of its own store, or none, and then
+ * [ExpenseGroup.add] generates one. The built-in category, Uncategorised, holds every expense without another.
  */
-public class Category internal constructor(
-    /** The identifier: `null` for a category to add, set for one the group holds. */
+public class Category(
+    /** The identifier: the app's own or `null` for a category to add, and set for one the group holds. */
     public val id: CategoryId?,
     /** The name, which no other category of the group shares. */
     public val name: String,
 ) {
-    /** A category to add, called [name]. */
+    /** A category to add, called [name], under an identifier the group generates. */
     public constructor(name: String) : this(null, name)
 
     /** The category as the generated code holds it. */

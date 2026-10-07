@@ -7,9 +7,9 @@ import java.util.Optional;
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * <p>A new member has no identifier; {@link ExpenseGroup#addMember} gives them one. To change a
- * member, read them from the group, edit them through {@link #toBuilder}, and pass the result to
- * {@link ExpenseGroup#replaceMember}.
+ * <p>A new member takes the identifier the app gives them through {@link Builder#id}, or none, and
+ * then {@link ExpenseGroup#addMember} generates one. To change a member, read them from the group,
+ * edit them through {@link #toBuilder}, and pass the result to {@link ExpenseGroup#replaceMember}.
  */
 public final class Member {
     private final MemberId id;
@@ -86,7 +86,7 @@ public final class Member {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for a member to add
+     * @return the identifier, empty for a member to add under one the group generates
      */
     public Optional<MemberId> id() {
         return Optional.ofNullable(id);
@@ -172,7 +172,7 @@ public final class Member {
 
     /** A builder of a member, whose every setter replaces what was set before. */
     public static final class Builder {
-        private final MemberId id;
+        private MemberId id;
         private String firstName;
         private String lastName;
         private Email email;
@@ -180,8 +180,19 @@ public final class Member {
         private List<PaymentAccount> accounts = List.of();
 
         private Builder(MemberId id, String firstName) {
+            id(id).firstName(firstName);
+        }
+
+        /**
+         * Sets the identifier; {@code null} leaves it to the group to generate one when it adds the
+         * member.
+         *
+         * @param id the identifier, or {@code null}
+         * @return this builder
+         */
+        public Builder id(MemberId id) {
             this.id = id;
-            firstName(firstName);
+            return this;
         }
 
         /**

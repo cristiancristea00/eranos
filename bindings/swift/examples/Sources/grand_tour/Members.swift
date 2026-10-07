@@ -132,7 +132,8 @@ func members(_ group: ExpenseGroup) throws(EranosError) -> People {
 func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
     section("3. Categories")
     let food = try group.add(Category(name: "Food"))
-    let lodging = try group.add(Category(name: "Lodging"))
+    // An app that keeps its categories elsewhere gives them its own keys.
+    let lodging = try group.add(Category(id: Category.ID("lodging"), name: "Lodging"))
     let transport = try group.add(Category(name: "Transport"))
     let homonym = Result { () throws(EranosError) in try group.add(Category(name: "FOOD")) }
     guard var renamed = try group.category(withID: transport) else {
@@ -146,8 +147,9 @@ func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
     other.name = "Other"
     let builtIn = Result { () throws(EranosError) in try group.replace(other) }
     print("""
-        Every group has the built-in Uncategorised; this one adds Food, Lodging, and
-        Transport, then renames Transport, which keeps its identifier. In identifier order:
+        Every group has the built-in Uncategorised; this one adds Food, Lodging, under the
+        identifier lodging that the app gives it, and Transport, then renames Transport, which
+        keeps its identifier. In identifier order, where lodging follows the generated ones:
           \(try group.categories().map(\.name).joined(separator: ", "))
         Names are compared caselessly, and the built-in category keeps its name:
         """)
@@ -166,5 +168,7 @@ func addCategories(_ group: ExpenseGroup) throws(EranosError) -> Categories {
         preconditionFailure("the built-in category keeps its name")
     }
     expect("Getting around", try group.category(withID: transport)?.name, "Transport is renamed")
+    expect("lodging", lodging.rawValue, "Lodging keeps the app's identifier")
+    expect([other.id, food, transport, lodging], try group.categories().map(\.id), "lodging follows the generated identifiers")
     return Categories(food: food, lodging: lodging, transport: transport)
 }

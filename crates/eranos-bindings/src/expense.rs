@@ -2,14 +2,14 @@
 //! carry them.
 
 use eranos::error::ExpenseError;
-use eranos::{CategoryId, MemberId};
+use eranos::{CategoryId, ExpenseId, MemberId};
 use eranos::{expense as library, money};
 use eranos_expense::{FromExpenseSplit, FromSplit, FromTipDistribution, FromTipValue};
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::money::{Cost, Money, parts, percentage};
-use crate::{EranosError, check_new, identifier};
+use crate::{EranosError, identifier, identifier_to_add};
 
 /// An exact amount one member pays.
 #[eranos_glue_macros::mirrored]
@@ -352,8 +352,9 @@ impl TipRule {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expense {
-    /// The identifier: absent for an expense to add, present for one the
-    /// group holds or one to replace.
+    /// The identifier: the app's own for an expense to add, or absent for the
+    /// library to generate one, and present for an expense the group holds or
+    /// one to replace.
     pub id: Option<String>,
     /// What was bought.
     pub name: String,
@@ -394,15 +395,16 @@ impl Expense {
         }
     }
 
-    /// The library's expense, for a record to add: it gets a new identifier.
+    /// The library's expense, for a record to add: under the record's
+    /// identifier, or a generated one when it has none.
     ///
     /// # Errors
     ///
-    /// [`EranosError::IdentifierGiven`] when the record has an identifier,
-    /// the errors of the fields' conversions, and those of
+    /// An [`EranosError::Id`] for an identifier the rules refuse, the errors
+    /// of the fields' conversions, and those of
     /// [`ExpenseBuilder::build`](library::ExpenseBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Expense, EranosError> {
-        check_new(self.id.as_deref())?;
+        let id: Option<ExpenseId> = identifier_to_add(self.id.as_deref())?;
         let (cost, payers, date) = (
             self.cost.to_library()?,
             self.payers.to_library()?,
@@ -424,7 +426,7 @@ impl Expense {
                 date,
             ),
         };
-        Ok(self.with_optional_fields(builder)?.build()?)
+        Ok(self.with_optional_fields(builder.id(id))?.build()?)
     }
 
     /// The library's expense that replaces `existing`, keeping its

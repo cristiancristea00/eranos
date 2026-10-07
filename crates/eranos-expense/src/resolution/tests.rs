@@ -20,7 +20,7 @@ const IDENTIFIER: &str = "[A-Za-z0-9-]{1,64}";
 
 /// `expense` under the identifier `id`, which seeds its tie rotation.
 fn identified(expense: &Expense, id: ExpenseId) -> Expense {
-    expense.to_builder().with_id(id).build().unwrap()
+    expense.to_builder().id(id).build().unwrap()
 }
 
 /// The member `number`; members sort by number.

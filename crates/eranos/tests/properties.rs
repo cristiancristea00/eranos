@@ -6,7 +6,7 @@
 //! must beat or match greedy, a plan awaited in an executor must equal the
 //! one computed on the caller's thread, and a group must not depend on the
 //! order its entries arrived in (two devices syncing the same entries must
-//! agree).
+//! agree). Entries draw identifiers an app gives as well as generated ones.
 #![forbid(unsafe_code)]
 #![expect(
     clippy::unwrap_used,
@@ -20,11 +20,23 @@ use eranos::{
     CalendarDate, CategoryTotal, Cost, CurrencyCode, CurrencyRate, ExchangeRate, Expense,
     ExpenseGroup, ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts,
     MemberPercentage, Money, Parts, Percentage, SettlementStrategy, Split, TipDistribution,
-    TipRule, Transfer, error::ExpenseGroupError,
+    TipRule, Transfer, TransferId, error::ExpenseGroupError,
 };
 use proptest::prelude::*;
 
 const MEMBERS: usize = 6;
+
+/// The starts of the identifiers an app might give an entry, outside the
+/// shape of a generated one: before the nil UUID text, after every
+/// generated text, and beyond ASCII. Each entry adds its position, so no
+/// two of one kind share an identifier.
+const GIVEN: [&str; 4] = ["-food", "!a", "zz", "Ωmega · "];
+
+/// The identifier an app gives the entry at `position`, starting with the
+/// text `GIVEN` holds at `start`.
+fn given<Id: std::str::FromStr<Err = eranos::error::IdError>>(start: usize, position: usize) -> Id {
+    format!("{}{position}", GIVEN[start]).parse().unwrap()
+}
 
 fn day() -> CalendarDate {
     CalendarDate::new(2026, 9, 23).unwrap()
@@ -157,6 +169,9 @@ struct TipRuleRecipe {
 
 #[derive(Debug, Clone)]
 struct ExpenseRecipe {
+    /// Where in `GIVEN` the identifier an app gives it starts, or `None`
+    /// for a generated one.
+    id: Option<usize>,
     amount: i64,
     payers: SplitRecipe,
     split: SplitRecipe,
@@ -167,6 +182,7 @@ struct ExpenseRecipe {
 
 fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
     (
+        proptest::option::of(0..GIVEN.len()),
         1_i64..500_000,
         proptest::option::weighted(
             0.3,
@@ -203,7 +219,8 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
         ),
     )
         .prop_map(
-            |(amount, items, split, payers, tip, foreign)| ExpenseRecipe {
+            |(id, amount, items, split, payers, tip, foreign)| ExpenseRecipe {
+                id,
                 amount,
                 payers,
                 split,
@@ -215,7 +232,8 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
 }
 
 impl ExpenseRecipe {
-    fn build(&self, members: &[MemberId]) -> Expense {
+    /// The expense at `position` among the recipe's, among `members`.
+    fn build(&self, position: usize, members: &[MemberId]) -> Expense {
         let currency = self
             .foreign
             .map_or(CurrencyCode::EUR, |foreign| foreign.currency);
@@ -248,7 +266,11 @@ impl ExpenseRecipe {
                 .sum();
             Expense::itemised_builder("Itemised", cost(money(amount)), members[0], items, day())
         };
-        let mut builder = self.items.as_ref().map_or_else(whole, itemised);
+        let mut builder = self
+            .items
+            .as_ref()
+            .map_or_else(whole, itemised)
+            .id(self.id.map(|start| given::<ExpenseId>(start, position)));
         if let Some(recipe) = self.tip {
             let tip = if recipe.fixed {
                 TipRule::fixed(money(i64::from(recipe.value)))
@@ -273,9 +295,11 @@ impl ExpenseRecipe {
 }
 
 /// A transfer of an amount in minor units between two members, by their
-/// indices among the group's members.
+/// indices among the group's members, and where in `GIVEN` the identifier
+/// an app gives it starts, or `None` for a generated one.
 #[derive(Debug, Clone, Copy)]
 struct TransferRecipe {
+    id: Option<usize>,
     from: usize,
     to: usize,
     amount: i64,
@@ -291,8 +315,18 @@ fn group_recipe() -> impl Strategy<Value = ExpenseGroupRecipe> {
     (
         proptest::collection::vec(expense_recipe(), 0..12),
         proptest::collection::vec(
-            (0..MEMBERS, 0..MEMBERS, 1_i64..100_000)
-                .prop_map(|(from, to, amount)| TransferRecipe { from, to, amount }),
+            (
+                proptest::option::of(0..GIVEN.len()),
+                0..MEMBERS,
+                0..MEMBERS,
+                1_i64..100_000,
+            )
+                .prop_map(|(id, from, to, amount)| TransferRecipe {
+                    id,
+                    from,
+                    to,
+                    amount,
+                }),
             0..6,
         ),
     )
@@ -311,27 +345,36 @@ struct Entries {
 }
 
 fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
-    let members: Vec<Member> =
-        std::iter::repeat_with(|| Member::builder("Member").build().unwrap())
-            .take(MEMBERS)
-            .collect();
+    // Every other member under an identifier an app gives, the others under
+    // generated ones.
+    let members: Vec<Member> = (0..MEMBERS)
+        .map(|position| {
+            let id: Option<MemberId> =
+                (0 == position % 2).then(|| given(position % GIVEN.len(), position));
+            Member::builder("Member").id(id).build().unwrap()
+        })
+        .collect();
     let ids: Vec<MemberId> = members.iter().map(Member::id).collect();
     let expenses = recipe
         .expenses
         .iter()
-        .map(|expense| expense.build(&ids))
+        .enumerate()
+        .map(|(position, expense)| expense.build(position, &ids))
         .collect();
     let transfers = recipe
         .transfers
         .iter()
-        .filter(|transfer| transfer.from != transfer.to)
-        .map(|transfer| {
+        .enumerate()
+        .filter(|(_, transfer)| transfer.from != transfer.to)
+        .map(|(position, transfer)| {
+            let id: Option<TransferId> = transfer.id.map(|start| given(start, position));
             Transfer::builder(
                 ids[transfer.from],
                 ids[transfer.to],
                 Money::from_minor_units(transfer.amount, CurrencyCode::EUR),
                 day(),
             )
+            .id(id)
             .build()
             .unwrap()
         })
@@ -408,7 +451,7 @@ proptest! {
             let plan = settled.settlement(strategy).unwrap().clone();
             for payment in plan.payments() {
                 prop_assert!(payment.amount().is_positive());
-                settled.add_transfer(Transfer::from_payment(payment, day())).unwrap();
+                settled.add_transfer(Transfer::builder_from_payment(payment, day()).build().unwrap()).unwrap();
             }
             prop_assert!(settled.summary().members().all(|member| member.net().is_zero()));
             prop_assert!(settled.settlement(strategy).unwrap().is_empty());

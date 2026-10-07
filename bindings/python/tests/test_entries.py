@@ -47,6 +47,10 @@ from eranos import (
     Username,
     UsernamePaymentAccountDetails,
     WholeExpenseSplit,
+    parse_category_id,
+    parse_expense_id,
+    parse_member_id,
+    parse_transfer_id,
 )
 
 
@@ -115,6 +119,60 @@ def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> Non
     assert len(flat.group.categories()) == 2
 
 
+def test_every_entry_keeps_the_identifier_its_app_gives_it(flat: Flat) -> None:
+    """An entry that lost the identifier its app gave it, or replaced one the group holds under it, would part the app's store and the group."""
+    carla = parse_member_id('!a')
+    member = Member(id=carla, first_name='Carla')
+    assert flat.group.add_member(member) == carla
+    assert flat.group.member(carla) == member
+    drinks = parse_category_id('-food')
+    category = Category(id=drinks, name='Drinks')
+    assert flat.group.add_category(category) == drinks
+    assert flat.group.category(drinks) == category
+    omega = parse_expense_id('Ωmega')
+    expense = copy.replace(flat.expense('Snack', flat.ana, (flat.ana, carla)), id=omega, category=drinks)
+    assert flat.group.add_expense(expense) == omega
+    assert flat.group.expense(omega) == expense
+    coins = parse_transfer_id('zz')
+    transfer = Transfer(id=coins, sender=carla, receiver=flat.ana, cost=LocalCost(flat.euros(100)), date=flat.day)
+    assert flat.group.add_transfer(transfer) == coins
+    assert flat.group.transfer(coins) == transfer
+    with pytest.raises(ExpenseGroupError) as second_member:
+        flat.group.add_member(copy.replace(member, first_name='Dana'))
+    assert second_member.value.failure == ExpenseGroupError.DuplicateMember(member=carla)
+    with pytest.raises(ExpenseGroupError) as second_category:
+        flat.group.add_category(copy.replace(category, name='Sweets'))
+    assert second_category.value.failure == ExpenseGroupError.DuplicateCategory(category=drinks)
+    with pytest.raises(ExpenseGroupError) as second_expense:
+        flat.group.add_expense(copy.replace(expense, name='Tea'))
+    assert second_expense.value.failure == ExpenseGroupError.DuplicateExpense(expense=omega)
+    with pytest.raises(ExpenseGroupError) as second_transfer:
+        flat.group.add_transfer(copy.replace(transfer, note='Again'))
+    assert second_transfer.value.failure == ExpenseGroupError.DuplicateTransfer(transfer=coins)
+    assert flat.group.member(carla) == member
+    assert flat.group.category(drinks) == category
+    assert flat.group.expense(omega) == expense
+    assert flat.group.transfer(coins) == transfer
+    with pytest.raises(IdError) as padded:
+        flat.group.add_member(Member(id=MemberId(' x'), first_name='Dana'))
+    assert padded.value.failure == IdError.SurroundingWhitespace()
+    assert len(flat.group.members()) == 3
+
+
+def test_identifiers_order_in_python_as_the_group_lists_them(flat: Flat) -> None:
+    """
+    An app that sorted identifiers otherwise than the library, by UTF-16 code units, would list entries in another order than the group.
+
+    The group orders identifiers by their bytes of UTF-8, as Python orders text by code points: U+FFFD comes before U+1F600 in both, and after it in
+    UTF-16. Text that Unicode holds equivalent, a precomposed é and an e with a combining accent, stays two identifiers.
+    """
+    added = [
+        flat.group.add_member(Member(id=parse_member_id(text), first_name='Carla'))
+        for text in ('\U0001f600', '\ufffd', 'Z', 'a', '-food', '\u00e9', 'e\u0301')
+    ]
+    assert [member.id for member in flat.group.members()] == sorted([flat.ana, flat.bob, *added])
+
+
 def test_replacing_an_entry_keeps_its_identifier_and_returns_it_as_it_was(flat: Flat) -> None:
     """An edit that lost an entry's identifier, or returned the entry as it became, would leave an app's undo pointing nowhere."""
     dinner = flat.group.expense(flat.dinner)
@@ -139,8 +197,9 @@ def test_replacing_an_entry_keeps_its_identifier_and_returns_it_as_it_was(flat: 
     assert flat.group.category(flat.food) == meals
     with pytest.raises(ValueError, match='identifier'):
         flat.group.replace_expense(flat.expense('Snack', flat.ana, (flat.ana,)))
-    with pytest.raises(ValueError, match='identifier'):
+    with pytest.raises(ExpenseGroupError) as added:
         flat.group.add_expense(lunch)
+    assert added.value.failure == ExpenseGroupError.DuplicateExpense(expense=flat.dinner)
 
 
 def test_removing_an_entry_returns_it_and_forgets_it(flat: Flat) -> None:

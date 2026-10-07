@@ -14,6 +14,7 @@ import {
     Email,
     ExchangeRate,
     Iban,
+    IdError,
     Language,
     LanguageError,
     Money,
@@ -28,10 +29,15 @@ import {
     formatBalance,
     groupId,
     memberId,
+    parseCategoryId,
+    parseExpenseId,
+    parseGroupId,
+    parseMemberId,
+    parseTransferId,
     transferId,
 } from '../src/index.js';
 import * as internal from '../src/internal/eranos.js';
-import { initialised } from './flat.js';
+import { initialised, refusedIdentifiers } from './flat.js';
 
 await initialised;
 
@@ -176,6 +182,23 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
             { kind: 'invalidLanguage' },
             'invalid language tag: expected a BCP 47 tag such as `en` or `ro-RO`',
         );
+    });
+
+    /**
+     * A check of an identifier that let through text the library refuses, refused it for another rule, or changed the text
+     * would let an app store a key that no group takes, or read back another one than it stored.
+     */
+    void it('checks an identifier by the rules every kind shares and keeps its text', () => {
+        const text = 'Ana Popa, café ☕ 🍰';
+        for (const parse of [parseGroupId, parseMemberId, parseCategoryId, parseExpenseId, parseTransferId]) {
+            assert.equal(parse(text), text);
+            for (const refused of refusedIdentifiers) {
+                assertRefused(() => parse(refused.text), IdError, refused.failure, refused.message);
+            }
+        }
+        // The rule counts bytes of UTF-8, not the characters or the UTF-16 code units of the text: é takes two bytes.
+        assert.equal(parseMemberId('é'.repeat(32)), 'é'.repeat(32));
+        assertRefused(() => parseMemberId('é'.repeat(33)), IdError, { kind: 'tooLong' });
     });
 
     /** Identifiers of different entities that printed as another text would let an app store one and read back another. */

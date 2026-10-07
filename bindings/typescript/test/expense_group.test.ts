@@ -6,7 +6,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-    type IdFailure,
     CurrencyCode,
     ExchangeRate,
     ExpenseGroup,
@@ -16,29 +15,16 @@ import {
     Language,
     Money,
     SettlementStrategy,
+    groupId,
     memberId,
+    parseGroupId,
 } from '../src/index.js';
-import { Flat } from './flat.js';
+import { Flat, refusedIdentifiers } from './flat.js';
 
 /** Whether `error` is the refusal of a call that found the group's lock held. */
 function busy(error: unknown): boolean {
     return error instanceof ExpenseGroupError && 'busy' === error.failure.kind;
 }
-
-/** Text the library refuses as an identifier, with the failure it reports and its message. */
-interface RefusedIdentifier {
-    readonly text: string;
-    readonly failure: IdFailure;
-    readonly message: string;
-}
-
-/** Text that fails each of the library's checks of an identifier. */
-const refusedIdentifiers: readonly RefusedIdentifier[] = [
-    { text: '', failure: { kind: 'empty' }, message: 'an identifier must not be empty' },
-    { text: 'a'.repeat(65), failure: { kind: 'tooLong' }, message: 'an identifier can be at most 64 bytes long' },
-    { text: 'a\tb', failure: { kind: 'controlCharacter' }, message: 'an identifier cannot contain control characters' },
-    { text: ' ana', failure: { kind: 'surroundingWhitespace' }, message: 'an identifier cannot start or end with whitespace' },
-];
 
 void describe('every call of the group, synchronous and asynchronous, and every read of its read handle', () => {
     /** A read that answered another way than the group holds would show an app entries, totals, or plans the group does not have. */
@@ -263,11 +249,19 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     });
 
     /**
-     * A new group that dropped what it starts with, or a saved one that loaded from text that is not the saved form, would
-     * start an app from another group.
+     * A new group that dropped what it starts with, the identifier the app gives it included, took an identifier the rules
+     * refuse, or a saved one that loaded from text that is not the saved form, would start an app from another group.
      */
     void it('starts a group with what it is given and loads only its saved form', async () => {
         const euro = CurrencyCode.of('EUR');
+        using trip = ExpenseGroup.create('Trip', euro, { id: parseGroupId('trip-2026'), description: 'Alps' });
+        assert.equal(trip.idSync(), 'trip-2026');
+        assert.equal(trip.descriptionSync(), 'Alps');
+        assert.equal(ExpenseGroup.loadSync(trip.saveSync()).idSync(), 'trip-2026');
+        assert.throws(
+            () => ExpenseGroup.create('Trip', euro, { id: groupId(' trip') }),
+            (error: unknown) => error instanceof IdError && 'surroundingWhitespace' === error.failure.kind,
+        );
         assert.throws(
             () => ExpenseGroup.create(' ', euro),
             (error: unknown) =>

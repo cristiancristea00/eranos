@@ -6,14 +6,33 @@ use std::collections::BTreeSet;
 
 use eranos::error::MoneyError;
 use eranos::expense as expenses;
-use eranos::{Email, Iban, Language, PhoneNumber, Username};
+use eranos::{Email, Iban, Language, MemberId, PhoneNumber, Username};
 use eranos::{calendar, ledger, money as library};
 
-use crate::EranosError;
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::ledger::Balance;
 use crate::money::{CurrencyDetails, Money, currency, exchange_rate, parts, percentage};
+use crate::{EranosError, identifier};
+
+// --- Identifiers -------------------------------------------------------------
+
+/// The identifier written `text`, as it is: not trimmed, and in its case.
+/// Every kind of identifier, of a group, a member, a category, an expense,
+/// or a transfer, follows the same rules.
+///
+/// # Errors
+///
+/// An [`EranosError::Id`] naming the first rule the text breaks:
+/// [`IdFailure::Empty`](crate::IdFailure::Empty),
+/// [`IdFailure::TooLong`](crate::IdFailure::TooLong) for more than 64 bytes
+/// of UTF-8,
+/// [`IdFailure::ControlCharacter`](crate::IdFailure::ControlCharacter), and
+/// [`IdFailure::SurroundingWhitespace`](crate::IdFailure::SurroundingWhitespace).
+pub fn identifier_parse(text: &str) -> Result<String, EranosError> {
+    // A member's identifier stands for every kind, whose rules are the same.
+    Ok(identifier::<MemberId>(text)?.as_str().to_owned())
+}
 
 // --- Money -------------------------------------------------------------------
 
@@ -324,7 +343,7 @@ pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
         ),
         ExpenseSplit::Whole { split } => expenses::ExpenseSplit::Whole(split.to_library()?),
     };
-    let mut members: BTreeSet<eranos::MemberId> = payers.members().collect();
+    let mut members: BTreeSet<MemberId> = payers.members().collect();
     members.extend(split.participants());
     Ok(members.iter().map(ToString::to_string).collect())
 }

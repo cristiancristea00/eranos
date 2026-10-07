@@ -46,25 +46,31 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `category`, which has no identifier yet, and returns the one the group gives it.
+    /// Adds `category` under its identifier, or one the library generates when it has none, and
+    /// returns the identifier.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for a category with an identifier, and
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateCategoryName(_:)`` for a name
-    ///   another category has, compared caselessly; on wasm, ``EranosError/expenseGroup(_:detail:)`` with
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse, and
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateCategory(_:)`` for an
+    ///   identifier the group holds, Uncategorised's included, or
+    ///   ``ExpenseGroupFailure/duplicateCategoryName(_:)`` for a name another category has, compared
+    ///   caselessly; on wasm, ``EranosError/expenseGroup(_:detail:)`` with
     ///   ``ExpenseGroupFailure/busy`` while another call holds the lock.
     @discardableResult
     func add(_ category: Category) throws(EranosError) -> Category.ID {
         try converting { Category.ID(rawValue: try handle.addCategory(category: category.generated)) }
     }
 
-    /// Adds `category`, which has no identifier yet, and returns the one the group gives it.
+    /// Adds `category` under its identifier, or one the library generates when it has none, and
+    /// returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for a category with an identifier, and
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateCategoryName(_:)`` for a name
-    ///   another category has, compared caselessly; ``EranosError/cancelled(detail:)`` when the task
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse, and
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateCategory(_:)`` for an
+    ///   identifier the group holds, Uncategorised's included, or
+    ///   ``ExpenseGroupFailure/duplicateCategoryName(_:)`` for a name another category has, compared
+    ///   caselessly; ``EranosError/cancelled(detail:)`` when the task
     ///   is cancelled first.
     @discardableResult
     func add(_ category: Category) async throws(EranosError) -> Category.ID {

@@ -1,4 +1,5 @@
-// A group the tests share the shape of, and the loading of the module every test runs in.
+// A group the tests share the shape of, the text the library refuses as an identifier, and the loading of the module every
+// test runs in.
 
 import { readFile } from 'node:fs/promises';
 
@@ -6,6 +7,7 @@ import {
     type CategoryId,
     type Expense,
     type ExpenseId,
+    type IdFailure,
     type MemberId,
     type TransferId,
     CalendarDate,
@@ -21,7 +23,22 @@ export const initialised: Promise<void> = init(await readFile(new URL('../src/in
 
 await initialised;
 
-/** A group of two with a category, an expense, and a transfer, and the identifiers the group gave them. */
+/** Text the library refuses as an identifier, with the failure it reports and its message. */
+export interface RefusedIdentifier {
+    readonly text: string;
+    readonly failure: IdFailure;
+    readonly message: string;
+}
+
+/** Text that fails each of the library's checks of an identifier. */
+export const refusedIdentifiers: readonly RefusedIdentifier[] = [
+    { text: '', failure: { kind: 'empty' }, message: 'an identifier must not be empty' },
+    { text: 'a'.repeat(65), failure: { kind: 'tooLong' }, message: 'an identifier can be at most 64 bytes long' },
+    { text: 'a\tb', failure: { kind: 'controlCharacter' }, message: 'an identifier cannot contain control characters' },
+    { text: ' ana', failure: { kind: 'surroundingWhitespace' }, message: 'an identifier cannot start or end with whitespace' },
+];
+
+/** A group of two with a category, an expense, and a transfer, and the identifiers the library generated for them. */
 export class Flat {
     readonly euro = CurrencyCode.of('EUR');
     readonly day = CalendarDate.of(2026, 9, 23);

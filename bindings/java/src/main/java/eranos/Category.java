@@ -6,20 +6,27 @@ import java.util.Optional;
 /**
  * A label the group gives expenses: "Food".
  *
- * <p>A new category has no identifier; {@link ExpenseGroup#addCategory} gives it one. The built-in
+ * <p>A new category takes the identifier the app gives it through {@link #Category(CategoryId,
+ * String)}, or none, and then {@link ExpenseGroup#addCategory} generates one. The built-in
  * category, Uncategorised, holds every expense without another.
  */
 public final class Category {
     private final CategoryId id;
     private final String name;
 
-    private Category(CategoryId id, String name) {
+    /**
+     * A category to add under the identifier {@code id}, called {@code name}.
+     *
+     * @param id the identifier, or {@code null} for the group to generate one
+     * @param name the name, which no other category of the group may share
+     */
+    public Category(CategoryId id, String name) {
         this.id = id;
         this.name = Objects.requireNonNull(name, "name");
     }
 
     /**
-     * A category to add, called {@code name}.
+     * A category to add, called {@code name}, under an identifier the group generates.
      *
      * @param name the name, which no other category of the group may share
      */
@@ -60,7 +67,7 @@ public final class Category {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for a category to add
+     * @return the identifier, empty for a category to add under one the group generates
      */
     public Optional<CategoryId> id() {
         return Optional.ofNullable(id);

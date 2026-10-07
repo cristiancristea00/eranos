@@ -13,8 +13,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 /** The currencies, amounts, ratios, dates, times, contact details, and identifiers. */
 class ValuesTest {
+    /**
+     * A text the identifier rules refuse, the failure that names why, and the library's message.
+     */
+    private record IdentifierRefusal(String text, IdFailure failure, String message) {}
+
     /**
      * A currency, an amount, or a check that read or wrote another way than the library's would
      * show an app another amount than the group holds.
@@ -175,6 +182,46 @@ class ValuesTest {
         assertEquals(text, new ExpenseId(text).toString());
         assertEquals(text, new TransferId(text).toString());
         assertThrows(NullPointerException.class, () -> new MemberId(null));
+    }
+
+    /**
+     * An identifier that parsing let through against the library's rules would be refused only when
+     * a call carries it, after the app stored it; one parsed into another text, or refused for
+     * another rule, would show an app another identifier or another reason.
+     */
+    @Test
+    void identifiersParseAsTheLibraryReadsThem() throws EranosException {
+        // Kept as it is, case and inner spaces included; the limit is 64 bytes of UTF-8, which 32
+        // two-byte characters reach.
+        for (String text : List.of("-food", "!a", "Lisboa · 2026", "é".repeat(32))) {
+            assertEquals(new ExpenseGroupId(text), ExpenseGroupId.parse(text));
+            assertEquals(new MemberId(text), MemberId.parse(text));
+            assertEquals(new CategoryId(text), CategoryId.parse(text));
+            assertEquals(new ExpenseId(text), ExpenseId.parse(text));
+            assertEquals(new TransferId(text), TransferId.parse(text));
+        }
+        // Each refusal names the first rule the text breaks.
+        for (IdentifierRefusal refusal :
+                List.of(
+                        new IdentifierRefusal(
+                                "", new IdFailure.Empty(), "an identifier must not be empty"),
+                        new IdentifierRefusal(
+                                "é".repeat(33),
+                                new IdFailure.TooLong(),
+                                "an identifier can be at most 64 bytes long"),
+                        new IdentifierRefusal(
+                                "a\tb",
+                                new IdFailure.ControlCharacter(),
+                                "an identifier cannot contain control characters"),
+                        new IdentifierRefusal(
+                                " x",
+                                new IdFailure.SurroundingWhitespace(),
+                                "an identifier cannot start or end with whitespace"))) {
+            EranosException.Id refused =
+                    assertThrows(EranosException.Id.class, () -> MemberId.parse(refusal.text()));
+            assertEquals(refusal.failure(), refused.failure());
+            assertEquals(refusal.message(), refused.getMessage());
+        }
     }
 
     /**

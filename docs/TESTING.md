@@ -154,11 +154,12 @@ Helpers are plain functions at the top of the test file (`member(1)`,
 `eur("12.00")`, `day()`). A test names members, categories, and entries by
 identifiers it builds from text with `new`, such as `member-001` or `ana`,
 whose byte order is the order the test means. An entity gets a generated ID
-when it is built; the tie rotation hashes the text of an expense's ID, so a
-unit test that pins which member receives a leftover cent builds it with
-the test-only `ExpenseBuilder::with_id`. An integration test sees only the public API:
-it builds its entries once and clones them, and a base group, wherever
-two groups must be equal.
+when it is built unless its builder's `id` gives it one; the tie rotation
+hashes the text of an expense's ID, so a test that pins which member
+receives a leftover cent gives the expense its ID through
+`ExpenseBuilder::id`. An integration test sees only the public API: it
+builds its entries once and clones them, and a base group, wherever two
+groups must be equal.
 
 ### Lints in tests
 

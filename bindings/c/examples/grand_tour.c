@@ -1004,16 +1004,21 @@ static People members(EranosExpenseGroup *const group) {
 
 // 3. Categories.
 
-/// Adds the category @p name to @p group.
-static Id addCategory(EranosExpenseGroup *const group, char const *const name) {
+/// Adds the category @p name to @p group, under the identifier @p id, or a generated one when @p id is nullptr.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the identifier, then the name, in the order the library's constructor reads them.
+static Id addCategory(EranosExpenseGroup *const group, char const *const id, char const *const name) {
     EranosCategory *category = nullptr;
     must(eranosCategoryCreate(name, &category));
     EranosText *const text = eranosTextCreate();
+    if (nullptr != id) {
+        must(eranosIdentifierParse(id, text));
+        must(eranosCategorySetId(category, eranosTextData(text)));
+    }
     must(eranosExpenseGroupAddCategory(group, category, text));
-    Id const id = idOf(text);
+    Id const added = idOf(text);
     eranosTextDestroy(text);
     eranosCategoryDestroy(category);
-    return id;
+    return added;
 }
 
 /// What @p group refuses the category @p name with.
@@ -1061,6 +1066,22 @@ static Line categoryNames(EranosExpenseGroup const *const group) {
     return line;
 }
 
+/// Whether the categories of @p group, in identifier order, are the @p count identifiers of @p expected.
+static bool categoriesAre(EranosExpenseGroup const *const group, Id const *const expected, size_t const count) {
+    EranosCategoryList *categories = nullptr;
+    must(eranosExpenseGroupCategories(group, &categories));
+    EranosText *const text = eranosTextCreate();
+    bool same = count == eranosCategoryListLength(categories);
+    for (size_t index = 0; same && count > index; ++index) {
+        EranosCategory *const category = eranosCategoryListGet(categories, index);
+        same = eranosCategoryId(category, text) && 0 == strcmp(eranosTextData(text), expected[index].text);
+        eranosCategoryDestroy(category);
+    }
+    eranosTextDestroy(text);
+    eranosCategoryListDestroy(categories);
+    return same;
+}
+
 /// Whether @p error names @p category as the one with the name it refused.
 static bool namesExisting(EranosError const *const error, Id const category) {
     EranosText *const text = eranosTextCreate();
@@ -1072,16 +1093,18 @@ static bool namesExisting(EranosError const *const error, Id const category) {
 /// Adds Food, Lodging, and Transport to @p group, renames Transport, and shows what renaming refuses.
 static Categories addCategories(EranosExpenseGroup *const group) {
     section("3. Categories");
-    Id const food = addCategory(group, "Food");
-    Id const lodging = addCategory(group, "Lodging");
-    Id const transport = addCategory(group, "Transport");
+    Id const food = addCategory(group, nullptr, "Food");
+    // An app that keeps its categories elsewhere gives them its own keys.
+    Id const lodging = addCategory(group, "lodging", "Lodging");
+    Id const transport = addCategory(group, nullptr, "Transport");
     EranosError *const homonym = categoryRefusal(group, "FOOD");
     must(renamed(group, transport, "Getting around"));
     Id const uncategorised = builtInCategory(group);
     EranosError *const builtIn = renamed(group, uncategorised, "Other");
     Line const names = categoryNames(group);
-    printFormatted("Every group has the built-in Uncategorised; this one adds Food, Lodging, and\n"
-                   "Transport, then renames Transport, which keeps its identifier. In identifier order:\n"
+    printFormatted("Every group has the built-in Uncategorised; this one adds Food, Lodging, under the\n"
+                   "identifier lodging that the app gives it, and Transport, then renames Transport, which\n"
+                   "keeps its identifier. In identifier order, where lodging follows the generated ones:\n"
                    "  %s\n"
                    "Names are compared caselessly, and the built-in category keeps its name:",
                    names.text);
@@ -1096,6 +1119,9 @@ static Categories addCategories(EranosExpenseGroup *const group) {
 
     Line const name = categoryName(group, transport.text);
     check(0 == strcmp(name.text, "Getting around"), "Transport is renamed");
+    check(0 == strcmp(lodging.text, "lodging"), "Lodging is under the identifier the app gave it");
+    Id const order[] = {uncategorised, food, transport, lodging};
+    check(categoriesAre(group, order, sizeof order / sizeof order[0]), "lodging follows the generated identifiers");
     return (Categories){.food = food, .lodging = lodging, .transport = transport};
 }
 

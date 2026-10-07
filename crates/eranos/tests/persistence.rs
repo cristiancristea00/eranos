@@ -18,9 +18,10 @@ use eranos::cooperative::block_on;
 use eranos::error::ExpenseGroupError;
 use eranos::{
     CalendarDate, Category, CategoryId, CategoryTotal, CurrencyCode, Email, ExchangeRate, Expense,
-    ExpenseGroup, ExpenseItem, Iban, Language, Member, MemberAmount, MemberId, MemberParts,
-    MemberPercentage, Money, Parts, PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup,
-    SettlementStrategy, Split, TimeOfDay, TipDistribution, TipRule, Transfer, Username,
+    ExpenseGroup, ExpenseGroupId, ExpenseId, ExpenseItem, Iban, Language, Member, MemberAmount,
+    MemberId, MemberParts, MemberPercentage, Money, Parts, PaymentAccount, Percentage, PhoneNumber,
+    SavedExpenseGroup, SettlementStrategy, Split, TimeOfDay, TipDistribution, TipRule, Transfer,
+    TransferId, Username,
 };
 use serde_json::{Value, json};
 
@@ -495,6 +496,86 @@ fn identifiers_load_as_written_and_uncategorised_stays_first() {
             .contains("an identifier cannot start or end with whitespace"),
         "{refused}"
     );
+}
+
+/// A group whose app gave it and its entries identifiers of its own would
+/// not save, or would load under other identifiers, in another order, or
+/// with other totals.
+#[test]
+fn a_group_with_given_identifiers_round_trips() {
+    let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
+        .id(ExpenseGroupId::new("zz").unwrap())
+        .build()
+        .unwrap();
+    let member = |name: &str, id: Option<&str>| {
+        Member::builder(name)
+            .id(id.map(|text| MemberId::new(text).unwrap()))
+            .build()
+            .unwrap()
+    };
+    let ana = group.add_member(member("Ana", Some("!a"))).unwrap();
+    let bob = group.add_member(member("Bob", Some("Bøb"))).unwrap();
+    let carol = group.add_member(member("Carol", None)).unwrap();
+    let food = Category::with_id(CategoryId::new("-food").unwrap(), "Food").unwrap();
+    let food = group.add_category(food).unwrap();
+    let fuel = group.add_category(Category::new("Fuel").unwrap()).unwrap();
+    let dinner = Expense::builder(
+        "Dinner",
+        eur("30.00"),
+        ana,
+        Split::equal([ana, bob, carol]),
+        day(),
+    )
+    .id(ExpenseId::new("晚餐").unwrap())
+    .category(food)
+    .build()
+    .unwrap();
+    let dinner = group.add_expense(dinner).unwrap();
+    let taxi = Expense::builder(
+        "Taxi",
+        eur("12.00"),
+        carol,
+        Split::equal([bob, carol]),
+        day(),
+    )
+    .category(fuel)
+    .build()
+    .unwrap();
+    let taxi = group.add_expense(taxi).unwrap();
+    let repayment = Transfer::builder(bob, ana, eur("10.00"), day())
+        .id(TransferId::new("zz").unwrap())
+        .build()
+        .unwrap();
+    let repayment = group.add_transfer(repayment).unwrap();
+
+    let json = serde_json::to_string(&group).unwrap();
+    for text in [r#""zz""#, r#""!a""#, r#""Bøb""#, r#""-food""#, r#""晚餐""#] {
+        assert!(json.contains(text), "{text}");
+    }
+    let loaded: ExpenseGroup = serde_json::from_str(&json).unwrap();
+    assert_eq!(loaded, group);
+    assert_eq!(loaded.summary(), group.summary());
+    assert_eq!(loaded.id().as_str(), "zz");
+    // Byte order: `!` before the digits of generated text, before `B`.
+    assert_eq!(
+        loaded.members().map(Member::id).collect::<Vec<_>>(),
+        [ana, carol, bob]
+    );
+    // Uncategorised first, then `-food` and the generated text.
+    assert_eq!(
+        loaded.categories().map(Category::id).collect::<Vec<_>>(),
+        [CategoryId::UNCATEGORISED, food, fuel]
+    );
+    // A generated identifier's digits before the bytes of `晚`.
+    assert_eq!(
+        loaded.expenses().map(Expense::id).collect::<Vec<_>>(),
+        [taxi, dinner]
+    );
+    assert_eq!(
+        loaded.transfers().map(Transfer::id).collect::<Vec<_>>(),
+        [repayment]
+    );
+    assert_eq!(serde_json::to_string(&loaded).unwrap(), json);
 }
 
 /// A load would hold its thread for the whole file, or leave half a group

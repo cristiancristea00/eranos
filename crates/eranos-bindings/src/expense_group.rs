@@ -5,19 +5,22 @@ use std::future::Future;
 use std::sync::Arc;
 
 use eranos::expense_group::{ExpenseGroupReadGuard, ExpenseGroupWriteGuard, SavedExpenseGroup};
-use eranos::{ExpenseGroup, Language, SharedExpenseGroup};
+use eranos::{ExpenseGroup, ExpenseGroupId, Language, SharedExpenseGroup};
 
-use crate::EranosError;
 use crate::cancellation::{Cancellation, cancellable};
 use crate::money::{CurrencyRate, currency};
 use crate::operations::CurrencyChange;
 use crate::reader::ExpenseGroupReader;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
+use crate::{EranosError, identifier_to_add};
 
 /// What a new group starts with.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NewExpenseGroup {
+    /// The identifier: the app's own, or absent for the library to generate
+    /// one.
+    pub id: Option<String>,
     /// The group's name.
     pub name: String,
     /// The ISO 4217 code of the group currency, which every total is in.
@@ -44,16 +47,20 @@ pub struct ExpenseGroupHandle {
 }
 
 impl ExpenseGroupHandle {
-    /// A new group with no members and no entries.
+    /// A new group with no members and no entries, under the identifier
+    /// `group` gives, or a generated one.
     ///
     /// # Errors
     ///
+    /// An [`EranosError::Id`] for an identifier the rules refuse,
     /// [`MoneyFailure::UnknownCurrency`](crate::MoneyFailure::UnknownCurrency),
     /// [`ExpenseGroupFailure::EmptyName`](crate::ExpenseGroupFailure::EmptyName), and
     /// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
     pub fn new(group: &NewExpenseGroup) -> Result<Self, EranosError> {
+        let id: Option<ExpenseGroupId> = identifier_to_add(group.id.as_deref())?;
         let language = group.language.as_deref().map(Language::parse).transpose()?;
         let group = ExpenseGroup::builder(group.name.clone(), currency(&group.currency)?)
+            .id(id)
             .description(group.description.clone().unwrap_or_default())
             .language(language)
             .build()?;

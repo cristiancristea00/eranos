@@ -222,10 +222,12 @@ typedef struct EranosMember EranosMember;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// The identifier: absent for a member to add, present for one the group holds. Writes it, if present; absent otherwise.
+/// The identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds. Writes it, if
+/// present; absent otherwise.
 ///
 /// @param member The member
-/// @param id Receives the identifier: absent for a member to add, present for one the group holds, replacing what it held
+/// @param id Receives the identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group
+///   holds, replacing what it held
 /// @return Whether there is one
 [[nodiscard]] static inline bool eranosMemberId(EranosMember const *const member, EranosText *const id) {
     eranosDetailClear(id);
@@ -234,10 +236,11 @@ typedef struct EranosMember EranosMember;
     return present;
 }
 
-/// Sets the identifier: absent for a member to add, present for one the group holds.
+/// Sets the identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds.
 ///
 /// @param member The member
-/// @param id The identifier: absent for a member to add, present for one the group holds, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param id The identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds, as
+///   UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosMemberSetId(EranosMember *const member, char const *const id) {
@@ -245,7 +248,7 @@ typedef struct EranosMember EranosMember;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
-/// Clears the identifier: absent for a member to add, present for one the group holds.
+/// Clears the identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds.
 ///
 /// @param member The member
 static inline void eranosMemberClearId(EranosMember *const member) { EranosMember_clear_id(member); }

@@ -9,14 +9,13 @@ from eranos import (
     ConvertedCost,
     CurrencyCode,
     ExchangeRate,
-    ExpenseGroup,
     IdError,
     Language,
-    MemberId,
     Money,
     Parts,
     Percentage,
     TimeOfDay,
+    parse_member_id,
 )
 from examples.grand_tour.tour import People, eur, ron
 from examples.report import Row, message, print_lines, print_table, refusal, section
@@ -156,23 +155,21 @@ def _ratios() -> None:
     assert str(rate) == '4.9765'
 
 
-def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
+def _dates_and_identifiers(people: People) -> None:
     """
     Print dates, times, an identifier, and language tags as the library reads and writes them, and what it refuses.
 
     Args:
-        group: The group, which checks an identifier when a call carries it.
         people: The members of the trip.
 
     """
     date = CalendarDate.parse('2026-10-01')
     time = TimeOfDay.parse('22:15')
-    parsed = MemberId(str(people.ana))
-    found = group.member(parsed)
-    empty = refusal(lambda: group.member(MemberId('')))
-    after_a_space = refusal(lambda: group.member(MemberId(' ana')))
-    with_a_tab = refusal(lambda: group.member(MemberId('a\tb')))
-    too_long = refusal(lambda: group.member(MemberId('a' * 65)))
+    parsed = parse_member_id(str(people.ana))
+    empty = refusal(lambda: parse_member_id(''))
+    after_a_space = refusal(lambda: parse_member_id(' ana'))
+    with_a_tab = refusal(lambda: parse_member_id('a\tb'))
+    too_long = refusal(lambda: parse_member_id('a' * 65))
     language = Language('pt-pt')
     print_lines('Dates, times, identifiers, and language tags read and print the ISO forms:')
     print_table(
@@ -182,9 +179,7 @@ def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
             ValueRow(input='29 February 2027', result=message(refusal(lambda: CalendarDate(2027, 2, 29)))),
             ValueRow(input='22:15', result=f'{time}: hour {time.hour}, minute {time.minute}'),
             ValueRow(input='24:00', result=message(refusal(lambda: TimeOfDay(24, 0)))),
-            ValueRow(
-                input="Ana's identifier", result=f'{parsed}, the same after a round trip: {_truth(found is not None and found.id == people.ana)}'
-            ),
+            ValueRow(input="Ana's identifier", result=f'{parsed}, the same after a round trip: {_truth(parsed == people.ana)}'),
             ValueRow(input='empty text', result=message(empty)),
             ValueRow(input='ana after a space', result=message(after_a_space)),
             ValueRow(input='a tab between a and b', result=message(with_a_tab)),
@@ -211,12 +206,11 @@ def _dates_and_identifiers(group: ExpenseGroup, people: People) -> None:
         assert error.failure == failure
 
 
-def values(group: ExpenseGroup, people: People) -> None:
+def values(people: People) -> None:
     """
     Print section 13: the library's values on their own.
 
     Args:
-        group: The group, which checks an identifier when a call carries it.
         people: The members of the trip.
 
     """
@@ -224,4 +218,4 @@ def values(group: ExpenseGroup, people: People) -> None:
     _currencies()
     _amounts()
     _ratios()
-    _dates_and_identifiers(group, people)
+    _dates_and_identifiers(people)

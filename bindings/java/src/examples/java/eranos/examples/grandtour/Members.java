@@ -3,6 +3,7 @@ package eranos.examples.grandtour;
 import static eranos.examples.Report.check;
 import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
+import static eranos.examples.grandtour.Tables.builtInCategory;
 import static eranos.examples.grandtour.Tour.cell;
 import static eranos.examples.grandtour.Tour.groupFailure;
 import static eranos.examples.grandtour.Tour.message;
@@ -199,7 +200,9 @@ final class Members {
     static Categories addCategories(ExpenseGroup group) throws EranosException {
         section("3. Categories");
         CategoryId food = group.addCategory(new Category("Food"));
-        CategoryId lodging = group.addCategory(new Category("Lodging"));
+        // An app that keeps its categories elsewhere gives them its own keys.
+        CategoryId lodging =
+                group.addCategory(new Category(CategoryId.parse("lodging"), "Lodging"));
         CategoryId transport = group.addCategory(new Category("Transport"));
         Optional<EranosException> homonym = refusal(() -> group.addCategory(new Category("FOOD")));
         group.replaceCategory(group.category(transport).orElseThrow().renamed("Getting around"));
@@ -207,8 +210,9 @@ final class Members {
         Optional<EranosException> builtIn = refusal(() -> group.replaceCategory(other));
         System.out.print(
                 """
-                Every group has the built-in Uncategorised; this one adds Food, Lodging, and
-                Transport, then renames Transport, which keeps its identifier. In identifier order:
+                Every group has the built-in Uncategorised; this one adds Food, Lodging, under the
+                identifier lodging that the app gives it, and Transport, then renames Transport, which
+                keeps its identifier. In identifier order, where lodging follows the generated ones:
                   %s
                 Names are compared caselessly, and the built-in category keeps its name:
                 """
@@ -228,6 +232,14 @@ final class Members {
                         .equals(groupFailure(homonym)));
         check(Optional.of(new ExpenseGroupFailure.BuiltInCategory()).equals(groupFailure(builtIn)));
         check(Optional.of("Getting around").equals(group.category(transport).map(Category::name)));
+        check("lodging".equals(lodging.value()));
+        check(
+                List.of(
+                                builtInCategory(group),
+                                Optional.of(food),
+                                Optional.of(transport),
+                                Optional.of(lodging))
+                        .equals(group.categories().stream().map(Category::id).toList()));
         return new Categories(food, lodging, transport);
     }
 }

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.fail
 
-/** A group of two with a category, an expense, and a transfer, and the identifiers the group gave them. */
+/** A group of two with a category, an expense, and a transfer, and the identifiers the group generated for them. */
 internal class Flat {
     val euro: CurrencyCode = CurrencyCode.of("EUR")
     val day: CalendarDate = CalendarDate.of(2026, 9, 23)

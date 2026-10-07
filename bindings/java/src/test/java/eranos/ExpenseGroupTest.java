@@ -292,8 +292,9 @@ class ExpenseGroupTest {
     }
 
     /**
-     * A new group that dropped what it starts with, or a saved one that loaded from text that is
-     * not the saved form, would start an app from another group.
+     * A new group that dropped what it starts with, the identifier the app gave it included, or a
+     * saved one that loaded from text that is not the saved form, would start an app from another
+     * group.
      */
     @Test
     void aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() throws EranosException {
@@ -301,6 +302,16 @@ class ExpenseGroupTest {
         ExpenseGroup plain = ExpenseGroup.builder("Trip", euro).build();
         assertEquals(Optional.empty(), plain.description());
         assertEquals(Optional.empty(), plain.language());
+        ExpenseGroupId lisbon = ExpenseGroupId.parse("lisbon-2026");
+        assertEquals(lisbon, ExpenseGroup.builder("Trip", euro).id(lisbon).build().id());
+        EranosException.Id refused =
+                assertThrows(
+                        EranosException.Id.class,
+                        () ->
+                                ExpenseGroup.builder("Trip", euro)
+                                        .id(new ExpenseGroupId(" x"))
+                                        .build());
+        assertEquals(new IdFailure.SurroundingWhitespace(), refused.failure());
         EranosException.ExpenseGroup blank =
                 assertThrows(
                         EranosException.ExpenseGroup.class,
@@ -315,6 +326,24 @@ class ExpenseGroupTest {
         CompletionException loading =
                 assertThrows(CompletionException.class, () -> ExpenseGroup.loadAsync("{").join());
         assertInstanceOf(EranosException.InvalidJson.class, loading.getCause());
+    }
+
+    /**
+     * A layer that ordered identifiers itself, by UTF-16 code units as {@link String#compareTo}
+     * does, would list text above U+FFFF before text just below it: another order than the
+     * library's, and than the other languages'.
+     */
+    @Test
+    void entriesComeInTheLibrarysIdentifierOrder() throws EranosException {
+        ExpenseGroup group = ExpenseGroup.builder("Trip", CurrencyCode.of("EUR")).build();
+        // U+1F600 is four bytes of UTF-8 from 0xF0, and two UTF-16 units from 0xD83D; U+FF61 is
+        // three bytes from 0xEF, and one unit.
+        MemberId above =
+                group.addMember(Member.builder("Ana").id(new MemberId("\uD83D\uDE00")).build());
+        MemberId below = group.addMember(Member.builder("Bob").id(new MemberId("\uFF61")).build());
+        assertEquals(
+                List.of(Optional.of(below), Optional.of(above)),
+                group.members().stream().map(Member::id).toList());
     }
 
     /**

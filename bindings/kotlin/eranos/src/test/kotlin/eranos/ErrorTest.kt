@@ -45,7 +45,6 @@ class ErrorTest {
         assertEquals(1L, json.line)
         assertEquals(2L, json.column)
         assertEquals("detail", json.message)
-        assertStandard(eranos.internal.EranosException.IdentifierGiven("detail"), IllegalArgumentException::class.java)
         assertStandard(eranos.internal.EranosException.IdentifierMissing("detail"), IllegalArgumentException::class.java)
         assertStandard(eranos.internal.EranosException.Cancelled("detail"), CancellationException::class.java)
         assertStandard(eranos.internal.EranosException.Released("detail"), IllegalStateException::class.java)

@@ -132,13 +132,14 @@ pub mod ffi {
     }
 
     impl EranosExpenseGroup {
-        /// A new group, with the details `details` holds.
+        /// A new group, with the details `details` holds, under the identifier it gives or a
+        /// generated one.
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Money` for a currency the library does not list, of the
-        /// kind `ExpenseGroup` for a blank name, and of the kind `Language` for a language that is
-        /// not a tag.
+        /// [`EranosError`] of the kind `Id` for an identifier the rules refuse, of the kind `Money`
+        /// for a currency the library does not list, of the kind `ExpenseGroup` for a blank name,
+        /// and of the kind `Language` for a language that is not a tag.
         pub fn create(details: &EranosNewExpenseGroup) -> Result<Box<Self>, Box<EranosError>> {
             eranos_bindings::ExpenseGroupHandle::new(&details.0)
                 .map(|handle| Box::new(Self::from(handle)))
@@ -296,8 +297,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `category`, which has no identifier yet, and returns the one it gets. Writes it
-        /// into `write`.
+        /// Adds `category` under its identifier, or one the library generates when it has none, and
+        /// returns the identifier. Writes it into `write`.
         ///
         /// # Errors
         ///
@@ -635,8 +636,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `expense`, which has no identifier yet, and returns the one it gets. Writes it into
-        /// `write`.
+        /// Adds `expense` under its identifier, or one the library generates when it has none, and
+        /// returns the identifier. Writes it into `write`.
         ///
         /// # Errors
         ///
@@ -923,8 +924,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `member`, who has no identifier yet, and returns the one they get. Writes it into
-        /// `write`.
+        /// Adds `member` under their identifier, or one the library generates when they have none,
+        /// and returns the identifier. Writes it into `write`.
         ///
         /// # Errors
         ///
@@ -1373,8 +1374,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `transfer`, which has no identifier yet, and returns the one it gets. Writes it
-        /// into `write`.
+        /// Adds `transfer` under its identifier, or one the library generates when it has none, and
+        /// returns the identifier. Writes it into `write`.
         ///
         /// # Errors
         ///

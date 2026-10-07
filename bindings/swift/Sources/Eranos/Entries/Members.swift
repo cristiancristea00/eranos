@@ -2,14 +2,16 @@ internal import EranosGenerated
 
 /// A person in the group: a first name, and optionally more ways to reach and pay them.
 ///
-/// A new member has no identifier; `ExpenseGroup.add(_:)` gives them one.
+/// A member to add carries the identifier the app gives them, or none, and then
+/// `ExpenseGroup.add(_:)` returns one the library generates.
 public struct Member: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a member.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
 
-    /// The identifier: absent for a member to add, present for one the group holds.
-    public private(set) var id: ID?
+    /// The identifier: the app's own for a member to add, or absent for the library to generate
+    /// one, and present for a member the group holds or one to replace.
+    public var id: ID?
 
     /// The first name.
     public var firstName: String
@@ -37,14 +39,16 @@ public struct Member: Hashable, Sendable {
         )
     }
 
-    /// A member to add, called `firstName`.
+    /// A member to add, called `firstName`, under `id`, or one the library generates.
     public init(
+        id: ID? = nil,
         firstName: String,
         lastName: String? = nil,
         email: Email? = nil,
         phone: PhoneNumber? = nil,
         accounts: [PaymentAccount] = []
     ) {
+        self.id = id
         self.firstName = firstName
         self.lastName = lastName
         self.email = email
@@ -54,13 +58,13 @@ public struct Member: Hashable, Sendable {
 
     init(_ member: EranosGenerated.Member) {
         self.init(
+            id: member.id.map { ID(rawValue: $0) },
             firstName: member.firstName,
             lastName: member.lastName,
             email: member.email.map { Email(known: $0) },
             phone: member.phone.map { PhoneNumber(known: $0) },
             accounts: member.accounts.map(PaymentAccount.init)
         )
-        id = member.id.map { ID(rawValue: $0) }
     }
 }
 

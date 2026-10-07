@@ -322,10 +322,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .settlement(SettlementStrategy::MinimumTransfers)?
         .clone();
     for payment in plan.payments() {
-        group.add_transfer(Transfer::from_payment(
-            payment,
-            CalendarDate::new(2026, 9, 27)?,
-        ))?;
+        group.add_transfer(
+            Transfer::builder_from_payment(payment, CalendarDate::new(2026, 9, 27)?).build()?,
+        )?;
     }
     println!(
         "Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards\n\

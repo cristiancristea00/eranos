@@ -4,7 +4,8 @@
 //! shares that do not add up), keep the payers covering the amount plus the
 //! tip while the participants divide the amount alone, keep the last setter
 //! in force, also between the forms of payers and of splits, keep a
-//! replaced cost's rate only when the new cost has one, and keep the way a
+//! replaced cost's rate only when the new cost has one, keep an expense's
+//! identifier, given or generated, through every edit, and keep the way a
 //! cost is shared through `FromExpenseSplit`.
 
 use eranos_money::{CurrencyCode, Percentage};
@@ -624,6 +625,23 @@ fn an_expense_keeps_its_identifier_through_edits() {
     assert_ne!(full_expense().id(), expense.id());
     let renamed = expense.to_builder().name("Supper").build().unwrap();
     assert_eq!(renamed.id(), expense.id());
+}
+
+/// An expense from an app's own store would get another identifier than its
+/// key, and so another tie rotation on every device, lose it in an edit, or
+/// keep it after the app asked for a generated one.
+#[test]
+fn an_expense_takes_the_identifier_it_is_given() {
+    let id = ExpenseId::new("Ωmega dinner").unwrap();
+    let expense = full_expense().to_builder().id(id).build().unwrap();
+    assert_eq!(expense.id(), id);
+    // An edit keeps it.
+    let renamed = expense.to_builder().name("Supper").build().unwrap();
+    assert_eq!(renamed.id(), id);
+    // `None` leaves generation to `build`, and nothing else changes.
+    let generated = expense.to_builder().id(None).build().unwrap();
+    assert_ne!(generated.id(), id);
+    assert_eq!(generated.to_builder().id(id).build().unwrap(), expense);
 }
 
 /// Editing an expense would silently drop fields that were not edited.

@@ -289,8 +289,8 @@ fn every_call_by_identifier_refuses_text_that_is_not_one() {
     assert_eq!(flat.group, before);
 }
 
-/// A category change would take an identifier from outside the group,
-/// change another category, or let a refusal through.
+/// A category change would add a second category under an identifier the
+/// group holds, change another category, or let a refusal through.
 #[test]
 fn categories_change_through_the_records() {
     let mut flat = flat();
@@ -353,7 +353,10 @@ fn categories_change_through_the_records() {
         matches!(
             refusals,
             [
-                EranosError::IdentifierGiven { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateCategory { .. },
+                    ..
+                },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::DuplicateCategoryName { .. },
                     ..
@@ -390,8 +393,8 @@ fn categories_change_through_the_records() {
     ));
 }
 
-/// An expense change would take an identifier from outside the group,
-/// replace another expense, or let a refusal through.
+/// An expense change would add a second expense under an identifier the
+/// group holds, replace another expense, or let a refusal through.
 #[test]
 fn expenses_change_through_the_records() {
     let mut flat = flat();
@@ -449,7 +452,10 @@ fn expenses_change_through_the_records() {
         matches!(
             refusals,
             [
-                EranosError::IdentifierGiven { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateExpense { .. },
+                    ..
+                },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
@@ -482,8 +488,8 @@ fn expenses_change_through_the_records() {
     ));
 }
 
-/// A member change would take an identifier from outside the group, change
-/// another member, or let a refusal through.
+/// A member change would add a second member under an identifier the group
+/// holds, change another member, or let a refusal through.
 #[test]
 fn members_change_through_the_records() {
     let mut flat = flat();
@@ -534,7 +540,10 @@ fn members_change_through_the_records() {
         matches!(
             refusals,
             [
-                EranosError::IdentifierGiven { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateMember { .. },
+                    ..
+                },
                 EranosError::Member {
                     failure: MemberFailure::EmptyFirstName,
                     ..
@@ -572,8 +581,8 @@ fn members_change_through_the_records() {
     assert_eq!(operations::remove_member(group, &carol), Ok(renamed));
 }
 
-/// A transfer change would take an identifier from outside the group,
-/// replace another transfer, or let a refusal through.
+/// A transfer change would add a second transfer under an identifier the
+/// group holds, replace another transfer, or let a refusal through.
 #[test]
 fn transfers_change_through_the_records() {
     let mut flat = flat();
@@ -630,7 +639,10 @@ fn transfers_change_through_the_records() {
         matches!(
             refusals,
             [
-                EranosError::IdentifierGiven { .. },
+                EranosError::ExpenseGroup {
+                    failure: ExpenseGroupFailure::DuplicateTransfer { .. },
+                    ..
+                },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..

@@ -21,11 +21,24 @@ public final class ExpenseGroup: Sendable {
 
     let handle: EranosGenerated.ExpenseGroup
 
-    /// A new group with no members and no entries.
+    /// A new group with no members and no entries, under `id`, or one the library generates.
     ///
-    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName`` for a blank name.
-    public init(name: String, currency: CurrencyCode, description: String? = nil, language: Language? = nil) throws(EranosError) {
-        let group = NewExpenseGroup(name: name, currency: currency.code, description: description, language: language?.description)
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse, and
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName`` for a blank name.
+    public init(
+        id: ID? = nil,
+        name: String,
+        currency: CurrencyCode,
+        description: String? = nil,
+        language: Language? = nil
+    ) throws(EranosError) {
+        let group = NewExpenseGroup(
+            id: id?.rawValue,
+            name: name,
+            currency: currency.code,
+            description: description,
+            language: language?.description
+        )
         handle = try converting { try EranosGenerated.ExpenseGroup(group: group) }
     }
 

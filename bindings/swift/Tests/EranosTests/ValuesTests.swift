@@ -155,6 +155,24 @@ func anIdentifierIsItsText() {
     #expect(id != Member.ID(rawValue: "other"))
 }
 
+/// Identifiers that compared or hashed as `String` does, which holds canonically equivalent texts
+/// equal, would take two identifiers the library holds apart for one, and read or change the
+/// other entry.
+@Test
+func canonicallyEquivalentTextsStayTwoIdentifiers() throws {
+    // "é" as one character, and as "e" and a combining acute accent.
+    let composed = "\u{E9}"
+    let decomposed = "e\u{301}"
+    #expect(composed == decomposed)
+    #expect(Member.ID(rawValue: composed) != Member.ID(rawValue: decomposed))
+    #expect(2 == Set([Member.ID(rawValue: composed), Member.ID(rawValue: decomposed)]).count)
+    let group = try Flat().group
+    let first = try group.add(Member(id: Member.ID(composed), firstName: "Elena"))
+    let second = try group.add(Member(id: Member.ID(decomposed), firstName: "Emil"))
+    #expect(try "Elena" == group.member(withID: first)?.firstName)
+    #expect(try "Emil" == group.member(withID: second)?.firstName)
+}
+
 /// Text that is not an identifier, with the failure and the message the library refuses it with.
 private struct RefusedIdentifier {
     let text: String
@@ -163,8 +181,9 @@ private struct RefusedIdentifier {
 }
 
 /// A refusal that reached an app as another failure, or without the library's message, would
-/// give its user another reason than the library's, and refusing text the library accepts would
-/// put an entry the group holds out of the app's reach.
+/// give its user another reason than the library's; refusing text the library accepts would put
+/// an entry the group holds out of the app's reach; and a check that changed the text would give
+/// an entry another identifier than the app's.
 @Test
 func onlyTextThatCannotBeAnIdentifierIsRefused() throws {
     let group = try Flat().group
@@ -178,10 +197,15 @@ func onlyTextThatCannotBeAnIdentifierIsRefused() throws {
     ]
     for refusal in refusals {
         #expect(throws: EranosError.id(refusal.failure, detail: refusal.message)) {
+            try Member.ID(refusal.text)
+        }
+        #expect(throws: EranosError.id(refusal.failure, detail: refusal.message)) {
             try group.member(withID: Member.ID(rawValue: refusal.text))
         }
     }
-    for text in ["nobody", "Ana Maria", String(repeating: "a", count: 64), String(repeating: "â", count: 32)] {
+    // Kept as it is, case and inner spaces included.
+    for text in ["nobody", "Ana Maria", "-food", "!a", "Lisboa · 2026", String(repeating: "a", count: 64), String(repeating: "â", count: 32)] {
+        #expect(try text == Member.ID(text).rawValue)
         #expect(try nil == group.member(withID: Member.ID(rawValue: text)))
     }
 }

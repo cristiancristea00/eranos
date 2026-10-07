@@ -64,7 +64,8 @@ public func participants(_ split: ExpenseSplit) -> [Member.ID] {
     case let .itemised(items):
         items.flatMap(\.split.members)
     }
-    return Set(members).sorted { first, second in first.rawValue < second.rawValue }
+    // The library orders identifiers by their bytes of UTF-8, which `String`'s `<` does not.
+    return Set(members).sorted { first, second in first.rawValue.utf8.lexicographicallyPrecedes(second.rawValue.utf8) }
 }
 
 /// The totals of `member` in `summary`.

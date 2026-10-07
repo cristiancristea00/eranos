@@ -139,7 +139,8 @@ class ValuesTest {
 
     /**
      * Identifiers of different entities that compared, or printed, as each other's text would let an app store one and read
-     * back another.
+     * back another; a getter that read another text would do the same to Java, which receives identifiers boxed, such as in
+     * the list of an expense's members.
      */
     @Test
     fun anIdentifierIsItsText() {
@@ -155,6 +156,11 @@ class ValuesTest {
         assertEquals(text, TransferId(text).value)
         assertEquals(text, TransferId(text).toString())
         assertValue(MemberId(text), MemberId(text), MemberId("other"))
+        // Kotlin compiles no call to a value class's getter: Java reads a boxed identifier through it.
+        val boxed = listOf<Any>(ExpenseGroupId(text), MemberId(text), CategoryId(text), ExpenseId(text), TransferId(text))
+        for (identifier in boxed) {
+            assertEquals(text, identifier.javaClass.getMethod("getValue").invoke(identifier))
+        }
     }
 
     /**
@@ -168,24 +174,38 @@ class ValuesTest {
         for (text in listOf("nobody", "Ana Lúcia", "a".repeat(64), "é".repeat(32))) {
             assertNull(group.memberBlocking(MemberId(text)))
         }
-        val empty = "an identifier must not be empty"
-        val tooLong = "an identifier can be at most 64 bytes long"
-        val controlCharacter = "an identifier cannot contain control characters"
-        val surroundingWhitespace = "an identifier cannot start or end with whitespace"
-        val refusals =
-            listOf(
-                IdentifierRefusal(text = "", failure = IdFailure.Empty, message = empty),
-                IdentifierRefusal(text = "a".repeat(65), failure = IdFailure.TooLong, message = tooLong),
-                IdentifierRefusal(text = "é".repeat(33), failure = IdFailure.TooLong, message = tooLong),
-                IdentifierRefusal(text = "a\tb", failure = IdFailure.ControlCharacter, message = controlCharacter),
-                IdentifierRefusal(text = "\u0007 ", failure = IdFailure.ControlCharacter, message = controlCharacter),
-                IdentifierRefusal(text = " ana", failure = IdFailure.SurroundingWhitespace, message = surroundingWhitespace),
-                IdentifierRefusal(text = "ana\u00a0", failure = IdFailure.SurroundingWhitespace, message = surroundingWhitespace),
-            )
-        for (refusal in refusals) {
+        for (refusal in identifierRefusals) {
             val refused = assertThrows<EranosException.Id> { group.memberBlocking(MemberId(refusal.text)) }
             assertEquals(refusal.failure, refused.failure)
             assertEquals(refusal.message, refused.message)
+        }
+    }
+
+    /**
+     * A parse that checked by other rules than the library's, changed the text, or refused it with another failure or
+     * message would let an app store an identifier no group accepts, or another than the one it gave.
+     */
+    @Test
+    fun everyIdentifierParsesByTheLibrarysRules() {
+        val parses: List<(String) -> Any> =
+            listOf(
+                { text -> ExpenseGroupId.parse(text).value },
+                { text -> MemberId.parse(text).value },
+                { text -> CategoryId.parse(text).value },
+                { text -> ExpenseId.parse(text).value },
+                { text -> TransferId.parse(text).value },
+            )
+        for (parse in parses) {
+            // Kept as it is, case and inner spaces included.
+            for (text in listOf("-food", "!a", "zz", "Lisboa · 2026", "é".repeat(32))) {
+                assertEquals(text, parse(text))
+            }
+            // Each refusal names the first rule the text breaks.
+            for (refusal in identifierRefusals) {
+                val refused = assertThrows<EranosException.Id> { parse(refusal.text) }
+                assertEquals(refusal.failure, refused.failure)
+                assertEquals(refusal.message, refused.message)
+            }
         }
     }
 
@@ -217,3 +237,21 @@ private data class IdentifierRefusal(
     val failure: IdFailure,
     val message: String,
 )
+
+/** Text that breaks each rule of an identifier, in characters and in bytes. */
+private val identifierRefusals: List<IdentifierRefusal> =
+    run {
+        val empty = "an identifier must not be empty"
+        val tooLong = "an identifier can be at most 64 bytes long"
+        val controlCharacter = "an identifier cannot contain control characters"
+        val surroundingWhitespace = "an identifier cannot start or end with whitespace"
+        listOf(
+            IdentifierRefusal(text = "", failure = IdFailure.Empty, message = empty),
+            IdentifierRefusal(text = "a".repeat(65), failure = IdFailure.TooLong, message = tooLong),
+            IdentifierRefusal(text = "é".repeat(33), failure = IdFailure.TooLong, message = tooLong),
+            IdentifierRefusal(text = "a\tb", failure = IdFailure.ControlCharacter, message = controlCharacter),
+            IdentifierRefusal(text = "\u0007 ", failure = IdFailure.ControlCharacter, message = controlCharacter),
+            IdentifierRefusal(text = " ana", failure = IdFailure.SurroundingWhitespace, message = surroundingWhitespace),
+            IdentifierRefusal(text = "ana\u00a0", failure = IdFailure.SurroundingWhitespace, message = surroundingWhitespace),
+        )
+    }

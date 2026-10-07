@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 
 import {
     type Cost,
-    type ExpenseGroup,
     CalendarDate,
     CurrencyCode,
     ExchangeRate,
@@ -15,7 +14,7 @@ import {
     Parts,
     Percentage,
     TimeOfDay,
-    memberId,
+    parseMemberId,
 } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
 import { type People, eur, rate, ron } from './tour.js';
@@ -117,15 +116,15 @@ function ratios(): void {
     assert.equal(parts.hundredths, 150);
 }
 
-function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
+function datesAndIdentifiers(people: People): void {
     const date = CalendarDate.parse('2026-10-01');
     const time = TimeOfDay.parse('22:15');
-    const parsed = memberId(people.ana);
-    const found = group.memberSync(parsed)?.id;
-    const empty = refusal(() => group.memberSync(memberId('')));
-    const surroundingWhitespace = refusal(() => group.memberSync(memberId(' ana')));
-    const controlCharacter = refusal(() => group.memberSync(memberId('a\tb')));
-    const tooLong = refusal(() => group.memberSync(memberId('a'.repeat(65))));
+    const text: string = people.ana;
+    const parsed = parseMemberId(text);
+    const empty = refusal(() => parseMemberId(''));
+    const surroundingWhitespace = refusal(() => parseMemberId(' ana'));
+    const controlCharacter = refusal(() => parseMemberId('a\tb'));
+    const tooLong = refusal(() => parseMemberId('a'.repeat(65)));
     const language = Language.parse('pt-pt');
     printLines('Dates, times, identifiers, and language tags read and print the ISO forms:');
     printTable(
@@ -135,7 +134,7 @@ function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
             { input: '29 February 2027', result: message(refusal(() => CalendarDate.of(2027, 2, 29))) },
             { input: '22:15', result: `${time.toString()}: hour ${String(time.hour)}, minute ${String(time.minute)}` },
             { input: '24:00', result: message(refusal(() => TimeOfDay.of(24, 0))) },
-            { input: "Ana's identifier", result: `${parsed}, the same after a round trip: ${String(people.ana === found)}` },
+            { input: "Ana's identifier", result: `${parsed}, the same after a round trip: ${String(people.ana === parsed)}` },
             { input: 'empty text', result: message(empty) },
             { input: 'ana after a space', result: message(surroundingWhitespace) },
             { input: 'a tab between a and b', result: message(controlCharacter) },
@@ -157,10 +156,10 @@ function datesAndIdentifiers(group: ExpenseGroup, people: People): void {
     assert.ok(tooLong instanceof IdError && 'tooLong' === tooLong.failure.kind);
 }
 
-export function values(group: ExpenseGroup, people: People): void {
+export function values(people: People): void {
     section('13. Values on their own');
     currencies();
     amounts();
     ratios();
-    datesAndIdentifiers(group, people);
+    datesAndIdentifiers(people);
 }

@@ -5,6 +5,20 @@ use eranos_bindings::{
     Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, TimeOfDay,
 };
 
+/// The identifier written `text`, as it is: not trimmed, and in its case.
+/// Every kind of identifier, of a group, a member, a category, an expense,
+/// or a transfer, follows the same rules.
+///
+/// # Errors
+///
+/// `IdFailure::Empty`, `IdFailure::TooLong` for more than 64 bytes of
+/// UTF-8, `IdFailure::ControlCharacter`, and
+/// `IdFailure::SurroundingWhitespace`: the first rule the text breaks.
+#[uniffi::export]
+pub(crate) fn identifier_parse(text: &str) -> Result<String, EranosError> {
+    eranos_bindings::identifier_parse(text)
+}
+
 /// The amount written `text` in the currency `code`: "12.50".
 ///
 /// # Errors

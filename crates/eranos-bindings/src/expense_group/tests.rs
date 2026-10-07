@@ -20,7 +20,7 @@ use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::member::{Category, Member};
 use crate::money::{Cost, Money};
 use crate::transfer::Transfer;
-use crate::{ExpenseGroupFailure, LanguageFailure, MoneyFailure, SettlementFailure};
+use crate::{ExpenseGroupFailure, IdFailure, LanguageFailure, MoneyFailure, SettlementFailure};
 
 /// A task that counts how often it is woken.
 #[derive(Default)]
@@ -67,6 +67,7 @@ fn rate(currency: &str, rate: &str) -> CurrencyRate {
 
 fn new_group() -> NewExpenseGroup {
     NewExpenseGroup {
+        id: None,
         name: "Flat".to_owned(),
         currency: "EUR".to_owned(),
         description: Some("Rent".to_owned()),
@@ -216,11 +217,19 @@ fn busy() -> ExpenseGroupHandle {
 /// every binding's executor needs.
 const fn assert_send_and_static<Call: Future + Send + 'static>(_call: &Call) {}
 
-/// A new group would drop what it starts with, or start from a currency, a
-/// name, or a language the library refuses.
+/// A new group would drop what it starts with, its identifier included, or
+/// start from an identifier, a currency, a name, or a language the library
+/// refuses.
 #[test]
 fn a_new_group_takes_what_it_starts_with() {
+    let named = ExpenseGroupHandle::new(&NewExpenseGroup {
+        id: Some("flat-12".to_owned()),
+        ..new_group()
+    })
+    .unwrap();
+    assert_eq!(named.id(), Ok("flat-12".to_owned()));
     let handle = ExpenseGroupHandle::new(&new_group()).unwrap();
+    assert_ne!(handle.id(), named.id());
     assert_eq!(handle.currency(), Ok("EUR".to_owned()));
     assert_eq!(handle.name(), Ok("Flat".to_owned()));
     assert_eq!(handle.description(), Ok(Some("Rent".to_owned())));
@@ -235,6 +244,10 @@ fn a_new_group_takes_what_it_starts_with() {
     assert_eq!(plain.language(), Ok(None));
 
     let refusals = [
+        NewExpenseGroup {
+            id: Some("flat\n12".to_owned()),
+            ..new_group()
+        },
         NewExpenseGroup {
             currency: "XYZ".to_owned(),
             ..new_group()
@@ -253,6 +266,10 @@ fn a_new_group_takes_what_it_starts_with() {
         matches!(
             refusals,
             [
+                EranosError::Id {
+                    failure: IdFailure::ControlCharacter,
+                    ..
+                },
                 EranosError::Money {
                     failure: MoneyFailure::UnknownCurrency,
                     ..

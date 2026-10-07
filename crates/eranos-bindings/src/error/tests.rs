@@ -787,10 +787,6 @@ fn every_failure_of_the_library_converts_to_its_case() {
 fn the_bindings_own_cases_carry_their_messages() {
     assert_eq!(EranosError::cancelled().detail(), "the call was cancelled");
     assert_eq!(
-        EranosError::identifier_given().detail(),
-        "an entry to add must not carry an identifier"
-    );
-    assert_eq!(
         EranosError::identifier_missing().detail(),
         "an entry to replace must carry its identifier"
     );

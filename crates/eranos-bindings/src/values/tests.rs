@@ -93,6 +93,49 @@ fn is_unknown_currency<T>(result: &Result<T, EranosError>) -> bool {
     )
 }
 
+/// A text the identifier rules refuse, and the failure that names why.
+struct IdentifierRefusal {
+    text: String,
+    failure: IdFailure,
+}
+
+/// An app would give an entry an identifier the library refuses, change
+/// its text, or not learn which rule the text broke.
+#[test]
+fn identifiers_parse_as_the_library_reads_them() {
+    // Kept as it is, case and inner spaces included.
+    for text in ["-food", "!a", "zz", "Lisboa · 2026", &"é".repeat(32)] {
+        assert_eq!(identifier_parse(text), Ok(text.to_owned()), "{text}");
+    }
+    // Each refusal names the first rule the text breaks.
+    for IdentifierRefusal { text, failure } in [
+        IdentifierRefusal {
+            text: String::new(),
+            failure: IdFailure::Empty,
+        },
+        IdentifierRefusal {
+            text: "x".repeat(65),
+            failure: IdFailure::TooLong,
+        },
+        IdentifierRefusal {
+            text: "a\tb".to_owned(),
+            failure: IdFailure::ControlCharacter,
+        },
+        IdentifierRefusal {
+            text: " x".to_owned(),
+            failure: IdFailure::SurroundingWhitespace,
+        },
+    ] {
+        assert!(
+            matches!(
+                identifier_parse(&text),
+                Err(EranosError::Id { failure: refused, .. }) if refused == failure
+            ),
+            "{text:?}"
+        );
+    }
+}
+
 /// Amounts would be read or written another way than the library's, or a
 /// sum across currencies, past the range, or in an unknown currency would
 /// come back as an amount.

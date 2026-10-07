@@ -657,7 +657,10 @@ void validation(ExpenseGroup &group) {
 [[nodiscard]] Categories addCategories(ExpenseGroup &group) {
     section("3. Categories");
     auto const food = must(group.addCategory(Category("Food")));
-    auto const lodging = must(group.addCategory(Category("Lodging")));
+    // An app that keeps its categories elsewhere gives them its own keys.
+    Category lodgingCategory("Lodging");
+    lodgingCategory.id = must(CategoryId::parse("lodging"));
+    auto const lodging = must(group.addCategory(lodgingCategory));
     auto const transport = must(group.addCategory(Category("Transport")));
     auto const homonym = refusal(group.addCategory(Category("FOOD")));
     auto stored = must(group.category(transport)).value();
@@ -674,8 +677,9 @@ void validation(ExpenseGroup &group) {
     for (std::size_t index = 0; names.size() > index; ++index) {
         joined += (0 == index ? "" : ", ") + names.at(index);
     }
-    std::println("Every group has the built-in Uncategorised; this one adds Food, Lodging, and\n"
-                 "Transport, then renames Transport, which keeps its identifier. In identifier order:\n"
+    std::println("Every group has the built-in Uncategorised; this one adds Food, Lodging, under the\n"
+                 "identifier lodging that the app gives it, and Transport, then renames Transport, which\n"
+                 "keeps its identifier. In identifier order, where lodging follows the generated ones:\n"
                  "  {}\n"
                  "Names are compared caselessly, and the built-in category keeps its name:",
                  joined);
@@ -690,6 +694,12 @@ void validation(ExpenseGroup &group) {
           "a caseless homonym is refused");
     check(builtIn.has_value() && Failure::EXPENSE_GROUP_BUILT_IN_CATEGORY == builtIn->failure(), "the built-in category keeps its name");
     check("Getting around" == must(group.category(transport)).value().name, "Transport is renamed");
+    check("lodging" == lodging.value(), "Lodging is under the identifier the app gave it");
+    std::vector<CategoryId> order;
+    for (auto const &category : group.categories()) {
+        order.push_back(category.id.value());
+    }
+    check(order == std::vector{uncategorised.id.value(), food, transport, lodging}, "lodging follows the generated identifiers");
     return {.food = food, .lodging = lodging, .transport = transport};
 }
 

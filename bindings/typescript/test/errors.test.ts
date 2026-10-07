@@ -498,7 +498,6 @@ void describe('the conversions of every failure the generated code can report', 
         assert.equal(json.message, 'detail');
         assert.equal(json.name, 'InvalidJsonError');
         for (const generated of [
-            new internal.EranosError.IdentifierGiven({ detail: 'detail' }),
             new internal.EranosError.IdentifierMissing({ detail: 'detail' }),
             new internal.EranosError.Released({ detail: 'detail' }),
         ]) {

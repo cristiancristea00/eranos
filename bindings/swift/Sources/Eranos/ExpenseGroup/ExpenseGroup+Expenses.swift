@@ -68,12 +68,14 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `expense`, which has no identifier yet, and returns the one the group gives it.
+    /// Adds `expense` under its identifier, or one the library generates when it has none, and
+    /// returns the identifier.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for an expense with an identifier,
-    ///   ``EranosError/expense(_:detail:)`` for one that does not build, and
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
+    ///   ``EranosError/expense(_:detail:)`` for an expense that does not build, and
     ///   ``EranosError/expenseGroup(_:detail:)`` for one that does not fit the group, such as
-    ///   ``ExpenseGroupFailure/unknownMember(_:)`` or ``ExpenseGroupFailure/archivedMember(_:)``; on wasm,
+    ///   ``ExpenseGroupFailure/duplicateExpense(_:)`` for an identifier the group holds,
+    ///   ``ExpenseGroupFailure/unknownMember(_:)``, or ``ExpenseGroupFailure/archivedMember(_:)``; on wasm,
     ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call holds the
     ///   lock.
     @discardableResult
@@ -81,15 +83,17 @@ public extension ExpenseGroup {
         try converting { Expense.ID(rawValue: try handle.addExpense(expense: expense.generated)) }
     }
 
-    /// Adds `expense`, which has no identifier yet, and returns the one the group gives it.
+    /// Adds `expense` under its identifier, or one the library generates when it has none, and
+    /// returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierGiven(detail:)`` for an expense with an identifier,
-    ///   ``EranosError/expense(_:detail:)`` for one that does not build, and
+    /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
+    ///   ``EranosError/expense(_:detail:)`` for an expense that does not build, and
     ///   ``EranosError/expenseGroup(_:detail:)`` for one that does not fit the group, such as
-    ///   ``ExpenseGroupFailure/unknownMember(_:)`` or ``ExpenseGroupFailure/archivedMember(_:)``;
+    ///   ``ExpenseGroupFailure/duplicateExpense(_:)`` for an identifier the group holds,
+    ///   ``ExpenseGroupFailure/unknownMember(_:)``, or ``ExpenseGroupFailure/archivedMember(_:)``;
     ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     @discardableResult
     func add(_ expense: Expense) async throws(EranosError) -> Expense.ID {

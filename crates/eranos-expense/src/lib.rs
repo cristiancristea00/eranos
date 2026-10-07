@@ -38,10 +38,11 @@ use eranos_money::{Cost, ExchangeRate, Money};
 /// the group currency, fixed when the expense is entered. A tip is added on
 /// top of the amount, and the payers cover amount plus tip. Four
 /// constructors name the payers and the split up front: one payer or
-/// several, and a whole split or items. An expense gets its identifier when
-/// it is built, and keeps it through every edit. Expenses are values: to
-/// change one, edit a copy with [`to_builder`](Self::to_builder) and pass it
-/// to `ExpenseGroup::replace_expense`.
+/// several, and a whole split or items. An expense gets the identifier
+/// given to [`ExpenseBuilder::id`], or a generated one when it is built, and
+/// keeps it through every edit. Expenses are values: to change one, edit a
+/// copy with [`to_builder`](Self::to_builder) and pass it to
+/// `ExpenseGroup::replace_expense`.
 ///
 /// # Examples
 ///
@@ -399,11 +400,13 @@ pub struct ExpenseBuilder {
 }
 
 impl ExpenseBuilder {
-    /// Uses `id` instead of a generated identifier, so a test can pin the
-    /// tie rotation it seeds.
-    #[cfg(test)]
-    pub(crate) const fn with_id(mut self, id: ExpenseId) -> Self {
-        self.id = Some(id);
+    /// Sets the identifier, such as the key an app's own store gives the
+    /// expense, or leaves it to [`build`](Self::build) to generate one with
+    /// `None`; a builder from [`Expense::to_builder`] starts with the
+    /// expense's. The identifier seeds the tie rotation, so it decides who
+    /// gets a leftover cent.
+    pub fn id(mut self, id: impl Into<Option<ExpenseId>>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -479,8 +482,9 @@ impl ExpenseBuilder {
         self
     }
 
-    /// Validates the expense and returns it, under a newly generated
-    /// identifier unless the builder came from [`Expense::to_builder`].
+    /// Validates the expense and returns it, under the identifier the
+    /// builder holds, given to [`id`](Self::id) or kept by
+    /// [`Expense::to_builder`], or a newly generated one.
     ///
     /// Only the expense itself is checked here; whether its members,
     /// category, and cost fit a group is checked when it is added to one.
@@ -618,13 +622,11 @@ struct ExpenseRecord {
 #[cfg(feature = "serde")]
 fn from_record(record: ExpenseRecord) -> Result<Expense, ExpenseError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
-    let builder = ExpenseBuilder {
-        id: Some(record.id),
-        ..starting(record.name, cost, record.payers, record.split, record.date)
-    }
-    .tip(record.tip)
-    .time(record.time)
-    .category(record.category.unwrap_or(CategoryId::UNCATEGORISED));
+    let builder = starting(record.name, cost, record.payers, record.split, record.date)
+        .id(record.id)
+        .tip(record.tip)
+        .time(record.time)
+        .category(record.category.unwrap_or(CategoryId::UNCATEGORISED));
     match record.description {
         Some(description) => builder.description(description).build(),
         None => builder.build(),

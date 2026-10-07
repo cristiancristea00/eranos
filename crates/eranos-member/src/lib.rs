@@ -18,9 +18,10 @@ pub use error::{FromMemberError, MemberError};
 
 /// A person who pays for or shares expenses.
 ///
-/// Only the first name is required. A member gets its identifier when it is
-/// built, and keeps it through every edit. Members are values: to change
-/// one, edit a copy with [`to_builder`](Self::to_builder) and pass it to
+/// Only the first name is required. A member gets the identifier given to
+/// [`MemberBuilder::id`], or a generated one when it is built, and keeps it
+/// through every edit. Members are values: to change one, edit a copy with
+/// [`to_builder`](Self::to_builder) and pass it to
 /// `ExpenseGroup::replace_member`.
 ///
 /// # Examples
@@ -132,6 +133,26 @@ pub struct MemberBuilder {
 }
 
 impl MemberBuilder {
+    /// Sets the identifier, such as the key an app's own store gives the
+    /// member, or leaves it to [`build`](Self::build) to generate one with
+    /// `None`; a builder from [`Member::to_builder`] starts with the
+    /// member's.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Member, MemberId};
+    ///
+    /// let ana = Member::builder("Ana").id(MemberId::new("ana")?).build()?;
+    /// assert_eq!(ana.id().as_str(), "ana");
+    /// assert_eq!(ana.to_builder().first_name("Anna").build()?.id(), ana.id());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn id(mut self, id: impl Into<Option<MemberId>>) -> Self {
+        self.id = id.into();
+        self
+    }
+
     /// Replaces the first name.
     pub fn first_name(mut self, first_name: impl Into<String>) -> Self {
         self.first_name = first_name.into();
@@ -168,9 +189,9 @@ impl MemberBuilder {
         self
     }
 
-    /// Validates the names and returns the member, under a newly generated
-    /// identifier unless the builder came from
-    /// [`Member::to_builder`].
+    /// Validates the names and returns the member, under the identifier the
+    /// builder holds, given to [`id`](Self::id) or kept by
+    /// [`Member::to_builder`], or a newly generated one.
     ///
     /// # Errors
     ///
@@ -207,13 +228,11 @@ struct MemberRecord {
 /// Builds the member `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
 fn from_record(record: MemberRecord) -> Result<Member, MemberError> {
-    let builder = MemberBuilder {
-        id: Some(record.id),
-        ..Member::builder(record.first_name)
-    }
-    .email(record.email)
-    .phone(record.phone)
-    .accounts(record.accounts);
+    let builder = Member::builder(record.first_name)
+        .id(record.id)
+        .email(record.email)
+        .phone(record.phone)
+        .accounts(record.accounts);
     match record.last_name {
         Some(last_name) => builder.last_name(last_name).build(),
         None => builder.build(),

@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -205,8 +206,8 @@ class ExpenseGroupTest {
         }
 
     /**
-     * A new group that dropped what it starts with, or a saved one that loaded from text that is not the saved form, would
-     * start an app from another group.
+     * A new group that dropped what it starts with, its identifier included, started from an identifier the rules refuse, or
+     * a saved one that loaded from text that is not the saved form, would start an app from another group.
      */
     @Test
     fun aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() =
@@ -215,6 +216,13 @@ class ExpenseGroupTest {
             val plain = ExpenseGroup("Trip", euro)
             assertNull(plain.description())
             assertNull(plain.language())
+            val named = ExpenseGroup(ExpenseGroupId.parse("flat-12"), "Flat", euro, "Rent", Language.parse("ro"))
+            assertEquals(ExpenseGroupId("flat-12"), named.id())
+            assertEquals("Rent", named.description())
+            assertEquals(ExpenseGroupId("flat-12"), ExpenseGroup.load(named.save()).id())
+            assertNotEquals(named.id(), plain.id())
+            val refused = assertThrows<EranosException.Id> { ExpenseGroup(ExpenseGroupId("flat\n12"), "Flat", euro) }
+            assertEquals(IdFailure.ControlCharacter, refused.failure)
             val blank = assertThrows<EranosException.ExpenseGroup> { ExpenseGroup(" ", euro) }
             assertEquals(ExpenseGroupFailure.EmptyName, blank.failure)
             assertEquals("the group name must not be empty", blank.message)

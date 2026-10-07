@@ -529,14 +529,13 @@ static inline void eranosCurrencyRateListDestroy(EranosCurrencyRateList *const l
 /// queued calls finish and their callbacks run.
 typedef struct EranosExpenseGroup EranosExpenseGroup;
 
-/// A new group, with the details `details` holds.
+/// A new group, with the details `details` holds, under the identifier they give, or a generated one.
 ///
 /// @param details The details
 /// @param group Receives the group on success, which the caller destroys, and nullptr on failure
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_MONEY for a
-/// currency
-///   the library does not list, of the kind ERANOS_ERROR_KIND_EXPENSE_GROUP for a blank name, and of the kind ERANOS_ERROR_KIND_LANGUAGE for a
-///   language that is not a tag
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ID for an
+///   identifier the library refuses, of the kind ERANOS_ERROR_KIND_MONEY for a currency the library does not list, of the kind
+///   ERANOS_ERROR_KIND_EXPENSE_GROUP for a blank name, and of the kind ERANOS_ERROR_KIND_LANGUAGE for a language that is not a tag
 [[nodiscard]] static inline EranosError *eranosExpenseGroupCreate(EranosNewExpenseGroup const *const details, EranosExpenseGroup **const group) {
     EranosExpenseGroup_create_result const result = EranosExpenseGroup_create(details);
     *group = result.is_ok ? result.ok : nullptr;
@@ -669,7 +668,7 @@ static inline void eranosExpenseGroupCategoryAsync(EranosExpenseGroup const *con
     EranosExpenseGroup_category_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// Adds `category`, which has no identifier yet, and returns the one it gets. Writes it into @p id.
+/// Adds `category` under its identifier, or one the library generates when it has none, and returns the identifier. Writes it into @p id.
 ///
 /// @param group The group
 /// @param category The category
@@ -938,7 +937,7 @@ static inline void eranosExpenseGroupExpenseSharesAsync(EranosExpenseGroup const
     EranosExpenseGroup_expense_shares_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// Adds `expense`, which has no identifier yet, and returns the one it gets. Writes it into @p id.
+/// Adds `expense` under its identifier, or one the library generates when it has none, and returns the identifier. Writes it into @p id.
 ///
 /// @param group The group
 /// @param expense The expense
@@ -1172,7 +1171,7 @@ static inline void eranosExpenseGroupIsArchivedAsync(EranosExpenseGroup const *c
     EranosExpenseGroup_is_archived_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// Adds `member`, who has no identifier yet, and returns the one they get. Writes it into @p id.
+/// Adds `member` under their identifier, or one the library generates when they have none, and returns the identifier. Writes it into @p id.
 ///
 /// @param group The group
 /// @param member The member
@@ -1531,7 +1530,7 @@ static inline void eranosExpenseGroupTransferAmountAsync(EranosExpenseGroup cons
     EranosExpenseGroup_transfer_amount_async(group, eranosDetailView(id), cancellation, wrapped);
 }
 
-/// Adds `transfer`, which has no identifier yet, and returns the one it gets. Writes it into @p id.
+/// Adds `transfer` under its identifier, or one the library generates when it has none, and returns the identifier. Writes it into @p id.
 ///
 /// @param group The group
 /// @param transfer The transfer
@@ -1872,6 +1871,34 @@ typedef struct EranosNewExpenseGroup EranosNewExpenseGroup;
     *newGroup = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
+
+/// The identifier: the app's own, or absent for the library to generate one. Writes it, if present; absent otherwise.
+///
+/// @param newGroup The new group
+/// @param id Receives the identifier: the app's own, or absent for the library to generate one, replacing what it held
+/// @return Whether there is one
+[[nodiscard]] static inline bool eranosNewExpenseGroupId(EranosNewExpenseGroup const *const newGroup, EranosText *const id) {
+    eranosDetailClear(id);
+    bool const present = EranosNewExpenseGroup_id(newGroup, id).is_ok;
+    eranosDetailFinish(id);
+    return present;
+}
+
+/// Sets the identifier: the app's own, or absent for the library to generate one.
+///
+/// @param newGroup The new group
+/// @param id The identifier: the app's own, or absent for the library to generate one, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosNewExpenseGroupSetId(EranosNewExpenseGroup *const newGroup, char const *const id) {
+    EranosNewExpenseGroup_set_id_result const result = EranosNewExpenseGroup_set_id(newGroup, eranosDetailView(id));
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// Clears the identifier: the app's own, or absent for the library to generate one.
+///
+/// @param newGroup The new group
+static inline void eranosNewExpenseGroupClearId(EranosNewExpenseGroup *const newGroup) { EranosNewExpenseGroup_clear_id(newGroup); }
 
 /// The group's name.
 ///

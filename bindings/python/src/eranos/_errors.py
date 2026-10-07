@@ -29,9 +29,9 @@ class EranosError(Exception):
                 case _:
                     raise
 
-    A call the program should not make raises the standard error instead: ``ValueError`` for an entry to add that has an
-    identifier or one to replace that has none, and ``RuntimeError`` for a read through an ``ExpenseGroupReader`` after its
-    release. A call whose task is cancelled raises ``asyncio.CancelledError``.
+    A call the program should not make raises the standard error instead: ``ValueError`` for an entry to replace that has
+    no identifier, and ``RuntimeError`` for a read through an ``ExpenseGroupReader`` after its release. A call whose task
+    is cancelled raises ``asyncio.CancelledError``.
     """
 
 
@@ -955,7 +955,6 @@ _ERRORS: dict[type[object], Callable[[Any], BaseException]] = {
     generated.EranosError.Transfer: lambda error: TransferError(_TRANSFER_FAILURES[error.failure], error.detail),
     generated.EranosError.ExpenseGroup: lambda error: ExpenseGroupError(_EXPENSE_GROUP_FAILURES[type(error.failure)](error.failure), error.detail),
     generated.EranosError.Language: lambda error: LanguageError(_LANGUAGE_FAILURES[error.failure], error.detail),
-    generated.EranosError.IdentifierGiven: lambda error: ValueError(error.detail),
     generated.EranosError.IdentifierMissing: lambda error: ValueError(error.detail),
     generated.EranosError.InvalidJson: lambda error: InvalidJsonError(error.detail, line=error.line, column=error.column),
     generated.EranosError.Cancelled: lambda error: asyncio.CancelledError(error.detail),

@@ -84,15 +84,26 @@ class ExpenseGroup:
         self._handle: generated.ExpenseGroup | None = handle
 
     @classmethod
-    def create(cls, name: str, currency: CurrencyCode, *, description: str | None = None, language: Language | None = None) -> Self:
+    def create(
+        cls,
+        name: str,
+        currency: CurrencyCode,
+        *,
+        # Named id, as every entry's identifier is, though the name shadows the builtin.
+        id: ExpenseGroupId | None = None,  # ruff: ignore[builtin-argument-shadowing]
+        description: str | None = None,
+        language: Language | None = None,
+    ) -> Self:
         """
-        Make a group with no members and no entries, called name, whose totals are in currency.
+        Make a group with no members and no entries, called name, whose totals are in currency, under the identifier id or a generated one.
 
-        The library refuses a blank name with ``ExpenseGroupError.EmptyName``, in an ``ExpenseGroupError``.
+        The library refuses text that is not an identifier with an ``IdError``, and a blank name with ``ExpenseGroupError.EmptyName``, in an
+        ``ExpenseGroupError``.
 
         Args:
             name: The name.
             currency: The group currency.
+            id: The identifier the app gives the group, such as the key of its own store, or none for the library to generate one.
             description: A longer description, or none.
             language: The language the apps show the group in, or none.
 
@@ -101,7 +112,7 @@ class ExpenseGroup:
 
         """
         details = generated.NewExpenseGroup(
-            name=name, currency=currency.code, description=description, language=None if language is None else str(language)
+            id=id, name=name, currency=currency.code, description=description, language=None if language is None else str(language)
         )
         with library_errors():
             return cls(generated.ExpenseGroup(details))
@@ -298,11 +309,11 @@ class ExpenseGroup:
 
     def add_category(self, category: Category) -> CategoryId:
         """
-        Add category, which has no identifier yet, and return the one the group gives it.
+        Add category under its identifier, or one the group generates when it has none, and return the identifier.
 
-        It blocks the calling thread while another call holds the group's lock. The library refuses a blank name with ``CategoryError.EmptyName``, and
-        a name another category has, compared caselessly, with ``ExpenseGroupError.DuplicateCategoryName``; a category with an identifier raises
-        ``ValueError``.
+        It blocks the calling thread while another call holds the group's lock. The library refuses text that is not an identifier with an
+        ``IdError``, an identifier the group holds with ``ExpenseGroupError.DuplicateCategory``, a blank name with ``CategoryError.EmptyName``, and a
+        name another category has, compared caselessly, with ``ExpenseGroupError.DuplicateCategoryName``.
 
         Args:
             category: The category.
@@ -316,7 +327,7 @@ class ExpenseGroup:
 
     async def add_category_async(self, category: Category) -> CategoryId:
         """
-        Add category, which has no identifier yet, and return the one the group gives it.
+        Add category under its identifier, or one the group generates when it has none, and return the identifier.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_category refuses.
@@ -554,12 +565,12 @@ class ExpenseGroup:
 
     def add_expense(self, expense: Expense) -> ExpenseId:
         """
-        Add expense, which has no identifier yet, and return the one the group gives it.
+        Add expense under its identifier, or one the group generates when it has none, and return the identifier.
 
-        It blocks the calling thread while another call holds the group's lock. The library refuses an expense that does not build, such as one whose
+        It blocks the calling thread while another call holds the group's lock. The library refuses text that is not an identifier with an
+        ``IdError``, an identifier the group holds with ``ExpenseGroupError.DuplicateExpense``, an expense that does not build, such as one whose
         amounts do not add up, with an ``ExpenseError``, and one that does not fit the group, such as one that names a member it does not hold or an
-        archived one, with ``ExpenseGroupError.UnknownMember`` and ``ExpenseGroupError.ArchivedMember``; an expense with an identifier raises
-        ``ValueError``.
+        archived one, with ``ExpenseGroupError.UnknownMember`` and ``ExpenseGroupError.ArchivedMember``.
 
         Args:
             expense: The expense.
@@ -573,7 +584,7 @@ class ExpenseGroup:
 
     async def add_expense_async(self, expense: Expense) -> ExpenseId:
         """
-        Add expense, which has no identifier yet, and return the one the group gives it.
+        Add expense under its identifier, or one the group generates when it has none, and return the identifier.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_expense refuses.
@@ -778,11 +789,11 @@ class ExpenseGroup:
 
     def add_member(self, member: Member) -> MemberId:
         """
-        Add member, who has no identifier yet, and return the one the group gives them.
+        Add member under their identifier, or one the group generates when they have none, and return the identifier.
 
-        It blocks the calling thread while another call holds the group's lock. The library refuses a blank first name with
-        ``MemberError.EmptyFirstName``, and an account with a blank name with ``PaymentAccountError.EmptyName``; a member with an identifier raises
-        ``ValueError``.
+        It blocks the calling thread while another call holds the group's lock. The library refuses text that is not an identifier with an
+        ``IdError``, an identifier the group holds with ``ExpenseGroupError.DuplicateMember``, a blank first name with ``MemberError.EmptyFirstName``,
+        and an account with a blank name with ``PaymentAccountError.EmptyName``.
 
         Args:
             member: The member.
@@ -796,7 +807,7 @@ class ExpenseGroup:
 
     async def add_member_async(self, member: Member) -> MemberId:
         """
-        Add member, who has no identifier yet, and return the one the group gives them.
+        Add member under their identifier, or one the group generates when they have none, and return the identifier.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_member refuses.
@@ -1119,11 +1130,11 @@ class ExpenseGroup:
 
     def add_transfer(self, transfer: Transfer) -> TransferId:
         """
-        Add transfer, which has no identifier yet, and return the one the group gives it.
+        Add transfer under its identifier, or one the group generates when it has none, and return the identifier.
 
-        It blocks the calling thread while another call holds the group's lock. The library refuses a transfer that does not build, such as one from a
-        member to themselves, with a ``TransferError``, and one that names a member the group does not hold with ``ExpenseGroupError.UnknownMember``;
-        a transfer with an identifier raises ``ValueError``.
+        It blocks the calling thread while another call holds the group's lock. The library refuses text that is not an identifier with an
+        ``IdError``, an identifier the group holds with ``ExpenseGroupError.DuplicateTransfer``, a transfer that does not build, such as one from a
+        member to themselves, with a ``TransferError``, and one that names a member the group does not hold with ``ExpenseGroupError.UnknownMember``.
 
         Args:
             transfer: The transfer.
@@ -1137,7 +1148,7 @@ class ExpenseGroup:
 
     async def add_transfer_async(self, transfer: Transfer) -> TransferId:
         """
-        Add transfer, which has no identifier yet, and return the one the group gives it.
+        Add transfer under its identifier, or one the group generates when it has none, and return the identifier.
 
         It waits for the group's lock without blocking the event loop; cancelling the call's task cancels the call, which leaves the group as it was.
         It refuses what add_transfer refuses.

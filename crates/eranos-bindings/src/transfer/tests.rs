@@ -1,7 +1,7 @@
 //! Transfers cross the bindings as records. A record converted back and
 //! forth would change who paid whom or when, a field the library refuses
-//! would reach it, and a transfer to add would take its identifier from
-//! outside the group.
+//! would reach it, and a transfer to add would lose the identifier its app
+//! gives it.
 
 use eranos::MemberId;
 
@@ -198,9 +198,8 @@ fn a_transfer_refuses_every_field_that_does_not_convert() {
     }
 }
 
-/// An entry to add that carried an identifier would take it from outside
-/// the group, and a replacement would lose the stored identifier, keep a
-/// field that the record changes or clears, or name no transfer.
+/// A replacement would lose the stored identifier, or keep a field that
+/// the record changes or clears.
 #[test]
 fn a_replacement_keeps_the_identifier_and_takes_every_field() {
     let stored = repayment().to_new().unwrap();
@@ -215,6 +214,29 @@ fn a_replacement_keeps_the_identifier_and_takes_every_field() {
             }
         );
     }
-    let named = Transfer { id, ..payment() };
-    assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
+}
+
+/// A transfer to add would lose the identifier its app gives it, take one
+/// the rules refuse, or, without one, not get a generated one.
+#[test]
+fn a_transfer_to_add_keeps_the_identifier_it_carries() {
+    let named = Transfer {
+        id: Some("zz".to_owned()),
+        ..payment()
+    };
+    let transfer = named.to_new().unwrap();
+    assert_eq!(transfer.id().as_str(), "zz");
+    assert_eq!(Transfer::from_library(&transfer), named);
+    assert_ne!(payment().to_new().unwrap().id(), transfer.id());
+    let padded = Transfer {
+        id: Some(" x".to_owned()),
+        ..payment()
+    };
+    assert!(matches!(
+        padded.to_new(),
+        Err(EranosError::Id {
+            failure: IdFailure::SurroundingWhitespace,
+            ..
+        })
+    ));
 }

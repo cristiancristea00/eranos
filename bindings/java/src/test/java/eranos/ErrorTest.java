@@ -57,9 +57,6 @@ class ErrorTest {
                 new eranos.internal.EranosException.Cancelled("detail"),
                 CancellationException.class);
         assertStandard(
-                new eranos.internal.EranosException.IdentifierGiven("detail"),
-                IllegalArgumentException.class);
-        assertStandard(
                 new eranos.internal.EranosException.IdentifierMissing("detail"),
                 IllegalArgumentException.class);
         assertStandard(
@@ -78,7 +75,7 @@ class ErrorTest {
                 Arrays.stream(eranos.internal.EranosException.class.getDeclaredClasses())
                         .filter(eranos.internal.EranosException.class::isAssignableFrom)
                         .count();
-        assertEquals(17, cases);
+        assertEquals(16, cases);
     }
 
     /** Checks that {@code generated} converts to a {@code standard} exception with its message. */

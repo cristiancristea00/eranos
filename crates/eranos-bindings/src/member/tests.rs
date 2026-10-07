@@ -1,12 +1,12 @@
 //! Members, their accounts, and categories cross the bindings as records. A
 //! record converted back and forth would change a detail, a detail the
-//! library refuses would reach it, and an entry to add would take its
-//! identifier from outside the group.
+//! library refuses would reach it, and an entry to add would lose the
+//! identifier its app gives it.
 
 use eranos::MemberId;
 
 use super::*;
-use crate::{CategoryFailure, ContactFailure, MemberFailure, PaymentAccountFailure};
+use crate::{CategoryFailure, ContactFailure, IdFailure, MemberFailure, PaymentAccountFailure};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -210,15 +210,30 @@ fn a_member_refuses_every_detail_that_does_not_convert() {
     }
 }
 
-/// An entry to add that carried an identifier would take it from outside
-/// the group.
+/// A member to add would lose the identifier their app gives them, take one
+/// the rules refuse, or, without one, not get a generated one.
 #[test]
-fn a_member_to_add_carries_no_identifier() {
+fn a_member_to_add_keeps_the_identifier_they_carry() {
+    let id = MemberId::new("!a").unwrap();
     let named = Member {
-        id: Some(MemberId::new("member-1").unwrap().to_string()),
+        id: Some(id.to_string()),
         ..ana()
     };
-    assert_eq!(named.to_new().unwrap_err(), EranosError::identifier_given());
+    let member = named.to_new().unwrap();
+    assert_eq!(member.id(), id);
+    assert_eq!(Member::from_library(&member), named);
+    assert_ne!(ana().to_new().unwrap().id(), id);
+    let padded = Member {
+        id: Some(" x".to_owned()),
+        ..ana()
+    };
+    assert!(matches!(
+        padded.to_new(),
+        Err(EranosError::Id {
+            failure: IdFailure::SurroundingWhitespace,
+            ..
+        })
+    ));
 }
 
 /// A replacement would lose the stored member's identifier, or keep a
@@ -238,8 +253,9 @@ fn a_replacement_keeps_the_identifier_and_takes_every_detail() {
     }
 }
 
-/// A category would reach the group with an identifier from outside, a
-/// blank name, or, renamed, under another identifier.
+/// A category would lose the identifier its app gives it, reach the group
+/// with an identifier the rules refuse or a blank name, or, renamed, keep
+/// another identifier.
 #[test]
 fn a_category_converts_and_keeps_its_identifier_when_renamed() {
     let food = Category {
@@ -265,10 +281,24 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
             .map(|category| Category::from_library(&category)),
         Ok(renamed.clone())
     );
+    // A category to add under an identifier keeps it.
     assert_eq!(
-        renamed.to_new().unwrap_err(),
-        EranosError::identifier_given()
+        renamed
+            .to_new()
+            .map(|category| Category::from_library(&category)),
+        Ok(renamed.clone())
     );
+    let padded = Category {
+        id: Some(" x".to_owned()),
+        ..renamed
+    };
+    assert!(matches!(
+        padded.to_new(),
+        Err(EranosError::Id {
+            failure: IdFailure::SurroundingWhitespace,
+            ..
+        })
+    ));
     let blank = Category {
         id: None,
         name: " ".to_owned(),

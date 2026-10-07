@@ -25,9 +25,9 @@ import java.util.function.Function;
  * }</pre>
  *
  * <p>A call the program should not make throws the standard exception instead: {@link
- * IllegalArgumentException} for an entry to add that has an identifier or one to replace that has
- * none, and {@link IllegalStateException} for a read through an {@link ExpenseGroupReader} after it
- * is closed. A future whose call is cancelled fails with a {@link CancellationException}.
+ * IllegalArgumentException} for an entry to replace that has no identifier, and {@link
+ * IllegalStateException} for a read through an {@link ExpenseGroupReader} after it is closed. A
+ * future whose call is cancelled fails with a {@link CancellationException}.
  */
 // The exceptions are not serialisable in full: their failures hold the package's values, which
 // make no promise about a serialised form.
@@ -472,10 +472,6 @@ public abstract sealed class EranosException extends Exception
                 conversions,
                 eranos.internal.EranosException.Language.class,
                 exception -> new Language(converted(exception.failure()), exception.detail()));
-        register(
-                conversions,
-                eranos.internal.EranosException.IdentifierGiven.class,
-                exception -> new IllegalArgumentException(exception.detail()));
         register(
                 conversions,
                 eranos.internal.EranosException.IdentifierMissing.class,

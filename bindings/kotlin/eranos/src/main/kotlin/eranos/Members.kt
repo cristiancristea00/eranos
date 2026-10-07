@@ -3,26 +3,27 @@ package eranos
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * A new member has no identifier; [ExpenseGroup.add] gives them one. To change a member, read them from the group, [copy] them with
- * the changes, and pass the copy to [ExpenseGroup.replace].
+ * A member to add carries the identifier the app gives them, such as the key of its own store, or none, and then
+ * [ExpenseGroup.add] generates one. To change a member, read them from the group, [copy] them with the changes, and pass the
+ * copy to [ExpenseGroup.replace].
  */
-public class Member internal constructor(
-    /** The identifier: `null` for a member to add, set for one the group holds. */
+public class Member(
+    /** The identifier: the app's own or `null` for a member to add, and set for one the group holds. */
     public val id: MemberId?,
     /** The first name. */
     public val firstName: String,
     /** The last name. */
-    public val lastName: String?,
+    public val lastName: String? = null,
     /** The email address. */
-    public val email: Email?,
+    public val email: Email? = null,
     /** The phone number. */
-    public val phone: PhoneNumber?,
-    accounts: List<PaymentAccount>,
+    public val phone: PhoneNumber? = null,
+    accounts: List<PaymentAccount> = emptyList(),
 ) {
     /** Where the member can be paid, in the order they were given. */
     public val accounts: List<PaymentAccount> = accounts.toList()
 
-    /** A member to add, called [firstName]. */
+    /** A member to add, called [firstName], under an identifier the group generates. */
     public constructor(
         firstName: String,
         lastName: String? = null,

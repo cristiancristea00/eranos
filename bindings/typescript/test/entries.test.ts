@@ -23,6 +23,7 @@ import {
     Email,
     ExchangeRate,
     ExpenseError,
+    ExpenseGroupError,
     Iban,
     IdError,
     Money,
@@ -36,6 +37,10 @@ import {
     expenseTipAmount,
     expenseTotal,
     memberId,
+    parseCategoryId,
+    parseExpenseId,
+    parseMemberId,
+    parseTransferId,
     splitMembers,
 } from '../src/index.js';
 import { Flat } from './flat.js';
@@ -190,13 +195,70 @@ void describe('the expenses, members, categories, and transfers', () => {
         assert.deepEqual(flat.group.categorySync(trip), { id: trip, name: 'Travel' });
 
         assert.throws(
-            () => flat.group.addMemberSync({ ...carol, id }),
-            (error: unknown) => error instanceof TypeError && 'an entry to add must not carry an identifier' === error.message,
-        );
-        assert.throws(
             () => flat.group.replaceMemberSync(carol),
             (error: unknown) => error instanceof TypeError && 'an entry to replace must carry its identifier' === error.message,
         );
         assert.deepEqual(CalendarDate.of(2026, 1, 1).toString(), '2026-01-01');
+    });
+
+    /**
+     * An entry stored under another identifier than the one the app gives it, a second entry under an identifier the group
+     * holds, or an identifier the rules refuse would break the link between the app's own store and the group.
+     */
+    void it("adds every kind of entry under the app's identifier and refuses one the group holds", async () => {
+        const flat = new Flat();
+        const group = flat.group;
+        const carol = parseMemberId('carol');
+        assert.equal(group.addMemberSync({ id: carol, firstName: 'Carol' }), carol);
+        assert.deepEqual(group.memberSync(carol), { id: carol, firstName: 'Carol', accounts: [] });
+        // Identifiers compare byte for byte: two spellings of é that Unicode holds equivalent are two identifiers.
+        const composed = parseMemberId('\u00e9');
+        const decomposed = parseMemberId('e\u0301');
+        assert.equal(await group.addMember({ id: composed, firstName: 'Élise' }), composed);
+        assert.equal(await group.addMember({ id: decomposed, firstName: 'Emil' }), decomposed);
+        assert.equal(group.memberSync(composed)?.firstName, 'Élise');
+        assert.equal(group.memberSync(decomposed)?.firstName, 'Emil');
+
+        const travel = parseCategoryId('travel');
+        assert.equal(group.addCategorySync({ id: travel, name: 'Travel' }), travel);
+        assert.deepEqual(group.categorySync(travel), { id: travel, name: 'Travel' });
+
+        const flight = parseExpenseId('-flight');
+        assert.equal(group.addExpenseSync({ ...flat.expense('Flight', carol, [carol, flat.ana]), id: flight, category: travel }), flight);
+        assert.equal(group.expenseSync(flight)?.id, flight);
+        assert.equal(group.expenseSync(flight)?.category, travel);
+
+        const repayment = parseTransferId('zz');
+        const cash = { id: repayment, from: flat.ana, to: carol, cost: { kind: 'local', amount: flat.euros(1_500n) }, date: flat.day } as const;
+        assert.equal(group.addTransferSync(cash), repayment);
+        assert.deepEqual(group.transferSync(repayment), cash);
+
+        const duplicates = [
+            { add: () => group.addMemberSync({ id: carol, firstName: 'Caroline' }), failure: { kind: 'duplicateMember', member: carol } },
+            { add: () => group.addCategorySync({ id: travel, name: 'Trips' }), failure: { kind: 'duplicateCategory', category: travel } },
+            {
+                add: () => group.addExpenseSync({ ...flat.expense('Taxi', carol, [carol]), id: flight }),
+                failure: { kind: 'duplicateExpense', expense: flight },
+            },
+            { add: () => group.addTransferSync({ ...cash, note: 'Again' }), failure: { kind: 'duplicateTransfer', transfer: repayment } },
+        ];
+        for (const duplicate of duplicates) {
+            assert.throws(duplicate.add, (error: unknown) => {
+                assert.ok(error instanceof ExpenseGroupError);
+                assert.deepEqual(error.failure, duplicate.failure);
+                return true;
+            });
+        }
+        assert.equal(group.memberSync(carol)?.firstName, 'Carol');
+        assert.equal(group.categorySync(travel)?.name, 'Travel');
+        assert.equal(group.expenseSync(flight)?.name, 'Flight');
+        assert.equal(group.transferSync(repayment)?.note, undefined);
+        assert.throws(
+            () => group.addMemberSync({ id: memberId(' x'), firstName: 'X' }),
+            (error: unknown) =>
+                error instanceof IdError &&
+                'surroundingWhitespace' === error.failure.kind &&
+                'an identifier cannot start or end with whitespace' === error.message,
+        );
     });
 });

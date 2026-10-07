@@ -13,8 +13,8 @@
 //! currencies as ISO 4217 codes, exchange rates as decimals, amounts as
 //! 64-bit minor units, percentages in basis points, and parts in hundredths.
 //! Every value is checked by the library's own rules on its way in, so a bad
-//! one is a typed [`EranosError`], and an entry to add carries no identifier:
-//! the group gives it one.
+//! one is a typed [`EranosError`]. An entry to add carries the identifier
+//! the caller gives it, or none, and then the library generates one.
 //!
 //! The types stay within what `uniffi` 0.29 can mirror: records, enums with
 //! data, one error enum, and objects; no methods on records, and no
@@ -68,10 +68,10 @@ pub use transfer::Transfer;
 pub use values::{
     balance_format, calendar_date_format, calendar_date_parse, currencies, currency_details,
     email_parse, exchange_rate_convert, exchange_rate_parse, expense_members, expense_tip_amount,
-    expense_total, iban_country_code, iban_parse, language_parse, money_add, money_format,
-    money_parse, money_subtract, parts_format, parts_parse, percentage_format, percentage_parse,
-    phone_number_international, phone_number_parse, split_members, time_of_day_format,
-    time_of_day_parse, username_parse,
+    expense_total, iban_country_code, iban_parse, identifier_parse, language_parse, money_add,
+    money_format, money_parse, money_subtract, parts_format, parts_parse, percentage_format,
+    percentage_parse, phone_number_international, phone_number_parse, split_members,
+    time_of_day_format, time_of_day_parse, username_parse,
 };
 
 /// The identifier `text`, as it is.
@@ -85,17 +85,16 @@ fn identifier<Id: FromStr<Err = IdError>>(text: &str) -> Result<Id, EranosError>
     Ok(text.parse()?)
 }
 
-/// Refuses a record to add whose identifier `id` is present: the group
-/// gives a new entry its own.
+/// The identifier `id` of a record to add, if it has one; the library
+/// generates one for a record without.
 ///
 /// # Errors
 ///
-/// [`EranosError::IdentifierGiven`] when `id` is present.
-fn check_new(id: Option<&str>) -> Result<(), EranosError> {
-    if id.is_some() {
-        return Err(EranosError::identifier_given());
-    }
-    Ok(())
+/// An [`EranosError::Id`] for text that is not an identifier.
+fn identifier_to_add<Id: FromStr<Err = IdError>>(
+    id: Option<&str>,
+) -> Result<Option<Id>, EranosError> {
+    id.map(identifier).transpose()
 }
 
 /// The identifier `id` of a record to replace, which names the entry it

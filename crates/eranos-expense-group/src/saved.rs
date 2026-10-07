@@ -206,12 +206,11 @@ impl SavedExpenseGroup {
                 format: self.format,
             });
         }
-        let mut builder = ExpenseGroup::builder(self.name, self.currency);
+        let mut builder = ExpenseGroup::builder(self.name, self.currency).id(self.id);
         if let Some(description) = self.description {
             builder = builder.description(description);
         }
         let mut group = builder.language(self.language).build()?;
-        group.id = self.id;
         let mut pacer = Pacer::new(ENTRIES_PER_YIELD);
         for member in self.members {
             group.add_member(member)?;

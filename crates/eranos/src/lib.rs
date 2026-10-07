@@ -213,7 +213,10 @@ pub mod id {
     //! An identifier is text, stored as it is given: at most 64 bytes of
     //! UTF-8, not empty, without control characters, and without whitespace
     //! at either end. Two identifiers are equal when their bytes are, so
-    //! case matters, and identifiers order by their bytes. A generated
+    //! case matters, and identifiers order by their bytes. An app with
+    //! identifiers of its own, such as the keys of its store, gives them to
+    //! the builders' `id` and to [`Category::with_id`](crate::Category::with_id);
+    //! an entity built without one gets a generated identifier. A generated
     //! identifier is a UUID v7 written as lowercase hyphenated text: unique
     //! across devices, so entries created offline on two phones never
     //! collide, and in creation order. With the `sequential-ids` feature,

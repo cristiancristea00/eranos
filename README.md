@@ -103,6 +103,13 @@ flowchart LR
   group's has a converted cost, with an exchange rate fixed when it is
   entered; it is converted once, exactly, into the group currency. A plain
   amount is a local cost, in the group currency at a rate of 1.
+- **Identifiers are the app's or generated.** The group and every member,
+  category, expense, and transfer take the identifier an app gives them,
+  such as the key of its own store: any text of up to 64 bytes without
+  control characters or whitespace at either end. Without one, the library
+  generates a UUID v7, unique across devices and in creation order. Lists
+  follow the identifiers' byte order, the built-in category first among
+  categories, the same on every device.
 - **Totals are incremental.** Each change moves the totals by exactly its
   own shares, checked for overflow before anything is written: a failed
   change leaves the group untouched.

@@ -2,8 +2,8 @@
 
 @testable import Eranos
 
-/// A group of two with a category, an expense, and a transfer, and the identifiers the group
-/// gave them.
+/// A group of two with a category, an expense, and a transfer, and the identifiers the library
+/// generated for them.
 struct Flat {
     let ana: Member.ID
     let bob: Member.ID

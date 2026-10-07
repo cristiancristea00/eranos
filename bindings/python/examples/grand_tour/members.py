@@ -20,6 +20,7 @@ from eranos import (
     PhoneNumber,
     Username,
     UsernamePaymentAccountDetails,
+    parse_category_id,
 )
 from examples.grand_tour.tour import Categories, People, RefusalRow, cell
 from examples.report import Row, message, print_lines, print_table, refusal, section
@@ -313,7 +314,8 @@ def add_categories(group: ExpenseGroup) -> Categories:
     """
     section('3. Categories')
     food = group.add_category(Category(name='Food'))
-    lodging = group.add_category(Category(name='Lodging'))
+    # An app that keeps its categories elsewhere gives them its own keys.
+    lodging = group.add_category(Category(id=parse_category_id('lodging'), name='Lodging'))
     transport = group.add_category(Category(name='Transport'))
     homonym = refusal(lambda: group.add_category(Category(name='FOOD')))
     stored = group.category(transport)
@@ -323,8 +325,9 @@ def add_categories(group: ExpenseGroup) -> Categories:
     built_in = refusal(lambda: group.replace_category(copy.replace(uncategorised, name='Other')))
     listed = ', '.join(category.name for category in group.categories())
     print_lines(
-        'Every group has the built-in Uncategorised; this one adds Food, Lodging, and',
-        'Transport, then renames Transport, which keeps its identifier. In identifier order:',
+        'Every group has the built-in Uncategorised; this one adds Food, Lodging, under the',
+        'identifier lodging that the app gives it, and Transport, then renames Transport, which',
+        'keeps its identifier. In identifier order, where lodging follows the generated ones:',
         f'  {listed}',
         'Names are compared caselessly, and the built-in category keeps its name:',
     )
@@ -344,4 +347,6 @@ def add_categories(group: ExpenseGroup) -> Categories:
     renamed = group.category(transport)
     assert renamed is not None
     assert renamed.name == 'Getting around'
+    assert lodging == 'lodging'
+    assert [category.id for category in group.categories()] == [uncategorised.id, food, transport, lodging]
     return Categories(food=food, lodging=lodging, transport=transport)

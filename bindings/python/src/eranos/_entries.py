@@ -1,8 +1,9 @@
 """
 Hold the entries of a group: its members, categories, expenses, and transfers, and what they hold.
 
-Every entry is a frozen dataclass: one to add has no identifier, and one the group holds has the identifier it gave, and
-``copy.replace`` edits one. A variant, such as a split or a cost, is a union of dataclasses, which a ``match`` tells apart.
+Every entry is a frozen dataclass: one to add carries the identifier the app gives it, or none, and then the group generates
+one; one the group holds has its identifier, and ``copy.replace`` edits it. A variant, such as a split or a cost, is a union
+of dataclasses, which a ``match`` tells apart.
 
 """
 
@@ -233,7 +234,7 @@ class Expense:
     """An expense: what it cost, who paid, how it divides, and when."""
 
     id: ExpenseId | None = None
-    """The identifier the group gave it, or none for an expense to add."""
+    """The app's own identifier for an expense to add, or none for the group to generate one; the identifier of one it holds or one to replace."""
 
     name: str
     """What it was."""
@@ -308,7 +309,7 @@ class Transfer:
     """A transfer of money between two members, such as a repayment."""
 
     id: TransferId | None = None
-    """The identifier the group gave it, or none for a transfer to add."""
+    """The app's own identifier for a transfer to add, or none for the group to generate one; the identifier of one it holds or one to replace."""
 
     sender: MemberId
     """The member who sent the money."""
@@ -369,7 +370,7 @@ class Member:
     """A member of a group, with the details that reach and pay them."""
 
     id: MemberId | None = None
-    """The identifier the group gave them, or none for a member to add."""
+    """The app's own identifier for a member to add, or none for the group to generate one; the identifier of one it holds or one to replace."""
 
     first_name: str
     """The first name."""
@@ -393,7 +394,7 @@ class Category:
     """A category of expenses."""
 
     id: CategoryId | None = None
-    """The identifier the group gave it, or none for a category to add."""
+    """The app's own identifier for a category to add, or none for the group to generate one; the identifier of one it holds or one to rename."""
 
     name: str
     """The name."""

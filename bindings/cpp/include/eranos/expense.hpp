@@ -188,7 +188,7 @@ struct Expense final {
     Expense(std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
         : name(std::move(name)), cost(std::move(cost)), payers(std::move(payers)), split(std::move(split)), date(date) {}
 
-    /// The identifier: absent for an expense to add, present for one the group holds.
+    /// The identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group holds.
     std::optional<ExpenseId> id;
 
     /// What was bought.

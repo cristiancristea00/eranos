@@ -292,10 +292,6 @@ private let conversions: [Conversion] = [
         generated: .PaymentAccount(failure: .invalidIban(reason: .invalidChecksum), detail: "detail")
     ),
     Conversion(
-        expected: .identifierGiven(detail: "detail"),
-        generated: .IdentifierGiven(detail: "detail")
-    ),
-    Conversion(
         expected: .identifierMissing(detail: "detail"),
         generated: .IdentifierMissing(detail: "detail")
     ),
@@ -317,7 +313,7 @@ private let conversions: [Conversion] = [
 /// the message would show an app another failure than the library's.
 @Test
 func everyFailureOfTheGeneratedCodeConvertsToItsCase() {
-    #expect(69 == conversions.count)
+    #expect(68 == conversions.count)
     for conversion in conversions {
         let error = Eranos.EranosError(conversion.generated)
         #expect(error == conversion.expected)

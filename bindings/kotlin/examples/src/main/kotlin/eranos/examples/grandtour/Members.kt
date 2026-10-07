@@ -3,6 +3,7 @@
 package eranos.examples.grandtour
 
 import eranos.Category
+import eranos.CategoryId
 import eranos.CurrencyCode
 import eranos.Email
 import eranos.EranosException
@@ -186,7 +187,8 @@ internal fun members(group: ExpenseGroup): People {
 internal fun addCategories(group: ExpenseGroup): Categories {
     section("3. Categories")
     val food = group.addBlocking(Category("Food"))
-    val lodging = group.addBlocking(Category("Lodging"))
+    // An app that keeps its categories elsewhere gives them its own keys.
+    val lodging = group.addBlocking(Category(CategoryId.parse("lodging"), "Lodging"))
     val transport = group.addBlocking(Category("Transport"))
     val homonym = refusal { group.addBlocking(Category("FOOD")) }
     val renamed = checkNotNull(group.categoryBlocking(transport)) { "Transport was added" }.copy(name = "Getting around")
@@ -195,8 +197,9 @@ internal fun addCategories(group: ExpenseGroup): Categories {
     val builtIn = refusal { group.replaceBlocking(other) }
     println(
         """
-        Every group has the built-in Uncategorised; this one adds Food, Lodging, and
-        Transport, then renames Transport, which keeps its identifier. In identifier order:
+        Every group has the built-in Uncategorised; this one adds Food, Lodging, under the
+        identifier lodging that the app gives it, and Transport, then renames Transport, which
+        keeps its identifier. In identifier order, where lodging follows the generated ones:
           ${group.categoriesBlocking().joinToString(", ") { category -> category.name }}
         Names are compared caselessly, and the built-in category keeps its name:
         """.trimIndent(),
@@ -213,5 +216,7 @@ internal fun addCategories(group: ExpenseGroup): Categories {
     check(ExpenseGroupFailure.DuplicateCategoryName(food) == (homonym as? EranosException.ExpenseGroup)?.failure)
     check(ExpenseGroupFailure.BuiltInCategory == (builtIn as? EranosException.ExpenseGroup)?.failure)
     check("Getting around" == group.categoryBlocking(transport)?.name)
+    check("lodging" == lodging.value)
+    check(listOf(builtInCategory(group), food, transport, lodging) == group.categoriesBlocking().map { category -> category.id })
     return Categories(food, lodging, transport)
 }

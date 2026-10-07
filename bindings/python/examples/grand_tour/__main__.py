@@ -32,7 +32,7 @@ def main() -> None:
         new_currency(group, people)
         settling_up(group)
         saving_and_loading(group, people, categories)
-        values(group, people)
+        values(people)
         asyncio.run(sharing(group, people))
 
 

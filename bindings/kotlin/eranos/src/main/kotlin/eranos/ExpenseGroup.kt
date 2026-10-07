@@ -27,7 +27,36 @@ public class ExpenseGroup private constructor(
     private val handle: eranos.internal.ExpenseGroup,
 ) : AutoCloseable {
     /**
-     * A new group with no members and no entries, called [name], whose totals are in [currency].
+     * A new group with no members and no entries, called [name], whose totals are in [currency], under the identifier [id]
+     * that the app gives it, or one the library generates when [id] is `null`.
+     *
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.EmptyName] for a blank name.
+     * @throws EranosException.Id for an identifier that is not one.
+     */
+    @Throws(EranosException::class)
+    public constructor(
+        id: ExpenseGroupId?,
+        name: String,
+        currency: CurrencyCode,
+        description: String? = null,
+        language: Language? = null,
+    ) : this(
+        converting {
+            eranos.internal.ExpenseGroup(
+                NewExpenseGroup(
+                    id = id?.value,
+                    name = name,
+                    currency = currency.code,
+                    description = description,
+                    language = language?.toString(),
+                ),
+            )
+        },
+    )
+
+    /**
+     * A new group with no members and no entries, called [name], whose totals are in [currency], under an identifier the
+     * library generates.
      *
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.EmptyName] for a blank name.
      */
@@ -37,7 +66,7 @@ public class ExpenseGroup private constructor(
         currency: CurrencyCode,
         description: String? = null,
         language: Language? = null,
-    ) : this(converting { eranos.internal.ExpenseGroup(NewExpenseGroup(name, currency.code, description, language?.toString())) })
+    ) : this(null, name, currency, description, language)
 
     /** Frees the group; every call after it throws [IllegalStateException], and closing a closed group does nothing. */
     override fun close() {
@@ -307,26 +336,28 @@ public class ExpenseGroup private constructor(
     public fun isArchivedBlocking(id: MemberId): Boolean = converting { handle.isArchived(id.value) }
 
     /**
-     * Adds [member], who has no identifier yet, and returns the one the group gives them.
+     * Adds [member] under their identifier, or one the group generates when they have none, and returns the identifier.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [addBlocking] blocks instead.
      *
-     * @throws IllegalArgumentException for a member with an identifier.
      * @throws EranosException.Member with [MemberFailure.EmptyFirstName] for a blank first name.
      * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyName] for an account with a blank name.
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateMember] for an identifier another member has.
+     * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class, CancellationException::class)
     public suspend fun add(member: Member): MemberId = converting { MemberId(handle.addMemberAsync(member.generated, null)) }
 
     /**
-     * Adds [member], who has no identifier yet, and returns the one the group gives them.
+     * Adds [member] under their identifier, or one the group generates when they have none, and returns the identifier.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
      *
-     * @throws IllegalArgumentException for a member with an identifier.
      * @throws EranosException.Member with [MemberFailure.EmptyFirstName] for a blank first name.
      * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyName] for an account with a blank name.
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateMember] for an identifier another member has.
+     * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
     public fun addBlocking(member: Member): MemberId = converting { MemberId(handle.addMember(member.generated)) }
@@ -474,28 +505,30 @@ public class ExpenseGroup private constructor(
     public fun categoryBlocking(id: CategoryId): Category? = converting { handle.category(id.value)?.converted() }
 
     /**
-     * Adds [category], which has no identifier yet, and returns the one the group gives it.
+     * Adds [category] under its identifier, or one the group generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [addBlocking] blocks instead.
      *
-     * @throws IllegalArgumentException for a category with an identifier.
      * @throws EranosException.Category with [CategoryFailure.EmptyName] for a blank name.
-     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateCategoryName] for a name another category has, compared
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateCategory] for an identifier another category has,
+     *   the built-in one's included, and [ExpenseGroupFailure.DuplicateCategoryName] for a name another category has, compared
      *   caselessly.
+     * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class, CancellationException::class)
     public suspend fun add(category: Category): CategoryId = converting { CategoryId(handle.addCategoryAsync(category.generated, null)) }
 
     /**
-     * Adds [category], which has no identifier yet, and returns the one the group gives it.
+     * Adds [category] under its identifier, or one the group generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
      *
-     * @throws IllegalArgumentException for a category with an identifier.
      * @throws EranosException.Category with [CategoryFailure.EmptyName] for a blank name.
-     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateCategoryName] for a name another category has, compared
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.DuplicateCategory] for an identifier another category has,
+     *   the built-in one's included, and [ExpenseGroupFailure.DuplicateCategoryName] for a name another category has, compared
      *   caselessly.
+     * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
     public fun addBlocking(category: Category): CategoryId = converting { CategoryId(handle.addCategory(category.generated)) }
@@ -612,29 +645,29 @@ public class ExpenseGroup private constructor(
     public fun expenseSharesBlocking(id: ExpenseId): ExpenseShares? = converting { handle.expenseShares(id.value)?.converted() }
 
     /**
-     * Adds [expense], which has no identifier yet, and returns the one the group gives it.
+     * Adds [expense] under its identifier, or one the group generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [addBlocking] blocks instead.
      *
-     * @throws IllegalArgumentException for an expense with an identifier.
      * @throws EranosException.Expense for an expense that does not build, such as one whose amounts do not add up.
      * @throws EranosException.ExpenseGroup for one that does not fit the group, such as [ExpenseGroupFailure.UnknownMember] or
-     *   [ExpenseGroupFailure.ArchivedMember].
+     *   [ExpenseGroupFailure.ArchivedMember], and with [ExpenseGroupFailure.DuplicateExpense] for an identifier another expense
+     *   has.
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class, CancellationException::class)
     public suspend fun add(expense: Expense): ExpenseId = converting { ExpenseId(handle.addExpenseAsync(expense.generated, null)) }
 
     /**
-     * Adds [expense], which has no identifier yet, and returns the one the group gives it.
+     * Adds [expense] under its identifier, or one the group generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
      *
-     * @throws IllegalArgumentException for an expense with an identifier.
      * @throws EranosException.Expense for an expense that does not build, such as one whose amounts do not add up.
      * @throws EranosException.ExpenseGroup for one that does not fit the group, such as [ExpenseGroupFailure.UnknownMember] or
-     *   [ExpenseGroupFailure.ArchivedMember].
+     *   [ExpenseGroupFailure.ArchivedMember], and with [ExpenseGroupFailure.DuplicateExpense] for an identifier another expense
+     *   has.
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)
@@ -750,27 +783,27 @@ public class ExpenseGroup private constructor(
     public fun transferAmountBlocking(id: TransferId): Money? = converting { handle.transferAmount(id.value)?.converted() }
 
     /**
-     * Adds [transfer], which has no identifier yet, and returns the one the group gives it.
+     * Adds [transfer] under its identifier, or one the group generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock without blocking its thread; cancelling the coroutine cancels the call, which leaves the
      * group as it was. [addBlocking] blocks instead.
      *
-     * @throws IllegalArgumentException for a transfer with an identifier.
      * @throws EranosException.Transfer for a transfer that does not build, such as [TransferFailure.SameMember].
-     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember], and [ExpenseGroupFailure.DuplicateTransfer]
+     *   for an identifier another transfer has.
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class, CancellationException::class)
     public suspend fun add(transfer: Transfer): TransferId = converting { TransferId(handle.addTransferAsync(transfer.generated, null)) }
 
     /**
-     * Adds [transfer], which has no identifier yet, and returns the one the group gives it.
+     * Adds [transfer] under its identifier, or one the group generates when it has none, and returns the identifier.
      *
      * Waits for the group's lock by blocking its thread; in a coroutine, [add] waits without blocking it.
      *
-     * @throws IllegalArgumentException for a transfer with an identifier.
      * @throws EranosException.Transfer for a transfer that does not build, such as [TransferFailure.SameMember].
-     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
+     * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember], and [ExpenseGroupFailure.DuplicateTransfer]
+     *   for an identifier another transfer has.
      * @throws EranosException.Id for an identifier that is not one.
      */
     @Throws(EranosException::class)

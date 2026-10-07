@@ -602,13 +602,14 @@ fn group_item(methods: &[TokenStream]) -> Named {
             }
 
             impl EranosExpenseGroup {
-                /// A new group, with the details `details` holds.
+                /// A new group, with the details `details` holds, under the identifier it gives or a
+                /// generated one.
                 ///
                 /// # Errors
                 ///
-                /// [`EranosError`] of the kind `Money` for a currency the library does not list, of
-                /// the kind `ExpenseGroup` for a blank name, and of the kind `Language` for a language
-                /// that is not a tag.
+                /// [`EranosError`] of the kind `Id` for an identifier the rules refuse, of the kind
+                /// `Money` for a currency the library does not list, of the kind `ExpenseGroup` for a
+                /// blank name, and of the kind `Language` for a language that is not a tag.
                 pub fn create(details: &EranosNewExpenseGroup) -> Result<Box<Self>, Box<EranosError>> {
                     eranos_bindings::ExpenseGroupHandle::new(&details.0)
                         .map(|handle| Box::new(Self::from(handle)))

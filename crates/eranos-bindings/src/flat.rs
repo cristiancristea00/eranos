@@ -41,7 +41,7 @@ impl FlatError {
 impl From<&EranosError> for FlatError {
     #[expect(
         clippy::too_many_lines,
-        reason = "one arm per case of the error, of which there are 17"
+        reason = "one arm per case of the error, of which there are 16"
     )]
     fn from(error: &EranosError) -> Self {
         let message = error.to_string();
@@ -133,12 +133,6 @@ impl From<&EranosError> for FlatError {
                 message,
                 payload: Payload::default(),
             },
-            EranosError::IdentifierGiven { .. } => Self {
-                kind: ErrorKind::IdentifierGiven,
-                failure: None,
-                message,
-                payload: Payload::default(),
-            },
             EranosError::IdentifierMissing { .. } => Self {
                 kind: ErrorKind::IdentifierMissing,
                 failure: None,
@@ -199,8 +193,6 @@ pub enum ErrorKind {
     ExpenseGroup,
     /// [`EranosError::Language`].
     Language,
-    /// [`EranosError::IdentifierGiven`].
-    IdentifierGiven,
     /// [`EranosError::IdentifierMissing`].
     IdentifierMissing,
     /// [`EranosError::InvalidJson`].

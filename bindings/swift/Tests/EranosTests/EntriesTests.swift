@@ -1,6 +1,7 @@
 // The entries. An entry that converted to the generated code and back with a field changed or
-// dropped, or read back from the group another way than it was added, would store another
-// expense, member, or transfer than the app built.
+// dropped, read back from the group another way than it was added, or stored under another
+// identifier than the app gave it would store another expense, member, or transfer than the app
+// built.
 
 @testable import Eranos
 import Testing
@@ -134,10 +135,63 @@ func membersAndTransfersConvertAndStoreWhole() throws {
 
     let category = Category(name: "Travel")
     #expect(Category(category.generated) == category)
-    #expect(throws: EranosError.identifierGiven(detail: "an entry to add must not carry an identifier")) {
+    #expect(throws: EranosError.expenseGroup(.duplicateMember(id), detail: "member \(id) already exists")) {
         try flat.group.add(stored)
     }
     #expect(throws: EranosError.identifierMissing(detail: "an entry to replace must carry its identifier")) {
         try flat.group.replace(carol)
+    }
+}
+
+/// An entry the group stored under another identifier than the one the app gave it, or a second
+/// entry it let in under an identifier it holds, would leave the app's own store naming another
+/// entry than the group's.
+@Test
+func everyEntryKeepsTheIdentifierTheAppGivesIt() throws {
+    let flat = try Flat()
+    let group = flat.group
+
+    let carol = try Member.ID("carol")
+    let member = Member(id: carol, firstName: "Carol")
+    #expect(try group.add(member) == carol)
+    #expect(try group.member(withID: carol) == member)
+    #expect(throws: EranosError.expenseGroup(.duplicateMember(carol), detail: "member carol already exists")) {
+        try group.add(Member(id: carol, firstName: "Caroline"))
+    }
+
+    let travel = try Category.ID("-travel")
+    let category = Category(id: travel, name: "Travel")
+    #expect(try group.add(category) == travel)
+    #expect(try group.category(withID: travel) == category)
+    #expect(throws: EranosError.expenseGroup(.duplicateCategory(travel), detail: "category -travel already exists")) {
+        try group.add(Category(id: travel, name: "Trips"))
+    }
+    let builtIn = try #require(try group.categories().first?.id)
+    #expect(throws: EranosError.expenseGroup(.duplicateCategory(builtIn), detail: "category \(builtIn) already exists")) {
+        try group.add(Category(id: builtIn, name: "Other"))
+    }
+
+    let taxi = try Expense.ID("!taxi")
+    let expense = Expense(
+        id: taxi,
+        name: "Taxi",
+        cost: .local(flat.euros(1_200)),
+        payers: .equal([carol]),
+        split: .whole(.equal([flat.ana, carol])),
+        date: flat.day,
+        category: travel
+    )
+    #expect(try group.add(expense) == taxi)
+    #expect(try group.expense(withID: taxi) == expense)
+    #expect(throws: EranosError.expenseGroup(.duplicateExpense(taxi), detail: "expense !taxi already exists")) {
+        try group.add(expense)
+    }
+
+    let repaid = try Transfer.ID("zz")
+    let transfer = Transfer(id: repaid, from: flat.ana, to: carol, cost: .local(flat.euros(600)), date: flat.day)
+    #expect(try group.add(transfer) == repaid)
+    #expect(try group.transfer(withID: repaid) == transfer)
+    #expect(throws: EranosError.expenseGroup(.duplicateTransfer(repaid), detail: "transfer zz already exists")) {
+        try group.add(transfer)
     }
 }

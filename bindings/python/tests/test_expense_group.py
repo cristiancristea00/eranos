@@ -20,6 +20,7 @@ from eranos import (
     GetsBackBalance,
     ExpenseGroup,
     ExpenseGroupError,
+    ExpenseGroupId,
     IdError,
     InvalidJsonError,
     Language,
@@ -37,6 +38,7 @@ from eranos import (
     TransferId,
     WholeExpenseSplit,
     Category,
+    parse_expense_group_id,
 )
 
 
@@ -66,6 +68,19 @@ def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
     with pytest.raises(ExpenseGroupError) as nameless:
         ExpenseGroup.create(' ', flat.euro)
     assert nameless.value.failure == ExpenseGroupError.EmptyName()
+
+
+def test_a_group_keeps_the_identifier_its_app_gives_it(flat: Flat) -> None:
+    """A group that lost the identifier its app gave it, or took one the library refuses, would be saved under another key than the app's."""
+    trip_id = parse_expense_group_id('trip-12')
+    with ExpenseGroup.create('Trip', flat.euro, id=trip_id) as trip:
+        assert trip.id() == trip_id
+        with ExpenseGroup.load(trip.save()) as loaded:
+            assert loaded.id() == trip_id
+    assert flat.group.id() != trip_id
+    with pytest.raises(IdError) as refused:
+        ExpenseGroup.create('Trip', flat.euro, id=ExpenseGroupId('trip\n12'))
+    assert refused.value.failure == IdError.ControlCharacter()
 
 
 def test_the_summary_and_the_shares_add_up(flat: Flat) -> None:

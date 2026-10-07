@@ -235,14 +235,16 @@ test in `crates/xtask` checks every root.
 - **The library reads no clock, touches no file, and holds no global
   state**, with three exceptions. ID generation reads the clock and the OS
   random source (UUID v7), under one private lock in `eranos-core` that
-  keeps the IDs of concurrent threads in creation order: an entity gets its
-  ID when it is built, and loading a saved group restores the IDs through
-  serde, never through a public setter. With the `sequential-ids` feature,
-  which is for examples and tests, generation reads neither and takes the
-  next value of one counter in `eranos-core` instead. Phone-number
-  validation reads rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that
-  decodes the embedded libphonenumber metadata on first use and is never
-  written after; the invariant that rules out its panic is stated at the
+  keeps the IDs of concurrent threads in creation order: an entity gets a
+  generated ID when it is built unless the caller gives one to its
+  builder's `id` or to `Category::with_id`, and loading a saved group
+  restores the IDs through the same `id` and `with_id`, so it generates
+  none. With the `sequential-ids` feature, which is for examples and
+  tests, generation reads neither and takes the next value of one counter
+  in `eranos-core` instead. Phone-number validation reads
+  rlibphonenumber's `PHONE_NUMBER_UTIL`, a `LazyLock` that decodes the
+  embedded libphonenumber metadata on first use and is never written
+  after; the invariant that rules out its panic is stated at the
   call in `eranos-contact`. The lock behind `SharedExpenseGroup` is async-lock
   without its `std` feature, which would bring blocking methods that read
   the clock; a gate keeps its features off.
@@ -291,11 +293,13 @@ test in `crates/xtask` checks every root.
   [docs/DEVELOPMENT.md § 3.9](docs/DEVELOPMENT.md#39-a-crossing-between-crates).
 - **A builder starts complete.** A type with a builder names its
   constructors `builder` or a variant of it (`itemised_builder`,
-  `builder_with_payers`, `builder_with_split`), and `to_builder` starts an
-  edit; a type without one, such as `Category` or `PaymentAccount`, has `new`.
-  Every required value is a constructor argument, so `build` never reports
-  a missing one, and every setter replaces what was set before: the last
-  call wins.
+  `builder_with_payers`, `builder_with_split`, `builder_from_payment`), and
+  `to_builder` starts an edit; a type without one, such as `Category` or
+  `PaymentAccount`, has `new`, and `Category` also `with_id`, which takes
+  the identifier an app gives it. Every required value is a constructor
+  argument, so `build` never reports a missing one; the identifier is the
+  first setter, `id`, and `None` leaves it to `build` to generate one.
+  Every setter replaces what was set before: the last call wins.
 - **A value with meaning is a named struct.** Two or more values that
   travel together, such as a member and an amount, the members of a debt,
   or a row of a report's table, get a struct with named fields, in every

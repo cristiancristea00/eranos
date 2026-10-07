@@ -28,8 +28,8 @@ import { Money } from './money.js';
  * }
  * ```
  *
- * A call the program should not make throws a `TypeError` instead: for an entry to add that has an identifier, for one
- * to replace that has none, and for a read through an {@link ExpenseGroupReader} after its release.
+ * A call the program should not make throws a `TypeError` instead: for an entry to replace that has no identifier, and for
+ * a read through an {@link ExpenseGroupReader} after its release.
  */
 export abstract class EranosError extends Error {}
 
@@ -687,8 +687,6 @@ export function convertedError(error: unknown): unknown {
             return new ExpenseGroupError(convertedGroupFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.Language:
             return new LanguageError(convertedLanguageFailure(error.inner.failure), error.inner.detail);
-        case internal.EranosError_Tags.IdentifierGiven:
-            return new TypeError(error.inner.detail);
         case internal.EranosError_Tags.IdentifierMissing:
             return new TypeError(error.inner.detail);
         case internal.EranosError_Tags.InvalidJson:

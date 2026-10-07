@@ -40,8 +40,6 @@ enum class ErrorKind : std::uint8_t {
     EXPENSE_GROUP,
     /// A failure of the language module.
     LANGUAGE,
-    /// An entry to add has an identifier, which the group gives it.
-    IDENTIFIER_GIVEN,
     /// An entry to replace has no identifier, so the group cannot tell which entry it replaces.
     IDENTIFIER_MISSING,
     /// Text that is not a saved group; the error holds the line and the column where it stops being one.

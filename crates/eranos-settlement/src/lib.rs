@@ -155,8 +155,8 @@ pub trait FromSettlementStrategy: Sized {
 
 /// The payments that settle a group, all in the group currency.
 ///
-/// Recording every payment as a transfer, with `Transfer::from_payment`,
-/// brings every balance to zero.
+/// Recording every payment as a transfer, with
+/// `Transfer::builder_from_payment`, brings every balance to zero.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettlementPlan {
     payments: Vec<Payment>,

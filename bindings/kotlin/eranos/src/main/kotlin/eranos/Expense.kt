@@ -7,12 +7,13 @@ import eranos.internal.expenseTotal
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * A new expense has no identifier; [ExpenseGroup.add] gives it one. To change an expense, read it from the group, [copy] it with
- * the changes, and pass the copy to [ExpenseGroup.replace].
+ * An expense to add carries the identifier the app gives it, such as the key of its own store, or none, and then
+ * [ExpenseGroup.add] generates one. To change an expense, read it from the group, [copy] it with the changes, and pass the
+ * copy to [ExpenseGroup.replace].
  */
-@Suppress("LongParameterList") // An expense has the library's fields; the public constructor defaults the optional ones.
-public class Expense internal constructor(
-    /** The identifier: `null` for an expense to add, set for one the group holds. */
+@Suppress("LongParameterList") // An expense has the library's fields; the public constructors default the optional ones.
+public class Expense(
+    /** The identifier: the app's own or `null` for an expense to add, and set for one the group holds. */
     public val id: ExpenseId?,
     /** What was bought. */
     public val name: String,
@@ -25,15 +26,15 @@ public class Expense internal constructor(
     /** The day it was bought. */
     public val date: CalendarDate,
     /** The tip on top of the amount. */
-    public val tip: TipRule?,
+    public val tip: TipRule? = null,
     /** The time of day it was bought. */
-    public val time: TimeOfDay?,
+    public val time: TimeOfDay? = null,
     /** The category; `null` for the built-in one. */
-    public val category: CategoryId?,
+    public val category: CategoryId? = null,
     /** A longer description. */
-    public val description: String?,
+    public val description: String? = null,
 ) {
-    /** An expense to add, of [cost] on [date], that [payers] paid and [split] shares. */
+    /** An expense to add, of [cost] on [date], that [payers] paid and [split] shares, under an identifier the group generates. */
     public constructor(
         name: String,
         cost: Cost,

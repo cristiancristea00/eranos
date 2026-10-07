@@ -9,9 +9,9 @@ import java.util.Optional;
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * <p>A new expense has no identifier; {@link ExpenseGroup#addExpense} gives it one. To change an
- * expense, read it from the group, edit it through {@link #toBuilder}, and pass the result to
- * {@link ExpenseGroup#replaceExpense}.
+ * <p>A new expense takes the identifier the app gives it through {@link Builder#id}, or none, and
+ * then {@link ExpenseGroup#addExpense} generates one. To change an expense, read it from the group,
+ * edit it through {@link #toBuilder}, and pass the result to {@link ExpenseGroup#replaceExpense}.
  */
 public final class Expense {
     private final ExpenseId id;
@@ -111,7 +111,7 @@ public final class Expense {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for an expense to add
+     * @return the identifier, empty for an expense to add under one the group generates
      */
     public Optional<ExpenseId> id() {
         return Optional.ofNullable(id);
@@ -279,7 +279,7 @@ public final class Expense {
 
     /** A builder of an expense, whose every setter replaces what was set before. */
     public static final class Builder {
-        private final ExpenseId id;
+        private ExpenseId id;
         private String name;
         private Cost cost;
         private Split payers;
@@ -297,8 +297,19 @@ public final class Expense {
                 Split payers,
                 ExpenseSplit split,
                 CalendarDate date) {
+            id(id).name(name).cost(cost).payers(payers).split(split).date(date);
+        }
+
+        /**
+         * Sets the identifier; {@code null} leaves it to the group to generate one when it adds the
+         * expense.
+         *
+         * @param id the identifier, or {@code null}
+         * @return this builder
+         */
+        public Builder id(ExpenseId id) {
             this.id = id;
-            name(name).cost(cost).payers(payers).split(split).date(date);
+            return this;
         }
 
         /**

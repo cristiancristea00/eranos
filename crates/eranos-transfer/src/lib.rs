@@ -25,8 +25,9 @@ pub use error::{FromTransferError, TransferError};
 /// credit shrinks. It is not spending, so it counts towards no total or
 /// category. Like an expense, it has a [`Cost`]: a transfer in another
 /// currency than its group's carries the [`ExchangeRate`] into the group
-/// currency. A transfer gets its identifier when it is built, and keeps it
-/// through every edit.
+/// currency. A transfer gets the identifier given to
+/// [`TransferBuilder::id`], or a generated one when it is built, and keeps
+/// it through every edit.
 ///
 /// # Examples
 ///
@@ -80,29 +81,35 @@ impl Transfer {
         }
     }
 
-    /// The transfer recording `payment`, made on `date`, under a newly
-    /// generated identifier.
+    /// Starts the transfer recording `payment`, made on `date`: from its
+    /// payer to its payee, of its amount, as a local cost in the group
+    /// currency.
     ///
-    /// Recording every payment of a [`SettlementPlan`](eranos_settlement::SettlementPlan) brings
-    /// every balance to zero.
-    #[must_use]
-    pub fn from_payment(payment: &Payment, date: CalendarDate) -> Self {
-        // A settlement pays only from a debtor to a creditor, and only a
-        // positive amount: the checks of `TransferBuilder::build` hold.
-        debug_assert!(
-            payment.from() != payment.to() && payment.amount().is_positive(),
-            "a payment is between two members and positive"
-        );
-        Self {
-            id: TransferId::generate(),
-            from: payment.from(),
-            to: payment.to(),
-            amount: payment.amount(),
-            date,
-            exchange_rate: None,
-            time: None,
-            note: None,
-        }
+    /// Recording every payment of a
+    /// [`SettlementPlan`](eranos_settlement::SettlementPlan) brings every
+    /// balance to zero. A settlement pays only from one member to another,
+    /// and only a positive amount, so `build` accepts what this starts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, CurrencyCode, ExpenseGroup, Member, Money, SettlementStrategy, Transfer};
+    ///
+    /// let mut group = ExpenseGroup::builder("Flat", CurrencyCode::EUR).build()?;
+    /// let ana = group.add_member(Member::builder("Ana").build()?)?;
+    /// let bob = group.add_member(Member::builder("Bob").build()?)?;
+    /// let day = CalendarDate::new(2026, 9, 24)?;
+    /// group.add_transfer(Transfer::builder(ana, bob, Money::parse("30.00", CurrencyCode::EUR)?, day).build()?)?;
+    ///
+    /// let payments = group.settlement(SettlementStrategy::Greedy)?.payments().to_vec();
+    /// for payment in &payments {
+    ///     group.add_transfer(Transfer::builder_from_payment(payment, day).note("Settled").build()?)?;
+    /// }
+    /// assert!(group.settlement(SettlementStrategy::Greedy)?.is_empty());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn builder_from_payment(payment: &Payment, date: CalendarDate) -> TransferBuilder {
+        Self::builder(payment.from(), payment.to(), payment.amount(), date)
     }
 
     /// Starts a builder holding a copy of this transfer, to edit it; the
@@ -199,8 +206,8 @@ impl Transfer {
     }
 }
 
-/// Builds a [`Transfer`]; created by [`Transfer::builder`] or
-/// [`Transfer::to_builder`].
+/// Builds a [`Transfer`]; created by [`Transfer::builder`],
+/// [`Transfer::builder_from_payment`], or [`Transfer::to_builder`].
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct TransferBuilder {
@@ -214,11 +221,12 @@ pub struct TransferBuilder {
 }
 
 impl TransferBuilder {
-    /// Uses `id` instead of a generated identifier, so a test can compare a
-    /// built transfer with one made elsewhere.
-    #[cfg(test)]
-    pub(crate) const fn with_id(mut self, id: TransferId) -> Self {
-        self.id = Some(id);
+    /// Sets the identifier, such as the key an app's own store gives the
+    /// transfer, or leaves it to [`build`](Self::build) to generate one with
+    /// `None`; a builder from [`Transfer::to_builder`] starts with the
+    /// transfer's.
+    pub fn id(mut self, id: impl Into<Option<TransferId>>) -> Self {
+        self.id = id.into();
         self
     }
 
@@ -262,8 +270,9 @@ impl TransferBuilder {
         self
     }
 
-    /// Validates the transfer and returns it, under a newly generated
-    /// identifier unless the builder came from [`Transfer::to_builder`].
+    /// Validates the transfer and returns it, under the identifier the
+    /// builder holds, given to [`id`](Self::id) or kept by
+    /// [`Transfer::to_builder`], or a newly generated one.
     ///
     /// # Errors
     ///
@@ -312,11 +321,9 @@ struct TransferRecord {
 #[cfg(feature = "serde")]
 fn from_record(record: TransferRecord) -> Result<Transfer, TransferError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
-    let builder = TransferBuilder {
-        id: Some(record.id),
-        ..Transfer::builder(record.from, record.to, cost, record.date)
-    }
-    .time(record.time);
+    let builder = Transfer::builder(record.from, record.to, cost, record.date)
+        .id(record.id)
+        .time(record.time);
     match record.note {
         Some(note) => builder.note(note).build(),
         None => builder.build(),

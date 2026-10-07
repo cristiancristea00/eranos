@@ -129,12 +129,16 @@ flowchart TD
   checked by the library's rules on its way in, so a bad value, a number
   too large for its field included, is a typed error and never wraps into
   another value.
-- **Identity stays with the group.** An entry to add carries no identifier
-  (`IdentifierGiven` otherwise), and the call returns the one the group
-  generated. An entry to replace names its entry (`IdentifierMissing`
-  otherwise), and the replacement starts from the stored entry's
-  `to_builder()` and takes every field of the record, so no identifier is
-  set from outside.
+- **Identity is given or generated.** An entry to add may carry any
+  identifier the library accepts, such as the key of the app's own store,
+  or none, and then the library generates one; the call returns the
+  identifier, and one the group already holds is refused as a duplicate. A
+  new group takes an identifier the same way. `identifier_parse` checks a
+  text by the rules every kind of identifier shares before an app stores
+  it. An entry to replace names its entry (`IdentifierMissing` otherwise),
+  and the replacement starts from the stored entry's `to_builder()` and
+  takes every field of the record, so a replacement cannot move an entry
+  to another identifier.
 - **One error, grouped by module.** A binding call can fail in several
   modules at once, since its records are converted before the library runs
   it, and a generated function throws one error type, so every call
@@ -152,10 +156,9 @@ flowchart TD
   first rule the text breaks, in that order; the flat form names them
   `IdEmpty`, `IdTooLong`, `IdControlCharacter`, and
   `IdSurroundingWhitespace`. The core's own cases stand beside the
-  modules: `Cancelled`, `IdentifierGiven`, `IdentifierMissing`,
-  `InvalidJson`, which names the line and column of a refused saved group
-  but not its text, since the text can hold an account number, and
-  `Released`. The conversion traits
+  modules: `Cancelled`, `IdentifierMissing`, `InvalidJson`, which names
+  the line and column of a refused saved group but not its text, since the
+  text can hold an account number, and `Released`. The conversion traits
   of [ARCHITECTURE.md § 2](ARCHITECTURE.md#2-crate-map) keep the
   conversion exhaustive, so a new variant fails the core's build.
 - **One group object.** `ExpenseGroupHandle` holds a `SharedExpenseGroup`
@@ -176,9 +179,9 @@ flowchart TD
   the library's calls change nothing until they complete, so the group is
   left as it was, and its lock is released.
 - **The value helpers.** Free functions parse and write every value as the
-  library does (amounts, rates, percentages, parts, dates, times, language
-  tags, balances, currencies, and contact and account details), so every
-  text a binding shows is the library's.
+  library does (identifiers, amounts, rates, percentages, parts, dates,
+  times, language tags, balances, currencies, and contact and account
+  details), so every text a binding shows is the library's.
 - **Shapes every generator takes.** The types keep to what UniFFI 0.29,
   the oldest version the glue crates use, can mirror: records, enums with
   data, one error enum, and objects; no methods on records, and no
@@ -373,7 +376,8 @@ import`, so no generated type reaches an app. It follows the Swift API
 Design Guidelines:
 
 - Every entry has an identifier type of its own (`Member.ID`, `Expense.ID`,
-  an `Identifier` of the entity), absent on a new entry.
+  an `Identifier` of the entity), which `Identifier(_:)` checks by the
+  library's rules; a new entry's is absent unless the app gives one.
 - A value the library checks is a type that is valid once made: `CurrencyCode`,
   from the library's list, and `Money`, `ExchangeRate`, `Percentage`,
   `Parts`, `CalendarDate`, `TimeOfDay`, `Email`, `PhoneNumber`, `IBAN`,
@@ -413,16 +417,17 @@ its code. The layer follows the Kotlin library guidelines:
   generated `componentN` or `copy`; an entry's own `copy` keeps its
   identifier.
 - Every entry has an identifier type of its own, a value class
-  (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
+  (`MemberId`, `ExpenseId`) whose `parse` checks it, absent on a new entry
+  unless the app gives one. A value the library
   checks has an internal constructor and factories that check it
   (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`), and prints the
   library's text.
 - A failure the library reports throws `EranosException`, a subclass per
   module holding the module's failure (`ExpenseGroupFailure.MemberInUse`)
   and the library's message. A call the program should not make throws the
-  standard exception for it: `IllegalArgumentException` for an entry to add
-  that has an identifier or one to replace that has none, and
-  `IllegalStateException` for a read through a closed `ExpenseGroupReader`.
+  standard exception for it: `IllegalArgumentException` for an entry to
+  replace that has no identifier, and `IllegalStateException` for a read
+  through a closed `ExpenseGroupReader`.
 - Every group call is a `suspend` function that waits for the lock without
   blocking its thread; cancelling its coroutine drops the library's call,
   which leaves the group as it was. Its twin, whose name ends in `Blocking`,
@@ -448,10 +453,11 @@ module (`--patch-module`), whose `module-info` exports only `eranos`, so
 The layer follows Effective Java and Google Java Style:
 
 - Identifiers, amounts, the shares of a split, and the totals are
-  records; a value the library checks is a final class with a private
-  constructor and factories that check it (`CurrencyCode.of`, `Money.parse`,
-  `CalendarDate.of`); an entry is a final class built by a builder, as in
-  Rust, and edited through `toBuilder`, which keeps its identifier.
+  records, and an identifier's `parse` checks it; a value the library
+  checks is a final class with a private constructor and factories that
+  check it (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`); an entry
+  is a final class built by a builder, as in Rust, whose `id` takes the
+  app's identifier, and edited through `toBuilder`, which keeps it.
 - An absent value is an empty `Optional`, a variant a record of a sealed
   interface, and a failure the library reports a checked
   `EranosException`, a subclass per module holding the module's failure.
@@ -485,16 +491,16 @@ build. The layer follows the Google TypeScript Style Guide:
 
 - Every entry has an identifier type of its own, a branded string
   (`MemberId`, `ExpenseId`) that no other text or identifier stands in for,
-  absent on a new entry. A value the library checks is a class with
+  which `parseMemberId` and its siblings check, absent on a new entry
+  unless the app gives one. A value the library checks is a class with
   factories that check it (`CurrencyCode.of`, `Money.parse`, `CalendarDate.of`),
   printing the library's text; entries and totals are read-only interfaces,
   and a variant is a union discriminated by `kind`
   (`{ kind: 'equal', members }`).
 - A failure the library reports throws an `EranosError`, a subclass per
   module holding the module's failure, itself a union by `kind`. A call the
-  program should not make throws `TypeError`: an entry to add that has an
-  identifier, one to replace that has none, and a read through a released
-  `ExpenseGroupReader`.
+  program should not make throws `TypeError`: an entry to replace that has
+  no identifier, and a read through a released `ExpenseGroupReader`.
 - Every group call returns a Promise that waits for the lock; aborting the
   `AbortSignal` of its options cancels the call, which leaves the group as
   it was, and rejects with the signal's reason. Its twin, whose name ends in
@@ -590,7 +596,8 @@ Core Guidelines with the naming rule above:
   `Percentage`, `Parts`); a value the library checks is a class with a
   private constructor and factories that check it (`CurrencyCode::of`,
   `CalendarDate::of`, `Email::parse`), its fields in one private member;
-  every identifier is a class of its own over its text, with `std::hash`.
+  every identifier is a class of its own over its text, with `std::hash`
+  and a `parse` that checks it.
   A record is a struct whose constructor takes its required fields, and a
   variant a `std::variant` of structs (`EqualSplit`, `LocalCost`).
 - A call the library can refuse returns a `std::expected` of its value and
@@ -648,7 +655,8 @@ with every rule an error; the generated module keeps to no checker, so ty
 reads its annotations without checking its code, and Ruff leaves it out:
 
 - Every entry has an identifier type of its own, a `NewType` over `str`
-  (`MemberId`, `ExpenseId`), absent on a new entry. A value the library
+  (`MemberId`, `ExpenseId`), which `parse_member_id` and its siblings
+  check, absent on a new entry unless the app gives one. A value the library
   checks is a class whose constructor checks it, as `datetime.date`'s
   does (`CurrencyCode('EUR')`, `CalendarDate(2026, 9, 23)`,
   `Email('ana@example.com')`), and prints the library's text. Amounts,
@@ -661,8 +669,8 @@ reads its annotations without checking its code, and Ruff leaves it out:
   (`ExpenseGroupError.MemberInUse`), with the library's message; a saved
   group that is not JSON raises `InvalidJsonError`, with the line and
   column. A call the program should not make raises the standard error for
-  it: `ValueError` for an entry to add that has an identifier or one to
-  replace that has none, and `RuntimeError` for a call on a closed
+  it: `ValueError` for an entry to replace that has no identifier, and
+  `RuntimeError` for a call on a closed
   `ExpenseGroup` or a read through a released `ExpenseGroupReader`.
 - Every group call blocks, and its twin, whose name ends in `_async`, is a
   coroutine that waits for the lock without blocking the event loop;

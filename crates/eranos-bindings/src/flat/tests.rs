@@ -989,17 +989,6 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::IdentifierGiven {
-                detail: DETAIL.to_owned(),
-            },
-            flat: FlatError {
-                kind: ErrorKind::IdentifierGiven,
-                failure: None,
-                message: DETAIL.to_owned(),
-                payload: Payload::default(),
-            },
-        },
-        Flattening {
             error: EranosError::IdentifierMissing {
                 detail: DETAIL.to_owned(),
             },
@@ -1048,7 +1037,7 @@ fn flattenings() -> Vec<Flattening> {
 #[test]
 fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
     let flattenings = flattenings();
-    assert_eq!(flattenings.len(), 68);
+    assert_eq!(flattenings.len(), 67);
     for Flattening { error, flat } in &flattenings {
         assert_eq!(&FlatError::from(error), flat);
     }
@@ -1064,7 +1053,7 @@ fn every_error_flattens_to_its_kind_its_failure_and_what_it_holds() {
         .iter()
         .filter_map(|flattening| flattening.flat.payload.reason)
         .collect();
-    assert_eq!(kinds.len(), 17);
+    assert_eq!(kinds.len(), 16);
     assert_eq!(failures.len(), 58);
     assert_eq!(reasons.len(), 6);
 }
