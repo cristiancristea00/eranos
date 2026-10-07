@@ -24,7 +24,7 @@ fn the_core_is_its_marked_items_and_its_one_trait_of_calls() {
             "TimeOfDay",
             "TipDistribution",
             "ExpenseItem",
-            "Tip",
+            "TipRule",
             "Split",
             "Cost",
             "Balance",

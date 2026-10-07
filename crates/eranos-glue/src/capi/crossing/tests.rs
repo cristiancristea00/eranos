@@ -142,7 +142,7 @@ fn every_crossing_has_its_parameter_and_its_owned_value() {
         Case {
             crossing: Crossing::List(format_ident!("ExpenseItem")),
             owned: quote!(value.0.clone()),
-            parameter: quote!(value: &EranosItemList),
+            parameter: quote!(value: &EranosExpenseItemList),
         },
         Case {
             crossing: Crossing::Object(format_ident!("Expense")),
@@ -341,7 +341,7 @@ fn the_plan_holds_what_the_calls_reach() {
                     taken: false,
                 },
                 Reached {
-                    name: "Tip",
+                    name: "TipRule",
                     taken: true,
                 },
             ]),

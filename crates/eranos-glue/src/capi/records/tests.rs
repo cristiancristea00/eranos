@@ -349,12 +349,12 @@ fn a_taken_record_copies_its_records_and_lists() {
             },
             quote! {
                 #[must_use]
-                pub fn items(&self) -> Box<EranosItemList> {
-                    Box::new(EranosItemList(self.0.items.clone()))
+                pub fn items(&self) -> Box<EranosExpenseItemList> {
+                    Box::new(EranosExpenseItemList(self.0.items.clone()))
                 }
             },
             quote! {
-                pub fn set_items(&mut self, items: &EranosItemList) {
+                pub fn set_items(&mut self, items: &EranosExpenseItemList) {
                     self.0.items.clone_from(&items.0);
                 }
             },
@@ -405,7 +405,7 @@ fn a_constructor_without_text_cannot_fail_and_a_default_holds() {
         .to_token_stream()
         .to_string()
     );
-    let item = methods(&named["EranosItem"]);
+    let item = methods(&named["EranosExpenseItem"]);
     assert!(code(&item, "create").contains("quantity : 1"));
     assert!(!code(&item, "create").contains("quantity : &"));
 }
@@ -677,7 +677,7 @@ fn an_enum_without_data_is_a_c_like_enum() {
 #[test]
 fn a_taken_list_is_mutable_and_an_answered_one_is_not() {
     let named = named();
-    let items = &named["EranosItemList"];
+    let items = &named["EranosExpenseItemList"];
     assert!(items.to_string().contains("# [diplomat :: opaque_mut]"));
     assert_eq!(
         names(&methods(items)),

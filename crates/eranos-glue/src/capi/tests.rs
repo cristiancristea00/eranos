@@ -317,8 +317,8 @@ fn the_bridge_is_two_modules_that_import_what_they_name() {
         expected(quote! {
             use crate::error::ffi::EranosError;
             use crate::generated::records::ffi::{
-                EranosExpense, EranosExpenseList, EranosItemList, EranosNewExpenseGroup, EranosSummary,
-                EranosTipDistribution
+                EranosExpense, EranosExpenseItemList, EranosExpenseList, EranosNewExpenseGroup,
+                EranosSummary, EranosTipDistribution
             };
             use crate::values::ffi::{EranosCalendarDate, EranosTextList};
             use diplomat_runtime::{DiplomatStr, DiplomatWrite};

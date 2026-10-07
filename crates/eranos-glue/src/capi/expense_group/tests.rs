@@ -200,7 +200,7 @@ fn a_synchronous_form_lends_the_core_its_parameters() {
                 }
             },
             quote! {
-                pub fn set_members(&self, members: &EranosTextList, items: &EranosItemList) -> Result<(), Box<EranosError>> {
+                pub fn set_members(&self, members: &EranosTextList, items: &EranosExpenseItemList) -> Result<(), Box<EranosError>> {
                     self.handle.set_members(&members.0, &items.0).map_err(crate::failed)
                 }
             },
@@ -294,7 +294,7 @@ fn an_asynchronous_change_prepares_its_parameters_before_it_returns() {
                 pub fn set_members_async(
                     &self,
                     members: &EranosTextList,
-                    items: &EranosItemList,
+                    items: &EranosExpenseItemList,
                     cancellation: Option<&EranosCancellation>,
                     callback: impl Fn(Box<EranosUnitOutcome>) + 'static,
                 ) {
