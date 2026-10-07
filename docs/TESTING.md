@@ -79,10 +79,14 @@ language's hand-written layer alone, and prints its report byte for byte.
 Every text of a report is one the library writes
 ([BINDINGS.md § 5](BINDINGS.md#5-the-text-a-binding-shows)), so a port that
 prints another byte is a layer that shows a value otherwise, or a port that
-no longer follows its example. Gate 9 keeps each example's report; gate 19
-runs every port on a build of the glue with `sequential-ids` in
-`target/sequential`, whose identifiers count up as the example's do, and
-stops at the first line that differs, printing both versions of it. The
+no longer follows its example. A port makes an entry with its language's
+generating form where its example calls a constructor with the plain
+name, and with the form that takes the identifier where its example calls
+a `with_id` twin, so it generates identifiers in the example's order.
+Gate 9 keeps each example's report; gate 19 runs every port on a build of
+the glue with `sequential-ids` in `target/sequential`, whose identifiers
+count up as the example's do, and stops at the first line that differs,
+printing both versions of it. The
 Swift ports run on macOS, on a copy of the Swift package over the host
 library, since the identifiers of the package's own XCFramework are random;
 the Kotlin and Java ports run on every machine, on the JVM, loading that
@@ -153,10 +157,11 @@ where pytest collects a test by that prefix and the claim follows it
 Helpers are plain functions at the top of the test file (`member(1)`,
 `eur("12.00")`, `day()`). A test names members, categories, and entries by
 identifiers it builds from text with `new`, such as `member-001` or `ana`,
-whose byte order is the order the test means. An entity gets a generated ID
-when it is built unless its builder's `id` gives it one; the tie rotation
-hashes the text of an expense's ID, so a test that pins which member
-receives a leftover cent gives the expense its ID through
+whose byte order is the order the test means. An entity's constructor
+with the plain name generates its ID, and its `with_id` twin takes one
+built with `new`; the tie rotation hashes the text of an expense's ID, so a
+test that pins which member receives a leftover cent gives the expense an
+ID built with `new`, through `Expense::builder_with_id` or
 `ExpenseBuilder::id`. An integration test sees only the public API: it
 builds its entries once and clones them, and a base group, wherever two
 groups must be equal.

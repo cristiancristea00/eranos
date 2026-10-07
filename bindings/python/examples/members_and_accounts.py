@@ -200,7 +200,7 @@ def print_balances(group: ExpenseGroup) -> None:
                 balance=found.balance,
             )
             for member in group.members()
-            if member.id is not None and (found := totals(member.id, summary)) is not None
+            if (found := totals(member.id, summary)) is not None
         ],
         2,
     )
@@ -219,7 +219,7 @@ def members(group: ExpenseGroup) -> Flatmates:
     """
     section('1. Members')
     ana = group.add_member(
-        Member(
+        Member.create(
             first_name='Ana',
             last_name='Popescu',
             email=Email('ana@example.com'),
@@ -230,7 +230,7 @@ def members(group: ExpenseGroup) -> Flatmates:
             ),
         )
     )
-    bob = group.add_member(Member(first_name='Bob'))
+    bob = group.add_member(Member.create(first_name='Bob'))
     print_members(group)
     print_lines(
         'The phone number was stored in E.164 form, +40712345678, and the table shows it',
@@ -283,7 +283,7 @@ def moving_out(group: ExpenseGroup, flatmates: Flatmates) -> None:
     euro = CurrencyCode('EUR')
     both = WholeExpenseSplit(EqualSplit((ana, bob)))
     rent = group.add_expense(
-        Expense(name='Rent', cost=LocalCost(Money.parse('900.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 9, 1))
+        Expense.create(name='Rent', cost=LocalCost(Money.parse('900.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 9, 1))
     )
     group.archive_member(bob)
     print_lines(
@@ -292,7 +292,7 @@ def moving_out(group: ExpenseGroup, flatmates: Flatmates) -> None:
     )
     print_balances(group)
 
-    utilities = Expense(
+    utilities = Expense.create(
         name='Utilities', cost=LocalCost(Money.parse('60.00', euro)), payers=EqualSplit((ana,)), split=both, date=CalendarDate(2026, 10, 1)
     )
     refused = refusal(lambda: group.add_expense(utilities))

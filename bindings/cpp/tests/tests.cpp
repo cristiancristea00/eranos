@@ -108,6 +108,15 @@ template <typename Identifier> void checkParse(Check &check, std::string_view co
     check.that(isFailure(refusal(Identifier::parse("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), what);
 }
 
+/// Checks the generate() of an identifier type: two in a row differ, the second after the first in the order the library lists entries by, and
+/// each is text that parse() accepts as it is.
+template <typename Identifier> void checkGenerate(Check &check, std::string_view const what) {
+    auto const first = Identifier::generate();
+    auto const second = Identifier::generate();
+    check.that(first != second && first < second, what);
+    check.that(first == Identifier::parse(first.value()) && second == Identifier::parse(second.value()), what);
+}
+
 /// A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them.
 class Flat final {
   public:
@@ -299,6 +308,16 @@ void everyIdentifierIsCheckedAndKeptAsItIsWritten(Check &check) {
     checkParse<TransferId>(check, "a transfer's identifier");
 }
 
+/// A generated identifier that repeated an earlier one would put a new entry in the place of another, and one the rules refused would fail every
+/// call that carries it.
+void everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept(Check &check) {
+    checkGenerate<ExpenseGroupId>(check, "a group's identifier");
+    checkGenerate<MemberId>(check, "a member's identifier");
+    checkGenerate<CategoryId>(check, "a category's identifier");
+    checkGenerate<ExpenseId>(check, "an expense's identifier");
+    checkGenerate<TransferId>(check, "a transfer's identifier");
+}
+
 // --- Records and alternatives ------------------------------------------------------------------------------------------
 
 /// A record or an alternative whose comparison left a field out would merge two entries an app holds apart.
@@ -336,15 +355,22 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     checkValue(check, WholeExpenseSplit{EqualSplit{{ana}}}, WholeExpenseSplit{EqualSplit{{ana}}}, WholeExpenseSplit{EqualSplit{{bob}}},
                "whole splits");
     checkValue(check, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{pizza}}, ItemisedExpenseSplit{{twoPizzas}}, "itemised splits");
-    Expense const dinner("Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day);
+    ExpenseId const dinnerId("0199a000-0000-7000-8000-000000000004");
+    Expense const dinner(dinnerId, "Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day);
     auto described = dinner;
     described.description = "At the corner";
-    checkValue(check, dinner, Expense("Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day), described,
-               "expenses compare by description too");
-    Transfer const repayment(bob, ana, LocalCost{one}, day);
+    checkValue(check, dinner, Expense(dinnerId, "Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day),
+               described, "expenses compare by description too");
+    checkValue(check, dinner, Expense(dinnerId, "Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day),
+               Expense("Dinner", LocalCost{two}, EqualSplit{{ana}}, WholeExpenseSplit{EqualSplit{{ana, bob}}}, day),
+               "expenses compare by identifier too");
+    TransferId const repaymentId("0199a000-0000-7000-8000-000000000005");
+    Transfer const repayment(repaymentId, bob, ana, LocalCost{one}, day);
     auto noted = repayment;
     noted.note = "Cash";
-    checkValue(check, repayment, Transfer(bob, ana, LocalCost{one}, day), noted, "transfers compare by note too");
+    checkValue(check, repayment, Transfer(repaymentId, bob, ana, LocalCost{one}, day), noted, "transfers compare by note too");
+    checkValue(check, repayment, Transfer(repaymentId, bob, ana, LocalCost{one}, day), Transfer(bob, ana, LocalCost{one}, day),
+               "transfers compare by identifier too");
     auto const iban = Iban::parse("RO49AAAA1B31007593840000").value();
     checkValue(check, IbanPaymentAccountDetails{iban}, IbanPaymentAccountDetails{iban},
                IbanPaymentAccountDetails{Iban::parse("GB82WEST12345698765432").value()}, "IBAN details");
@@ -353,11 +379,13 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
                UsernamePaymentAccountDetails{Username::parse("bob.pays").value()}, "username details");
     checkValue(check, PaymentAccount("Bank", IbanPaymentAccountDetails{iban}), PaymentAccount("Bank", IbanPaymentAccountDetails{iban}),
                PaymentAccount("App", UsernamePaymentAccountDetails{username}), "accounts");
-    Member const member("Ana");
+    Member const member(ana, "Ana");
     auto withLastName = member;
     withLastName.lastName = "Pop";
-    checkValue(check, member, Member("Ana"), withLastName, "members compare by last name too");
-    checkValue(check, Category("Food"), Category("Food"), Category("Lodging"), "categories");
+    checkValue(check, member, Member(ana, "Ana"), withLastName, "members compare by last name too");
+    checkValue(check, member, Member(ana, "Ana"), Member("Ana"), "members compare by identifier too");
+    checkValue(check, Category(food, "Food"), Category(food, "Food"), Category(food, "Lodging"), "categories");
+    checkValue(check, Category(food, "Food"), Category(food, "Food"), Category("Food"), "categories compare by identifier too");
     checkValue(check, OwesBalance{one}, OwesBalance{one}, OwesBalance{two}, "balances a member owes");
     check.that(SettledBalance{} == SettledBalance{} && !(SettledBalance{} != SettledBalance{}), "settled balances are all equal");
     checkValue(check, GetsBackBalance{one}, GetsBackBalance{one}, GetsBackBalance{two}, "balances owed to a member");
@@ -392,9 +420,8 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
     lunch.time = TimeOfDay::of(13, 15).value();
     lunch.category = flat.food;
     lunch.description = "By the sea";
-    auto const lunchId = flat.group.addExpense(lunch).value();
-    lunch.id = lunchId;
-    check.that(flat.group.expense(lunchId) == lunch, "a converted expense with every detail reads back unchanged");
+    check.that(flat.group.addExpense(lunch) == lunch.id && flat.group.expense(lunch.id) == lunch,
+               "a converted expense with every detail reads back unchanged, under its identifier");
     ExpenseItem pizza("Pizza", flat.euros(1'200), EqualSplit{{flat.ana, flat.bob}});
     pizza.quantity = 2;
     Expense receipt(
@@ -402,8 +429,8 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
         ItemisedExpenseSplit{{pizza, ExpenseItem("Wine", flat.euros(600), PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}})}},
         flat.day);
     receipt.tip = TipRule(FixedTipValue{flat.euros(300)}, TipDistribution::EQUAL);
-    receipt.id = flat.group.addExpense(receipt).value();
-    check.that(flat.group.expense(receipt.id.value()) == receipt, "an itemised receipt with a fixed tip reads back unchanged");
+    check.that(flat.group.addExpense(receipt) == receipt.id && flat.group.expense(receipt.id) == receipt,
+               "an itemised receipt with a fixed tip reads back unchanged");
     auto const expenses = flat.group.expenses();
     check.that(3 == expenses.size(), "the group holds the dinner, the lunch, and the receipt");
     check.that(!flat.group.expense(ExpenseId("0199a000-0000-7000-8000-00000000ffff")).value().has_value(), "an absent expense is none");
@@ -416,9 +443,9 @@ void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
                   ConvertedCost{.amount = Money(1'000, CurrencyCode::of("RON").value()), .rate = ExchangeRate::parse("0.2").value()}, flat.day);
     cash.time = TimeOfDay::of(9, 5).value();
     cash.note = "Cash";
-    cash.id = flat.group.addTransfer(cash).value();
-    check.that(flat.group.transfer(cash.id.value()) == cash, "a converted transfer with a note and a time reads back unchanged");
-    check.that(flat.group.transferAmount(cash.id.value()) == flat.euros(200), "the transfer is 2.00 EUR in the group currency");
+    check.that(flat.group.addTransfer(cash) == cash.id && flat.group.transfer(cash.id) == cash,
+               "a converted transfer with a note and a time reads back unchanged");
+    check.that(flat.group.transferAmount(cash.id) == flat.euros(200), "the transfer is 2.00 EUR in the group currency");
     check.that(2 == flat.group.transfers().size(), "the group holds both transfers");
     check.that(!flat.group.transferAmount(TransferId("0199a000-0000-7000-8000-00000000ffff")).value().has_value(),
                "an absent transfer has no amount");
@@ -430,11 +457,9 @@ void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
         PaymentAccount("Bank", IbanPaymentAccountDetails{Iban::parse("RO49AAAA1B31007593840000").value()}),
         PaymentAccount("App", UsernamePaymentAccountDetails{Username::parse("carla.pays").value()}),
     };
-    carla.id = flat.group.addMember(carla).value();
-    check.that(flat.group.member(carla.id.value()) == carla, "a member with every detail reads back unchanged");
+    check.that(flat.group.addMember(carla) == carla.id && flat.group.member(carla.id) == carla, "a member with every detail reads back unchanged");
     check.that(3 == flat.group.members().size(), "the group holds three members");
-    check.that(flat.group.category(flat.food) == Category("Food") || "Food" == flat.group.category(flat.food).value().value().name,
-               "the category reads back");
+    check.that(flat.group.category(flat.food) == Category(flat.food, "Food"), "the category reads back");
     check.that(2 == flat.group.categories().size(), "the built-in category and the food");
 }
 
@@ -458,46 +483,62 @@ void replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas(Check &check) {
     auto meals = food;
     meals.name = "Meals";
     check.that(flat.group.replaceCategory(meals) == food && flat.group.category(flat.food) == meals, "a category");
-    auto const missing = refusal(flat.group.replaceExpense(flat.expense("Snack", flat.ana, {flat.ana})));
-    check.that(isFailure(missing, ErrorKind::IDENTIFIER_MISSING, std::nullopt), "an entry to replace names its identifier");
     auto const duplicate = refusal(flat.group.addExpense(lunch));
     check.that(isFailure(duplicate, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXPENSE),
                "an entry to add takes no identifier the group holds");
-    Member dan("Dan");
-    dan.id = MemberId(" x");
+    Member const dan(MemberId(" x"), "Dan");
     check.that(isFailure(refusal(flat.group.addMember(dan)), ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "nor one the library refuses");
+}
+
+/// A replacement of an entry the group does not hold would change another entry, or report a change it never made; each is refused with the
+/// failure that names the entry.
+void anEntryTheGroupDoesNotHoldIsNotReplaced(Check &check) {
+    Flat flat;
+    auto const snack = flat.expense("Snack", flat.ana, {flat.ana});
+    auto const expense = refusal(flat.group.replaceExpense(snack));
+    check.that(isFailure(expense, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_EXPENSE) && expense.value().expense() == snack.id,
+               "an expense");
+    Transfer const cash(flat.ana, flat.bob, LocalCost{flat.euros(500)}, flat.day);
+    auto const transfer = refusal(flat.group.replaceTransfer(cash));
+    check.that(isFailure(transfer, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_TRANSFER) && transfer.value().transfer() == cash.id,
+               "a transfer");
+    Member const carla("Carla");
+    auto const member = refusal(flat.group.replaceMember(carla));
+    check.that(isFailure(member, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_MEMBER) && member.value().member() == carla.id, "a member");
+    Category const travel("Travel");
+    auto const category = refusal(flat.group.replaceCategory(travel));
+    check.that(isFailure(category, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_UNKNOWN_CATEGORY) && category.value().category() == travel.id,
+               "a category");
+    check.that(2 == flat.group.members().size() && 2 == flat.group.categories().size() && 1 == flat.group.expenses().size() &&
+                   1 == flat.group.transfers().size(),
+               "and the group holds what it held");
 }
 
 /// An entry the group kept under another identifier than the app gave it would break the app's link to its own record, and a second entry under
 /// one identifier would stand for the first in every lookup.
 void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check &check) {
     Flat flat;
-    Member carla("Carla");
-    carla.id = MemberId::parse("carla").value();
-    check.that(flat.group.addMember(carla) == carla.id.value() && flat.group.member(carla.id.value()).value() == carla, "a member keeps it");
+    Member const carla(MemberId::parse("carla").value(), "Carla");
+    check.that(flat.group.addMember(carla) == carla.id && flat.group.member(carla.id).value() == carla, "a member keeps it");
     auto const memberTwice = refusal(flat.group.addMember(carla));
     check.that(isFailure(memberTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_MEMBER) && memberTwice.value().member() == carla.id,
                "a second member under it is refused");
-    Category lodging("Lodging");
-    lodging.id = CategoryId::parse("lodging").value();
-    check.that(flat.group.addCategory(lodging) == lodging.id.value() && flat.group.category(lodging.id.value()).value() == lodging,
-               "a category keeps it");
+    Category lodging(CategoryId::parse("lodging").value(), "Lodging");
+    check.that(flat.group.addCategory(lodging) == lodging.id && flat.group.category(lodging.id).value() == lodging, "a category keeps it");
     lodging.name = "Rooms";
     auto const categoryTwice = refusal(flat.group.addCategory(lodging));
     check.that(isFailure(categoryTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_CATEGORY) &&
                    categoryTwice.value().category() == lodging.id,
                "a second category under it is refused, whatever its name");
-    auto receipt = flat.expense("Receipt", flat.ana, {flat.ana, flat.bob});
-    receipt.id = ExpenseId::parse("receipt-17").value();
-    check.that(flat.group.addExpense(receipt) == receipt.id.value() && flat.group.expense(receipt.id.value()).value() == receipt,
-               "an expense keeps it");
+    Expense const receipt(ExpenseId::parse("receipt-17").value(), "Receipt", LocalCost{flat.euros(3'000)}, EqualSplit{{flat.ana}},
+                          WholeExpenseSplit{EqualSplit{{flat.ana, flat.bob}}}, flat.day);
+    check.that(flat.group.addExpense(receipt) == receipt.id && flat.group.expense(receipt.id).value() == receipt, "an expense keeps it");
     auto const expenseTwice = refusal(flat.group.addExpense(receipt));
     check.that(isFailure(expenseTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_EXPENSE) &&
                    expenseTwice.value().expense() == receipt.id,
                "a second expense under it is refused");
-    Transfer cash(flat.ana, flat.bob, LocalCost{flat.euros(500)}, flat.day);
-    cash.id = TransferId::parse("payment-3").value();
-    check.that(flat.group.addTransfer(cash) == cash.id.value() && flat.group.transfer(cash.id.value()).value() == cash, "a transfer keeps it");
+    Transfer const cash(TransferId::parse("payment-3").value(), flat.ana, flat.bob, LocalCost{flat.euros(500)}, flat.day);
+    check.that(flat.group.addTransfer(cash) == cash.id && flat.group.transfer(cash.id).value() == cash, "a transfer keeps it");
     auto const transferTwice = refusal(flat.group.addTransfer(cash));
     check.that(isFailure(transferTwice, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_DUPLICATE_TRANSFER) &&
                    transferTwice.value().transfer() == cash.id,
@@ -581,11 +622,12 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
     check.that(isFailure(refusal(flat.group.setDescription("\xff")), ErrorKind::INVALID_TEXT, std::nullopt), "a description that is not text");
     auto const trip = ExpenseGroup::create("Trip", flat.euro).value();
     check.that(!trip.description().has_value() && !trip.language().has_value(), "a group made without options has neither");
+    check.that(trip.id() != flat.group.id(), "a group made without an identifier has a generated one of its own");
     check.that(isFailure(refusal(ExpenseGroup::create(" ", flat.euro)), ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_EMPTY_NAME),
                "a group needs a name");
-    auto const home = ExpenseGroup::create("Home", flat.euro, ExpenseGroupOptions{.id = ExpenseGroupId::parse("home").value()}).value();
+    auto const home = ExpenseGroup::create(ExpenseGroupId::parse("home").value(), "Home", flat.euro).value();
     check.that(ExpenseGroupId("home") == home.id(), "a group under the app's identifier keeps it");
-    auto const refused = refusal(ExpenseGroup::create("Home", flat.euro, ExpenseGroupOptions{.id = ExpenseGroupId(" x")}));
+    auto const refused = refusal(ExpenseGroup::create(ExpenseGroupId(" x"), "Home", flat.euro));
     check.that(isFailure(refused, ErrorKind::ID, Failure::ID_SURROUNDING_WHITESPACE), "an identifier the library refuses");
 }
 
@@ -905,10 +947,12 @@ constexpr std::array TESTS = {
     Test{.name = "contactsAndAccountsAreCheckedAndMadeCanonical", .body = contactsAndAccountsAreCheckedAndMadeCanonical},
     Test{.name = "everyIdentifierComparesAndHashesByItsText", .body = everyIdentifierComparesAndHashesByItsText},
     Test{.name = "everyIdentifierIsCheckedAndKeptAsItIsWritten", .body = everyIdentifierIsCheckedAndKeptAsItIsWritten},
+    Test{.name = "everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept", .body = everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept},
     Test{.name = "everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother", .body = everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother},
     Test{.name = "anExpenseReadsBackAsItWasAdded", .body = anExpenseReadsBackAsItWasAdded},
     Test{.name = "aTransferAndAMemberReadBackAsTheyWereAdded", .body = aTransferAndAMemberReadBackAsTheyWereAdded},
     Test{.name = "replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas", .body = replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas},
+    Test{.name = "anEntryTheGroupDoesNotHoldIsNotReplaced", .body = anEntryTheGroupDoesNotHoldIsNotReplaced},
     Test{.name = "anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt", .body = anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt},
     Test{.name = "removingAnEntryReturnsItAndForgetsIt", .body = removingAnEntryReturnsItAndForgetsIt},
     Test{.name = "aMemberInUseIsNotRemoved", .body = aMemberInUseIsNotRemoved},

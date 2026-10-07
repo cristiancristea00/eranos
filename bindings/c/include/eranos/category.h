@@ -7,6 +7,7 @@
 #include "EranosCategory.h"
 #include "EranosCategoryList.h"
 #include "eranos/detail.h"
+#include "eranos/identifiers.h"
 #include "eranos/text.h"
 
 #include <stddef.h>
@@ -14,48 +15,56 @@
 /// A category of expenses.
 typedef struct EranosCategory EranosCategory;
 
-/// A new category of its required fields; every other field starts absent, empty, or at its default.
+/// A new category of its required fields under the identifier @p id, such as the key an app's own store gives it; every other field starts absent,
+/// empty, or at its default. eranosCategoryCreate() generates the identifier instead.
+///
+/// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
+///   text
+/// @param name The name, which no other category of the group shares, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param category Receives the category on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosCategoryCreateWithId(char const *const id, char const *const name, EranosCategory **const category) {
+    EranosCategory_create_result const result = EranosCategory_create(eranosDetailView(id), eranosDetailView(name));
+    *category = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// A new category of its required fields under an identifier generated when it is called, which eranosCategoryCreateWithId() takes instead; every
+/// other field starts absent, empty, or at its default.
 ///
 /// @param name The name, which no other category of the group shares, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param category Receives the category on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosCategoryCreate(char const *const name, EranosCategory **const category) {
-    EranosCategory_create_result const result = EranosCategory_create(eranosDetailView(name));
-    *category = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+    EranosText *const id = eranosTextCreate();
+    eranosIdentifierGenerate(id);
+    EranosError *const error = eranosCategoryCreateWithId(eranosTextData(id), name, category);
+    eranosTextDestroy(id);
+    return error;
 }
 
-/// The identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group holds. Writes it, if
-/// present; absent otherwise.
+/// The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param category The category
-/// @param id Receives the identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group
-///   holds, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosCategoryId(EranosCategory const *const category, EranosText *const id) {
+/// @param id Receives the identifier, replacing what it held
+static inline void eranosCategoryId(EranosCategory const *const category, EranosText *const id) {
     eranosDetailClear(id);
-    bool const present = EranosCategory_id(category, id).is_ok;
+    EranosCategory_id(category, id);
     eranosDetailFinish(id);
-    return present;
 }
 
-/// Sets the identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group holds.
+/// Sets the identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param category The category
-/// @param id The identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group holds, as
-///   UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param id The identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosCategorySetId(EranosCategory *const category, char const *const id) {
     EranosCategory_set_id_result const result = EranosCategory_set_id(category, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
-
-/// Clears the identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group holds.
-///
-/// @param category The category
-static inline void eranosCategoryClearId(EranosCategory *const category) { EranosCategory_clear_id(category); }
 
 /// The name, which no other category of the group shares.
 ///

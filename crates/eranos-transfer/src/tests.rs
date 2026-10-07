@@ -219,10 +219,10 @@ fn a_payment_becomes_the_transfer_that_records_it() {
             .id(),
         transfer.id()
     );
-    // An identifier and the optional fields are set as on any transfer.
+    // An identifier given and the optional fields are set as on any
+    // transfer.
     let id = TransferId::new("settled-1").unwrap();
-    let noted = Transfer::builder_from_payment(payment, september_24())
-        .id(id)
+    let noted = Transfer::builder_from_payment_with_id(id, payment, september_24())
         .note("Dinner")
         .build()
         .unwrap();
@@ -281,18 +281,22 @@ fn a_transfer_keeps_its_identifier_through_edits() {
 }
 
 /// A transfer from an app's own store would get another identifier than its
-/// key, lose it in an edit, or keep it after the app asked for a generated
-/// one.
+/// key, lose it in an edit, or keep it when an edit gives another.
 #[test]
 fn a_transfer_takes_the_identifier_it_is_given() {
     let id = TransferId::new("zz").unwrap();
-    let transfer = repayment().id(id).build().unwrap();
+    let transfer = Transfer::builder_with_id(id, bob(), ana(), euros(3_000), september_24())
+        .build()
+        .unwrap();
     assert_eq!(transfer.id(), id);
     // An edit keeps it.
     let edited = transfer.to_builder().note("Lunch").build().unwrap();
     assert_eq!(edited.id(), id);
-    // `None` leaves generation to `build`.
-    assert_ne!(transfer.to_builder().id(None).build().unwrap().id(), id);
+    // The last call wins, and nothing else changes.
+    let other = TransferId::new("!a").unwrap();
+    let moved = transfer.to_builder().id(other).build().unwrap();
+    assert_eq!(moved.id(), other);
+    assert_eq!(moved.to_builder().id(id).build().unwrap(), transfer);
 }
 
 /// The exchange rate fixed when a group changes currency would not be

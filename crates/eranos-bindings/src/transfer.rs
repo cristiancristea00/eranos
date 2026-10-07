@@ -1,21 +1,19 @@
 //! Transfers between members, as the bindings carry them.
 
-use eranos::TransferId;
 use eranos::transfer as library;
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::money::Cost;
-use crate::{EranosError, identifier, identifier_to_add};
+use crate::{EranosError, identifier};
 
 /// Money one member paid another, such as a repayment.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Transfer {
-    /// The identifier: the app's own for a transfer to add, or absent for the
-    /// library to generate one, and present for a transfer the group holds or
-    /// one to replace.
-    pub id: Option<String>,
+    /// The identifier, which the app gives: its own, or one
+    /// [`identifier_generate`](crate::identifier_generate) returns.
+    pub id: String,
     /// The member who paid, as their identifier.
     pub from: String,
     /// The member who was paid, as their identifier.
@@ -34,7 +32,7 @@ impl Transfer {
     /// The record of `transfer`.
     pub(crate) fn from_library(transfer: &library::Transfer) -> Self {
         Self {
-            id: Some(transfer.id().to_string()),
+            id: transfer.id().to_string(),
             from: transfer.from().to_string(),
             to: transfer.to().to_string(),
             cost: Cost::from_cost(transfer.cost()),
@@ -44,8 +42,8 @@ impl Transfer {
         }
     }
 
-    /// The library's transfer, for a record to add: under the record's
-    /// identifier, or a generated one when it has none.
+    /// The library's transfer, for a record to add, under the record's
+    /// identifier.
     ///
     /// # Errors
     ///
@@ -53,14 +51,13 @@ impl Transfer {
     /// of the fields' conversions, and those of
     /// [`TransferBuilder::build`](library::TransferBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Transfer, EranosError> {
-        let id: Option<TransferId> = identifier_to_add(self.id.as_deref())?;
-        let builder = library::Transfer::builder(
+        let builder = library::Transfer::builder_with_id(
+            identifier(&self.id)?,
             identifier(&self.from)?,
             identifier(&self.to)?,
             self.cost.to_library()?,
             self.date.to_library()?,
-        )
-        .id(id);
+        );
         Ok(self.with_optional_fields(builder)?.build()?)
     }
 

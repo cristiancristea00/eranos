@@ -7,9 +7,10 @@ import java.util.Optional;
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * <p>A new member takes the identifier the app gives them through {@link Builder#id}, or none, and
- * then {@link ExpenseGroup#addMember} generates one. To change a member, read them from the group,
- * edit them through {@link #toBuilder}, and pass the result to {@link ExpenseGroup#replaceMember}.
+ * <p>A member has an identifier from the moment their builder starts: the one given to {@link
+ * #builder(MemberId, String)}, or one that {@link #builder(String)} generates, and keeps it through
+ * every edit. To change a member, read them from the group, edit them through {@link #toBuilder},
+ * and pass the result to {@link ExpenseGroup#replaceMember}.
  */
 public final class Member {
     private final MemberId id;
@@ -29,13 +30,27 @@ public final class Member {
     }
 
     /**
-     * A builder of a member to add, called {@code firstName}.
+     * A builder of a member to add, called {@code firstName}, under an identifier generated when it
+     * is called; {@link #builder(MemberId, String)} takes one instead.
      *
      * @param firstName the first name
      * @return the builder
      */
     public static Builder builder(String firstName) {
-        return new Builder(null, firstName);
+        return builder(MemberId.generate(), firstName);
+    }
+
+    /**
+     * A builder of a member to add, called {@code firstName}, under the identifier {@code id}, such
+     * as the key an app's own store gives the member; {@link #builder(String)} generates one
+     * instead.
+     *
+     * @param id the identifier
+     * @param firstName the first name
+     * @return the builder
+     */
+    public static Builder builder(MemberId id, String firstName) {
+        return new Builder(id, firstName);
     }
 
     /**
@@ -59,8 +74,7 @@ public final class Member {
      * @return the member
      */
     static Member converted(eranos.internal.Member member) {
-        return new Builder(
-                        null == member.id() ? null : new MemberId(member.id()), member.firstName())
+        return new Builder(new MemberId(member.id()), member.firstName())
                 .lastName(member.lastName())
                 .email(null == member.email() ? null : Email.known(member.email()))
                 .phone(null == member.phone() ? null : PhoneNumber.known(member.phone()))
@@ -75,7 +89,7 @@ public final class Member {
      */
     eranos.internal.Member generated() {
         return new eranos.internal.Member(
-                null == id ? null : id.value(),
+                id.value(),
                 firstName,
                 lastName,
                 null == email ? null : email.toString(),
@@ -86,10 +100,10 @@ public final class Member {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for a member to add under one the group generates
+     * @return the identifier
      */
-    public Optional<MemberId> id() {
-        return Optional.ofNullable(id);
+    public MemberId id() {
+        return id;
     }
 
     /**
@@ -140,7 +154,7 @@ public final class Member {
     @Override
     public boolean equals(Object other) {
         return other instanceof Member member
-                && Objects.equals(id, member.id)
+                && id.equals(member.id)
                 && firstName.equals(member.firstName)
                 && Objects.equals(lastName, member.lastName)
                 && Objects.equals(email, member.email)
@@ -184,14 +198,13 @@ public final class Member {
         }
 
         /**
-         * Sets the identifier; {@code null} leaves it to the group to generate one when it adds the
-         * member.
+         * Sets the identifier.
          *
-         * @param id the identifier, or {@code null}
+         * @param id the identifier
          * @return this builder
          */
         public Builder id(MemberId id) {
-            this.id = id;
+            this.id = Objects.requireNonNull(id, "id");
             return this;
         }
 

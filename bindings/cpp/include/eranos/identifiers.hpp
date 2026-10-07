@@ -1,6 +1,6 @@
 /// @file eranos/identifiers.hpp
-/// The identifiers of a group and of its members, categories, expenses, and transfers, one type for each. Each type's parse() returns an error,
-/// which names identifiers, so it is defined with the conversions, after every part.
+/// The identifiers of a group and of its members, categories, expenses, and transfers, one type for each. Each type's generate() calls the
+/// generated API, and its parse() returns an error, which names identifiers, so both are defined with the conversions, after every part.
 ///
 /// A part of eranos.hpp, which includes every part and then the conversions their functions call: include eranos.hpp.
 
@@ -34,6 +34,12 @@ class ExpenseGroupId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit ExpenseGroupId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
+    /// identifiers generated one after another are in increasing order.
+    ///
+    /// @return The identifier
+    [[nodiscard]] static ExpenseGroupId generate();
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
@@ -78,6 +84,12 @@ class MemberId final {
     ///   with whitespace at either end
     explicit MemberId(std::string text) noexcept : text(std::move(text)) {}
 
+    /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
+    /// identifiers generated one after another are in increasing order.
+    ///
+    /// @return The identifier
+    [[nodiscard]] static MemberId generate();
+
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
@@ -118,6 +130,12 @@ class CategoryId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit CategoryId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
+    /// identifiers generated one after another are in increasing order.
+    ///
+    /// @return The identifier
+    [[nodiscard]] static CategoryId generate();
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
@@ -162,6 +180,12 @@ class ExpenseId final {
     ///   with whitespace at either end
     explicit ExpenseId(std::string text) noexcept : text(std::move(text)) {}
 
+    /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
+    /// identifiers generated one after another are in increasing order.
+    ///
+    /// @return The identifier
+    [[nodiscard]] static ExpenseId generate();
+
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
@@ -202,6 +226,12 @@ class TransferId final {
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
     explicit TransferId(std::string text) noexcept : text(std::move(text)) {}
+
+    /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
+    /// identifiers generated one after another are in increasing order.
+    ///
+    /// @return The identifier
+    [[nodiscard]] static TransferId generate();
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///

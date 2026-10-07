@@ -116,7 +116,7 @@ void run() {
                  summary.totalSpent.toString());
     std::vector<MemberRow> members;
     for (auto const &member : group.members()) {
-        auto const found = member.id.has_value() ? totalsOf(summary, *member.id) : std::nullopt;
+        auto const found = totalsOf(summary, member.id);
         if (found.has_value()) {
             members.push_back({
                 .name = member.firstName,

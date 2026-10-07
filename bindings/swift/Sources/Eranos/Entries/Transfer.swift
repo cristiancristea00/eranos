@@ -2,16 +2,16 @@ internal import EranosGenerated
 
 /// Money one member paid another, such as a repayment.
 ///
-/// A transfer to add carries the identifier the app gives it, or none, and then
-/// `ExpenseGroup.add(_:)` returns one the library generates.
+/// A transfer has an identifier from the moment it is made: the app's own, which
+/// ``init(id:from:to:cost:date:time:note:)`` takes, or one that
+/// ``init(from:to:cost:date:time:note:)`` generates.
 public struct Transfer: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a transfer.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
 
-    /// The identifier: the app's own for a transfer to add, or absent for the library to generate
-    /// one, and present for a transfer the group holds or one to replace.
-    public var id: ID?
+    /// The identifier, which the app gives: its own, or one ``Identifier/generate()`` makes.
+    public var id: ID
 
     /// The member who paid.
     public var from: Member.ID
@@ -33,7 +33,7 @@ public struct Transfer: Hashable, Sendable {
 
     var generated: EranosGenerated.Transfer {
         .init(
-            id: id?.rawValue,
+            id: id.rawValue,
             from: from.rawValue,
             to: to.rawValue,
             cost: cost.generated,
@@ -43,10 +43,11 @@ public struct Transfer: Hashable, Sendable {
         )
     }
 
-    /// A transfer to add, from one member to another, of `cost` on `date`, under `id`, or one the
-    /// library generates.
+    /// A transfer from one member to another, of `cost` on `date`, under `id`, which the app gives:
+    /// its own, or one ``Identifier/generate()`` makes; ``init(from:to:cost:date:time:note:)``
+    /// generates it.
     public init(
-        id: ID? = nil,
+        id: ID,
         from: Member.ID,
         to: Member.ID,
         cost: Cost,
@@ -63,9 +64,23 @@ public struct Transfer: Hashable, Sendable {
         self.note = note
     }
 
+    /// A transfer from one member to another, of `cost` on `date`, under an identifier
+    /// ``Identifier/generate()`` makes when this is called;
+    /// ``init(id:from:to:cost:date:time:note:)`` takes the app's own.
+    public init(
+        from: Member.ID,
+        to: Member.ID,
+        cost: Cost,
+        date: CalendarDate,
+        time: TimeOfDay? = nil,
+        note: String? = nil
+    ) {
+        self.init(id: .generate(), from: from, to: to, cost: cost, date: date, time: time, note: note)
+    }
+
     init(_ transfer: EranosGenerated.Transfer) {
         self.init(
-            id: transfer.id.map { ID(rawValue: $0) },
+            id: ID(rawValue: transfer.id),
             from: Member.ID(rawValue: transfer.from),
             to: Member.ID(rawValue: transfer.to),
             cost: Cost(transfer.cost),

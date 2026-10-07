@@ -60,7 +60,7 @@ public final class eranos/Category {
 	public final fun copy (Ljava/lang/String;)Leranos/Category;
 	public static synthetic fun copy$default (Leranos/Category;Ljava/lang/String;ILjava/lang/Object;)Leranos/Category;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getId-EwbX1to ()Ljava/lang/String;
+	public final fun getId-UO3Xi0Q ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -92,6 +92,7 @@ public final class eranos/CategoryId {
 }
 
 public final class eranos/CategoryId$Companion {
+	public final fun generate-UO3Xi0Q ()Ljava/lang/String;
 	public final fun parse-QR7iAcY (Ljava/lang/String;)Ljava/lang/String;
 }
 
@@ -263,7 +264,7 @@ public final class eranos/Expense {
 	public final fun getCost ()Leranos/Cost;
 	public final fun getDate ()Leranos/CalendarDate;
 	public final fun getDescription ()Ljava/lang/String;
-	public final fun getId-G_h5j58 ()Ljava/lang/String;
+	public final fun getId-uqo_usE ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
 	public final fun getPayers ()Leranos/Split;
 	public final fun getSplit ()Leranos/ExpenseSplit;
@@ -647,6 +648,7 @@ public final class eranos/ExpenseGroupId {
 }
 
 public final class eranos/ExpenseGroupId$Companion {
+	public final fun generate-3XV2ae8 ()Ljava/lang/String;
 	public final fun parse-oxDQ1YM (Ljava/lang/String;)Ljava/lang/String;
 }
 
@@ -689,6 +691,7 @@ public final class eranos/ExpenseId {
 }
 
 public final class eranos/ExpenseId$Companion {
+	public final fun generate-uqo_usE ()Ljava/lang/String;
 	public final fun parse-E54-VVg (Ljava/lang/String;)Ljava/lang/String;
 }
 
@@ -854,7 +857,7 @@ public final class eranos/Member {
 	public final fun getAccounts ()Ljava/util/List;
 	public final fun getEmail ()Leranos/Email;
 	public final fun getFirstName ()Ljava/lang/String;
-	public final fun getId-DDORX8A ()Ljava/lang/String;
+	public final fun getId-FHfRuUo ()Ljava/lang/String;
 	public final fun getLastName ()Ljava/lang/String;
 	public final fun getPhone ()Leranos/PhoneNumber;
 	public fun hashCode ()I
@@ -904,6 +907,7 @@ public final class eranos/MemberId {
 }
 
 public final class eranos/MemberId$Companion {
+	public final fun generate-FHfRuUo ()Ljava/lang/String;
 	public final fun parse-NfwCWDA (Ljava/lang/String;)Ljava/lang/String;
 }
 
@@ -1266,7 +1270,7 @@ public final class eranos/Transfer {
 	public final fun getCost ()Leranos/Cost;
 	public final fun getDate ()Leranos/CalendarDate;
 	public final fun getFrom-FHfRuUo ()Ljava/lang/String;
-	public final fun getId-XfyqeKw ()Ljava/lang/String;
+	public final fun getId-3NAYOEo ()Ljava/lang/String;
 	public final fun getNote ()Ljava/lang/String;
 	public final fun getTime ()Leranos/TimeOfDay;
 	public final fun getTo-FHfRuUo ()Ljava/lang/String;
@@ -1307,6 +1311,7 @@ public final class eranos/TransferId {
 }
 
 public final class eranos/TransferId$Companion {
+	public final fun generate-3NAYOEo ()Ljava/lang/String;
 	public final fun parse-hoS3jnY (Ljava/lang/String;)Ljava/lang/String;
 }
 

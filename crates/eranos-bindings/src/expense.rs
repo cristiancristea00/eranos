@@ -2,14 +2,14 @@
 //! carry them.
 
 use eranos::error::ExpenseError;
-use eranos::{CategoryId, ExpenseId, MemberId};
+use eranos::{CategoryId, MemberId};
 use eranos::{expense as library, money};
 use eranos_expense::{FromExpenseSplit, FromSplit, FromTipDistribution, FromTipValue};
 use eranos_money::FromCost;
 
 use crate::calendar::{CalendarDate, TimeOfDay};
 use crate::money::{Cost, Money, parts, percentage};
-use crate::{EranosError, identifier, identifier_to_add};
+use crate::{EranosError, identifier};
 
 /// An exact amount one member pays.
 #[eranos_glue_macros::mirrored]
@@ -352,10 +352,9 @@ impl TipRule {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Expense {
-    /// The identifier: the app's own for an expense to add, or absent for the
-    /// library to generate one, and present for an expense the group holds or
-    /// one to replace.
-    pub id: Option<String>,
+    /// The identifier, which the app gives: its own, or one
+    /// [`identifier_generate`](crate::identifier_generate) returns.
+    pub id: String,
     /// What was bought.
     pub name: String,
     /// What it cost.
@@ -382,7 +381,7 @@ impl Expense {
         let category = expense.category();
         let tip = expense.tip();
         Self {
-            id: Some(expense.id().to_string()),
+            id: expense.id().to_string(),
             name: expense.name().to_owned(),
             cost: Cost::from_cost(expense.cost()),
             payers: Split::from_split(expense.payers()),
@@ -395,8 +394,8 @@ impl Expense {
         }
     }
 
-    /// The library's expense, for a record to add: under the record's
-    /// identifier, or a generated one when it has none.
+    /// The library's expense, for a record to add, under the record's
+    /// identifier.
     ///
     /// # Errors
     ///
@@ -404,29 +403,33 @@ impl Expense {
     /// of the fields' conversions, and those of
     /// [`ExpenseBuilder::build`](library::ExpenseBuilder::build).
     pub(crate) fn to_new(&self) -> Result<library::Expense, EranosError> {
-        let id: Option<ExpenseId> = identifier_to_add(self.id.as_deref())?;
+        let id = identifier(&self.id)?;
         let (cost, payers, date) = (
             self.cost.to_library()?,
             self.payers.to_library()?,
             self.date.to_library()?,
         );
         let builder = match &self.split {
-            ExpenseSplit::Whole { split } => library::Expense::builder_with_payers(
+            ExpenseSplit::Whole { split } => library::Expense::builder_with_payers_and_id(
+                id,
                 self.name.clone(),
                 cost,
                 payers,
                 split.to_library()?,
                 date,
             ),
-            ExpenseSplit::Itemised { items } => library::Expense::itemised_builder_with_payers(
-                self.name.clone(),
-                cost,
-                payers,
-                items_of(items)?,
-                date,
-            ),
+            ExpenseSplit::Itemised { items } => {
+                library::Expense::itemised_builder_with_payers_and_id(
+                    id,
+                    self.name.clone(),
+                    cost,
+                    payers,
+                    items_of(items)?,
+                    date,
+                )
+            }
         };
-        Ok(self.with_optional_fields(builder.id(id))?.build()?)
+        Ok(self.with_optional_fields(builder)?.build()?)
     }
 
     /// The library's expense that replaces `existing`, keeping its

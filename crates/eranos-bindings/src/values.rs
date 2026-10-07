@@ -17,6 +17,19 @@ use crate::{EranosError, identifier};
 
 // --- Identifiers -------------------------------------------------------------
 
+/// A new identifier, which any entry or group can take.
+///
+/// It is a UUID v7 as lowercase hyphenated text. Every kind of identifier
+/// draws from the one generator of eranos-core, so the text is the same
+/// whichever kind it stands for, and identifiers generated one after
+/// another are in increasing order.
+#[must_use]
+pub fn identifier_generate() -> String {
+    // A member's identifier stands for every kind, which all draw from the
+    // same generator.
+    MemberId::generate().as_str().to_owned()
+}
+
 /// The identifier written `text`, as it is: not trimmed, and in its case.
 /// Every kind of identifier, of a group, a member, a category, an expense,
 /// or a transfer, follows the same rules.

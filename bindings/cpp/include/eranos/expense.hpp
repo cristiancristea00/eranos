@@ -178,18 +178,31 @@ using ExpenseSplit = std::variant<WholeExpenseSplit, ItemisedExpenseSplit>;
 
 /// An expense: what was bought, what it cost, who paid, and how it divides.
 struct Expense final {
-    /// The record of its required fields; the others start absent, empty, or at their default.
+    /// The record of its required fields under the identifier @p id, such as the key an app's own store gives it; the others start absent, empty,
+    /// or at their default. Expense(std::string, Cost, Split, ExpenseSplit, CalendarDate) generates the identifier instead.
+    ///
+    /// @param id The identifier, which the app gives: its own, or one ExpenseId::generate() makes.
+    /// @param name What was bought.
+    /// @param cost What it cost.
+    /// @param payers Who paid the total, amount and tip, and how much each.
+    /// @param split How the amount is shared.
+    /// @param date The day it was bought.
+    Expense(ExpenseId id, std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
+        : id(std::move(id)), name(std::move(name)), cost(std::move(cost)), payers(std::move(payers)), split(std::move(split)), date(date) {}
+
+    /// The record of its required fields under an identifier generated when it is called, which
+    /// Expense(ExpenseId, std::string, Cost, Split, ExpenseSplit, CalendarDate) takes instead; the others start absent, empty, or at their default.
     ///
     /// @param name What was bought.
     /// @param cost What it cost.
     /// @param payers Who paid the total, amount and tip, and how much each.
     /// @param split How the amount is shared.
     /// @param date The day it was bought.
-    Expense(std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
-        : name(std::move(name)), cost(std::move(cost)), payers(std::move(payers)), split(std::move(split)), date(date) {}
+    Expense(std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date)
+        : Expense(ExpenseId::generate(), std::move(name), std::move(cost), std::move(payers), std::move(split), date) {}
 
-    /// The identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group holds.
-    std::optional<ExpenseId> id;
+    /// The identifier, which the app gives: its own, or one ExpenseId::generate() makes.
+    ExpenseId id;
 
     /// What was bought.
     std::string name;

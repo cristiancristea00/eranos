@@ -271,7 +271,7 @@ def _balance_row(member: Member, summary: Summary, zero: Money) -> BalanceRow:
         The row.
 
     """
-    found = None if member.id is None else totals(member.id, summary)
+    found = totals(member.id, summary)
     if found is None:
         # The summary lists the members with a total; every total of the others is zero.
         return BalanceRow(name=member.first_name, paid=zero, consumed=zero, sent=zero, received=zero, balance=SettledBalance())
@@ -348,7 +348,7 @@ def _expense_row(group: ExpenseGroup, expense: Expense) -> EntryRow:
         The row: the expense's name, who paid it, its total as entered, its rate, and its total in the group currency.
 
     """
-    shares = None if expense.id is None else group.expense_shares(expense.id)
+    shares = group.expense_shares(expense.id)
     return EntryRow(
         name=expense.name,
         payer=names(group, expense.payers.members),
@@ -371,7 +371,7 @@ def _transfer_row(group: ExpenseGroup, transfer: Transfer) -> EntryRow:
         currency.
 
     """
-    amount = None if transfer.id is None else group.transfer_amount(transfer.id)
+    amount = group.transfer_amount(transfer.id)
     return EntryRow(
         name=f'Transfer to {name(group, transfer.receiver)}',
         payer=name(group, transfer.sender),

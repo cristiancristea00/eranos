@@ -85,7 +85,7 @@ void printEntries(ExpenseGroup const &group) {
     Money const zero(0, group.currency());
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
-        auto const shares = must(group.expenseShares(expense.id.value()));
+        auto const shares = must(group.expenseShares(expense.id));
         rows.push_back({
             .name = expense.name,
             .payer = names(group, must(participants(expense.payers))),
@@ -95,7 +95,7 @@ void printEntries(ExpenseGroup const &group) {
         });
     }
     for (auto const &transfer : group.transfers()) {
-        auto const converted = must(group.transferAmount(transfer.id.value()));
+        auto const converted = must(group.transferAmount(transfer.id));
         rows.push_back({
             .name = std::format("Transfer to {}", firstName(group, transfer.to)),
             .payer = firstName(group, transfer.from),
@@ -112,7 +112,7 @@ void printBalances(ExpenseGroup const &group) {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id.value()).value();
+        auto const found = totalsOf(summary, member.id).value();
         rows.push_back({
             .name = member.firstName,
             .paid = found.paid.toString(),

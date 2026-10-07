@@ -82,7 +82,7 @@ def another_currency(group: ExpenseGroup, people: People, categories: Categories
     euro = CurrencyCode('EUR')
     rate = ExchangeRate('0.2')
     parking = group.add_expense(
-        Expense(
+        Expense.create(
             name='Airport parking',
             cost=ConvertedCost(ron('250.00'), rate),
             payers=EqualSplit((people.ana,)),
@@ -92,7 +92,7 @@ def another_currency(group: ExpenseGroup, people: People, categories: Categories
         )
     )
     cash = group.add_transfer(
-        Transfer(
+        Transfer.create(
             sender=people.bob,
             receiver=people.ana,
             cost=ConvertedCost(ron('100.00'), rate),
@@ -143,25 +143,28 @@ def _replace_and_remove(group: ExpenseGroup, people: People, categories: Categor
     dinner = group.expense(seafood)
     assert dinner is not None, 'the dinner was added'
     previous = group.replace_expense(copy.replace(dinner, cost=LocalCost(eur('99.00')), description='Cervejaria Ramiro'))
-    # Bob entered the coffee twice.
-    coffee = Expense(
-        name='Coffee',
-        cost=LocalCost(eur('6.00')),
-        payers=EqualSplit((people.bob,)),
-        split=WholeExpenseSplit(EqualSplit((people.ana, people.bob, people.carol))),
-        date=october(5),
-        category=categories.food,
-    )
-    group.add_expense(coffee)
-    duplicate = group.add_expense(coffee)
+
+    # Bob entered the coffee twice, so each entry has an identifier of its own.
+    def coffee() -> Expense:
+        return Expense.create(
+            name='Coffee',
+            cost=LocalCost(eur('6.00')),
+            payers=EqualSplit((people.bob,)),
+            split=WholeExpenseSplit(EqualSplit((people.ana, people.bob, people.carol))),
+            date=october(5),
+            category=categories.food,
+        )
+
+    group.add_expense(coffee())
+    duplicate = group.add_expense(coffee())
     removed = group.remove_expense(duplicate)
     # Dan's part of the apartment was 120.00, not 100.00.
-    first = group.add_transfer(Transfer(sender=people.dan, receiver=people.ana, cost=LocalCost(eur('100.00')), date=october(5)))
+    first = group.add_transfer(Transfer.create(sender=people.dan, receiver=people.ana, cost=LocalCost(eur('100.00')), date=october(5)))
     stored = group.transfer(first)
     assert stored is not None, 'the transfer was added'
     replaced = group.replace_transfer(copy.replace(stored, cost=LocalCost(eur('120.00')), note='Apartment'))
     # Carol sent 10.00 to the wrong member.
-    mistake = group.add_transfer(Transfer(sender=people.carol, receiver=people.bob, cost=LocalCost(eur('10.00')), date=october(5)))
+    mistake = group.add_transfer(Transfer.create(sender=people.carol, receiver=people.bob, cost=LocalCost(eur('10.00')), date=october(5)))
     undone = group.remove_transfer(mistake)
 
     assert previous.cost.amount == eur('90.00')
@@ -205,7 +208,7 @@ def edits(group: ExpenseGroup, people: People, categories: Categories, seafood: 
     print_balances(group)
 
     before = group.summary()
-    taxi = Expense(
+    taxi = Expense.create(
         name='Taxi',
         cost=LocalCost(eur('30.00')),
         payers=EqualSplit((people.ana,)),
@@ -215,8 +218,10 @@ def edits(group: ExpenseGroup, people: People, categories: Categories, seafood: 
         date=october(6),
     )
     unbalanced = refusal(lambda: group.add_expense(taxi))
-    to_herself = refusal(lambda: group.add_transfer(Transfer(sender=people.ana, receiver=people.ana, cost=LocalCost(eur('5.00')), date=october(6))))
-    souvenirs = Expense(
+    to_herself = refusal(
+        lambda: group.add_transfer(Transfer.create(sender=people.ana, receiver=people.ana, cost=LocalCost(eur('5.00')), date=october(6)))
+    )
+    souvenirs = Expense.create(
         name='Souvenirs',
         cost=LocalCost(ron('40.00')),
         payers=EqualSplit((people.ana,)),
@@ -258,7 +263,7 @@ def comings_and_goings(group: ExpenseGroup, people: People) -> None:
     section('7. Members come and go')
     removed = group.remove_member(people.filip)
     group.archive_member(people.dan)
-    dinner = Expense(
+    dinner = Expense.create(
         name='Farewell dinner',
         cost=LocalCost(eur('40.00')),
         payers=EqualSplit((people.ana,)),
@@ -278,7 +283,7 @@ def comings_and_goings(group: ExpenseGroup, people: People) -> None:
         [
             StatusRow(name=member.first_name, status='archived' if group.is_archived(found.member) else 'active', balance=found.balance)
             for member in group.members()
-            if member.id is not None and (found := totals(member.id, summary)) is not None
+            if (found := totals(member.id, summary)) is not None
         ],
         2,
     )

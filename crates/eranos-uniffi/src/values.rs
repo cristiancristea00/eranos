@@ -5,6 +5,16 @@ use eranos_bindings::{
     Balance, CalendarDate, CurrencyDetails, EranosError, Expense, Money, TimeOfDay,
 };
 
+/// A new identifier, which any entry or group can take.
+///
+/// It is a UUID v7 as lowercase hyphenated text. Every kind of identifier,
+/// of a group, a member, a category, an expense, or a transfer, draws from
+/// the one generator of the library.
+#[uniffi::export]
+pub(crate) fn identifier_generate() -> String {
+    eranos_bindings::identifier_generate()
+}
+
 /// The identifier written `text`, as it is: not trimmed, and in its case.
 /// Every kind of identifier, of a group, a member, a category, an expense,
 /// or a transfer, follows the same rules.

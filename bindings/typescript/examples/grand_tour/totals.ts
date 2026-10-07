@@ -13,6 +13,7 @@ import {
     ExpenseGroupError,
     Money,
     SettlementStrategy,
+    createTransfer,
 } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
 import {
@@ -90,20 +91,15 @@ export function summary(group: ExpenseGroup, people: People, categories: Categor
     const zero = new Money(0n, group.currencySync());
     printTable(
         memberCategoryColumns,
-        group.membersSync().flatMap((member) => {
-            if (undefined === member.id) {
-                return [];
-            }
+        group.membersSync().map((member) => {
             const own = byCategory(summary, member.id);
-            return [
-                {
-                    name: member.firstName,
-                    food: total(own, categories.food) ?? zero,
-                    lodging: total(own, categories.lodging) ?? zero,
-                    transport: total(own, categories.transport) ?? zero,
-                    uncategorised: total(own, builtIn) ?? zero,
-                },
-            ];
+            return {
+                name: member.firstName,
+                food: total(own, categories.food) ?? zero,
+                lodging: total(own, categories.lodging) ?? zero,
+                transport: total(own, categories.transport) ?? zero,
+                uncategorised: total(own, builtIn) ?? zero,
+            };
         }),
         1,
     );
@@ -225,7 +221,9 @@ export function settlingUp(group: ExpenseGroup): void {
         2,
     );
     for (const payment of plan.payments) {
-        group.addTransferSync({ from: payment.from, to: payment.to, cost: { kind: 'local', amount: payment.amount }, date: october(7) });
+        group.addTransferSync(
+            createTransfer({ from: payment.from, to: payment.to, cost: { kind: 'local', amount: payment.amount }, date: october(7) }),
+        );
     }
     printLines('Each payment, once made, is recorded as a transfer, and every balance is settled:');
     printBalances(group);

@@ -3,48 +3,8 @@
 //! from whichever thread it runs on. A field that is neither `Send` nor
 //! `Sync` (an `Rc`, a `Cell`, a guard tied to one thread) fails the build
 //! here instead of in a glue crate's generated code, far from its cause.
-//! Every record to replace names its entry through one check, which would
-//! otherwise let a replacement name no entry or text that is not one, and
-//! every record to add passes the identifier it carries through another.
-
-use eranos::MemberId;
 
 use super::*;
-
-/// A record to replace without an identifier could not name its entry, and
-/// one whose identifier the rules refuse would name none.
-#[test]
-fn a_record_to_replace_names_its_entry_by_a_valid_identifier() {
-    let id = MemberId::new("member-1").unwrap();
-    assert_eq!(identifier_to_replace(Some(&id.to_string())), Ok(id));
-    assert_eq!(
-        identifier_to_replace::<MemberId>(None),
-        Err(EranosError::identifier_missing())
-    );
-    assert!(matches!(
-        identifier_to_replace::<MemberId>(Some("")),
-        Err(EranosError::Id {
-            failure: IdFailure::Empty,
-            ..
-        })
-    ));
-}
-
-/// A record to add would lose the identifier its app gave it, take one the
-/// rules refuse, or, without one, not leave it to the library to generate.
-#[test]
-fn a_record_to_add_carries_a_valid_identifier_or_none() {
-    let id = MemberId::new("member-1").unwrap();
-    assert_eq!(identifier_to_add(Some(id.as_str())), Ok(Some(id)));
-    assert_eq!(identifier_to_add::<MemberId>(None), Ok(None));
-    assert!(matches!(
-        identifier_to_add::<MemberId>(Some(" x")),
-        Err(EranosError::Id {
-            failure: IdFailure::SurroundingWhitespace,
-            ..
-        })
-    ));
-}
 
 /// Compiles only when `T` can move to another thread and be shared between
 /// threads.

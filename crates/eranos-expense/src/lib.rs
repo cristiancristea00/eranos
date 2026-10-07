@@ -38,10 +38,11 @@ use eranos_money::{Cost, ExchangeRate, Money};
 /// the group currency, fixed when the expense is entered. A tip is added on
 /// top of the amount, and the payers cover amount plus tip. Four
 /// constructors name the payers and the split up front: one payer or
-/// several, and a whole split or items. An expense gets the identifier
-/// given to [`ExpenseBuilder::id`], or a generated one when it is built, and
-/// keeps it through every edit. Expenses are values: to change one, edit a
-/// copy with [`to_builder`](Self::to_builder) and pass it to
+/// several, and a whole split or items. Each comes in two forms: one
+/// generates the identifier when it is called, and its twin, whose name
+/// ends in `with_id` or `and_id`, takes it. An expense keeps its identifier
+/// through every edit. Expenses are values: to change one, edit a copy with
+/// [`to_builder`](Self::to_builder) and pass it to
 /// `ExpenseGroup::replace_expense`.
 ///
 /// # Examples
@@ -85,7 +86,8 @@ pub struct Expense {
 
 impl Expense {
     /// Starts an expense that `payer` paid alone and whose amount `split`
-    /// divides.
+    /// divides, under an identifier generated when it is called;
+    /// [`builder_with_id`](Self::builder_with_id) takes one instead.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
@@ -96,7 +98,37 @@ impl Expense {
         split: Split,
         date: CalendarDate,
     ) -> ExpenseBuilder {
+        Self::builder_with_id(ExpenseId::generate(), name, cost, payer, split, date)
+    }
+
+    /// Starts an expense that `payer` paid alone and whose amount `split`
+    /// divides, under the identifier `id`, such as the key an app's own
+    /// store gives it; [`builder`](Self::builder) generates one instead.
+    /// The identifier seeds the tie rotation, so it decides who gets a
+    /// leftover cent.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, CurrencyCode, Expense, ExpenseId, MemberId, Money, Split};
+    ///
+    /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
+    /// let (amount, date) = (Money::parse("30.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 23)?);
+    /// let id = ExpenseId::new("dinner-1")?;
+    /// let dinner = Expense::builder_with_id(id, "Dinner", amount, ana, Split::equal([ana, bob]), date).build()?;
+    /// assert_eq!(dinner.id().as_str(), "dinner-1");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn builder_with_id(
+        id: ExpenseId,
+        name: impl Into<String>,
+        cost: impl Into<Cost>,
+        payer: MemberId,
+        split: Split,
+        date: CalendarDate,
+    ) -> ExpenseBuilder {
         starting(
+            id,
             name.into(),
             cost.into(),
             Split::equal([payer]),
@@ -107,7 +139,9 @@ impl Expense {
 
     /// Starts an expense whose total (the amount plus the tip) `payers`
     /// divides among the members who paid it, and whose amount `split`
-    /// divides.
+    /// divides, under an identifier generated when it is called;
+    /// [`builder_with_payers_and_id`](Self::builder_with_payers_and_id)
+    /// takes one instead.
     pub fn builder_with_payers(
         name: impl Into<String>,
         cost: impl Into<Cost>,
@@ -115,7 +149,22 @@ impl Expense {
         split: Split,
         date: CalendarDate,
     ) -> ExpenseBuilder {
+        Self::builder_with_payers_and_id(ExpenseId::generate(), name, cost, payers, split, date)
+    }
+
+    /// Starts an expense as [`builder_with_payers`](Self::builder_with_payers)
+    /// does, under the identifier `id`; `builder_with_payers` generates one
+    /// instead.
+    pub fn builder_with_payers_and_id(
+        id: ExpenseId,
+        name: impl Into<String>,
+        cost: impl Into<Cost>,
+        payers: Split,
+        split: Split,
+        date: CalendarDate,
+    ) -> ExpenseBuilder {
         starting(
+            id,
             name.into(),
             cost.into(),
             payers,
@@ -125,7 +174,10 @@ impl Expense {
     }
 
     /// Starts an expense that `payer` paid alone and whose amount is divided
-    /// item by item; the line totals must add up to the amount.
+    /// item by item, under an identifier generated when it is called; the
+    /// line totals must add up to the amount.
+    /// [`itemised_builder_with_id`](Self::itemised_builder_with_id) takes
+    /// the identifier instead.
     pub fn itemised_builder(
         name: impl Into<String>,
         cost: impl Into<Cost>,
@@ -133,7 +185,22 @@ impl Expense {
         items: impl IntoIterator<Item = ExpenseItem>,
         date: CalendarDate,
     ) -> ExpenseBuilder {
+        Self::itemised_builder_with_id(ExpenseId::generate(), name, cost, payer, items, date)
+    }
+
+    /// Starts an expense as [`itemised_builder`](Self::itemised_builder)
+    /// does, under the identifier `id`; `itemised_builder` generates one
+    /// instead.
+    pub fn itemised_builder_with_id(
+        id: ExpenseId,
+        name: impl Into<String>,
+        cost: impl Into<Cost>,
+        payer: MemberId,
+        items: impl IntoIterator<Item = ExpenseItem>,
+        date: CalendarDate,
+    ) -> ExpenseBuilder {
         starting(
+            id,
             name.into(),
             cost.into(),
             Split::equal([payer]),
@@ -143,7 +210,10 @@ impl Expense {
     }
 
     /// Starts an expense whose total `payers` divides among the members who
-    /// paid it, and whose amount is divided item by item.
+    /// paid it, and whose amount is divided item by item, under an
+    /// identifier generated when it is called;
+    /// [`itemised_builder_with_payers_and_id`](Self::itemised_builder_with_payers_and_id)
+    /// takes one instead.
     pub fn itemised_builder_with_payers(
         name: impl Into<String>,
         cost: impl Into<Cost>,
@@ -151,7 +221,30 @@ impl Expense {
         items: impl IntoIterator<Item = ExpenseItem>,
         date: CalendarDate,
     ) -> ExpenseBuilder {
+        Self::itemised_builder_with_payers_and_id(
+            ExpenseId::generate(),
+            name,
+            cost,
+            payers,
+            items,
+            date,
+        )
+    }
+
+    /// Starts an expense as
+    /// [`itemised_builder_with_payers`](Self::itemised_builder_with_payers)
+    /// does, under the identifier `id`; `itemised_builder_with_payers`
+    /// generates one instead.
+    pub fn itemised_builder_with_payers_and_id(
+        id: ExpenseId,
+        name: impl Into<String>,
+        cost: impl Into<Cost>,
+        payers: Split,
+        items: impl IntoIterator<Item = ExpenseItem>,
+        date: CalendarDate,
+    ) -> ExpenseBuilder {
         starting(
+            id,
             name.into(),
             cost.into(),
             payers,
@@ -167,7 +260,7 @@ impl Expense {
     /// `payers` the payers, whichever form they had.
     pub fn to_builder(&self) -> ExpenseBuilder {
         ExpenseBuilder {
-            id: Some(self.id),
+            id: self.id,
             name: self.name.clone(),
             cost: self.cost(),
             payers: self.payers.clone(),
@@ -387,7 +480,7 @@ pub trait FromExpenseSplit: Sized {
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct ExpenseBuilder {
-    id: Option<ExpenseId>,
+    id: ExpenseId,
     name: String,
     cost: Cost,
     payers: Split,
@@ -400,13 +493,10 @@ pub struct ExpenseBuilder {
 }
 
 impl ExpenseBuilder {
-    /// Sets the identifier, such as the key an app's own store gives the
-    /// expense, or leaves it to [`build`](Self::build) to generate one with
-    /// `None`; a builder from [`Expense::to_builder`] starts with the
-    /// expense's. The identifier seeds the tie rotation, so it decides who
-    /// gets a leftover cent.
-    pub fn id(mut self, id: impl Into<Option<ExpenseId>>) -> Self {
-        self.id = id.into();
+    /// Replaces the identifier, which seeds the tie rotation, so it decides
+    /// who gets a leftover cent.
+    pub const fn id(mut self, id: ExpenseId) -> Self {
+        self.id = id;
         self
     }
 
@@ -483,8 +573,7 @@ impl ExpenseBuilder {
     }
 
     /// Validates the expense and returns it, under the identifier the
-    /// builder holds, given to [`id`](Self::id) or kept by
-    /// [`Expense::to_builder`], or a newly generated one.
+    /// builder holds.
     ///
     /// Only the expense itself is checked here; whether its members,
     /// category, and cost fit a group is checked when it is added to one.
@@ -517,7 +606,7 @@ impl ExpenseBuilder {
             .map_err(|_| ExpenseError::Overflow)?;
         payers.validate(total)?;
         Ok(Expense {
-            id: self.id.unwrap_or_else(ExpenseId::generate),
+            id: self.id,
             name,
             amount,
             total,
@@ -563,6 +652,7 @@ fn validate_items(items: &[ExpenseItem], amount: Money) -> Result<(), ExpenseErr
 /// A builder with the required fields set and every optional one at its
 /// default; the constructors and the serialised form start here.
 fn starting(
+    id: ExpenseId,
     name: String,
     cost: Cost,
     payers: Split,
@@ -570,7 +660,7 @@ fn starting(
     date: CalendarDate,
 ) -> ExpenseBuilder {
     ExpenseBuilder {
-        id: None,
+        id,
         name,
         cost,
         payers,
@@ -622,11 +712,17 @@ struct ExpenseRecord {
 #[cfg(feature = "serde")]
 fn from_record(record: ExpenseRecord) -> Result<Expense, ExpenseError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
-    let builder = starting(record.name, cost, record.payers, record.split, record.date)
-        .id(record.id)
-        .tip(record.tip)
-        .time(record.time)
-        .category(record.category.unwrap_or(CategoryId::UNCATEGORISED));
+    let builder = starting(
+        record.id,
+        record.name,
+        cost,
+        record.payers,
+        record.split,
+        record.date,
+    )
+    .tip(record.tip)
+    .time(record.time)
+    .category(record.category.unwrap_or(CategoryId::UNCATEGORISED));
     match record.description {
         Some(description) => builder.description(description).build(),
         None => builder.build(),

@@ -243,7 +243,7 @@ final class Tables {
 
     /** The identifier of the built-in category, which the group lists first. */
     static Optional<CategoryId> builtInCategory(ExpenseGroup group) {
-        return group.categories().stream().findFirst().flatMap(Category::id);
+        return group.categories().stream().findFirst().map(Category::id);
     }
 
     static void printBalances(ExpenseGroup group) {
@@ -252,7 +252,7 @@ final class Tables {
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
             // The summary lists the members with a total; every total of the others is zero.
-            Optional<MemberSummary> totals = member.id().flatMap(id -> totals(id, summary));
+            Optional<MemberSummary> totals = totals(member.id(), summary);
             rows.add(
                     totals.map(
                                     found ->
@@ -307,10 +307,7 @@ final class Tables {
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
             if (shown.test(expense.cost().amount().currency())) {
-                Optional<ExpenseShares> shares =
-                        expense.id().isPresent()
-                                ? group.expenseShares(expense.id().orElseThrow())
-                                : Optional.empty();
+                Optional<ExpenseShares> shares = group.expenseShares(expense.id());
                 rows.add(
                         new EntryRow(
                                 expense.name(),
@@ -322,10 +319,7 @@ final class Tables {
         }
         for (Transfer transfer : group.transfers()) {
             if (shown.test(transfer.cost().amount().currency())) {
-                Optional<Money> amount =
-                        transfer.id().isPresent()
-                                ? group.transferAmount(transfer.id().orElseThrow())
-                                : Optional.empty();
+                Optional<Money> amount = group.transferAmount(transfer.id());
                 rows.add(
                         new EntryRow(
                                 "Transfer to " + name(group, transfer.to()),

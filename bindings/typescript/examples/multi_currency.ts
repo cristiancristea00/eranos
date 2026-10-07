@@ -14,6 +14,9 @@ import {
     ExchangeRate,
     ExpenseGroup,
     Money,
+    createExpense,
+    createMember,
+    createTransfer,
     expenseTotal,
     formatBalance,
     splitMembers,
@@ -69,14 +72,14 @@ function printEntries(group: ExpenseGroup): void {
         payer: names(group, splitMembers(expense.payers)),
         original: expenseTotal(expense),
         rate: rate(expense.cost),
-        converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
+        converted: group.expenseSharesSync(expense.id)?.total ?? zero,
     }));
     const transfers = group.transfersSync().map((transfer): EntryRow => ({
         name: `Transfer to ${names(group, [transfer.to])}`,
         payer: names(group, [transfer.from]),
         original: transfer.cost.amount,
         rate: rate(transfer.cost),
-        converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
+        converted: group.transferAmountSync(transfer.id) ?? zero,
     }));
     printTable(entryColumns, [...expenses, ...transfers], 2);
 }
@@ -86,7 +89,7 @@ function printBalances(group: ExpenseGroup): void {
     printTable(
         balanceColumns,
         group.membersSync().flatMap((member) => {
-            const found = undefined === member.id ? undefined : totals(member.id, summary);
+            const found = totals(member.id, summary);
             return undefined === found
                 ? []
                 : [
@@ -107,27 +110,33 @@ function printBalances(group: ExpenseGroup): void {
 function expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     section('1. Expenses in three currencies');
     const both: Split = { kind: 'equal', members: [ana, bob] };
-    group.addExpenseSync({
-        name: 'Fuel',
-        cost: { kind: 'converted', amount: Money.parse('400.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
-        payers: { kind: 'equal', members: [ana] },
-        split: { kind: 'whole', split: both },
-        date: CalendarDate.of(2026, 8, 1),
-    });
-    group.addExpenseSync({
-        name: 'Dinner',
-        cost: { kind: 'converted', amount: Money.parse('24000.00', CurrencyCode.of('HUF')), rate: ExchangeRate.parse('0.0025') },
-        payers: { kind: 'equal', members: [bob] },
-        split: { kind: 'whole', split: both },
-        date: CalendarDate.of(2026, 8, 2),
-    });
-    group.addExpenseSync({
-        name: 'Ferry',
-        cost: { kind: 'local', amount: Money.parse('60.00', CurrencyCode.of('EUR')) },
-        payers: { kind: 'equal', members: [bob] },
-        split: { kind: 'whole', split: both },
-        date: CalendarDate.of(2026, 8, 3),
-    });
+    group.addExpenseSync(
+        createExpense({
+            name: 'Fuel',
+            cost: { kind: 'converted', amount: Money.parse('400.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
+            payers: { kind: 'equal', members: [ana] },
+            split: { kind: 'whole', split: both },
+            date: CalendarDate.of(2026, 8, 1),
+        }),
+    );
+    group.addExpenseSync(
+        createExpense({
+            name: 'Dinner',
+            cost: { kind: 'converted', amount: Money.parse('24000.00', CurrencyCode.of('HUF')), rate: ExchangeRate.parse('0.0025') },
+            payers: { kind: 'equal', members: [bob] },
+            split: { kind: 'whole', split: both },
+            date: CalendarDate.of(2026, 8, 2),
+        }),
+    );
+    group.addExpenseSync(
+        createExpense({
+            name: 'Ferry',
+            cost: { kind: 'local', amount: Money.parse('60.00', CurrencyCode.of('EUR')) },
+            payers: { kind: 'equal', members: [bob] },
+            split: { kind: 'whole', split: both },
+            date: CalendarDate.of(2026, 8, 3),
+        }),
+    );
     printEntries(group);
     printLines(
         `The rate says how many ${group.currencySync().toString()} one unit of the entry's currency is worth: 400.00 RON at`,
@@ -137,13 +146,15 @@ function expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
 
 function repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId): void {
     section('3. A repayment in cash, in another currency');
-    group.addTransferSync({
-        from: ana,
-        to: bob,
-        cost: { kind: 'converted', amount: Money.parse('100.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
-        date: CalendarDate.of(2026, 8, 4),
-        note: 'Cash at the border',
-    });
+    group.addTransferSync(
+        createTransfer({
+            from: ana,
+            to: bob,
+            cost: { kind: 'converted', amount: Money.parse('100.00', CurrencyCode.of('RON')), rate: ExchangeRate.parse('0.2') },
+            date: CalendarDate.of(2026, 8, 4),
+            note: 'Cash at the border',
+        }),
+    );
     printLines(
         'Ana pays Bob 100.00 RON in cash, which at 0.2 is exactly the 20.00 EUR she owed.',
         `Transfers move balances but are not spending, so the total stays at ${group.summarySync().totalSpent.toString()}:`,
@@ -171,8 +182,8 @@ await load();
 const euro = CurrencyCode.of('EUR');
 const leu = CurrencyCode.of('RON');
 using group = ExpenseGroup.create('Danube road trip', euro);
-const ana = group.addMemberSync({ firstName: 'Ana' });
-const bob = group.addMemberSync({ firstName: 'Bob' });
+const ana = group.addMemberSync(createMember({ firstName: 'Ana' }));
+const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
 
 printLines(`${group.nameSync()}: expenses in several currencies`, '════════════════════════════════════════════════');
 printLines(

@@ -176,7 +176,7 @@ def spend(group: ExpenseGroup, name: str, amount: str, payer: MemberId, members:
 
     """
     group.add_expense(
-        Expense(
+        Expense.create(
             name=name,
             cost=LocalCost(Money.parse(amount, CurrencyCode('EUR'))),
             payers=EqualSplit((payer,)),
@@ -200,7 +200,7 @@ def print_balances(group: ExpenseGroup) -> None:
         [
             BalanceRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=found.balance)
             for member in group.members()
-            if member.id is not None and (found := totals(member.id, summary)) is not None
+            if (found := totals(member.id, summary)) is not None
         ],
         1,
     )
@@ -319,12 +319,12 @@ def festival() -> int:
     section('8. A larger group')
     euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Festival', euro)
-    friends = tuple(group.add_member(Member(first_name=f'Friend {number}')) for number in range(1, 22))
+    friends = tuple(group.add_member(Member.create(first_name=f'Friend {number}')) for number in range(1, 22))
     # Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's balance is 21·i² - 3311
     # cents: never zero, and never the opposite of another's.
     for number, payer in enumerate(friends, start=1):
         group.add_expense(
-            Expense(
+            Expense.create(
                 name='Round',
                 cost=LocalCost(Money(21 * number**2, euro)),
                 payers=EqualSplit((payer,)),
@@ -350,12 +350,12 @@ def festival() -> int:
 def main() -> None:
     """Print the report, checking its key numbers."""
     group = ExpenseGroup.create('Ski week', CurrencyCode('EUR'))
-    ana = group.add_member(Member(first_name='Ana'))
-    bob = group.add_member(Member(first_name='Bob'))
-    carol = group.add_member(Member(first_name='Carol'))
-    dan = group.add_member(Member(first_name='Dan'))
-    eva = group.add_member(Member(first_name='Eva'))
-    filip = group.add_member(Member(first_name='Filip'))
+    ana = group.add_member(Member.create(first_name='Ana'))
+    bob = group.add_member(Member.create(first_name='Bob'))
+    carol = group.add_member(Member.create(first_name='Carol'))
+    dan = group.add_member(Member.create(first_name='Dan'))
+    eva = group.add_member(Member.create(first_name='Eva'))
+    filip = group.add_member(Member.create(first_name='Filip'))
 
     title('Ski week: four ways to settle up')
     print_lines(
@@ -394,7 +394,9 @@ def main() -> None:
     plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS)
     for payment in plan.payments:
         # A settlement's payments are in the group currency, so the transfer that records one has a local cost.
-        group.add_transfer(Transfer(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=CalendarDate(2026, 9, 27)))
+        group.add_transfer(
+            Transfer.create(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=CalendarDate(2026, 9, 27))
+        )
     print_lines(
         'Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards',
         'every balance is zero and a new settlement has nothing left to pay:',

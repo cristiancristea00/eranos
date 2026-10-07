@@ -16,7 +16,6 @@ import {
 } from '../src/entries.js';
 import {
     type Expense,
-    type Member,
     type Split,
     CalendarDate,
     CurrencyCode,
@@ -33,6 +32,10 @@ import {
     TimeOfDay,
     TipDistribution,
     Username,
+    createCategory,
+    createExpense,
+    createMember,
+    createTransfer,
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
@@ -58,7 +61,7 @@ interface Expenses {
  */
 function expenses(flat: Flat): Expenses {
     const lei = CurrencyCode.of('RON');
-    const taxi: Expense = {
+    const taxi = createExpense({
         name: 'Taxi',
         cost: { kind: 'converted', amount: new Money(5_000n, lei), rate: ExchangeRate.parse('0.2') },
         payers: { kind: 'percentages', shares: [{ member: flat.ana, percentage: Percentage.ofBasisPoints(10_000) }] },
@@ -85,15 +88,15 @@ function expenses(flat: Flat): Expenses {
         time: TimeOfDay.of(9, 5),
         category: flat.food,
         description: 'To the airport',
-    };
-    const dinner: Expense = {
+    });
+    const dinner = createExpense({
         name: 'Dinner',
         cost: { kind: 'local', amount: flat.euros(3_000n) },
         payers: { kind: 'amounts', shares: [{ member: flat.ana, amount: flat.euros(3_300n) }] },
         split: { kind: 'whole', split: { kind: 'equal', members: [flat.ana, flat.bob] } },
         date: flat.day,
         tip: { value: { kind: 'percentage', percentage: Percentage.ofBasisPoints(1_000) } },
-    };
+    });
     return { dinner, taxi };
 }
 
@@ -115,6 +118,7 @@ void describe('the expenses, members, categories, and transfers', () => {
         });
         for (const expense of [taxi, dinner]) {
             const id = flat.group.addExpenseSync(expense);
+            assert.equal(id, expense.id);
             const stored = flat.group.expenseSync(id);
             assert.ok(undefined !== stored);
             assert.equal(stored.id, id);
@@ -160,7 +164,7 @@ void describe('the expenses, members, categories, and transfers', () => {
      */
     void it('converts and stores members, categories, and transfers whole', () => {
         const flat = new Flat();
-        const carol: Member = {
+        const carol = createMember({
             firstName: 'Carol',
             lastName: 'Popa',
             email: Email.parse('carol@example.com'),
@@ -169,36 +173,100 @@ void describe('the expenses, members, categories, and transfers', () => {
                 { name: 'Main account', details: { kind: 'iban', iban: Iban.parse('RO49AAAA1B31007593840000') } },
                 { name: 'Payment app', details: { kind: 'username', username: Username.parse('carol.pays') } },
             ],
-        };
+        });
         assert.deepEqual(convertedMember(generatedMember(carol)), carol);
-        assert.deepEqual(convertedMember(generatedMember({ firstName: 'Dan' })), { firstName: 'Dan', accounts: [] });
-        const id = flat.group.addMemberSync(carol);
-        const stored = flat.group.memberSync(id);
-        assert.deepEqual(stored, { ...carol, id });
+        const dan = createMember({ firstName: 'Dan' });
+        assert.deepEqual(convertedMember(generatedMember(dan)), { ...dan, accounts: [] });
+        assert.equal(flat.group.addMemberSync(carol), carol.id);
+        assert.deepEqual(flat.group.memberSync(carol.id), carol);
 
         const lei = CurrencyCode.of('RON');
-        const cash = {
+        const cash = createTransfer({
             from: flat.bob,
             to: flat.ana,
             cost: { kind: 'converted', amount: new Money(1_000n, lei), rate: ExchangeRate.parse('0.2') },
             date: flat.day,
             time: TimeOfDay.of(10, 0),
             note: 'Cash',
-        } as const;
+        });
         assert.deepEqual(convertedTransfer(generatedTransfer(cash)), cash);
-        const payment = flat.group.addTransferSync(cash);
-        assert.deepEqual(flat.group.transferSync(payment), { ...cash, id: payment });
-        assert.ok(flat.group.transferAmountSync(payment)?.equals(flat.euros(200n)));
+        assert.equal(flat.group.addTransferSync(cash), cash.id);
+        assert.deepEqual(flat.group.transferSync(cash.id), cash);
+        assert.ok(flat.group.transferAmountSync(cash.id)?.equals(flat.euros(200n)));
 
-        assert.deepEqual(convertedCategory(generatedCategory({ name: 'Travel' })), { name: 'Travel' });
-        const trip = flat.group.addCategorySync({ name: 'Travel' });
-        assert.deepEqual(flat.group.categorySync(trip), { id: trip, name: 'Travel' });
-
-        assert.throws(
-            () => flat.group.replaceMemberSync(carol),
-            (error: unknown) => error instanceof TypeError && 'an entry to replace must carry its identifier' === error.message,
-        );
+        const travel = createCategory({ name: 'Travel' });
+        assert.deepEqual(convertedCategory(generatedCategory(travel)), travel);
+        assert.equal(flat.group.addCategorySync(travel), travel.id);
+        assert.deepEqual(flat.group.categorySync(travel.id), travel);
         assert.deepEqual(CalendarDate.of(2026, 1, 1).toString(), '2026-01-01');
+    });
+
+    /**
+     * A create function that returned an identifier an earlier call had returned, or kept one its fields carry, would make a
+     * copy of an entry that the group refuses as a duplicate of the original.
+     */
+    void it('creates every kind of entry under an identifier generated at each call', () => {
+        const flat = new Flat();
+        const group = flat.group;
+        const member = group.memberSync(flat.ana);
+        const category = group.categorySync(flat.food);
+        const expense = group.expenseSync(flat.dinner);
+        const transfer = group.transferSync(flat.repayment);
+        assert.ok(undefined !== member && undefined !== category && undefined !== expense && undefined !== transfer);
+
+        const memberCopy = createMember({ ...member });
+        assert.notEqual(memberCopy.id, member.id);
+        assert.deepEqual(memberCopy, { ...member, id: memberCopy.id });
+        assert.equal(group.addMemberSync(memberCopy), memberCopy.id);
+        const categoryCopy = createCategory({ ...category, name: 'Groceries' });
+        assert.notEqual(categoryCopy.id, category.id);
+        assert.equal(group.addCategorySync(categoryCopy), categoryCopy.id);
+        const expenseCopy = createExpense({ ...expense });
+        assert.notEqual(expenseCopy.id, expense.id);
+        assert.deepEqual(expenseCopy, { ...expense, id: expenseCopy.id });
+        assert.equal(group.addExpenseSync(expenseCopy), expenseCopy.id);
+        const transferCopy = createTransfer({ ...transfer });
+        assert.notEqual(transferCopy.id, transfer.id);
+        assert.deepEqual(transferCopy, { ...transfer, id: transferCopy.id });
+        assert.equal(group.addTransferSync(transferCopy), transferCopy.id);
+        assert.equal(parseMemberId(memberCopy.id), memberCopy.id);
+        assert.equal(parseCategoryId(categoryCopy.id), categoryCopy.id);
+        assert.equal(parseExpenseId(expenseCopy.id), expenseCopy.id);
+        assert.equal(parseTransferId(transferCopy.id), transferCopy.id);
+    });
+
+    /**
+     * A replacement of an entry the group does not hold that the group added, or that changed another entry, would store an
+     * entry the app never added.
+     */
+    void it('refuses to replace an entry the group does not hold', async () => {
+        const flat = new Flat();
+        const group = flat.group;
+        const zoe = createMember({ firstName: 'Zoe' });
+        const trips = createCategory({ name: 'Trips' });
+        const taxi = flat.expense('Taxi', flat.ana, [flat.ana]);
+        const cash = createTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
+        const unknowns = [
+            { replace: () => group.replaceMemberSync(zoe), failure: { kind: 'unknownMember', member: zoe.id } },
+            { replace: () => group.replaceCategorySync(trips), failure: { kind: 'unknownCategory', category: trips.id } },
+            { replace: () => group.replaceExpenseSync(taxi), failure: { kind: 'unknownExpense', expense: taxi.id } },
+            { replace: () => group.replaceTransferSync(cash), failure: { kind: 'unknownTransfer', transfer: cash.id } },
+        ];
+        for (const unknown of unknowns) {
+            assert.throws(unknown.replace, (error: unknown) => {
+                assert.ok(error instanceof ExpenseGroupError);
+                assert.deepEqual(error.failure, unknown.failure);
+                return true;
+            });
+        }
+        await assert.rejects(
+            group.replaceMember(zoe),
+            (error: unknown) => error instanceof ExpenseGroupError && 'unknownMember' === error.failure.kind,
+        );
+        assert.equal(group.memberSync(zoe.id), undefined);
+        assert.equal(group.categorySync(trips.id), undefined);
+        assert.equal(group.expenseSync(taxi.id), undefined);
+        assert.equal(group.transferSync(cash.id), undefined);
     });
 
     /**

@@ -92,7 +92,7 @@ internal fun printBalances(group: ExpenseGroup) {
         BalanceRow.HEADERS,
         group.membersBlocking().map { member ->
             // The summary lists the members with a total; every total of the others is zero.
-            val totals = member.id?.let { id -> totals(id, summary) }
+            val totals = totals(member.id, summary)
             if (null == totals) {
                 BalanceRow(name = member.firstName, paid = zero, consumed = zero, sent = zero, received = zero, balance = Balance.Settled)
             } else {
@@ -139,7 +139,7 @@ internal fun printEntries(
                 payer = names(group, expense.payers.members),
                 original = expense.total(),
                 rate = rate(expense.cost),
-                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
+                converted = group.expenseSharesBlocking(expense.id)?.total ?: zero,
             )
         }
     val transfers =
@@ -149,7 +149,7 @@ internal fun printEntries(
                 payer = name(group, transfer.from),
                 original = transfer.cost.amount,
                 rate = rate(transfer.cost),
-                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
+                converted = group.transferAmountBlocking(transfer.id) ?: zero,
             )
         }
     printTable(EntryRow.HEADERS, expenses + transfers, numbersFrom = 2)

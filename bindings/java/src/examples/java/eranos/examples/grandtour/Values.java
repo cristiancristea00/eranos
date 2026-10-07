@@ -124,7 +124,7 @@ final class Values {
         CalendarDate date = CalendarDate.parse("2026-10-01");
         TimeOfDay time = TimeOfDay.parse("22:15");
         MemberId parsed = new MemberId(people.ana().value());
-        Optional<MemberId> found = group.member(parsed).flatMap(Member::id);
+        Optional<MemberId> found = group.member(parsed).map(Member::id);
         Optional<EranosException> empty = refusal(() -> group.member(new MemberId("")));
         Optional<EranosException> spaced = refusal(() -> group.member(new MemberId(" ana")));
         Optional<EranosException> tabbed = refusal(() -> group.member(new MemberId("a\tb")));

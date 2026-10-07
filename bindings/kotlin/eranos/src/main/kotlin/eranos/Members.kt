@@ -3,13 +3,15 @@ package eranos
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * A member to add carries the identifier the app gives them, such as the key of its own store, or none, and then
- * [ExpenseGroup.add] generates one. To change a member, read them from the group, [copy] them with the changes, and pass the
- * copy to [ExpenseGroup.replace].
+ * A member has their identifier from the moment they are made: the app's own, such as the key of its own store, or a
+ * generated one. To change a member, read them from the group, [copy] them with the changes, and pass the copy to
+ * [ExpenseGroup.replace].
+ *
+ * @constructor A member called [firstName], under the identifier [id]; the constructor without [id] generates one.
  */
 public class Member(
-    /** The identifier: the app's own or `null` for a member to add, and set for one the group holds. */
-    public val id: MemberId?,
+    /** The identifier, which the app gives: its own, or one [MemberId.generate] makes. */
+    public val id: MemberId,
     /** The first name. */
     public val firstName: String,
     /** The last name. */
@@ -23,20 +25,20 @@ public class Member(
     /** Where the member can be paid, in the order they were given. */
     public val accounts: List<PaymentAccount> = accounts.toList()
 
-    /** A member to add, called [firstName], under an identifier the group generates. */
+    /** A member called [firstName], under an identifier [MemberId.generate] makes; the constructor with [id] takes the app's. */
     public constructor(
         firstName: String,
         lastName: String? = null,
         email: Email? = null,
         phone: PhoneNumber? = null,
         accounts: List<PaymentAccount> = emptyList(),
-    ) : this(null, firstName, lastName, email, phone, accounts)
+    ) : this(MemberId.generate(), firstName, lastName, email, phone, accounts)
 
     /** The member as the generated code holds them. */
     internal val generated: eranos.internal.Member
         get() =
             eranos.internal.Member(
-                id?.value,
+                id.value,
                 firstName,
                 lastName,
                 email?.toString(),
@@ -75,7 +77,7 @@ public class Member(
 /** The member the generated code holds as [this]. */
 internal fun eranos.internal.Member.converted(): Member =
     Member(
-        id?.let(::MemberId),
+        MemberId(id),
         firstName,
         lastName,
         email?.let(::Email),

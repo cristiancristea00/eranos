@@ -638,6 +638,24 @@ static void anIdentifierIsCheckedAndKeptAsItIsWritten(Check *const check) {
     eranosTextDestroy(text);
 }
 
+/// A generated identifier that repeated an earlier one would put a new entry in the place of another, and one the rules refused would fail
+/// every call that carries it.
+static void aGeneratedIdentifierIsNewAndOneTheRulesAccept(Check *const check) {
+    EranosText *const first = eranosTextCreate();
+    EranosText *const second = eranosTextCreate();
+    EranosText *const parsed = eranosTextCreate();
+    eranosIdentifierGenerate(first);
+    eranosIdentifierGenerate(second);
+    checkThat(check, !isText(first, eranosTextData(second)), "two generated identifiers differ");
+    checkSucceeded(check, eranosIdentifierParse(eranosTextData(first), parsed), "a generated identifier parses");
+    checkThat(check, isText(parsed, eranosTextData(first)), "as it was generated");
+    checkSucceeded(check, eranosIdentifierParse(eranosTextData(second), parsed), "and so does the next");
+    checkThat(check, isText(parsed, eranosTextData(second)), "as it was generated");
+    eranosTextDestroy(parsed);
+    eranosTextDestroy(second);
+    eranosTextDestroy(first);
+}
+
 /// A list of identifiers that reordered or dropped one would give a member's share to another.
 static void aListOfIdentifiersKeepsItsOrder(Check *const check) {
     EranosTextList *const list = eranosTextListCreate();
@@ -851,10 +869,10 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
 static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosText *const text = eranosTextCreate();
     EranosExpense *const expense = expenseOf("Dinner", "ana", "ana", "bob");
-    checkThat(check,
-              !eranosExpenseId(expense, text) && !eranosExpenseCategory(expense, text) && !eranosExpenseDescription(expense, text) &&
-                  nullptr == eranosExpenseTip(expense),
-              "a new expense has no identifier, category, description, or tip");
+    eranosExpenseId(expense, text);
+    checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new expense has a generated identifier");
+    checkThat(check, !eranosExpenseCategory(expense, text) && !eranosExpenseDescription(expense, text) && nullptr == eranosExpenseTip(expense),
+              "and no category, description, or tip");
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
     checkThat(check, !eranosExpenseTime(expense, &time), "nor time");
     checkSucceeded(check, eranosExpenseSetId(expense, "0199a000-0000-7000-8000-000000000001"), "an identifier is set");
@@ -875,7 +893,8 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosTipValue *const tenPercent = eranosTipValueCreatePercentage(1'000);
     EranosTipRule *const tip = eranosTipRuleCreate(tenPercent, ERANOS_TIP_DISTRIBUTION_EQUAL);
     eranosExpenseSetTip(expense, tip);
-    checkThat(check, eranosExpenseId(expense, text) && isText(text, "0199a000-0000-7000-8000-000000000001"), "the identifier as set");
+    eranosExpenseId(expense, text);
+    checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000001"), "the identifier as set");
     eranosExpenseName(expense, text);
     checkThat(check, isText(text, "Lunch"), "the name");
     checkThat(check, eranosExpenseCategory(expense, text) && isText(text, "0199a000-0000-7000-8000-000000000002"), "the category");
@@ -913,18 +932,26 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
                   isKind(eranosExpenseSetCategory(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosExpenseSetDescription(expense, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "every text field is text");
-    eranosExpenseClearId(expense);
     eranosExpenseClearCategory(expense);
     eranosExpenseClearDescription(expense);
     eranosExpenseClearTime(expense);
     eranosExpenseClearTip(expense);
     checkThat(check,
-              !eranosExpenseId(expense, text) && !eranosExpenseCategory(expense, text) && !eranosExpenseDescription(expense, text) &&
-                  !eranosExpenseTime(expense, &time) && nullptr == eranosExpenseTip(expense),
+              !eranosExpenseCategory(expense, text) && !eranosExpenseDescription(expense, text) && !eranosExpenseTime(expense, &time) &&
+                  nullptr == eranosExpenseTip(expense),
               "every optional field clears");
+    EranosExpense *receipt = nullptr;
+    checkSucceeded(check, eranosExpenseCreateWithId("receipt-17", "Receipt", cost, bob, split, next, &receipt),
+                   "an expense under the app's identifier");
+    eranosExpenseId(receipt, text);
+    checkThat(check, isText(text, "receipt-17"), "keeps it");
     EranosExpense *noExpense = nullptr;
     EranosCalendarDate const never = {.year = 2026, .month = 2, .day = 30};
     checkThat(check, isKind(eranosExpenseCreate("\xff", cost, bob, split, never, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
+    checkThat(check,
+              isKind(eranosExpenseCreateWithId("\xff", "Receipt", cost, bob, split, next, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  nullptr == noExpense,
+              "an identifier is text");
     eranosCostDestroy(strange);
     eranosMoneyDestroy(unlisted);
     eranosTipRuleDestroy(readTip);
@@ -937,6 +964,7 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     eranosSplitDestroy(bob);
     eranosCostDestroy(cost);
     eranosMoneyDestroy(forty);
+    eranosExpenseDestroy(receipt);
     eranosExpenseDestroy(expense);
     eranosTextDestroy(text);
 }
@@ -946,8 +974,9 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosText *const text = eranosTextCreate();
     EranosTransfer *const transfer = transferOf("bob", "ana", 1'000);
     EranosTimeOfDay time = {.hour = 0, .minute = 0};
-    checkThat(check, !eranosTransferId(transfer, text) && !eranosTransferNote(transfer, text) && !eranosTransferTime(transfer, &time),
-              "a new transfer has no identifier, note, or time");
+    eranosTransferId(transfer, text);
+    checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new transfer has a generated identifier");
+    checkThat(check, !eranosTransferNote(transfer, text) && !eranosTransferTime(transfer, &time), "and no note or time");
     checkSucceeded(check, eranosTransferSetId(transfer, "0199a000-0000-7000-8000-000000000003"), "an identifier is set");
     checkSucceeded(check, eranosTransferSetFrom(transfer, "ana"), "who paid");
     checkSucceeded(check, eranosTransferSetTo(transfer, "bob"), "who was paid");
@@ -959,7 +988,8 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
     EranosMoney *const five = euros(500);
     EranosCost *const cost = eranosCostCreateLocal(five);
     eranosTransferSetCost(transfer, cost);
-    checkThat(check, eranosTransferId(transfer, text) && isText(text, "0199a000-0000-7000-8000-000000000003"), "the identifier");
+    eranosTransferId(transfer, text);
+    checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000003"), "the identifier");
     eranosTransferFrom(transfer, text);
     checkThat(check, isText(text, "ana"), "who paid");
     eranosTransferTo(transfer, text);
@@ -975,13 +1005,19 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
                   isKind(eranosTransferSetTo(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosTransferSetNote(transfer, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "every text field is text");
-    eranosTransferClearId(transfer);
     eranosTransferClearNote(transfer);
     eranosTransferClearTime(transfer);
-    checkThat(check, !eranosTransferId(transfer, text) && !eranosTransferNote(transfer, text) && !eranosTransferTime(transfer, &time), "and clears");
+    checkThat(check, !eranosTransferNote(transfer, text) && !eranosTransferTime(transfer, &time), "and clears");
+    EranosTransfer *cash = nullptr;
+    checkSucceeded(check, eranosTransferCreateWithId("payment-3", "ana", "bob", cost, DAY, &cash), "a transfer under the app's identifier");
+    eranosTransferId(cash, text);
+    checkThat(check, isText(text, "payment-3"), "keeps it");
     EranosTransfer *none = nullptr;
     checkThat(check, isKind(eranosTransferCreate("\xff", "ana", cost, DAY, &none), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == none,
               "who paid is text");
+    checkThat(check, isKind(eranosTransferCreateWithId("\xff", "ana", "bob", cost, DAY, &none), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == none,
+              "an identifier is text");
+    eranosTransferDestroy(cash);
     eranosCostDestroy(readCost);
     eranosCostDestroy(cost);
     eranosMoneyDestroy(five);
@@ -1026,10 +1062,12 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     EranosMember *member = nullptr;
     checkSucceeded(check, eranosMemberCreate("Carla", &member), "a member");
     EranosPaymentAccountList *const noAccounts = eranosMemberAccounts(member);
+    eranosMemberId(member, text);
+    checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new member has a generated identifier");
     checkThat(check,
-              !eranosMemberId(member, text) && !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) &&
-                  !eranosMemberPhone(member, text) && eranosPaymentAccountListIsEmpty(noAccounts),
-              "a new member has a first name only");
+              !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) && !eranosMemberPhone(member, text) &&
+                  eranosPaymentAccountListIsEmpty(noAccounts),
+              "and a first name only");
     checkSucceeded(check, eranosMemberSetId(member, "0199a000-0000-7000-8000-000000000004"), "an identifier is set");
     checkSucceeded(check, eranosMemberSetFirstName(member, "Carla Maria"), "a first name");
     checkSucceeded(check, eranosMemberSetEmail(member, "carla@example.com"), "an email");
@@ -1043,10 +1081,11 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
               "one account");
     eranosMemberFirstName(member, text);
     checkThat(check, isText(text, "Carla Maria"), "the first name");
+    eranosMemberId(member, text);
+    checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000004"), "the identifier");
     checkThat(check,
-              eranosMemberId(member, text) && isText(text, "0199a000-0000-7000-8000-000000000004") && eranosMemberEmail(member, text) &&
-                  isText(text, "carla@example.com") && eranosMemberLastName(member, text) && isText(text, "Pop") && eranosMemberPhone(member, text) &&
-                  isText(text, "+40712345678"),
+              eranosMemberEmail(member, text) && isText(text, "carla@example.com") && eranosMemberLastName(member, text) && isText(text, "Pop") &&
+                  eranosMemberPhone(member, text) && isText(text, "+40712345678"),
               "every detail as set");
     checkThat(check,
               isKind(eranosMemberSetId(member, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
@@ -1055,16 +1094,19 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
                   isKind(eranosMemberSetLastName(member, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosMemberSetPhone(member, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "every text field is text");
-    eranosMemberClearId(member);
     eranosMemberClearEmail(member);
     eranosMemberClearLastName(member);
     eranosMemberClearPhone(member);
-    checkThat(check,
-              !eranosMemberId(member, text) && !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) &&
-                  !eranosMemberPhone(member, text),
-              "and clears");
+    checkThat(check, !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) && !eranosMemberPhone(member, text), "and clears");
+    EranosMember *carla = nullptr;
+    checkSucceeded(check, eranosMemberCreateWithId("carla", "Carla", &carla), "a member under the app's identifier");
+    eranosMemberId(carla, text);
+    checkThat(check, isText(text, "carla"), "keeps it");
     EranosMember *noMember = nullptr;
     checkThat(check, isKind(eranosMemberCreate("\xff", &noMember), ERANOS_ERROR_KIND_INVALID_TEXT), "a first name is text");
+    checkThat(check, isKind(eranosMemberCreateWithId("\xff", "Carla", &noMember), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == noMember,
+              "an identifier is text");
+    eranosMemberDestroy(carla);
     eranosPaymentAccountDestroy(firstAccount);
     eranosPaymentAccountListDestroy(readAccounts);
     eranosPaymentAccountListDestroy(noAccounts);
@@ -1082,20 +1124,27 @@ static void aCategoryReadsBackAsItWasGiven(Check *const check) {
     EranosText *const text = eranosTextCreate();
     EranosCategory *category = nullptr;
     checkSucceeded(check, eranosCategoryCreate("Food", &category), "a category");
-    checkThat(check, !eranosCategoryId(category, text), "a new category has no identifier");
+    eranosCategoryId(category, text);
+    checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a new category has a generated identifier");
     checkSucceeded(check, eranosCategorySetId(category, "0199a000-0000-7000-8000-000000000005"), "an identifier is set");
     checkSucceeded(check, eranosCategorySetName(category, "Meals"), "a name");
     eranosCategoryName(category, text);
     checkThat(check, isText(text, "Meals"), "the name as set");
-    checkThat(check, eranosCategoryId(category, text) && isText(text, "0199a000-0000-7000-8000-000000000005"), "the identifier as set");
+    eranosCategoryId(category, text);
+    checkThat(check, isText(text, "0199a000-0000-7000-8000-000000000005"), "the identifier as set");
     checkThat(check,
               isKind(eranosCategorySetId(category, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   isKind(eranosCategorySetName(category, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT),
               "its fields are text");
-    eranosCategoryClearId(category);
-    checkThat(check, !eranosCategoryId(category, text), "the identifier clears");
+    EranosCategory *lodging = nullptr;
+    checkSucceeded(check, eranosCategoryCreateWithId("lodging", "Lodging", &lodging), "a category under the app's identifier");
+    eranosCategoryId(lodging, text);
+    checkThat(check, isText(text, "lodging"), "keeps it");
     EranosCategory *none = nullptr;
     checkThat(check, isKind(eranosCategoryCreate("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
+    checkThat(check, isKind(eranosCategoryCreateWithId("\xff", "Lodging", &none), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == none,
+              "an identifier is text");
+    eranosCategoryDestroy(lodging);
     eranosCategoryDestroy(category);
     eranosTextDestroy(text);
 }
@@ -1192,11 +1241,11 @@ static void destroyingNullDoesNothing(Check *const check) {
 static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     EranosText *const text = eranosTextCreate();
     EranosNewExpenseGroup *details = nullptr;
-    checkSucceeded(check, eranosNewExpenseGroupCreate("Flat", "EUR", &details), "a new group's details");
-    checkThat(check,
-              !eranosNewExpenseGroupId(details, text) && !eranosNewExpenseGroupDescription(details, text) &&
-                  !eranosNewExpenseGroupLanguage(details, text),
-              "start without identifier, description, or language");
+    checkSucceeded(check, eranosNewExpenseGroupCreateWithId("flat", "Flat", "EUR", &details), "a new group's details under the app's identifier");
+    eranosNewExpenseGroupId(details, text);
+    checkThat(check, isText(text, "flat"), "keep it");
+    checkThat(check, !eranosNewExpenseGroupDescription(details, text) && !eranosNewExpenseGroupLanguage(details, text),
+              "and start without description or language");
     checkSucceeded(check, eranosNewExpenseGroupSetId(details, "home"), "an identifier is set");
     checkSucceeded(check, eranosNewExpenseGroupSetCurrency(details, "RON"), "a currency is set");
     checkSucceeded(check, eranosNewExpenseGroupSetName(details, "Home"), "a name");
@@ -1206,7 +1255,8 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     checkThat(check, isText(text, "RON"), "the currency as set");
     eranosNewExpenseGroupName(details, text);
     checkThat(check, isText(text, "Home"), "the name");
-    checkThat(check, eranosNewExpenseGroupId(details, text) && isText(text, "home"), "the identifier");
+    eranosNewExpenseGroupId(details, text);
+    checkThat(check, isText(text, "home"), "the identifier");
     checkThat(check,
               eranosNewExpenseGroupDescription(details, text) && isText(text, "Bills") && eranosNewExpenseGroupLanguage(details, text) &&
                   isText(text, "ro-RO"),
@@ -1229,19 +1279,23 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
               isFailure(eranosExpenseGroupCreate(details, &refused), ERANOS_ERROR_KIND_ID, ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE) &&
                   nullptr == refused,
               "an identifier the library refuses");
-    eranosNewExpenseGroupClearId(details);
     eranosNewExpenseGroupClearDescription(details);
     eranosNewExpenseGroupClearLanguage(details);
-    checkThat(check,
-              !eranosNewExpenseGroupId(details, text) && !eranosNewExpenseGroupDescription(details, text) &&
-                  !eranosNewExpenseGroupLanguage(details, text),
-              "and clear");
+    checkThat(check, !eranosNewExpenseGroupDescription(details, text) && !eranosNewExpenseGroupLanguage(details, text), "and clear");
     EranosNewExpenseGroup *noDetails = nullptr;
     checkThat(check, isKind(eranosNewExpenseGroupCreate("Flat", "\xff", &noDetails), ERANOS_ERROR_KIND_INVALID_TEXT), "a currency's code is text");
+    checkThat(check,
+              isKind(eranosNewExpenseGroupCreateWithId("\xff", "Flat", "EUR", &noDetails), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == noDetails,
+              "an identifier is text");
+    EranosNewExpenseGroup *generated = nullptr;
+    checkSucceeded(check, eranosNewExpenseGroupCreate("Flat", "RON", &generated), "a new group's details under a generated identifier");
+    EranosText *const id = eranosTextCreate();
+    eranosNewExpenseGroupId(generated, id);
     EranosExpenseGroup *group = nullptr;
-    checkSucceeded(check, eranosExpenseGroupCreate(details, &group), "a group");
+    checkSucceeded(check, eranosExpenseGroupCreate(generated, &group), "a group");
     checkSucceeded(check, eranosExpenseGroupId(group, text), "has an identifier");
-    checkThat(check, eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"), "a hyphenated UUID");
+    checkThat(check, isText(text, eranosTextData(id)) && eranosTextLength(text) == strlen("0199a000-0000-7000-8000-000000000001"),
+              "the generated one, a hyphenated UUID");
     checkSucceeded(check, eranosExpenseGroupCurrency(group, text), "a currency");
     checkThat(check, isText(text, "RON"), "the one it started with");
     checkSucceeded(check, eranosExpenseGroupSetName(group, "Trip"), "a name is set");
@@ -1264,13 +1318,15 @@ static void aGroupHoldsItsDetailsAndChangesThem(Check *const check) {
     checkThat(check,
               isFailure(eranosExpenseGroupSetLanguage(group, "not a tag"), ERANOS_ERROR_KIND_LANGUAGE, ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE),
               "no tag");
-    eranosErrorDestroy(eranosNewExpenseGroupSetName(details, " "));
+    eranosErrorDestroy(eranosNewExpenseGroupSetName(generated, " "));
     EranosExpenseGroup *noGroup = nullptr;
     checkThat(check,
-              isFailure(eranosExpenseGroupCreate(details, &noGroup), ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME) &&
+              isFailure(eranosExpenseGroupCreate(generated, &noGroup), ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME) &&
                   nullptr == noGroup,
               "a group needs a name");
     eranosExpenseGroupDestroy(group);
+    eranosTextDestroy(id);
+    eranosNewExpenseGroupDestroy(generated);
     eranosNewExpenseGroupDestroy(details);
     eranosTextDestroy(text);
 }
@@ -1286,7 +1342,8 @@ static void entriesComeAndGoThroughTheGroup(Check *const check) {
               1 == eranosExpenseListLength(expenses) && !eranosExpenseListIsEmpty(expenses) && nullptr != dinner &&
                   nullptr == eranosExpenseListGet(expenses, 1),
               "the dinner, alone");
-    checkThat(check, eranosExpenseId(dinner, text) && isText(text, eranosTextData(flat.dinner)), "under its identifier");
+    eranosExpenseId(dinner, text);
+    checkThat(check, isText(text, eranosTextData(flat.dinner)), "under its identifier");
     checkSucceeded(check, eranosExpenseSetName(dinner, "Supper"), "an edit");
     EranosExpense *previous = nullptr;
     checkSucceeded(check, eranosExpenseGroupReplaceExpense(flat.group, dinner, &previous), "replaces the expense");
@@ -1398,24 +1455,26 @@ static void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check *const che
     EranosText *const text = eranosTextCreate();
     EranosText *const named = eranosTextCreate();
     EranosMember *carla = nullptr;
-    eranosErrorDestroy(eranosMemberCreate("Carla", &carla));
-    eranosErrorDestroy(eranosMemberSetId(carla, "carla"));
+    eranosErrorDestroy(eranosMemberCreateWithId("carla", "Carla", &carla));
     checkSucceeded(check, eranosExpenseGroupAddMember(flat.group, carla, text), "a member under the app's identifier");
     EranosMember *member = nullptr;
     checkSucceeded(check, eranosExpenseGroupMember(flat.group, "carla", &member), "is found by it");
-    checkThat(check, isText(text, "carla") && nullptr != member && eranosMemberId(member, named) && isText(named, "carla"), "and keeps it");
+    checkThat(check, isText(text, "carla") && nullptr != member, "and keeps it");
+    eranosMemberId(member, named);
+    checkThat(check, isText(named, "carla"), "the member holds it");
     EranosError *const memberTwice = eranosExpenseGroupAddMember(flat.group, carla, text);
     checkThat(check,
               holdsFailure(memberTwice, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_MEMBER) &&
                   eranosErrorMember(memberTwice, named) && isText(named, "carla"),
               "a second member under it is refused");
     EranosCategory *lodging = nullptr;
-    eranosErrorDestroy(eranosCategoryCreate("Lodging", &lodging));
-    eranosErrorDestroy(eranosCategorySetId(lodging, "lodging"));
+    eranosErrorDestroy(eranosCategoryCreateWithId("lodging", "Lodging", &lodging));
     checkSucceeded(check, eranosExpenseGroupAddCategory(flat.group, lodging, text), "a category under the app's identifier");
     EranosCategory *category = nullptr;
     checkSucceeded(check, eranosExpenseGroupCategory(flat.group, "lodging", &category), "is found by it");
-    checkThat(check, isText(text, "lodging") && nullptr != category && eranosCategoryId(category, named) && isText(named, "lodging"), "and keeps it");
+    checkThat(check, isText(text, "lodging") && nullptr != category, "and keeps it");
+    eranosCategoryId(category, named);
+    checkThat(check, isText(named, "lodging"), "the category holds it");
     eranosErrorDestroy(eranosCategorySetName(lodging, "Rooms"));
     EranosError *const categoryTwice = eranosExpenseGroupAddCategory(flat.group, lodging, text);
     checkThat(check,
@@ -1427,8 +1486,9 @@ static void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check *const che
     checkSucceeded(check, eranosExpenseGroupAddExpense(flat.group, receipt, text), "an expense under the app's identifier");
     EranosExpense *expense = nullptr;
     checkSucceeded(check, eranosExpenseGroupExpense(flat.group, "receipt-17", &expense), "is found by it");
-    checkThat(check, isText(text, "receipt-17") && nullptr != expense && eranosExpenseId(expense, named) && isText(named, "receipt-17"),
-              "and keeps it");
+    checkThat(check, isText(text, "receipt-17") && nullptr != expense, "and keeps it");
+    eranosExpenseId(expense, named);
+    checkThat(check, isText(named, "receipt-17"), "the expense holds it");
     EranosError *const expenseTwice = eranosExpenseGroupAddExpense(flat.group, receipt, text);
     checkThat(check,
               holdsFailure(expenseTwice, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_EXPENSE) &&
@@ -1439,8 +1499,9 @@ static void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check *const che
     checkSucceeded(check, eranosExpenseGroupAddTransfer(flat.group, cash, text), "a transfer under the app's identifier");
     EranosTransfer *transfer = nullptr;
     checkSucceeded(check, eranosExpenseGroupTransfer(flat.group, "payment-3", &transfer), "is found by it");
-    checkThat(check, isText(text, "payment-3") && nullptr != transfer && eranosTransferId(transfer, named) && isText(named, "payment-3"),
-              "and keeps it");
+    checkThat(check, isText(text, "payment-3") && nullptr != transfer, "and keeps it");
+    eranosTransferId(transfer, named);
+    checkThat(check, isText(named, "payment-3"), "the transfer holds it");
     EranosError *const transferTwice = eranosExpenseGroupAddTransfer(flat.group, cash, text);
     checkThat(check,
               holdsFailure(transferTwice, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_DUPLICATE_TRANSFER) &&
@@ -1526,8 +1587,7 @@ static void anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved(Check *const c
     char const *const ana = eranosTextData(flat.ana);
     char const *const bob = eranosTextData(flat.bob);
     EranosCategory *category = nullptr;
-    checkSucceeded(check, eranosCategoryCreate("Travel", &category), "a category");
-    checkSucceeded(check, eranosCategorySetId(category, unknown), "its identifier");
+    checkSucceeded(check, eranosCategoryCreateWithId(unknown, "Travel", &category), "a category the group does not hold");
     EranosCategory *previousCategory = nullptr;
     checkThat(check,
               isFailure(eranosExpenseGroupReplaceCategory(flat.group, category, &previousCategory), ERANOS_ERROR_KIND_EXPENSE_GROUP,
@@ -1553,8 +1613,7 @@ static void anEntryTheGroupDoesNotHoldIsNeitherReplacedNorRemoved(Check *const c
                   nullptr == previousExpense,
               "nor removed");
     EranosMember *member = nullptr;
-    checkSucceeded(check, eranosMemberCreate("Carol", &member), "a member");
-    checkSucceeded(check, eranosMemberSetId(member, unknown), "their identifier");
+    checkSucceeded(check, eranosMemberCreateWithId(unknown, "Carol", &member), "a member the group does not hold");
     EranosMember *previousMember = nullptr;
     checkThat(check,
               isFailure(eranosExpenseGroupReplaceMember(flat.group, member, &previousMember), ERANOS_ERROR_KIND_EXPENSE_GROUP,
@@ -2189,8 +2248,7 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     checkThat(check, isFailure(waiter.error, ERANOS_ERROR_KIND_EXPENSE_GROUP, ERANOS_FAILURE_EXPENSE_GROUP_EMPTY_NAME),
               "a change that fails reports its error");
     EranosMember *dan = nullptr;
-    eranosErrorDestroy(eranosMemberCreate("Dan", &dan));
-    eranosErrorDestroy(eranosMemberSetId(dan, " x"));
+    eranosErrorDestroy(eranosMemberCreateWithId(" x", "Dan", &dan));
     EranosTextCallback const failingTextCallback = {waiting(&waiter), receiveText};
     eranosExpenseGroupAddMemberAsync(flat.group, dan, nullptr, &failingTextCallback);
     await(&waiter);
@@ -2383,6 +2441,7 @@ int main(void) {
         {.body = datesAndTimesAreCheckedAndWritten, .name = "datesAndTimesAreCheckedAndWritten"},
         {.body = contactsAndAccountsAreCheckedAndMadeCanonical, .name = "contactsAndAccountsAreCheckedAndMadeCanonical"},
         {.body = anIdentifierIsCheckedAndKeptAsItIsWritten, .name = "anIdentifierIsCheckedAndKeptAsItIsWritten"},
+        {.body = aGeneratedIdentifierIsNewAndOneTheRulesAccept, .name = "aGeneratedIdentifierIsNewAndOneTheRulesAccept"},
         {.body = aListOfIdentifiersKeepsItsOrder, .name = "aListOfIdentifiersKeepsItsOrder"},
         {.body = everyShareOfASplitReadsBackAsItWasMade, .name = "everyShareOfASplitReadsBackAsItWasMade"},
         {.body = itemsTipsAndCostsReadBackAsTheyWereMade, .name = "itemsTipsAndCostsReadBackAsTheyWereMade"},

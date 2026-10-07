@@ -149,22 +149,20 @@ fn a_member_keeps_its_identifier_through_edits() {
 }
 
 /// A member from an app's own store would get another identifier than its
-/// key, lose it in an edit, or keep it after the app asked for a generated
-/// one.
+/// key, lose it in an edit, or keep it when an edit gives another.
 #[test]
 fn a_member_takes_the_identifier_it_is_given() {
     let id = MemberId::new("!a").unwrap();
-    let member = Member::builder("Ana").id(id).build().unwrap();
+    let member = Member::builder_with_id(id, "Ana").build().unwrap();
     assert_eq!(member.id(), id);
     // An edit keeps it.
     let renamed = member.to_builder().first_name("Anna").build().unwrap();
     assert_eq!(renamed.id(), id);
-    // The last call wins, and `None` leaves generation to `build`.
+    // The last call wins, and nothing else changes.
     let other = MemberId::new("zz").unwrap();
-    assert_eq!(member.to_builder().id(other).build().unwrap().id(), other);
-    let generated = member.to_builder().id(None).build().unwrap();
-    assert_ne!(generated.id(), id);
-    assert_eq!(generated.first_name(), "Ana");
+    let moved = member.to_builder().id(other).build().unwrap();
+    assert_eq!(moved.id(), other);
+    assert_eq!(moved.to_builder().id(id).build().unwrap(), member);
 }
 
 /// Editing a copy of a member would change the member shown elsewhere.

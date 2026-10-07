@@ -242,7 +242,7 @@ An `ExpenseGroup` has an ID, a name (the only required text), a description, a
 **required** currency (every total is in it), and a language tag for the
 apps. It owns four maps keyed by the identifiers of their entries, so
 iteration order is the byte order of the identifiers' text, on every device,
-which for generated identifiers is the order the entries were built in. The
+which for generated identifiers is the order they were generated in. The
 categories map is keyed by `CategoryKey`, which puts the built-in
 Uncategorised first whatever the text of the others:
 
@@ -258,12 +258,16 @@ Entities are immutable values built by builders (`Member::builder`,
 every value it receives. A builder's constructor takes every required value:
 an expense has four, for one payer or several and for a whole split or
 items, and an item two, for an equal split or any other. The group and
-every member, category, expense, and transfer carry an identifier: the one
-an app gives the builder's `id`, or `Category::with_id`, such as the key of
-its own store, or one generated when the value is built. `to_builder` keeps
-it, so an edit stays the same entry: `add_*` refuses an identifier the
-group already holds, Uncategorised's included, and `replace_*` finds the
-entry to replace by it.
+every member, category, expense, and transfer carry an identifier from
+the moment their constructor is called: a constructor with the plain name
+generates one (`Member::builder`, `Category::new`), and its twin takes the
+app's own, such as the key of its store (`Member::builder_with_id`,
+`Category::with_id`). The plain form generates before anything is
+checked, so an entry the builder then refuses has still used up the
+identifier generated for it, and `build` generates nothing. `to_builder`
+keeps the identifier, so an edit stays the same entry: `add_*` refuses an
+identifier the group already holds, Uncategorised's included, and
+`replace_*` finds the entry to replace by it.
 
 An **identifier** (`ExpenseGroupId`, `MemberId`, `CategoryId`, `ExpenseId`,
 `TransferId`) is text stored as it is given: at most 64 bytes of UTF-8, not
@@ -580,8 +584,8 @@ never the derived totals:
   unarchived first), categories, expenses, transfers, then the `archived`
   list, because an expense may reference a member archived after it was
   added. The group and every entry take their saved identifiers through
-  the builders' `id` and `Category::with_id`, as an app gives its own, so
-  a load generates none. A hand-edited or corrupted file is refused, never
+  the constructors' `with_id` twins, as an app gives its own, so a load
+  generates none. A hand-edited or corrupted file is refused, never
   loaded inconsistently. Deserialising an `ExpenseGroup` reports the
   refusal as the deserialiser's error; deserialising a `SavedExpenseGroup`
   and calling `into_expense_group` reports it as an `ExpenseGroupError`, so

@@ -124,8 +124,9 @@ class ExpenseGroupTest {
     fun everyBlockingChangeTakesEffect() {
         val flat = Flat()
         val group = flat.group
-        val carol = group.addBlocking(Member("Carol"))
-        assertEquals(Member("Carol"), present(group.memberBlocking(carol)).let { Member(it.firstName) })
+        val newcomer = Member("Carol")
+        val carol = group.addBlocking(newcomer)
+        assertEquals(newcomer, group.memberBlocking(carol))
         val renamed = present(group.memberBlocking(carol)).copy(lastName = "Popa")
         assertEquals("Carol", group.replaceBlocking(renamed).firstName)
         assertEquals("Popa", present(group.memberBlocking(carol)).lastName)

@@ -210,6 +210,27 @@ class ValuesTest {
     }
 
     /**
+     * A generate that repeated an identifier, made one its parse refuses, or drew from a generator of its own for a kind would
+     * give two entries one identifier, leave an app an identifier it cannot store, or list entries out of creation order.
+     */
+    @Test
+    fun everyIdentifierGeneratesNewTextThatItsParseAccepts() {
+        val group = ExpenseGroupId.generate()
+        val member = MemberId.generate()
+        val category = CategoryId.generate()
+        val expense = ExpenseId.generate()
+        val transfer = TransferId.generate()
+        assertEquals(group, ExpenseGroupId.parse(group.value))
+        assertEquals(member, MemberId.parse(member.value))
+        assertEquals(category, CategoryId.parse(category.value))
+        assertEquals(expense, ExpenseId.parse(expense.value))
+        assertEquals(transfer, TransferId.parse(transfer.value))
+        // Every kind draws from one generator, so each text is new and sorts after the one generated before it.
+        val texts = listOf(group.value, member.value, category.value, expense.value, transfer.value, MemberId.generate().value)
+        assertEquals(texts.distinct().sorted(), texts)
+    }
+
+    /**
      * A value the library never sends, such as an amount in a currency it does not list, would throw from its text instead of
      * printing.
      */

@@ -6,7 +6,10 @@
 use eranos::MemberId;
 
 use super::*;
-use crate::{CategoryFailure, ContactFailure, IdFailure, MemberFailure, PaymentAccountFailure};
+use crate::{
+    CategoryFailure, ContactFailure, IdFailure, MemberFailure, PaymentAccountFailure,
+    identifier_generate,
+};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -26,7 +29,7 @@ fn iban_account() -> PaymentAccount {
 /// Ana with every detail, as the group holds them.
 fn ana() -> Member {
     Member {
-        id: None,
+        id: identifier_generate(),
         first_name: "Ana".to_owned(),
         last_name: Some("Popescu".to_owned()),
         email: Some("ana@example.com".to_owned()),
@@ -46,7 +49,7 @@ fn ana() -> Member {
 /// Bob with a first name only.
 fn bob() -> Member {
     Member {
-        id: None,
+        id: identifier_generate(),
         first_name: "Bob".to_owned(),
         last_name: None,
         email: None,
@@ -168,14 +171,7 @@ fn refused_members() -> [Refusal; 6] {
 #[test]
 fn a_member_to_add_converts_both_ways() {
     for record in [ana(), bob()] {
-        let member = record.to_new().unwrap();
-        assert_eq!(
-            Member::from_library(&member),
-            Member {
-                id: Some(member.id().to_string()),
-                ..record
-            }
-        );
+        assert_eq!(Member::from_library(&record.to_new().unwrap()), record);
     }
     let entered = Member {
         email: Some(" ana@example.com ".to_owned()),
@@ -210,21 +206,22 @@ fn a_member_refuses_every_detail_that_does_not_convert() {
     }
 }
 
-/// A member to add would lose the identifier their app gives them, take one
-/// the rules refuse, or, without one, not get a generated one.
+/// A member to add would lose the identifier their app gives them, its own
+/// or a generated one, or take one the rules refuse.
 #[test]
 fn a_member_to_add_keeps_the_identifier_they_carry() {
     let id = MemberId::new("!a").unwrap();
     let named = Member {
-        id: Some(id.to_string()),
+        id: id.to_string(),
         ..ana()
     };
     let member = named.to_new().unwrap();
     assert_eq!(member.id(), id);
     assert_eq!(Member::from_library(&member), named);
-    assert_ne!(ana().to_new().unwrap().id(), id);
+    let generated = ana();
+    assert_eq!(generated.to_new().unwrap().id().as_str(), generated.id);
     let padded = Member {
-        id: Some(" x".to_owned()),
+        id: " x".to_owned(),
         ..ana()
     };
     assert!(matches!(
@@ -246,7 +243,7 @@ fn a_replacement_keeps_the_identifier_and_takes_every_detail() {
         assert_eq!(
             Member::from_library(&replacement),
             Member {
-                id: Some(stored.id().to_string()),
+                id: stored.id().to_string(),
                 ..record
             }
         );
@@ -259,18 +256,12 @@ fn a_replacement_keeps_the_identifier_and_takes_every_detail() {
 #[test]
 fn a_category_converts_and_keeps_its_identifier_when_renamed() {
     let food = Category {
-        id: None,
+        id: identifier_generate(),
         name: "Food".to_owned(),
     };
     let stored = food.to_new().unwrap();
-    let id = Some(stored.id().to_string());
-    assert_eq!(
-        Category::from_library(&stored),
-        Category {
-            id: id.clone(),
-            ..food
-        }
-    );
+    let id = stored.id().to_string();
+    assert_eq!(Category::from_library(&stored), food);
     let renamed = Category {
         id: id.clone(),
         name: "Groceries".to_owned(),
@@ -289,7 +280,7 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
         Ok(renamed.clone())
     );
     let padded = Category {
-        id: Some(" x".to_owned()),
+        id: " x".to_owned(),
         ..renamed
     };
     assert!(matches!(
@@ -300,7 +291,7 @@ fn a_category_converts_and_keeps_its_identifier_when_renamed() {
         })
     ));
     let blank = Category {
-        id: None,
+        id: identifier_generate(),
         name: " ".to_owned(),
     };
     let blank_rename = Category {

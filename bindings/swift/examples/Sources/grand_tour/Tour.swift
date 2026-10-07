@@ -97,7 +97,7 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     printTable(
         try group.members().map { member in
             // The summary lists the members with a total; every total of the others is zero.
-            guard let totals = member.id.flatMap({ id in totals(of: id, in: summary) }) else {
+            guard let totals = totals(of: member.id, in: summary) else {
                 return BalanceRow(name: member.firstName, paid: zero, consumed: zero, sent: zero, received: zero, balance: .settled)
             }
             return BalanceRow(
@@ -137,7 +137,7 @@ func printEntries(_ group: ExpenseGroup, _ shown: (CurrencyCode) -> Bool) throws
             payer: try names(group, expense.payers.members),
             original: try expense.total(),
             rate: try rate(of: expense.cost),
-            converted: try expense.id.flatMap { id throws(EranosError) in try group.shares(of: id) }?.total ?? zero
+            converted: try group.shares(of: expense.id)?.total ?? zero
         )
     }
     let transfers = try group.transfers().filter { transfer in shown(transfer.cost.amount.currency) }.map { transfer throws(EranosError) in
@@ -146,7 +146,7 @@ func printEntries(_ group: ExpenseGroup, _ shown: (CurrencyCode) -> Bool) throws
             payer: try name(group, transfer.from),
             original: transfer.cost.amount,
             rate: try rate(of: transfer.cost),
-            converted: try transfer.id.flatMap { id throws(EranosError) in try group.amount(of: id) } ?? zero
+            converted: try group.amount(of: transfer.id) ?? zero
         )
     }
     printTable(expenses + transfers, numbersFrom: 2)

@@ -317,6 +317,14 @@ pub mod ffi {
     pub struct EranosIdentifier;
 
     impl EranosIdentifier {
+        /// Writes a new identifier, which any entry or group can take.
+        ///
+        /// It is a UUID v7 as lowercase hyphenated text. Every kind of identifier draws from the
+        /// one generator of the library.
+        pub fn generate(write: &mut DiplomatWrite) {
+            crate::write_text(write, &eranos_bindings::identifier_generate());
+        }
+
         /// Writes the identifier written `text`, as it is: not trimmed, and in its case.
         ///
         /// # Errors

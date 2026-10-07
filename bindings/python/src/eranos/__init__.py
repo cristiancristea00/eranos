@@ -8,10 +8,10 @@ settle them. Every amount is a whole number of minor units, and every division a
 
     euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Flat', euro)
-    ana = group.add_member(Member(first_name='Ana'))
-    bob = group.add_member(Member(first_name='Bob'))
+    ana = group.add_member(Member.create(first_name='Ana'))
+    bob = group.add_member(Member.create(first_name='Bob'))
     group.add_expense(
-        Expense(
+        Expense.create(
             name='Dinner',
             cost=LocalCost(Money(3000, euro)),
             payers=EqualSplit((ana,)),
@@ -20,8 +20,10 @@ settle them. Every amount is a whole number of minor units, and every division a
         )
     )
 
-Every call of a group comes in two forms: the one named for the call blocks while another call holds the group's lock,
-and its twin, whose name ends in ``_async``, is a coroutine. What the library refuses raises an ``EranosError``.
+Every entry and every group has its identifier from the moment it is made: ``create`` generates it, and the class, or
+``ExpenseGroup.create_with_id``, takes the app's own. Every call of a group comes in two forms: the one named for the call
+blocks while another call holds the group's lock, and its twin, whose name ends in ``_async``, is a coroutine. What the
+library refuses raises an ``EranosError``.
 
 """
 
@@ -90,7 +92,18 @@ from eranos._errors import (
 from eranos._expense_group import CurrencyRate, ExpenseGroup
 from eranos._expense_group_reader import ExpenseGroupReader
 from eranos import _identifiers
-from eranos._identifiers import parse_category_id, parse_expense_group_id, parse_expense_id, parse_member_id, parse_transfer_id
+from eranos._identifiers import (
+    generate_category_id,
+    generate_expense_group_id,
+    generate_expense_id,
+    generate_member_id,
+    generate_transfer_id,
+    parse_category_id,
+    parse_expense_group_id,
+    parse_expense_id,
+    parse_member_id,
+    parse_transfer_id,
+)
 from eranos._money import Money
 from eranos._ratios import ExchangeRate, Parts, Percentage
 from eranos._totals import (
@@ -113,23 +126,23 @@ from eranos._totals import (
 # ruff: disable[non-empty-init-module]
 # Autodoc documents an identifier only where the module it documents gives the identifier's docstring.
 ExpenseGroupId = _identifiers.ExpenseGroupId
-"""The identifier of a group: the text the app gives it, or one the library generates, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of a group: the text the app gives it, or one ``generate_expense_group_id`` returns, a UUID v7 in lowercase hyphenated form."""
 
 MemberId = _identifiers.MemberId
-"""The identifier of a member: the text the app gives them, or one the group generates, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of a member: the text the app gives them, or one ``generate_member_id`` returns, a UUID v7 in lowercase hyphenated form."""
 
 CategoryId = _identifiers.CategoryId
 """
-The identifier of a category: the text the app gives it, or one the group generates, a UUID v7 in lowercase hyphenated form.
+The identifier of a category: the text the app gives it, or one ``generate_category_id`` returns, a UUID v7 in lowercase hyphenated form.
 
 The built-in category's is the nil UUID in that form, and the group lists that category before every other, whatever their identifiers.
 """
 
 ExpenseId = _identifiers.ExpenseId
-"""The identifier of an expense: the text the app gives it, or one the group generates, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of an expense: the text the app gives it, or one ``generate_expense_id`` returns, a UUID v7 in lowercase hyphenated form."""
 
 TransferId = _identifiers.TransferId
-"""The identifier of a transfer: the text the app gives it, or one the group generates, a UUID v7 in lowercase hyphenated form."""
+"""The identifier of a transfer: the text the app gives it, or one ``generate_transfer_id`` returns, a UUID v7 in lowercase hyphenated form."""
 # ruff: enable[non-empty-init-module]
 
 
@@ -222,6 +235,11 @@ __all__ = [
     'Username',
     'UsernamePaymentAccountDetails',
     'WholeExpenseSplit',
+    'generate_category_id',
+    'generate_expense_group_id',
+    'generate_expense_id',
+    'generate_member_id',
+    'generate_transfer_id',
     'parse_category_id',
     'parse_expense_group_id',
     'parse_expense_id',

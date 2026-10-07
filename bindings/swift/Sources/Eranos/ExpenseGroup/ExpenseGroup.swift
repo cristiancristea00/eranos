@@ -21,25 +21,41 @@ public final class ExpenseGroup: Sendable {
 
     let handle: EranosGenerated.ExpenseGroup
 
-    /// A new group with no members and no entries, under `id`, or one the library generates.
+    /// A new group with no members and no entries, under `id`, which the app gives: its own, or one
+    /// ``Identifier/generate()`` makes; ``init(name:currency:description:language:)`` generates it.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse, and
     ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName`` for a blank name.
     public init(
-        id: ID? = nil,
+        id: ID,
         name: String,
         currency: CurrencyCode,
         description: String? = nil,
         language: Language? = nil
     ) throws(EranosError) {
         let group = NewExpenseGroup(
-            id: id?.rawValue,
+            id: id.rawValue,
             name: name,
             currency: currency.code,
             description: description,
             language: language?.description
         )
         handle = try converting { try EranosGenerated.ExpenseGroup(group: group) }
+    }
+
+    /// A new group with no members and no entries, under an identifier ``Identifier/generate()``
+    /// makes when this is called; ``init(id:name:currency:description:language:)`` takes the app's
+    /// own.
+    ///
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/emptyName``
+    ///   for a blank name.
+    public convenience init(
+        name: String,
+        currency: CurrencyCode,
+        description: String? = nil,
+        language: Language? = nil
+    ) throws(EranosError) {
+        try self.init(id: .generate(), name: name, currency: currency, description: description, language: language)
     }
 
     private init(handle: EranosGenerated.ExpenseGroup) {

@@ -62,13 +62,13 @@ def test_every_asynchronous_change_of_an_entry_does_what_its_synchronous_form_do
         brunch = copy.replace(added, name='Brunch')
         assert await group.replace_expense_async(brunch) == added
         assert await group.remove_expense_async(lunch) == brunch
-        cash = await group.add_transfer_async(Transfer(sender=flat.ana, receiver=flat.bob, cost=LocalCost(flat.euros(100)), date=flat.day))
+        cash = await group.add_transfer_async(Transfer.create(sender=flat.ana, receiver=flat.bob, cost=LocalCost(flat.euros(100)), date=flat.day))
         sent = group.transfer(cash)
         assert sent is not None
         coins = copy.replace(sent, note='Coins')
         assert await group.replace_transfer_async(coins) == sent
         assert await group.remove_transfer_async(cash) == coins
-        carla = await group.add_member_async(Member(first_name='Carla'))
+        carla = await group.add_member_async(Member.create(first_name='Carla'))
         joined = group.member(carla)
         assert joined is not None
         maria = copy.replace(joined, first_name='Carla Maria')
@@ -78,7 +78,7 @@ def test_every_asynchronous_change_of_an_entry_does_what_its_synchronous_form_do
         await group.unarchive_member_async(carla)
         assert not group.is_archived(carla)
         assert await group.remove_member_async(carla) == maria
-        drinks = await group.add_category_async(Category(name='Drinks'))
+        drinks = await group.add_category_async(Category.create(name='Drinks'))
         coffee = Category(id=drinks, name='Coffee')
         assert await group.replace_category_async(coffee) == Category(id=drinks, name='Drinks')
         assert await group.remove_category_async(drinks) == coffee

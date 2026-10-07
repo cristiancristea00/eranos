@@ -171,7 +171,7 @@ internal fun printFado(
         $rule tip of ${fado.tipAmount()} was shared $shared:
         """.trimIndent(),
     )
-    fado.id?.let { id -> printItems(group, id) }
+    printItems(group, fado.id)
     println("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.")
 }
 

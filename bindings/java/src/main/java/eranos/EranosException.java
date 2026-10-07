@@ -25,7 +25,6 @@ import java.util.function.Function;
  * }</pre>
  *
  * <p>A call the program should not make throws the standard exception instead: {@link
- * IllegalArgumentException} for an entry to replace that has no identifier, and {@link
  * IllegalStateException} for a read through an {@link ExpenseGroupReader} after it is closed. A
  * future whose call is cancelled fails with a {@link CancellationException}.
  */
@@ -472,10 +471,6 @@ public abstract sealed class EranosException extends Exception
                 conversions,
                 eranos.internal.EranosException.Language.class,
                 exception -> new Language(converted(exception.failure()), exception.detail()));
-        register(
-                conversions,
-                eranos.internal.EranosException.IdentifierMissing.class,
-                exception -> new IllegalArgumentException(exception.detail()));
         register(
                 conversions,
                 eranos.internal.EranosException.InvalidJson.class,

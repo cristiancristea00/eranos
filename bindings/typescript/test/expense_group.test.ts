@@ -15,6 +15,9 @@ import {
     Language,
     Money,
     SettlementStrategy,
+    createCategory,
+    createMember,
+    createTransfer,
     expenseGroupId,
     memberId,
     parseExpenseGroupId,
@@ -142,7 +145,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     void it('takes every synchronous change into effect', () => {
         const flat = new Flat();
         const group = flat.group;
-        const carol = group.addMemberSync({ firstName: 'Carol' });
+        const carol = group.addMemberSync(createMember({ firstName: 'Carol' }));
         const stored = group.memberSync(carol);
         assert.ok(undefined !== stored);
         assert.deepEqual(group.replaceMemberSync({ ...stored, lastName: 'Popa' }), stored);
@@ -162,7 +165,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
                 error.failure.transfers[0] === flat.repayment,
         );
 
-        const travel = group.addCategorySync({ name: 'Travel' });
+        const travel = group.addCategorySync(createCategory({ name: 'Travel' }));
         assert.equal(group.replaceCategorySync({ id: travel, name: 'Trips' }).name, 'Travel');
         assert.equal(group.removeCategorySync(travel).name, 'Trips');
 
@@ -170,7 +173,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(group.replaceExpenseSync({ ...flat.expense('Brunch', flat.bob, [flat.ana]), id: lunch }).name, 'Lunch');
         assert.equal(group.removeExpenseSync(lunch).name, 'Brunch');
 
-        const cash = group.addTransferSync({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
+        const cash = group.addTransferSync(
+            createTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day }),
+        );
         const storedCash = group.transferSync(cash);
         assert.ok(undefined !== storedCash);
         assert.equal(group.replaceTransferSync({ ...storedCash, note: 'Cash' }).note, undefined);
@@ -199,7 +204,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
     void it('takes every asynchronous change into effect as its synchronous twin does', async () => {
         const flat = new Flat();
         const group = flat.group;
-        const carol = await group.addMember({ firstName: 'Carol' });
+        const carol = await group.addMember(createMember({ firstName: 'Carol' }));
         const stored = group.memberSync(carol);
         assert.ok(undefined !== stored);
         assert.deepEqual(await group.replaceMember({ ...stored, lastName: 'Popa' }), stored);
@@ -209,7 +214,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal(group.isArchivedSync(carol), false);
         assert.equal((await group.removeMember(carol)).lastName, 'Popa');
 
-        const travel = await group.addCategory({ name: 'Travel' });
+        const travel = await group.addCategory(createCategory({ name: 'Travel' }));
         assert.equal((await group.replaceCategory({ id: travel, name: 'Trips' })).name, 'Travel');
         assert.equal((await group.removeCategory(travel)).name, 'Trips');
 
@@ -217,7 +222,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         assert.equal((await group.replaceExpense({ ...flat.expense('Brunch', flat.bob, [flat.ana]), id: lunch })).name, 'Lunch');
         assert.equal((await group.removeExpense(lunch)).name, 'Brunch');
 
-        const cash = await group.addTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day });
+        const cash = await group.addTransfer(
+            createTransfer({ from: flat.ana, to: flat.bob, cost: { kind: 'local', amount: flat.euros(100n) }, date: flat.day }),
+        );
         assert.equal(
             (
                 await group.replaceTransfer({
@@ -250,18 +257,24 @@ void describe('every call of the group, synchronous and asynchronous, and every 
 
     /**
      * A new group that dropped what it starts with, the identifier the app gives it included, took an identifier the rules
-     * refuse, or a saved one that loaded from text that is not the saved form, would start an app from another group.
+     * refuse, shared a generated identifier with another group, or a saved one that loaded from text that is not the saved
+     * form, would start an app from another group.
      */
     void it('starts a group with what it is given and loads only its saved form', async () => {
         const euro = CurrencyCode.of('EUR');
-        using trip = ExpenseGroup.create('Trip', euro, { id: parseExpenseGroupId('trip-2026'), description: 'Alps' });
+        using trip = ExpenseGroup.createWithId(parseExpenseGroupId('trip-2026'), 'Trip', euro, { description: 'Alps' });
         assert.equal(trip.idSync(), 'trip-2026');
+        assert.equal(trip.nameSync(), 'Trip');
         assert.equal(trip.descriptionSync(), 'Alps');
         assert.equal(ExpenseGroup.loadSync(trip.saveSync()).idSync(), 'trip-2026');
         assert.throws(
-            () => ExpenseGroup.create('Trip', euro, { id: expenseGroupId(' trip') }),
+            () => ExpenseGroup.createWithId(expenseGroupId(' trip'), 'Trip', euro),
             (error: unknown) => error instanceof IdError && 'surroundingWhitespace' === error.failure.kind,
         );
+        using first = ExpenseGroup.create('Trip', euro);
+        using second = ExpenseGroup.create('Trip', euro);
+        assert.equal(parseExpenseGroupId(first.idSync()), first.idSync());
+        assert.notEqual(first.idSync(), second.idSync());
         assert.throws(
             () => ExpenseGroup.create(' ', euro),
             (error: unknown) =>
@@ -327,9 +340,9 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         const flat = new Flat();
         const group = flat.group;
         const reader = group.readSync();
-        assert.throws(() => group.addMemberSync({ firstName: 'Carol' }), busy);
+        assert.throws(() => group.addMemberSync(createMember({ firstName: 'Carol' })), busy);
         group.readSync().release();
-        const adding = group.addMember({ firstName: 'Carol' });
+        const adding = group.addMember(createMember({ firstName: 'Carol' }));
         let settled = false;
         void adding.then(() => (settled = true));
         await new Promise((resolve) => setTimeout(resolve, 10));
@@ -352,7 +365,7 @@ void describe('every call of the group, synchronous and asynchronous, and every 
         const reader = group.readSync();
         const controller = new AbortController();
         const reason = new Error('the user left');
-        const adding = group.addMember({ firstName: 'Carol' }, { signal: controller.signal });
+        const adding = group.addMember(createMember({ firstName: 'Carol' }), { signal: controller.signal });
         await new Promise((resolve) => setTimeout(resolve, 10));
         controller.abort(reason);
         reader.release();

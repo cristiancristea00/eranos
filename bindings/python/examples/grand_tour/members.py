@@ -244,7 +244,7 @@ def _validation(group: ExpenseGroup) -> None:
             _phone('+351 912 345 678'),
             _phone('+40 612 345 678'),
             CheckRow(input='"   "', kind='username', result=_outcome(lambda: Username('   '), str)),
-            CheckRow(input='"  "', kind='first name', result=_outcome(lambda: group.add_member(Member(first_name='  ')), str)),
+            CheckRow(input='"  "', kind='first name', result=_outcome(lambda: group.add_member(Member.create(first_name='  ')), str)),
         ],
         3,
     )
@@ -263,7 +263,7 @@ def members(group: ExpenseGroup) -> People:
     """
     section('2. Members')
     ana = group.add_member(
-        Member(
+        Member.create(
             first_name='Ana',
             last_name='Popescu',
             email=Email('ana@example.com'),
@@ -274,11 +274,11 @@ def members(group: ExpenseGroup) -> People:
             ),
         )
     )
-    bob = group.add_member(Member(first_name='Bob'))
-    carol = group.add_member(Member(first_name='Carol'))
-    dan = group.add_member(Member(first_name='Dan'))
-    eva = group.add_member(Member(first_name='Eva'))
-    filip = group.add_member(Member(first_name='Filip'))
+    bob = group.add_member(Member.create(first_name='Bob'))
+    carol = group.add_member(Member.create(first_name='Carol'))
+    dan = group.add_member(Member.create(first_name='Dan'))
+    eva = group.add_member(Member.create(first_name='Eva'))
+    filip = group.add_member(Member.create(first_name='Filip'))
     # An edit starts from a copy of the member, which keeps its identifier.
     stored = group.member(bob)
     assert stored is not None, 'Bob is a member'
@@ -313,11 +313,11 @@ def add_categories(group: ExpenseGroup) -> Categories:
 
     """
     section('3. Categories')
-    food = group.add_category(Category(name='Food'))
+    food = group.add_category(Category.create(name='Food'))
     # An app that keeps its categories elsewhere gives them its own keys.
     lodging = group.add_category(Category(id=parse_category_id('lodging'), name='Lodging'))
-    transport = group.add_category(Category(name='Transport'))
-    homonym = refusal(lambda: group.add_category(Category(name='FOOD')))
+    transport = group.add_category(Category.create(name='Transport'))
+    homonym = refusal(lambda: group.add_category(Category.create(name='FOOD')))
     stored = group.category(transport)
     assert stored is not None, 'Transport was added'
     group.replace_category(copy.replace(stored, name='Getting around'))

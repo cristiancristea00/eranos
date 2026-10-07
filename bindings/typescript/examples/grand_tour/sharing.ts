@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type ExpenseGroup, CurrencyCode, ExchangeRate, SettlementStrategy } from '../../src/index.js';
+import { type ExpenseGroup, CurrencyCode, ExchangeRate, SettlementStrategy, createExpense } from '../../src/index.js';
 import { printLines, printTable, section } from '../report.js';
 import { type People, october, paymentColumns, ron } from './tour.js';
 
@@ -12,13 +12,15 @@ export async function sharing(group: ExpenseGroup, people: People): Promise<void
     // Another handle on the same group, as another task holds: a group is shared as it is.
     const other = group;
     const everyone = [people.ana, people.bob, people.carol, people.dan, people.eva];
-    await other.addExpense({
-        name: 'Airport coffee',
-        cost: { kind: 'local', amount: ron('75.00') },
-        payers: { kind: 'equal', members: [people.bob] },
-        split: { kind: 'whole', split: { kind: 'equal', members: everyone } },
-        date: october(8),
-    });
+    await other.addExpense(
+        createExpense({
+            name: 'Airport coffee',
+            cost: { kind: 'local', amount: ron('75.00') },
+            payers: { kind: 'equal', members: [people.bob] },
+            split: { kind: 'whole', split: { kind: 'equal', members: everyone } },
+            date: october(8),
+        }),
+    );
     const plan = await group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
     printLines(
         'An app shares the group between its tasks and threads through a',

@@ -46,8 +46,7 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `category` under its identifier, or one the library generates when it has none, and
-    /// returns the identifier.
+    /// Adds `category` under its identifier, and returns the identifier.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse, and
     ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateCategory(_:)`` for an
@@ -60,8 +59,7 @@ public extension ExpenseGroup {
         try converting { Category.ID(rawValue: try handle.addCategory(category: category.generated)) }
     }
 
-    /// Adds `category` under its identifier, or one the library generates when it has none, and
-    /// returns the identifier.
+    /// Adds `category` under its identifier, and returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
@@ -81,11 +79,10 @@ public extension ExpenseGroup {
 
     /// Renames the category that `category` names by its identifier, and returns it as it was.
     ///
-    /// - Throws: ``EranosError/identifierMissing(detail:)`` for a category without an identifier,
-    ///   and ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownCategory(_:)``,
-    ///   ``ExpenseGroupFailure/builtInCategory``, or ``ExpenseGroupFailure/duplicateCategoryName(_:)``; on wasm,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call holds the
-    ///   lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownCategory(_:)``
+    ///   for an identifier the group does not hold, ``ExpenseGroupFailure/builtInCategory``, or
+    ///   ``ExpenseGroupFailure/duplicateCategoryName(_:)``; on wasm, ``EranosError/expenseGroup(_:detail:)``
+    ///   with ``ExpenseGroupFailure/busy`` while another call holds the lock.
     @discardableResult
     func replace(_ category: Category) throws(EranosError) -> Category {
         try converting { Category(try handle.replaceCategory(category: category.generated)) }
@@ -96,10 +93,10 @@ public extension ExpenseGroup {
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierMissing(detail:)`` for a category without an identifier,
-    ///   and ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownCategory(_:)``,
-    ///   ``ExpenseGroupFailure/builtInCategory``, or ``ExpenseGroupFailure/duplicateCategoryName(_:)``;
-    ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownCategory(_:)``
+    ///   for an identifier the group does not hold, ``ExpenseGroupFailure/builtInCategory``, or
+    ///   ``ExpenseGroupFailure/duplicateCategoryName(_:)``; ``EranosError/cancelled(detail:)`` when the
+    ///   task is cancelled first.
     @discardableResult
     func replace(_ category: Category) async throws(EranosError) -> Category {
         try await converting { [handle] cancellation in

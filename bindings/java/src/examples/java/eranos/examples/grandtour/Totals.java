@@ -91,16 +91,14 @@ final class Totals {
         Money zero = new Money(0, group.currency());
         List<MemberCategoryRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            if (member.id().isPresent()) {
-                List<CategoryTotal> totals = byCategory(summary, member.id().orElseThrow());
-                rows.add(
-                        new MemberCategoryRow(
-                                member.firstName(),
-                                total(totals, Optional.of(categories.food())).orElse(zero),
-                                total(totals, Optional.of(categories.lodging())).orElse(zero),
-                                total(totals, Optional.of(categories.transport())).orElse(zero),
-                                total(totals, builtIn).orElse(zero)));
-            }
+            List<CategoryTotal> totals = byCategory(summary, member.id());
+            rows.add(
+                    new MemberCategoryRow(
+                            member.firstName(),
+                            total(totals, Optional.of(categories.food())).orElse(zero),
+                            total(totals, Optional.of(categories.lodging())).orElse(zero),
+                            total(totals, Optional.of(categories.transport())).orElse(zero),
+                            total(totals, builtIn).orElse(zero)));
         }
         printTable(MemberCategoryRow.HEADERS, rows, 1);
 

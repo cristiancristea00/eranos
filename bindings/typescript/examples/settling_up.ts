@@ -12,6 +12,9 @@ import {
     ExpenseGroup,
     Money,
     SettlementStrategy,
+    createExpense,
+    createMember,
+    createTransfer,
     expenseTotal,
     formatBalance,
     splitMembers,
@@ -100,13 +103,15 @@ function strategyName(strategy: SettlementStrategy): string {
 
 /** Records an expense of `amount` EUR paid by `payer` and split equally. */
 function spend(group: ExpenseGroup, name: string, amount: string, payer: MemberId, members: MemberId[]): void {
-    group.addExpenseSync({
-        name,
-        cost: { kind: 'local', amount: Money.parse(amount, CurrencyCode.of('EUR')) },
-        payers: { kind: 'equal', members: [payer] },
-        split: { kind: 'whole', split: { kind: 'equal', members } },
-        date: CalendarDate.of(2026, 9, 20),
-    });
+    group.addExpenseSync(
+        createExpense({
+            name,
+            cost: { kind: 'local', amount: Money.parse(amount, CurrencyCode.of('EUR')) },
+            payers: { kind: 'equal', members: [payer] },
+            split: { kind: 'whole', split: { kind: 'equal', members } },
+            date: CalendarDate.of(2026, 9, 20),
+        }),
+    );
 }
 
 function printBalances(group: ExpenseGroup): void {
@@ -114,7 +119,7 @@ function printBalances(group: ExpenseGroup): void {
     printTable(
         balanceColumns,
         group.membersSync().flatMap((member) => {
-            const found = undefined === member.id ? undefined : totals(member.id, summary);
+            const found = totals(member.id, summary);
             return undefined === found ? [] : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance }];
         }),
         1,
@@ -207,19 +212,21 @@ function festival(): number {
     using group = ExpenseGroup.create('Festival', euro);
     const friends: MemberId[] = [];
     for (let number = 1; 21 >= number; number += 1) {
-        friends.push(group.addMemberSync({ firstName: `Friend ${String(number)}` }));
+        friends.push(group.addMemberSync(createMember({ firstName: `Friend ${String(number)}` })));
     }
     // Friend i buys a round of 0.21·i² EUR for all 21, so each share is i² cents with nothing to round, and friend i's
     // balance is 21·i² − 3311 cents: never zero, and never the opposite of another's.
     for (const [index, payer] of friends.entries()) {
         const number = BigInt(index + 1);
-        group.addExpenseSync({
-            name: 'Round',
-            cost: { kind: 'local', amount: new Money(21n * number * number, euro) },
-            payers: { kind: 'equal', members: [payer] },
-            split: { kind: 'whole', split: { kind: 'equal', members: friends } },
-            date: CalendarDate.of(2026, 9, 18),
-        });
+        group.addExpenseSync(
+            createExpense({
+                name: 'Round',
+                cost: { kind: 'local', amount: new Money(21n * number * number, euro) },
+                payers: { kind: 'equal', members: [payer] },
+                split: { kind: 'whole', split: { kind: 'equal', members: friends } },
+                date: CalendarDate.of(2026, 9, 18),
+            }),
+        );
     }
     const open = group.summarySync().members.filter((member) => 0n !== member.net.minorUnits).length;
     const adaptive = group.settlementSync(SettlementStrategy.ADAPTIVE);
@@ -238,12 +245,12 @@ function festival(): number {
 
 await load();
 using group = ExpenseGroup.create('Ski week', CurrencyCode.of('EUR'));
-const ana = group.addMemberSync({ firstName: 'Ana' });
-const bob = group.addMemberSync({ firstName: 'Bob' });
-const carol = group.addMemberSync({ firstName: 'Carol' });
-const dan = group.addMemberSync({ firstName: 'Dan' });
-const eva = group.addMemberSync({ firstName: 'Eva' });
-const filip = group.addMemberSync({ firstName: 'Filip' });
+const ana = group.addMemberSync(createMember({ firstName: 'Ana' }));
+const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
+const carol = group.addMemberSync(createMember({ firstName: 'Carol' }));
+const dan = group.addMemberSync(createMember({ firstName: 'Dan' }));
+const eva = group.addMemberSync(createMember({ firstName: 'Eva' }));
+const filip = group.addMemberSync(createMember({ firstName: 'Filip' }));
 
 printLines('Ski week: four ways to settle up', '════════════════════════════════');
 printLines('Six friends spent a week in the mountains. The library can turn their balances', 'into payments in four ways, and the app picks one.');
@@ -275,12 +282,14 @@ const festivalPayments = festival();
 section('9. Settling up for real');
 const plan = group.settlementSync(SettlementStrategy.MINIMUM_TRANSFERS);
 for (const payment of plan.payments) {
-    group.addTransferSync({
-        from: payment.from,
-        to: payment.to,
-        cost: { kind: 'local', amount: payment.amount },
-        date: CalendarDate.of(2026, 9, 27),
-    });
+    group.addTransferSync(
+        createTransfer({
+            from: payment.from,
+            to: payment.to,
+            cost: { kind: 'local', amount: payment.amount },
+            date: CalendarDate.of(2026, 9, 27),
+        }),
+    );
 }
 printLines(
     'Each payment of the minimum plan, once made, is recorded as a transfer. Afterwards',

@@ -2,17 +2,18 @@ internal import EranosGenerated
 
 /// Something bought for the group: what it cost, who paid, and how it divides.
 ///
-/// An expense to add carries the identifier the app gives it, or none, and then
-/// `ExpenseGroup.add(_:)` returns one the library generates. To change an expense, read it from
-/// the group, change its properties, and pass it to `ExpenseGroup.replace(_:)`.
+/// An expense has an identifier from the moment it is made: the app's own, which
+/// ``init(id:name:cost:payers:split:date:tip:time:category:description:)`` takes, or one that
+/// ``init(name:cost:payers:split:date:tip:time:category:description:)`` generates. To change an
+/// expense, read it from the group, change its properties, and pass it to
+/// `ExpenseGroup.replace(_:)`.
 public struct Expense: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of an expense.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
 
-    /// The identifier: the app's own for an expense to add, or absent for the library to generate
-    /// one, and present for an expense the group holds or one to replace.
-    public var id: ID?
+    /// The identifier, which the app gives: its own, or one ``Identifier/generate()`` makes.
+    public var id: ID
 
     /// What was bought.
     public var name: String
@@ -43,7 +44,7 @@ public struct Expense: Hashable, Sendable {
 
     var generated: EranosGenerated.Expense {
         .init(
-            id: id?.rawValue,
+            id: id.rawValue,
             name: name,
             cost: cost.generated,
             payers: payers.generated,
@@ -56,10 +57,11 @@ public struct Expense: Hashable, Sendable {
         )
     }
 
-    /// An expense to add, of `cost`, that `payers` paid and `split` shares, on `date`, under `id`,
-    /// or one the library generates.
+    /// An expense of `cost`, that `payers` paid and `split` shares, on `date`, under `id`, which
+    /// the app gives: its own, or one ``Identifier/generate()`` makes;
+    /// ``init(name:cost:payers:split:date:tip:time:category:description:)`` generates it.
     public init(
-        id: ID? = nil,
+        id: ID,
         name: String,
         cost: Cost,
         payers: Split,
@@ -82,9 +84,37 @@ public struct Expense: Hashable, Sendable {
         self.description = description
     }
 
+    /// An expense of `cost`, that `payers` paid and `split` shares, on `date`, under an identifier
+    /// ``Identifier/generate()`` makes when this is called;
+    /// ``init(id:name:cost:payers:split:date:tip:time:category:description:)`` takes the app's own.
+    public init(
+        name: String,
+        cost: Cost,
+        payers: Split,
+        split: ExpenseSplit,
+        date: CalendarDate,
+        tip: TipRule? = nil,
+        time: TimeOfDay? = nil,
+        category: Category.ID? = nil,
+        description: String? = nil
+    ) {
+        self.init(
+            id: .generate(),
+            name: name,
+            cost: cost,
+            payers: payers,
+            split: split,
+            date: date,
+            tip: tip,
+            time: time,
+            category: category,
+            description: description
+        )
+    }
+
     init(_ expense: EranosGenerated.Expense) {
         self.init(
-            id: expense.id.map { ID(rawValue: $0) },
+            id: ID(rawValue: expense.id),
             name: expense.name,
             cost: Cost(expense.cost),
             payers: Split(expense.payers),

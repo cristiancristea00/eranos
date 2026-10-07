@@ -11,6 +11,8 @@ import {
     ExpenseGroup,
     Money,
     SettlementStrategy,
+    createExpense,
+    createMember,
     expenseTotal,
     formatBalance,
     splitMembers,
@@ -70,29 +72,33 @@ printLines(
 );
 
 section('1. Members');
-const ana = group.addMemberSync({ firstName: 'Ana' });
-const bob = group.addMemberSync({ firstName: 'Bob' });
-const carol = group.addMemberSync({ firstName: 'Carol' });
+const ana = group.addMemberSync(createMember({ firstName: 'Ana' }));
+const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
+const carol = group.addMemberSync(createMember({ firstName: 'Carol' }));
 printLines(`${String(group.membersSync().length)} people joined the group: ${names(group, [ana, bob, carol])}.`);
 
 section('2. Expenses');
 printLines('Each expense records who paid and who shares it. Here everyone shares everything', 'equally.');
 const friday = CalendarDate.of(2026, 9, 25);
 const everyone: Split = { kind: 'equal', members: [ana, bob, carol] };
-group.addExpenseSync({
-    name: 'Cabin',
-    cost: { kind: 'local', amount: Money.parse('240.00', euro) },
-    payers: { kind: 'equal', members: [ana] },
-    split: { kind: 'whole', split: everyone },
-    date: friday,
-});
-group.addExpenseSync({
-    name: 'Groceries',
-    cost: { kind: 'local', amount: Money.parse('60.00', euro) },
-    payers: { kind: 'equal', members: [bob] },
-    split: { kind: 'whole', split: everyone },
-    date: friday,
-});
+group.addExpenseSync(
+    createExpense({
+        name: 'Cabin',
+        cost: { kind: 'local', amount: Money.parse('240.00', euro) },
+        payers: { kind: 'equal', members: [ana] },
+        split: { kind: 'whole', split: everyone },
+        date: friday,
+    }),
+);
+group.addExpenseSync(
+    createExpense({
+        name: 'Groceries',
+        cost: { kind: 'local', amount: Money.parse('60.00', euro) },
+        payers: { kind: 'equal', members: [bob] },
+        split: { kind: 'whole', split: everyone },
+        date: friday,
+    }),
+);
 printTable(
     expenseColumns,
     group.expensesSync().map((expense) => ({
@@ -113,7 +119,7 @@ printLines(
 printTable(
     memberColumns,
     group.membersSync().flatMap((member) => {
-        const found = undefined === member.id ? undefined : totals(member.id, summary);
+        const found = totals(member.id, summary);
         return undefined === found ? [] : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: found.balance }];
     }),
     1,

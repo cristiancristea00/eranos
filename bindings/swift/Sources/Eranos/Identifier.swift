@@ -4,7 +4,7 @@ internal import EranosGenerated
 /// generated.
 ///
 /// An identifier is text of at most 64 bytes of UTF-8, not empty, with no control character and no
-/// whitespace at either end, such as the key of the app's own store; one the library generates is a
+/// whitespace at either end, such as the key of the app's own store; one ``generate()`` makes is a
 /// UUID v7 in lowercase hyphenated form. ``init(_:)`` checks a text by these rules, which every
 /// kind of identifier shares, and ``init(rawValue:)`` keeps it unchecked, for one the app stored;
 /// the library checks the text when a call carries it.
@@ -31,6 +31,14 @@ public struct Identifier<Entity>: Hashable, Sendable, RawRepresentable, CustomSt
     /// The identifier written `rawValue`, unchecked.
     public init(rawValue: String) {
         self.rawValue = rawValue
+    }
+
+    /// A new identifier, which ``init(_:)`` accepts: a UUID v7 in lowercase hyphenated form.
+    ///
+    /// Every kind of identifier draws from the one generator of the library, so identifiers
+    /// generated one after another are in increasing order, whichever kind each stands for.
+    public static func generate() -> Self {
+        Self(rawValue: EranosGenerated.identifierGenerate())
     }
 
     /// The identifier's text.

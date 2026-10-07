@@ -1,21 +1,30 @@
 """
 Hold the entries of a group: its members, categories, expenses, and transfers, and what they hold.
 
-Every entry is a frozen dataclass: one to add carries the identifier the app gives it, or none, and then the group generates
-one; one the group holds has its identifier, and ``copy.replace`` edits it. A variant, such as a split or a cost, is a union
-of dataclasses, which a ``match`` tells apart.
+Every entry is a frozen dataclass that carries its identifier from the moment it is made: the class takes the app's own
+or a generated one, and the classmethod ``create`` generates it when it is called. ``copy.replace`` edits an entry and
+keeps its identifier. A variant, such as a split or a cost, is a union of dataclasses, which a ``match`` tells apart.
 
 """
 
 import dataclasses
 import enum
 from collections.abc import Callable
-from typing import Any, assert_never, final
+from typing import Any, Self, assert_never, final
 
 from eranos._calendar import CalendarDate, TimeOfDay, date_of, generated_date, generated_time, time_of
 from eranos._contact import Email, Iban, PhoneNumber, Username
 from eranos._errors import library_errors
-from eranos._identifiers import CategoryId, ExpenseId, MemberId, TransferId
+from eranos._identifiers import (
+    CategoryId,
+    ExpenseId,
+    MemberId,
+    TransferId,
+    generate_category_id,
+    generate_expense_id,
+    generate_member_id,
+    generate_transfer_id,
+)
 from eranos._internal import eranos as generated
 from eranos._money import Money, generated_money, money_of
 from eranos._ratios import ExchangeRate, Parts, Percentage
@@ -231,10 +240,14 @@ type ExpenseSplit = WholeExpenseSplit | ItemisedExpenseSplit
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Expense:
-    """An expense: what it cost, who paid, how it divides, and when."""
+    """
+    An expense: what it cost, who paid, how it divides, and when.
 
-    id: ExpenseId | None = None
-    """The app's own identifier for an expense to add, or none for the group to generate one; the identifier of one it holds or one to replace."""
+    The class takes the expense's identifier, the app's own or one ``generate_expense_id`` returns, and ``create`` generates it.
+    """
+
+    id: ExpenseId
+    """The identifier, the app's own or a generated one."""
 
     name: str
     """What it was."""
@@ -262,6 +275,55 @@ class Expense:
 
     description: str | None = None
     """A longer description, or none."""
+
+    # One parameter per field of the expense but its identifier.
+    @classmethod
+    def create(  # ruff: ignore[too-many-arguments]
+        cls,
+        *,
+        name: str,
+        cost: Cost,
+        payers: Split,
+        split: ExpenseSplit,
+        date: CalendarDate,
+        tip: TipRule | None = None,
+        time: TimeOfDay | None = None,
+        category: CategoryId | None = None,
+        description: str | None = None,
+    ) -> Self:
+        """
+        Make an expense under an identifier that ``generate_expense_id`` generates when this is called.
+
+        An expense the group then refuses has still used up its identifier. The class itself takes the identifier instead,
+        the app's own or a generated one.
+
+        Args:
+            name: What it was.
+            cost: What it cost.
+            payers: Who paid, and how much each.
+            split: How it divides among the members who share it.
+            date: The day it happened.
+            tip: Its tip, or none.
+            time: The time of day it happened, or none.
+            category: Its category, or none for the built-in one.
+            description: A longer description, or none.
+
+        Returns:
+            The expense.
+
+        """
+        return cls(
+            id=generate_expense_id(),
+            name=name,
+            cost=cost,
+            payers=payers,
+            split=split,
+            date=date,
+            tip=tip,
+            time=time,
+            category=category,
+            description=description,
+        )
 
     def total(self) -> Money:
         """
@@ -306,10 +368,14 @@ class Expense:
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Transfer:
-    """A transfer of money between two members, such as a repayment."""
+    """
+    A transfer of money between two members, such as a repayment.
 
-    id: TransferId | None = None
-    """The app's own identifier for a transfer to add, or none for the group to generate one; the identifier of one it holds or one to replace."""
+    The class takes the transfer's identifier, the app's own or one ``generate_transfer_id`` returns, and ``create`` generates it.
+    """
+
+    id: TransferId
+    """The identifier, the app's own or a generated one."""
 
     sender: MemberId
     """The member who sent the money."""
@@ -328,6 +394,38 @@ class Transfer:
 
     note: str | None = None
     """A note, or none."""
+
+    # One parameter per field of the transfer but its identifier.
+    @classmethod
+    def create(  # ruff: ignore[too-many-arguments]
+        cls,
+        *,
+        sender: MemberId,
+        receiver: MemberId,
+        cost: Cost,
+        date: CalendarDate,
+        time: TimeOfDay | None = None,
+        note: str | None = None,
+    ) -> Self:
+        """
+        Make a transfer under an identifier that ``generate_transfer_id`` generates when this is called.
+
+        A transfer the group then refuses has still used up its identifier. The class itself takes the identifier instead,
+        the app's own or a generated one.
+
+        Args:
+            sender: The member who sent the money.
+            receiver: The member who received the money.
+            cost: What was sent.
+            date: The day it happened.
+            time: The time of day it happened, or none.
+            note: A note, or none.
+
+        Returns:
+            The transfer.
+
+        """
+        return cls(id=generate_transfer_id(), sender=sender, receiver=receiver, cost=cost, date=date, time=time, note=note)
 
 
 @final
@@ -367,10 +465,14 @@ class PaymentAccount:
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Member:
-    """A member of a group, with the details that reach and pay them."""
+    """
+    A member of a group, with the details that reach and pay them.
 
-    id: MemberId | None = None
-    """The app's own identifier for a member to add, or none for the group to generate one; the identifier of one it holds or one to replace."""
+    The class takes the member's identifier, the app's own or one ``generate_member_id`` returns, and ``create`` generates it.
+    """
+
+    id: MemberId
+    """The identifier, the app's own or a generated one."""
 
     first_name: str
     """The first name."""
@@ -387,17 +489,67 @@ class Member:
     accounts: tuple[PaymentAccount, ...] = ()
     """The accounts they are paid into."""
 
+    @classmethod
+    def create(
+        cls,
+        *,
+        first_name: str,
+        last_name: str | None = None,
+        email: Email | None = None,
+        phone: PhoneNumber | None = None,
+        accounts: tuple[PaymentAccount, ...] = (),
+    ) -> Self:
+        """
+        Make a member under an identifier that ``generate_member_id`` generates when this is called.
+
+        A member the group then refuses has still used up their identifier. The class itself takes the identifier instead,
+        the app's own or a generated one.
+
+        Args:
+            first_name: The first name.
+            last_name: The last name, or none.
+            email: Their email address, or none.
+            phone: Their phone number, or none.
+            accounts: The accounts they are paid into.
+
+        Returns:
+            The member.
+
+        """
+        return cls(id=generate_member_id(), first_name=first_name, last_name=last_name, email=email, phone=phone, accounts=accounts)
+
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Category:
-    """A category of expenses."""
+    """
+    A category of expenses.
 
-    id: CategoryId | None = None
-    """The app's own identifier for a category to add, or none for the group to generate one; the identifier of one it holds or one to rename."""
+    The class takes the category's identifier, the app's own or one ``generate_category_id`` returns, and ``create`` generates it.
+    """
+
+    id: CategoryId
+    """The identifier, the app's own or a generated one."""
 
     name: str
     """The name."""
+
+    @classmethod
+    def create(cls, *, name: str) -> Self:
+        """
+        Make a category under an identifier that ``generate_category_id`` generates when this is called.
+
+        A category the group then refuses has still used up its identifier. The class itself takes the identifier instead,
+        the app's own or a generated one.
+
+        Args:
+            name: The name.
+
+        Returns:
+            The category.
+
+        """
+        return cls(id=generate_category_id(), name=name)
 
 
 def generated_split(split: Split) -> generated.Split:
@@ -639,7 +791,7 @@ def expense_of(value: generated.Expense) -> Expense:
 
     """
     return Expense(
-        id=None if value.id is None else ExpenseId(value.id),
+        id=ExpenseId(value.id),
         name=value.name,
         cost=cost_of(value.cost),
         payers=split_of(value.payers),
@@ -686,7 +838,7 @@ def transfer_of(value: generated.Transfer) -> Transfer:
 
     """
     return Transfer(
-        id=None if value.id is None else TransferId(value.id),
+        id=TransferId(value.id),
         # The generator names the field after the keyword it would otherwise be.
         sender=MemberId(value._from),  # ruff: ignore[private-member-access]
         receiver=MemberId(value.to),
@@ -758,7 +910,7 @@ def member_of(value: generated.Member) -> Member:
 
     """
     return Member(
-        id=None if value.id is None else MemberId(value.id),
+        id=MemberId(value.id),
         first_name=value.first_name,
         last_name=value.last_name,
         email=None if value.email is None else Email(value.email),
@@ -792,4 +944,4 @@ def category_of(value: generated.Category) -> Category:
         The category.
 
     """
-    return Category(id=None if value.id is None else CategoryId(value.id), name=value.name)
+    return Category(id=CategoryId(value.id), name=value.name)

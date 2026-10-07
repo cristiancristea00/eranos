@@ -122,11 +122,35 @@ struct TransferRecord {
 }
 
 impl ExpenseGroup {
-    /// Starts a group with its required name and currency.
+    /// Starts a group with its required name and currency, under an
+    /// identifier generated when it is called;
+    /// [`builder_with_id`](Self::builder_with_id) takes one instead.
     ///
     /// Every total, balance, and settlement is in the group currency.
     pub fn builder(name: impl Into<String>, currency: CurrencyCode) -> ExpenseGroupBuilder {
-        ExpenseGroupBuilder::new(name.into(), currency)
+        Self::builder_with_id(ExpenseGroupId::generate(), name, currency)
+    }
+
+    /// Starts a group with its required name and currency under the
+    /// identifier `id`, such as the key an app's own store gives it;
+    /// [`builder`](Self::builder) generates one instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CurrencyCode, ExpenseGroup, ExpenseGroupId};
+    ///
+    /// let id = ExpenseGroupId::new("lisbon-2026")?;
+    /// let group = ExpenseGroup::builder_with_id(id, "Lisbon", CurrencyCode::EUR).build()?;
+    /// assert_eq!(group.id().as_str(), "lisbon-2026");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn builder_with_id(
+        id: ExpenseGroupId,
+        name: impl Into<String>,
+        currency: CurrencyCode,
+    ) -> ExpenseGroupBuilder {
+        ExpenseGroupBuilder::new(id, name.into(), currency)
     }
 
     fn new(

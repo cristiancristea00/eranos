@@ -15,6 +15,8 @@ import {
     Percentage,
     TimeOfDay,
     TransferError,
+    createExpense,
+    createTransfer,
     formatBalance,
 } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section, totals } from '../report.js';
@@ -48,22 +50,26 @@ export function anotherCurrency(group: ExpenseGroup, people: People, categories:
     section('5. Another currency');
     const euro = CurrencyCode.of('EUR');
     const rate = ExchangeRate.parse('0.2');
-    const parking = group.addExpenseSync({
-        name: 'Airport parking',
-        cost: { kind: 'converted', amount: ron('250.00'), rate },
-        payers: { kind: 'equal', members: [people.ana] },
-        split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob] } },
-        date: october(6),
-        category: categories.transport,
-    });
-    const cash = group.addTransferSync({
-        from: people.bob,
-        to: people.ana,
-        cost: { kind: 'converted', amount: ron('100.00'), rate },
-        date: october(6),
-        time: TimeOfDay.of(7, 40),
-        note: 'Cash for the parking',
-    });
+    const parking = group.addExpenseSync(
+        createExpense({
+            name: 'Airport parking',
+            cost: { kind: 'converted', amount: ron('250.00'), rate },
+            payers: { kind: 'equal', members: [people.ana] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob] } },
+            date: october(6),
+            category: categories.transport,
+        }),
+    );
+    const cash = group.addTransferSync(
+        createTransfer({
+            from: people.bob,
+            to: people.ana,
+            cost: { kind: 'converted', amount: ron('100.00'), rate },
+            date: october(6),
+            time: TimeOfDay.of(7, 40),
+            note: 'Cash for the parking',
+        }),
+    );
     printLines(
         'Back at the Bucharest airport, Ana paid the parking in RON and Bob paid her back in',
         'cash. An entry in another currency carries the rate into the group currency, how',
@@ -92,24 +98,29 @@ function replaceAndRemove(group: ExpenseGroup, people: People, categories: Categ
     assert.ok(undefined !== dinner, 'the dinner was added');
     const previous = group.replaceExpenseSync({ ...dinner, cost: { kind: 'local', amount: eur('99.00') }, description: 'Cervejaria Ramiro' });
     // Bob entered the coffee twice.
-    const coffee: Expense = {
-        name: 'Coffee',
-        cost: { kind: 'local', amount: eur('6.00') },
-        payers: { kind: 'equal', members: [people.bob] },
-        split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob, people.carol] } },
-        date: october(5),
-        category: categories.food,
-    };
-    group.addExpenseSync(coffee);
-    const copy = group.addExpenseSync(coffee);
+    const coffee = (): Expense =>
+        createExpense({
+            name: 'Coffee',
+            cost: { kind: 'local', amount: eur('6.00') },
+            payers: { kind: 'equal', members: [people.bob] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob, people.carol] } },
+            date: october(5),
+            category: categories.food,
+        });
+    group.addExpenseSync(coffee());
+    const copy = group.addExpenseSync(coffee());
     const removed = group.removeExpenseSync(copy);
     // Dan's part of the apartment was 120.00, not 100.00.
-    const first = group.addTransferSync({ from: people.dan, to: people.ana, cost: { kind: 'local', amount: eur('100.00') }, date: october(5) });
+    const first = group.addTransferSync(
+        createTransfer({ from: people.dan, to: people.ana, cost: { kind: 'local', amount: eur('100.00') }, date: october(5) }),
+    );
     const stored = group.transferSync(first);
     assert.ok(undefined !== stored, 'the transfer was added');
     const replaced = group.replaceTransferSync({ ...stored, cost: { kind: 'local', amount: eur('120.00') }, note: 'Apartment' });
     // Carol sent 10.00 to the wrong member.
-    const mistake = group.addTransferSync({ from: people.carol, to: people.bob, cost: { kind: 'local', amount: eur('10.00') }, date: october(5) });
+    const mistake = group.addTransferSync(
+        createTransfer({ from: people.carol, to: people.bob, cost: { kind: 'local', amount: eur('10.00') }, date: october(5) }),
+    );
     const undone = group.removeTransferSync(mistake);
 
     assert.ok(eur('90.00').equals(previous.cost.amount));
@@ -149,34 +160,38 @@ export function edits(group: ExpenseGroup, people: People, categories: Categorie
 
     const before = group.summarySync();
     const unbalanced = refusal(() =>
-        group.addExpenseSync({
-            name: 'Taxi',
-            cost: { kind: 'local', amount: eur('30.00') },
-            payers: { kind: 'equal', members: [people.ana] },
-            split: {
-                kind: 'whole',
+        group.addExpenseSync(
+            createExpense({
+                name: 'Taxi',
+                cost: { kind: 'local', amount: eur('30.00') },
+                payers: { kind: 'equal', members: [people.ana] },
                 split: {
-                    kind: 'percentages',
-                    shares: [
-                        { member: people.ana, percentage: Percentage.parse('50') },
-                        { member: people.bob, percentage: Percentage.parse('49.99') },
-                    ],
+                    kind: 'whole',
+                    split: {
+                        kind: 'percentages',
+                        shares: [
+                            { member: people.ana, percentage: Percentage.parse('50') },
+                            { member: people.bob, percentage: Percentage.parse('49.99') },
+                        ],
+                    },
                 },
-            },
-            date: october(6),
-        }),
+                date: october(6),
+            }),
+        ),
     );
     const toHerself = refusal(() =>
-        group.addTransferSync({ from: people.ana, to: people.ana, cost: { kind: 'local', amount: eur('5.00') }, date: october(6) }),
+        group.addTransferSync(createTransfer({ from: people.ana, to: people.ana, cost: { kind: 'local', amount: eur('5.00') }, date: october(6) })),
     );
     const unrated = refusal(() =>
-        group.addExpenseSync({
-            name: 'Souvenirs',
-            cost: { kind: 'local', amount: ron('40.00') },
-            payers: { kind: 'equal', members: [people.ana] },
-            split: { kind: 'whole', split: { kind: 'equal', members: [people.ana] } },
-            date: october(6),
-        }),
+        group.addExpenseSync(
+            createExpense({
+                name: 'Souvenirs',
+                cost: { kind: 'local', amount: ron('40.00') },
+                payers: { kind: 'equal', members: [people.ana] },
+                split: { kind: 'whole', split: { kind: 'equal', members: [people.ana] } },
+                date: october(6),
+            }),
+        ),
     );
     printLines('A change that does not fit is refused, and the group stays as it was:');
     printTable(
@@ -204,13 +219,15 @@ export function comingsAndGoings(group: ExpenseGroup, people: People): void {
     const removed = group.removeMemberSync(people.filip);
     group.archiveMemberSync(people.dan);
     const farewell = refusal(() =>
-        group.addExpenseSync({
-            name: 'Farewell dinner',
-            cost: { kind: 'local', amount: eur('40.00') },
-            payers: { kind: 'equal', members: [people.ana] },
-            split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob, people.carol, people.dan] } },
-            date: october(6),
-        }),
+        group.addExpenseSync(
+            createExpense({
+                name: 'Farewell dinner',
+                cost: { kind: 'local', amount: eur('40.00') },
+                payers: { kind: 'equal', members: [people.ana] },
+                split: { kind: 'whole', split: { kind: 'equal', members: [people.ana, people.bob, people.carol, people.dan] } },
+                date: october(6),
+            }),
+        ),
     );
     const inUse = refusal(() => group.removeMemberSync(people.dan));
     printLines(
@@ -222,8 +239,8 @@ export function comingsAndGoings(group: ExpenseGroup, people: People): void {
     printTable(
         statusColumns,
         group.membersSync().flatMap((member) => {
-            const found = undefined === member.id ? undefined : totals(member.id, summary);
-            return undefined === member.id || undefined === found
+            const found = totals(member.id, summary);
+            return undefined === found
                 ? []
                 : [{ name: member.firstName, status: group.isArchivedSync(member.id) ? 'archived' : 'active', balance: found.balance }];
         }),

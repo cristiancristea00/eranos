@@ -109,9 +109,9 @@
 //!   [`ExpenseGroupError`](error::ExpenseGroupError). Account details serialise in clear
 //!   text, so store serialised groups in the platform's secure storage.
 //! - `sequential-ids`: identifiers count up from one instead of reading the
-//!   clock and the random source, so a program that builds the same entries
-//!   in the same order prints the same identifiers on every run. It is for
-//!   examples and tests: identifiers from two devices would collide.
+//!   clock and the random source, so a program that generates its
+//!   identifiers in the same order prints the same ones on every run. It is
+//!   for examples and tests: identifiers from two devices would collide.
 //!
 //! # Examples
 //!
@@ -213,17 +213,22 @@ pub mod id {
     //! An identifier is text, stored as it is given: at most 64 bytes of
     //! UTF-8, not empty, without control characters, and without whitespace
     //! at either end. Two identifiers are equal when their bytes are, so
-    //! case matters, and identifiers order by their bytes. An app with
-    //! identifiers of its own, such as the keys of its store, gives them to
-    //! the builders' `id` and to [`Category::with_id`](crate::Category::with_id);
-    //! an entity built without one gets a generated identifier. A generated
-    //! identifier is a UUID v7 written as lowercase hyphenated text: unique
-    //! across devices, so entries created offline on two phones never
-    //! collide, and in creation order. With the `sequential-ids` feature,
-    //! the identifiers of a process count up from one instead, so a program
-    //! that builds the same entries in the same order gets the same
-    //! identifiers on every run. The feature is for examples and tests: two
-    //! devices would generate the same identifiers.
+    //! case matters, and identifiers order by their bytes. A group and every
+    //! entry have an identifier from the moment their constructor is
+    //! called: the constructors with the plain name, such as
+    //! [`Member::builder`](crate::Member::builder) and
+    //! [`Category::new`](crate::Category::new), generate one, and their
+    //! twins, such as [`Member::builder_with_id`](crate::Member::builder_with_id)
+    //! and [`Category::with_id`](crate::Category::with_id), take the app's
+    //! own, such as the key of its store. A generated identifier is a UUID v7
+    //! written as lowercase hyphenated text: unique across devices, so
+    //! entries created offline on two phones never collide, and in creation
+    //! order. A saved group loads under the identifiers it saved, through the
+    //! twins, so loading generates none. With the
+    //! `sequential-ids` feature, the identifiers of a process count up from
+    //! one instead, so a program that generates its identifiers in the same
+    //! order gets the same ones on every run. The feature is for examples and
+    //! tests: two devices would generate the same identifiers.
 
     #[doc(inline)]
     pub use eranos_core::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId};

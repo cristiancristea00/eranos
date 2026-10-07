@@ -62,10 +62,9 @@ struct CurrencyRate final {
     [[nodiscard]] friend bool operator==(CurrencyRate const &left, CurrencyRate const &right) noexcept = default;
 };
 
-/// The details a new group can start with besides its name and currency. Each starts absent, so a designated initialiser names only those it gives.
+/// The details a new group can start with besides its identifier, name, and currency. Each starts absent, so a designated initialiser names only
+/// those it gives.
 struct ExpenseGroupOptions final {
-    /// The identifier: the app's own, or absent for the library to generate one.
-    std::optional<ExpenseGroupId> id = std::nullopt;
     /// A longer description.
     std::optional<std::string> description = std::nullopt;
     /// The language the apps show the group in.
@@ -97,13 +96,25 @@ class Cancellation final {
 /// destroyed or assigned.
 class ExpenseGroup final {
   public:
-    /// A new group, under the identifier @p options gives, or a generated one.
+    /// A new group under the identifier @p id, such as the key an app's own store gives it. The overload without @p id generates the identifier
+    /// instead.
     ///
+    /// @param id The group's identifier, which the app gives: its own, or one ExpenseGroupId::generate() makes
     /// @param name The group's name
     /// @param currency The group currency, which every total is in
     /// @param options The details it starts with besides
     /// @return The group, or an error of the kind ErrorKind::ID for an identifier the library refuses, ErrorKind::EXPENSE_GROUP for a blank name,
     ///   ErrorKind::LANGUAGE for a language that is not a tag, and ErrorKind::INVALID_TEXT for text that is not UTF-8
+    [[nodiscard]] static std::expected<ExpenseGroup, Error> create(ExpenseGroupId const &id, std::string_view const name,
+                                                                   CurrencyCode const &currency, ExpenseGroupOptions const &options = {});
+
+    /// A new group under an identifier generated when it is called, which the overload with an identifier takes instead.
+    ///
+    /// @param name The group's name
+    /// @param currency The group currency, which every total is in
+    /// @param options The details it starts with besides
+    /// @return The group, or an error of the kind ErrorKind::EXPENSE_GROUP for a blank name, ErrorKind::LANGUAGE for a language that is not a tag,
+    ///   and ErrorKind::INVALID_TEXT for text that is not UTF-8
     [[nodiscard]] static std::expected<ExpenseGroup, Error> create(std::string_view const name, CurrencyCode const &currency,
                                                                    ExpenseGroupOptions const &options = {});
 
@@ -164,8 +175,7 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Category>, Error>> categoryAsync(CategoryId const &id,
                                                                                            Cancellation const *const cancellation = nullptr) const;
 
-    /// Adds category under its identifier, or one the library generates when it has none, and returns the identifier. Blocks the calling thread while
-    /// another call holds the group's lock.
+    /// Adds category under its identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @param category The category
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
@@ -293,8 +303,7 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<ExpenseShares>, Error>>
     expenseSharesAsync(ExpenseId const &id, Cancellation const *const cancellation = nullptr) const;
 
-    /// Adds expense under its identifier, or one the library generates when it has none, and returns the identifier. Blocks the calling thread while
-    /// another call holds the group's lock.
+    /// Adds expense under its identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @param expense The expense
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
@@ -402,8 +411,7 @@ class ExpenseGroup final {
     /// @return A future of the result, or of the error the call ends with
     [[nodiscard]] std::future<std::expected<bool, Error>> isArchivedAsync(MemberId const &id, Cancellation const *const cancellation = nullptr) const;
 
-    /// Adds member under their identifier, or one the library generates when they have none, and returns the identifier. Blocks the calling thread
-    /// while another call holds the group's lock.
+    /// Adds member under their identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @param member The member
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
@@ -571,8 +579,7 @@ class ExpenseGroup final {
     [[nodiscard]] std::future<std::expected<std::optional<Money>, Error>> transferAmountAsync(TransferId const &id,
                                                                                               Cancellation const *const cancellation = nullptr) const;
 
-    /// Adds transfer under its identifier, or one the library generates when it has none, and returns the identifier. Blocks the calling thread while
-    /// another call holds the group's lock.
+    /// Adds transfer under its identifier, and returns the identifier. Blocks the calling thread while another call holds the group's lock.
     ///
     /// @param transfer The transfer
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
@@ -735,13 +742,9 @@ namespace detail {
 
 } // namespace detail
 
-inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(std::string_view const name, CurrencyCode const &currency,
+inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(ExpenseGroupId const &id, std::string_view const name, CurrencyCode const &currency,
                                                                ExpenseGroupOptions const &options) {
-    return detail::expectedOf(detail::EranosNewExpenseGroup::create(name, currency.code()))
-        .and_then([&options](std::unique_ptr<detail::EranosNewExpenseGroup> details) {
-            return detail::setIfPresent(std::move(details), options.id,
-                                        [](detail::EranosNewExpenseGroup &record, ExpenseGroupId const &id) { return record.set_id(id.value()); });
-        })
+    return detail::expectedOf(detail::EranosNewExpenseGroup::create(id.value(), name, currency.code()))
         .and_then([&options](std::unique_ptr<detail::EranosNewExpenseGroup> details) {
             return detail::setIfPresent(std::move(details), options.description,
                                         [](detail::EranosNewExpenseGroup &record, std::string const &text) { return record.set_description(text); });
@@ -755,6 +758,11 @@ inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(std::string_view 
             return detail::expectedOf(detail::EranosExpenseGroup::create(*details));
         })
         .transform([](std::unique_ptr<detail::EranosExpenseGroup> handle) { return ExpenseGroup(std::move(handle)); });
+}
+
+inline std::expected<ExpenseGroup, Error> ExpenseGroup::create(std::string_view const name, CurrencyCode const &currency,
+                                                               ExpenseGroupOptions const &options) {
+    return create(ExpenseGroupId::generate(), name, currency, options);
 }
 
 inline std::expected<ExpenseGroup, Error> ExpenseGroup::load(std::string_view const json) {

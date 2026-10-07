@@ -11,7 +11,7 @@ use crate::member::{Category, Member};
 use crate::money::{self, CurrencyRate, Money};
 use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
-use crate::{EranosError, identifier, identifier_to_replace};
+use crate::{EranosError, identifier};
 
 // --- Identifier --------------------------------------------------------------
 
@@ -47,7 +47,7 @@ pub(crate) fn replace_category(
     group: &mut ExpenseGroup,
     category: &Category,
 ) -> Result<Category, EranosError> {
-    let id = identifier_to_replace(category.id.as_deref())?;
+    let id: CategoryId = identifier(&category.id)?;
     let existing = group
         .category(id)
         .ok_or(ExpenseGroupError::UnknownCategory(id))?;
@@ -139,7 +139,7 @@ pub(crate) fn replace_expense(
     group: &mut ExpenseGroup,
     expense: &Expense,
 ) -> Result<Expense, EranosError> {
-    let id = identifier_to_replace(expense.id.as_deref())?;
+    let id: ExpenseId = identifier(&expense.id)?;
     let existing = group
         .expense(id)
         .ok_or(ExpenseGroupError::UnknownExpense(id))?;
@@ -194,7 +194,7 @@ pub(crate) fn replace_member(
     group: &mut ExpenseGroup,
     member: &Member,
 ) -> Result<Member, EranosError> {
-    let id = identifier_to_replace(member.id.as_deref())?;
+    let id: MemberId = identifier(&member.id)?;
     let existing = group
         .member(id)
         .ok_or(ExpenseGroupError::UnknownMember(id))?;
@@ -286,7 +286,7 @@ pub(crate) fn replace_transfer(
     group: &mut ExpenseGroup,
     transfer: &Transfer,
 ) -> Result<Transfer, EranosError> {
-    let id = identifier_to_replace(transfer.id.as_deref())?;
+    let id: TransferId = identifier(&transfer.id)?;
     let existing = group
         .transfer(id)
         .ok_or(ExpenseGroupError::UnknownTransfer(id))?;

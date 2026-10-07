@@ -68,8 +68,7 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `transfer` under its identifier, or one the library generates when it has none, and
-    /// returns the identifier.
+    /// Adds `transfer` under its identifier, and returns the identifier.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
     ///   ``EranosError/transfer(_:detail:)`` for a transfer that does not build, such as
@@ -82,8 +81,7 @@ public extension ExpenseGroup {
         try converting { Transfer.ID(rawValue: try handle.addTransfer(transfer: transfer.generated)) }
     }
 
-    /// Adds `transfer` under its identifier, or one the library generates when it has none, and
-    /// returns the identifier.
+    /// Adds `transfer` under its identifier, and returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
@@ -103,10 +101,10 @@ public extension ExpenseGroup {
 
     /// Replaces the transfer that `transfer` names by its identifier, and returns it as it was.
     ///
-    /// - Throws: ``EranosError/identifierMissing(detail:)`` for a transfer without an identifier,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``, and the failures
-    ///   of adding one; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while
-    ///   another call holds the lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``
+    ///   for an identifier the group does not hold, and the failures of adding one; on wasm,
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call
+    ///   holds the lock.
     @discardableResult
     func replace(_ transfer: Transfer) throws(EranosError) -> Transfer {
         try converting { Transfer(try handle.replaceTransfer(transfer: transfer.generated)) }
@@ -117,9 +115,9 @@ public extension ExpenseGroup {
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierMissing(detail:)`` for a transfer without an identifier,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``, and the failures
-    ///   of adding one; ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownTransfer(_:)``
+    ///   for an identifier the group does not hold, and the failures of adding one;
+    ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     @discardableResult
     func replace(_ transfer: Transfer) async throws(EranosError) -> Transfer {
         try await converting { [handle] cancellation in

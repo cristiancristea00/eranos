@@ -503,30 +503,34 @@ fn identifiers_load_as_written_and_uncategorised_stays_first() {
 /// with other totals.
 #[test]
 fn a_group_with_given_identifiers_round_trips() {
-    let mut group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
-        .id(ExpenseGroupId::new("zz").unwrap())
-        .build()
+    let mut group = ExpenseGroup::builder_with_id(
+        ExpenseGroupId::new("zz").unwrap(),
+        "Lisbon",
+        CurrencyCode::EUR,
+    )
+    .build()
+    .unwrap();
+    let member = |id: MemberId, name: &str| Member::builder_with_id(id, name).build().unwrap();
+    let ana = group
+        .add_member(member(MemberId::new("!a").unwrap(), "Ana"))
         .unwrap();
-    let member = |name: &str, id: Option<&str>| {
-        Member::builder(name)
-            .id(id.map(|text| MemberId::new(text).unwrap()))
-            .build()
-            .unwrap()
-    };
-    let ana = group.add_member(member("Ana", Some("!a"))).unwrap();
-    let bob = group.add_member(member("Bob", Some("Bøb"))).unwrap();
-    let carol = group.add_member(member("Carol", None)).unwrap();
+    let bob = group
+        .add_member(member(MemberId::new("Bøb").unwrap(), "Bob"))
+        .unwrap();
+    let carol = group
+        .add_member(Member::builder("Carol").build().unwrap())
+        .unwrap();
     let food = Category::with_id(CategoryId::new("-food").unwrap(), "Food").unwrap();
     let food = group.add_category(food).unwrap();
     let fuel = group.add_category(Category::new("Fuel").unwrap()).unwrap();
-    let dinner = Expense::builder(
+    let dinner = Expense::builder_with_id(
+        ExpenseId::new("晚餐").unwrap(),
         "Dinner",
         eur("30.00"),
         ana,
         Split::equal([ana, bob, carol]),
         day(),
     )
-    .id(ExpenseId::new("晚餐").unwrap())
     .category(food)
     .build()
     .unwrap();
@@ -542,10 +546,15 @@ fn a_group_with_given_identifiers_round_trips() {
     .build()
     .unwrap();
     let taxi = group.add_expense(taxi).unwrap();
-    let repayment = Transfer::builder(bob, ana, eur("10.00"), day())
-        .id(TransferId::new("zz").unwrap())
-        .build()
-        .unwrap();
+    let repayment = Transfer::builder_with_id(
+        TransferId::new("zz").unwrap(),
+        bob,
+        ana,
+        eur("10.00"),
+        day(),
+    )
+    .build()
+    .unwrap();
     let repayment = group.add_transfer(repayment).unwrap();
 
     let json = serde_json::to_string(&group).unwrap();

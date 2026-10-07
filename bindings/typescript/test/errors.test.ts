@@ -497,14 +497,9 @@ void describe('the conversions of every failure the generated code can report', 
         assert.equal(json.column, 2);
         assert.equal(json.message, 'detail');
         assert.equal(json.name, 'InvalidJsonError');
-        for (const generated of [
-            new internal.EranosError.IdentifierMissing({ detail: 'detail' }),
-            new internal.EranosError.Released({ detail: 'detail' }),
-        ]) {
-            const converted = convertedError(generated);
-            assert.ok(converted instanceof TypeError);
-            assert.equal(converted.message, 'detail');
-        }
+        const released = convertedError(new internal.EranosError.Released({ detail: 'detail' }));
+        assert.ok(released instanceof TypeError);
+        assert.equal(released.message, 'detail');
         const cancelled = convertedError(new internal.EranosError.Cancelled({ detail: 'detail' }));
         assert.ok(cancelled instanceof DOMException);
         assert.equal(cancelled.name, 'AbortError');

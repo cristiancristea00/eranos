@@ -146,13 +146,12 @@ public final class Main {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberId> id = member.id();
-            Optional<MemberSummary> found = id.flatMap(known -> totals(known, summary));
-            if (id.isPresent() && found.isPresent()) {
+            Optional<MemberSummary> found = totals(member.id(), summary);
+            if (found.isPresent()) {
                 rows.add(
                         new BalanceRow(
                                 member.firstName(),
-                                group.isArchived(id.orElseThrow()) ? "archived" : "active",
+                                group.isArchived(member.id()) ? "archived" : "active",
                                 found.orElseThrow().share(),
                                 found.orElseThrow().balance()));
             }

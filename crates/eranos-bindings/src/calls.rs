@@ -41,8 +41,7 @@ trait ExpenseGroupCalls {
     #[read]
     fn category(&self, id: &str) -> Result<Option<Category>, EranosError>;
 
-    /// Adds `category` under its identifier, or one the library generates
-    /// when it has none, and returns the identifier.
+    /// Adds `category` under its identifier, and returns the identifier.
     #[write]
     fn add_category(&self, category: &Category) -> Result<String, EranosError>;
 
@@ -85,8 +84,7 @@ trait ExpenseGroupCalls {
     #[read]
     fn expense_shares(&self, id: &str) -> Result<Option<ExpenseShares>, EranosError>;
 
-    /// Adds `expense` under its identifier, or one the library generates
-    /// when it has none, and returns the identifier.
+    /// Adds `expense` under its identifier, and returns the identifier.
     #[write]
     fn add_expense(&self, expense: &Expense) -> Result<String, EranosError>;
 
@@ -123,8 +121,7 @@ trait ExpenseGroupCalls {
     #[read]
     fn is_archived(&self, id: &str) -> Result<bool, EranosError>;
 
-    /// Adds `member` under their identifier, or one the library generates
-    /// when they have none, and returns the identifier.
+    /// Adds `member` under their identifier, and returns the identifier.
     #[write]
     fn add_member(&self, member: &Member) -> Result<String, EranosError>;
 
@@ -181,8 +178,7 @@ trait ExpenseGroupCalls {
     #[read]
     fn transfer_amount(&self, id: &str) -> Result<Option<Money>, EranosError>;
 
-    /// Adds `transfer` under its identifier, or one the library generates
-    /// when it has none, and returns the identifier.
+    /// Adds `transfer` under its identifier, and returns the identifier.
     #[write]
     fn add_transfer(&self, transfer: &Transfer) -> Result<String, EranosError>;
 

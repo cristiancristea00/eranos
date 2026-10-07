@@ -118,7 +118,7 @@ public final class Main {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = member.id().flatMap(id -> totals(id, summary));
+            Optional<MemberSummary> found = totals(member.id(), summary);
             found.ifPresent(
                     totals ->
                             rows.add(

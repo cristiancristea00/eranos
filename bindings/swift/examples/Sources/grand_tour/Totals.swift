@@ -17,18 +17,16 @@ func summary(_ group: ExpenseGroup, _ people: People, _ categories: Categories) 
     let builtIn = try builtInCategory(group)
     let zero = Money(minorUnits: 0, currency: try group.currency())
     printTable(
-        try group.members().compactMap { member in
-            member.id.map { id in
-                let totals = summary.memberCategoryTotals.first { totals in totals.member == id }?.totals ?? []
-                let total = { (category: Category.ID?) in totals.first { total in total.category == category }?.total ?? zero }
-                return MemberCategoryRow(
-                    name: member.firstName,
-                    food: total(categories.food),
-                    lodging: total(categories.lodging),
-                    transport: total(categories.transport),
-                    uncategorised: total(builtIn)
-                )
-            }
+        try group.members().map { member in
+            let totals = summary.memberCategoryTotals.first { totals in totals.member == member.id }?.totals ?? []
+            let total = { (category: Category.ID?) in totals.first { total in total.category == category }?.total ?? zero }
+            return MemberCategoryRow(
+                name: member.firstName,
+                food: total(categories.food),
+                lodging: total(categories.lodging),
+                transport: total(categories.transport),
+                uncategorised: total(builtIn)
+            )
         },
         numbersFrom: 1
     )

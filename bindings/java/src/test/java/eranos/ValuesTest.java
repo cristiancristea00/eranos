@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 /** The currencies, amounts, ratios, dates, times, contact details, and identifiers. */
 class ValuesTest {
@@ -182,6 +183,34 @@ class ValuesTest {
         assertEquals(text, new ExpenseId(text).toString());
         assertEquals(text, new TransferId(text).toString());
         assertThrows(NullPointerException.class, () -> new MemberId(null));
+    }
+
+    /**
+     * A generated identifier that the rules refuse would fail the call that carries it, and two
+     * generated one after the other that were equal, of one kind or of two, would merge two
+     * entries; one out of order would list a new entry before an older one.
+     */
+    @Test
+    void generatedIdentifiersFollowTheRulesAndCountUp() throws EranosException {
+        ExpenseGroupId group = ExpenseGroupId.generate();
+        MemberId member = MemberId.generate();
+        CategoryId category = CategoryId.generate();
+        ExpenseId expense = ExpenseId.generate();
+        TransferId transfer = TransferId.generate();
+        assertEquals(group, ExpenseGroupId.parse(group.value()));
+        assertEquals(member, MemberId.parse(member.value()));
+        assertEquals(category, CategoryId.parse(category.value()));
+        assertEquals(expense, ExpenseId.parse(expense.value()));
+        assertEquals(transfer, TransferId.parse(transfer.value()));
+        List<String> texts =
+                List.of(
+                        group.value(),
+                        member.value(),
+                        category.value(),
+                        expense.value(),
+                        transfer.value());
+        assertEquals(texts.size(), Set.copyOf(texts).size());
+        assertEquals(texts.stream().sorted().toList(), texts);
     }
 
     /**

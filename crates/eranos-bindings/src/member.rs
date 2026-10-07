@@ -3,10 +3,9 @@
 
 use eranos::category as categories;
 use eranos::member as library;
-use eranos::{CategoryId, MemberId};
 use eranos_payment_account::FromPaymentAccountDetails;
 
-use crate::{EranosError, identifier_to_add};
+use crate::{EranosError, identifier};
 
 /// Where a member can be paid, without its label.
 #[eranos_glue_macros::mirrored]
@@ -94,10 +93,9 @@ impl PaymentAccount {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Member {
-    /// The identifier: the app's own for a member to add, or absent for the
-    /// library to generate one, and present for a member the group holds or
-    /// one to replace.
-    pub id: Option<String>,
+    /// The identifier, which the app gives: its own, or one
+    /// [`identifier_generate`](crate::identifier_generate) returns.
+    pub id: String,
     /// The first name.
     pub first_name: String,
     /// The last name.
@@ -115,7 +113,7 @@ impl Member {
     /// The record of `member`.
     pub(crate) fn from_library(member: &library::Member) -> Self {
         Self {
-            id: Some(member.id().to_string()),
+            id: member.id().to_string(),
             first_name: member.first_name().to_owned(),
             last_name: member.last_name().map(str::to_owned),
             email: member.email().map(|email| email.as_str().to_owned()),
@@ -128,8 +126,8 @@ impl Member {
         }
     }
 
-    /// The library's member, for a record to add: under the record's
-    /// identifier, or a generated one when it has none.
+    /// The library's member, for a record to add, under the record's
+    /// identifier.
     ///
     /// # Errors
     ///
@@ -138,8 +136,10 @@ impl Member {
     /// [`MemberFailure::EmptyFirstName`](crate::MemberFailure::EmptyFirstName)
     /// for a blank first name.
     pub(crate) fn to_new(&self) -> Result<library::Member, EranosError> {
-        let id: Option<MemberId> = identifier_to_add(self.id.as_deref())?;
-        self.filled(library::Member::builder(self.first_name.clone()).id(id))
+        self.filled(library::Member::builder_with_id(
+            identifier(&self.id)?,
+            self.first_name.clone(),
+        ))
     }
 
     /// The library's member that replaces `existing`, keeping their
@@ -186,10 +186,9 @@ impl Member {
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Category {
-    /// The identifier: the app's own for a category to add, or absent for the
-    /// library to generate one, and present for a category the group holds or
-    /// one to rename.
-    pub id: Option<String>,
+    /// The identifier, which the app gives: its own, or one
+    /// [`identifier_generate`](crate::identifier_generate) returns.
+    pub id: String,
     /// The name, which no other category of the group shares.
     pub name: String,
 }
@@ -198,13 +197,13 @@ impl Category {
     /// The record of `category`.
     pub(crate) fn from_library(category: &categories::Category) -> Self {
         Self {
-            id: Some(category.id().to_string()),
+            id: category.id().to_string(),
             name: category.name().to_owned(),
         }
     }
 
-    /// The library's category, for a record to add: under the record's
-    /// identifier, or a generated one when it has none.
+    /// The library's category, for a record to add, under the record's
+    /// identifier.
     ///
     /// # Errors
     ///
@@ -212,12 +211,10 @@ impl Category {
     /// [`CategoryFailure::EmptyName`](crate::CategoryFailure::EmptyName) for a
     /// blank name.
     pub(crate) fn to_new(&self) -> Result<categories::Category, EranosError> {
-        let id: Option<CategoryId> = identifier_to_add(self.id.as_deref())?;
-        let name = self.name.clone();
-        Ok(match id {
-            Some(id) => categories::Category::with_id(id, name),
-            None => categories::Category::new(name),
-        }?)
+        Ok(categories::Category::with_id(
+            identifier(&self.id)?,
+            self.name.clone(),
+        )?)
     }
 
     /// `existing` renamed to the record's name, keeping its identifier.

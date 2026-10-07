@@ -240,10 +240,13 @@ impl ExpenseRecipe {
         let rate = self.foreign.map(ForeignRecipe::rate);
         let money = |minor_units| Money::from_minor_units(minor_units, currency);
         let cost = |amount: Money| rate.map_or_else(|| Cost::from(amount), |rate| amount.at(rate));
+        let id = self.id.map_or_else(ExpenseId::generate, |start| {
+            given::<ExpenseId>(start, position)
+        });
         let whole = || {
             let amount = money(self.amount);
             let split = self.split.build(members, amount);
-            Expense::builder("Whole", cost(amount), members[0], split, day())
+            Expense::builder_with_id(id, "Whole", cost(amount), members[0], split, day())
         };
         let itemised = |items: &Vec<ExpenseItemRecipe>| {
             let items: Vec<ExpenseItem> = items
@@ -264,13 +267,16 @@ impl ExpenseRecipe {
                 .iter()
                 .map(|item| item.line_total().minor_units())
                 .sum();
-            Expense::itemised_builder("Itemised", cost(money(amount)), members[0], items, day())
+            Expense::itemised_builder_with_id(
+                id,
+                "Itemised",
+                cost(money(amount)),
+                members[0],
+                items,
+                day(),
+            )
         };
-        let mut builder = self
-            .items
-            .as_ref()
-            .map_or_else(whole, itemised)
-            .id(self.id.map(|start| given::<ExpenseId>(start, position)));
+        let mut builder = self.items.as_ref().map_or_else(whole, itemised);
         if let Some(recipe) = self.tip {
             let tip = if recipe.fixed {
                 TipRule::fixed(money(i64::from(recipe.value)))
@@ -349,9 +355,12 @@ fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
     // generated ones.
     let members: Vec<Member> = (0..MEMBERS)
         .map(|position| {
-            let id: Option<MemberId> =
-                (0 == position % 2).then(|| given(position % GIVEN.len(), position));
-            Member::builder("Member").id(id).build().unwrap()
+            let id = if 0 == position % 2 {
+                given(position % GIVEN.len(), position)
+            } else {
+                MemberId::generate()
+            };
+            Member::builder_with_id(id, "Member").build().unwrap()
         })
         .collect();
     let ids: Vec<MemberId> = members.iter().map(Member::id).collect();
@@ -367,14 +376,16 @@ fn entries(recipe: &ExpenseGroupRecipe) -> Entries {
         .enumerate()
         .filter(|(_, transfer)| transfer.from != transfer.to)
         .map(|(position, transfer)| {
-            let id: Option<TransferId> = transfer.id.map(|start| given(start, position));
-            Transfer::builder(
+            let id = transfer
+                .id
+                .map_or_else(TransferId::generate, |start| given(start, position));
+            Transfer::builder_with_id(
+                id,
                 ids[transfer.from],
                 ids[transfer.to],
                 Money::from_minor_units(transfer.amount, CurrencyCode::EUR),
                 day(),
             )
-            .id(id)
             .build()
             .unwrap()
         })

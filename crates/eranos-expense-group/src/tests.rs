@@ -162,22 +162,30 @@ fn a_new_group_starts_empty() {
 }
 
 /// A group from an app's own store would get another identifier than its
-/// key, or keep it after the app asked for a generated one.
+/// key, two groups would share a generated one, or a builder would keep its
+/// identifier when it is given another.
 #[test]
 fn a_new_group_takes_the_identifier_it_is_given() {
     let id = ExpenseGroupId::new("Lisboa · 2026").unwrap();
-    let group = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
-        .id(id)
+    let group = ExpenseGroup::builder_with_id(id, "Lisbon", CurrencyCode::EUR)
         .build()
         .unwrap();
     assert_eq!(group.id(), id);
-    // The last call wins, and `None` leaves generation to `build`.
-    let generated = ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
-        .id(id)
-        .id(None)
+    // Without one, each group generates its own.
+    let generated = || {
+        ExpenseGroup::builder("Lisbon", CurrencyCode::EUR)
+            .build()
+            .unwrap()
+            .id()
+    };
+    assert_ne!(generated(), generated());
+    // The last call wins.
+    let other = ExpenseGroupId::new("zz").unwrap();
+    let moved = ExpenseGroup::builder_with_id(id, "Lisbon", CurrencyCode::EUR)
+        .id(other)
         .build()
         .unwrap();
-    assert_ne!(generated.id(), id);
+    assert_eq!(moved.id(), other);
 }
 
 /// Entries from an app's own store would be stored under other identifiers
@@ -189,16 +197,16 @@ fn entries_take_the_identifiers_they_are_given_once() {
         .build()
         .unwrap();
     let (ana_id, bob_id) = (MemberId::new("!a").unwrap(), MemberId::new("zz").unwrap());
-    let ana = Member::builder("Ana").id(ana_id).build().unwrap();
+    let ana = Member::builder_with_id(ana_id, "Ana").build().unwrap();
     assert_eq!(group.add_member(ana), Ok(ana_id));
     assert_eq!(
-        group.add_member(Member::builder("Bob").id(bob_id).build().unwrap()),
+        group.add_member(Member::builder_with_id(bob_id, "Bob").build().unwrap()),
         Ok(bob_id)
     );
     assert_unchanged(
         &mut group,
         &ExpenseGroupError::DuplicateMember(ana_id),
-        |group| group.add_member(Member::builder("Anna").id(ana_id).build().unwrap()),
+        |group| group.add_member(Member::builder_with_id(ana_id, "Anna").build().unwrap()),
     );
     let food_id = CategoryId::new("-food").unwrap();
     assert_eq!(
@@ -1502,14 +1510,17 @@ fn apply(
                     ));
                 }
             }
-            let expense = Expense::builder(
+            let id = id.map_or_else(ExpenseId::generate, |index| {
+                ExpenseId::new(GIVEN[index]).unwrap()
+            });
+            let expense = Expense::builder_with_id(
+                id,
                 "Random",
                 money(amount),
                 members[payer],
                 Split::parts(chosen),
                 day(),
             )
-            .id(id.map(|index| ExpenseId::new(GIVEN[index]).unwrap()))
             .category(categories[category])
             .build()
             .unwrap();
@@ -1543,9 +1554,12 @@ fn apply(
             to,
             amount,
         } => {
-            let Ok(transfer) = Transfer::builder(members[from], members[to], money(amount), day())
-                .id(id.map(|index| TransferId::new(GIVEN[index]).unwrap()))
-                .build()
+            let id = id.map_or_else(TransferId::generate, |index| {
+                TransferId::new(GIVEN[index]).unwrap()
+            });
+            let Ok(transfer) =
+                Transfer::builder_with_id(id, members[from], members[to], money(amount), day())
+                    .build()
             else {
                 return false;
             };
@@ -1563,12 +1577,12 @@ proptest! {
     /// the group untouched, and every settlement clears every balance.
     #[test]
     fn random_changes_keep_the_group_consistent(operations in proptest::collection::vec(operation(), 1..40)) {
-        let mut group = ExpenseGroup::builder("Random", CurrencyCode::EUR).id(ExpenseGroupId::new(GIVEN[3]).unwrap()).build().unwrap();
+        let mut group = ExpenseGroup::builder_with_id(ExpenseGroupId::new(GIVEN[3]).unwrap(), "Random", CurrencyCode::EUR).build().unwrap();
         // Members and categories under given and generated identifiers.
         let mut members: Vec<MemberId> = ["Ana", "Bob", "Carol"].iter().map(|name| group.add_member(person(name)).unwrap()).collect();
         let given = |index: usize| MemberId::new(GIVEN[index]).unwrap();
-        members.push(group.add_member(Member::builder("Dan").id(given(1)).build().unwrap()).unwrap());
-        members.push(group.add_member(Member::builder("Eve").id(given(2)).build().unwrap()).unwrap());
+        members.push(group.add_member(Member::builder_with_id(given(1), "Dan").build().unwrap()).unwrap());
+        members.push(group.add_member(Member::builder_with_id(given(2), "Eve").build().unwrap()).unwrap());
         let food = Category::with_id(CategoryId::new(GIVEN[0]).unwrap(), "Food").unwrap();
         let categories = [
             CategoryId::UNCATEGORISED,

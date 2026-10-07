@@ -269,7 +269,7 @@ private fun printTotals(group: ExpenseGroup) {
     printTable(
         TotalRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
-            member.id?.let { id -> totals(id, summary) }?.let { totals ->
+            totals(member.id, summary)?.let { totals ->
                 TotalRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = "${totals.balance}")
             }
         },

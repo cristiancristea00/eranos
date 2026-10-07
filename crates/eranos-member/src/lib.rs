@@ -18,9 +18,11 @@ pub use error::{FromMemberError, MemberError};
 
 /// A person who pays for or shares expenses.
 ///
-/// Only the first name is required. A member gets the identifier given to
-/// [`MemberBuilder::id`], or a generated one when it is built, and keeps it
-/// through every edit. Members are values: to change one, edit a copy with
+/// Only the first name is required. A member has an identifier from the
+/// moment its builder starts: the one given to
+/// [`builder_with_id`](Self::builder_with_id), or one that
+/// [`builder`](Self::builder) generates, and keeps it through every edit.
+/// Members are values: to change one, edit a copy with
 /// [`to_builder`](Self::to_builder) and pass it to
 /// `ExpenseGroup::replace_member`.
 ///
@@ -57,10 +59,30 @@ pub struct Member {
 }
 
 impl Member {
-    /// Starts a member with the required first name.
+    /// Starts a member with the required first name, under an identifier
+    /// generated when it is called; [`builder_with_id`](Self::builder_with_id)
+    /// takes one instead.
     pub fn builder(first_name: impl Into<String>) -> MemberBuilder {
+        Self::builder_with_id(MemberId::generate(), first_name)
+    }
+
+    /// Starts a member with the required first name under the identifier
+    /// `id`, such as the key an app's own store gives the member;
+    /// [`builder`](Self::builder) generates one instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{Member, MemberId};
+    ///
+    /// let ana = Member::builder_with_id(MemberId::new("ana")?, "Ana").build()?;
+    /// assert_eq!(ana.id().as_str(), "ana");
+    /// assert_eq!(ana.to_builder().first_name("Anna").build()?.id(), ana.id());
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn builder_with_id(id: MemberId, first_name: impl Into<String>) -> MemberBuilder {
         MemberBuilder {
-            id: None,
+            id,
             first_name: first_name.into(),
             last_name: None,
             email: None,
@@ -73,7 +95,7 @@ impl Member {
     /// keeps the identifier.
     pub fn to_builder(&self) -> MemberBuilder {
         MemberBuilder {
-            id: Some(self.id),
+            id: self.id,
             first_name: self.first_name.clone(),
             last_name: self.last_name.clone(),
             email: self.email.clone(),
@@ -119,12 +141,12 @@ impl Member {
     }
 }
 
-/// Builds a [`Member`]; created by [`Member::builder`] or
-/// [`Member::to_builder`].
+/// Builds a [`Member`]; created by [`Member::builder`],
+/// [`Member::builder_with_id`], or [`Member::to_builder`].
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct MemberBuilder {
-    id: Option<MemberId>,
+    id: MemberId,
     first_name: String,
     last_name: Option<String>,
     email: Option<Email>,
@@ -133,23 +155,9 @@ pub struct MemberBuilder {
 }
 
 impl MemberBuilder {
-    /// Sets the identifier, such as the key an app's own store gives the
-    /// member, or leaves it to [`build`](Self::build) to generate one with
-    /// `None`; a builder from [`Member::to_builder`] starts with the
-    /// member's.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use eranos::{Member, MemberId};
-    ///
-    /// let ana = Member::builder("Ana").id(MemberId::new("ana")?).build()?;
-    /// assert_eq!(ana.id().as_str(), "ana");
-    /// assert_eq!(ana.to_builder().first_name("Anna").build()?.id(), ana.id());
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn id(mut self, id: impl Into<Option<MemberId>>) -> Self {
-        self.id = id.into();
+    /// Replaces the identifier.
+    pub const fn id(mut self, id: MemberId) -> Self {
+        self.id = id;
         self
     }
 
@@ -190,8 +198,7 @@ impl MemberBuilder {
     }
 
     /// Validates the names and returns the member, under the identifier the
-    /// builder holds, given to [`id`](Self::id) or kept by
-    /// [`Member::to_builder`], or a newly generated one.
+    /// builder holds.
     ///
     /// # Errors
     ///
@@ -199,7 +206,7 @@ impl MemberBuilder {
     pub fn build(self) -> Result<Member, MemberError> {
         let first_name = text::required(self.first_name, MemberError::EmptyFirstName)?;
         Ok(Member {
-            id: self.id.unwrap_or_else(MemberId::generate),
+            id: self.id,
             first_name,
             last_name: self.last_name.and_then(text::optional),
             email: self.email,
@@ -228,8 +235,7 @@ struct MemberRecord {
 /// Builds the member `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
 fn from_record(record: MemberRecord) -> Result<Member, MemberError> {
-    let builder = Member::builder(record.first_name)
-        .id(record.id)
+    let builder = Member::builder_with_id(record.id, record.first_name)
         .email(record.email)
         .phone(record.phone)
         .accounts(record.accounts);

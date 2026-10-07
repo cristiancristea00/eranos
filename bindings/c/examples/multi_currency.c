@@ -92,7 +92,7 @@ static void addExpenses(EranosExpenseGroup const *const group, Table *const tabl
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosExpenseListLength(expenses) > index; ++index) {
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
-        (void)eranosExpenseId(expense, text);
+        eranosExpenseId(expense, text);
         EranosExpenseShares *shares = nullptr;
         must(eranosExpenseGroupExpenseShares(group, eranosTextData(text), &shares));
         eranosExpenseName(expense, text);
@@ -122,7 +122,7 @@ static void addTransfers(EranosExpenseGroup const *const group, Table *const tab
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosTransferListLength(transfers) > index; ++index) {
         EranosTransfer *const transfer = eranosTransferListGet(transfers, index);
-        (void)eranosTransferId(transfer, text);
+        eranosTransferId(transfer, text);
         EranosMoney *converted = nullptr;
         must(eranosExpenseGroupTransferAmount(group, eranosTextData(text), &converted));
         eranosTransferTo(transfer, text);
@@ -161,7 +161,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        (void)eranosMemberId(member, text);
+        eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         check(nullptr != found, "every member has totals");
         eranosMemberFirstName(member, text);

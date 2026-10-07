@@ -20,8 +20,8 @@ pub use error::{CategoryError, FromCategoryError};
 /// Every group defines its own categories; names are unique within a group
 /// under Unicode canonical caseless matching, so `Food` and `FOOD`, `Straße`
 /// and `STRASSE`, and a composed and a decomposed `Café` are one name, and so
-/// are `Maße` and `Masse`. A category gets the identifier given to
-/// [`with_id`](Self::with_id), or a generated one from [`new`](Self::new),
+/// are `Maße` and `Masse`. A category has the identifier given to
+/// [`with_id`](Self::with_id), or one that [`new`](Self::new) generates,
 /// and [`renamed`](Self::renamed) keeps it. Every group also has the
 /// built-in "Uncategorised" category, [`CategoryId::UNCATEGORISED`], which
 /// cannot be renamed or removed.
@@ -47,22 +47,20 @@ pub struct Category {
 }
 
 impl Category {
-    /// Returns a category named `name`, trimmed, under a newly generated
-    /// identifier.
+    /// Returns a category named `name`, trimmed, under an identifier
+    /// generated when it is called; [`with_id`](Self::with_id) takes one
+    /// instead.
     ///
     /// # Errors
     ///
     /// [`CategoryError::EmptyName`] when the name is blank.
     pub fn new(name: impl Into<String>) -> Result<Self, CategoryError> {
-        let name = text::required(name, CategoryError::EmptyName)?;
-        Ok(Self {
-            id: CategoryId::generate(),
-            name,
-        })
+        Self::with_id(CategoryId::generate(), name)
     }
 
     /// Returns a category named `name`, trimmed, under the identifier `id`,
-    /// such as the key an app's own store gives it.
+    /// such as the key an app's own store gives it; [`new`](Self::new)
+    /// generates one instead.
     ///
     /// A group refuses to add a category under an identifier it already
     /// holds, [`CategoryId::UNCATEGORISED`] included.

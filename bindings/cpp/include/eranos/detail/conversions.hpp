@@ -123,11 +123,15 @@ inline std::optional<TransferId> const &Error::transfer() const noexcept { retur
 
 inline std::optional<std::vector<TransferId>> const &Error::transfers() const noexcept { return fields->transfers; }
 
+inline ExpenseGroupId ExpenseGroupId::generate() { return ExpenseGroupId(detail::EranosIdentifier::generate()); }
+
 inline std::expected<ExpenseGroupId, Error> ExpenseGroupId::parse(std::string_view const text) {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return ExpenseGroupId(std::move(identifier));
     });
 }
+
+inline MemberId MemberId::generate() { return MemberId(detail::EranosIdentifier::generate()); }
 
 inline std::expected<MemberId, Error> MemberId::parse(std::string_view const text) {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
@@ -135,17 +139,23 @@ inline std::expected<MemberId, Error> MemberId::parse(std::string_view const tex
     });
 }
 
+inline CategoryId CategoryId::generate() { return CategoryId(detail::EranosIdentifier::generate()); }
+
 inline std::expected<CategoryId, Error> CategoryId::parse(std::string_view const text) {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return CategoryId(std::move(identifier));
     });
 }
 
+inline ExpenseId ExpenseId::generate() { return ExpenseId(detail::EranosIdentifier::generate()); }
+
 inline std::expected<ExpenseId, Error> ExpenseId::parse(std::string_view const text) {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return ExpenseId(std::move(identifier));
     });
 }
+
+inline TransferId TransferId::generate() { return TransferId(detail::EranosIdentifier::generate()); }
 
 inline std::expected<TransferId, Error> TransferId::parse(std::string_view const text) {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
@@ -639,9 +649,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Expense fromDetail(EranosExpense const &value) {
-    Expense result(value.name(), detail::fromDetail(*value.cost()), detail::fromDetail(*value.payers()), detail::fromDetail(*value.split()),
-                   detail::calendarDateOf(value.date()));
-    result.id = detail::optionalId<ExpenseId>(value.id());
+    Expense result(ExpenseId(value.id()), value.name(), detail::fromDetail(*value.cost()), detail::fromDetail(*value.payers()),
+                   detail::fromDetail(*value.split()), detail::calendarDateOf(value.date()));
     result.tip = detail::optionalRecord<TipRule>(value.tip());
     result.time = detail::optionalTime(value.time());
     result.category = detail::optionalId<CategoryId>(value.category());
@@ -654,7 +663,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
     return detail::toDetail(value.payers)
         .and_then([&value](std::unique_ptr<EranosSplit> const &payers) {
             return detail::toDetail(value.split).and_then([&value, &payers](std::unique_ptr<EranosExpenseSplit> const &split) {
-                return expectedOf(EranosExpense::create(value.name, *detail::toDetail(value.cost), *payers, *split, detail::toDetail(value.date)));
+                return expectedOf(EranosExpense::create(value.id.value(), value.name, *detail::toDetail(value.cost), *payers, *split,
+                                                        detail::toDetail(value.date)));
             });
         })
         .and_then([&value](std::unique_ptr<EranosExpense> result) {
@@ -664,9 +674,6 @@ template <typename Value, typename Argument, typename Start, typename Convert>
             if (value.time) {
                 result->set_time(detail::toDetail(*value.time));
             }
-            return setIfPresent(std::move(result), value.id, [](EranosExpense &record, ExpenseId const &id) { return record.set_id(id.value()); });
-        })
-        .and_then([&value](std::unique_ptr<EranosExpense> result) {
             return setIfPresent(std::move(result), value.category,
                                 [](EranosExpense &record, CategoryId const &id) { return record.set_category(id.value()); });
         })
@@ -720,8 +727,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Transfer fromDetail(EranosTransfer const &value) {
-    Transfer result(MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.cost()), detail::calendarDateOf(value.date()));
-    result.id = detail::optionalId<TransferId>(value.id());
+    Transfer result(TransferId(value.id()), MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.cost()),
+                    detail::calendarDateOf(value.date()));
     result.time = detail::optionalTime(value.time());
     result.note = value.note();
     return result;
@@ -729,14 +736,12 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value) {
-    return expectedOf(EranosTransfer::create(value.from.value(), value.to.value(), *detail::toDetail(value.cost), detail::toDetail(value.date)))
+    return expectedOf(EranosTransfer::create(value.id.value(), value.from.value(), value.to.value(), *detail::toDetail(value.cost),
+                                             detail::toDetail(value.date)))
         .and_then([&value](std::unique_ptr<EranosTransfer> result) {
             if (value.time) {
                 result->set_time(detail::toDetail(*value.time));
             }
-            return setIfPresent(std::move(result), value.id, [](EranosTransfer &record, TransferId const &id) { return record.set_id(id.value()); });
-        })
-        .and_then([&value](std::unique_ptr<EranosTransfer> result) {
             return setIfPresent(std::move(result), value.note, [](EranosTransfer &record, std::string const &text) { return record.set_note(text); });
         });
 }
@@ -791,8 +796,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The record of @p value.
 [[nodiscard]] inline Member fromDetail(EranosMember const &value) {
-    Member result(value.first_name());
-    result.id = detail::optionalId<MemberId>(value.id());
+    Member result(MemberId(value.id()), value.first_name());
     result.lastName = value.last_name();
     result.email = detail::optionalText<Email>(value.email(), detail::emailOf);
     result.phone = detail::optionalText<PhoneNumber>(value.phone(), detail::phoneNumberOf);
@@ -804,13 +808,10 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value) {
     return listOf<EranosPaymentAccountList>(value.accounts)
         .and_then([&value](std::unique_ptr<EranosPaymentAccountList> const &accounts) {
-            return expectedOf(EranosMember::create(value.firstName)).transform([&accounts](std::unique_ptr<EranosMember> result) {
+            return expectedOf(EranosMember::create(value.id.value(), value.firstName)).transform([&accounts](std::unique_ptr<EranosMember> result) {
                 result->set_accounts(*accounts);
                 return result;
             });
-        })
-        .and_then([&value](std::unique_ptr<EranosMember> result) {
-            return setIfPresent(std::move(result), value.id, [](EranosMember &record, MemberId const &id) { return record.set_id(id.value()); });
         })
         .and_then([&value](std::unique_ptr<EranosMember> result) {
             return setIfPresent(std::move(result), value.lastName,
@@ -847,17 +848,11 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Category fromDetail(EranosCategory const &value) {
-    Category result(value.name());
-    result.id = detail::optionalId<CategoryId>(value.id());
-    return result;
-}
+[[nodiscard]] inline Category fromDetail(EranosCategory const &value) { return {CategoryId(value.id()), value.name()}; }
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value) {
-    return expectedOf(EranosCategory::create(value.name)).and_then([&value](std::unique_ptr<EranosCategory> result) {
-        return setIfPresent(std::move(result), value.id, [](EranosCategory &record, CategoryId const &id) { return record.set_id(id.value()); });
-    });
+    return expectedOf(EranosCategory::create(value.id.value(), value.name));
 }
 
 /// The records of @p list.

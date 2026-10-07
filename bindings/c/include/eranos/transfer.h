@@ -9,6 +9,7 @@
 #include "eranos/calendar.h"
 #include "eranos/detail.h"
 #include "eranos/expense.h"
+#include "eranos/identifiers.h"
 #include "eranos/text.h"
 
 #include <stddef.h>
@@ -16,7 +17,28 @@
 /// A transfer: money one member paid another.
 typedef struct EranosTransfer EranosTransfer;
 
-/// A new transfer of its required fields; every other field starts absent, empty, or at its default.
+/// A new transfer of its required fields under the identifier @p id, such as the key an app's own store gives it; every other field starts absent,
+/// empty, or at its default. eranosTransferCreate() generates the identifier instead.
+///
+/// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
+///   text
+/// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param cost What was paid
+/// @param date The day it was paid
+/// @param transfer Receives the transfer on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosTransferCreateWithId(char const *const id, char const *const from, char const *const to,
+                                                                    EranosCost const *const cost, EranosCalendarDate const date,
+                                                                    EranosTransfer **const transfer) {
+    EranosTransfer_create_result const result = EranosTransfer_create(eranosDetailView(id), eranosDetailView(from), eranosDetailView(to), cost, date);
+    *transfer = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// A new transfer of its required fields under an identifier generated when it is called, which eranosTransferCreateWithId() takes instead; every
+/// other field starts absent, empty, or at its default.
 ///
 /// @param from The identifier of the member who paid, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param to The identifier of the member who was paid, as UTF-8 ended by a NUL; nullptr reads as empty text
@@ -27,41 +49,33 @@ typedef struct EranosTransfer EranosTransfer;
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosTransferCreate(char const *const from, char const *const to, EranosCost const *const cost,
                                                               EranosCalendarDate const date, EranosTransfer **const transfer) {
-    EranosTransfer_create_result const result = EranosTransfer_create(eranosDetailView(from), eranosDetailView(to), cost, date);
-    *transfer = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+    EranosText *const id = eranosTextCreate();
+    eranosIdentifierGenerate(id);
+    EranosError *const error = eranosTransferCreateWithId(eranosTextData(id), from, to, cost, date, transfer);
+    eranosTextDestroy(id);
+    return error;
 }
 
-/// The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds. Writes it, if
-/// present; absent otherwise.
+/// The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param transfer The transfer
-/// @param id Receives the identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group
-///   holds, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosTransferId(EranosTransfer const *const transfer, EranosText *const id) {
+/// @param id Receives the identifier, replacing what it held
+static inline void eranosTransferId(EranosTransfer const *const transfer, EranosText *const id) {
     eranosDetailClear(id);
-    bool const present = EranosTransfer_id(transfer, id).is_ok;
+    EranosTransfer_id(transfer, id);
     eranosDetailFinish(id);
-    return present;
 }
 
-/// Sets the identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds.
+/// Sets the identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param transfer The transfer
-/// @param id The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds, as
-///   UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param id The identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosTransferSetId(EranosTransfer *const transfer, char const *const id) {
     EranosTransfer_set_id_result const result = EranosTransfer_set_id(transfer, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
-
-/// Clears the identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for one the group holds.
-///
-/// @param transfer The transfer
-static inline void eranosTransferClearId(EranosTransfer *const transfer) { EranosTransfer_clear_id(transfer); }
 
 /// The identifier of the member who paid.
 ///

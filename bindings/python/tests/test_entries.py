@@ -56,7 +56,7 @@ from eranos import (
 
 def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
     """An expense that came back from the group otherwise than it went in would change what an app shows after a save."""
-    lunch = Expense(
+    lunch = Expense.create(
         name='Lunch',
         cost=ConvertedCost(Money(5000, CurrencyCode('RON')), ExchangeRate('0.2')),
         payers=PercentagesSplit((MemberPercentage(flat.ana, Percentage(5000)), MemberPercentage(flat.bob, Percentage(5000)))),
@@ -67,11 +67,11 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
         category=flat.food,
         description='By the sea',
     )
-    lunch_id = flat.group.add_expense(lunch)
-    assert flat.group.expense(lunch_id) == copy.replace(lunch, id=lunch_id)
+    assert flat.group.add_expense(lunch) == lunch.id
+    assert flat.group.expense(lunch.id) == lunch
     pizza = ExpenseItem(name='Pizza', unit_price=flat.euros(1200), split=EqualSplit((flat.ana, flat.bob)), quantity=2)
     wine = ExpenseItem(name='Wine', unit_price=flat.euros(600), split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)))
-    receipt = Expense(
+    receipt = Expense.create(
         name='Receipt',
         cost=LocalCost(flat.euros(3000)),
         payers=AmountsSplit((MemberAmount(flat.bob, flat.euros(3300)),)),
@@ -79,15 +79,15 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
         date=flat.day,
         tip=TipRule(FixedTip(flat.euros(300)), TipDistribution.EQUAL),
     )
-    receipt_id = flat.group.add_expense(receipt)
-    assert flat.group.expense(receipt_id) == copy.replace(receipt, id=receipt_id)
+    assert flat.group.add_expense(receipt) == receipt.id
+    assert flat.group.expense(receipt.id) == receipt
     assert len(flat.group.expenses()) == 3
     assert flat.group.expense(ExpenseId('0199a000-0000-7000-8000-00000000ffff')) is None
 
 
 def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> None:
     """A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save."""
-    cash = Transfer(
+    cash = Transfer.create(
         sender=flat.ana,
         receiver=flat.bob,
         cost=ConvertedCost(Money(1000, CurrencyCode('RON')), ExchangeRate('0.2')),
@@ -95,13 +95,12 @@ def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> Non
         time=TimeOfDay(9, 5),
         note='Cash',
     )
-    cash = copy.replace(cash, id=flat.group.add_transfer(cash))
-    assert cash.id is not None
+    assert flat.group.add_transfer(cash) == cash.id
     assert flat.group.transfer(cash.id) == cash
     assert flat.group.transfer_amount(cash.id) == flat.euros(200)
     assert len(flat.group.transfers()) == 2
     assert flat.group.transfer_amount(TransferId('0199a000-0000-7000-8000-00000000ffff')) is None
-    carla = Member(
+    carla = Member.create(
         first_name='Carla',
         last_name='Pop',
         email=Email('carla@example.com'),
@@ -111,12 +110,55 @@ def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> Non
             PaymentAccount('App', UsernamePaymentAccountDetails(Username('carla.pays'))),
         ),
     )
-    carla = copy.replace(carla, id=flat.group.add_member(carla))
-    assert carla.id is not None
+    assert flat.group.add_member(carla) == carla.id
     assert flat.group.member(carla.id) == carla
     assert len(flat.group.members()) == 3
     assert flat.group.category(flat.food) == Category(id=flat.food, name='Food')
     assert len(flat.group.categories()) == 2
+
+
+def test_create_makes_every_entry_under_a_new_identifier_with_the_fields_it_is_given(flat: Flat) -> None:
+    """
+    A create that reused an identifier would make two entries collide in the group; one that dropped a field would lose what the app entered.
+
+    Each create draws its identifier from the library's one generator when it is called, so the identifiers follow the order of the calls,
+    whatever the kind, and the class, given that identifier and the same fields, makes the same entry.
+    """
+    email, phone, time = Email('carla@example.com'), PhoneNumber('+40712345678'), TimeOfDay(8, 30)
+    accounts = (PaymentAccount('App', UsernamePaymentAccountDetails(Username('carla.pays'))),)
+    cost, tip = LocalCost(flat.euros(300)), TipRule(FixedTip(flat.euros(30)))
+    payers, split = EqualSplit((flat.ana,)), WholeExpenseSplit(EqualSplit((flat.ana, flat.bob)))
+    carla = Member.create(first_name='Carla', last_name='Pop', email=email, phone=phone, accounts=accounts)
+    assert carla == Member(id=carla.id, first_name='Carla', last_name='Pop', email=email, phone=phone, accounts=accounts)
+    drinks = Category.create(name='Drinks')
+    assert drinks == Category(id=drinks.id, name='Drinks')
+    coffee = Expense.create(
+        name='Coffee', cost=cost, payers=payers, split=split, date=flat.day, tip=tip, time=time, category=flat.food, description='Two cups'
+    )
+    assert coffee == Expense(
+        id=coffee.id,
+        name='Coffee',
+        cost=cost,
+        payers=payers,
+        split=split,
+        date=flat.day,
+        tip=tip,
+        time=time,
+        category=flat.food,
+        description='Two cups',
+    )
+    coins = Transfer.create(sender=flat.bob, receiver=flat.ana, cost=cost, date=flat.day, time=time, note='Coins')
+    assert coins == Transfer(id=coins.id, sender=flat.bob, receiver=flat.ana, cost=cost, date=flat.day, time=time, note='Coins')
+    twin = Member.create(first_name='Carla', last_name='Pop', email=email, phone=phone, accounts=accounts)
+    assert twin != carla
+    assert copy.replace(twin, id=carla.id) == carla
+    identifiers = [carla.id, drinks.id, coffee.id, coins.id, twin.id]
+    assert identifiers == sorted(identifiers)
+    assert len(set(identifiers)) == len(identifiers)
+    assert parse_member_id(carla.id) == carla.id
+    assert parse_category_id(drinks.id) == drinks.id
+    assert parse_expense_id(coffee.id) == coffee.id
+    assert parse_transfer_id(coins.id) == coins.id
 
 
 def test_every_entry_keeps_the_identifier_its_app_gives_it(flat: Flat) -> None:
@@ -195,11 +237,33 @@ def test_replacing_an_entry_keeps_its_identifier_and_returns_it_as_it_was(flat: 
     meals = copy.replace(food, name='Meals')
     assert flat.group.replace_category(meals) == food
     assert flat.group.category(flat.food) == meals
-    with pytest.raises(ValueError, match='identifier'):
-        flat.group.replace_expense(flat.expense('Snack', flat.ana, (flat.ana,)))
     with pytest.raises(ExpenseGroupError) as added:
         flat.group.add_expense(lunch)
     assert added.value.failure == ExpenseGroupError.DuplicateExpense(expense=flat.dinner)
+
+
+def test_replacing_an_entry_the_group_does_not_hold_is_refused(flat: Flat) -> None:
+    """A replace that added an entry the group does not hold would bring back, through an app's stale edit, an entry another device removed."""
+    snack = flat.expense('Snack', flat.ana, (flat.ana,))
+    with pytest.raises(ExpenseGroupError) as expense:
+        flat.group.replace_expense(snack)
+    assert expense.value.failure == ExpenseGroupError.UnknownExpense(expense=snack.id)
+    coins = Transfer.create(sender=flat.ana, receiver=flat.bob, cost=LocalCost(flat.euros(100)), date=flat.day)
+    with pytest.raises(ExpenseGroupError) as transfer:
+        flat.group.replace_transfer(coins)
+    assert transfer.value.failure == ExpenseGroupError.UnknownTransfer(transfer=coins.id)
+    carla = Member.create(first_name='Carla')
+    with pytest.raises(ExpenseGroupError) as member:
+        flat.group.replace_member(carla)
+    assert member.value.failure == ExpenseGroupError.UnknownMember(member=carla.id)
+    drinks = Category.create(name='Drinks')
+    with pytest.raises(ExpenseGroupError) as category:
+        flat.group.replace_category(drinks)
+    assert category.value.failure == ExpenseGroupError.UnknownCategory(category=drinks.id)
+    assert flat.group.expense(snack.id) is None
+    assert flat.group.transfer(coins.id) is None
+    assert flat.group.member(carla.id) is None
+    assert flat.group.category(drinks.id) is None
 
 
 def test_removing_an_entry_returns_it_and_forgets_it(flat: Flat) -> None:

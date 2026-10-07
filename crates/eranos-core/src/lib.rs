@@ -5,13 +5,14 @@
 //! not empty, without control characters, and without whitespace at either
 //! end. Two identifiers are equal when their bytes are, so case matters, and
 //! identifiers order by their bytes. An identifier is the one an app gives
-//! an entity, such as the key of its own store, or a generated one. A
+//! an entity when it makes it, such as the key of its own store, or one
+//! that `generate` returns when the entity's constructor calls it. A
 //! generated identifier is a UUID v7 written as lowercase hyphenated text:
 //! unique across devices, so entries created offline on two phones never
 //! collide, and in creation order, since such text orders as the UUIDs'
 //! timestamps do. With the `sequential-ids` feature, the identifiers of a
-//! process count up from one instead, so a program that builds the same
-//! entries in the same order gets the same identifiers on every run. The
+//! process count up from one instead, so a program that generates its
+//! identifiers in the same order gets the same ones on every run. The
 //! feature is for examples and tests: two devices would generate the same
 //! identifiers.
 //!

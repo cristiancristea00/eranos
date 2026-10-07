@@ -12,6 +12,8 @@ import {
     Money,
     Percentage,
     SettlementStrategy,
+    createExpense,
+    createMember,
     formatBalance,
 } from '../src/index.js';
 import { type Columns, load, printLines, printTable, refusal, section, title, totals } from './report.js';
@@ -39,23 +41,27 @@ await load();
 const euro = CurrencyCode.of('EUR');
 const day = CalendarDate.of(2026, 9, 23);
 using group = ExpenseGroup.create('Road trip', euro);
-const ana = group.addMemberSync({ firstName: 'Ana' });
-const bob = group.addMemberSync({ firstName: 'Bob' });
-group.addExpenseSync({
-    name: 'Fuel',
-    cost: { kind: 'local', amount: Money.parse('70.00', euro) },
-    payers: { kind: 'equal', members: [ana] },
-    split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob] } },
-    date: day,
-});
-group.addExpenseSync({
-    name: 'Lunch',
-    cost: { kind: 'local', amount: Money.parse('30.00', euro) },
-    payers: { kind: 'equal', members: [bob] },
-    split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob] } },
-    date: day,
-    tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
-});
+const ana = group.addMemberSync(createMember({ firstName: 'Ana' }));
+const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
+group.addExpenseSync(
+    createExpense({
+        name: 'Fuel',
+        cost: { kind: 'local', amount: Money.parse('70.00', euro) },
+        payers: { kind: 'equal', members: [ana] },
+        split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob] } },
+        date: day,
+    }),
+);
+group.addExpenseSync(
+    createExpense({
+        name: 'Lunch',
+        cost: { kind: 'local', amount: Money.parse('30.00', euro) },
+        payers: { kind: 'equal', members: [bob] },
+        split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob] } },
+        date: day,
+        tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
+    }),
+);
 
 title('Road trip: saving and loading a group');
 printLines(

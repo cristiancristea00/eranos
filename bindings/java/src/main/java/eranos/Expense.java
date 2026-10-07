@@ -9,9 +9,11 @@ import java.util.Optional;
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * <p>A new expense takes the identifier the app gives it through {@link Builder#id}, or none, and
- * then {@link ExpenseGroup#addExpense} generates one. To change an expense, read it from the group,
- * edit it through {@link #toBuilder}, and pass the result to {@link ExpenseGroup#replaceExpense}.
+ * <p>An expense has an identifier from the moment its builder starts: the one given to {@link
+ * #builder(ExpenseId, String, Cost, Split, ExpenseSplit, CalendarDate)}, or one that {@link
+ * #builder(String, Cost, Split, ExpenseSplit, CalendarDate)} generates, and keeps it through every
+ * edit. To change an expense, read it from the group, edit it through {@link #toBuilder}, and pass
+ * the result to {@link ExpenseGroup#replaceExpense}.
  */
 public final class Expense {
     private final ExpenseId id;
@@ -40,7 +42,8 @@ public final class Expense {
 
     /**
      * A builder of an expense to add, of {@code cost} on {@code date}, that {@code payers} paid and
-     * {@code split} shares.
+     * {@code split} shares, under an identifier generated when it is called; {@link
+     * #builder(ExpenseId, String, Cost, Split, ExpenseSplit, CalendarDate)} takes one instead.
      *
      * @param name what was bought
      * @param cost what it cost
@@ -51,7 +54,31 @@ public final class Expense {
      */
     public static Builder builder(
             String name, Cost cost, Split payers, ExpenseSplit split, CalendarDate date) {
-        return new Builder(null, name, cost, payers, split, date);
+        return builder(ExpenseId.generate(), name, cost, payers, split, date);
+    }
+
+    /**
+     * A builder of an expense to add, of {@code cost} on {@code date}, that {@code payers} paid and
+     * {@code split} shares, under the identifier {@code id}, such as the key an app's own store
+     * gives it; {@link #builder(String, Cost, Split, ExpenseSplit, CalendarDate)} generates one
+     * instead.
+     *
+     * @param id the identifier
+     * @param name what was bought
+     * @param cost what it cost
+     * @param payers who paid the total, amount and tip, and how much each
+     * @param split how the amount is shared
+     * @param date the day it was bought
+     * @return the builder
+     */
+    public static Builder builder(
+            ExpenseId id,
+            String name,
+            Cost cost,
+            Split payers,
+            ExpenseSplit split,
+            CalendarDate date) {
+        return new Builder(id, name, cost, payers, split, date);
     }
 
     /**
@@ -76,7 +103,7 @@ public final class Expense {
      */
     static Expense converted(eranos.internal.Expense expense) {
         return new Builder(
-                        null == expense.id() ? null : new ExpenseId(expense.id()),
+                        new ExpenseId(expense.id()),
                         expense.name(),
                         Conversions.converted(expense.cost()),
                         Conversions.converted(expense.payers()),
@@ -96,7 +123,7 @@ public final class Expense {
      */
     eranos.internal.Expense generated() {
         return new eranos.internal.Expense(
-                null == id ? null : id.value(),
+                id.value(),
                 name,
                 Conversions.generated(cost),
                 Conversions.generated(payers),
@@ -111,10 +138,10 @@ public final class Expense {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for an expense to add under one the group generates
+     * @return the identifier
      */
-    public Optional<ExpenseId> id() {
-        return Optional.ofNullable(id);
+    public ExpenseId id() {
+        return id;
     }
 
     /**
@@ -235,7 +262,7 @@ public final class Expense {
     @Override
     public boolean equals(Object other) {
         return other instanceof Expense expense
-                && Objects.equals(id, expense.id)
+                && id.equals(expense.id)
                 && name.equals(expense.name)
                 && cost.equals(expense.cost)
                 && payers.equals(expense.payers)
@@ -301,14 +328,13 @@ public final class Expense {
         }
 
         /**
-         * Sets the identifier; {@code null} leaves it to the group to generate one when it adds the
-         * expense.
+         * Sets the identifier.
          *
-         * @param id the identifier, or {@code null}
+         * @param id the identifier
          * @return this builder
          */
         public Builder id(ExpenseId id) {
-            this.id = id;
+            this.id = Objects.requireNonNull(id, "id");
             return this;
         }
 

@@ -17,6 +17,8 @@ import {
     Money,
     PhoneNumber,
     Username,
+    createExpense,
+    createMember,
     formatBalance,
 } from '../src/index.js';
 import { type Columns, load, printLines, printTable, refusal, section, totals } from './report.js';
@@ -103,8 +105,8 @@ function printBalances(group: ExpenseGroup): void {
     printTable(
         balanceColumns,
         group.membersSync().flatMap((member) => {
-            const found = undefined === member.id ? undefined : totals(member.id, summary);
-            return undefined === member.id || undefined === found
+            const found = totals(member.id, summary);
+            return undefined === found
                 ? []
                 : [
                       {
@@ -121,17 +123,19 @@ function printBalances(group: ExpenseGroup): void {
 
 function members(group: ExpenseGroup): Flatmates {
     section('1. Members');
-    const ana = group.addMemberSync({
-        firstName: 'Ana',
-        lastName: 'Popescu',
-        email: Email.parse('ana@example.com'),
-        phone: PhoneNumber.parse('+40 712 345 678'),
-        accounts: [
-            { name: 'ING', details: { kind: 'iban', iban: Iban.parse('ro49 aaaa 1b31 0075 9384 0000') } },
-            { name: 'Revolut', details: { kind: 'username', username: Username.parse('@ana') } },
-        ],
-    });
-    const bob = group.addMemberSync({ firstName: 'Bob' });
+    const ana = group.addMemberSync(
+        createMember({
+            firstName: 'Ana',
+            lastName: 'Popescu',
+            email: Email.parse('ana@example.com'),
+            phone: PhoneNumber.parse('+40 712 345 678'),
+            accounts: [
+                { name: 'ING', details: { kind: 'iban', iban: Iban.parse('ro49 aaaa 1b31 0075 9384 0000') } },
+                { name: 'Revolut', details: { kind: 'username', username: Username.parse('@ana') } },
+            ],
+        }),
+    );
+    const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
     printMembers(group);
     printLines(
         'The phone number was stored in E.164 form, +40712345678, and the table shows it',
@@ -183,13 +187,15 @@ function movingOut(group: ExpenseGroup, flatmates: Flatmates): void {
     const { ana, bob } = flatmates;
     const euro = CurrencyCode.of('EUR');
     const both: Split = { kind: 'equal', members: [ana, bob] };
-    const rent = group.addExpenseSync({
-        name: 'Rent',
-        cost: { kind: 'local', amount: Money.parse('900.00', euro) },
-        payers: { kind: 'equal', members: [ana] },
-        split: { kind: 'whole', split: both },
-        date: CalendarDate.of(2026, 9, 1),
-    });
+    const rent = group.addExpenseSync(
+        createExpense({
+            name: 'Rent',
+            cost: { kind: 'local', amount: Money.parse('900.00', euro) },
+            payers: { kind: 'equal', members: [ana] },
+            split: { kind: 'whole', split: both },
+            date: CalendarDate.of(2026, 9, 1),
+        }),
+    );
     group.archiveMemberSync(bob);
     printLines(
         "Bob shared September's rent, then moved out. He is archived, not removed: his",
@@ -198,13 +204,15 @@ function movingOut(group: ExpenseGroup, flatmates: Flatmates): void {
     printBalances(group);
 
     const refused = refusal(() =>
-        group.addExpenseSync({
-            name: 'Utilities',
-            cost: { kind: 'local', amount: Money.parse('60.00', euro) },
-            payers: { kind: 'equal', members: [ana] },
-            split: { kind: 'whole', split: both },
-            date: CalendarDate.of(2026, 10, 1),
-        }),
+        group.addExpenseSync(
+            createExpense({
+                name: 'Utilities',
+                cost: { kind: 'local', amount: Money.parse('60.00', euro) },
+                payers: { kind: 'equal', members: [ana] },
+                split: { kind: 'whole', split: both },
+                date: CalendarDate.of(2026, 10, 1),
+            }),
+        ),
     );
     assert.ok(refused instanceof ExpenseGroupError, 'the archived member must be refused');
     printLines("October's utilities cannot include him:", `  error: ${refused.message}`);

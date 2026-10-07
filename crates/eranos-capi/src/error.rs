@@ -37,8 +37,6 @@ pub mod ffi {
         ExpenseGroup,
         /// A `LanguageError`, about a language tag.
         Language,
-        /// An entry to replace carried no identifier to find it by.
-        IdentifierMissing,
         /// A saved group that is not JSON of the saved form, at `line` and `column`.
         InvalidJson,
         /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.

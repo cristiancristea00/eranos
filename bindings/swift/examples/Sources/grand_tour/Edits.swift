@@ -61,17 +61,20 @@ func replaceAndRemove(_ group: ExpenseGroup, _ people: People, _ categories: Cat
     corrected.cost = .local(try eur("99.00"))
     corrected.description = "Cervejaria Ramiro"
     let previous = try group.replace(corrected)
-    // Bob entered the coffee twice.
-    let coffee = Expense(
-        name: "Coffee",
-        cost: .local(try eur("6.00")),
-        payers: .equal([people.bob]),
-        split: .whole(.equal([people.ana, people.bob, people.carol])),
-        date: try october(5),
-        category: categories.food
-    )
-    _ = try group.add(coffee)
-    let copy = try group.add(coffee)
+    // Bob entered the coffee twice. Each entry is an expense with an identifier of its own: the same
+    // value added twice would be refused as a duplicate.
+    let coffee = { () throws(EranosError) in
+        Expense(
+            name: "Coffee",
+            cost: .local(try eur("6.00")),
+            payers: .equal([people.bob]),
+            split: .whole(.equal([people.ana, people.bob, people.carol])),
+            date: try october(5),
+            category: categories.food
+        )
+    }
+    _ = try group.add(coffee())
+    let copy = try group.add(coffee())
     let removed = try group.remove(copy)
     // Dan's part of the apartment was 120.00, not 100.00.
     let first = try group.add(Transfer(from: people.dan, to: people.ana, cost: .local(try eur("100.00")), date: try october(5)))
@@ -181,10 +184,10 @@ func comingsAndGoings(_ group: ExpenseGroup, _ people: People) throws(EranosErro
     let summary = try group.summary()
     var rows: [StatusRow] = []
     for member in try group.members() {
-        guard let id = member.id, let totals = totals(of: id, in: summary) else {
+        guard let totals = totals(of: member.id, in: summary) else {
             continue
         }
-        rows.append(StatusRow(name: member.firstName, status: try group.isArchived(id) ? "archived" : "active", balance: totals.balance))
+        rows.append(StatusRow(name: member.firstName, status: try group.isArchived(member.id) ? "archived" : "active", balance: totals.balance))
     }
     printTable(rows, numbersFrom: 2)
     printTable(

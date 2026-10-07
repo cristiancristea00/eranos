@@ -73,14 +73,23 @@ def test_a_group_holds_its_details_and_changes_them(flat: Flat) -> None:
 def test_a_group_keeps_the_identifier_its_app_gives_it(flat: Flat) -> None:
     """A group that lost the identifier its app gave it, or took one the library refuses, would be saved under another key than the app's."""
     trip_id = parse_expense_group_id('trip-12')
-    with ExpenseGroup.create('Trip', flat.euro, id=trip_id) as trip:
+    with ExpenseGroup.create_with_id(trip_id, 'Trip', flat.euro, description='Porto', language=Language('pt-pt')) as trip:
         assert trip.id() == trip_id
+        assert trip.description() == 'Porto'
+        assert trip.language() == Language('pt-PT')
         with ExpenseGroup.load(trip.save()) as loaded:
             assert loaded.id() == trip_id
     assert flat.group.id() != trip_id
     with pytest.raises(IdError) as refused:
-        ExpenseGroup.create('Trip', flat.euro, id=ExpenseGroupId('trip\n12'))
+        ExpenseGroup.create_with_id(ExpenseGroupId('trip\n12'), 'Trip', flat.euro)
     assert refused.value.failure == IdError.ControlCharacter()
+
+
+def test_create_makes_each_group_under_a_new_identifier(flat: Flat) -> None:
+    """A create that reused an identifier would save a new group over another one the app keeps under that identifier."""
+    with ExpenseGroup.create('Trip', flat.euro) as trip, ExpenseGroup.create('Trip', flat.euro) as again:
+        assert flat.group.id() < trip.id() < again.id()
+        assert parse_expense_group_id(trip.id()) == trip.id()
 
 
 def test_the_summary_and_the_shares_add_up(flat: Flat) -> None:
@@ -112,7 +121,7 @@ def test_each_strategy_settles_every_balance(flat: Flat) -> None:
         # The flat's two open balances are well within the adaptive strategy's limit, so it settles them exactly.
         assert settlement.strategy == (SettlementStrategy.MINIMUM_TRANSFERS if strategy is SettlementStrategy.ADAPTIVE else strategy)
         assert settlement.payments == (Payment(sender=flat.bob, receiver=flat.ana, amount=flat.euros(500)),)
-    flat.group.add_transfer(Transfer(sender=flat.bob, receiver=flat.ana, cost=LocalCost(flat.euros(500)), date=flat.day))
+    flat.group.add_transfer(Transfer.create(sender=flat.bob, receiver=flat.ana, cost=LocalCost(flat.euros(500)), date=flat.day))
     settled: Balance = SettledBalance()
     assert all(member.balance == settled for member in flat.group.summary().members)
 
@@ -170,7 +179,7 @@ def test_every_error_holds_what_its_failure_holds(flat: Flat) -> None:
         flat.group.add_expense(halves)
     assert percentages.value.failure == ExpenseError.PercentagesDoNotAddUp(total_basis_points=5000)
     with pytest.raises(ExpenseGroupError) as duplicate:
-        flat.group.add_category(Category(name='food'))
+        flat.group.add_category(Category.create(name='food'))
     assert duplicate.value.failure == ExpenseGroupError.DuplicateCategoryName(existing=flat.food)
     absent = CategoryId('0199a000-0000-7000-8000-00000000ffff')
     with pytest.raises(ExpenseGroupError) as category:

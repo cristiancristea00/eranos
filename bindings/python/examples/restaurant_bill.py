@@ -31,6 +31,7 @@ from eranos import (
     PercentageTip,
     TipRule,
     TipDistribution,
+    generate_expense_id,
 )
 from examples.report import Row, names, print_lines, print_table, refusal, section, title
 
@@ -160,7 +161,7 @@ def preview(group: ExpenseGroup, expense: Expense) -> ExpenseShares:
 
     Args:
         group: The group.
-        expense: The expense, which has no identifier yet.
+        expense: The expense, under an identifier the group does not hold.
 
     Returns:
         How the expense divides.
@@ -191,7 +192,7 @@ def consumed(shares: ExpenseShares, member: MemberId) -> Money:
 
 def bill(untipped: Expense, distribution: TipDistribution) -> Expense:
     """
-    Make the dinner with its tip of 10 %, shared by distribution.
+    Make the dinner with its tip of 10 %, shared by distribution, under an identifier of its own, which it generates.
 
     Args:
         untipped: The dinner without a tip.
@@ -201,7 +202,7 @@ def bill(untipped: Expense, distribution: TipDistribution) -> Expense:
         The dinner with its tip.
 
     """
-    return copy.replace(untipped, tip=TipRule(PercentageTip(Percentage.parse('10')), distribution))
+    return copy.replace(untipped, id=generate_expense_id(), tip=TipRule(PercentageTip(Percentage.parse('10')), distribution))
 
 
 def tip_row(group: ExpenseGroup, member: MemberId, ordered: ExpenseShares, by_consumption: ExpenseShares, even: ExpenseShares) -> TipRow:
@@ -235,9 +236,9 @@ def tip_row(group: ExpenseGroup, member: MemberId, ordered: ExpenseShares, by_co
 def main() -> None:
     """Print the report, checking its key numbers."""
     group = ExpenseGroup.create("Dinner at Caru' cu Bere", CurrencyCode('EUR'))
-    ana = group.add_member(Member(first_name='Ana'))
-    bob = group.add_member(Member(first_name='Bob'))
-    carol = group.add_member(Member(first_name='Carol'))
+    ana = group.add_member(Member.create(first_name='Ana'))
+    bob = group.add_member(Member.create(first_name='Bob'))
+    carol = group.add_member(Member.create(first_name='Carol'))
     day = CalendarDate(2026, 9, 23)
 
     title(f'{group.name()}: an itemised bill')
@@ -268,7 +269,7 @@ def main() -> None:
     )
 
     section('2. Who ordered what, and the tip')
-    untipped = Expense(name='Dinner', cost=LocalCost(euros('54.00')), payers=EqualSplit((ana,)), split=ItemisedExpenseSplit(lines), date=day)
+    untipped = Expense.create(name='Dinner', cost=LocalCost(euros('54.00')), payers=EqualSplit((ana,)), split=ItemisedExpenseSplit(lines), date=day)
     ordered = preview(group, untipped)
     proportional = group.add_expense(bill(untipped, TipDistribution.PROPORTIONAL))
     by_consumption = group.expense_shares(proportional)
@@ -287,7 +288,7 @@ def main() -> None:
 
     section('3. A total that does not match is refused')
     # The layer builds an expense only when a group adds it, so the group's add_expense refuses it where Rust's build does.
-    mismatched = copy.replace(untipped, cost=LocalCost(euros('55.00')))
+    mismatched = copy.replace(untipped, id=generate_expense_id(), cost=LocalCost(euros('55.00')))
     refused = refusal(lambda: group.add_expense(mismatched))
     assert refused is not None, 'the mismatch must be refused'
     print_lines('An amount of 55.00 EUR with these lines is refused when the expense is built:', f'  error: {refused}')

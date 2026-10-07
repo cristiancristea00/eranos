@@ -101,35 +101,26 @@ pub mod ffi {
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(name: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+        pub fn create(id: &DiplomatStr, name: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Category {
-                id: None,
+                id: crate::text(id)?,
                 name: crate::text(name)?,
             })))
         }
 
-        /// The identifier: the app's own for a category to add, or absent for the library to
-        /// generate one, and present for a category the group holds or one to rename. Writes it, if
-        /// present; absent otherwise.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.id.as_deref())
+        /// The identifier, which the app gives: its own, or one `identifier_generate` returns.
+        pub fn id(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.id);
         }
 
-        /// Sets the identifier: the app's own for a category to add, or absent for the library to
-        /// generate one, and present for a category the group holds or one to rename.
+        /// Sets the identifier, which the app gives: its own, or one `identifier_generate` returns.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_id(&mut self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.id = Some(crate::text(id)?);
+            self.0.id = crate::text(id)?;
             Ok(())
-        }
-
-        /// Clears the identifier: the app's own for a category to add, or absent for the library to
-        /// generate one, and present for a category the group holds or one to rename.
-        pub fn clear_id(&mut self) {
-            self.0.id = None;
         }
 
         /// The name, which no other category of the group shares.
@@ -469,6 +460,7 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
+            id: &DiplomatStr,
             name: &DiplomatStr,
             cost: &EranosCost,
             payers: &EranosSplit,
@@ -476,7 +468,7 @@ pub mod ffi {
             date: EranosCalendarDate,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Expense {
-                id: None,
+                id: crate::text(id)?,
                 name: crate::text(name)?,
                 cost: cost.0.clone(),
                 payers: payers.0.clone(),
@@ -489,28 +481,19 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: the app's own for an expense to add, or absent for the library to
-        /// generate one, and present for an expense the group holds or one to replace. Writes it,
-        /// if present; absent otherwise.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.id.as_deref())
+        /// The identifier, which the app gives: its own, or one `identifier_generate` returns.
+        pub fn id(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.id);
         }
 
-        /// Sets the identifier: the app's own for an expense to add, or absent for the library to
-        /// generate one, and present for an expense the group holds or one to replace.
+        /// Sets the identifier, which the app gives: its own, or one `identifier_generate` returns.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_id(&mut self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.id = Some(crate::text(id)?);
+            self.0.id = crate::text(id)?;
             Ok(())
-        }
-
-        /// Clears the identifier: the app's own for an expense to add, or absent for the library to
-        /// generate one, and present for an expense the group holds or one to replace.
-        pub fn clear_id(&mut self) {
-            self.0.id = None;
         }
 
         /// What was bought.
@@ -927,9 +910,12 @@ pub mod ffi {
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(first_name: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+        pub fn create(
+            id: &DiplomatStr,
+            first_name: &DiplomatStr,
+        ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Member {
-                id: None,
+                id: crate::text(id)?,
                 first_name: crate::text(first_name)?,
                 last_name: None,
                 email: None,
@@ -938,28 +924,19 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: the app's own for a member to add, or absent for the library to generate
-        /// one, and present for a member the group holds or one to replace. Writes it, if present;
-        /// absent otherwise.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.id.as_deref())
+        /// The identifier, which the app gives: its own, or one `identifier_generate` returns.
+        pub fn id(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.id);
         }
 
-        /// Sets the identifier: the app's own for a member to add, or absent for the library to
-        /// generate one, and present for a member the group holds or one to replace.
+        /// Sets the identifier, which the app gives: its own, or one `identifier_generate` returns.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_id(&mut self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.id = Some(crate::text(id)?);
+            self.0.id = crate::text(id)?;
             Ok(())
-        }
-
-        /// Clears the identifier: the app's own for a member to add, or absent for the library to
-        /// generate one, and present for a member the group holds or one to replace.
-        pub fn clear_id(&mut self) {
-            self.0.id = None;
         }
 
         /// The first name.
@@ -1527,11 +1504,12 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
+            id: &DiplomatStr,
             name: &DiplomatStr,
             currency: &DiplomatStr,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::NewExpenseGroup {
-                id: None,
+                id: crate::text(id)?,
                 name: crate::text(name)?,
                 currency: crate::text(currency)?,
                 description: None,
@@ -1539,25 +1517,19 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: the app's own, or absent for the library to generate one. Writes it, if
-        /// present; absent otherwise.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.id.as_deref())
+        /// The identifier, which the app gives: its own, or one `identifier_generate` returns.
+        pub fn id(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.id);
         }
 
-        /// Sets the identifier: the app's own, or absent for the library to generate one.
+        /// Sets the identifier, which the app gives: its own, or one `identifier_generate` returns.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_id(&mut self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.id = Some(crate::text(id)?);
+            self.0.id = crate::text(id)?;
             Ok(())
-        }
-
-        /// Clears the identifier: the app's own, or absent for the library to generate one.
-        pub fn clear_id(&mut self) {
-            self.0.id = None;
         }
 
         /// The group's name.
@@ -2166,13 +2138,14 @@ pub mod ffi {
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn create(
+            id: &DiplomatStr,
             from: &DiplomatStr,
             to: &DiplomatStr,
             cost: &EranosCost,
             date: EranosCalendarDate,
         ) -> Result<Box<Self>, Box<EranosError>> {
             Ok(Box::new(Self(eranos_bindings::Transfer {
-                id: None,
+                id: crate::text(id)?,
                 from: crate::text(from)?,
                 to: crate::text(to)?,
                 cost: cost.0.clone(),
@@ -2182,28 +2155,19 @@ pub mod ffi {
             })))
         }
 
-        /// The identifier: the app's own for a transfer to add, or absent for the library to
-        /// generate one, and present for a transfer the group holds or one to replace. Writes it,
-        /// if present; absent otherwise.
-        pub fn id(&self, write: &mut DiplomatWrite) -> Option<()> {
-            crate::write_optional(write, self.0.id.as_deref())
+        /// The identifier, which the app gives: its own, or one `identifier_generate` returns.
+        pub fn id(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.id);
         }
 
-        /// Sets the identifier: the app's own for a transfer to add, or absent for the library to
-        /// generate one, and present for a transfer the group holds or one to replace.
+        /// Sets the identifier, which the app gives: its own, or one `identifier_generate` returns.
         ///
         /// # Errors
         ///
         /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
         pub fn set_id(&mut self, id: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.id = Some(crate::text(id)?);
+            self.0.id = crate::text(id)?;
             Ok(())
-        }
-
-        /// Clears the identifier: the app's own for a transfer to add, or absent for the library to
-        /// generate one, and present for a transfer the group holds or one to replace.
-        pub fn clear_id(&mut self) {
-            self.0.id = None;
         }
 
         /// The member who paid, as their identifier.

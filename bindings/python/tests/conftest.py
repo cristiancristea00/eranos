@@ -29,7 +29,7 @@ from eranos import (
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Flat:
-    """A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them."""
+    """A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers they were made with."""
 
     group: ExpenseGroup
     """The group."""
@@ -70,7 +70,7 @@ class Flat:
 
     def expense(self, name: str, payer: MemberId, members: tuple[MemberId, ...]) -> Expense:
         """
-        Make an expense of 30.00 EUR, called name, that payer paid and members share equally.
+        Make an expense of 30.00 EUR, called name, that payer paid and members share equally, under a generated identifier.
 
         Args:
             name: What it was.
@@ -81,7 +81,7 @@ class Flat:
             The expense, to add.
 
         """
-        return Expense(
+        return Expense.create(
             name=name, cost=LocalCost(self.euros(3000)), payers=EqualSplit((payer,)), split=WholeExpenseSplit(EqualSplit(members)), date=self.day
         )
 
@@ -98,11 +98,11 @@ def flat() -> Iterator[Flat]:
     euro = CurrencyCode('EUR')
     day = CalendarDate(2026, 9, 23)
     with ExpenseGroup.create('Flat', euro, description='Rent', language=Language('pt-pt')) as group:
-        ana = group.add_member(Member(first_name='Ana'))
-        bob = group.add_member(Member(first_name='Bob'))
-        food = group.add_category(Category(name='Food'))
+        ana = group.add_member(Member.create(first_name='Ana'))
+        bob = group.add_member(Member.create(first_name='Bob'))
+        food = group.add_category(Category.create(name='Food'))
         dinner = group.add_expense(
-            Expense(
+            Expense.create(
                 name='Dinner',
                 cost=LocalCost(Money(3000, euro)),
                 payers=EqualSplit((ana,)),
@@ -111,5 +111,5 @@ def flat() -> Iterator[Flat]:
                 category=food,
             )
         )
-        repayment = group.add_transfer(Transfer(sender=bob, receiver=ana, cost=LocalCost(Money(1000, euro)), date=day))
+        repayment = group.add_transfer(Transfer.create(sender=bob, receiver=ana, cost=LocalCost(Money(1000, euro)), date=day))
         yield Flat(group=group, euro=euro, day=day, ana=ana, bob=bob, food=food, dinner=dinner, repayment=repayment)

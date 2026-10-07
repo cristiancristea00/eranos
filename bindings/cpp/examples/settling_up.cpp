@@ -139,7 +139,7 @@ void printBalances(ExpenseGroup const &group) {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id.value()).value();
+        auto const found = totalsOf(summary, member.id).value();
         rows.push_back({
             .name = member.firstName,
             .paid = found.paid.toString(),

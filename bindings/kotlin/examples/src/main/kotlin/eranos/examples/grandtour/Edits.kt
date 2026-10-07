@@ -116,8 +116,8 @@ private fun replaceAndRemove(
         checkNotNull(group.expenseBlocking(seafood)) { "the dinner was added" }
             .copy(cost = Cost.Local(eur("99.00")), description = "Cervejaria Ramiro")
     val previous = group.replaceBlocking(corrected)
-    // Bob entered the coffee twice.
-    val coffee =
+    // Bob entered the coffee twice, each time as a new expense under an identifier of its own.
+    val coffee = {
         Expense(
             "Coffee",
             Cost.Local(eur("6.00")),
@@ -126,8 +126,9 @@ private fun replaceAndRemove(
             october(5),
             category = categories.food,
         )
-    group.addBlocking(coffee)
-    val copy = group.addBlocking(coffee)
+    }
+    group.addBlocking(coffee())
+    val copy = group.addBlocking(coffee())
     val removed = group.removeBlocking(copy)
     // Dan's part of the apartment was 120.00, not 100.00.
     val first = group.addBlocking(Transfer(people.dan, people.ana, Cost.Local(eur("100.00")), october(5)))
@@ -246,10 +247,12 @@ internal fun comingsAndGoings(
     val summary = group.summaryBlocking()
     val rows =
         group.membersBlocking().mapNotNull { member ->
-            member.id?.let { id ->
-                totals(id, summary)?.let { totals ->
-                    StatusRow(name = member.firstName, status = if (group.isArchivedBlocking(id)) "archived" else "active", balance = totals.balance)
-                }
+            totals(member.id, summary)?.let { totals ->
+                StatusRow(
+                    name = member.firstName,
+                    status = if (group.isArchivedBlocking(member.id)) "archived" else "active",
+                    balance = totals.balance,
+                )
             }
         }
     printTable(StatusRow.HEADERS, rows, numbersFrom = 2)

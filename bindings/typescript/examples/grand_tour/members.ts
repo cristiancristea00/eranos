@@ -13,6 +13,8 @@ import {
     Language,
     PhoneNumber,
     Username,
+    createCategory,
+    createMember,
     parseCategoryId,
 } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
@@ -141,7 +143,7 @@ function validation(group: ExpenseGroup): void {
             phone('+351 912 345 678'),
             phone('+40 612 345 678'),
             { input: '"   "', kind: 'username', result: outcome(() => Username.parse('   '), String) },
-            { input: '"  "', kind: 'first name', result: outcome(() => group.addMemberSync({ firstName: '  ' }), String) },
+            { input: '"  "', kind: 'first name', result: outcome(() => group.addMemberSync(createMember({ firstName: '  ' })), String) },
         ],
         3,
     );
@@ -149,21 +151,23 @@ function validation(group: ExpenseGroup): void {
 
 export function members(group: ExpenseGroup): People {
     section('2. Members');
-    const ana = group.addMemberSync({
-        firstName: 'Ana',
-        lastName: 'Popescu',
-        email: Email.parse('ana@example.com'),
-        phone: PhoneNumber.parse('+40 712 345 678'),
-        accounts: [
-            { name: 'ING', details: { kind: 'iban', iban: Iban.parse('RO49 AAAA 1B31 0075 9384 0000') } },
-            { name: 'Revolut', details: { kind: 'username', username: Username.parse('@ana') } },
-        ],
-    });
-    const bob = group.addMemberSync({ firstName: 'Bob' });
-    const carol = group.addMemberSync({ firstName: 'Carol' });
-    const dan = group.addMemberSync({ firstName: 'Dan' });
-    const eva = group.addMemberSync({ firstName: 'Eva' });
-    const filip = group.addMemberSync({ firstName: 'Filip' });
+    const ana = group.addMemberSync(
+        createMember({
+            firstName: 'Ana',
+            lastName: 'Popescu',
+            email: Email.parse('ana@example.com'),
+            phone: PhoneNumber.parse('+40 712 345 678'),
+            accounts: [
+                { name: 'ING', details: { kind: 'iban', iban: Iban.parse('RO49 AAAA 1B31 0075 9384 0000') } },
+                { name: 'Revolut', details: { kind: 'username', username: Username.parse('@ana') } },
+            ],
+        }),
+    );
+    const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
+    const carol = group.addMemberSync(createMember({ firstName: 'Carol' }));
+    const dan = group.addMemberSync(createMember({ firstName: 'Dan' }));
+    const eva = group.addMemberSync(createMember({ firstName: 'Eva' }));
+    const filip = group.addMemberSync(createMember({ firstName: 'Filip' }));
     // An edit starts from a copy of the member, which keeps its identifier.
     const stored = group.memberSync(bob);
     assert.ok(undefined !== stored, 'Bob is a member');
@@ -185,11 +189,11 @@ export function members(group: ExpenseGroup): People {
 
 export function addCategories(group: ExpenseGroup): Categories {
     section('3. Categories');
-    const food = group.addCategorySync({ name: 'Food' });
+    const food = group.addCategorySync(createCategory({ name: 'Food' }));
     // An app that keeps its categories elsewhere gives them its own keys.
     const lodging = group.addCategorySync({ id: parseCategoryId('lodging'), name: 'Lodging' });
-    const transport = group.addCategorySync({ name: 'Transport' });
-    const homonym = refusal(() => group.addCategorySync({ name: 'FOOD' }));
+    const transport = group.addCategorySync(createCategory({ name: 'Transport' }));
+    const homonym = refusal(() => group.addCategorySync(createCategory({ name: 'FOOD' })));
     const stored = group.categorySync(transport);
     assert.ok(undefined !== stored, 'Transport was added');
     group.replaceCategorySync({ ...stored, name: 'Getting around' });

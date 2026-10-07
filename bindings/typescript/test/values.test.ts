@@ -28,6 +28,11 @@ import {
     expenseId,
     formatBalance,
     expenseGroupId,
+    generateCategoryId,
+    generateExpenseGroupId,
+    generateExpenseId,
+    generateMemberId,
+    generateTransferId,
     memberId,
     parseCategoryId,
     parseExpenseId,
@@ -199,6 +204,29 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         // The rule counts bytes of UTF-8, not the characters or the UTF-16 code units of the text: é takes two bytes.
         assert.equal(parseMemberId('é'.repeat(32)), 'é'.repeat(32));
         assertRefused(() => parseMemberId('é'.repeat(33)), IdError, { kind: 'tooLong' });
+    });
+
+    /**
+     * A generated identifier that the rules refused, or that an earlier call had generated, would make an entry or a group
+     * that no group takes, or one that the group refuses as a duplicate.
+     */
+    void it('generates identifiers of every kind that the rules accept, each new and in increasing order', () => {
+        const group = generateExpenseGroupId();
+        const member = generateMemberId();
+        const category = generateCategoryId();
+        const expense = generateExpenseId();
+        const transfer = generateTransferId();
+        assert.equal(parseExpenseGroupId(group), group);
+        assert.equal(parseMemberId(member), member);
+        assert.equal(parseCategoryId(category), category);
+        assert.equal(parseExpenseId(expense), expense);
+        assert.equal(parseTransferId(transfer), transfer);
+        const generated: readonly string[] = [group, member, category, expense, transfer];
+        for (const text of generated) {
+            assert.match(text, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+        }
+        assert.deepEqual([...generated].sort(), generated);
+        assert.equal(new Set(generated).size, generated.length);
     });
 
     /** Identifiers of different entities that printed as another text would let an app store one and read back another. */

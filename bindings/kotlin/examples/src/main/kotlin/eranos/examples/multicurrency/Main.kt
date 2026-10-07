@@ -69,7 +69,7 @@ private fun printEntries(group: ExpenseGroup) {
                 payer = names(group, expense.payers.members),
                 original = expense.total(),
                 rate = rate(expense.cost),
-                converted = expense.id?.let { id -> group.expenseSharesBlocking(id) }?.total ?: zero,
+                converted = group.expenseSharesBlocking(expense.id)?.total ?: zero,
             )
         }
     val transfers =
@@ -79,7 +79,7 @@ private fun printEntries(group: ExpenseGroup) {
                 payer = name(group, transfer.from),
                 original = transfer.cost.amount,
                 rate = rate(transfer.cost),
-                converted = transfer.id?.let { id -> group.transferAmountBlocking(id) } ?: zero,
+                converted = group.transferAmountBlocking(transfer.id) ?: zero,
             )
         }
     printTable(EntryRow.HEADERS, expenses + transfers, numbersFrom = 2)
@@ -97,7 +97,7 @@ private fun printBalances(group: ExpenseGroup) {
     printTable(
         BalanceRow.HEADERS,
         group.membersBlocking().mapNotNull { member ->
-            member.id?.let { id -> totals(id, summary) }?.let { totals ->
+            totals(member.id, summary)?.let { totals ->
                 BalanceRow(
                     name = member.firstName,
                     paid = totals.paid,

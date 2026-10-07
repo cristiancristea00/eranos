@@ -160,7 +160,7 @@ export function printBalances(group: ExpenseGroup): void {
         balanceColumns,
         group.membersSync().map((member): BalanceRow => {
             // The summary lists the members with a total; every total of the others is zero.
-            const found = undefined === member.id ? undefined : totals(member.id, summary);
+            const found = totals(member.id, summary);
             return undefined === found
                 ? { name: member.firstName, paid: zero, consumed: zero, sent: zero, received: zero, balance: { kind: 'settled' } }
                 : {
@@ -201,7 +201,7 @@ export function printEntries(group: ExpenseGroup, shown: (currency: CurrencyCode
             payer: names(group, splitMembers(expense.payers)),
             original: expenseTotal(expense),
             rate: rate(expense.cost),
-            converted: (undefined === expense.id ? undefined : group.expenseSharesSync(expense.id))?.total ?? zero,
+            converted: group.expenseSharesSync(expense.id)?.total ?? zero,
         }));
     const transfers = group
         .transfersSync()
@@ -211,7 +211,7 @@ export function printEntries(group: ExpenseGroup, shown: (currency: CurrencyCode
             payer: name(group, transfer.from),
             original: transfer.cost.amount,
             rate: rate(transfer.cost),
-            converted: (undefined === transfer.id ? undefined : group.transferAmountSync(transfer.id)) ?? zero,
+            converted: group.transferAmountSync(transfer.id) ?? zero,
         }));
     printTable(entryColumns, [...expenses, ...transfers], 2);
 }

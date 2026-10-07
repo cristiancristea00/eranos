@@ -1,11 +1,12 @@
 package eranos
 
+import eranos.internal.identifierGenerate
 import eranos.internal.identifierParse
 import kotlin.jvm.JvmInline
 
 /**
- * The identifier of a group: the text the app gave it, such as the key of its own store, or one the library generated, a
- * UUID v7 in lowercase hyphenated form.
+ * The identifier of a group: the text the app gave it, such as the key of its own store, or one [generate] made, a UUID v7
+ * in lowercase hyphenated form.
  *
  * An identifier is text of at most 64 bytes of UTF-8, not empty, without control characters, and without whitespace at
  * either end. Two identifiers are equal when their text is, byte for byte, so case matters. Every entity has an
@@ -21,8 +22,14 @@ public value class ExpenseGroupId(
     /** The identifier's text. */
     override fun toString(): String = value
 
-    /** The checked reading of an identifier from its text. */
+    /** The making of a new identifier, and the checked reading of one from its text. */
     public companion object {
+        /**
+         * A new identifier, a UUID v7 in lowercase hyphenated form, which [parse] accepts. Every kind of identifier draws
+         * from the one generator of the library, and identifiers generated one after another are in increasing order.
+         */
+        public fun generate(): ExpenseGroupId = ExpenseGroupId(identifierGenerate())
+
         /**
          * The identifier written [text], as it is: not trimmed, and in its case.
          *
@@ -35,8 +42,8 @@ public value class ExpenseGroupId(
 }
 
 /**
- * The identifier of a member: the text the app gave them, or one the library generated, a UUID v7 in lowercase hyphenated
- * form, which follows the rules [ExpenseGroupId] states.
+ * The identifier of a member: the text the app gave them, or one [generate] made, a UUID v7 in lowercase hyphenated form,
+ * which follows the rules [ExpenseGroupId] states.
  */
 @JvmInline
 public value class MemberId(
@@ -46,8 +53,11 @@ public value class MemberId(
     /** The identifier's text. */
     override fun toString(): String = value
 
-    /** The checked reading of an identifier from its text. */
+    /** The making of a new identifier, and the checked reading of one from its text. */
     public companion object {
+        /** A new identifier, as [ExpenseGroupId.generate] makes one. */
+        public fun generate(): MemberId = MemberId(identifierGenerate())
+
         /**
          * The identifier written [text], as it is: not trimmed, and in its case.
          *
@@ -59,8 +69,8 @@ public value class MemberId(
 }
 
 /**
- * The identifier of a category: the text the app gave it, or one the library generated, a UUID v7 in lowercase hyphenated
- * form, which follows the rules [ExpenseGroupId] states.
+ * The identifier of a category: the text the app gave it, or one [generate] made, a UUID v7 in lowercase hyphenated form,
+ * which follows the rules [ExpenseGroupId] states.
  */
 @JvmInline
 public value class CategoryId(
@@ -70,8 +80,11 @@ public value class CategoryId(
     /** The identifier's text. */
     override fun toString(): String = value
 
-    /** The checked reading of an identifier from its text. */
+    /** The making of a new identifier, and the checked reading of one from its text. */
     public companion object {
+        /** A new identifier, as [ExpenseGroupId.generate] makes one. */
+        public fun generate(): CategoryId = CategoryId(identifierGenerate())
+
         /**
          * The identifier written [text], as it is: not trimmed, and in its case.
          *
@@ -83,8 +96,8 @@ public value class CategoryId(
 }
 
 /**
- * The identifier of an expense: the text the app gave it, or one the library generated, a UUID v7 in lowercase hyphenated
- * form, which follows the rules [ExpenseGroupId] states.
+ * The identifier of an expense: the text the app gave it, or one [generate] made, a UUID v7 in lowercase hyphenated form,
+ * which follows the rules [ExpenseGroupId] states.
  */
 @JvmInline
 public value class ExpenseId(
@@ -94,8 +107,11 @@ public value class ExpenseId(
     /** The identifier's text. */
     override fun toString(): String = value
 
-    /** The checked reading of an identifier from its text. */
+    /** The making of a new identifier, and the checked reading of one from its text. */
     public companion object {
+        /** A new identifier, as [ExpenseGroupId.generate] makes one. */
+        public fun generate(): ExpenseId = ExpenseId(identifierGenerate())
+
         /**
          * The identifier written [text], as it is: not trimmed, and in its case.
          *
@@ -107,8 +123,8 @@ public value class ExpenseId(
 }
 
 /**
- * The identifier of a transfer: the text the app gave it, or one the library generated, a UUID v7 in lowercase hyphenated
- * form, which follows the rules [ExpenseGroupId] states.
+ * The identifier of a transfer: the text the app gave it, or one [generate] made, a UUID v7 in lowercase hyphenated form,
+ * which follows the rules [ExpenseGroupId] states.
  */
 @JvmInline
 public value class TransferId(
@@ -118,8 +134,11 @@ public value class TransferId(
     /** The identifier's text. */
     override fun toString(): String = value
 
-    /** The checked reading of an identifier from its text. */
+    /** The making of a new identifier, and the checked reading of one from its text. */
     public companion object {
+        /** A new identifier, as [ExpenseGroupId.generate] makes one. */
+        public fun generate(): TransferId = TransferId(identifierGenerate())
+
         /**
          * The identifier written [text], as it is: not trimmed, and in its case.
          *

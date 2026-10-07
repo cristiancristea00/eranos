@@ -113,15 +113,13 @@ private fun printBalances(group: ExpenseGroup) {
     val summary = group.summaryBlocking()
     val rows =
         group.membersBlocking().mapNotNull { member ->
-            member.id?.let { id ->
-                totals(id, summary)?.let { totals ->
-                    BalanceRow(
-                        name = member.firstName,
-                        status = if (group.isArchivedBlocking(id)) "archived" else "active",
-                        consumed = totals.share,
-                        balance = totals.balance,
-                    )
-                }
+            totals(member.id, summary)?.let { totals ->
+                BalanceRow(
+                    name = member.firstName,
+                    status = if (group.isArchivedBlocking(member.id)) "archived" else "active",
+                    consumed = totals.share,
+                    balance = totals.balance,
+                )
             }
         }
     printTable(BalanceRow.HEADERS, rows, numbersFrom = 2)

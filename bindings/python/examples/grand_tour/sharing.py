@@ -55,7 +55,7 @@ async def sharing(group: ExpenseGroup, people: People) -> None:
     other = group
     everyone = (people.ana, people.bob, people.carol, people.dan, people.eva)
     await other.add_expense_async(
-        Expense(
+        Expense.create(
             name='Airport coffee',
             cost=LocalCost(ron('75.00')),
             payers=EqualSplit((people.bob,)),

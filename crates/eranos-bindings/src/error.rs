@@ -120,11 +120,6 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
-    /// An entry to replace carried no identifier to find it by.
-    IdentifierMissing {
-        /// What went wrong.
-        detail: String,
-    },
     /// A saved group that is not JSON of the saved form, at `line` and
     /// `column`.
     InvalidJson {
@@ -149,13 +144,6 @@ pub enum EranosError {
 }
 
 impl EranosError {
-    /// The error of the case `IdentifierMissing`.
-    pub(crate) fn identifier_missing() -> Self {
-        Self::IdentifierMissing {
-            detail: "an entry to replace must carry its identifier".to_owned(),
-        }
-    }
-
     /// The error of a saved group that is not JSON of the saved form. The
     /// detail names the fault and where it is, never the text there,
     /// which can hold account numbers.
@@ -205,7 +193,6 @@ impl EranosError {
             | Self::Transfer { detail, .. }
             | Self::ExpenseGroup { detail, .. }
             | Self::Language { detail, .. }
-            | Self::IdentifierMissing { detail, .. }
             | Self::InvalidJson { detail, .. }
             | Self::Cancelled { detail, .. }
             | Self::Released { detail, .. } => detail,

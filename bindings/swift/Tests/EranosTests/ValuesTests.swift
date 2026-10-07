@@ -155,6 +155,19 @@ func anIdentifierIsItsText() {
     #expect(id != Member.ID(rawValue: "other"))
 }
 
+/// A generated identifier that repeated an earlier one would put two entries under one identifier,
+/// one that the library's check refused would give an entry an identifier the app cannot store and
+/// check again, and one out of order would list entries out of their creation order.
+@Test
+func generatedIdentifiersAreNewAcceptedAndInOrder() throws {
+    let member = Member.ID.generate()
+    let expense = Expense.ID.generate()
+    #expect(member.rawValue != expense.rawValue)
+    #expect(member.rawValue.utf8.lexicographicallyPrecedes(expense.rawValue.utf8))
+    #expect(try member == Member.ID(member.rawValue))
+    #expect(try expense == Expense.ID(expense.rawValue))
+}
+
 /// Identifiers that compared or hashed as `String` does, which holds canonically equivalent texts
 /// equal, would take two identifiers the library holds apart for one, and read or change the
 /// other entry.

@@ -628,20 +628,60 @@ fn an_expense_keeps_its_identifier_through_edits() {
 }
 
 /// An expense from an app's own store would get another identifier than its
-/// key, and so another tie rotation on every device, lose it in an edit, or
-/// keep it after the app asked for a generated one.
+/// key, and so another tie rotation on every device, a constructor that
+/// generates one would repeat it, or an edit would lose it or keep it when
+/// the edit gives another.
 #[test]
 fn an_expense_takes_the_identifier_it_is_given() {
     let id = ExpenseId::new("Ωmega dinner").unwrap();
-    let expense = full_expense().to_builder().id(id).build().unwrap();
+    let (amount, date) = (euros(9_000), september_23());
+    let (payers, split) = (Split::equal([ana()]), Split::equal([ana(), bob()]));
+    let items = [item("Soup", 9_000)];
+    // Each constructor that takes an identifier keeps it.
+    for builder in [
+        Expense::builder_with_id(id, "Dinner", amount, ana(), split.clone(), date),
+        Expense::builder_with_payers_and_id(
+            id,
+            "Dinner",
+            amount,
+            payers.clone(),
+            split.clone(),
+            date,
+        ),
+        Expense::itemised_builder_with_id(id, "Dinner", amount, ana(), items.clone(), date),
+        Expense::itemised_builder_with_payers_and_id(
+            id,
+            "Dinner",
+            amount,
+            payers.clone(),
+            items.clone(),
+            date,
+        ),
+    ] {
+        assert_eq!(builder.build().unwrap().id(), id);
+    }
+    // Each of their twins generates one of its own.
+    let generated: BTreeSet<ExpenseId> = [
+        Expense::builder("Dinner", amount, ana(), split.clone(), date),
+        Expense::builder_with_payers("Dinner", amount, payers.clone(), split, date),
+        Expense::itemised_builder("Dinner", amount, ana(), items.clone(), date),
+        Expense::itemised_builder_with_payers("Dinner", amount, payers, items, date),
+    ]
+    .into_iter()
+    .map(|builder| builder.build().unwrap().id())
+    .collect();
+    assert_eq!(generated.len(), 4);
+    assert!(!generated.contains(&id));
+    let expense = dinner().id(id).build().unwrap();
     assert_eq!(expense.id(), id);
     // An edit keeps it.
     let renamed = expense.to_builder().name("Supper").build().unwrap();
     assert_eq!(renamed.id(), id);
-    // `None` leaves generation to `build`, and nothing else changes.
-    let generated = expense.to_builder().id(None).build().unwrap();
-    assert_ne!(generated.id(), id);
-    assert_eq!(generated.to_builder().id(id).build().unwrap(), expense);
+    // The last call wins, and nothing else changes.
+    let other = ExpenseId::new("zz").unwrap();
+    let moved = expense.to_builder().id(other).build().unwrap();
+    assert_eq!(moved.id(), other);
+    assert_eq!(moved.to_builder().id(id).build().unwrap(), expense);
 }
 
 /// Editing an expense would silently drop fields that were not edited.

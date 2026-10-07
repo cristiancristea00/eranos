@@ -140,7 +140,7 @@ public final class Main {
                             .formatted(summary.totalSpent()));
             List<MemberRow> balances = new ArrayList<>();
             for (Member member : group.members()) {
-                Optional<MemberSummary> totals = member.id().flatMap(id -> totals(id, summary));
+                Optional<MemberSummary> totals = totals(member.id(), summary);
                 totals.ifPresent(
                         found ->
                                 balances.add(

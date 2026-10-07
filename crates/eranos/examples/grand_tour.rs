@@ -766,8 +766,8 @@ fn fado_items(people: &People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
     ])
 }
 
-/// The fado night, item by item, paid by Carol and Dan, with a 10 % tip; the
-/// caller builds it, which gives it its identifier.
+/// The fado night, item by item, paid by Carol and Dan, with a 10 % tip,
+/// under the identifier its constructor generates; the caller builds it.
 fn fado_night(people: &People, categories: Categories) -> Result<ExpenseBuilder, Box<dyn Error>> {
     Ok(Expense::itemised_builder_with_payers(
         "Fado night",

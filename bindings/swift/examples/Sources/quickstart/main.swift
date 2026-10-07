@@ -86,7 +86,7 @@ func main() throws(EranosError) {
         """)
     printTable(
         try group.members().compactMap { member in
-            member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
+            totals(of: member.id, in: summary).map { totals in
                 MemberRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: totals.balance)
             }
         },

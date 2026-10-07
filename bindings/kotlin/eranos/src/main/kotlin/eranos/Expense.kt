@@ -7,14 +7,16 @@ import eranos.internal.expenseTotal
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * An expense to add carries the identifier the app gives it, such as the key of its own store, or none, and then
- * [ExpenseGroup.add] generates one. To change an expense, read it from the group, [copy] it with the changes, and pass the
- * copy to [ExpenseGroup.replace].
+ * An expense has its identifier from the moment it is made: the app's own, such as the key of its own store, or a generated
+ * one. To change an expense, read it from the group, [copy] it with the changes, and pass the copy to [ExpenseGroup.replace].
+ *
+ * @constructor An expense of [cost] on [date], that [payers] paid and [split] shares, under the identifier [id]; the
+ *   constructor without [id] generates one.
  */
 @Suppress("LongParameterList") // An expense has the library's fields; the public constructors default the optional ones.
 public class Expense(
-    /** The identifier: the app's own or `null` for an expense to add, and set for one the group holds. */
-    public val id: ExpenseId?,
+    /** The identifier, which the app gives: its own, or one [ExpenseId.generate] makes. */
+    public val id: ExpenseId,
     /** What was bought. */
     public val name: String,
     /** What it cost. */
@@ -34,7 +36,10 @@ public class Expense(
     /** A longer description. */
     public val description: String? = null,
 ) {
-    /** An expense to add, of [cost] on [date], that [payers] paid and [split] shares, under an identifier the group generates. */
+    /**
+     * An expense of [cost] on [date], that [payers] paid and [split] shares, under an identifier [ExpenseId.generate] makes;
+     * the constructor with [id] takes the app's.
+     */
     public constructor(
         name: String,
         cost: Cost,
@@ -45,13 +50,13 @@ public class Expense(
         time: TimeOfDay? = null,
         category: CategoryId? = null,
         description: String? = null,
-    ) : this(null, name, cost, payers, split, date, tip, time, category, description)
+    ) : this(ExpenseId.generate(), name, cost, payers, split, date, tip, time, category, description)
 
     /** The expense as the generated code holds it. */
     internal val generated: eranos.internal.Expense
         get() =
             eranos.internal.Expense(
-                id?.value,
+                id.value,
                 name,
                 cost.generated,
                 payers.generated,
@@ -131,7 +136,7 @@ public class Expense(
 /** The expense the generated code holds as [this]. */
 internal fun eranos.internal.Expense.converted(): Expense =
     Expense(
-        id?.let(::ExpenseId),
+        ExpenseId(id),
         name,
         cost.converted(),
         payers.converted(),

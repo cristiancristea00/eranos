@@ -23,6 +23,18 @@ public record TransferId(String value) {
     }
 
     /**
+     * A new identifier, a UUID v7 in lowercase hyphenated form.
+     *
+     * <p>Every kind of identifier draws from the one generator of the library, so identifiers
+     * generated one after another are in increasing order, whatever their kinds.
+     *
+     * @return the identifier
+     */
+    public static TransferId generate() {
+        return new TransferId(Eranos.identifierGenerate());
+    }
+
+    /**
      * The identifier written {@code text}, checked by the rules of every identifier: not trimmed,
      * and in its case.
      *

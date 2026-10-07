@@ -12,15 +12,15 @@ use crate::money::{CurrencyRate, currency};
 use crate::operations::CurrencyChange;
 use crate::reader::ExpenseGroupReader;
 use crate::settlement::{SettlementPlan, SettlementStrategy};
-use crate::{EranosError, identifier_to_add};
+use crate::{EranosError, identifier};
 
 /// What a new group starts with.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NewExpenseGroup {
-    /// The identifier: the app's own, or absent for the library to generate
-    /// one.
-    pub id: Option<String>,
+    /// The identifier, which the app gives: its own, or one
+    /// [`identifier_generate`](crate::identifier_generate) returns.
+    pub id: String,
     /// The group's name.
     pub name: String,
     /// The ISO 4217 code of the group currency, which every total is in.
@@ -48,7 +48,7 @@ pub struct ExpenseGroupHandle {
 
 impl ExpenseGroupHandle {
     /// A new group with no members and no entries, under the identifier
-    /// `group` gives, or a generated one.
+    /// `group` gives.
     ///
     /// # Errors
     ///
@@ -57,13 +57,13 @@ impl ExpenseGroupHandle {
     /// [`ExpenseGroupFailure::EmptyName`](crate::ExpenseGroupFailure::EmptyName), and
     /// [`LanguageFailure::InvalidLanguage`](crate::LanguageFailure::InvalidLanguage).
     pub fn new(group: &NewExpenseGroup) -> Result<Self, EranosError> {
-        let id: Option<ExpenseGroupId> = identifier_to_add(group.id.as_deref())?;
+        let id: ExpenseGroupId = identifier(&group.id)?;
         let language = group.language.as_deref().map(Language::parse).transpose()?;
-        let group = ExpenseGroup::builder(group.name.clone(), currency(&group.currency)?)
-            .id(id)
-            .description(group.description.clone().unwrap_or_default())
-            .language(language)
-            .build()?;
+        let group =
+            ExpenseGroup::builder_with_id(id, group.name.clone(), currency(&group.currency)?)
+                .description(group.description.clone().unwrap_or_default())
+                .language(language)
+                .build()?;
         Ok(Self::from(group))
     }
 

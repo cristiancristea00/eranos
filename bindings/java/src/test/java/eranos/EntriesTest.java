@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,8 +80,9 @@ class EntriesTest {
         for (Expense expense : List.of(taxi(flat), dinner(flat))) {
             assertEquals(expense, Expense.converted(expense.generated()));
             ExpenseId id = flat.group.addExpense(expense);
+            assertEquals(expense.id(), id);
             Expense stored = flat.group.expense(id).orElseThrow();
-            assertEquals(Optional.of(id), stored.id());
+            assertEquals(id, stored.id());
             assertEquals(expense.name(), stored.name());
             assertEquals(expense.cost(), stored.cost());
             assertEquals(expense.payers(), stored.payers());
@@ -218,8 +220,9 @@ class EntriesTest {
                         .build();
         assertEquals(carol, Member.converted(carol.generated()));
         MemberId id = flat.group.addMember(carol);
+        assertEquals(carol.id(), id);
         Member stored = flat.group.member(id).orElseThrow();
-        assertEquals(Optional.of(id), stored.id());
+        assertEquals(id, stored.id());
         assertEquals(carol.lastName(), stored.lastName());
         assertEquals(carol.email(), stored.email());
         assertEquals(carol.phone(), stored.phone());
@@ -247,8 +250,9 @@ class EntriesTest {
                         .build();
         assertEquals(cash, Transfer.converted(cash.generated()));
         TransferId payment = flat.group.addTransfer(cash);
+        assertEquals(cash.id(), payment);
         Transfer storedCash = flat.group.transfer(payment).orElseThrow();
-        assertEquals(Optional.of(payment), storedCash.id());
+        assertEquals(payment, storedCash.id());
         assertEquals(cash.from(), storedCash.from());
         assertEquals(cash.to(), storedCash.to());
         assertEquals(cash.cost(), storedCash.cost());
@@ -274,17 +278,15 @@ class EntriesTest {
         Category travel = new Category("Travel");
         assertEquals(travel, Category.converted(travel.generated()));
         CategoryId trip = flat.group.addCategory(travel);
+        assertEquals(travel.id(), trip);
         Category storedTravel = flat.group.category(trip).orElseThrow();
-        assertEquals(Optional.of(trip), storedTravel.id());
+        assertEquals(trip, storedTravel.id());
         assertValue(storedTravel, storedTravel.renamed("Travel"), storedTravel.renamed("Trips"));
 
         EranosException.ExpenseGroup again =
                 assertThrows(
                         EranosException.ExpenseGroup.class, () -> flat.group.addMember(stored));
         assertEquals(new ExpenseGroupFailure.DuplicateMember(id), again.failure());
-        IllegalArgumentException missing =
-                assertThrows(IllegalArgumentException.class, () -> flat.group.replaceMember(carol));
-        assertEquals("an entry to replace must carry its identifier", missing.getMessage());
         for (PaymentAccount account : accounts) {
             assertEquals(
                     account.details(),
@@ -293,66 +295,134 @@ class EntriesTest {
     }
 
     /**
-     * An entry added under another identifier than the one the app gave it, a second entry added
-     * under an identifier the group holds, or an identifier the rules refuse let through would
-     * leave the app's own store pointing at another entry.
+     * An entry made under another identifier than the one the app gave it, two entries made one
+     * after the other under one generated identifier, a second entry added under an identifier the
+     * group holds, a replacement of an entry the group does not hold, or an identifier the rules
+     * refuse let through would leave the app's own store pointing at another entry.
      */
     @Test
-    void anEntryKeepsTheIdentifierTheAppGivesIt() throws EranosException {
+    void anEntryKeepsTheIdentifierItIsMadeWith() throws EranosException {
         Flat flat = new Flat();
         ExpenseGroup group = flat.group;
 
         MemberId carol = MemberId.parse("carol");
-        Member member = Member.builder("Carol").id(carol).build();
+        Member member = Member.builder(carol, "Carol").build();
         assertEquals(carol, group.addMember(member));
-        assertEquals(
-                Optional.of(carol), group.member(carol).orElseThrow().toBuilder().build().id());
+        assertEquals(carol, group.member(carol).orElseThrow().toBuilder().build().id());
         EranosException.ExpenseGroup memberAgain =
                 assertThrows(
                         EranosException.ExpenseGroup.class,
-                        () -> group.addMember(Member.builder("Caroline").id(carol).build()));
+                        () -> group.addMember(Member.builder(carol, "Caroline").build()));
         assertEquals(new ExpenseGroupFailure.DuplicateMember(carol), memberAgain.failure());
-        MemberId generated = group.addMember(member.toBuilder().id(null).build());
-        assertNotEquals(carol, generated);
+        Member generated = Member.builder("Carol").build();
+        assertNotEquals(carol, generated.id());
+        assertNotEquals(generated.id(), Member.builder("Carol").build().id());
+        assertEquals(generated.id(), group.addMember(generated));
+        MemberId dan = MemberId.parse("dan");
+        Member unknownMember = member.toBuilder().id(dan).build();
+        assertEquals(dan, unknownMember.id());
+        EranosException.ExpenseGroup memberUnknown =
+                assertThrows(
+                        EranosException.ExpenseGroup.class,
+                        () -> group.replaceMember(unknownMember));
+        assertEquals(new ExpenseGroupFailure.UnknownMember(dan), memberUnknown.failure());
 
         CategoryId travel = CategoryId.parse("travel");
         assertEquals(travel, group.addCategory(new Category(travel, "Travel")));
-        assertEquals(Optional.of(travel), group.category(travel).orElseThrow().id());
+        assertEquals(travel, group.category(travel).orElseThrow().id());
         EranosException.ExpenseGroup categoryAgain =
                 assertThrows(
                         EranosException.ExpenseGroup.class,
                         () -> group.addCategory(new Category(travel, "Trips")));
         assertEquals(new ExpenseGroupFailure.DuplicateCategory(travel), categoryAgain.failure());
+        assertNotEquals(new Category("Trips").id(), new Category("Trips").id());
+        CategoryId trips = CategoryId.parse("trips");
+        EranosException.ExpenseGroup categoryUnknown =
+                assertThrows(
+                        EranosException.ExpenseGroup.class,
+                        () -> group.replaceCategory(new Category(trips, "Trips")));
+        assertEquals(new ExpenseGroupFailure.UnknownCategory(trips), categoryUnknown.failure());
 
         ExpenseId lunch = ExpenseId.parse("lunch");
         Expense expense =
-                flat.expense("Lunch", flat.ana, List.of(flat.bob)).toBuilder().id(lunch).build();
+                Expense.builder(
+                                lunch,
+                                "Lunch",
+                                new Cost.Local(flat.euros(3_000)),
+                                new Split.Equal(List.of(flat.ana)),
+                                new ExpenseSplit.Whole(new Split.Equal(List.of(flat.bob))),
+                                flat.day)
+                        .build();
         assertEquals(lunch, group.addExpense(expense));
-        assertEquals(Optional.of(lunch), group.expense(lunch).orElseThrow().id());
+        assertEquals(lunch, group.expense(lunch).orElseThrow().id());
         EranosException.ExpenseGroup expenseAgain =
                 assertThrows(EranosException.ExpenseGroup.class, () -> group.addExpense(expense));
         assertEquals(new ExpenseGroupFailure.DuplicateExpense(lunch), expenseAgain.failure());
+        assertNotEquals(
+                flat.expense("Lunch", flat.ana, List.of(flat.bob)).id(),
+                flat.expense("Lunch", flat.ana, List.of(flat.bob)).id());
+        ExpenseId brunch = ExpenseId.parse("brunch");
+        Expense unknownExpense = expense.toBuilder().id(brunch).build();
+        assertEquals(brunch, unknownExpense.id());
+        EranosException.ExpenseGroup expenseUnknown =
+                assertThrows(
+                        EranosException.ExpenseGroup.class,
+                        () -> group.replaceExpense(unknownExpense));
+        assertEquals(new ExpenseGroupFailure.UnknownExpense(brunch), expenseUnknown.failure());
 
         TransferId cash = TransferId.parse("cash");
-        Transfer transfer =
-                Transfer.builder(flat.bob, flat.ana, new Cost.Local(flat.euros(100)), flat.day)
-                        .id(cash)
-                        .build();
+        Cost hundred = new Cost.Local(flat.euros(100));
+        Transfer transfer = Transfer.builder(cash, flat.bob, flat.ana, hundred, flat.day).build();
         assertEquals(cash, group.addTransfer(transfer));
-        assertEquals(Optional.of(cash), group.transfer(cash).orElseThrow().id());
+        assertEquals(cash, group.transfer(cash).orElseThrow().id());
         EranosException.ExpenseGroup transferAgain =
                 assertThrows(EranosException.ExpenseGroup.class, () -> group.addTransfer(transfer));
         assertEquals(new ExpenseGroupFailure.DuplicateTransfer(cash), transferAgain.failure());
+        assertNotEquals(
+                Transfer.builder(flat.bob, flat.ana, hundred, flat.day).build().id(),
+                Transfer.builder(flat.bob, flat.ana, hundred, flat.day).build().id());
+        TransferId card = TransferId.parse("card");
+        Transfer unknownTransfer = transfer.toBuilder().id(card).build();
+        assertEquals(card, unknownTransfer.id());
+        EranosException.ExpenseGroup transferUnknown =
+                assertThrows(
+                        EranosException.ExpenseGroup.class,
+                        () -> group.replaceTransfer(unknownTransfer));
+        assertEquals(new ExpenseGroupFailure.UnknownTransfer(card), transferUnknown.failure());
 
         String json = group.save();
         assertEquals(json, ExpenseGroup.load(json).save());
         EranosException.Id refused =
                 assertThrows(
                         EranosException.Id.class,
-                        () ->
-                                group.addMember(
-                                        Member.builder("Dan").id(new MemberId(" x")).build()));
+                        () -> group.addMember(Member.builder(new MemberId(" x"), "Dan").build()));
         assertEquals(new IdFailure.SurroundingWhitespace(), refused.failure());
+    }
+
+    /**
+     * A null identifier let through to the generated code would fail there, far from the call that
+     * passed it, instead of where the program made the mistake.
+     */
+    @Test
+    void aNullIdentifierIsRefusedWhereItIsGiven() throws EranosException {
+        Flat flat = new Flat();
+        Cost cost = new Cost.Local(flat.euros(100));
+        Split payers = new Split.Equal(List.of(flat.ana));
+        ExpenseSplit split = new ExpenseSplit.Whole(payers);
+        for (Executable call :
+                List.<Executable>of(
+                        () -> Member.builder(null, "Ana"),
+                        () -> Member.builder("Ana").id(null),
+                        () -> new Category(null, "Food"),
+                        () -> Expense.builder(null, "Lunch", cost, payers, split, flat.day),
+                        () -> Expense.builder("Lunch", cost, payers, split, flat.day).id(null),
+                        () -> Transfer.builder(null, flat.bob, flat.ana, cost, flat.day),
+                        () -> Transfer.builder(flat.bob, flat.ana, cost, flat.day).id(null),
+                        () -> ExpenseGroup.builder(null, "Flat", flat.euro),
+                        () -> ExpenseGroup.builder("Flat", flat.euro).id(null))) {
+            NullPointerException refused = assertThrows(NullPointerException.class, call);
+            assertEquals("id", refused.getMessage());
+        }
     }
 
     /**

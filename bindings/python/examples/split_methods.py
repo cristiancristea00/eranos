@@ -168,7 +168,7 @@ def equally(group: ExpenseGroup, family: Family) -> None:
         'nobody always pays it.',
     )
     taxi = group.add_expense(
-        Expense(
+        Expense.create(
             name='Taxi',
             cost=LocalCost(euros('10.00')),
             payers=EqualSplit((family.ana,)),
@@ -194,7 +194,7 @@ def by_percentage(group: ExpenseGroup, family: Family) -> None:
         "100 %. Mia's room is smaller, so she takes 20 %.",
     )
     rent = group.add_expense(
-        Expense(
+        Expense.create(
             name='Flat',
             cost=LocalCost(euros('500.00')),
             payers=EqualSplit((family.bob,)),
@@ -231,7 +231,7 @@ def by_parts(group: ExpenseGroup, family: Family) -> ExpenseId:
         '2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.',
     )
     food = group.add_expense(
-        Expense(
+        Expense.create(
             name='Food',
             cost=LocalCost(euros('125.00')),
             payers=EqualSplit((family.ana,)),
@@ -263,7 +263,7 @@ def by_amounts(group: ExpenseGroup, family: Family) -> None:
     section('4. By exact amounts')
     print_lines('Everyone pays a fixed amount, such as a ticket price; the amounts must add up to', 'exactly the expense amount.')
     tickets = group.add_expense(
-        Expense(
+        Expense.create(
             name='Museum',
             cost=LocalCost(euros('35.00')),
             payers=EqualSplit((family.bob,)),
@@ -297,7 +297,7 @@ def several_payers(group: ExpenseGroup, family: Family) -> None:
         'divided with the same methods as the participants.',
     )
     dinner = group.add_expense(
-        Expense(
+        Expense.create(
             name='Dinner',
             cost=LocalCost(euros('90.00')),
             payers=AmountsSplit((MemberAmount(family.ana, euros('50.00')), MemberAmount(family.bob, euros('40.00')))),
@@ -321,7 +321,7 @@ def mistakes(group: ExpenseGroup, family: Family) -> None:
     """
     section('6. Mistakes are refused')
     print_lines('A percentage split that adds up to 90 % is refused when the expense is built:')
-    invalid = Expense(
+    invalid = Expense.create(
         name='Invalid',
         cost=LocalCost(euros('10.00')),
         payers=EqualSplit((family.ana,)),
@@ -351,7 +351,7 @@ def print_totals(group: ExpenseGroup) -> None:
         [
             TotalRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=str(found.balance))
             for member in group.members()
-            if member.id is not None and (found := totals(member.id, summary)) is not None
+            if (found := totals(member.id, summary)) is not None
         ],
         1,
     )
@@ -361,9 +361,9 @@ def main() -> None:
     """Print the report, checking its key numbers."""
     group = ExpenseGroup.create('Family holiday', CurrencyCode('EUR'))
     family = Family(
-        ana=group.add_member(Member(first_name='Ana')),
-        bob=group.add_member(Member(first_name='Bob')),
-        mia=group.add_member(Member(first_name='Mia')),
+        ana=group.add_member(Member.create(first_name='Ana')),
+        bob=group.add_member(Member.create(first_name='Bob')),
+        mia=group.add_member(Member.create(first_name='Mia')),
         day=CalendarDate(2026, 7, 14),
     )
 

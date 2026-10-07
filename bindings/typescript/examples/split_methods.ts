@@ -3,7 +3,19 @@
 
 import assert from 'node:assert/strict';
 
-import { type ExpenseId, type MemberId, CalendarDate, CurrencyCode, ExpenseGroup, Money, Parts, Percentage, formatBalance } from '../src/index.js';
+import {
+    type ExpenseId,
+    type MemberId,
+    CalendarDate,
+    CurrencyCode,
+    ExpenseGroup,
+    Money,
+    Parts,
+    Percentage,
+    createExpense,
+    createMember,
+    formatBalance,
+} from '../src/index.js';
 import { type Columns, load, names, printLines, printTable, refusal, section, totals } from './report.js';
 
 /** A member's rule, payment, and consumption in one expense, as the table of shares prints them. */
@@ -84,13 +96,15 @@ function equally(group: ExpenseGroup, family: Family): void {
         'leftover cent; which member it is rotates from expense to expense, so over a trip',
         'nobody always pays it.',
     );
-    const taxi = group.addExpenseSync({
-        name: 'Taxi',
-        cost: { kind: 'local', amount: eur('10.00') },
-        payers: { kind: 'equal', members: [family.ana] },
-        split: { kind: 'whole', split: { kind: 'equal', members: [family.ana, family.bob, family.mia] } },
-        date: family.day,
-    });
+    const taxi = group.addExpenseSync(
+        createExpense({
+            name: 'Taxi',
+            cost: { kind: 'local', amount: eur('10.00') },
+            payers: { kind: 'equal', members: [family.ana] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [family.ana, family.bob, family.mia] } },
+            date: family.day,
+        }),
+    );
     report(group, taxi, thirds(family));
 }
 
@@ -100,23 +114,25 @@ function byPercentage(group: ExpenseGroup, family: Family): void {
         'Everyone pays a percentage of the amount; the percentages must add up to exactly',
         "100 %. Mia's room is smaller, so she takes 20 %.",
     );
-    const rent = group.addExpenseSync({
-        name: 'Flat',
-        cost: { kind: 'local', amount: eur('500.00') },
-        payers: { kind: 'equal', members: [family.bob] },
-        split: {
-            kind: 'whole',
+    const rent = group.addExpenseSync(
+        createExpense({
+            name: 'Flat',
+            cost: { kind: 'local', amount: eur('500.00') },
+            payers: { kind: 'equal', members: [family.bob] },
             split: {
-                kind: 'percentages',
-                shares: [
-                    { member: family.ana, percentage: Percentage.parse('40') },
-                    { member: family.bob, percentage: Percentage.parse('40') },
-                    { member: family.mia, percentage: Percentage.parse('20') },
-                ],
+                kind: 'whole',
+                split: {
+                    kind: 'percentages',
+                    shares: [
+                        { member: family.ana, percentage: Percentage.parse('40') },
+                        { member: family.bob, percentage: Percentage.parse('40') },
+                        { member: family.mia, percentage: Percentage.parse('20') },
+                    ],
+                },
             },
-        },
-        date: family.day,
-    });
+            date: family.day,
+        }),
+    );
     report(
         group,
         rent,
@@ -134,23 +150,25 @@ function byParts(group: ExpenseGroup, family: Family): ExpenseId {
         'Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:',
         '2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.',
     );
-    const food = group.addExpenseSync({
-        name: 'Food',
-        cost: { kind: 'local', amount: eur('125.00') },
-        payers: { kind: 'equal', members: [family.ana] },
-        split: {
-            kind: 'whole',
+    const food = group.addExpenseSync(
+        createExpense({
+            name: 'Food',
+            cost: { kind: 'local', amount: eur('125.00') },
+            payers: { kind: 'equal', members: [family.ana] },
             split: {
-                kind: 'parts',
-                shares: [
-                    { member: family.ana, parts: Parts.parse('1') },
-                    { member: family.bob, parts: Parts.parse('1') },
-                    { member: family.mia, parts: Parts.parse('0.5') },
-                ],
+                kind: 'whole',
+                split: {
+                    kind: 'parts',
+                    shares: [
+                        { member: family.ana, parts: Parts.parse('1') },
+                        { member: family.bob, parts: Parts.parse('1') },
+                        { member: family.mia, parts: Parts.parse('0.5') },
+                    ],
+                },
             },
-        },
-        date: family.day,
-    });
+            date: family.day,
+        }),
+    );
     report(
         group,
         food,
@@ -166,23 +184,25 @@ function byParts(group: ExpenseGroup, family: Family): ExpenseId {
 function byAmounts(group: ExpenseGroup, family: Family): void {
     section('4. By exact amounts');
     printLines('Everyone pays a fixed amount, such as a ticket price; the amounts must add up to', 'exactly the expense amount.');
-    const tickets = group.addExpenseSync({
-        name: 'Museum',
-        cost: { kind: 'local', amount: eur('35.00') },
-        payers: { kind: 'equal', members: [family.bob] },
-        split: {
-            kind: 'whole',
+    const tickets = group.addExpenseSync(
+        createExpense({
+            name: 'Museum',
+            cost: { kind: 'local', amount: eur('35.00') },
+            payers: { kind: 'equal', members: [family.bob] },
             split: {
-                kind: 'amounts',
-                shares: [
-                    { member: family.ana, amount: eur('15.00') },
-                    { member: family.bob, amount: eur('15.00') },
-                    { member: family.mia, amount: eur('5.00') },
-                ],
+                kind: 'whole',
+                split: {
+                    kind: 'amounts',
+                    shares: [
+                        { member: family.ana, amount: eur('15.00') },
+                        { member: family.bob, amount: eur('15.00') },
+                        { member: family.mia, amount: eur('5.00') },
+                    ],
+                },
             },
-        },
-        date: family.day,
-    });
+            date: family.day,
+        }),
+    );
     report(
         group,
         tickets,
@@ -200,19 +220,21 @@ function severalPayers(group: ExpenseGroup, family: Family): void {
         'The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are',
         'divided with the same methods as the participants.',
     );
-    const dinner = group.addExpenseSync({
-        name: 'Dinner',
-        cost: { kind: 'local', amount: eur('90.00') },
-        payers: {
-            kind: 'amounts',
-            shares: [
-                { member: family.ana, amount: eur('50.00') },
-                { member: family.bob, amount: eur('40.00') },
-            ],
-        },
-        split: { kind: 'whole', split: { kind: 'equal', members: [family.ana, family.bob, family.mia] } },
-        date: family.day,
-    });
+    const dinner = group.addExpenseSync(
+        createExpense({
+            name: 'Dinner',
+            cost: { kind: 'local', amount: eur('90.00') },
+            payers: {
+                kind: 'amounts',
+                shares: [
+                    { member: family.ana, amount: eur('50.00') },
+                    { member: family.bob, amount: eur('40.00') },
+                ],
+            },
+            split: { kind: 'whole', split: { kind: 'equal', members: [family.ana, family.bob, family.mia] } },
+            date: family.day,
+        }),
+    );
     report(group, dinner, thirds(family));
 }
 
@@ -220,22 +242,24 @@ function mistakes(group: ExpenseGroup, family: Family): void {
     section('6. Mistakes are refused');
     printLines('A percentage split that adds up to 90 % is refused when the expense is built:');
     const refused = refusal(() =>
-        group.addExpenseSync({
-            name: 'Invalid',
-            cost: { kind: 'local', amount: eur('10.00') },
-            payers: { kind: 'equal', members: [family.ana] },
-            split: {
-                kind: 'whole',
+        group.addExpenseSync(
+            createExpense({
+                name: 'Invalid',
+                cost: { kind: 'local', amount: eur('10.00') },
+                payers: { kind: 'equal', members: [family.ana] },
                 split: {
-                    kind: 'percentages',
-                    shares: [
-                        { member: family.ana, percentage: Percentage.parse('60') },
-                        { member: family.bob, percentage: Percentage.parse('30') },
-                    ],
+                    kind: 'whole',
+                    split: {
+                        kind: 'percentages',
+                        shares: [
+                            { member: family.ana, percentage: Percentage.parse('60') },
+                            { member: family.bob, percentage: Percentage.parse('30') },
+                        ],
+                    },
                 },
-            },
-            date: family.day,
-        }),
+                date: family.day,
+            }),
+        ),
     );
     assert.ok(undefined !== refused, 'the split must be refused');
     printLines(`  error: ${refused.message}`);
@@ -248,7 +272,7 @@ function printTotals(group: ExpenseGroup): void {
     printTable(
         totalColumns,
         group.membersSync().flatMap((member) => {
-            const found = undefined === member.id ? undefined : totals(member.id, summary);
+            const found = totals(member.id, summary);
             return undefined === found
                 ? []
                 : [{ name: member.firstName, paid: found.paid, consumed: found.share, balance: formatBalance(found.balance) }];
@@ -260,9 +284,9 @@ function printTotals(group: ExpenseGroup): void {
 await load();
 using group = ExpenseGroup.create('Family holiday', CurrencyCode.of('EUR'));
 const family: Family = {
-    ana: group.addMemberSync({ firstName: 'Ana' }),
-    bob: group.addMemberSync({ firstName: 'Bob' }),
-    mia: group.addMemberSync({ firstName: 'Mia' }),
+    ana: group.addMemberSync(createMember({ firstName: 'Ana' })),
+    bob: group.addMemberSync(createMember({ firstName: 'Bob' })),
+    mia: group.addMemberSync(createMember({ firstName: 'Mia' })),
     day: CalendarDate.of(2026, 7, 14),
 };
 

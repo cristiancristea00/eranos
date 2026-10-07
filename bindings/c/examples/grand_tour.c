@@ -427,7 +427,7 @@ static Id builtInCategory(EranosExpenseGroup const *const group) {
     EranosCategory *const first = eranosCategoryListGet(categories, 0);
     check(nullptr != first, "every group has the built-in category");
     EranosText *const text = eranosTextCreate();
-    (void)eranosCategoryId(first, text);
+    eranosCategoryId(first, text);
     Id const id = idOf(text);
     eranosTextDestroy(text);
     eranosCategoryDestroy(first);
@@ -552,7 +552,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        (void)eranosMemberId(member, text);
+        eranosMemberId(member, text);
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
         eranosMemberFirstName(member, text);
         // The summary lists the members with a total; every total of the others is zero.
@@ -665,7 +665,7 @@ static void addExpenseEntries(EranosExpenseGroup const *const group, char const 
         EranosExpense *const expense = eranosExpenseListGet(expenses, index);
         EranosCost *const cost = eranosExpenseCost(expense);
         if (isShown(hidden, cost)) {
-            (void)eranosExpenseId(expense, text);
+            eranosExpenseId(expense, text);
             EranosExpenseShares *shares = nullptr;
             must(eranosExpenseGroupExpenseShares(group, eranosTextData(text), &shares));
             Line const converted = nullptr == shares ? zero : moneyLine(eranosExpenseSharesTotal(shares));
@@ -701,7 +701,7 @@ static void addTransferEntries(EranosExpenseGroup const *const group, char const
         EranosTransfer *const transfer = eranosTransferListGet(transfers, index);
         EranosCost *const cost = eranosTransferCost(transfer);
         if (isShown(hidden, cost)) {
-            (void)eranosTransferId(transfer, text);
+            eranosTransferId(transfer, text);
             EranosMoney *amount = nullptr;
             must(eranosExpenseGroupTransferAmount(group, eranosTextData(text), &amount));
             Line const converted = nullptr == amount ? zero : moneyLine(amount);
@@ -1008,11 +1008,12 @@ static People members(EranosExpenseGroup *const group) {
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the identifier, then the name, in the order the library's constructor reads them.
 static Id addCategory(EranosExpenseGroup *const group, char const *const id, char const *const name) {
     EranosCategory *category = nullptr;
-    must(eranosCategoryCreate(name, &category));
     EranosText *const text = eranosTextCreate();
-    if (nullptr != id) {
+    if (nullptr == id) {
+        must(eranosCategoryCreate(name, &category));
+    } else {
         must(eranosIdentifierParse(id, text));
-        must(eranosCategorySetId(category, eranosTextData(text)));
+        must(eranosCategoryCreateWithId(eranosTextData(text), name, &category));
     }
     must(eranosExpenseGroupAddCategory(group, category, text));
     Id const added = idOf(text);
@@ -1074,7 +1075,8 @@ static bool categoriesAre(EranosExpenseGroup const *const group, Id const *const
     bool same = count == eranosCategoryListLength(categories);
     for (size_t index = 0; same && count > index; ++index) {
         EranosCategory *const category = eranosCategoryListGet(categories, index);
-        same = eranosCategoryId(category, text) && 0 == strcmp(eranosTextData(text), expected[index].text);
+        eranosCategoryId(category, text);
+        same = 0 == strcmp(eranosTextData(text), expected[index].text);
         eranosCategoryDestroy(category);
     }
     eranosTextDestroy(text);
@@ -1791,7 +1793,7 @@ static void comingsAndGoings(EranosExpenseGroup *const group, People const *cons
     Table *const table = statusTable(2);
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        (void)eranosMemberId(member, text);
+        eranosMemberId(member, text);
         bool archived = false;
         must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));
@@ -1885,7 +1887,7 @@ static void printMemberCategories(EranosExpenseGroup const *const group, Categor
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        (void)eranosMemberId(member, text);
+        eranosMemberId(member, text);
         EranosCategoryTotalList *const own = byCategory(summary, eranosTextData(text));
         eranosMemberFirstName(member, text);
         addMemberCategoryRow(table, &(MemberCategoryRow){
@@ -2457,7 +2459,8 @@ static void datesAndIdentifiers(EranosExpenseGroup const *const group, People co
     EranosMember *member = nullptr;
     must(eranosExpenseGroupMember(group, people->ana.text, &member));
     check(nullptr != member, "Ana is a member");
-    bool const found = eranosMemberId(member, text) && 0 == strcmp(eranosTextData(text), people->ana.text);
+    eranosMemberId(member, text);
+    bool const found = 0 == strcmp(eranosTextData(text), people->ana.text);
     eranosMemberDestroy(member);
     Line const empty = identifierRefusal(group, "", ERANOS_FAILURE_ID_EMPTY);
     Line const afterASpace = identifierRefusal(group, " ana", ERANOS_FAILURE_ID_SURROUNDING_WHITESPACE);

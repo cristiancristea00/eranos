@@ -109,6 +109,22 @@ final class Edits {
         check(transfer.cost() instanceof Cost.Converted);
     }
 
+    /**
+     * Bob's coffee, which Ana, Bob, and Carol share, under the identifier its builder generates.
+     */
+    static Expense coffee(People people, Categories categories) throws EranosException {
+        return Expense.builder(
+                        "Coffee",
+                        new Cost.Local(eur("6.00")),
+                        new Split.Equal(List.of(people.bob())),
+                        new ExpenseSplit.Whole(
+                                new Split.Equal(
+                                        List.of(people.ana(), people.bob(), people.carol()))),
+                        october(5))
+                .category(categories.food())
+                .build();
+    }
+
     /** Replaces an expense and a transfer, and removes one of each; returns what changed. */
     static List<EditRow> replaceAndRemove(
             ExpenseGroup group, People people, Categories categories, ExpenseId seafood)
@@ -121,22 +137,8 @@ final class Edits {
                         .build();
         Expense previous = group.replaceExpense(corrected);
         // Bob entered the coffee twice.
-        Expense coffee =
-                Expense.builder(
-                                "Coffee",
-                                new Cost.Local(eur("6.00")),
-                                new Split.Equal(List.of(people.bob())),
-                                new ExpenseSplit.Whole(
-                                        new Split.Equal(
-                                                List.of(
-                                                        people.ana(),
-                                                        people.bob(),
-                                                        people.carol()))),
-                                october(5))
-                        .category(categories.food())
-                        .build();
-        group.addExpense(coffee);
-        ExpenseId copy = group.addExpense(coffee);
+        group.addExpense(coffee(people, categories));
+        ExpenseId copy = group.addExpense(coffee(people, categories));
         Expense removed = group.removeExpense(copy);
         // Dan's part of the apartment was 120.00, not 100.00.
         TransferId first =
@@ -302,17 +304,13 @@ final class Edits {
         Summary summary = group.summary();
         List<StatusRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            if (member.id().isPresent()) {
-                Optional<MemberSummary> found = totals(member.id().orElseThrow(), summary);
-                if (found.isPresent()) {
-                    rows.add(
-                            new StatusRow(
-                                    member.firstName(),
-                                    group.isArchived(member.id().orElseThrow())
-                                            ? "archived"
-                                            : "active",
-                                    found.orElseThrow().balance()));
-                }
+            Optional<MemberSummary> found = totals(member.id(), summary);
+            if (found.isPresent()) {
+                rows.add(
+                        new StatusRow(
+                                member.firstName(),
+                                group.isArchived(member.id()) ? "archived" : "active",
+                                found.orElseThrow().balance()));
             }
         }
         printTable(StatusRow.HEADERS, rows, 2);

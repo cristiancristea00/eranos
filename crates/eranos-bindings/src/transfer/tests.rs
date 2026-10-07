@@ -7,7 +7,7 @@ use eranos::MemberId;
 
 use super::*;
 use crate::money::Money;
-use crate::{CalendarFailure, IdFailure, MoneyFailure, TransferFailure};
+use crate::{CalendarFailure, IdFailure, MoneyFailure, TransferFailure, identifier_generate};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -34,7 +34,7 @@ fn date() -> CalendarDate {
 /// Bob paying Ana back in lei, with a note and a time.
 fn repayment() -> Transfer {
     Transfer {
-        id: None,
+        id: identifier_generate(),
         from: bob(),
         to: ana(),
         cost: Cost::Converted {
@@ -53,7 +53,7 @@ fn repayment() -> Transfer {
 /// Ana paying Bob in euros, with no optional field.
 fn payment() -> Transfer {
     Transfer {
-        id: None,
+        id: identifier_generate(),
         from: ana(),
         to: bob(),
         cost: Cost::Local {
@@ -171,14 +171,7 @@ fn refused_transfers() -> [Refusal; 6] {
 #[test]
 fn a_transfer_to_add_converts_both_ways() {
     for record in [repayment(), payment()] {
-        let transfer = record.to_new().unwrap();
-        assert_eq!(
-            Transfer::from_library(&transfer),
-            Transfer {
-                id: Some(transfer.id().to_string()),
-                ..record
-            }
-        );
+        assert_eq!(Transfer::from_library(&record.to_new().unwrap()), record);
     }
 }
 
@@ -203,7 +196,7 @@ fn a_transfer_refuses_every_field_that_does_not_convert() {
 #[test]
 fn a_replacement_keeps_the_identifier_and_takes_every_field() {
     let stored = repayment().to_new().unwrap();
-    let id = Some(stored.id().to_string());
+    let id = stored.id().to_string();
     for record in [payment(), repayment()] {
         let replacement = record.replacing(&stored).unwrap();
         assert_eq!(
@@ -216,20 +209,21 @@ fn a_replacement_keeps_the_identifier_and_takes_every_field() {
     }
 }
 
-/// A transfer to add would lose the identifier its app gives it, take one
-/// the rules refuse, or, without one, not get a generated one.
+/// A transfer to add would lose the identifier its app gives it, its own or
+/// a generated one, or take one the rules refuse.
 #[test]
 fn a_transfer_to_add_keeps_the_identifier_it_carries() {
     let named = Transfer {
-        id: Some("zz".to_owned()),
+        id: "zz".to_owned(),
         ..payment()
     };
     let transfer = named.to_new().unwrap();
     assert_eq!(transfer.id().as_str(), "zz");
     assert_eq!(Transfer::from_library(&transfer), named);
-    assert_ne!(payment().to_new().unwrap().id(), transfer.id());
+    let generated = payment();
+    assert_eq!(generated.to_new().unwrap().id().as_str(), generated.id);
     let padded = Transfer {
-        id: Some(" x".to_owned()),
+        id: " x".to_owned(),
         ..payment()
     };
     assert!(matches!(

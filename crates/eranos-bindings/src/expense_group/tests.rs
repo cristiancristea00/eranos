@@ -20,7 +20,10 @@ use crate::expense::{Expense, ExpenseSplit, Split};
 use crate::member::{Category, Member};
 use crate::money::{Cost, Money};
 use crate::transfer::Transfer;
-use crate::{ExpenseGroupFailure, IdFailure, LanguageFailure, MoneyFailure, SettlementFailure};
+use crate::{
+    ExpenseGroupFailure, IdFailure, LanguageFailure, MoneyFailure, SettlementFailure,
+    identifier_generate,
+};
 
 /// A task that counts how often it is woken.
 #[derive(Default)]
@@ -67,7 +70,7 @@ fn rate(currency: &str, rate: &str) -> CurrencyRate {
 
 fn new_group() -> NewExpenseGroup {
     NewExpenseGroup {
-        id: None,
+        id: identifier_generate(),
         name: "Flat".to_owned(),
         currency: "EUR".to_owned(),
         description: Some("Rent".to_owned()),
@@ -77,7 +80,7 @@ fn new_group() -> NewExpenseGroup {
 
 fn new_member(first_name: &str) -> Member {
     Member {
-        id: None,
+        id: identifier_generate(),
         first_name: first_name.to_owned(),
         last_name: None,
         email: None,
@@ -88,7 +91,7 @@ fn new_member(first_name: &str) -> Member {
 
 fn new_category(name: &str) -> Category {
     Category {
-        id: None,
+        id: identifier_generate(),
         name: name.to_owned(),
     }
 }
@@ -96,7 +99,7 @@ fn new_category(name: &str) -> Category {
 /// An expense of 30.00 EUR that `payer` paid and `members` share equally.
 fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
     Expense {
-        id: None,
+        id: identifier_generate(),
         name: name.to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
@@ -123,7 +126,7 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
 
 fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
     Transfer {
-        id: None,
+        id: identifier_generate(),
         from: from.to_owned(),
         to: to.to_owned(),
         cost: Cost::Local {
@@ -223,13 +226,14 @@ const fn assert_send_and_static<Call: Future + Send + 'static>(_call: &Call) {}
 #[test]
 fn a_new_group_takes_what_it_starts_with() {
     let named = ExpenseGroupHandle::new(&NewExpenseGroup {
-        id: Some("flat-12".to_owned()),
+        id: "flat-12".to_owned(),
         ..new_group()
     })
     .unwrap();
     assert_eq!(named.id(), Ok("flat-12".to_owned()));
-    let handle = ExpenseGroupHandle::new(&new_group()).unwrap();
-    assert_ne!(handle.id(), named.id());
+    let generated = new_group();
+    let handle = ExpenseGroupHandle::new(&generated).unwrap();
+    assert_eq!(handle.id(), Ok(generated.id));
     assert_eq!(handle.currency(), Ok("EUR".to_owned()));
     assert_eq!(handle.name(), Ok("Flat".to_owned()));
     assert_eq!(handle.description(), Ok(Some("Rent".to_owned())));
@@ -245,7 +249,7 @@ fn a_new_group_takes_what_it_starts_with() {
 
     let refusals = [
         NewExpenseGroup {
-            id: Some("flat\n12".to_owned()),
+            id: "flat\n12".to_owned(),
             ..new_group()
         },
         NewExpenseGroup {
@@ -362,11 +366,11 @@ fn categories_change_alike_in_both_forms() {
     let travel = handle.add_category(&new_category("Travel")).unwrap();
     let rent = block_on(handle.add_category_async(new_category("Rent"), None)).unwrap();
     let trips = Category {
-        id: Some(travel.clone()),
+        id: travel.clone(),
         name: "Trips".to_owned(),
     };
     let home = Category {
-        id: Some(rent.clone()),
+        id: rent.clone(),
         name: "Home".to_owned(),
     };
     assert_eq!(
@@ -392,12 +396,12 @@ fn members_change_alike_in_both_forms() {
     let carol = handle.add_member(&new_member("Carol")).unwrap();
     let dan = block_on(handle.add_member_async(new_member("Dan"), None)).unwrap();
     let carol_popa = Member {
-        id: Some(carol.clone()),
+        id: carol.clone(),
         last_name: Some("Popa".to_owned()),
         ..new_member("Carol")
     };
     let dan_popa = Member {
-        id: Some(dan.clone()),
+        id: dan.clone(),
         last_name: Some("Popa".to_owned()),
         ..new_member("Dan")
     };
@@ -435,11 +439,11 @@ fn expenses_change_alike_in_both_forms() {
     let supper =
         block_on(handle.add_expense_async(new_expense("Supper", bob, &[ana, bob]), None)).unwrap();
     let late_lunch = Expense {
-        id: Some(lunch.clone()),
+        id: lunch.clone(),
         ..new_expense("Late lunch", ana, &[ana])
     };
     let late_supper = Expense {
-        id: Some(supper.clone()),
+        id: supper.clone(),
         ..new_expense("Late supper", bob, &[bob])
     };
     assert_eq!(
@@ -466,24 +470,24 @@ fn transfers_change_alike_in_both_forms() {
     let first = handle.add_transfer(&new_transfer(ana, bob, 100)).unwrap();
     let second = block_on(handle.add_transfer_async(new_transfer(bob, ana, 200), None)).unwrap();
     let larger_first = Transfer {
-        id: Some(first.clone()),
+        id: first.clone(),
         ..new_transfer(ana, bob, 300)
     };
     let larger_second = Transfer {
-        id: Some(second.clone()),
+        id: second.clone(),
         ..new_transfer(bob, ana, 400)
     };
     assert_eq!(
         handle.replace_transfer(&larger_first),
         Ok(Transfer {
-            id: Some(first.clone()),
+            id: first.clone(),
             ..new_transfer(ana, bob, 100)
         })
     );
     assert_eq!(
         block_on(handle.replace_transfer_async(larger_second.clone(), None)),
         Ok(Transfer {
-            id: Some(second.clone()),
+            id: second.clone(),
             ..new_transfer(bob, ana, 200)
         })
     );

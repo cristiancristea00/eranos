@@ -7,7 +7,7 @@
 use eranos::ExpenseId;
 
 use super::*;
-use crate::{CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure};
+use crate::{CalendarFailure, ExpenseFailure, IdFailure, MoneyFailure, identifier_generate};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal<Record> {
@@ -204,7 +204,7 @@ fn fare() -> ExpenseItem {
 /// optional field set.
 fn dinner() -> Expense {
     Expense {
-        id: None,
+        id: identifier_generate(),
         name: "Dinner".to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
@@ -241,7 +241,7 @@ fn dinner() -> Expense {
 /// A taxi fare in lei that Bob paid, itemised: no optional field set.
 fn taxi() -> Expense {
     Expense {
-        id: None,
+        id: identifier_generate(),
         name: "Taxi".to_owned(),
         cost: Cost::Converted {
             amount: lei(5_000),
@@ -541,32 +541,26 @@ fn tips_convert_both_ways_and_refuse_what_does_not_convert() {
 #[test]
 fn an_expense_to_add_converts_both_ways() {
     for record in [dinner(), taxi()] {
-        let expense = record.to_new().unwrap();
-        assert_eq!(
-            Expense::from_library(&expense),
-            Expense {
-                id: Some(expense.id().to_string()),
-                ..record
-            }
-        );
+        assert_eq!(Expense::from_library(&record.to_new().unwrap()), record);
     }
 }
 
-/// An expense to add would lose the identifier its app gives it, take one
-/// the rules refuse, or, without one, not get a generated one.
+/// An expense to add would lose the identifier its app gives it, its own or
+/// a generated one, or take one the rules refuse.
 #[test]
 fn an_expense_to_add_keeps_the_identifier_it_carries() {
     let id = ExpenseId::new("Ωmega").unwrap();
     let named = Expense {
-        id: Some(id.to_string()),
+        id: id.to_string(),
         ..dinner()
     };
     let expense = named.to_new().unwrap();
     assert_eq!(expense.id(), id);
     assert_eq!(Expense::from_library(&expense), named);
-    assert_ne!(dinner().to_new().unwrap().id(), id);
+    let generated = dinner();
+    assert_eq!(generated.to_new().unwrap().id().as_str(), generated.id);
     let padded = Expense {
-        id: Some(" x".to_owned()),
+        id: " x".to_owned(),
         ..dinner()
     };
     assert!(matches!(
@@ -588,7 +582,7 @@ fn a_replacement_keeps_the_identifier_and_takes_every_field() {
         assert_eq!(
             Expense::from_library(&replacement),
             Expense {
-                id: Some(stored.id().to_string()),
+                id: stored.id().to_string(),
                 ..record
             }
         );

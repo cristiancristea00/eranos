@@ -11,6 +11,7 @@
 #include "EranosPaymentAccountDetailsKind.h"
 #include "EranosPaymentAccountList.h"
 #include "eranos/detail.h"
+#include "eranos/identifiers.h"
 #include "eranos/text.h"
 
 #include <stddef.h>
@@ -210,48 +211,56 @@ static inline void eranosPaymentAccountListDestroy(EranosPaymentAccountList *con
 /// A member of the group.
 typedef struct EranosMember EranosMember;
 
-/// A new member of its required fields; every other field starts absent, empty, or at its default.
+/// A new member of its required fields under the identifier @p id, such as the key an app's own store gives the member; every other field starts
+/// absent, empty, or at its default. eranosMemberCreate() generates the identifier instead.
+///
+/// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
+///   text
+/// @param firstName The first name, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param member Receives the member on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosMemberCreateWithId(char const *const id, char const *const firstName, EranosMember **const member) {
+    EranosMember_create_result const result = EranosMember_create(eranosDetailView(id), eranosDetailView(firstName));
+    *member = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// A new member of its required fields under an identifier generated when it is called, which eranosMemberCreateWithId() takes instead; every other
+/// field starts absent, empty, or at its default.
 ///
 /// @param firstName The first name, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param member Receives the member on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosMemberCreate(char const *const firstName, EranosMember **const member) {
-    EranosMember_create_result const result = EranosMember_create(eranosDetailView(firstName));
-    *member = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+    EranosText *const id = eranosTextCreate();
+    eranosIdentifierGenerate(id);
+    EranosError *const error = eranosMemberCreateWithId(eranosTextData(id), firstName, member);
+    eranosTextDestroy(id);
+    return error;
 }
 
-/// The identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds. Writes it, if
-/// present; absent otherwise.
+/// The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param member The member
-/// @param id Receives the identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group
-///   holds, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosMemberId(EranosMember const *const member, EranosText *const id) {
+/// @param id Receives the identifier, replacing what it held
+static inline void eranosMemberId(EranosMember const *const member, EranosText *const id) {
     eranosDetailClear(id);
-    bool const present = EranosMember_id(member, id).is_ok;
+    EranosMember_id(member, id);
     eranosDetailFinish(id);
-    return present;
 }
 
-/// Sets the identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds.
+/// Sets the identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param member The member
-/// @param id The identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds, as
-///   UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param id The identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosMemberSetId(EranosMember *const member, char const *const id) {
     EranosMember_set_id_result const result = EranosMember_set_id(member, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
-
-/// Clears the identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds.
-///
-/// @param member The member
-static inline void eranosMemberClearId(EranosMember *const member) { EranosMember_clear_id(member); }
 
 /// The first name.
 ///

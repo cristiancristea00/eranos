@@ -52,7 +52,7 @@ fn equal(members: &[String]) -> Split {
 /// the third and second share, listed in that order.
 fn dinner() -> Expense {
     Expense {
-        id: None,
+        id: identifier_generate(),
         name: "Dinner".to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
@@ -133,6 +133,22 @@ fn identifiers_parse_as_the_library_reads_them() {
             ),
             "{text:?}"
         );
+    }
+}
+
+/// An app that asked for a new identifier would get one that the rules
+/// refuse, that is not a UUID v7's text, or that another request also got.
+#[test]
+fn generated_identifiers_are_distinct_and_valid() {
+    let (first, second) = (identifier_generate(), identifier_generate());
+    // Distinct, and in the order they were generated.
+    assert!(first < second, "{first} and {second}");
+    for generated in [first, second] {
+        assert_eq!(identifier_parse(&generated), Ok(generated.clone()));
+        // A UUID v7, as lowercase hyphenated text.
+        assert_eq!(generated.len(), 36);
+        assert_eq!(generated.chars().nth(14), Some('7'));
+        assert_eq!(generated.to_lowercase(), generated);
     }
 }
 

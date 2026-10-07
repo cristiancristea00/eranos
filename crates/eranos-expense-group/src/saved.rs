@@ -206,7 +206,7 @@ impl SavedExpenseGroup {
                 format: self.format,
             });
         }
-        let mut builder = ExpenseGroup::builder(self.name, self.currency).id(self.id);
+        let mut builder = ExpenseGroup::builder_with_id(self.id, self.name, self.currency);
         if let Some(description) = self.description {
             builder = builder.description(description);
         }

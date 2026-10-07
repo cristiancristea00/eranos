@@ -64,9 +64,9 @@ class EntriesTest {
         for (expense in listOf(expenses.taxi, expenses.dinner)) {
             assertEquals(expense, expense.generated.converted())
             val id = flat.group.addBlocking(expense)
+            assertEquals(expense.id, id)
             val stored = present(flat.group.expenseBlocking(id))
-            assertEquals(id, stored.id)
-            assertEquals(expense, stored.withoutId())
+            assertEquals(expense, stored)
             assertValue(stored, stored.copy(), stored.copy(name = "Lunch"))
         }
     }
@@ -173,9 +173,9 @@ class EntriesTest {
             )
         assertEquals(carol, carol.generated.converted())
         val id = flat.group.addBlocking(carol)
+        assertEquals(carol.id, id)
         val stored = present(flat.group.memberBlocking(id))
-        assertEquals(id, stored.id)
-        assertEquals(carol, Member(stored.firstName, stored.lastName, stored.email, stored.phone, stored.accounts))
+        assertEquals(carol, stored)
         assertValue(stored, stored.copy(), stored.copy(firstName = "Caroline"))
         assertEquals(emptyList<PaymentAccount>(), Member("Dan").accounts)
         assertValue(mainAccount, PaymentAccount("Main account", mainAccount.details), PaymentAccount("Savings", mainAccount.details))
@@ -202,8 +202,9 @@ class EntriesTest {
             )
         assertEquals(cash, cash.generated.converted())
         val payment = flat.group.addBlocking(cash)
+        assertEquals(cash.id, payment)
         val storedCash = present(flat.group.transferBlocking(payment))
-        assertEquals(payment, storedCash.id)
+        assertEquals(cash, storedCash)
         assertEquals("10:00", storedCash.time.toString())
         assertEquals("Cash", storedCash.note)
         assertEquals(flat.euros(200), flat.group.transferAmountBlocking(payment))
@@ -212,11 +213,50 @@ class EntriesTest {
         val travel = Category("Travel")
         assertEquals(travel, travel.generated.converted())
         val trip = flat.group.addBlocking(travel)
+        assertEquals(travel.id, trip)
         val storedTravel = present(flat.group.categoryBlocking(trip))
+        assertEquals(travel, storedTravel)
         assertValue(storedTravel, storedTravel.copy(), storedTravel.copy(name = "Trips"))
+    }
 
-        val missing = assertThrows<IllegalArgumentException> { flat.group.replaceBlocking(carol) }
-        assertEquals("an entry to replace must carry its identifier", missing.message)
+    /**
+     * An entry made without an identifier that generated none when it was made, or the same one as another entry, would
+     * leave the app nothing to store the entry under, or two entries under one identifier.
+     */
+    @Test
+    fun anEntryMadeWithoutAnIdentifierGeneratesANewOne() {
+        val flat = Flat()
+        assertNotEquals(Member("Dan").id, Member("Dan").id)
+        assertNotEquals(Category("Travel").id, Category("Travel").id)
+        assertNotEquals(flat.expense("Lunch", flat.ana, listOf(flat.ana)).id, flat.expense("Lunch", flat.ana, listOf(flat.ana)).id)
+        val cost = Cost.Local(flat.euros(500))
+        assertNotEquals(Transfer(flat.bob, flat.ana, cost, flat.day).id, Transfer(flat.bob, flat.ana, cost, flat.day).id)
+    }
+
+    /**
+     * A replacement under an identifier the group does not hold that the group added instead, or refused with another
+     * failure, would store an entry the app meant to change, or hide from it that the entry it changes is gone.
+     */
+    @Test
+    fun aReplacementForAnEntryTheGroupDoesNotHoldIsRefused() {
+        val flat = Flat()
+        val group = flat.group
+        val dan = Member("Dan")
+        val travel = Category("Travel")
+        val lunch = flat.expense("Lunch", flat.ana, listOf(flat.ana, flat.bob))
+        val cash = Transfer(flat.bob, flat.ana, Cost.Local(flat.euros(500)), flat.day)
+        val unknowns =
+            listOf(
+                Refusal(call = { group.replaceBlocking(dan) }, failure = ExpenseGroupFailure.UnknownMember(dan.id)),
+                Refusal(call = { group.replaceBlocking(travel) }, failure = ExpenseGroupFailure.UnknownCategory(travel.id)),
+                Refusal(call = { group.replaceBlocking(lunch) }, failure = ExpenseGroupFailure.UnknownExpense(lunch.id)),
+                Refusal(call = { group.replaceBlocking(cash) }, failure = ExpenseGroupFailure.UnknownTransfer(cash.id)),
+            )
+        for (unknown in unknowns) {
+            val refused = assertThrows<EranosException.ExpenseGroup> { unknown.call() }
+            assertEquals(unknown.failure, refused.failure)
+        }
+        assertEquals(listOf(flat.ana, flat.bob), group.membersBlocking().map { member -> member.id })
     }
 
     /**
@@ -253,29 +293,29 @@ class EntriesTest {
         val uncategorised = group.categoriesBlocking().first().id
         val duplicates =
             listOf(
-                Duplicate(
-                    add = { group.addBlocking(Member(carol.id, "Caroline")) },
+                Refusal(
+                    call = { group.addBlocking(Member(carol.id, "Caroline")) },
                     failure = ExpenseGroupFailure.DuplicateMember(MemberId("carol")),
                 ),
-                Duplicate(
-                    add = { group.addBlocking(Category(travel.id, "Trips")) },
+                Refusal(
+                    call = { group.addBlocking(Category(travel.id, "Trips")) },
                     failure = ExpenseGroupFailure.DuplicateCategory(CategoryId("-travel")),
                 ),
-                Duplicate(
-                    add = { group.addBlocking(Category(uncategorised, "Other")) },
-                    failure = ExpenseGroupFailure.DuplicateCategory(present(uncategorised)),
+                Refusal(
+                    call = { group.addBlocking(Category(uncategorised, "Other")) },
+                    failure = ExpenseGroupFailure.DuplicateCategory(uncategorised),
                 ),
-                Duplicate(
-                    add = { group.addBlocking(lunch.copy(name = "Dinner")) },
+                Refusal(
+                    call = { group.addBlocking(lunch.copy(name = "Dinner")) },
                     failure = ExpenseGroupFailure.DuplicateExpense(ExpenseId("Lisboa · 2026")),
                 ),
-                Duplicate(
-                    add = { group.addBlocking(cash.copy(note = null)) },
+                Refusal(
+                    call = { group.addBlocking(cash.copy(note = null)) },
                     failure = ExpenseGroupFailure.DuplicateTransfer(TransferId("zz")),
                 ),
             )
         for (duplicate in duplicates) {
-            val refused = assertThrows<EranosException.ExpenseGroup> { duplicate.add() }
+            val refused = assertThrows<EranosException.ExpenseGroup> { duplicate.call() }
             assertEquals(duplicate.failure, refused.failure)
         }
         val padded = assertThrows<EranosException.Id> { group.addBlocking(Member(MemberId(" x"), "Dan")) }
@@ -308,11 +348,8 @@ private data class Expenses(
     val taxi: Expense,
 )
 
-/** An entry added under an identifier the group holds, and the failure that refuses it. */
-private class Duplicate(
-    val add: () -> Any,
+/** A call the group refuses, such as an add under an identifier it holds, and the failure it refuses it with. */
+private class Refusal(
+    val call: () -> Any,
     val failure: ExpenseGroupFailure,
 )
-
-/** This expense without its identifier, as the app built it. */
-private fun Expense.withoutId(): Expense = Expense(null, name, cost, payers, split, date, tip, time, category, description)

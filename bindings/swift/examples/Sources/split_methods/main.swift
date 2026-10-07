@@ -205,7 +205,7 @@ func printTotals(_ group: ExpenseGroup) throws(EranosError) {
     print("\(summary.totalSpent) spent over five expenses:")
     printTable(
         try group.members().compactMap { member in
-            member.id.flatMap { id in totals(of: id, in: summary) }.map { totals in
+            totals(of: member.id, in: summary).map { totals in
                 TotalRow(name: member.firstName, paid: totals.paid, consumed: totals.share, balance: "\(totals.balance)")
             }
         },

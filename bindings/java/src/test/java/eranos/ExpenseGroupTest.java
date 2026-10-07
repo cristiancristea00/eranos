@@ -7,6 +7,7 @@ package eranos;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -292,9 +293,9 @@ class ExpenseGroupTest {
     }
 
     /**
-     * A new group that dropped what it starts with, the identifier the app gave it included, or a
-     * saved one that loaded from text that is not the saved form, would start an app from another
-     * group.
+     * A new group that dropped what it starts with, the identifier the app gave it included, two
+     * new groups under one generated identifier, or a saved one that loaded from text that is not
+     * the saved form, would start an app from another group.
      */
     @Test
     void aGroupStartsWithWhatItIsGivenAndLoadsOnlyItsSavedForm() throws EranosException {
@@ -302,8 +303,9 @@ class ExpenseGroupTest {
         ExpenseGroup plain = ExpenseGroup.builder("Trip", euro).build();
         assertEquals(Optional.empty(), plain.description());
         assertEquals(Optional.empty(), plain.language());
+        assertNotEquals(plain.id(), ExpenseGroup.builder("Trip", euro).build().id());
         ExpenseGroupId lisbon = ExpenseGroupId.parse("lisbon-2026");
-        assertEquals(lisbon, ExpenseGroup.builder("Trip", euro).id(lisbon).build().id());
+        assertEquals(lisbon, ExpenseGroup.builder(lisbon, "Trip", euro).build().id());
         EranosException.Id refused =
                 assertThrows(
                         EranosException.Id.class,
@@ -339,11 +341,9 @@ class ExpenseGroupTest {
         // U+1F600 is four bytes of UTF-8 from 0xF0, and two UTF-16 units from 0xD83D; U+FF61 is
         // three bytes from 0xEF, and one unit.
         MemberId above =
-                group.addMember(Member.builder("Ana").id(new MemberId("\uD83D\uDE00")).build());
-        MemberId below = group.addMember(Member.builder("Bob").id(new MemberId("\uFF61")).build());
-        assertEquals(
-                List.of(Optional.of(below), Optional.of(above)),
-                group.members().stream().map(Member::id).toList());
+                group.addMember(Member.builder(new MemberId("\uD83D\uDE00"), "Ana").build());
+        MemberId below = group.addMember(Member.builder(new MemberId("\uFF61"), "Bob").build());
+        assertEquals(List.of(below, above), group.members().stream().map(Member::id).toList());
     }
 
     /**

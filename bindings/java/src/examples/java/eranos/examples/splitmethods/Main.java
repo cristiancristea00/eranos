@@ -288,7 +288,7 @@ public final class Main {
         System.out.printf("%s spent over five expenses:%n", summary.totalSpent());
         List<TotalRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = member.id().flatMap(id -> totals(id, summary));
+            Optional<MemberSummary> found = totals(member.id(), summary);
             found.ifPresent(
                     totals ->
                             rows.add(

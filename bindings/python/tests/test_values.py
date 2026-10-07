@@ -1,5 +1,6 @@
 """Check the values the library checks and writes: identifiers, currencies, amounts, ratios, dates, times, contacts, and accounts."""
 
+import uuid
 from collections.abc import Callable
 
 import pytest
@@ -23,6 +24,11 @@ from eranos import (
     TimeOfDay,
     Username,
     ContactError,
+    generate_category_id,
+    generate_expense_group_id,
+    generate_expense_id,
+    generate_member_id,
+    generate_transfer_id,
     parse_category_id,
     parse_expense_group_id,
     parse_expense_id,
@@ -50,6 +56,30 @@ def test_an_identifier_parses_as_the_library_reads_it() -> None:
             with pytest.raises(IdError) as refusal:
                 parse(text)
             assert refusal.value.failure == failure, text
+
+
+def test_a_generated_identifier_is_new_and_parses_as_the_library_reads_it() -> None:
+    """
+    A repeated generated identifier would collide with another entry, and one out of order would list entries out of creation order.
+
+    Every kind draws from the library's one generator a UUID v7 in lowercase hyphenated form, which the parse of every kind accepts and which
+    orders after every one generated before it.
+    """
+    generators: tuple[Callable[[], str], ...] = (
+        generate_expense_group_id,
+        generate_member_id,
+        generate_category_id,
+        generate_expense_id,
+        generate_transfer_id,
+    )
+    parsers: tuple[Callable[[str], str], ...] = (parse_expense_group_id, parse_member_id, parse_category_id, parse_expense_id, parse_transfer_id)
+    identifiers = [generate() for generate in generators + generators]
+    for parse, identifier in zip(parsers + parsers, identifiers, strict=True):
+        assert parse(identifier) == identifier
+        assert str(uuid.UUID(identifier)) == identifier
+        assert uuid.UUID(identifier).version == 7
+    assert identifiers == sorted(identifiers)
+    assert len(set(identifiers)) == len(identifiers)
 
 
 def test_a_currency_holds_what_the_library_knows_of_it() -> None:

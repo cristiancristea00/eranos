@@ -67,22 +67,20 @@ internal fun summary(
     val zero = Money(0, group.currencyBlocking())
     printTable(
         MemberCategoryRow.HEADERS,
-        group.membersBlocking().mapNotNull { member ->
-            member.id?.let { id ->
-                val totals =
-                    summary.memberCategoryTotals
-                        .firstOrNull { entry -> entry.member == id }
-                        ?.totals
-                        .orEmpty()
-                val total = { category: CategoryId? -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
-                MemberCategoryRow(
-                    name = member.firstName,
-                    food = total(categories.food),
-                    lodging = total(categories.lodging),
-                    transport = total(categories.transport),
-                    uncategorised = total(builtIn),
-                )
-            }
+        group.membersBlocking().map { member ->
+            val totals =
+                summary.memberCategoryTotals
+                    .firstOrNull { entry -> entry.member == member.id }
+                    ?.totals
+                    .orEmpty()
+            val total = { category: CategoryId? -> totals.firstOrNull { total -> total.category == category }?.total ?: zero }
+            MemberCategoryRow(
+                name = member.firstName,
+                food = total(categories.food),
+                lodging = total(categories.lodging),
+                transport = total(categories.transport),
+                uncategorised = total(builtIn),
+            )
         },
         numbersFrom = 1,
     )

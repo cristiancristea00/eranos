@@ -341,7 +341,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
     ana, bob, carol, dan, eva = people.ana, people.bob, people.carol, people.dan, people.eva
     one = Parts.parse('1')
     groceries = group.add_expense(
-        Expense(
+        Expense.create(
             name='Groceries',
             cost=LocalCost(eur('10.00')),
             payers=EqualSplit((ana,)),
@@ -351,7 +351,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
         )
     )
     apartment = group.add_expense(
-        Expense(
+        Expense.create(
             name='Apartment',
             cost=LocalCost(eur('800.00')),
             payers=EqualSplit((ana,)),
@@ -370,7 +370,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
         )
     )
     seafood = group.add_expense(
-        Expense(
+        Expense.create(
             name='Seafood dinner',
             cost=LocalCost(eur('90.00')),
             payers=EqualSplit((carol,)),
@@ -390,7 +390,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
         )
     )
     train = group.add_expense(
-        Expense(
+        Expense.create(
             name='Train to Porto',
             cost=LocalCost(eur('88.50')),
             payers=EqualSplit((bob,)),
@@ -409,7 +409,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
         )
     )
     museum = group.add_expense(
-        Expense(
+        Expense.create(
             name='Museum',
             cost=LocalCost(eur('60.00')),
             payers=EqualSplit((ana, bob)),
@@ -418,7 +418,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
         )
     )
     fado = group.add_expense(
-        Expense(
+        Expense.create(
             name='Fado night',
             cost=LocalCost(eur('54.00')),
             payers=AmountsSplit((MemberAmount(carol, eur('39.40')), MemberAmount(dan, eur('20.00')))),
@@ -431,7 +431,7 @@ def _add_expenses(group: ExpenseGroup, people: People, categories: Categories) -
         )
     )
     tour = group.add_expense(
-        Expense(
+        Expense.create(
             name='Tuk-tuk tour',
             cost=LocalCost(eur('45.00')),
             payers=EqualSplit((dan,)),

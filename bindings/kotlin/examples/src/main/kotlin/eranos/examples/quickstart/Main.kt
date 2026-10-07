@@ -119,7 +119,7 @@ fun main() {
         printTable(
             MemberRow.HEADERS,
             group.membersBlocking().mapNotNull { member ->
-                member.id?.let { id -> totals(id, summary) }?.let { totals ->
+                totals(member.id, summary)?.let { totals ->
                     MemberRow(name = member.firstName, paid = totals.paid, consumed = totals.share, balance = totals.balance)
                 }
             },

@@ -56,6 +56,7 @@ func everyKindOfExpenseConvertsAndStoresWhole() throws {
     for expense in [expenses.taxi, expenses.dinner] {
         #expect(Expense(expense.generated) == expense)
         let id = try flat.group.add(expense)
+        #expect(id == expense.id)
         let stored = try #require(try flat.group.expense(withID: id))
         #expect(stored.id == id)
         #expect(stored.cost == expense.cost)
@@ -109,6 +110,7 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     )
     #expect(Member(carol.generated) == carol)
     let id = try flat.group.add(carol)
+    #expect(id == carol.id)
     let stored = try #require(try flat.group.member(withID: id))
     #expect(stored.id == id)
     #expect("Popa" == stored.lastName)
@@ -127,6 +129,7 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     )
     #expect(Transfer(cash.generated) == cash)
     let payment = try flat.group.add(cash)
+    #expect(payment == cash.id)
     let storedCash = try #require(try flat.group.transfer(withID: payment))
     #expect(storedCash.id == payment)
     #expect("10:00" == storedCash.time?.description)
@@ -138,8 +141,29 @@ func membersAndTransfersConvertAndStoreWhole() throws {
     #expect(throws: EranosError.expenseGroup(.duplicateMember(id), detail: "member \(id) already exists")) {
         try flat.group.add(stored)
     }
-    #expect(throws: EranosError.identifierMissing(detail: "an entry to replace must carry its identifier")) {
-        try flat.group.replace(carol)
+}
+
+/// A replace that added an entry the group does not hold, instead of refusing it, would bring back
+/// an entry the app removed while its user edited it.
+@Test
+func onlyAnEntryTheGroupHoldsIsReplaced() throws {
+    let flat = try Flat()
+    let group = flat.group
+    let member = Member(firstName: "Carol")
+    #expect(throws: EranosError.expenseGroup(.unknownMember(member.id), detail: "unknown member \(member.id)")) {
+        try group.replace(member)
+    }
+    let category = Category(name: "Travel")
+    #expect(throws: EranosError.expenseGroup(.unknownCategory(category.id), detail: "unknown category \(category.id)")) {
+        try group.replace(category)
+    }
+    let expense = flat.expense("Lunch", paidBy: flat.ana, sharedBy: [flat.ana, flat.bob])
+    #expect(throws: EranosError.expenseGroup(.unknownExpense(expense.id), detail: "unknown expense \(expense.id)")) {
+        try group.replace(expense)
+    }
+    let transfer = Transfer(from: flat.ana, to: flat.bob, cost: .local(flat.euros(100)), date: flat.day)
+    #expect(throws: EranosError.expenseGroup(.unknownTransfer(transfer.id), detail: "unknown transfer \(transfer.id)")) {
+        try group.replace(transfer)
     }
 }
 

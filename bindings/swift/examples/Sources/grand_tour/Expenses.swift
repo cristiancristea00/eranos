@@ -233,9 +233,7 @@ func printFado(_ group: ExpenseGroup, _ fado: Expense) throws(EranosError) {
         expense. The fado night, at \(fado.time?.description ?? "") on \(fado.date) at \(fado.description ?? ""), was itemised; its
         \(rule) tip of \(try fado.tipAmount()) was shared \(shared):
         """)
-    if let id = fado.id {
-        try printItems(group, id)
-    }
+    try printItems(group, fado.id)
     print("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.")
 }
 

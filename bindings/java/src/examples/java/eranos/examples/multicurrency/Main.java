@@ -75,10 +75,7 @@ public final class Main {
         Money zero = new Money(0, group.currency());
         List<EntryRow> rows = new ArrayList<>();
         for (Expense expense : group.expenses()) {
-            Optional<ExpenseShares> shares =
-                    expense.id().isPresent()
-                            ? group.expenseShares(expense.id().orElseThrow())
-                            : Optional.empty();
+            Optional<ExpenseShares> shares = group.expenseShares(expense.id());
             rows.add(
                     new EntryRow(
                             expense.name(),
@@ -88,10 +85,7 @@ public final class Main {
                             shares.map(ExpenseShares::total).orElse(zero)));
         }
         for (Transfer transfer : group.transfers()) {
-            Optional<Money> amount =
-                    transfer.id().isPresent()
-                            ? group.transferAmount(transfer.id().orElseThrow())
-                            : Optional.empty();
+            Optional<Money> amount = group.transferAmount(transfer.id());
             rows.add(
                     new EntryRow(
                             "Transfer to " + names(group, List.of(transfer.to())),
@@ -115,7 +109,7 @@ public final class Main {
         Summary summary = group.summary();
         List<BalanceRow> rows = new ArrayList<>();
         for (Member member : group.members()) {
-            Optional<MemberSummary> found = member.id().flatMap(id -> totals(id, summary));
+            Optional<MemberSummary> found = totals(member.id(), summary);
             found.ifPresent(
                     totals ->
                             rows.add(

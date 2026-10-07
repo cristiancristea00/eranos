@@ -37,14 +37,29 @@ public final class ExpenseGroup implements AutoCloseable {
 
     /**
      * A builder of a new group with no members and no entries, called {@code name}, whose totals
-     * are in {@code currency}.
+     * are in {@code currency}, under an identifier generated when it is called; {@link
+     * #builder(ExpenseGroupId, String, CurrencyCode)} takes one instead.
      *
      * @param name the name
      * @param currency the group currency
      * @return the builder
      */
     public static Builder builder(String name, CurrencyCode currency) {
-        return new Builder(name, currency);
+        return builder(ExpenseGroupId.generate(), name, currency);
+    }
+
+    /**
+     * A builder of a new group with no members and no entries, called {@code name}, whose totals
+     * are in {@code currency}, under the identifier {@code id}, such as the key an app's own store
+     * gives it; {@link #builder(String, CurrencyCode)} generates one instead.
+     *
+     * @param id the identifier
+     * @param name the name
+     * @param currency the group currency
+     * @return the builder
+     */
+    public static Builder builder(ExpenseGroupId id, String name, CurrencyCode currency) {
+        return new Builder(id, name, currency);
     }
 
     /**
@@ -515,8 +530,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code member} under their identifier, or one the group generates when they have none,
-     * and returns the identifier.
+     * Adds {@code member} under their identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #addMemberAsync} waits without
      * blocking it.
@@ -536,8 +550,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code member} under their identifier, or one the group generates when they have none,
-     * and returns the identifier.
+     * Adds {@code member} under their identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -565,10 +578,10 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * @param member the member
      * @return the member as they were
-     * @throws IllegalArgumentException for a member without an identifier
      * @throws EranosException.Member as adding one does
      * @throws EranosException.PaymentAccount as adding one does
-     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownMember}
+     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownMember} for an
+     *     identifier the group does not hold
      * @throws EranosException.Id for an identifier that is not one
      */
     public Member replaceMember(Member member) throws EranosException {
@@ -582,11 +595,10 @@ public final class ExpenseGroup implements AutoCloseable {
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
-     * <p>The future fails with {@link IllegalArgumentException} for a member without an identifier;
-     * {@link EranosException.Member} as adding one does; {@link EranosException.PaymentAccount} as
-     * adding one does; {@link EranosException.ExpenseGroup} with {@link
-     * ExpenseGroupFailure.UnknownMember}; {@link EranosException.Id} for an identifier that is not
-     * one.
+     * <p>The future fails with {@link EranosException.Member} as adding one does; {@link
+     * EranosException.PaymentAccount} as adding one does; {@link EranosException.ExpenseGroup} with
+     * {@link ExpenseGroupFailure.UnknownMember} for an identifier the group does not hold; {@link
+     * EranosException.Id} for an identifier that is not one.
      *
      * @param member the member
      * @return a future of the member as they were
@@ -761,8 +773,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code category} under its identifier, or one the group generates when it has none, and
-     * returns the identifier.
+     * Adds {@code category} under its identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #addCategoryAsync} waits without
      * blocking it.
@@ -780,8 +791,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code category} under its identifier, or one the group generates when it has none, and
-     * returns the identifier.
+     * Adds {@code category} under its identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -809,11 +819,10 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * @param category the category
      * @return the category as it was
-     * @throws IllegalArgumentException for a category without an identifier
      * @throws EranosException.Category with {@link CategoryFailure.EmptyName} for a blank name
-     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownCategory}, {@link
-     *     ExpenseGroupFailure.BuiltInCategory}, or {@link
-     *     ExpenseGroupFailure.DuplicateCategoryName}
+     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownCategory} for an
+     *     identifier the group does not hold, {@link ExpenseGroupFailure.BuiltInCategory}, or
+     *     {@link ExpenseGroupFailure.DuplicateCategoryName}
      * @throws EranosException.Id for an identifier that is not one
      */
     public Category replaceCategory(Category category) throws EranosException {
@@ -827,12 +836,11 @@ public final class ExpenseGroup implements AutoCloseable {
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
-     * <p>The future fails with {@link IllegalArgumentException} for a category without an
-     * identifier; {@link EranosException.Category} with {@link CategoryFailure.EmptyName} for a
-     * blank name; {@link EranosException.ExpenseGroup} with {@link
-     * ExpenseGroupFailure.UnknownCategory}, {@link ExpenseGroupFailure.BuiltInCategory}, or {@link
-     * ExpenseGroupFailure.DuplicateCategoryName}; {@link EranosException.Id} for an identifier that
-     * is not one.
+     * <p>The future fails with {@link EranosException.Category} with {@link
+     * CategoryFailure.EmptyName} for a blank name; {@link EranosException.ExpenseGroup} with {@link
+     * ExpenseGroupFailure.UnknownCategory} for an identifier the group does not hold, {@link
+     * ExpenseGroupFailure.BuiltInCategory}, or {@link ExpenseGroupFailure.DuplicateCategoryName};
+     * {@link EranosException.Id} for an identifier that is not one.
      *
      * @param category the category
      * @return a future of the category as it was
@@ -977,8 +985,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code expense} under its identifier, or one the group generates when it has none, and
-     * returns the identifier.
+     * Adds {@code expense} under its identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #addExpenseAsync} waits without
      * blocking it.
@@ -997,8 +1004,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code expense} under its identifier, or one the group generates when it has none, and
-     * returns the identifier.
+     * Adds {@code expense} under its identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -1026,10 +1032,9 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * @param expense the expense
      * @return the expense as it was
-     * @throws IllegalArgumentException for an expense without an identifier
      * @throws EranosException.Expense as adding one does
-     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownExpense}, and as
-     *     adding one does
+     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownExpense} for an
+     *     identifier the group does not hold, and as adding one does
      * @throws EranosException.Id for an identifier that is not one
      */
     public Expense replaceExpense(Expense expense) throws EranosException {
@@ -1042,10 +1047,10 @@ public final class ExpenseGroup implements AutoCloseable {
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
-     * <p>The future fails with {@link IllegalArgumentException} for an expense without an
-     * identifier; {@link EranosException.Expense} as adding one does; {@link
-     * EranosException.ExpenseGroup} with {@link ExpenseGroupFailure.UnknownExpense}, and as adding
-     * one does; {@link EranosException.Id} for an identifier that is not one.
+     * <p>The future fails with {@link EranosException.Expense} as adding one does; {@link
+     * EranosException.ExpenseGroup} with {@link ExpenseGroupFailure.UnknownExpense} for an
+     * identifier the group does not hold, and as adding one does; {@link EranosException.Id} for an
+     * identifier that is not one.
      *
      * @param expense the expense
      * @return a future of the expense as it was
@@ -1185,8 +1190,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code transfer} under its identifier, or one the group generates when it has none, and
-     * returns the identifier.
+     * Adds {@code transfer} under its identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock by blocking its thread; {@link #addTransferAsync} waits without
      * blocking it.
@@ -1204,8 +1208,7 @@ public final class ExpenseGroup implements AutoCloseable {
     }
 
     /**
-     * Adds {@code transfer} under its identifier, or one the group generates when it has none, and
-     * returns the identifier.
+     * Adds {@code transfer} under its identifier, and returns the identifier.
      *
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
@@ -1234,10 +1237,9 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * @param transfer the transfer
      * @return the transfer as it was
-     * @throws IllegalArgumentException for a transfer without an identifier
      * @throws EranosException.Transfer as adding one does
-     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownTransfer}, and as
-     *     adding one does
+     * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownTransfer} for an
+     *     identifier the group does not hold, and as adding one does
      * @throws EranosException.Id for an identifier that is not one
      */
     public Transfer replaceTransfer(Transfer transfer) throws EranosException {
@@ -1252,10 +1254,10 @@ public final class ExpenseGroup implements AutoCloseable {
      * <p>Waits for the group's lock without blocking a thread; cancelling the future cancels the
      * call, which leaves the group as it was.
      *
-     * <p>The future fails with {@link IllegalArgumentException} for a transfer without an
-     * identifier; {@link EranosException.Transfer} as adding one does; {@link
-     * EranosException.ExpenseGroup} with {@link ExpenseGroupFailure.UnknownTransfer}, and as adding
-     * one does; {@link EranosException.Id} for an identifier that is not one.
+     * <p>The future fails with {@link EranosException.Transfer} as adding one does; {@link
+     * EranosException.ExpenseGroup} with {@link ExpenseGroupFailure.UnknownTransfer} for an
+     * identifier the group does not hold, and as adding one does; {@link EranosException.Id} for an
+     * identifier that is not one.
      *
      * @param transfer the transfer
      * @return a future of the transfer as it was
@@ -1380,20 +1382,20 @@ public final class ExpenseGroup implements AutoCloseable {
         private String description;
         private Language language;
 
-        private Builder(String name, CurrencyCode currency) {
+        private Builder(ExpenseGroupId id, String name, CurrencyCode currency) {
+            this.id = Objects.requireNonNull(id, "id");
             this.name = Objects.requireNonNull(name, "name");
             this.currency = Objects.requireNonNull(currency, "currency");
         }
 
         /**
-         * Sets the identifier; {@code null} leaves it to the group to generate one when it is
-         * built.
+         * Sets the identifier.
          *
-         * @param id the identifier, or {@code null}
+         * @param id the identifier
          * @return this builder
          */
         public Builder id(ExpenseGroupId id) {
-            this.id = id;
+            this.id = Objects.requireNonNull(id, "id");
             return this;
         }
 
@@ -1430,7 +1432,7 @@ public final class ExpenseGroup implements AutoCloseable {
         public ExpenseGroup build() throws EranosException {
             NewExpenseGroup group =
                     new NewExpenseGroup(
-                            null == id ? null : id.value(),
+                            id.value(),
                             name,
                             currency.code(),
                             description,

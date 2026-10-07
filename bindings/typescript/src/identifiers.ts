@@ -1,10 +1,11 @@
 /**
  * The identifiers of the entities: each is text of at most 64 bytes of UTF-8, not empty, without control characters, and
- * without whitespace at either end, compared byte for byte, so case matters. An app may give a new entry or a new group
- * an identifier of its own, such as the key of its own store; without one, the library generates a UUID v7 in lowercase
- * hyphenated form. Each is branded so that one entity's identifier cannot stand where another's is expected. An identifier
- * converts to its text and back, for storing it: {@link parseMemberId} and its siblings check the text, and
- * {@link memberId} and its siblings take it unchecked, for the library to check when a call carries it.
+ * without whitespace at either end, compared byte for byte, so case matters. Every entry and every group has one from the
+ * moment it is made: the app's own, such as the key of its own store, or one that {@link generateMemberId} and its
+ * siblings make, a UUID v7 in lowercase hyphenated form. Each is branded so that one entity's identifier cannot stand where
+ * another's is expected. An identifier converts to its text and back, for storing it: {@link parseMemberId} and its
+ * siblings check the text, and {@link memberId} and its siblings take it unchecked, for the library to check when a call
+ * carries it.
  *
  * @packageDocumentation
  */
@@ -73,6 +74,16 @@ export function parseExpenseGroupId(text: string): ExpenseGroupId {
 }
 
 /**
+ * A new group identifier, a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the library's one
+ * generator, so identifiers generated one after another are in increasing order.
+ *
+ * @returns The identifier
+ */
+export function generateExpenseGroupId(): ExpenseGroupId {
+    return expenseGroupId(internal.identifierGenerate());
+}
+
+/**
  * The member identifier written `text`, unchecked: a call that carries it checks it, and {@link parseMemberId} checks
  * it at once.
  *
@@ -94,6 +105,16 @@ export function memberId(text: string): MemberId {
  */
 export function parseMemberId(text: string): MemberId {
     return memberId(calling(() => internal.identifierParse(text)));
+}
+
+/**
+ * A new member identifier, a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the library's one
+ * generator, so identifiers generated one after another are in increasing order.
+ *
+ * @returns The identifier
+ */
+export function generateMemberId(): MemberId {
+    return memberId(internal.identifierGenerate());
 }
 
 /**
@@ -121,6 +142,16 @@ export function parseCategoryId(text: string): CategoryId {
 }
 
 /**
+ * A new category identifier, a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the library's one
+ * generator, so identifiers generated one after another are in increasing order.
+ *
+ * @returns The identifier
+ */
+export function generateCategoryId(): CategoryId {
+    return categoryId(internal.identifierGenerate());
+}
+
+/**
  * The expense identifier written `text`, unchecked: a call that carries it checks it, and {@link parseExpenseId} checks
  * it at once.
  *
@@ -145,6 +176,16 @@ export function parseExpenseId(text: string): ExpenseId {
 }
 
 /**
+ * A new expense identifier, a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the library's one
+ * generator, so identifiers generated one after another are in increasing order.
+ *
+ * @returns The identifier
+ */
+export function generateExpenseId(): ExpenseId {
+    return expenseId(internal.identifierGenerate());
+}
+
+/**
  * The transfer identifier written `text`, unchecked: a call that carries it checks it, and {@link parseTransferId}
  * checks it at once.
  *
@@ -166,4 +207,14 @@ export function transferId(text: string): TransferId {
  */
 export function parseTransferId(text: string): TransferId {
     return transferId(calling(() => internal.identifierParse(text)));
+}
+
+/**
+ * A new transfer identifier, a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the library's one
+ * generator, so identifiers generated one after another are in increasing order.
+ *
+ * @returns The identifier
+ */
+export function generateTransferId(): TransferId {
+    return transferId(internal.identifierGenerate());
 }

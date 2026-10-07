@@ -3,14 +3,16 @@ package eranos
 /**
  * Money one member paid another, such as a repayment.
  *
- * A transfer to add carries the identifier the app gives it, such as the key of its own store, or none, and then
- * [ExpenseGroup.add] generates one. To change a transfer, read it from the group, [copy] it with the changes, and pass the
- * copy to [ExpenseGroup.replace].
+ * A transfer has its identifier from the moment it is made: the app's own, such as the key of its own store, or a generated
+ * one. To change a transfer, read it from the group, [copy] it with the changes, and pass the copy to [ExpenseGroup.replace].
+ *
+ * @constructor A transfer of [cost] on [date], from one member to another, under the identifier [id]; the constructor
+ *   without [id] generates one.
  */
 @Suppress("LongParameterList") // A transfer has the library's fields; the public constructors default the optional ones.
 public class Transfer(
-    /** The identifier: the app's own or `null` for a transfer to add, and set for one the group holds. */
-    public val id: TransferId?,
+    /** The identifier, which the app gives: its own, or one [TransferId.generate] makes. */
+    public val id: TransferId,
     /** The member who paid. */
     public val from: MemberId,
     /** The member who was paid. */
@@ -24,7 +26,10 @@ public class Transfer(
     /** A note on the transfer. */
     public val note: String? = null,
 ) {
-    /** A transfer to add, of [cost] on [date], from one member to another, under an identifier the group generates. */
+    /**
+     * A transfer of [cost] on [date], from one member to another, under an identifier [TransferId.generate] makes; the
+     * constructor with [id] takes the app's.
+     */
     public constructor(
         from: MemberId,
         to: MemberId,
@@ -32,11 +37,11 @@ public class Transfer(
         date: CalendarDate,
         time: TimeOfDay? = null,
         note: String? = null,
-    ) : this(null, from, to, cost, date, time, note)
+    ) : this(TransferId.generate(), from, to, cost, date, time, note)
 
     /** The transfer as the generated code holds it. */
     internal val generated: eranos.internal.Transfer
-        get() = eranos.internal.Transfer(id?.value, from.value, to.value, cost.generated, date.generated, time?.generated, note)
+        get() = eranos.internal.Transfer(id.value, from.value, to.value, cost.generated, date.generated, time?.generated, note)
 
     /** This transfer with the given fields changed; the identifier stays, so the copy can replace the transfer. */
     public fun copy(
@@ -69,7 +74,7 @@ public class Transfer(
 /** The transfer the generated code holds as [this]. */
 internal fun eranos.internal.Transfer.converted(): Transfer =
     Transfer(
-        id?.let(::TransferId),
+        TransferId(id),
         MemberId(from),
         MemberId(to),
         cost.converted(),

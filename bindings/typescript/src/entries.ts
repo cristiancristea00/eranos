@@ -1,7 +1,7 @@
 /**
  * The entries of a group: its members, categories, expenses, and transfers, and the splits, costs, and tips they hold.
- * Every entry is a plain object: one to add has the `id` the app gives it, or none, for the library to generate one, and one
- * the group holds has its `id`.
+ * Every entry is a plain object with its `id` from the moment it is made: a `{ id, … }` literal takes the app's own, and
+ * {@link createMember} and its siblings take the other fields and generate one.
  *
  * @packageDocumentation
  */
@@ -9,7 +9,20 @@
 import { CalendarDate, TimeOfDay } from './calendar.js';
 import { Email, Iban, PhoneNumber, Username } from './contact.js';
 import { calling } from './converting.js';
-import { type CategoryId, type ExpenseId, type MemberId, type TransferId, categoryId, expenseId, memberId, transferId } from './identifiers.js';
+import {
+    type CategoryId,
+    type ExpenseId,
+    type MemberId,
+    type TransferId,
+    categoryId,
+    expenseId,
+    generateCategoryId,
+    generateExpenseId,
+    generateMemberId,
+    generateTransferId,
+    memberId,
+    transferId,
+} from './identifiers.js';
 import * as internal from './internal/eranos.js';
 import { Money } from './money.js';
 import { ExchangeRate, Parts, Percentage } from './ratios.js';
@@ -357,16 +370,13 @@ function generatedTipDistribution(distribution: TipDistribution): internal.TipDi
 /**
  * Something bought for the group: what it cost, who paid, and how it divides.
  *
- * A new expense has the `id` the app gives it, or none, and then {@link ExpenseGroup.addExpense} generates one. To change an
- * expense, read it from the group, spread it into a new object with the changes, and pass that to
- * {@link ExpenseGroup.replaceExpense}.
+ * A new expense has its identifier from the moment it is made: a `{ id, … }` literal takes the app's own, and
+ * {@link createExpense} generates one. To change an expense, read it from the group, spread it into a new object with the
+ * changes, and pass that to {@link ExpenseGroup.replaceExpense}.
  */
 export interface Expense {
-    /**
-     * The identifier: the app's own for an expense to add, or absent for the library to generate one, and present for an
-     * expense the group holds or one to replace.
-     */
-    readonly id?: ExpenseId;
+    /** The identifier, which the app gives: its own, or one that {@link generateExpenseId} makes. */
+    readonly id: ExpenseId;
     /** What was bought. */
     readonly name: string;
     /** What it cost. */
@@ -388,13 +398,26 @@ export interface Expense {
 }
 
 /**
+ * The expense that `fields` describe, under an identifier this call generates; a `{ id, … }` literal takes the app's own
+ * instead.
+ *
+ * @param fields - Every field of the expense but its identifier
+ * @returns The expense
+ */
+export function createExpense(fields: Omit<Expense, 'id'>): Expense {
+    // The generated identifier comes last, so that an `id` the fields carry at run time, which `Omit` lets through, does not
+    // replace it.
+    return { ...fields, id: generateExpenseId() };
+}
+
+/**
  * The expense the generated code holds as `expense`.
  *
  * @internal
  */
 export function convertedExpense(expense: internal.Expense): Expense {
     return {
-        ...(undefined === expense.id ? {} : { id: expenseId(expense.id) }),
+        id: expenseId(expense.id),
         name: expense.name,
         cost: convertedCost(expense.cost),
         payers: convertedSplit(expense.payers),
@@ -414,7 +437,7 @@ export function convertedExpense(expense: internal.Expense): Expense {
  */
 export function generatedExpense(expense: Expense): internal.Expense {
     return internal.Expense.create({
-        ...(undefined === expense.id ? {} : { id: expense.id }),
+        id: expense.id,
         name: expense.name,
         cost: generatedCost(expense.cost),
         payers: generatedSplit(expense.payers),
@@ -508,14 +531,12 @@ function generatedPaymentAccountDetails(details: PaymentAccountDetails): interna
 /**
  * A person in the group: a first name, and optionally more ways to reach and pay them.
  *
- * A new member has the `id` the app gives them, or none, and then {@link ExpenseGroup.addMember} generates one.
+ * A new member has their identifier from the moment they are made: a `{ id, … }` literal takes the app's own, and
+ * {@link createMember} generates one.
  */
 export interface Member {
-    /**
-     * The identifier: the app's own for a member to add, or absent for the library to generate one, and present for a member
-     * the group holds or one to replace.
-     */
-    readonly id?: MemberId;
+    /** The identifier, which the app gives: its own, or one that {@link generateMemberId} makes. */
+    readonly id: MemberId;
     /** The first name. */
     readonly firstName: string;
     /** The last name. */
@@ -529,13 +550,26 @@ export interface Member {
 }
 
 /**
+ * The member that `fields` describe, under an identifier this call generates; a `{ id, … }` literal takes the app's own
+ * instead.
+ *
+ * @param fields - Every field of the member but their identifier
+ * @returns The member
+ */
+export function createMember(fields: Omit<Member, 'id'>): Member {
+    // The generated identifier comes last, so that an `id` the fields carry at run time, which `Omit` lets through, does not
+    // replace it.
+    return { ...fields, id: generateMemberId() };
+}
+
+/**
  * The member the generated code holds as `member`.
  *
  * @internal
  */
 export function convertedMember(member: internal.Member): Member {
     return {
-        ...(undefined === member.id ? {} : { id: memberId(member.id) }),
+        id: memberId(member.id),
         firstName: member.firstName,
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
         ...(undefined === member.email ? {} : { email: Email.known(member.email) }),
@@ -551,7 +585,7 @@ export function convertedMember(member: internal.Member): Member {
  */
 export function generatedMember(member: Member): internal.Member {
     return internal.Member.create({
-        ...(undefined === member.id ? {} : { id: member.id }),
+        id: member.id,
         firstName: member.firstName,
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
         ...(undefined === member.email ? {} : { email: member.email.toString() }),
@@ -565,17 +599,27 @@ export function generatedMember(member: Member): internal.Member {
 /**
  * A label the group gives expenses: "Food".
  *
- * A new category has the `id` the app gives it, or none, and then {@link ExpenseGroup.addCategory} generates one. The
- * built-in category, Uncategorised, holds every expense without another.
+ * A new category has its identifier from the moment it is made: a `{ id, … }` literal takes the app's own, and
+ * {@link createCategory} generates one. The built-in category, Uncategorised, holds every expense without another.
  */
 export interface Category {
-    /**
-     * The identifier: the app's own for a category to add, or absent for the library to generate one, and present for a
-     * category the group holds or one to rename.
-     */
-    readonly id?: CategoryId;
+    /** The identifier, which the app gives: its own, or one that {@link generateCategoryId} makes. */
+    readonly id: CategoryId;
     /** The name, which no other category of the group shares. */
     readonly name: string;
+}
+
+/**
+ * The category that `fields` describe, under an identifier this call generates; a `{ id, … }` literal takes the app's own
+ * instead.
+ *
+ * @param fields - Every field of the category but its identifier
+ * @returns The category
+ */
+export function createCategory(fields: Omit<Category, 'id'>): Category {
+    // The generated identifier comes last, so that an `id` the fields carry at run time, which `Omit` lets through, does not
+    // replace it.
+    return { ...fields, id: generateCategoryId() };
 }
 
 /**
@@ -584,7 +628,7 @@ export interface Category {
  * @internal
  */
 export function convertedCategory(category: internal.Category): Category {
-    return { ...(undefined === category.id ? {} : { id: categoryId(category.id) }), name: category.name };
+    return { id: categoryId(category.id), name: category.name };
 }
 
 /**
@@ -593,20 +637,18 @@ export function convertedCategory(category: internal.Category): Category {
  * @internal
  */
 export function generatedCategory(category: Category): internal.Category {
-    return internal.Category.create({ ...(undefined === category.id ? {} : { id: category.id }), name: category.name });
+    return internal.Category.create({ id: category.id, name: category.name });
 }
 
 /**
  * Money one member paid another, such as a repayment.
  *
- * A new transfer has the `id` the app gives it, or none, and then {@link ExpenseGroup.addTransfer} generates one.
+ * A new transfer has its identifier from the moment it is made: a `{ id, … }` literal takes the app's own, and
+ * {@link createTransfer} generates one.
  */
 export interface Transfer {
-    /**
-     * The identifier: the app's own for a transfer to add, or absent for the library to generate one, and present for a
-     * transfer the group holds or one to replace.
-     */
-    readonly id?: TransferId;
+    /** The identifier, which the app gives: its own, or one that {@link generateTransferId} makes. */
+    readonly id: TransferId;
     /** The member who paid. */
     readonly from: MemberId;
     /** The member who was paid. */
@@ -622,13 +664,26 @@ export interface Transfer {
 }
 
 /**
+ * The transfer that `fields` describe, under an identifier this call generates; a `{ id, … }` literal takes the app's own
+ * instead.
+ *
+ * @param fields - Every field of the transfer but its identifier
+ * @returns The transfer
+ */
+export function createTransfer(fields: Omit<Transfer, 'id'>): Transfer {
+    // The generated identifier comes last, so that an `id` the fields carry at run time, which `Omit` lets through, does not
+    // replace it.
+    return { ...fields, id: generateTransferId() };
+}
+
+/**
  * The transfer the generated code holds as `transfer`.
  *
  * @internal
  */
 export function convertedTransfer(transfer: internal.Transfer): Transfer {
     return {
-        ...(undefined === transfer.id ? {} : { id: transferId(transfer.id) }),
+        id: transferId(transfer.id),
         from: memberId(transfer.from),
         to: memberId(transfer.to),
         cost: convertedCost(transfer.cost),
@@ -645,7 +700,7 @@ export function convertedTransfer(transfer: internal.Transfer): Transfer {
  */
 export function generatedTransfer(transfer: Transfer): internal.Transfer {
     return internal.Transfer.create({
-        ...(undefined === transfer.id ? {} : { id: transfer.id }),
+        id: transfer.id,
         from: transfer.from,
         to: transfer.to,
         cost: generatedCost(transfer.cost),

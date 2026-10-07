@@ -338,9 +338,7 @@ final class Expenses {
                                 rule,
                                 fado.tipAmount(),
                                 shared));
-        if (fado.id().isPresent()) {
-            printItems(group, fado.id().orElseThrow());
-        }
+        printItems(group, fado.id());
         System.out.println("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
     }
 

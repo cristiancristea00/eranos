@@ -429,7 +429,7 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 }
 
 /// The identifier of the built-in category, which the group lists first.
-[[nodiscard]] CategoryId builtInCategory(ExpenseGroup const &group) { return group.categories().at(0).id.value(); }
+[[nodiscard]] CategoryId builtInCategory(ExpenseGroup const &group) { return group.categories().at(0).id; }
 
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
 void printBalances(ExpenseGroup const &group) {
@@ -438,7 +438,7 @@ void printBalances(ExpenseGroup const &group) {
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
         // The summary lists the members with a total; every total of the others is zero.
-        auto const found = totalsOf(summary, member.id.value());
+        auto const found = totalsOf(summary, member.id);
         if (found.has_value()) {
             rows.push_back({
                 .name = member.firstName,
@@ -486,7 +486,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
         if (shown(amountOf(expense.cost).currency)) {
-            auto const shares = must(group.expenseShares(expense.id.value()));
+            auto const shares = must(group.expenseShares(expense.id));
             rows.push_back({
                 .name = expense.name,
                 .payer = names(group, must(participants(expense.payers))),
@@ -498,7 +498,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
     }
     for (auto const &transfer : group.transfers()) {
         if (shown(amountOf(transfer.cost).currency)) {
-            auto const converted = must(group.transferAmount(transfer.id.value()));
+            auto const converted = must(group.transferAmount(transfer.id));
             rows.push_back({
                 .name = std::format("Transfer to {}", firstName(group, transfer.to)),
                 .payer = firstName(group, transfer.from),
@@ -658,9 +658,7 @@ void validation(ExpenseGroup &group) {
     section("3. Categories");
     auto const food = must(group.addCategory(Category("Food")));
     // An app that keeps its categories elsewhere gives them its own keys.
-    Category lodgingCategory("Lodging");
-    lodgingCategory.id = must(CategoryId::parse("lodging"));
-    auto const lodging = must(group.addCategory(lodgingCategory));
+    auto const lodging = must(group.addCategory(Category(must(CategoryId::parse("lodging")), "Lodging")));
     auto const transport = must(group.addCategory(Category("Transport")));
     auto const homonym = refusal(group.addCategory(Category("FOOD")));
     auto stored = must(group.category(transport)).value();
@@ -697,9 +695,9 @@ void validation(ExpenseGroup &group) {
     check("lodging" == lodging.value(), "Lodging is under the identifier the app gave it");
     std::vector<CategoryId> order;
     for (auto const &category : group.categories()) {
-        order.push_back(category.id.value());
+        order.push_back(category.id);
     }
-    check(order == std::vector{uncategorised.id.value(), food, transport, lodging}, "lodging follows the generated identifiers");
+    check(order == std::vector{uncategorised.id, food, transport, lodging}, "lodging follows the generated identifiers");
     return {.food = food, .lodging = lodging, .transport = transport};
 }
 
@@ -833,19 +831,8 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
         MemberAmount(people.carol, eur("24.50")),
         MemberAmount(people.eva, eur("15.00")),
     };
-    Expense fadoNight("Fado night", LocalCost{eur("54.00")},
-                      AmountsSplit{{MemberAmount(people.carol, eur("39.40")), MemberAmount(people.dan, eur("20.00"))}},
-                      ItemisedExpenseSplit{fadoItems(people)}, october(4));
-    fadoNight.category = categories.food;
-    fadoNight.description = "Tasca do Chico";
-    fadoNight.time = must(TimeOfDay::of(22, 15));
-    fadoNight.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
-    Expense ride("Tuk-tuk tour", LocalCost{eur("45.00")}, EqualSplit{{people.dan}},
-                 WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan, people.eva}}}, october(5));
-    ride.category = categories.transport;
-    ride.tip = TipRule(FixedTipValue{eur("5.00")}, TipDistribution::EQUAL);
-    // The group gives each expense its identifier as it adds it: an initialiser of Expenses would add them in the order of
-    // its fields, not this one.
+    // Each expense draws its identifier when it is made: an initialiser of Expenses would make them in the order of its
+    // fields, not this one.
     auto const groceries =
         must(group.addExpense(inCategory(Expense("Groceries", LocalCost{eur("10.00")}, EqualSplit{{people.ana}},
                                                  WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}, october(1)),
@@ -862,7 +849,18 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
     auto const museum =
         must(group.addExpense(Expense("Museum", LocalCost{eur("60.00")}, EqualSplit{{people.ana, people.bob}},
                                       WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan}}}, october(3))));
+    Expense fadoNight("Fado night", LocalCost{eur("54.00")},
+                      AmountsSplit{{MemberAmount(people.carol, eur("39.40")), MemberAmount(people.dan, eur("20.00"))}},
+                      ItemisedExpenseSplit{fadoItems(people)}, october(4));
+    fadoNight.category = categories.food;
+    fadoNight.description = "Tasca do Chico";
+    fadoNight.time = must(TimeOfDay::of(22, 15));
+    fadoNight.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, TipDistribution::PROPORTIONAL);
     auto const fado = must(group.addExpense(fadoNight));
+    Expense ride("Tuk-tuk tour", LocalCost{eur("45.00")}, EqualSplit{{people.dan}},
+                 WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol, people.dan, people.eva}}}, october(5));
+    ride.category = categories.transport;
+    ride.tip = TipRule(FixedTipValue{eur("5.00")}, TipDistribution::EQUAL);
     auto const tour = must(group.addExpense(ride));
     return {
         .apartment = apartment,
@@ -894,7 +892,7 @@ void printFado(ExpenseGroup const &group, Expense const &fado) {
                  "expense. The fado night, at {} on {} at {}, was itemised; its\n"
                  "{} tip of {} was shared {}:",
                  fado.time.value().toString(), fado.date.toString(), fado.description.value_or(""), rule, must(tipAmount(fado)).toString(), shared);
-    printItems(group, fado.id.value());
+    printItems(group, fado.id);
     printLine("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
 }
 
@@ -973,12 +971,14 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
     dinner.cost = LocalCost{eur("99.00")};
     dinner.description = "Cervejaria Ramiro";
     auto const previous = must(group.replaceExpense(dinner));
-    // Bob entered the coffee twice.
-    auto const coffee = inCategory(Expense("Coffee", LocalCost{eur("6.00")}, EqualSplit{{people.bob}},
-                                           WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}, october(5)),
-                                   categories.food);
-    static_cast<void>(must(group.addExpense(coffee)));
-    auto const copy = must(group.addExpense(coffee));
+    // Bob entered the coffee twice, so each entry has an identifier of its own.
+    auto const coffee = [&] {
+        return inCategory(Expense("Coffee", LocalCost{eur("6.00")}, EqualSplit{{people.bob}},
+                                  WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}, october(5)),
+                          categories.food);
+    };
+    static_cast<void>(must(group.addExpense(coffee())));
+    auto const copy = must(group.addExpense(coffee()));
     auto const removed = must(group.removeExpense(copy));
     // Dan's part of the apartment was 120.00, not 100.00.
     auto const first = must(group.addTransfer(Transfer(people.dan, people.ana, LocalCost{eur("100.00")}, october(5))));
@@ -1074,11 +1074,11 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) {
     auto const summary = group.summary();
     std::vector<StatusRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id.value());
+        auto const found = totalsOf(summary, member.id);
         if (found.has_value()) {
             rows.push_back({
                 .name = member.firstName,
-                .status = must(group.isArchived(member.id.value())) ? "archived" : "active",
+                .status = must(group.isArchived(member.id)) ? "archived" : "active",
                 .balance = toString(found->balance),
             });
         }
@@ -1130,7 +1130,7 @@ void summary(ExpenseGroup const &group, People const &people, Categories const &
     Money const zero(0, group.currency());
     std::vector<MemberCategoryRow> rows;
     for (auto const &member : group.members()) {
-        auto const own = byCategory(totals, member.id.value());
+        auto const own = byCategory(totals, member.id);
         rows.push_back({
             .name = member.firstName,
             .food = totalOf(own, categories.food).value_or(zero).toString(),
@@ -1432,8 +1432,7 @@ void datesAndIdentifiers(ExpenseGroup const &group, People const &people) {
             {.input = "24:00", .result = message(refusal(TimeOfDay::of(24, 0)))},
             {
                 .input = "Ana's identifier",
-                .result = std::format("{}, the same after a round trip: {}", people.ana.value(),
-                                      (std::optional<MemberId>(people.ana) == found ? "true" : "false")),
+                .result = std::format("{}, the same after a round trip: {}", people.ana.value(), (people.ana == found ? "true" : "false")),
             },
             {.input = "empty text", .result = identifierRefusal(group, "", Failure::ID_EMPTY)},
             {.input = "ana after a space", .result = identifierRefusal(group, " ana", Failure::ID_SURROUNDING_WHITESPACE)},
@@ -1445,7 +1444,7 @@ void datesAndIdentifiers(ExpenseGroup const &group, People const &people) {
         2);
     check(1 == date.day() && 10 == date.month() && 2026 == date.year(), "the date reads as 1 October 2026");
     check(22 == time.hour() && 15 == time.minute(), "the time reads as 22:15");
-    check(std::optional<MemberId>(people.ana) == found, "Ana's identifier comes back the same");
+    check(people.ana == found, "Ana's identifier comes back the same");
 }
 
 /// Prints the values on their own: currencies, amounts, ratios, dates, times, identifiers, and language tags.

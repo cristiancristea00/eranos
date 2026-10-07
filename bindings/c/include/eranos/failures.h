@@ -173,8 +173,6 @@ static constexpr EranosErrorKind ERANOS_ERROR_KIND_TRANSFER = EranosErrorKind_Tr
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_EXPENSE_GROUP = EranosErrorKind_ExpenseGroup;
 /// A `LanguageError`, about a language tag.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_LANGUAGE = EranosErrorKind_Language;
-/// An entry to replace carried no identifier to find it by.
-static constexpr EranosErrorKind ERANOS_ERROR_KIND_IDENTIFIER_MISSING = EranosErrorKind_IdentifierMissing;
 /// A saved group that is not JSON of the saved form, at `line` and `column`.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_INVALID_JSON = EranosErrorKind_InvalidJson;
 /// Text that is not UTF-8, which the C and C++ APIs refuse before the library sees it.

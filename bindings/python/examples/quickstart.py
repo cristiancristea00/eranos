@@ -105,17 +105,21 @@ def main() -> None:
     )
 
     section('1. Members')
-    ana = group.add_member(Member(first_name='Ana'))
-    bob = group.add_member(Member(first_name='Bob'))
-    carol = group.add_member(Member(first_name='Carol'))
+    ana = group.add_member(Member.create(first_name='Ana'))
+    bob = group.add_member(Member.create(first_name='Bob'))
+    carol = group.add_member(Member.create(first_name='Carol'))
     print_lines(f'{len(group.members())} people joined the group: {names(group, (ana, bob, carol))}.')
 
     section('2. Expenses')
     print_lines('Each expense records who paid and who shares it. Here everyone shares everything', 'equally.')
     friday = CalendarDate(2026, 9, 25)
     everyone = WholeExpenseSplit(EqualSplit((ana, bob, carol)))
-    group.add_expense(Expense(name='Cabin', cost=LocalCost(Money.parse('240.00', euro)), payers=EqualSplit((ana,)), split=everyone, date=friday))
-    group.add_expense(Expense(name='Groceries', cost=LocalCost(Money.parse('60.00', euro)), payers=EqualSplit((bob,)), split=everyone, date=friday))
+    group.add_expense(
+        Expense.create(name='Cabin', cost=LocalCost(Money.parse('240.00', euro)), payers=EqualSplit((ana,)), split=everyone, date=friday)
+    )
+    group.add_expense(
+        Expense.create(name='Groceries', cost=LocalCost(Money.parse('60.00', euro)), payers=EqualSplit((bob,)), split=everyone, date=friday)
+    )
     print_table(
         ExpenseRow,
         [
@@ -141,7 +145,7 @@ def main() -> None:
         [
             MemberRow(name=member.first_name, paid=found.paid, consumed=found.share, balance=found.balance)
             for member in group.members()
-            if member.id is not None and (found := totals(member.id, summary)) is not None
+            if (found := totals(member.id, summary)) is not None
         ],
         1,
     )

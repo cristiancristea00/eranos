@@ -6,10 +6,11 @@ import java.util.Optional;
 /**
  * Money one member paid another, such as a repayment.
  *
- * <p>A new transfer takes the identifier the app gives it through {@link Builder#id}, or none, and
- * then {@link ExpenseGroup#addTransfer} generates one. To change a transfer, read it from the
- * group, edit it through {@link #toBuilder}, and pass the result to {@link
- * ExpenseGroup#replaceTransfer}.
+ * <p>A transfer has an identifier from the moment its builder starts: the one given to {@link
+ * #builder(TransferId, MemberId, MemberId, Cost, CalendarDate)}, or one that {@link
+ * #builder(MemberId, MemberId, Cost, CalendarDate)} generates, and keeps it through every edit. To
+ * change a transfer, read it from the group, edit it through {@link #toBuilder}, and pass the
+ * result to {@link ExpenseGroup#replaceTransfer}.
  */
 public final class Transfer {
     private final TransferId id;
@@ -31,7 +32,9 @@ public final class Transfer {
     }
 
     /**
-     * A builder of a transfer to add, of {@code cost} on {@code date}, from one member to another.
+     * A builder of a transfer to add, of {@code cost} on {@code date}, from one member to another,
+     * under an identifier generated when it is called; {@link #builder(TransferId, MemberId,
+     * MemberId, Cost, CalendarDate)} takes one instead.
      *
      * @param from the member who paid
      * @param to the member who was paid
@@ -40,7 +43,24 @@ public final class Transfer {
      * @return the builder
      */
     public static Builder builder(MemberId from, MemberId to, Cost cost, CalendarDate date) {
-        return new Builder(null, from, to, cost, date);
+        return builder(TransferId.generate(), from, to, cost, date);
+    }
+
+    /**
+     * A builder of a transfer to add, of {@code cost} on {@code date}, from one member to another,
+     * under the identifier {@code id}, such as the key an app's own store gives it; {@link
+     * #builder(MemberId, MemberId, Cost, CalendarDate)} generates one instead.
+     *
+     * @param id the identifier
+     * @param from the member who paid
+     * @param to the member who was paid
+     * @param cost what was paid
+     * @param date the day it was paid
+     * @return the builder
+     */
+    public static Builder builder(
+            TransferId id, MemberId from, MemberId to, Cost cost, CalendarDate date) {
+        return new Builder(id, from, to, cost, date);
     }
 
     /**
@@ -61,7 +81,7 @@ public final class Transfer {
      */
     static Transfer converted(eranos.internal.Transfer transfer) {
         return new Builder(
-                        null == transfer.id() ? null : new TransferId(transfer.id()),
+                        new TransferId(transfer.id()),
                         new MemberId(transfer.from()),
                         new MemberId(transfer.to()),
                         Conversions.converted(transfer.cost()),
@@ -78,7 +98,7 @@ public final class Transfer {
      */
     eranos.internal.Transfer generated() {
         return new eranos.internal.Transfer(
-                null == id ? null : id.value(),
+                id.value(),
                 from.value(),
                 to.value(),
                 Conversions.generated(cost),
@@ -90,10 +110,10 @@ public final class Transfer {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for a transfer to add under one the group generates
+     * @return the identifier
      */
-    public Optional<TransferId> id() {
-        return Optional.ofNullable(id);
+    public TransferId id() {
+        return id;
     }
 
     /**
@@ -153,7 +173,7 @@ public final class Transfer {
     @Override
     public boolean equals(Object other) {
         return other instanceof Transfer transfer
-                && Objects.equals(id, transfer.id)
+                && id.equals(transfer.id)
                 && from.equals(transfer.from)
                 && to.equals(transfer.to)
                 && cost.equals(transfer.cost)
@@ -201,14 +221,13 @@ public final class Transfer {
         }
 
         /**
-         * Sets the identifier; {@code null} leaves it to the group to generate one when it adds the
-         * transfer.
+         * Sets the identifier.
          *
-         * @param id the identifier, or {@code null}
+         * @param id the identifier
          * @return this builder
          */
         public Builder id(TransferId id) {
-            this.id = id;
+            this.id = Objects.requireNonNull(id, "id");
             return this;
         }
 

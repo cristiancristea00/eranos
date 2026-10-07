@@ -2,16 +2,16 @@ internal import EranosGenerated
 
 /// A person in the group: a first name, and optionally more ways to reach and pay them.
 ///
-/// A member to add carries the identifier the app gives them, or none, and then
-/// `ExpenseGroup.add(_:)` returns one the library generates.
+/// A member has an identifier from the moment they are made: the app's own, which
+/// ``init(id:firstName:lastName:email:phone:accounts:)`` takes, or one that
+/// ``init(firstName:lastName:email:phone:accounts:)`` generates.
 public struct Member: Hashable, Sendable {
     // `ID` is the name Swift gives an identifier type, as `Identifiable.ID` does.
     /// The identifier of a member.
     public typealias ID = Identifier<Self> // swiftlint:disable:this type_name
 
-    /// The identifier: the app's own for a member to add, or absent for the library to generate
-    /// one, and present for a member the group holds or one to replace.
-    public var id: ID?
+    /// The identifier, which the app gives: its own, or one ``Identifier/generate()`` makes.
+    public var id: ID
 
     /// The first name.
     public var firstName: String
@@ -30,7 +30,7 @@ public struct Member: Hashable, Sendable {
 
     var generated: EranosGenerated.Member {
         .init(
-            id: id?.rawValue,
+            id: id.rawValue,
             firstName: firstName,
             lastName: lastName,
             email: email?.description,
@@ -39,9 +39,11 @@ public struct Member: Hashable, Sendable {
         )
     }
 
-    /// A member to add, called `firstName`, under `id`, or one the library generates.
+    /// A member called `firstName`, under `id`, which the app gives: its own, or one
+    /// ``Identifier/generate()`` makes; ``init(firstName:lastName:email:phone:accounts:)``
+    /// generates it.
     public init(
-        id: ID? = nil,
+        id: ID,
         firstName: String,
         lastName: String? = nil,
         email: Email? = nil,
@@ -56,9 +58,28 @@ public struct Member: Hashable, Sendable {
         self.accounts = accounts
     }
 
+    /// A member called `firstName`, under an identifier ``Identifier/generate()`` makes when this
+    /// is called; ``init(id:firstName:lastName:email:phone:accounts:)`` takes the app's own.
+    public init(
+        firstName: String,
+        lastName: String? = nil,
+        email: Email? = nil,
+        phone: PhoneNumber? = nil,
+        accounts: [PaymentAccount] = []
+    ) {
+        self.init(
+            id: .generate(),
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            phone: phone,
+            accounts: accounts
+        )
+    }
+
     init(_ member: EranosGenerated.Member) {
         self.init(
-            id: member.id.map { ID(rawValue: $0) },
+            id: ID(rawValue: member.id),
             firstName: member.firstName,
             lastName: member.lastName,
             email: member.email.map { Email(known: $0) },

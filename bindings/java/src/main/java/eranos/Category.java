@@ -1,37 +1,38 @@
 package eranos;
 
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * A label the group gives expenses: "Food".
  *
- * <p>A new category takes the identifier the app gives it through {@link #Category(CategoryId,
- * String)}, or none, and then {@link ExpenseGroup#addCategory} generates one. The built-in
- * category, Uncategorised, holds every expense without another.
+ * <p>A category has the identifier given to {@link #Category(CategoryId, String)}, or one that
+ * {@link #Category(String)} generates, and {@link #renamed} keeps it. The built-in category,
+ * Uncategorised, holds every expense without another.
  */
 public final class Category {
     private final CategoryId id;
     private final String name;
 
     /**
-     * A category to add under the identifier {@code id}, called {@code name}.
-     *
-     * @param id the identifier, or {@code null} for the group to generate one
-     * @param name the name, which no other category of the group may share
-     */
-    public Category(CategoryId id, String name) {
-        this.id = id;
-        this.name = Objects.requireNonNull(name, "name");
-    }
-
-    /**
-     * A category to add, called {@code name}, under an identifier the group generates.
+     * A category to add, called {@code name}, under an identifier generated when it is called;
+     * {@link #Category(CategoryId, String)} takes one instead.
      *
      * @param name the name, which no other category of the group may share
      */
     public Category(String name) {
-        this(null, name);
+        this(CategoryId.generate(), name);
+    }
+
+    /**
+     * A category to add, called {@code name}, under the identifier {@code id}, such as the key an
+     * app's own store gives it; {@link #Category(String)} generates one instead.
+     *
+     * @param id the identifier
+     * @param name the name, which no other category of the group may share
+     */
+    public Category(CategoryId id, String name) {
+        this.id = Objects.requireNonNull(id, "id");
+        this.name = Objects.requireNonNull(name, "name");
     }
 
     /**
@@ -41,8 +42,7 @@ public final class Category {
      * @return the category
      */
     static Category converted(eranos.internal.Category category) {
-        return new Category(
-                null == category.id() ? null : new CategoryId(category.id()), category.name());
+        return new Category(new CategoryId(category.id()), category.name());
     }
 
     /**
@@ -51,7 +51,7 @@ public final class Category {
      * @return the generated category
      */
     eranos.internal.Category generated() {
-        return new eranos.internal.Category(null == id ? null : id.value(), name);
+        return new eranos.internal.Category(id.value(), name);
     }
 
     /**
@@ -67,10 +67,10 @@ public final class Category {
     /**
      * The identifier.
      *
-     * @return the identifier, empty for a category to add under one the group generates
+     * @return the identifier
      */
-    public Optional<CategoryId> id() {
-        return Optional.ofNullable(id);
+    public CategoryId id() {
+        return id;
     }
 
     /**
@@ -85,7 +85,7 @@ public final class Category {
     @Override
     public boolean equals(Object other) {
         return other instanceof Category category
-                && Objects.equals(id, category.id)
+                && id.equals(category.id)
                 && name.equals(category.name);
     }
 

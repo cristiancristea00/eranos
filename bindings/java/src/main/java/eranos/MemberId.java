@@ -23,6 +23,18 @@ public record MemberId(String value) {
     }
 
     /**
+     * A new identifier, a UUID v7 in lowercase hyphenated form.
+     *
+     * <p>Every kind of identifier draws from the one generator of the library, so identifiers
+     * generated one after another are in increasing order, whatever their kinds.
+     *
+     * @return the identifier
+     */
+    public static MemberId generate() {
+        return new MemberId(Eranos.identifierGenerate());
+    }
+
+    /**
      * The identifier written {@code text}, checked by the rules of every identifier: not trimmed,
      * and in its case.
      *

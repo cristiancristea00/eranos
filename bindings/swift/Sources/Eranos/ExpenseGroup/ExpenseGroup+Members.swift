@@ -70,8 +70,7 @@ public extension ExpenseGroup {
         }
     }
 
-    /// Adds `member` under their identifier, or one the library generates when they have none, and
-    /// returns the identifier.
+    /// Adds `member` under their identifier, and returns the identifier.
     ///
     /// - Throws: ``EranosError/id(_:detail:)`` for an identifier the rules refuse,
     ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/duplicateMember(_:)`` for one
@@ -83,8 +82,7 @@ public extension ExpenseGroup {
         try converting { Member.ID(rawValue: try handle.addMember(member: member.generated)) }
     }
 
-    /// Adds `member` under their identifier, or one the library generates when they have none, and
-    /// returns the identifier.
+    /// Adds `member` under their identifier, and returns the identifier.
     ///
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
@@ -103,10 +101,10 @@ public extension ExpenseGroup {
     /// Replaces the details of the member that `member` names by their identifier, and returns them
     /// as they were; an archived member stays archived.
     ///
-    /// - Throws: ``EranosError/identifierMissing(detail:)`` for a member without an identifier,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownMember(_:)``, and the failures
-    ///   of adding one; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while
-    ///   another call holds the lock.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownMember(_:)``
+    ///   for an identifier the group does not hold, and the failures of adding one; on wasm,
+    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while another call
+    ///   holds the lock.
     @discardableResult
     func replace(_ member: Member) throws(EranosError) -> Member {
         try converting { Member(try handle.replaceMember(member: member.generated)) }
@@ -118,9 +116,9 @@ public extension ExpenseGroup {
     /// Waits for the group's lock without blocking a thread; cancelling the task cancels the call,
     /// which leaves the group as it was.
     ///
-    /// - Throws: ``EranosError/identifierMissing(detail:)`` for a member without an identifier,
-    ///   ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownMember(_:)``, and the failures
-    ///   of adding one; ``EranosError/cancelled(detail:)`` when the task is cancelled first.
+    /// - Throws: ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/unknownMember(_:)``
+    ///   for an identifier the group does not hold, and the failures of adding one;
+    ///   ``EranosError/cancelled(detail:)`` when the task is cancelled first.
     @discardableResult
     func replace(_ member: Member) async throws(EranosError) -> Member {
         try await converting { [handle] cancellation in

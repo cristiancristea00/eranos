@@ -72,10 +72,10 @@ def main() -> None:
     euro = CurrencyCode('EUR')
     day = CalendarDate(2026, 9, 23)
     group = ExpenseGroup.create('Road trip', euro)
-    ana = group.add_member(Member(first_name='Ana'))
-    bob = group.add_member(Member(first_name='Bob'))
+    ana = group.add_member(Member.create(first_name='Ana'))
+    bob = group.add_member(Member.create(first_name='Bob'))
     group.add_expense(
-        Expense(
+        Expense.create(
             name='Fuel',
             cost=LocalCost(Money.parse('70.00', euro)),
             payers=EqualSplit((ana,)),
@@ -84,7 +84,7 @@ def main() -> None:
         )
     )
     group.add_expense(
-        Expense(
+        Expense.create(
             name='Lunch',
             cost=LocalCost(Money.parse('30.00', euro)),
             payers=EqualSplit((bob,)),

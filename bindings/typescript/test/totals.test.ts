@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { SettlementStrategy, formatBalance } from '../src/index.js';
+import { SettlementStrategy, createTransfer, formatBalance } from '../src/index.js';
 import { convertedStrategy, generatedStrategy } from '../src/totals.js';
 import { Flat } from './flat.js';
 
@@ -40,7 +40,7 @@ void describe('the summary, the balances, the shares of an expense, and the sett
         assert.equal(formatBalance({ kind: 'settled' }), 'settled');
         assert.equal(formatBalance({ kind: 'getsBack', amount: flat.euros(1_200n) }), 'gets back 12.00 EUR');
         const group = flat.group;
-        group.addTransferSync({ from: flat.bob, to: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day });
+        group.addTransferSync(createTransfer({ from: flat.bob, to: flat.ana, cost: { kind: 'local', amount: flat.euros(500n) }, date: flat.day }));
         assert.deepEqual(
             group.summarySync().members.map((member) => formatBalance(member.balance)),
             ['settled', 'settled'],

@@ -12,7 +12,6 @@
 #include "eranos/identifiers.hpp"
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -21,13 +20,21 @@ namespace eranos {
 
 /// A category of expenses.
 struct Category final {
-    /// The record of its required fields; the others start absent, empty, or at their default.
+    /// The record of its required fields under the identifier @p id, such as the key an app's own store gives it; the others start absent, empty,
+    /// or at their default. Category(std::string) generates the identifier instead.
+    ///
+    /// @param id The identifier, which the app gives: its own, or one CategoryId::generate() makes.
+    /// @param name The name, which no other category of the group shares.
+    Category(CategoryId id, std::string name) noexcept : id(std::move(id)), name(std::move(name)) {}
+
+    /// The record of its required fields under an identifier generated when it is called, which Category(CategoryId, std::string) takes instead;
+    /// the others start absent, empty, or at their default.
     ///
     /// @param name The name, which no other category of the group shares.
-    explicit Category(std::string name) noexcept : name(std::move(name)) {}
+    explicit Category(std::string name) : Category(CategoryId::generate(), std::move(name)) {}
 
-    /// The identifier: the app's own for a category to add, or absent for the library to generate one, and present for one the group holds.
-    std::optional<CategoryId> id;
+    /// The identifier, which the app gives: its own, or one CategoryId::generate() makes.
+    CategoryId id;
 
     /// The name, which no other category of the group shares.
     std::string name;

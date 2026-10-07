@@ -16,6 +16,8 @@ import {
     Parts,
     Percentage,
     TipDistribution,
+    createExpense,
+    createMember,
     splitMembers,
 } from '../src/index.js';
 import { type Columns, load, names, printLines, printTable, refusal, section, title } from './report.js';
@@ -97,9 +99,9 @@ function consumed(shares: ExpenseShares | undefined, member: MemberId): Money | 
 
 await load();
 using group = ExpenseGroup.create("Dinner at Caru' cu Bere", CurrencyCode.of('EUR'));
-const ana = group.addMemberSync({ firstName: 'Ana' });
-const bob = group.addMemberSync({ firstName: 'Bob' });
-const carol = group.addMemberSync({ firstName: 'Carol' });
+const ana = group.addMemberSync(createMember({ firstName: 'Ana' }));
+const bob = group.addMemberSync(createMember({ firstName: 'Bob' }));
+const carol = group.addMemberSync(createMember({ firstName: 'Carol' }));
 const day = CalendarDate.of(2026, 9, 23);
 
 title(`${group.nameSync()}: an itemised bill`);
@@ -130,21 +132,22 @@ printLines(
 
 section('2. Who ordered what, and the tip');
 // The dinner, its tip of 10 % shared by `distribution`.
-const bill = (distribution: TipDistribution): Expense => ({
+const bill = (distribution: TipDistribution): Expense =>
+    createExpense({
+        name: 'Dinner',
+        cost: { kind: 'local', amount: eur('54.00') },
+        payers: { kind: 'equal', members: [ana] },
+        split: { kind: 'itemised', items: receipt(ana, bob, carol) },
+        date: day,
+        tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') }, distribution },
+    });
+const untipped = createExpense({
     name: 'Dinner',
     cost: { kind: 'local', amount: eur('54.00') },
     payers: { kind: 'equal', members: [ana] },
     split: { kind: 'itemised', items: receipt(ana, bob, carol) },
     date: day,
-    tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') }, distribution },
 });
-const untipped: Expense = {
-    name: 'Dinner',
-    cost: { kind: 'local', amount: eur('54.00') },
-    payers: { kind: 'equal', members: [ana] },
-    split: { kind: 'itemised', items: receipt(ana, bob, carol) },
-    date: day,
-};
 const ordered = preview(group, untipped);
 const proportional = group.addExpenseSync(bill(TipDistribution.PROPORTIONAL));
 const byConsumption = group.expenseSharesSync(proportional);
@@ -175,13 +178,15 @@ printLines('By consumption, Carol, who ordered the most, adds the largest part o
 
 section('3. A total that does not match is refused');
 const mismatch = refusal(() =>
-    group.addExpenseSync({
-        name: 'Dinner',
-        cost: { kind: 'local', amount: eur('55.00') },
-        payers: { kind: 'equal', members: [ana] },
-        split: { kind: 'itemised', items: receipt(ana, bob, carol) },
-        date: day,
-    }),
+    group.addExpenseSync(
+        createExpense({
+            name: 'Dinner',
+            cost: { kind: 'local', amount: eur('55.00') },
+            payers: { kind: 'equal', members: [ana] },
+            split: { kind: 'itemised', items: receipt(ana, bob, carol) },
+            date: day,
+        }),
+    ),
 );
 assert.ok(undefined !== mismatch, 'the mismatch must be refused');
 printLines('An amount of 55.00 EUR with these lines is refused when the expense is built:', `  error: ${mismatch.message}`);

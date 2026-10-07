@@ -75,13 +75,21 @@ struct PaymentAccount final {
 
 /// A member of the group.
 struct Member final {
-    /// The record of its required fields; the others start absent, empty, or at their default.
+    /// The record of its required fields under the identifier @p id, such as the key an app's own store gives the member; the others start absent,
+    /// empty, or at their default. Member(std::string) generates the identifier instead.
+    ///
+    /// @param id The identifier, which the app gives: its own, or one MemberId::generate() makes.
+    /// @param firstName The first name.
+    Member(MemberId id, std::string firstName) noexcept : id(std::move(id)), firstName(std::move(firstName)) {}
+
+    /// The record of its required fields under an identifier generated when it is called, which Member(MemberId, std::string) takes instead; the
+    /// others start absent, empty, or at their default.
     ///
     /// @param firstName The first name.
-    explicit Member(std::string firstName) noexcept : firstName(std::move(firstName)) {}
+    explicit Member(std::string firstName) : Member(MemberId::generate(), std::move(firstName)) {}
 
-    /// The identifier: the app's own for a member to add, or absent for the library to generate one, and present for one the group holds.
-    std::optional<MemberId> id;
+    /// The identifier, which the app gives: its own, or one MemberId::generate() makes.
+    MemberId id;
 
     /// The first name.
     std::string firstName;

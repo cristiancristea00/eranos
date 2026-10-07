@@ -106,7 +106,7 @@ static void printMembers(EranosExpenseGroup const *const group, EranosSummary co
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        (void)eranosMemberId(member, text);
+        eranosMemberId(member, text);
         EranosMemberSummary *const totals = totalsOf(summary, eranosTextData(text));
         check(nullptr != totals, "every member has totals");
         eranosMemberFirstName(member, text);

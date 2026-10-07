@@ -166,7 +166,7 @@ def _consumption_row(member: Member, summary: Summary, categories: Categories, b
         The row: the member's first name and what they consumed in each category.
 
     """
-    own = () if member.id is None else _by_category(summary, member.id)
+    own = _by_category(summary, member.id)
     return MemberCategoryRow(
         name=member.first_name,
         food=_total(own, categories.food) or zero,
@@ -341,7 +341,7 @@ def settling_up(group: ExpenseGroup) -> None:
         2,
     )
     for payment in plan.payments:
-        group.add_transfer(Transfer(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=october(7)))
+        group.add_transfer(Transfer.create(sender=payment.sender, receiver=payment.receiver, cost=LocalCost(payment.amount), date=october(7)))
     print_lines('Each payment, once made, is recorded as a transfer, and every balance is settled:')
     print_balances(group)
 

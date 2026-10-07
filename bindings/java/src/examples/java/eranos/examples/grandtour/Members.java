@@ -239,7 +239,10 @@ final class Members {
                                 Optional.of(food),
                                 Optional.of(transport),
                                 Optional.of(lodging))
-                        .equals(group.categories().stream().map(Category::id).toList()));
+                        .equals(
+                                group.categories().stream()
+                                        .map(category -> Optional.of(category.id()))
+                                        .toList()));
         return new Categories(food, lodging, transport);
     }
 }

@@ -14,6 +14,7 @@ import {
     Percentage,
     TimeOfDay,
     TipDistribution,
+    createExpense,
     expenseMembers,
     expenseTipAmount,
     expenseTotal,
@@ -167,105 +168,119 @@ function fadoItems(people: People): ExpenseItem[] {
 /** Adds one expense for every way of dividing one. */
 function addExpenses(group: ExpenseGroup, people: People, categories: Categories): Expenses {
     const { ana, bob, carol, dan, eva } = people;
-    const groceries = group.addExpenseSync({
-        name: 'Groceries',
-        cost: { kind: 'local', amount: eur('10.00') },
-        payers: { kind: 'equal', members: [ana] },
-        split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol] } },
-        date: october(1),
-        category: categories.food,
-    });
-    const apartment = group.addExpenseSync({
-        name: 'Apartment',
-        cost: { kind: 'local', amount: eur('800.00') },
-        payers: { kind: 'equal', members: [ana] },
-        split: {
-            kind: 'whole',
+    const groceries = group.addExpenseSync(
+        createExpense({
+            name: 'Groceries',
+            cost: { kind: 'local', amount: eur('10.00') },
+            payers: { kind: 'equal', members: [ana] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol] } },
+            date: october(1),
+            category: categories.food,
+        }),
+    );
+    const apartment = group.addExpenseSync(
+        createExpense({
+            name: 'Apartment',
+            cost: { kind: 'local', amount: eur('800.00') },
+            payers: { kind: 'equal', members: [ana] },
             split: {
-                kind: 'percentages',
-                shares: [
-                    { member: ana, percentage: Percentage.parse('25') },
-                    { member: bob, percentage: Percentage.parse('25') },
-                    { member: carol, percentage: Percentage.parse('35') },
-                    { member: dan, percentage: Percentage.parse('15') },
-                ],
+                kind: 'whole',
+                split: {
+                    kind: 'percentages',
+                    shares: [
+                        { member: ana, percentage: Percentage.parse('25') },
+                        { member: bob, percentage: Percentage.parse('25') },
+                        { member: carol, percentage: Percentage.parse('35') },
+                        { member: dan, percentage: Percentage.parse('15') },
+                    ],
+                },
             },
-        },
-        date: october(1),
-        category: categories.lodging,
-    });
-    const seafood = group.addExpenseSync({
-        name: 'Seafood dinner',
-        cost: { kind: 'local', amount: eur('90.00') },
-        payers: { kind: 'equal', members: [carol] },
-        split: {
-            kind: 'whole',
+            date: october(1),
+            category: categories.lodging,
+        }),
+    );
+    const seafood = group.addExpenseSync(
+        createExpense({
+            name: 'Seafood dinner',
+            cost: { kind: 'local', amount: eur('90.00') },
+            payers: { kind: 'equal', members: [carol] },
             split: {
-                kind: 'parts',
-                shares: [
-                    { member: ana, parts: Parts.parse('1') },
-                    { member: bob, parts: Parts.parse('1') },
-                    { member: carol, parts: Parts.parse('1') },
-                    { member: dan, parts: Parts.parse('1') },
-                    { member: eva, parts: Parts.parse('0.5') },
-                ],
+                kind: 'whole',
+                split: {
+                    kind: 'parts',
+                    shares: [
+                        { member: ana, parts: Parts.parse('1') },
+                        { member: bob, parts: Parts.parse('1') },
+                        { member: carol, parts: Parts.parse('1') },
+                        { member: dan, parts: Parts.parse('1') },
+                        { member: eva, parts: Parts.parse('0.5') },
+                    ],
+                },
             },
-        },
-        date: october(2),
-        category: categories.food,
-    });
-    const train = group.addExpenseSync({
-        name: 'Train to Porto',
-        cost: { kind: 'local', amount: eur('88.50') },
-        payers: { kind: 'equal', members: [bob] },
-        split: {
-            kind: 'whole',
+            date: october(2),
+            category: categories.food,
+        }),
+    );
+    const train = group.addExpenseSync(
+        createExpense({
+            name: 'Train to Porto',
+            cost: { kind: 'local', amount: eur('88.50') },
+            payers: { kind: 'equal', members: [bob] },
             split: {
+                kind: 'whole',
+                split: {
+                    kind: 'amounts',
+                    shares: [
+                        { member: ana, amount: eur('24.50') },
+                        { member: bob, amount: eur('24.50') },
+                        { member: carol, amount: eur('24.50') },
+                        { member: eva, amount: eur('15.00') },
+                    ],
+                },
+            },
+            date: october(3),
+            category: categories.transport,
+        }),
+    );
+    const museum = group.addExpenseSync(
+        createExpense({
+            name: 'Museum',
+            cost: { kind: 'local', amount: eur('60.00') },
+            payers: { kind: 'equal', members: [ana, bob] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol, dan] } },
+            date: october(3),
+        }),
+    );
+    const fado = group.addExpenseSync(
+        createExpense({
+            name: 'Fado night',
+            cost: { kind: 'local', amount: eur('54.00') },
+            payers: {
                 kind: 'amounts',
                 shares: [
-                    { member: ana, amount: eur('24.50') },
-                    { member: bob, amount: eur('24.50') },
-                    { member: carol, amount: eur('24.50') },
-                    { member: eva, amount: eur('15.00') },
+                    { member: carol, amount: eur('39.40') },
+                    { member: dan, amount: eur('20.00') },
                 ],
             },
-        },
-        date: october(3),
-        category: categories.transport,
-    });
-    const museum = group.addExpenseSync({
-        name: 'Museum',
-        cost: { kind: 'local', amount: eur('60.00') },
-        payers: { kind: 'equal', members: [ana, bob] },
-        split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol, dan] } },
-        date: october(3),
-    });
-    const fado = group.addExpenseSync({
-        name: 'Fado night',
-        cost: { kind: 'local', amount: eur('54.00') },
-        payers: {
-            kind: 'amounts',
-            shares: [
-                { member: carol, amount: eur('39.40') },
-                { member: dan, amount: eur('20.00') },
-            ],
-        },
-        split: { kind: 'itemised', items: fadoItems(people) },
-        date: october(4),
-        tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
-        time: TimeOfDay.of(22, 15),
-        category: categories.food,
-        description: 'Tasca do Chico',
-    });
-    const tour = group.addExpenseSync({
-        name: 'Tuk-tuk tour',
-        cost: { kind: 'local', amount: eur('45.00') },
-        payers: { kind: 'equal', members: [dan] },
-        split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol, dan, eva] } },
-        date: october(5),
-        tip: { value: { kind: 'fixed', amount: eur('5.00') }, distribution: TipDistribution.EQUAL },
-        category: categories.transport,
-    });
+            split: { kind: 'itemised', items: fadoItems(people) },
+            date: october(4),
+            tip: { value: { kind: 'percentage', percentage: Percentage.parse('10') } },
+            time: TimeOfDay.of(22, 15),
+            category: categories.food,
+            description: 'Tasca do Chico',
+        }),
+    );
+    const tour = group.addExpenseSync(
+        createExpense({
+            name: 'Tuk-tuk tour',
+            cost: { kind: 'local', amount: eur('45.00') },
+            payers: { kind: 'equal', members: [dan] },
+            split: { kind: 'whole', split: { kind: 'equal', members: [ana, bob, carol, dan, eva] } },
+            date: october(5),
+            tip: { value: { kind: 'fixed', amount: eur('5.00') }, distribution: TipDistribution.EQUAL },
+            category: categories.transport,
+        }),
+    );
     return { apartment, fado, groceries, museum, seafood, tour, train };
 }
 
@@ -286,9 +301,7 @@ function printFado(group: ExpenseGroup, fado: Expense): void {
         `expense. The fado night, at ${fado.time?.toString() ?? ''} on ${fado.date.toString()} at ${fado.description ?? ''}, was itemised; its`,
         `${rule} tip of ${expenseTipAmount(fado).toString()} was shared ${shared}:`,
     );
-    if (undefined !== fado.id) {
-        printItems(group, fado.id);
-    }
+    printItems(group, fado.id);
     printLines("The tuk-tuk's fixed 5.00 EUR tip was shared equally instead.");
 }
 

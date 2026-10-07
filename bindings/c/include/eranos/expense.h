@@ -116,7 +116,29 @@ static inline void eranosCostDestroy(EranosCost *const cost) {
 /// An expense: what was bought, what it cost, who paid, and how it divides.
 typedef struct EranosExpense EranosExpense;
 
-/// A new expense of its required fields; every other field starts absent, empty, or at its default.
+/// A new expense of its required fields under the identifier @p id, such as the key an app's own store gives it; every other field starts absent,
+/// empty, or at its default. eranosExpenseCreate() generates the identifier instead.
+///
+/// @param id The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes, as UTF-8 ended by a NUL; nullptr reads as empty
+///   text
+/// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param cost What it cost
+/// @param payers Who paid the total, amount and tip, and how much each
+/// @param split How the amount is shared
+/// @param date The day it was bought
+/// @param expense Receives the expense on success, which the caller destroys, and nullptr on failure
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
+///   text that is not UTF-8
+[[nodiscard]] static inline EranosError *eranosExpenseCreateWithId(char const *const id, char const *const name, EranosCost const *const cost,
+                                                                   EranosSplit const *const payers, EranosExpenseSplit const *const split,
+                                                                   EranosCalendarDate const date, EranosExpense **const expense) {
+    EranosExpense_create_result const result = EranosExpense_create(eranosDetailView(id), eranosDetailView(name), cost, payers, split, date);
+    *expense = result.is_ok ? result.ok : nullptr;
+    return eranosDetailErrorOf(result.is_ok, &result.err);
+}
+
+/// A new expense of its required fields under an identifier generated when it is called, which eranosExpenseCreateWithId() takes instead; every
+/// other field starts absent, empty, or at its default.
 ///
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param cost What it cost
@@ -129,41 +151,33 @@ typedef struct EranosExpense EranosExpense;
 [[nodiscard]] static inline EranosError *eranosExpenseCreate(char const *const name, EranosCost const *const cost, EranosSplit const *const payers,
                                                              EranosExpenseSplit const *const split, EranosCalendarDate const date,
                                                              EranosExpense **const expense) {
-    EranosExpense_create_result const result = EranosExpense_create(eranosDetailView(name), cost, payers, split, date);
-    *expense = result.is_ok ? result.ok : nullptr;
-    return eranosDetailErrorOf(result.is_ok, &result.err);
+    EranosText *const id = eranosTextCreate();
+    eranosIdentifierGenerate(id);
+    EranosError *const error = eranosExpenseCreateWithId(eranosTextData(id), name, cost, payers, split, date, expense);
+    eranosTextDestroy(id);
+    return error;
 }
 
-/// The identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group holds. Writes it, if
-/// present; absent otherwise.
+/// The identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param expense The expense
-/// @param id Receives the identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group
-///   holds, replacing what it held
-/// @return Whether there is one
-[[nodiscard]] static inline bool eranosExpenseId(EranosExpense const *const expense, EranosText *const id) {
+/// @param id Receives the identifier, replacing what it held
+static inline void eranosExpenseId(EranosExpense const *const expense, EranosText *const id) {
     eranosDetailClear(id);
-    bool const present = EranosExpense_id(expense, id).is_ok;
+    EranosExpense_id(expense, id);
     eranosDetailFinish(id);
-    return present;
 }
 
-/// Sets the identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group holds.
+/// Sets the identifier, which the app gives: its own, or one eranosIdentifierGenerate() writes.
 ///
 /// @param expense The expense
-/// @param id The identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group holds, as
-///   UTF-8 ended by a NUL; nullptr reads as empty text
+/// @param id The identifier, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosExpenseSetId(EranosExpense *const expense, char const *const id) {
     EranosExpense_set_id_result const result = EranosExpense_set_id(expense, eranosDetailView(id));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
-
-/// Clears the identifier: the app's own for an expense to add, or absent for the library to generate one, and present for one the group holds.
-///
-/// @param expense The expense
-static inline void eranosExpenseClearId(EranosExpense *const expense) { EranosExpense_clear_id(expense); }
 
 /// What was bought.
 ///

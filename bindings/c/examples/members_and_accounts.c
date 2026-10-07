@@ -173,7 +173,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
     EranosText *const text = eranosTextCreate();
     for (size_t index = 0; eranosMemberListLength(members) > index; ++index) {
         EranosMember *const member = eranosMemberListGet(members, index);
-        (void)eranosMemberId(member, text);
+        eranosMemberId(member, text);
         bool archived = false;
         must(eranosExpenseGroupIsArchived(group, eranosTextData(text), &archived));
         EranosMemberSummary *const found = totalsOf(summary, eranosTextData(text));

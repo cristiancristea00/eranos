@@ -602,8 +602,7 @@ fn group_item(methods: &[TokenStream]) -> Named {
             }
 
             impl EranosExpenseGroup {
-                /// A new group, with the details `details` holds, under the identifier it gives or a
-                /// generated one.
+                /// A new group, with the details `details` holds, under the identifier it gives.
                 ///
                 /// # Errors
                 ///

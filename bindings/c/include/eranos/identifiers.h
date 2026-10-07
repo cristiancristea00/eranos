@@ -1,6 +1,6 @@
 /// @file eranos/identifiers.h
-/// Identifiers: the check of one by the rules every kind shares, and lists of them, such as the members of an equal split and the entries an error
-/// names.
+/// Identifiers: a new one, the check of one by the rules every kind shares, and lists of them, such as the members of an equal split and the
+/// entries an error names.
 
 #ifndef ERANOS_IDENTIFIERS_H
 #define ERANOS_IDENTIFIERS_H
@@ -11,6 +11,16 @@
 #include "eranos/text.h"
 
 #include <stddef.h>
+
+/// Writes a new identifier, which any entry or group can take: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one
+/// generator of the library, and identifiers generated one after another are in increasing order.
+///
+/// @param identifier Receives the identifier, replacing what it held
+static inline void eranosIdentifierGenerate(EranosText *const identifier) {
+    eranosDetailClear(identifier);
+    EranosIdentifier_generate(identifier);
+    eranosDetailFinish(identifier);
+}
 
 /// Writes the identifier written `text`, as it is: not trimmed, and in its case. Every kind of identifier, of a group, a member, a category, an
 /// expense, or a transfer, follows the same rules.

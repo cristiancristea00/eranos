@@ -132,8 +132,7 @@ pub mod ffi {
     }
 
     impl EranosExpenseGroup {
-        /// A new group, with the details `details` holds, under the identifier it gives or a
-        /// generated one.
+        /// A new group, with the details `details` holds, under the identifier it gives.
         ///
         /// # Errors
         ///
@@ -297,8 +296,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `category` under its identifier, or one the library generates when it has none, and
-        /// returns the identifier. Writes it into `write`.
+        /// Adds `category` under its identifier, and returns the identifier. Writes it into
+        /// `write`.
         ///
         /// # Errors
         ///
@@ -636,8 +635,7 @@ pub mod ffi {
             );
         }
 
-        /// Adds `expense` under its identifier, or one the library generates when it has none, and
-        /// returns the identifier. Writes it into `write`.
+        /// Adds `expense` under its identifier, and returns the identifier. Writes it into `write`.
         ///
         /// # Errors
         ///
@@ -924,8 +922,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `member` under their identifier, or one the library generates when they have none,
-        /// and returns the identifier. Writes it into `write`.
+        /// Adds `member` under their identifier, and returns the identifier. Writes it into
+        /// `write`.
         ///
         /// # Errors
         ///
@@ -1374,8 +1372,8 @@ pub mod ffi {
             );
         }
 
-        /// Adds `transfer` under its identifier, or one the library generates when it has none, and
-        /// returns the identifier. Writes it into `write`.
+        /// Adds `transfer` under its identifier, and returns the identifier. Writes it into
+        /// `write`.
         ///
         /// # Errors
         ///

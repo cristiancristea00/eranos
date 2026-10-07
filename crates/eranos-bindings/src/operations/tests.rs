@@ -15,7 +15,7 @@ use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{
     CategoryFailure, EranosError, ExpenseFailure, ExpenseGroupFailure, IdFailure, LanguageFailure,
-    MemberFailure, MoneyFailure, TransferFailure,
+    MemberFailure, MoneyFailure, TransferFailure, identifier_generate,
 };
 
 /// A group of two with a category, an expense, and a transfer, and the
@@ -38,7 +38,7 @@ fn euros(minor_units: i64) -> Money {
 
 fn new_member(first_name: &str) -> Member {
     Member {
-        id: None,
+        id: identifier_generate(),
         first_name: first_name.to_owned(),
         last_name: None,
         email: None,
@@ -49,7 +49,7 @@ fn new_member(first_name: &str) -> Member {
 
 fn new_category(name: &str) -> Category {
     Category {
-        id: None,
+        id: identifier_generate(),
         name: name.to_owned(),
     }
 }
@@ -57,7 +57,7 @@ fn new_category(name: &str) -> Category {
 /// An expense of 30.00 EUR that `payer` paid and `members` share equally.
 fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
     Expense {
-        id: None,
+        id: identifier_generate(),
         name: name.to_owned(),
         cost: Cost::Local {
             amount: euros(3_000),
@@ -84,7 +84,7 @@ fn new_expense(name: &str, payer: &str, members: &[&str]) -> Expense {
 
 fn new_transfer(from: &str, to: &str, minor_units: i64) -> Transfer {
     Transfer {
-        id: None,
+        id: identifier_generate(),
         from: from.to_owned(),
         to: to.to_owned(),
         cost: Cost::Local {
@@ -135,7 +135,7 @@ fn every_read_converts_what_the_group_holds() {
     assert_eq!(
         categories[1],
         Category {
-            id: Some(flat.food.clone()),
+            id: flat.food.clone(),
             name: "Food".to_owned(),
         }
     );
@@ -146,7 +146,7 @@ fn every_read_converts_what_the_group_holds() {
     assert_eq!(operations::currency(group), "EUR");
     let expenses = operations::expenses(group);
     assert_eq!(expenses.len(), 1);
-    assert_eq!(expenses[0].id.as_ref(), Some(&flat.dinner));
+    assert_eq!(expenses[0].id, flat.dinner);
     assert_eq!(
         operations::expense(group, &flat.dinner),
         Ok(Some(expenses[0].clone()))
@@ -168,7 +168,7 @@ fn every_read_converts_what_the_group_holds() {
             .iter()
             .map(|member| member.id.clone())
             .collect::<Vec<_>>(),
-        [Some(flat.ana.clone()), Some(flat.bob.clone())]
+        [flat.ana.clone(), flat.bob.clone()]
     );
     assert_eq!(
         operations::member(group, &flat.ana),
@@ -297,13 +297,13 @@ fn categories_change_through_the_records() {
     let group = &mut flat.group;
     let travel = operations::add_category(group, &new_category("Travel")).unwrap();
     let renamed = Category {
-        id: Some(travel.clone()),
+        id: travel.clone(),
         name: "Trips".to_owned(),
     };
     assert_eq!(
         operations::replace_category(group, &renamed),
         Ok(Category {
-            id: Some(travel.clone()),
+            id: travel.clone(),
             name: "Travel".to_owned(),
         })
     );
@@ -315,11 +315,10 @@ fn categories_change_through_the_records() {
     let refusals = [
         operations::add_category(group, &renamed).unwrap_err(),
         operations::add_category(group, &new_category("FOOD")).unwrap_err(),
-        operations::replace_category(group, &new_category("Trips")).unwrap_err(),
         operations::replace_category(
             group,
             &Category {
-                id: Some(CategoryId::new("category-9").unwrap().to_string()),
+                id: CategoryId::new("category-9").unwrap().to_string(),
                 name: "Trips".to_owned(),
             },
         )
@@ -327,7 +326,7 @@ fn categories_change_through_the_records() {
         operations::replace_category(
             group,
             &Category {
-                id: Some(travel.clone()),
+                id: travel.clone(),
                 name: " ".to_owned(),
             },
         )
@@ -335,7 +334,7 @@ fn categories_change_through_the_records() {
         operations::replace_category(
             group,
             &Category {
-                id: Some(travel.clone()),
+                id: travel.clone(),
                 name: "food".to_owned(),
             },
         )
@@ -343,7 +342,7 @@ fn categories_change_through_the_records() {
         operations::replace_category(
             group,
             &Category {
-                id: Some(CategoryId::UNCATEGORISED.to_string()),
+                id: CategoryId::UNCATEGORISED.to_string(),
                 name: "Other".to_owned(),
             },
         )
@@ -361,7 +360,6 @@ fn categories_change_through_the_records() {
                     failure: ExpenseGroupFailure::DuplicateCategoryName { .. },
                     ..
                 },
-                EranosError::IdentifierMissing { .. },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownCategory { .. },
                     ..
@@ -402,14 +400,14 @@ fn expenses_change_through_the_records() {
     let group = &mut flat.group;
     let lunch = operations::add_expense(group, &new_expense("Lunch", bob, &[ana, bob])).unwrap();
     let replacement = Expense {
-        id: Some(lunch.clone()),
+        id: lunch.clone(),
         ..new_expense("Late lunch", ana, &[ana, bob])
     };
     let replaced = operations::replace_expense(group, &replacement).unwrap();
     assert_eq!(
         replaced,
         Expense {
-            id: Some(lunch.clone()),
+            id: lunch.clone(),
             ..new_expense("Lunch", bob, &[ana, bob])
         }
     );
@@ -422,11 +420,10 @@ fn expenses_change_through_the_records() {
     let refusals = [
         operations::add_expense(group, &replacement).unwrap_err(),
         operations::add_expense(group, &new_expense("Lunch", &nobody, &[ana])).unwrap_err(),
-        operations::replace_expense(group, &new_expense("Lunch", ana, &[ana])).unwrap_err(),
         operations::replace_expense(
             group,
             &Expense {
-                id: Some(ExpenseId::new("expense-9").unwrap().to_string()),
+                id: ExpenseId::new("expense-9").unwrap().to_string(),
                 ..replacement.clone()
             },
         )
@@ -442,7 +439,7 @@ fn expenses_change_through_the_records() {
         operations::replace_expense(
             group,
             &Expense {
-                id: Some(lunch.clone()),
+                id: lunch.clone(),
                 ..new_expense("Lunch", &nobody, &[ana])
             },
         )
@@ -460,7 +457,6 @@ fn expenses_change_through_the_records() {
                     failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
-                EranosError::IdentifierMissing { .. },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownExpense { .. },
                     ..
@@ -496,14 +492,14 @@ fn members_change_through_the_records() {
     let group = &mut flat.group;
     let carol = operations::add_member(group, &new_member("Carol")).unwrap();
     let renamed = Member {
-        id: Some(carol.clone()),
+        id: carol.clone(),
         last_name: Some("Ionescu".to_owned()),
         ..new_member("Carol")
     };
     assert_eq!(
         operations::replace_member(group, &renamed),
         Ok(Member {
-            id: Some(carol.clone()),
+            id: carol.clone(),
             ..new_member("Carol")
         })
     );
@@ -515,13 +511,12 @@ fn members_change_through_the_records() {
 
     let nobody = MemberId::new("member-9").unwrap().to_string();
     let unknown = Member {
-        id: Some(nobody.clone()),
+        id: nobody.clone(),
         ..new_member("Dan")
     };
     let refusals = [
         operations::add_member(group, &renamed).unwrap_err(),
         operations::add_member(group, &new_member(" ")).unwrap_err(),
-        operations::replace_member(group, &new_member("Dan")).unwrap_err(),
         operations::replace_member(group, &unknown).unwrap_err(),
         operations::replace_member(
             group,
@@ -548,7 +543,6 @@ fn members_change_through_the_records() {
                     failure: MemberFailure::EmptyFirstName,
                     ..
                 },
-                EranosError::IdentifierMissing { .. },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
@@ -590,13 +584,13 @@ fn transfers_change_through_the_records() {
     let group = &mut flat.group;
     let payment = operations::add_transfer(group, &new_transfer(ana, bob, 500)).unwrap();
     let replacement = Transfer {
-        id: Some(payment.clone()),
+        id: payment.clone(),
         ..new_transfer(ana, bob, 700)
     };
     assert_eq!(
         operations::replace_transfer(group, &replacement),
         Ok(Transfer {
-            id: Some(payment.clone()),
+            id: payment.clone(),
             ..new_transfer(ana, bob, 500)
         })
     );
@@ -609,11 +603,10 @@ fn transfers_change_through_the_records() {
     let refusals = [
         operations::add_transfer(group, &replacement).unwrap_err(),
         operations::add_transfer(group, &new_transfer(ana, &nobody, 500)).unwrap_err(),
-        operations::replace_transfer(group, &new_transfer(ana, bob, 500)).unwrap_err(),
         operations::replace_transfer(
             group,
             &Transfer {
-                id: Some(TransferId::new("transfer-9").unwrap().to_string()),
+                id: TransferId::new("transfer-9").unwrap().to_string(),
                 ..replacement.clone()
             },
         )
@@ -647,7 +640,6 @@ fn transfers_change_through_the_records() {
                     failure: ExpenseGroupFailure::UnknownMember { .. },
                     ..
                 },
-                EranosError::IdentifierMissing { .. },
                 EranosError::ExpenseGroup {
                     failure: ExpenseGroupFailure::UnknownTransfer { .. },
                     ..

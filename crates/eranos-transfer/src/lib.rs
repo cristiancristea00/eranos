@@ -25,8 +25,11 @@ pub use error::{FromTransferError, TransferError};
 /// credit shrinks. It is not spending, so it counts towards no total or
 /// category. Like an expense, it has a [`Cost`]: a transfer in another
 /// currency than its group's carries the [`ExchangeRate`] into the group
-/// currency. A transfer gets the identifier given to
-/// [`TransferBuilder::id`], or a generated one when it is built, and keeps
+/// currency. A transfer has the identifier given to
+/// [`builder_with_id`](Self::builder_with_id) or
+/// [`builder_from_payment_with_id`](Self::builder_from_payment_with_id), or
+/// one that [`builder`](Self::builder) or
+/// [`builder_from_payment`](Self::builder_from_payment) generates, and keeps
 /// it through every edit.
 ///
 /// # Examples
@@ -60,7 +63,9 @@ pub struct Transfer {
 }
 
 impl Transfer {
-    /// Starts a transfer from `from` to `to` of `cost` on `date`.
+    /// Starts a transfer from `from` to `to` of `cost` on `date`, under an
+    /// identifier generated when it is called;
+    /// [`builder_with_id`](Self::builder_with_id) takes one instead.
     ///
     /// A [`Money`] amount is a local cost, in the group currency;
     /// [`Money::at`] makes a converted one.
@@ -70,8 +75,34 @@ impl Transfer {
         cost: impl Into<Cost>,
         date: CalendarDate,
     ) -> TransferBuilder {
+        Self::builder_with_id(TransferId::generate(), from, to, cost, date)
+    }
+
+    /// Starts a transfer from `from` to `to` of `cost` on `date`, under the
+    /// identifier `id`, such as the key an app's own store gives it;
+    /// [`builder`](Self::builder) generates one instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use eranos::{CalendarDate, CurrencyCode, Money, Transfer};
+    /// use eranos::id::{MemberId, TransferId};
+    ///
+    /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
+    /// let (amount, date) = (Money::parse("30.00", CurrencyCode::EUR)?, CalendarDate::new(2026, 9, 24)?);
+    /// let repayment = Transfer::builder_with_id(TransferId::new("repayment-1")?, bob, ana, amount, date).build()?;
+    /// assert_eq!(repayment.id().as_str(), "repayment-1");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn builder_with_id(
+        id: TransferId,
+        from: MemberId,
+        to: MemberId,
+        cost: impl Into<Cost>,
+        date: CalendarDate,
+    ) -> TransferBuilder {
         TransferBuilder {
-            id: None,
+            id,
             from,
             to,
             cost: cost.into(),
@@ -81,9 +112,11 @@ impl Transfer {
         }
     }
 
-    /// Starts the transfer recording `payment`, made on `date`: from its
-    /// payer to its payee, of its amount, as a local cost in the group
-    /// currency.
+    /// Starts the transfer recording `payment`, made on `date`, under an
+    /// identifier generated when it is called: from its payer to its payee,
+    /// of its amount, as a local cost in the group currency;
+    /// [`builder_from_payment_with_id`](Self::builder_from_payment_with_id)
+    /// takes the identifier instead.
     ///
     /// Recording every payment of a
     /// [`SettlementPlan`](eranos_settlement::SettlementPlan) brings every
@@ -109,14 +142,25 @@ impl Transfer {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn builder_from_payment(payment: &Payment, date: CalendarDate) -> TransferBuilder {
-        Self::builder(payment.from(), payment.to(), payment.amount(), date)
+        Self::builder_from_payment_with_id(TransferId::generate(), payment, date)
+    }
+
+    /// Starts the transfer recording `payment`, made on `date`, as
+    /// [`builder_from_payment`](Self::builder_from_payment) does, under the
+    /// identifier `id`; `builder_from_payment` generates one instead.
+    pub fn builder_from_payment_with_id(
+        id: TransferId,
+        payment: &Payment,
+        date: CalendarDate,
+    ) -> TransferBuilder {
+        Self::builder_with_id(id, payment.from(), payment.to(), payment.amount(), date)
     }
 
     /// Starts a builder holding a copy of this transfer, to edit it; the
     /// copy keeps the identifier.
     pub fn to_builder(&self) -> TransferBuilder {
         TransferBuilder {
-            id: Some(self.id),
+            id: self.id,
             from: self.from,
             to: self.to,
             cost: self.cost(),
@@ -207,11 +251,12 @@ impl Transfer {
 }
 
 /// Builds a [`Transfer`]; created by [`Transfer::builder`],
-/// [`Transfer::builder_from_payment`], or [`Transfer::to_builder`].
+/// [`Transfer::builder_from_payment`], their twins that take the
+/// identifier, or [`Transfer::to_builder`].
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
 pub struct TransferBuilder {
-    id: Option<TransferId>,
+    id: TransferId,
     from: MemberId,
     to: MemberId,
     cost: Cost,
@@ -221,12 +266,9 @@ pub struct TransferBuilder {
 }
 
 impl TransferBuilder {
-    /// Sets the identifier, such as the key an app's own store gives the
-    /// transfer, or leaves it to [`build`](Self::build) to generate one with
-    /// `None`; a builder from [`Transfer::to_builder`] starts with the
-    /// transfer's.
-    pub fn id(mut self, id: impl Into<Option<TransferId>>) -> Self {
-        self.id = id.into();
+    /// Replaces the identifier.
+    pub const fn id(mut self, id: TransferId) -> Self {
+        self.id = id;
         self
     }
 
@@ -271,8 +313,7 @@ impl TransferBuilder {
     }
 
     /// Validates the transfer and returns it, under the identifier the
-    /// builder holds, given to [`id`](Self::id) or kept by
-    /// [`Transfer::to_builder`], or a newly generated one.
+    /// builder holds.
     ///
     /// # Errors
     ///
@@ -288,7 +329,7 @@ impl TransferBuilder {
             return Err(TransferError::NonPositiveAmount);
         }
         Ok(Transfer {
-            id: self.id.unwrap_or_else(TransferId::generate),
+            id: self.id,
             from: self.from,
             to: self.to,
             amount,
@@ -321,8 +362,7 @@ struct TransferRecord {
 #[cfg(feature = "serde")]
 fn from_record(record: TransferRecord) -> Result<Transfer, TransferError> {
     let cost = Cost::from_parts(record.amount, record.exchange_rate);
-    let builder = Transfer::builder(record.from, record.to, cost, record.date)
-        .id(record.id)
+    let builder = Transfer::builder_with_id(record.id, record.from, record.to, cost, record.date)
         .time(record.time);
     match record.note {
         Some(note) => builder.note(note).build(),

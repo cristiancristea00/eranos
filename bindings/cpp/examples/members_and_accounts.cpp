@@ -127,10 +127,10 @@ void printBalances(ExpenseGroup const &group) {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
-        auto const found = totalsOf(summary, member.id.value()).value();
+        auto const found = totalsOf(summary, member.id).value();
         rows.push_back({
             .name = member.firstName,
-            .status = must(group.isArchived(member.id.value())) ? "archived" : "active",
+            .status = must(group.isArchived(member.id)) ? "archived" : "active",
             .consumed = found.share.toString(),
             .balance = toString(found.balance),
         });

@@ -139,7 +139,7 @@ def print_entries(group: ExpenseGroup) -> None:
             payer=names(group, expense.payers.members),
             original=expense.total(),
             rate=rate(expense.cost),
-            converted=shares.total if expense.id is not None and (shares := group.expense_shares(expense.id)) is not None else zero,
+            converted=shares.total if (shares := group.expense_shares(expense.id)) is not None else zero,
         )
         for expense in group.expenses()
     ]
@@ -149,7 +149,7 @@ def print_entries(group: ExpenseGroup) -> None:
             payer=names(group, (transfer.sender,)),
             original=transfer.cost.amount,
             rate=rate(transfer.cost),
-            converted=amount if transfer.id is not None and (amount := group.transfer_amount(transfer.id)) is not None else zero,
+            converted=amount if (amount := group.transfer_amount(transfer.id)) is not None else zero,
         )
         for transfer in group.transfers()
     ]
@@ -177,7 +177,7 @@ def print_balances(group: ExpenseGroup) -> None:
                 balance=found.balance,
             )
             for member in group.members()
-            if member.id is not None and (found := totals(member.id, summary)) is not None
+            if (found := totals(member.id, summary)) is not None
         ],
         1,
     )
@@ -196,7 +196,7 @@ def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
     section('1. Expenses in three currencies')
     both = WholeExpenseSplit(EqualSplit((ana, bob)))
     group.add_expense(
-        Expense(
+        Expense.create(
             name='Fuel',
             cost=ConvertedCost(Money.parse('400.00', CurrencyCode('RON')), ExchangeRate('0.2')),
             payers=EqualSplit((ana,)),
@@ -205,7 +205,7 @@ def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
         )
     )
     group.add_expense(
-        Expense(
+        Expense.create(
             name='Dinner',
             cost=ConvertedCost(Money.parse('24000.00', CurrencyCode('HUF')), ExchangeRate('0.0025')),
             payers=EqualSplit((bob,)),
@@ -214,7 +214,7 @@ def expenses(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
         )
     )
     group.add_expense(
-        Expense(
+        Expense.create(
             name='Ferry',
             cost=LocalCost(Money.parse('60.00', CurrencyCode('EUR'))),
             payers=EqualSplit((bob,)),
@@ -240,7 +240,7 @@ def repayment(group: ExpenseGroup, ana: MemberId, bob: MemberId) -> None:
 
     """
     section('3. A repayment in cash, in another currency')
-    cash = Transfer(
+    cash = Transfer.create(
         sender=ana,
         receiver=bob,
         cost=ConvertedCost(Money.parse('100.00', CurrencyCode('RON')), ExchangeRate('0.2')),
@@ -282,8 +282,8 @@ def main() -> None:
     """Print the report, checking its key numbers."""
     euro = CurrencyCode('EUR')
     group = ExpenseGroup.create('Danube road trip', euro)
-    ana = group.add_member(Member(first_name='Ana'))
-    bob = group.add_member(Member(first_name='Bob'))
+    ana = group.add_member(Member.create(first_name='Ana'))
+    bob = group.add_member(Member.create(first_name='Bob'))
 
     title(f'{group.name()}: expenses in several currencies')
     print_lines(
