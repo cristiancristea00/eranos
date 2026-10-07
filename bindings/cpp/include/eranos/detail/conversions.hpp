@@ -123,41 +123,41 @@ inline std::optional<TransferId> const &Error::transfer() const noexcept { retur
 
 inline std::optional<std::vector<TransferId>> const &Error::transfers() const noexcept { return fields->transfers; }
 
-inline ExpenseGroupId ExpenseGroupId::generate() { return ExpenseGroupId(detail::EranosIdentifier::generate()); }
+inline ExpenseGroupId ExpenseGroupId::generate() noexcept { return ExpenseGroupId(detail::EranosIdentifier::generate()); }
 
-inline std::expected<ExpenseGroupId, Error> ExpenseGroupId::parse(std::string_view const text) {
+inline std::expected<ExpenseGroupId, Error> ExpenseGroupId::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return ExpenseGroupId(std::move(identifier));
     });
 }
 
-inline MemberId MemberId::generate() { return MemberId(detail::EranosIdentifier::generate()); }
+inline MemberId MemberId::generate() noexcept { return MemberId(detail::EranosIdentifier::generate()); }
 
-inline std::expected<MemberId, Error> MemberId::parse(std::string_view const text) {
+inline std::expected<MemberId, Error> MemberId::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return MemberId(std::move(identifier));
     });
 }
 
-inline CategoryId CategoryId::generate() { return CategoryId(detail::EranosIdentifier::generate()); }
+inline CategoryId CategoryId::generate() noexcept { return CategoryId(detail::EranosIdentifier::generate()); }
 
-inline std::expected<CategoryId, Error> CategoryId::parse(std::string_view const text) {
+inline std::expected<CategoryId, Error> CategoryId::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return CategoryId(std::move(identifier));
     });
 }
 
-inline ExpenseId ExpenseId::generate() { return ExpenseId(detail::EranosIdentifier::generate()); }
+inline ExpenseId ExpenseId::generate() noexcept { return ExpenseId(detail::EranosIdentifier::generate()); }
 
-inline std::expected<ExpenseId, Error> ExpenseId::parse(std::string_view const text) {
+inline std::expected<ExpenseId, Error> ExpenseId::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return ExpenseId(std::move(identifier));
     });
 }
 
-inline TransferId TransferId::generate() { return TransferId(detail::EranosIdentifier::generate()); }
+inline TransferId TransferId::generate() noexcept { return TransferId(detail::EranosIdentifier::generate()); }
 
-inline std::expected<TransferId, Error> TransferId::parse(std::string_view const text) {
+inline std::expected<TransferId, Error> TransferId::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosIdentifier::parse(text)).transform([](std::string identifier) noexcept {
         return TransferId(std::move(identifier));
     });
@@ -169,7 +169,7 @@ namespace eranos::detail {
 
 /// The value @p result holds, or the error it holds.
 template <typename Value>
-[[nodiscard]] inline std::expected<Value, Error> expectedOf(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
+[[nodiscard]] inline std::expected<Value, Error> expectedOf(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) noexcept {
     if (result.is_ok()) {
         return std::move(std::move(result).ok().value()); // NOLINT(bugprone-unchecked-optional-access): is_ok() says which side it holds.
     }
@@ -178,38 +178,38 @@ template <typename Value>
 }
 
 /// Nothing when @p result, of a call that returns nothing, succeeded, or the error it holds.
-[[nodiscard]] inline std::expected<void, Error> expectedOf(diplomat::result<std::monostate, std::unique_ptr<EranosError>> &&result) {
+[[nodiscard]] inline std::expected<void, Error> expectedOf(diplomat::result<std::monostate, std::unique_ptr<EranosError>> &&result) noexcept {
     return expectedOf<std::monostate>(std::move(result)).transform([](std::monostate const /* value */) noexcept {});
 }
 
 /// The value of @p result, which holds no error: the call fails only for a value that the layer's types rule out, and its caller says which.
-template <typename Value> [[nodiscard]] inline Value known(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
+template <typename Value> [[nodiscard]] inline Value known(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) noexcept {
     return std::move(std::move(result).ok().value()); // NOLINT(bugprone-unchecked-optional-access): the caller says why it holds a value.
 }
 
 /// The value of @p result, of a synchronous group call that takes nothing the library could refuse: the call waits for the group's lock, so it
 /// fails only where it cannot wait, on wasm32, for which the C API does not build.
-template <typename Value> [[nodiscard]] inline Value waited(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) {
+template <typename Value> [[nodiscard]] inline Value waited(diplomat::result<Value, std::unique_ptr<EranosError>> &&result) noexcept {
     return known(std::move(result));
 }
 
 /// @p record, once @p set has given it @p value when @p value is present, or the error that @p set reports.
 template <typename Record, typename Value, typename Set>
 [[nodiscard]] inline std::expected<std::unique_ptr<Record>, Error> setIfPresent(std::unique_ptr<Record> record, std::optional<Value> const &value,
-                                                                                Set const &set) {
+                                                                                Set const &set) noexcept {
     if (!value) {
         return record;
     }
-    return expectedOf(set(*record, *value)).transform([&record] { return std::move(record); });
+    return expectedOf(set(*record, *value)).transform([&record] noexcept { return std::move(record); });
 }
 
 /// The generated list @p List of @p records, or the error that the conversion of the first record it refuses reports.
 template <typename List, typename Record>
-[[nodiscard]] inline std::expected<std::unique_ptr<List>, Error> listOf(std::vector<Record> const &records) {
+[[nodiscard]] inline std::expected<std::unique_ptr<List>, Error> listOf(std::vector<Record> const &records) noexcept {
     std::expected<std::unique_ptr<List>, Error> result = List::create();
     for (auto const &record : records) {
-        result = std::move(result).and_then([&record](std::unique_ptr<List> list) {
-            return toDetail(record).transform([&list](auto const &element) {
+        result = std::move(result).and_then([&record](std::unique_ptr<List> list) noexcept {
+            return toDetail(record).transform([&list](auto const &element) noexcept {
                 list->push(*element);
                 return std::move(list);
             });
@@ -219,7 +219,7 @@ template <typename List, typename Record>
 }
 
 /// @p text, absent when empty: the group holds no blank description and no blank language.
-[[nodiscard]] inline std::optional<std::string> present(std::string text) noexcept {
+[[nodiscard]] inline constexpr std::optional<std::string> present(std::string text) noexcept {
     if (text.empty()) {
         return std::nullopt;
     }
@@ -227,7 +227,7 @@ template <typename List, typename Record>
 }
 
 /// The identifier of @p text, if present.
-template <typename Identifier> [[nodiscard]] inline std::optional<Identifier> optionalId(std::optional<std::string> text) noexcept {
+template <typename Identifier> [[nodiscard]] inline constexpr std::optional<Identifier> optionalId(std::optional<std::string> text) noexcept {
     if (!text) {
         return std::nullopt;
     }
@@ -236,7 +236,8 @@ template <typename Identifier> [[nodiscard]] inline std::optional<Identifier> op
 
 /// The value that @p make makes of @p text, if present.
 template <typename Value>
-[[nodiscard]] inline std::optional<Value> optionalText(std::optional<std::string> text, Value (*const make)(std::string) noexcept) noexcept {
+[[nodiscard]] inline constexpr std::optional<Value> optionalText(std::optional<std::string> text,
+                                                                 Value (*const make)(std::string) noexcept) noexcept {
     if (!text) {
         return std::nullopt;
     }
@@ -244,7 +245,7 @@ template <typename Value>
 }
 
 /// The value of the generated object @p value, if present.
-template <typename Value, typename Detail> [[nodiscard]] inline std::optional<Value> optionalRecord(std::unique_ptr<Detail> const &value) {
+template <typename Value, typename Detail> [[nodiscard]] inline std::optional<Value> optionalRecord(std::unique_ptr<Detail> const &value) noexcept {
     if (!value) {
         return std::nullopt;
     }
@@ -252,7 +253,7 @@ template <typename Value, typename Detail> [[nodiscard]] inline std::optional<Va
 }
 
 /// The identifiers of the texts of @p list.
-template <typename Identifier> [[nodiscard]] inline std::vector<Identifier> identifiers(EranosTextList const &list) {
+template <typename Identifier> [[nodiscard]] inline std::vector<Identifier> identifiers(EranosTextList const &list) noexcept {
     std::vector<Identifier> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -262,7 +263,7 @@ template <typename Identifier> [[nodiscard]] inline std::vector<Identifier> iden
 }
 
 /// The success of an asynchronous call that returns nothing, whose outcome @p outcome holds no error.
-[[nodiscard]] inline std::expected<void, Error> finished(EranosUnitOutcome const & /* outcome */) noexcept { return {}; }
+[[nodiscard]] inline constexpr std::expected<void, Error> finished(EranosUnitOutcome const & /* outcome */) noexcept { return {}; }
 
 /// Completes @p promise with the value that @p convert makes of @p outcome, or with the error it holds. A completion runs on the library's thread,
 /// in a callback of its C API, which no exception may leave, so a conversion that runs out of memory ends the program, as the library's own
@@ -279,7 +280,7 @@ inline void complete(std::promise<std::expected<Value, Error>> &promise, Outcome
 /// A future of the asynchronous call that @p start makes with the callback it is given, which completes the future with the value that
 /// @p convert makes of the call's outcome, or with the error the outcome holds.
 template <typename Value, typename Start, typename Convert>
-[[nodiscard]] inline std::future<std::expected<Value, Error>> launch(Start const &start, Convert convert) {
+[[nodiscard]] inline std::future<std::expected<Value, Error>> launch(Start const &start, Convert convert) noexcept {
     auto const promise = std::make_shared<std::promise<std::expected<Value, Error>>>();
     auto future = promise->get_future();
     start([promise, convert = std::move(convert)](auto const outcome) noexcept { complete(*promise, *outcome, convert); });
@@ -290,9 +291,9 @@ template <typename Value, typename Start, typename Convert>
 /// the other launch() does; when the argument's conversion failed, a future of its error, and no call.
 template <typename Value, typename Argument, typename Start, typename Convert>
 [[nodiscard]] inline std::future<std::expected<Value, Error>> launch(std::expected<Argument, Error> const &argument, Start const &start,
-                                                                     Convert convert) {
+                                                                     Convert convert) noexcept {
     if (argument) {
-        return launch<Value>([&argument, &start](auto callback) { start(*argument, std::move(callback)); }, std::move(convert));
+        return launch<Value>([&argument, &start](auto callback) noexcept { start(*argument, std::move(callback)); }, std::move(convert));
     }
     std::promise<std::expected<Value, Error>> promise;
     promise.set_value(std::unexpected(argument.error()));
@@ -300,50 +301,52 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The currency of @p details.
-[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details) {
+[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details) noexcept {
     return CurrencyCode(
         {.code = details.code(), .name = details.name(), .numericCode = details.numeric_code(), .decimalPlaces = details.decimal_places()});
 }
 
 /// The currency of the ISO 4217 code @p code, which the library wrote.
-[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code) {
+[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code) noexcept {
     // A code the library wrote is one it lists.
     return currencyOf(*known(EranosCurrencyDetails::of(code)));
 }
 
 /// The amount of @p value, which the library made. It reads the currency with known(), which converts no error: an error's amounts convert
 /// through this function, so converting an error here would make the two call each other.
-[[nodiscard]] inline Money fromDetail(EranosMoney const &value) { return {value.minor_units(), listedCurrency(value.currency())}; }
+[[nodiscard]] inline Money fromDetail(EranosMoney const &value) noexcept { return {value.minor_units(), listedCurrency(value.currency())}; }
 
 /// The generated amount of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosMoney> toDetail(Money const &value) noexcept {
     // A currency's code is text the library wrote.
     return known(EranosMoney::create(value.minorUnits, value.currency.code()));
 }
 
 /// The rate written @p text, which the library wrote.
-[[nodiscard]] inline ExchangeRate exchangeRateOf(std::string text) noexcept { return ExchangeRate(std::move(text)); }
+[[nodiscard]] inline constexpr ExchangeRate exchangeRateOf(std::string text) noexcept { return ExchangeRate(std::move(text)); }
 
 /// The date of @p date, which the library checked.
-[[nodiscard]] constexpr CalendarDate calendarDateOf(EranosCalendarDate const date) noexcept {
+[[nodiscard]] inline constexpr CalendarDate calendarDateOf(EranosCalendarDate const date) noexcept {
     return CalendarDate({.year = date.year, .month = date.month, .day = date.day});
 }
 
 /// The generated date of @p date.
-[[nodiscard]] constexpr EranosCalendarDate toDetail(CalendarDate const date) noexcept {
+[[nodiscard]] inline constexpr EranosCalendarDate toDetail(CalendarDate const date) noexcept {
     return EranosCalendarDate{.year = date.year(), .month = date.month(), .day = date.day()};
 }
 
 /// The time of @p time, which the library checked.
-[[nodiscard]] constexpr TimeOfDay timeOfDayOf(EranosTimeOfDay const time) noexcept { return TimeOfDay({.hour = time.hour, .minute = time.minute}); }
+[[nodiscard]] inline constexpr TimeOfDay timeOfDayOf(EranosTimeOfDay const time) noexcept {
+    return TimeOfDay({.hour = time.hour, .minute = time.minute});
+}
 
 /// The generated time of @p time.
-[[nodiscard]] constexpr EranosTimeOfDay toDetail(TimeOfDay const time) noexcept {
+[[nodiscard]] inline constexpr EranosTimeOfDay toDetail(TimeOfDay const time) noexcept {
     return EranosTimeOfDay{.hour = time.hour(), .minute = time.minute()};
 }
 
 /// The time of @p time, if present.
-[[nodiscard]] constexpr std::optional<TimeOfDay> optionalTime(std::optional<EranosTimeOfDay> const time) noexcept {
+[[nodiscard]] inline constexpr std::optional<TimeOfDay> optionalTime(std::optional<EranosTimeOfDay> const time) noexcept {
     if (!time) {
         return std::nullopt;
     }
@@ -351,19 +354,19 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The email written @p text, which the library wrote.
-[[nodiscard]] inline Email emailOf(std::string text) noexcept { return Email(std::move(text)); }
+[[nodiscard]] inline constexpr Email emailOf(std::string text) noexcept { return Email(std::move(text)); }
 
 /// The phone number written @p text, which the library wrote.
-[[nodiscard]] inline PhoneNumber phoneNumberOf(std::string text) noexcept { return PhoneNumber(std::move(text)); }
+[[nodiscard]] inline constexpr PhoneNumber phoneNumberOf(std::string text) noexcept { return PhoneNumber(std::move(text)); }
 
 /// The IBAN written @p text, which the library wrote.
-[[nodiscard]] inline Iban ibanOf(std::string text) noexcept { return Iban(std::move(text)); }
+[[nodiscard]] inline constexpr Iban ibanOf(std::string text) noexcept { return Iban(std::move(text)); }
 
 /// The username written @p text, which the library wrote.
-[[nodiscard]] inline Username usernameOf(std::string text) noexcept { return Username(std::move(text)); }
+[[nodiscard]] inline constexpr Username usernameOf(std::string text) noexcept { return Username(std::move(text)); }
 
 /// The language written @p text, which the library wrote.
-[[nodiscard]] inline Language languageOf(std::string text) noexcept { return Language(std::move(text)); }
+[[nodiscard]] inline constexpr Language languageOf(std::string text) noexcept { return Language(std::move(text)); }
 
 /// The error kind of @p value. The two enumerations list their 17 values in one order, which the generator of both
 /// writes, so a value converts by its number; a library failure that no call can provoke, such as a settlement out of memory, converts
@@ -383,7 +386,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The error of @p detail, with everything the failure holds.
-[[nodiscard]] inline Error errorOf(EranosError const &detail) {
+[[nodiscard]] inline Error errorOf(EranosError const &detail) noexcept {
     Error::Fields fields{};
     fields.kind = fromDetail(detail.kind());
     fields.message = detail.message();
@@ -417,46 +420,46 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated list of the identifiers @p members, or the error of the first that is not text.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosTextList>, Error> toDetail(std::vector<MemberId> const &members) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosTextList>, Error> toDetail(std::vector<MemberId> const &members) noexcept {
     std::expected<std::unique_ptr<EranosTextList>, Error> result = EranosTextList::create();
     for (auto const &member : members) {
-        result = std::move(result).and_then([&member](std::unique_ptr<EranosTextList> list) {
-            return expectedOf(list->push(member.value())).transform([&list] { return std::move(list); });
+        result = std::move(result).and_then([&member](std::unique_ptr<EranosTextList> list) noexcept {
+            return expectedOf(list->push(member.value())).transform([&list] noexcept { return std::move(list); });
         });
     }
     return result;
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberParts fromDetail(EranosMemberParts const &value) { return {MemberId(value.member()), Parts{value.hundredths()}}; }
+[[nodiscard]] inline MemberParts fromDetail(EranosMemberParts const &value) noexcept { return {MemberId(value.member()), Parts{value.hundredths()}}; }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberParts>, Error> toDetail(MemberParts const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberParts>, Error> toDetail(MemberParts const &value) noexcept {
     return expectedOf(EranosMemberParts::create(value.member.value(), value.parts.hundredths));
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberPercentage fromDetail(EranosMemberPercentage const &value) {
+[[nodiscard]] inline MemberPercentage fromDetail(EranosMemberPercentage const &value) noexcept {
     return {MemberId(value.member()), Percentage{value.basis_points()}};
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberPercentage>, Error> toDetail(MemberPercentage const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberPercentage>, Error> toDetail(MemberPercentage const &value) noexcept {
     return expectedOf(EranosMemberPercentage::create(value.member.value(), value.percentage.basisPoints));
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value) {
+[[nodiscard]] inline MemberAmount fromDetail(EranosMemberAmount const &value) noexcept {
     return {MemberId(value.member()), detail::fromDetail(*value.amount())};
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMemberAmount>, Error> toDetail(MemberAmount const &value) noexcept {
     return expectedOf(EranosMemberAmount::create(value.member.value(), *detail::toDetail(value.amount)));
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline Split fromDetail(EranosSplit const &value) {
+[[nodiscard]] inline Split fromDetail(EranosSplit const &value) noexcept {
     switch (value.kind()) {
     case EranosSplitKind::Equal:
         return EqualSplit{detail::identifiers<MemberId>(*value.members())};
@@ -471,40 +474,40 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(EqualSplit const &value) {
-    return detail::toDetail(value.members).transform([](std::unique_ptr<EranosTextList> const &members) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(EqualSplit const &value) noexcept {
+    return detail::toDetail(value.members).transform([](std::unique_ptr<EranosTextList> const &members) noexcept {
         return EranosSplit::create_equal(*members);
     });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PartsSplit const &value) {
-    return listOf<EranosMemberPartsList>(value.shares).transform([](std::unique_ptr<EranosMemberPartsList> const &shares) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PartsSplit const &value) noexcept {
+    return listOf<EranosMemberPartsList>(value.shares).transform([](std::unique_ptr<EranosMemberPartsList> const &shares) noexcept {
         return EranosSplit::create_parts(*shares);
     });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PercentagesSplit const &value) {
-    return listOf<EranosMemberPercentageList>(value.shares).transform([](std::unique_ptr<EranosMemberPercentageList> const &shares) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(PercentagesSplit const &value) noexcept {
+    return listOf<EranosMemberPercentageList>(value.shares).transform([](std::unique_ptr<EranosMemberPercentageList> const &shares) noexcept {
         return EranosSplit::create_percentages(*shares);
     });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value) {
-    return listOf<EranosMemberAmountList>(value.shares).transform([](std::unique_ptr<EranosMemberAmountList> const &shares) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(AmountsSplit const &value) noexcept {
+    return listOf<EranosMemberAmountList>(value.shares).transform([](std::unique_ptr<EranosMemberAmountList> const &shares) noexcept {
         return EranosSplit::create_amounts(*shares);
     });
 }
 
 /// The generated split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosSplit>, Error> toDetail(Split const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<MemberParts> fromDetail(EranosMemberPartsList const &list) {
+[[nodiscard]] inline std::vector<MemberParts> fromDetail(EranosMemberPartsList const &list) noexcept {
     std::vector<MemberParts> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -514,7 +517,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<MemberPercentage> fromDetail(EranosMemberPercentageList const &list) {
+[[nodiscard]] inline std::vector<MemberPercentage> fromDetail(EranosMemberPercentageList const &list) noexcept {
     std::vector<MemberPercentage> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -524,7 +527,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list) {
+[[nodiscard]] inline std::vector<MemberAmount> fromDetail(EranosMemberAmountList const &list) noexcept {
     std::vector<MemberAmount> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -534,26 +537,26 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) {
+[[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) noexcept {
     ExpenseItem result(value.name(), detail::fromDetail(*value.unit_price()), detail::fromDetail(*value.split()));
     result.quantity = value.quantity();
     return result;
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value) noexcept {
     return detail::toDetail(value.split)
-        .and_then([&value](std::unique_ptr<EranosSplit> const &split) {
+        .and_then([&value](std::unique_ptr<EranosSplit> const &split) noexcept {
             return expectedOf(EranosExpenseItem::create(value.name, *detail::toDetail(value.unitPrice), *split));
         })
-        .transform([&value](std::unique_ptr<EranosExpenseItem> result) {
+        .transform([&value](std::unique_ptr<EranosExpenseItem> result) noexcept {
             result->set_quantity(value.quantity);
             return result;
         });
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value) {
+[[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value) noexcept {
     switch (value.kind()) {
     case EranosTipValueKind::Percentage:
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
@@ -565,32 +568,32 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated tip value of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value) noexcept {
     return EranosTipValue::create_percentage(value.percentage.basisPoints);
 }
 
 /// The generated tip value of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value) noexcept {
     return EranosTipValue::create_fixed(*detail::toDetail(value.amount));
 }
 
 /// The generated tip value of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(TipValue const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(TipValue const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
-[[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value) {
+[[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value) noexcept {
     return {detail::fromDetail(*value.value()), detail::fromDetail(value.distribution())};
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosTipRule> toDetail(TipRule const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosTipRule> toDetail(TipRule const &value) noexcept {
     return EranosTipRule::create(*detail::toDetail(value.value), detail::toDetail(value.distribution));
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline Cost fromDetail(EranosCost const &value) {
+[[nodiscard]] inline Cost fromDetail(EranosCost const &value) noexcept {
     switch (value.kind()) {
     case EranosCostKind::Local:
         return LocalCost{detail::fromDetail(*value.amount())};
@@ -602,23 +605,23 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated cost of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value) noexcept {
     return EranosCost::create_local(*detail::toDetail(value.amount));
 }
 
 /// The generated cost of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value) noexcept {
     // A rate is text the library wrote.
     return known(EranosCost::create_converted(*detail::toDetail(value.amount), value.rate.toString()));
 }
 
 /// The generated cost of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(Cost const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(Cost const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline ExpenseSplit fromDetail(EranosExpenseSplit const &value) {
+[[nodiscard]] inline ExpenseSplit fromDetail(EranosExpenseSplit const &value) noexcept {
     switch (value.kind()) {
     case EranosExpenseSplitKind::Whole:
         return WholeExpenseSplit{detail::fromDetail(*value.split())};
@@ -629,26 +632,26 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated expense split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(WholeExpenseSplit const &value) {
-    return detail::toDetail(value.split).transform([](std::unique_ptr<EranosSplit> const &split) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(WholeExpenseSplit const &value) noexcept {
+    return detail::toDetail(value.split).transform([](std::unique_ptr<EranosSplit> const &split) noexcept {
         return EranosExpenseSplit::create_whole(*split);
     });
 }
 
 /// The generated expense split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) {
-    return listOf<EranosExpenseItemList>(value.items).transform([](std::unique_ptr<EranosExpenseItemList> const &items) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) noexcept {
+    return listOf<EranosExpenseItemList>(value.items).transform([](std::unique_ptr<EranosExpenseItemList> const &items) noexcept {
         return EranosExpenseSplit::create_itemised(*items);
     });
 }
 
 /// The generated expense split of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Expense fromDetail(EranosExpense const &value) {
+[[nodiscard]] inline Expense fromDetail(EranosExpense const &value) noexcept {
     Expense result(ExpenseId(value.id()), value.name(), detail::fromDetail(*value.cost()), detail::fromDetail(*value.payers()),
                    detail::fromDetail(*value.split()), detail::calendarDateOf(value.date()));
     result.tip = detail::optionalRecord<TipRule>(value.tip());
@@ -659,15 +662,15 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value) noexcept {
     return detail::toDetail(value.payers)
-        .and_then([&value](std::unique_ptr<EranosSplit> const &payers) {
-            return detail::toDetail(value.split).and_then([&value, &payers](std::unique_ptr<EranosExpenseSplit> const &split) {
+        .and_then([&value](std::unique_ptr<EranosSplit> const &payers) noexcept {
+            return detail::toDetail(value.split).and_then([&value, &payers](std::unique_ptr<EranosExpenseSplit> const &split) noexcept {
                 return expectedOf(EranosExpense::create(value.id.value(), value.name, *detail::toDetail(value.cost), *payers, *split,
                                                         detail::toDetail(value.date)));
             });
         })
-        .and_then([&value](std::unique_ptr<EranosExpense> result) {
+        .and_then([&value](std::unique_ptr<EranosExpense> result) noexcept {
             if (value.tip) {
                 result->set_tip(*detail::toDetail(*value.tip));
             }
@@ -675,16 +678,16 @@ template <typename Value, typename Argument, typename Start, typename Convert>
                 result->set_time(detail::toDetail(*value.time));
             }
             return setIfPresent(std::move(result), value.category,
-                                [](EranosExpense &record, CategoryId const &id) { return record.set_category(id.value()); });
+                                [](EranosExpense &record, CategoryId const &id) noexcept { return record.set_category(id.value()); });
         })
-        .and_then([&value](std::unique_ptr<EranosExpense> result) {
+        .and_then([&value](std::unique_ptr<EranosExpense> result) noexcept {
             return setIfPresent(std::move(result), value.description,
-                                [](EranosExpense &record, std::string const &text) { return record.set_description(text); });
+                                [](EranosExpense &record, std::string const &text) noexcept { return record.set_description(text); });
         });
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Expense> fromDetail(EranosExpenseList const &list) {
+[[nodiscard]] inline std::vector<Expense> fromDetail(EranosExpenseList const &list) noexcept {
     std::vector<Expense> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -694,7 +697,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list) {
+[[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list) noexcept {
     std::vector<ExpenseItem> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -704,7 +707,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The value of @p value.
-[[nodiscard]] constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept {
+[[nodiscard]] inline constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept {
     switch (value) {
     case EranosTipDistribution::Proportional:
         return TipDistribution::PROPORTIONAL;
@@ -715,7 +718,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated value of @p value.
-[[nodiscard]] constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept {
+[[nodiscard]] inline constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept {
     switch (value) {
     case TipDistribution::PROPORTIONAL:
         return EranosTipDistribution::Proportional;
@@ -726,7 +729,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Transfer fromDetail(EranosTransfer const &value) {
+[[nodiscard]] inline Transfer fromDetail(EranosTransfer const &value) noexcept {
     Transfer result(TransferId(value.id()), MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.cost()),
                     detail::calendarDateOf(value.date()));
     result.time = detail::optionalTime(value.time());
@@ -735,19 +738,20 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosTransfer>, Error> toDetail(Transfer const &value) noexcept {
     return expectedOf(EranosTransfer::create(value.id.value(), value.from.value(), value.to.value(), *detail::toDetail(value.cost),
                                              detail::toDetail(value.date)))
-        .and_then([&value](std::unique_ptr<EranosTransfer> result) {
+        .and_then([&value](std::unique_ptr<EranosTransfer> result) noexcept {
             if (value.time) {
                 result->set_time(detail::toDetail(*value.time));
             }
-            return setIfPresent(std::move(result), value.note, [](EranosTransfer &record, std::string const &text) { return record.set_note(text); });
+            return setIfPresent(std::move(result), value.note,
+                                [](EranosTransfer &record, std::string const &text) noexcept { return record.set_note(text); });
         });
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Transfer> fromDetail(EranosTransferList const &list) {
+[[nodiscard]] inline std::vector<Transfer> fromDetail(EranosTransferList const &list) noexcept {
     std::vector<Transfer> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -757,7 +761,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline PaymentAccountDetails fromDetail(EranosPaymentAccountDetails const &value) {
+[[nodiscard]] inline PaymentAccountDetails fromDetail(EranosPaymentAccountDetails const &value) noexcept {
     switch (value.kind()) {
     case EranosPaymentAccountDetailsKind::Iban:
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
@@ -770,32 +774,34 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated account details of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(IbanPaymentAccountDetails const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(IbanPaymentAccountDetails const &value) noexcept {
     // An IBAN is text the library wrote.
     return known(EranosPaymentAccountDetails::create_iban(value.iban.toString()));
 }
 
 /// The generated account details of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(UsernamePaymentAccountDetails const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(UsernamePaymentAccountDetails const &value) noexcept {
     // A username is text the library wrote.
     return known(EranosPaymentAccountDetails::create_username(value.username.toString()));
 }
 
 /// The generated account details of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(PaymentAccountDetails const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(PaymentAccountDetails const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
-[[nodiscard]] inline PaymentAccount fromDetail(EranosPaymentAccount const &value) { return {value.name(), detail::fromDetail(*value.details())}; }
+[[nodiscard]] inline PaymentAccount fromDetail(EranosPaymentAccount const &value) noexcept {
+    return {value.name(), detail::fromDetail(*value.details())};
+}
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosPaymentAccount>, Error> toDetail(PaymentAccount const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosPaymentAccount>, Error> toDetail(PaymentAccount const &value) noexcept {
     return expectedOf(EranosPaymentAccount::create(value.name, *detail::toDetail(value.details)));
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Member fromDetail(EranosMember const &value) {
+[[nodiscard]] inline Member fromDetail(EranosMember const &value) noexcept {
     Member result(MemberId(value.id()), value.first_name());
     result.lastName = value.last_name();
     result.email = detail::optionalText<Email>(value.email(), detail::emailOf);
@@ -805,30 +811,31 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value) noexcept {
     return listOf<EranosPaymentAccountList>(value.accounts)
-        .and_then([&value](std::unique_ptr<EranosPaymentAccountList> const &accounts) {
-            return expectedOf(EranosMember::create(value.id.value(), value.firstName)).transform([&accounts](std::unique_ptr<EranosMember> result) {
-                result->set_accounts(*accounts);
-                return result;
-            });
+        .and_then([&value](std::unique_ptr<EranosPaymentAccountList> const &accounts) noexcept {
+            return expectedOf(EranosMember::create(value.id.value(), value.firstName))
+                .transform([&accounts](std::unique_ptr<EranosMember> result) noexcept {
+                    result->set_accounts(*accounts);
+                    return result;
+                });
         })
-        .and_then([&value](std::unique_ptr<EranosMember> result) {
+        .and_then([&value](std::unique_ptr<EranosMember> result) noexcept {
             return setIfPresent(std::move(result), value.lastName,
-                                [](EranosMember &record, std::string const &text) { return record.set_last_name(text); });
+                                [](EranosMember &record, std::string const &text) noexcept { return record.set_last_name(text); });
         })
-        .and_then([&value](std::unique_ptr<EranosMember> result) {
+        .and_then([&value](std::unique_ptr<EranosMember> result) noexcept {
             return setIfPresent(std::move(result), value.email,
-                                [](EranosMember &record, Email const &email) { return record.set_email(email.toString()); });
+                                [](EranosMember &record, Email const &email) noexcept { return record.set_email(email.toString()); });
         })
-        .and_then([&value](std::unique_ptr<EranosMember> result) {
+        .and_then([&value](std::unique_ptr<EranosMember> result) noexcept {
             return setIfPresent(std::move(result), value.phone,
-                                [](EranosMember &record, PhoneNumber const &phone) { return record.set_phone(phone.toString()); });
+                                [](EranosMember &record, PhoneNumber const &phone) noexcept { return record.set_phone(phone.toString()); });
         });
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<PaymentAccount> fromDetail(EranosPaymentAccountList const &list) {
+[[nodiscard]] inline std::vector<PaymentAccount> fromDetail(EranosPaymentAccountList const &list) noexcept {
     std::vector<PaymentAccount> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -838,7 +845,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Member> fromDetail(EranosMemberList const &list) {
+[[nodiscard]] inline std::vector<Member> fromDetail(EranosMemberList const &list) noexcept {
     std::vector<Member> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -848,15 +855,15 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Category fromDetail(EranosCategory const &value) { return {CategoryId(value.id()), value.name()}; }
+[[nodiscard]] inline Category fromDetail(EranosCategory const &value) noexcept { return {CategoryId(value.id()), value.name()}; }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value) noexcept {
     return expectedOf(EranosCategory::create(value.id.value(), value.name));
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Category> fromDetail(EranosCategoryList const &list) {
+[[nodiscard]] inline std::vector<Category> fromDetail(EranosCategoryList const &list) noexcept {
     std::vector<Category> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -866,7 +873,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline Balance fromDetail(EranosBalance const &value) {
+[[nodiscard]] inline Balance fromDetail(EranosBalance const &value) noexcept {
     switch (value.kind()) {
     case EranosBalanceKind::Owes:
         return OwesBalance{detail::fromDetail(*value.amount())};
@@ -879,25 +886,25 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated balance of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(OwesBalance const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(OwesBalance const &value) noexcept {
     return EranosBalance::create_owes(*detail::toDetail(value.amount));
 }
 
 /// The generated balance of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(SettledBalance const & /* value */) { return EranosBalance::create_settled(); }
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(SettledBalance const & /* value */) noexcept { return EranosBalance::create_settled(); }
 
 /// The generated balance of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value) noexcept {
     return EranosBalance::create_gets_back(*detail::toDetail(value.amount));
 }
 
 /// The generated balance of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(Balance const &value) {
-    return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(Balance const &value) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberSummary fromDetail(EranosMemberSummary const &value) {
+[[nodiscard]] inline MemberSummary fromDetail(EranosMemberSummary const &value) noexcept {
     return {MemberId(value.member()),
             detail::fromDetail(*value.paid()),
             detail::fromDetail(*value.share()),
@@ -908,43 +915,43 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline CategoryTotal fromDetail(EranosCategoryTotal const &value) {
+[[nodiscard]] inline CategoryTotal fromDetail(EranosCategoryTotal const &value) noexcept {
     return {CategoryId(value.category()), detail::fromDetail(*value.total())};
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberCategoryTotals fromDetail(EranosMemberCategoryTotals const &value) {
+[[nodiscard]] inline MemberCategoryTotals fromDetail(EranosMemberCategoryTotals const &value) noexcept {
     return {MemberId(value.member()), detail::fromDetail(*value.totals())};
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Summary fromDetail(EranosSummary const &value) {
+[[nodiscard]] inline Summary fromDetail(EranosSummary const &value) noexcept {
     return {detail::fromDetail(*value.total_spent()), detail::fromDetail(*value.members()), detail::fromDetail(*value.category_totals()),
             detail::fromDetail(*value.member_category_totals())};
 }
 
 /// The record of @p value.
-[[nodiscard]] inline MemberShare fromDetail(EranosMemberShare const &value) {
+[[nodiscard]] inline MemberShare fromDetail(EranosMemberShare const &value) noexcept {
     return {MemberId(value.member()), detail::fromDetail(*value.paid()), detail::fromDetail(*value.share())};
 }
 
 /// The record of @p value.
-[[nodiscard]] inline ExpenseShares fromDetail(EranosExpenseShares const &value) {
+[[nodiscard]] inline ExpenseShares fromDetail(EranosExpenseShares const &value) noexcept {
     return {detail::fromDetail(*value.members()), detail::fromDetail(*value.total()), detail::fromDetail(*value.tip())};
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Payment fromDetail(EranosPayment const &value) {
+[[nodiscard]] inline Payment fromDetail(EranosPayment const &value) noexcept {
     return {MemberId(value.from()), MemberId(value.to()), detail::fromDetail(*value.amount())};
 }
 
 /// The record of @p value.
-[[nodiscard]] inline SettlementPlan fromDetail(EranosSettlementPlan const &value) {
+[[nodiscard]] inline SettlementPlan fromDetail(EranosSettlementPlan const &value) noexcept {
     return {detail::fromDetail(*value.payments()), detail::fromDetail(value.strategy())};
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<CategoryTotal> fromDetail(EranosCategoryTotalList const &list) {
+[[nodiscard]] inline std::vector<CategoryTotal> fromDetail(EranosCategoryTotalList const &list) noexcept {
     std::vector<CategoryTotal> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -954,7 +961,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<MemberCategoryTotals> fromDetail(EranosMemberCategoryTotalsList const &list) {
+[[nodiscard]] inline std::vector<MemberCategoryTotals> fromDetail(EranosMemberCategoryTotalsList const &list) noexcept {
     std::vector<MemberCategoryTotals> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -964,7 +971,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<MemberShare> fromDetail(EranosMemberShareList const &list) {
+[[nodiscard]] inline std::vector<MemberShare> fromDetail(EranosMemberShareList const &list) noexcept {
     std::vector<MemberShare> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -974,7 +981,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<MemberSummary> fromDetail(EranosMemberSummaryList const &list) {
+[[nodiscard]] inline std::vector<MemberSummary> fromDetail(EranosMemberSummaryList const &list) noexcept {
     std::vector<MemberSummary> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -984,7 +991,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Payment> fromDetail(EranosPaymentList const &list) {
+[[nodiscard]] inline std::vector<Payment> fromDetail(EranosPaymentList const &list) noexcept {
     std::vector<Payment> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
@@ -994,7 +1001,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The value of @p value.
-[[nodiscard]] constexpr SettlementStrategy fromDetail(EranosSettlementStrategy const value) noexcept {
+[[nodiscard]] inline constexpr SettlementStrategy fromDetail(EranosSettlementStrategy const value) noexcept {
     switch (value) {
     case EranosSettlementStrategy::Adaptive:
         return SettlementStrategy::ADAPTIVE;
@@ -1009,7 +1016,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated value of @p value.
-[[nodiscard]] constexpr EranosSettlementStrategy toDetail(SettlementStrategy const value) noexcept {
+[[nodiscard]] inline constexpr EranosSettlementStrategy toDetail(SettlementStrategy const value) noexcept {
     switch (value) {
     case SettlementStrategy::ADAPTIVE:
         return EranosSettlementStrategy::Adaptive;
@@ -1024,18 +1031,18 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The generated cancellation of @p cancellation, or none.
-[[nodiscard]] inline EranosCancellation const *handleOf(Cancellation const *const cancellation) noexcept {
+[[nodiscard]] inline constexpr EranosCancellation const *handleOf(Cancellation const *const cancellation) noexcept {
     return nullptr == cancellation ? nullptr : cancellation->handle.get();
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosCurrencyRate> toDetail(CurrencyRate const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosCurrencyRate> toDetail(CurrencyRate const &value) noexcept {
     // A currency's code and a rate are text the library wrote.
     return known(EranosCurrencyRate::create(value.currency.code(), value.rate.toString()));
 }
 
 /// The generated list of @p records.
-[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::span<CurrencyRate const> const records) {
+[[nodiscard]] inline std::unique_ptr<EranosCurrencyRateList> toDetail(std::span<CurrencyRate const> const records) noexcept {
     auto result = EranosCurrencyRateList::create();
     for (auto const &record : records) {
         result->push(*toDetail(record));

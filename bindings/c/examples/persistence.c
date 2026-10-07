@@ -20,7 +20,7 @@ typedef struct ComparisonRow {
 } ComparisonRow;
 
 /// A table of balances before and after, its columns from @p numbersFrom on aligned to the right.
-static Table *comparisonTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *comparisonTable(size_t const numbersFrom) {
     return tableCreate(3, (char const *const[]){"Member", "Balance before saving", "Balance after loading"}, numbersFrom);
 }
 
@@ -30,7 +30,7 @@ static void addComparisonRow(Table *const table, ComparisonRow const *const row)
 }
 
 /// The balance of @p member in @p group, as the library writes it, or ? for a member without totals.
-static Line balanceOf(EranosExpenseGroup const *const group, Id const member) {
+[[nodiscard]] static Line balanceOf(EranosExpenseGroup const *const group, Id const member) {
     EranosSummary *summary = nullptr;
     must(eranosExpenseGroupSummary(group, &summary));
     EranosMemberSummary *const totals = totalsOf(summary, member.text);
@@ -41,7 +41,7 @@ static Line balanceOf(EranosExpenseGroup const *const group, Id const member) {
 }
 
 /// The lunch that Bob paid, with a tip of 10 % shared in proportion to what each consumed.
-static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCalendarDate const day) {
+[[nodiscard]] static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCalendarDate const day) {
     EranosExpense *const expense = expenseOf("Lunch", localCost(amountOf("30.00", "EUR")), soleSplit(bob), equalSplit(both), day);
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
@@ -54,7 +54,7 @@ static EranosExpense *lunchOf(Members const *const both, Id const bob, EranosCal
 }
 
 int main(void) {
-    EranosCalendarDate const day = {.year = 2026, .month = 9, .day = 23};
+    constexpr EranosCalendarDate DAY = {.year = 2026, .month = 9, .day = 23};
     EranosNewExpenseGroup *details = nullptr;
     must(eranosNewExpenseGroupCreate("Road trip", "EUR", &details));
     EranosExpenseGroup *group = nullptr;
@@ -63,8 +63,8 @@ int main(void) {
     Id const ana = addMember(group, "Ana");
     Id const bob = addMember(group, "Bob");
     Members const both = {.count = 2, .ids = {ana, bob}};
-    addExpense(group, expenseOf("Fuel", localCost(amountOf("70.00", "EUR")), soleSplit(ana), equalSplit(&both), day));
-    addExpense(group, lunchOf(&both, bob, day));
+    (void)addExpense(group, expenseOf("Fuel", localCost(amountOf("70.00", "EUR")), soleSplit(ana), equalSplit(&both), DAY));
+    (void)addExpense(group, lunchOf(&both, bob, DAY));
 
     title("Road trip: saving and loading a group");
     printLine("With the `serde` feature a group serialises, and so does every type it stores.\n"

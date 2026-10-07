@@ -25,8 +25,8 @@ namespace eranos {
 
 namespace detail {
 
-[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details);
-[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code);
+[[nodiscard]] inline CurrencyCode currencyOf(EranosCurrencyDetails const &details) noexcept;
+[[nodiscard]] inline CurrencyCode listedCurrency(std::string_view const code) noexcept;
 
 } // namespace detail
 
@@ -39,39 +39,39 @@ class CurrencyCode final {
     /// @param code The ISO 4217 code
     /// @return The currency, or an error of the kind ErrorKind::MONEY for a code the library does not list, and ErrorKind::INVALID_TEXT for text that
     ///   is not UTF-8
-    [[nodiscard]] static std::expected<CurrencyCode, Error> of(std::string_view const code);
+    [[nodiscard]] static std::expected<CurrencyCode, Error> of(std::string_view const code) noexcept;
 
     /// Every currency the library lists, by code.
     ///
     /// @return The currencies
-    [[nodiscard]] static std::vector<CurrencyCode> all();
+    [[nodiscard]] static std::vector<CurrencyCode> all() noexcept;
 
     /// The ISO 4217 code: "EUR".
     ///
     /// @return The code
-    [[nodiscard]] std::string const &code() const noexcept { return fields.code; }
+    [[nodiscard]] inline constexpr std::string const &code() const noexcept { return fields.code; }
 
     /// The English name: "Euro".
     ///
     /// @return The name
-    [[nodiscard]] std::string const &name() const noexcept { return fields.name; }
+    [[nodiscard]] inline constexpr std::string const &name() const noexcept { return fields.name; }
 
     /// The ISO 4217 numeric code: 978 for the euro.
     ///
     /// @return The numeric code
-    [[nodiscard]] std::int32_t numericCode() const noexcept { return fields.numericCode; }
+    [[nodiscard]] inline constexpr std::int32_t numericCode() const noexcept { return fields.numericCode; }
 
     /// The number of decimal places of its amounts: 2 for the euro, 0 for the yen.
     ///
     /// @return The decimal places
-    [[nodiscard]] std::int32_t decimalPlaces() const noexcept { return fields.decimalPlaces; }
+    [[nodiscard]] inline constexpr std::int32_t decimalPlaces() const noexcept { return fields.decimalPlaces; }
 
     /// Whether two currencies have one code.
     ///
     /// @param left A currency
     /// @param right Another currency
     /// @return Whether they are the same currency
-    [[nodiscard]] friend bool operator==(CurrencyCode const &left, CurrencyCode const &right) noexcept {
+    [[nodiscard]] friend inline constexpr bool operator==(CurrencyCode const &left, CurrencyCode const &right) noexcept {
         return left.fields.code == right.fields.code;
     }
 
@@ -80,12 +80,12 @@ class CurrencyCode final {
     /// @param left A currency
     /// @param right Another currency
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(CurrencyCode const &left, CurrencyCode const &right) noexcept {
+    [[nodiscard]] friend inline constexpr std::strong_ordering operator<=>(CurrencyCode const &left, CurrencyCode const &right) noexcept {
         return left.fields.code <=> right.fields.code;
     }
 
   private:
-    friend CurrencyCode detail::currencyOf(detail::EranosCurrencyDetails const &details);
+    friend CurrencyCode detail::currencyOf(detail::EranosCurrencyDetails const &details) noexcept;
 
     /// What the library knows of the currency.
     struct Fields final {
@@ -95,18 +95,17 @@ class CurrencyCode final {
         std::int32_t decimalPlaces;
     };
 
-    explicit CurrencyCode(Fields fields) noexcept : fields(std::move(fields)) {}
+    inline constexpr explicit CurrencyCode(Fields fields) noexcept : fields(std::move(fields)) {}
 
     Fields fields;
 };
 
-inline std::expected<CurrencyCode, Error> CurrencyCode::of(std::string_view const code) {
-    return detail::expectedOf(detail::EranosCurrencyDetails::of(code)).transform([](std::unique_ptr<detail::EranosCurrencyDetails> const &details) {
-        return detail::currencyOf(*details);
-    });
+inline std::expected<CurrencyCode, Error> CurrencyCode::of(std::string_view const code) noexcept {
+    return detail::expectedOf(detail::EranosCurrencyDetails::of(code))
+        .transform([](std::unique_ptr<detail::EranosCurrencyDetails> const &details) noexcept { return detail::currencyOf(*details); });
 }
 
-inline std::vector<CurrencyCode> CurrencyCode::all() {
+inline std::vector<CurrencyCode> CurrencyCode::all() noexcept {
     auto const list = detail::EranosCurrencyDetailsList::all();
     std::vector<CurrencyCode> result;
     result.reserve(list->len());

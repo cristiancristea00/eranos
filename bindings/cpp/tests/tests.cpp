@@ -31,7 +31,7 @@ class Check final {
     ///
     /// @param holds Whether the claim holds
     /// @param claim What the test claims
-    void that(bool const holds, std::string_view const claim) {
+    inline constexpr void that(bool const holds, std::string_view const claim) noexcept {
         if (!holds) {
             failures.emplace_back(claim);
         }
@@ -40,14 +40,14 @@ class Check final {
     /// The claims that failed.
     ///
     /// @return The claims
-    [[nodiscard]] std::vector<std::string> const &failed() const noexcept { return failures; }
+    [[nodiscard]] inline constexpr std::vector<std::string> const &failed() const noexcept { return failures; }
 
   private:
     std::vector<std::string> failures;
 };
 
 /// The error @p result holds, or none when it holds a value.
-template <typename Value> [[nodiscard]] std::optional<Error> refusal(std::expected<Value, Error> const &result) {
+template <typename Value> [[nodiscard]] std::optional<Error> refusal(std::expected<Value, Error> const &result) noexcept {
     if (result) {
         return std::nullopt;
     }
@@ -61,15 +61,16 @@ template <typename Value> [[nodiscard]] std::optional<Error> refusal(std::expect
 
 /// Checks that @p value equals @p same and differs from @p other through both operators: a comparison that left a field out
 /// would merge two values an app holds apart, and one whose two operators disagreed would answer a question twice.
+template <typename Value>
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the value, its twin, and another, in the order the claim reads them.
-template <typename Value> void checkValue(Check &check, Value const &value, Value const &same, Value const &other, std::string_view const what) {
+inline constexpr void checkValue(Check &check, Value const &value, Value const &same, Value const &other, std::string_view const what) noexcept {
     check.that(value == same && !(value != same), what);
     check.that(value != other && !(value == other), what);
 }
 
 /// Checks an identifier type: equal to its twin with one hash, different from another, and ordered by the bytes of its text, as the
 /// library orders the entries it lists and as a map or a set of them expects.
-template <typename Identifier> void checkIdentifier(Check &check, std::string_view const what) {
+template <typename Identifier> void checkIdentifier(Check &check, std::string_view const what) noexcept {
     Identifier const first("0199a000-0000-7000-8000-000000000001");
     Identifier const twin(first.value());
     Identifier const second("0199a000-0000-7000-8000-000000000002");
@@ -88,7 +89,7 @@ struct RefusedText final {
 };
 
 /// Text that breaks each rule of identifiers, with the failure of the rule.
-[[nodiscard]] std::array<RefusedText, 4> refusedTexts() {
+[[nodiscard]] inline constexpr std::array<RefusedText, 4> refusedTexts() noexcept {
     return {
         RefusedText{.failure = Failure::ID_EMPTY, .text = ""},
         RefusedText{.failure = Failure::ID_TOO_LONG, .text = std::string(65, 'a')},
@@ -99,7 +100,7 @@ struct RefusedText final {
 
 /// Checks the parse() of an identifier type: text the rules accept comes back as it is written, byte for byte and in its case, and text
 /// they refuse is refused with the first rule it breaks.
-template <typename Identifier> void checkParse(Check &check, std::string_view const what) {
+template <typename Identifier> void checkParse(Check &check, std::string_view const what) noexcept {
     check.that(Identifier("Ana-1") == Identifier::parse("Ana-1"), what);
     check.that(Identifier("caf\u00e9 \u2615") == Identifier::parse("caf\u00e9 \u2615"), what);
     for (auto const &[failure, text] : refusedTexts()) {
@@ -110,7 +111,7 @@ template <typename Identifier> void checkParse(Check &check, std::string_view co
 
 /// Checks the generate() of an identifier type: two in a row differ, the second after the first in the order the library lists entries by, and
 /// each is text that parse() accepts as it is.
-template <typename Identifier> void checkGenerate(Check &check, std::string_view const what) {
+template <typename Identifier> void checkGenerate(Check &check, std::string_view const what) noexcept {
     auto const first = Identifier::generate();
     auto const second = Identifier::generate();
     check.that(first != second && first < second, what);
@@ -120,17 +121,17 @@ template <typename Identifier> void checkGenerate(Check &check, std::string_view
 /// A group of two, Ana and Bob, with a category, an expense, and a transfer, and the identifiers the group gave them.
 class Flat final {
   public:
-    Flat()
+    inline Flat() noexcept
         : euro(CurrencyCode::of("EUR").value()), day(CalendarDate::of(2026, 9, 23).value()),
           group(ExpenseGroup::create("Flat", euro, ExpenseGroupOptions{.description = "Rent", .language = Language::parse("pt-pt").value()}).value()),
           ana(group.addMember(Member("Ana")).value()), bob(group.addMember(Member("Bob")).value()), food(group.addCategory(Category("Food")).value()),
           dinner(group.addExpense(dinnerExpense()).value()), repayment(group.addTransfer(Transfer(bob, ana, LocalCost{euros(1'000)}, day)).value()) {}
 
     /// @p minorUnits cents.
-    [[nodiscard]] Money euros(std::int64_t const minorUnits) const { return {minorUnits, euro}; }
+    [[nodiscard]] inline Money euros(std::int64_t const minorUnits) const noexcept { return {minorUnits, euro}; }
 
     /// An expense of 30.00 EUR, called @p name, that @p payer paid and @p members share equally.
-    [[nodiscard]] Expense expense(std::string name, MemberId const &payer, std::vector<MemberId> members) const {
+    [[nodiscard]] inline Expense expense(std::string name, MemberId const &payer, std::vector<MemberId> members) const noexcept {
         return {std::move(name), LocalCost{euros(3'000)}, EqualSplit{{payer}}, WholeExpenseSplit{EqualSplit{std::move(members)}}, day};
     }
 
@@ -145,7 +146,7 @@ class Flat final {
 
   private:
     /// The dinner Ana paid for the two of them, in the food category.
-    [[nodiscard]] Expense dinnerExpense() const {
+    [[nodiscard]] inline Expense dinnerExpense() const noexcept {
         auto dinnerEntry = expense("Dinner", ana, {ana, bob});
         dinnerEntry.category = food;
         return dinnerEntry;
@@ -155,7 +156,7 @@ class Flat final {
 // --- Values -----------------------------------------------------------------------------------------------------------
 
 /// A currency whose details came out wrong would format every amount in it wrongly.
-void aCurrencyHoldsWhatTheLibraryKnowsOfIt(Check &check) {
+void aCurrencyHoldsWhatTheLibraryKnowsOfIt(Check &check) noexcept {
     auto const euro = CurrencyCode::of("EUR").value();
     auto const yen = CurrencyCode::of("JPY").value();
     check.that("EUR" == euro.code() && 2 == euro.decimalPlaces() && "Euro" == euro.name() && 978 == euro.numericCode(), "the euro's details");
@@ -165,27 +166,27 @@ void aCurrencyHoldsWhatTheLibraryKnowsOfIt(Check &check) {
 }
 
 /// A list that missed a currency or came out of order would hide one from the currency pickers of an app.
-void everyCurrencyTheLibraryListsIsListedByCode(Check &check) {
+void everyCurrencyTheLibraryListsIsListedByCode(Check &check) noexcept {
     auto const all = CurrencyCode::all();
     check.that(std::ranges::is_sorted(all), "the currencies are in the order of their codes");
     check.that(std::ranges::contains(all, CurrencyCode::of("EUR").value()), "the euro is listed");
 }
 
 /// A code the library does not list, taken, would make an amount no call can format.
-void aCodeTheLibraryDoesNotListIsRefused(Check &check) {
+void aCodeTheLibraryDoesNotListIsRefused(Check &check) noexcept {
     auto const unknown = refusal(CurrencyCode::of("XYZ"));
     check.that(isFailure(unknown, ErrorKind::MONEY, Failure::MONEY_UNKNOWN_CURRENCY), "an unknown code is refused");
     check.that(unknown.has_value() && "unknown currency code" == unknown.value().message(), "the message names the failure, not the code");
 }
 
 /// Bytes that are not UTF-8, passed on, would reach the library as text it cannot hold.
-void textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt(Check &check) {
+void textThatIsNotUtf8IsRefusedBeforeTheLibrarySeesIt(Check &check) noexcept {
     auto const refused = refusal(CurrencyCode::of("\xff"));
     check.that(isFailure(refused, ErrorKind::INVALID_TEXT, std::nullopt), "the bytes are refused as text");
 }
 
 /// An amount that parsed or formatted otherwise than the library does would show one number in an app and store another.
-void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) {
+void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) noexcept {
     auto const euro = CurrencyCode::of("EUR").value();
     auto const price = Money::parse("12.5", euro).value();
     check.that(price.currency == euro && 1'250 == price.minorUnits, "12.5 is 1250 cents");
@@ -199,7 +200,7 @@ void anAmountParsesAndFormatsAsTheLibraryWritesIt(Check &check) {
 }
 
 /// Arithmetic that mixed currencies or wrapped around would put a wrong total in a report.
-void amountsInOneCurrencyAddAndSubtract(Check &check) {
+void amountsInOneCurrencyAddAndSubtract(Check &check) noexcept {
     auto const euro = CurrencyCode::of("EUR").value();
     auto const lei = CurrencyCode::of("RON").value();
     check.that(Money(1'000, euro).plus(Money(250, euro)) == Money(1'250, euro), "10.00 EUR and 2.50 EUR make 12.50 EUR");
@@ -212,7 +213,7 @@ void amountsInOneCurrencyAddAndSubtract(Check &check) {
 }
 
 /// A rate that parsed or converted otherwise than the library does would change the share of every converted expense.
-void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) {
+void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) noexcept {
     auto const euro = CurrencyCode::of("EUR").value();
     auto const lei = CurrencyCode::of("RON").value();
     auto const rate = ExchangeRate::parse("4.970").value();
@@ -226,7 +227,7 @@ void aRateParsesAndConvertsAsTheLibraryDoes(Check &check) {
 }
 
 /// A percentage or a number of parts read otherwise than the library reads it would divide a split otherwise than it shows.
-void percentagesAndPartsParseAndFormatAsTheLibraryDoes(Check &check) {
+void percentagesAndPartsParseAndFormatAsTheLibraryDoes(Check &check) noexcept {
     auto const percentage = Percentage::parse("12.5 %").value();
     check.that(1'250 == percentage.basisPoints && "12.5%" == percentage.toString(), "12.5 % is 1250 basis points");
     checkValue(check, percentage, Percentage{1'250}, Percentage{1'251}, "percentages compare by basis points");
@@ -240,7 +241,7 @@ void percentagesAndPartsParseAndFormatAsTheLibraryDoes(Check &check) {
 }
 
 /// A date or a time the calendar does not have, taken, would date an expense on a day that never was.
-void datesAndTimesAreCheckedWhenMade(Check &check) {
+void datesAndTimesAreCheckedWhenMade(Check &check) noexcept {
     auto const date = CalendarDate::of(2026, 9, 23).value();
     check.that(2026 == date.year() && 9 == date.month() && 23 == date.day() && "2026-09-23" == date.toString(), "the date's fields and text");
     checkValue(check, date, CalendarDate::parse("2026-09-23").value(), CalendarDate::of(2026, 9, 24).value(), "dates compare by day");
@@ -254,7 +255,7 @@ void datesAndTimesAreCheckedWhenMade(Check &check) {
 }
 
 /// Contact details and accounts kept as typed would differ from the same details typed otherwise, and a wrong one would pass.
-void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) {
+void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) noexcept {
     auto const email = Email::parse(" ana@example.com ").value();
     check.that("ana@example.com" == email.toString(), "an email is trimmed");
     checkValue(check, email, Email::parse("ana@example.com").value(), Email::parse("bob@example.com").value(), "emails compare by text");
@@ -290,7 +291,7 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) {
 
 /// An identifier that compared or hashed otherwise than by its text would lose an entry in the maps and sets of an app, and one that
 /// ordered otherwise than by its bytes would sort entries otherwise than the library lists them.
-void everyIdentifierComparesAndHashesByItsText(Check &check) {
+void everyIdentifierComparesAndHashesByItsText(Check &check) noexcept {
     checkIdentifier<ExpenseGroupId>(check, "a group's identifier");
     checkIdentifier<MemberId>(check, "a member's identifier");
     checkIdentifier<CategoryId>(check, "a category's identifier");
@@ -300,7 +301,7 @@ void everyIdentifierComparesAndHashesByItsText(Check &check) {
 
 /// An identifier kept otherwise than it was written, trimmed or in another case, would no longer match the key the app gave, and text the library
 /// refuses, taken, would fail every call that carries it.
-void everyIdentifierIsCheckedAndKeptAsItIsWritten(Check &check) {
+void everyIdentifierIsCheckedAndKeptAsItIsWritten(Check &check) noexcept {
     checkParse<ExpenseGroupId>(check, "a group's identifier");
     checkParse<MemberId>(check, "a member's identifier");
     checkParse<CategoryId>(check, "a category's identifier");
@@ -310,7 +311,7 @@ void everyIdentifierIsCheckedAndKeptAsItIsWritten(Check &check) {
 
 /// A generated identifier that repeated an earlier one would put a new entry in the place of another, and one the rules refused would fail every
 /// call that carries it.
-void everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept(Check &check) {
+void everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept(Check &check) noexcept {
     checkGenerate<ExpenseGroupId>(check, "a group's identifier");
     checkGenerate<MemberId>(check, "a member's identifier");
     checkGenerate<CategoryId>(check, "a category's identifier");
@@ -321,7 +322,7 @@ void everyIdentifierTypeGeneratesANewIdentifierTheRulesAccept(Check &check) {
 // --- Records and alternatives ------------------------------------------------------------------------------------------
 
 /// A record or an alternative whose comparison left a field out would merge two entries an app holds apart.
-void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
+void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) noexcept {
     auto const euro = CurrencyCode::of("EUR").value();
     MemberId const ana("0199a000-0000-7000-8000-000000000001");
     MemberId const bob("0199a000-0000-7000-8000-000000000002");
@@ -410,7 +411,7 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
 // --- Entries through the group -----------------------------------------------------------------------------------------
 
 /// An expense that came back from the group otherwise than it went in would change what an app shows after a save.
-void anExpenseReadsBackAsItWasAdded(Check &check) {
+void anExpenseReadsBackAsItWasAdded(Check &check) noexcept {
     Flat flat;
     auto const lei = CurrencyCode::of("RON").value();
     Expense lunch("Lunch", ConvertedCost{.amount = Money(5'000, lei), .rate = ExchangeRate::parse("0.2").value()},
@@ -437,7 +438,7 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
 }
 
 /// A transfer or a member that came back otherwise than it went in would move money to the wrong account after a save.
-void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
+void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) noexcept {
     Flat flat;
     Transfer cash(flat.ana, flat.bob,
                   ConvertedCost{.amount = Money(1'000, CurrencyCode::of("RON").value()), .rate = ExchangeRate::parse("0.2").value()}, flat.day);
@@ -464,7 +465,7 @@ void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
 }
 
 /// An edit that lost an entry's identifier, or returned the entry as it became, would leave an app's undo pointing nowhere.
-void replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas(Check &check) {
+void replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas(Check &check) noexcept {
     Flat flat;
     auto const dinner = flat.group.expense(flat.dinner).value().value();
     auto lunch = dinner;
@@ -492,7 +493,7 @@ void replacingAnEntryKeepsItsIdentifierAndReturnsItAsItWas(Check &check) {
 
 /// A replacement of an entry the group does not hold would change another entry, or report a change it never made; each is refused with the
 /// failure that names the entry.
-void anEntryTheGroupDoesNotHoldIsNotReplaced(Check &check) {
+void anEntryTheGroupDoesNotHoldIsNotReplaced(Check &check) noexcept {
     Flat flat;
     auto const snack = flat.expense("Snack", flat.ana, {flat.ana});
     auto const expense = refusal(flat.group.replaceExpense(snack));
@@ -516,7 +517,7 @@ void anEntryTheGroupDoesNotHoldIsNotReplaced(Check &check) {
 
 /// An entry the group kept under another identifier than the app gave it would break the app's link to its own record, and a second entry under
 /// one identifier would stand for the first in every lookup.
-void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check &check) {
+void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check &check) noexcept {
     Flat flat;
     Member const carla(MemberId::parse("carla").value(), "Carla");
     check.that(flat.group.addMember(carla) == carla.id && flat.group.member(carla.id).value() == carla, "a member keeps it");
@@ -546,7 +547,7 @@ void anEntryKeepsTheAppsIdentifierAndNoOtherEntryTakesIt(Check &check) {
 }
 
 /// A removal that returned something else, or left the entry behind, would let an app show a deleted entry.
-void removingAnEntryReturnsItAndForgetsIt(Check &check) {
+void removingAnEntryReturnsItAndForgetsIt(Check &check) noexcept {
     Flat flat;
     auto const dinner = flat.group.expense(flat.dinner).value().value();
     check.that(flat.group.removeExpense(flat.dinner) == dinner && !flat.group.expense(flat.dinner).value().has_value(), "an expense");
@@ -559,7 +560,7 @@ void removingAnEntryReturnsItAndForgetsIt(Check &check) {
 }
 
 /// A member removed while entries name them would leave shares nobody owes.
-void aMemberInUseIsNotRemoved(Check &check) {
+void aMemberInUseIsNotRemoved(Check &check) noexcept {
     Flat flat;
     auto const refused = refusal(flat.group.removeMember(flat.ana));
     check.that(isFailure(refused, ErrorKind::EXPENSE_GROUP, Failure::EXPENSE_GROUP_MEMBER_IN_USE), "Ana paid the dinner and received the repayment");
@@ -569,7 +570,7 @@ void aMemberInUseIsNotRemoved(Check &check) {
 }
 
 /// An archived member who could join a new expense would owe money for a trip they left.
-void anArchivedMemberJoinsNoNewExpense(Check &check) {
+void anArchivedMemberJoinsNoNewExpense(Check &check) noexcept {
     Flat flat;
     flat.group.archiveMember(flat.bob).value();
     check.that(flat.group.isArchived(flat.bob).value() && !flat.group.isArchived(flat.ana).value(), "Bob is archived and Ana is not");
@@ -584,7 +585,7 @@ void anArchivedMemberJoinsNoNewExpense(Check &check) {
 }
 
 /// A helper that read an entry otherwise than the library would show an app a total the group does not hold.
-void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) {
+void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) noexcept {
     Flat flat;
     Split const split = EqualSplit{{flat.bob, flat.ana}};
     check.that(participants(split) == std::vector<MemberId>{flat.bob, flat.ana}, "a split's participants, in the order it lists them");
@@ -604,7 +605,7 @@ void theHelpersReadAnEntryAsTheLibraryDoes(Check &check) {
 
 /// A group that started without the identifier and the details it was given, or whose details did not change as asked, would show an app a name
 /// or a language the user replaced.
-void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
+void aGroupHoldsItsDetailsAndChangesThem(Check &check) noexcept {
     Flat flat;
     check.that(!flat.group.id().value().empty(), "the group has an identifier");
     check.that("Flat" == flat.group.name() && flat.group.currency() == flat.euro, "the name and the currency");
@@ -632,12 +633,12 @@ void aGroupHoldsItsDetailsAndChangesThem(Check &check) {
 }
 
 /// Totals that did not add up would tell a member they owe what they do not.
-void theSummaryAndTheSharesAddUp(Check &check) {
+void theSummaryAndTheSharesAddUp(Check &check) noexcept {
     Flat flat;
     auto const summary = flat.group.summary();
     check.that(summary.totalSpent == flat.euros(3'000), "the dinner is all that was spent");
     check.that(summary.categoryTotals == std::vector<CategoryTotal>{CategoryTotal(flat.food, flat.euros(3'000))}, "all of it on food");
-    auto const ana = std::ranges::find_if(summary.members, [&](MemberSummary const &member) { return member.member == flat.ana; });
+    auto const ana = std::ranges::find_if(summary.members, [&](MemberSummary const &member) noexcept { return member.member == flat.ana; });
     check.that(ana != summary.members.end() && ana->paid == flat.euros(3'000) && ana->share == flat.euros(1'500) &&
                    ana->received == flat.euros(1'000) && ana->sent == flat.euros(0) && ana->net == flat.euros(500) &&
                    ana->balance == Balance{GetsBackBalance{flat.euros(500)}},
@@ -658,7 +659,7 @@ constexpr std::array STRATEGIES = {
 };
 
 /// A strategy that settled otherwise than the library would ask a member to pay twice.
-void eachStrategySettlesEveryBalance(Check &check) {
+void eachStrategySettlesEveryBalance(Check &check) noexcept {
     Flat flat;
     for (auto const strategy : STRATEGIES) {
         auto const settlement = flat.group.settlement(strategy).value();
@@ -669,20 +670,20 @@ void eachStrategySettlesEveryBalance(Check &check) {
     }
     static_cast<void>(flat.group.addTransfer(Transfer(flat.bob, flat.ana, LocalCost{flat.euros(500)}, flat.day)).value());
     auto const members = flat.group.summary().members;
-    check.that(std::ranges::all_of(members, [](MemberSummary const &member) { return member.balance == Balance{SettledBalance{}}; }),
+    check.that(std::ranges::all_of(members, [](MemberSummary const &member) noexcept { return member.balance == Balance{SettledBalance{}}; }),
                "once Bob pays, every balance is settled");
 }
 
 /// A strategy that converted to another would settle by a plan the app did not ask for, or name another than the one that made it. No
 /// settlement holds the adaptive strategy, so only this round trip converts it back from the generated value.
-void everyStrategyConvertsToTheGeneratedOneAndBack(Check &check) {
+void everyStrategyConvertsToTheGeneratedOneAndBack(Check &check) noexcept {
     for (auto const strategy : STRATEGIES) {
         check.that(detail::fromDetail(detail::toDetail(strategy)) == strategy, "the strategy converts to the generated one and back");
     }
 }
 
 /// A change of currency that left an entry unconverted, or took a rate it was not given, would mix currencies in the totals.
-void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
+void aChangeOfCurrencyConvertsEveryEntry(Check &check) noexcept {
     Flat flat;
     auto const lei = CurrencyCode::of("RON").value();
     auto const missing = refusal(flat.group.changeCurrency(lei, {}));
@@ -708,7 +709,7 @@ void aChangeOfCurrencyConvertsEveryEntry(Check &check) {
 }
 
 /// A saved group that loaded otherwise than it was saved would lose entries between two runs of an app.
-void aSavedGroupLoadsAsItWasSaved(Check &check) {
+void aSavedGroupLoadsAsItWasSaved(Check &check) noexcept {
     Flat const flat;
     auto const json = flat.group.save();
     check.that(ExpenseGroup::load(json).value().save() == json, "the loaded group saves the same text");
@@ -726,7 +727,7 @@ void aSavedGroupLoadsAsItWasSaved(Check &check) {
 
 /// An identifier that is not one would reach the library as no entry's, or as another's; each of the group's lookups refuses it with
 /// the failure of the rule it breaks, which converts from the generated failure by its number.
-void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check &check) {
+void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check &check) noexcept {
     Flat const flat;
     for (auto const &[failure, text] : refusedTexts()) {
         check.that(isFailure(refusal(flat.group.category(CategoryId(text))), ErrorKind::ID, failure), "a category");
@@ -739,7 +740,7 @@ void anIdentifierThatIsNotOneIsRefusedByEveryLookup(Check &check) {
 }
 
 /// An error that lost what it holds would leave an app unable to say which entry, amount, or category the library refused.
-void everyErrorHoldsWhatItsFailureHolds(Check &check) {
+void everyErrorHoldsWhatItsFailureHolds(Check &check) noexcept {
     Flat flat;
     auto uneven = flat.expense("Uneven", flat.ana, {});
     uneven.split = WholeExpenseSplit{AmountsSplit{{MemberAmount(flat.ana, flat.euros(1'000))}}};
@@ -785,7 +786,7 @@ void everyErrorHoldsWhatItsFailureHolds(Check &check) {
 // --- Asynchronous calls, the read handle, and the cancellation -----------------------------------------------------------
 
 /// An asynchronous call that returned otherwise than its synchronous form would give an app two answers to one question.
-void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) {
+void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) noexcept {
     Flat flat;
     auto &group = flat.group;
     check.that(group.idAsync().get() == group.id() && group.nameAsync().get() == group.name(), "the identifier and the name");
@@ -847,7 +848,7 @@ void everyAsynchronousCallReturnsWhatItsSynchronousFormReturns(Check &check) {
 
 /// An asynchronous call that dropped the error its synchronous form returns would leave an app waiting for a change that never happened;
 /// one given an entry the layer cannot convert would start a call the library never sees.
-void anAsynchronousCallReportsTheErrorItsSynchronousFormReturns(Check &check) {
+void anAsynchronousCallReportsTheErrorItsSynchronousFormReturns(Check &check) noexcept {
     Flat flat;
     MemberId const nobody("0199a000-0000-7000-8000-00000000ffff");
     auto removing = flat.group.removeMemberAsync(nobody);
@@ -862,7 +863,7 @@ void anAsynchronousCallReportsTheErrorItsSynchronousFormReturns(Check &check) {
 }
 
 /// A read handle that let a change in, or read after its release, would show a report two states of one group.
-void aReaderReadsTheGroupUntilItIsReleased(Check &check) {
+void aReaderReadsTheGroupUntilItIsReleased(Check &check) noexcept {
     Flat const flat;
     auto reader = flat.group.read();
     check.that(reader.id() == flat.group.id() && "Flat" == reader.name() && reader.currency() == flat.euro, "the details");
@@ -890,7 +891,7 @@ void aReaderReadsTheGroupUntilItIsReleased(Check &check) {
 
 /// A cancelled change that still ran would change the group after the app gave the change up; one that kept waiting would hold
 /// the worker thread for a lock it no longer needs.
-void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check) {
+void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check) noexcept {
     Flat flat;
     auto reader = flat.group.read();
     Cancellation cancellation;
@@ -908,11 +909,11 @@ void aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas(Check &check
 
 /// A kind of call whose outcome lost its failure would leave the app's future waiting, or hand it a value the library never
 /// gave; a call given a cancelled cancellation reports the cancellation, whatever it returns.
-void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) {
+void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) noexcept {
     Flat const flat;
     Cancellation cancelled;
     cancelled.cancel();
-    auto const reportsIt = [](std::optional<Error> const &error) { return isFailure(error, ErrorKind::CANCELLED, std::nullopt); };
+    auto const reportsIt = [](std::optional<Error> const &error) noexcept { return isFailure(error, ErrorKind::CANCELLED, std::nullopt); };
     check.that(reportsIt(refusal(flat.group.categoriesAsync(&cancelled).get())), "the categories");
     check.that(reportsIt(refusal(flat.group.categoryAsync(flat.food, &cancelled).get())), "a category");
     check.that(reportsIt(refusal(flat.group.expensesAsync(&cancelled).get())), "the expenses");
@@ -931,7 +932,7 @@ void everyKindOfAsynchronousCallReportsItsCancellation(Check &check) {
 /// A test: its name, the claim it makes, and its body.
 struct Test final {
     std::string_view name;
-    void (*body)(Check &check);
+    void (*body)(Check &check) noexcept;
 };
 
 constexpr std::array TESTS = {
@@ -979,7 +980,7 @@ constexpr std::array TESTS = {
 /// Runs every test and prints each claim that failed.
 ///
 /// @return How many tests failed
-[[nodiscard]] std::size_t runTests() {
+[[nodiscard]] std::size_t runTests() noexcept {
     std::size_t failed = 0;
     for (auto const &test : TESTS) {
         Check check;
@@ -996,4 +997,4 @@ constexpr std::array TESTS = {
 } // namespace
 } // namespace eranos
 
-int main() { return 0 == eranos::runTests() ? EXIT_SUCCESS : EXIT_FAILURE; }
+int main() noexcept { return 0 == eranos::runTests() ? EXIT_SUCCESS : EXIT_FAILURE; }

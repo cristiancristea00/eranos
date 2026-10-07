@@ -643,6 +643,9 @@ Core Guidelines with the naming rule above:
   amount's text, returns its value. Nothing throws: the tests and the ports
   build with `-fno-exceptions`, so a `throw` or a `try` in a header fails
   the gates, and a program built without exceptions can use the package.
+  Every function, constructor, operator, and lambda of the layer is
+  `noexcept`, so an allocation that fails ends the program, as one in the
+  library does, and every other failure is an error in a `std::expected`.
 - `ExpenseGroup` owns its handle, so it moves and never copies; an asynchronous
   call returns a `std::future` of what the synchronous form returns, as a
   `std::expected`, and takes an optional `Cancellation`, which leaves an
@@ -651,8 +654,12 @@ Core Guidelines with the naming rule above:
 - Text goes in as `std::string_view` and comes back as `std::string`.
   Every class and struct is `final`, `const` sits after what it qualifies,
   on every parameter the function does not move from, and on every member
-  function that changes nothing a later call sees; `noexcept`,
-  `constexpr`, and `[[nodiscard]]` go wherever they apply.
+  function that changes nothing a later call sees; `noexcept` and
+  `[[nodiscard]]` go wherever they apply, `constexpr` on every function
+  that reaches neither the C API, Diplomat's classes, nor a part of the
+  standard library that C++23 cannot evaluate at compile time, such as
+  `std::shared_ptr` and `std::format`, and `inline` on every function a
+  header defines, written even where the language implies it.
 - Equality is defaulted wherever it compares every field; `CurrencyCode`
   compares its code alone. An identifier orders by its text through a
   `<=>` written out, since the defaulted one holds a branch that no

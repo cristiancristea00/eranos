@@ -33,39 +33,39 @@ class ExpenseGroupId final {
     ///
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
-    explicit ExpenseGroupId(std::string text) noexcept : text(std::move(text)) {}
+    inline constexpr explicit ExpenseGroupId(std::string text) noexcept : text(std::move(text)) {}
 
     /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
     /// identifiers generated one after another are in increasing order.
     ///
     /// @return The identifier
-    [[nodiscard]] static ExpenseGroupId generate();
+    [[nodiscard]] static ExpenseGroupId generate() noexcept;
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
     /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<ExpenseGroupId, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<ExpenseGroupId, Error> parse(std::string_view const text) noexcept;
 
     /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
-    [[nodiscard]] std::string const &value() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &value() const noexcept { return text; }
 
     /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept = default;
 
     /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept {
+    [[nodiscard]] friend inline constexpr std::strong_ordering operator<=>(ExpenseGroupId const &left, ExpenseGroupId const &right) noexcept {
         return left.text <=> right.text;
     }
 
@@ -82,39 +82,41 @@ class MemberId final {
     ///
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
-    explicit MemberId(std::string text) noexcept : text(std::move(text)) {}
+    inline constexpr explicit MemberId(std::string text) noexcept : text(std::move(text)) {}
 
     /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
     /// identifiers generated one after another are in increasing order.
     ///
     /// @return The identifier
-    [[nodiscard]] static MemberId generate();
+    [[nodiscard]] static MemberId generate() noexcept;
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
     /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<MemberId, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<MemberId, Error> parse(std::string_view const text) noexcept;
 
     /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
-    [[nodiscard]] std::string const &value() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &value() const noexcept { return text; }
 
     /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberId const &left, MemberId const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(MemberId const &left, MemberId const &right) noexcept = default;
 
     /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(MemberId const &left, MemberId const &right) noexcept { return left.text <=> right.text; }
+    [[nodiscard]] friend inline constexpr std::strong_ordering operator<=>(MemberId const &left, MemberId const &right) noexcept {
+        return left.text <=> right.text;
+    }
 
   private:
     std::string text;
@@ -129,39 +131,39 @@ class CategoryId final {
     ///
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
-    explicit CategoryId(std::string text) noexcept : text(std::move(text)) {}
+    inline constexpr explicit CategoryId(std::string text) noexcept : text(std::move(text)) {}
 
     /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
     /// identifiers generated one after another are in increasing order.
     ///
     /// @return The identifier
-    [[nodiscard]] static CategoryId generate();
+    [[nodiscard]] static CategoryId generate() noexcept;
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
     /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<CategoryId, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<CategoryId, Error> parse(std::string_view const text) noexcept;
 
     /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
-    [[nodiscard]] std::string const &value() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &value() const noexcept { return text; }
 
     /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(CategoryId const &left, CategoryId const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(CategoryId const &left, CategoryId const &right) noexcept = default;
 
     /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(CategoryId const &left, CategoryId const &right) noexcept {
+    [[nodiscard]] friend inline constexpr std::strong_ordering operator<=>(CategoryId const &left, CategoryId const &right) noexcept {
         return left.text <=> right.text;
     }
 
@@ -178,39 +180,41 @@ class ExpenseId final {
     ///
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
-    explicit ExpenseId(std::string text) noexcept : text(std::move(text)) {}
+    inline constexpr explicit ExpenseId(std::string text) noexcept : text(std::move(text)) {}
 
     /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
     /// identifiers generated one after another are in increasing order.
     ///
     /// @return The identifier
-    [[nodiscard]] static ExpenseId generate();
+    [[nodiscard]] static ExpenseId generate() noexcept;
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
     /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<ExpenseId, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<ExpenseId, Error> parse(std::string_view const text) noexcept;
 
     /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
-    [[nodiscard]] std::string const &value() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &value() const noexcept { return text; }
 
     /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExpenseId const &left, ExpenseId const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ExpenseId const &left, ExpenseId const &right) noexcept = default;
 
     /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(ExpenseId const &left, ExpenseId const &right) noexcept { return left.text <=> right.text; }
+    [[nodiscard]] friend inline constexpr std::strong_ordering operator<=>(ExpenseId const &left, ExpenseId const &right) noexcept {
+        return left.text <=> right.text;
+    }
 
   private:
     std::string text;
@@ -225,39 +229,39 @@ class TransferId final {
     ///
     /// @param text The identifier's text, kept as it is: the library refuses text that is empty, longer than 64 bytes, with a control character, or
     ///   with whitespace at either end
-    explicit TransferId(std::string text) noexcept : text(std::move(text)) {}
+    inline constexpr explicit TransferId(std::string text) noexcept : text(std::move(text)) {}
 
     /// A new identifier: a UUID v7 in lowercase hyphenated form. Every kind of identifier draws from the one generator of the library, and
     /// identifiers generated one after another are in increasing order.
     ///
     /// @return The identifier
-    [[nodiscard]] static TransferId generate();
+    [[nodiscard]] static TransferId generate() noexcept;
 
     /// The identifier written @p text, as it is: not trimmed, and in its case, checked by the rules every kind of identifier shares.
     ///
     /// @param text The text
     /// @return The identifier, or an error of the kind ErrorKind::ID for text that is not one, with the first rule it breaks, and
     ///   ErrorKind::INVALID_TEXT for text that is not UTF-8
-    [[nodiscard]] static std::expected<TransferId, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<TransferId, Error> parse(std::string_view const text) noexcept;
 
     /// The identifier's text, as it was given or generated.
     ///
     /// @return The text
-    [[nodiscard]] std::string const &value() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &value() const noexcept { return text; }
 
     /// Whether two identifiers have one text, byte for byte, so case matters: equal ones name one entity.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(TransferId const &left, TransferId const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(TransferId const &left, TransferId const &right) noexcept = default;
 
     /// How two identifiers order: by the bytes of their text, as the library orders them, which is creation order for generated identifiers.
     ///
     /// @param left An identifier
     /// @param right Another identifier
     /// @return Their order
-    [[nodiscard]] friend std::strong_ordering operator<=>(TransferId const &left, TransferId const &right) noexcept {
+    [[nodiscard]] friend inline constexpr std::strong_ordering operator<=>(TransferId const &left, TransferId const &right) noexcept {
         return left.text <=> right.text;
     }
 
@@ -273,7 +277,7 @@ template <> struct std::hash<eranos::ExpenseGroupId> final {
     ///
     /// @param identifier The identifier
     /// @return The hash
-    [[nodiscard]] std::size_t operator()(eranos::ExpenseGroupId const &identifier) const noexcept {
+    [[nodiscard]] inline std::size_t operator()(eranos::ExpenseGroupId const &identifier) const noexcept {
         return std::hash<std::string>()(identifier.value());
     }
 };
@@ -284,7 +288,9 @@ template <> struct std::hash<eranos::MemberId> final {
     ///
     /// @param identifier The identifier
     /// @return The hash
-    [[nodiscard]] std::size_t operator()(eranos::MemberId const &identifier) const noexcept { return std::hash<std::string>()(identifier.value()); }
+    [[nodiscard]] inline std::size_t operator()(eranos::MemberId const &identifier) const noexcept {
+        return std::hash<std::string>()(identifier.value());
+    }
 };
 
 /// The hash of an identifier: its text's.
@@ -293,7 +299,9 @@ template <> struct std::hash<eranos::CategoryId> final {
     ///
     /// @param identifier The identifier
     /// @return The hash
-    [[nodiscard]] std::size_t operator()(eranos::CategoryId const &identifier) const noexcept { return std::hash<std::string>()(identifier.value()); }
+    [[nodiscard]] inline std::size_t operator()(eranos::CategoryId const &identifier) const noexcept {
+        return std::hash<std::string>()(identifier.value());
+    }
 };
 
 /// The hash of an identifier: its text's.
@@ -302,7 +310,9 @@ template <> struct std::hash<eranos::ExpenseId> final {
     ///
     /// @param identifier The identifier
     /// @return The hash
-    [[nodiscard]] std::size_t operator()(eranos::ExpenseId const &identifier) const noexcept { return std::hash<std::string>()(identifier.value()); }
+    [[nodiscard]] inline std::size_t operator()(eranos::ExpenseId const &identifier) const noexcept {
+        return std::hash<std::string>()(identifier.value());
+    }
 };
 
 /// The hash of an identifier: its text's.
@@ -311,7 +321,9 @@ template <> struct std::hash<eranos::TransferId> final {
     ///
     /// @param identifier The identifier
     /// @return The hash
-    [[nodiscard]] std::size_t operator()(eranos::TransferId const &identifier) const noexcept { return std::hash<std::string>()(identifier.value()); }
+    [[nodiscard]] inline std::size_t operator()(eranos::TransferId const &identifier) const noexcept {
+        return std::hash<std::string>()(identifier.value());
+    }
 };
 
 #endif // ERANOS_IDENTIFIERS_HPP

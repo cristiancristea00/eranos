@@ -12,7 +12,13 @@
 # operator yields an int, which a bool takes; the functions of C11's Annex K
 # that the analyser recommends over fprintf and the like are in neither glibc
 # nor Apple's C library; and the pthread types come from the platform's
-# internal headers, which pthread.h includes.
+# internal headers, which pthread.h includes. Of the checks that keep the
+# qualifiers, readability-non-const-parameter asks for a pointer parameter
+# that writes nothing through it to point to const, and
+# readability-avoid-const-params-in-decls keeps a prototype's parameters free
+# of the const its definition writes; misc-const-correctness reads only C++,
+# and no check reads C for a local that could be const or constexpr or a
+# result that wants [[nodiscard]], so those are kept by reading.
 Checks: >
   -*,
   bugprone-*,

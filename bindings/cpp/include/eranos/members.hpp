@@ -31,7 +31,7 @@ struct IbanPaymentAccountDetails final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(IbanPaymentAccountDetails const &left, IbanPaymentAccountDetails const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(IbanPaymentAccountDetails const &left, IbanPaymentAccountDetails const &right) noexcept = default;
 };
 
 /// A username in a payment app.
@@ -44,7 +44,8 @@ struct UsernamePaymentAccountDetails final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(UsernamePaymentAccountDetails const &left, UsernamePaymentAccountDetails const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(UsernamePaymentAccountDetails const &left,
+                                                   UsernamePaymentAccountDetails const &right) noexcept = default;
 };
 
 /// Where an account is: a bank account or a username in a payment app. One of its alternatives: IbanPaymentAccountDetails,
@@ -57,7 +58,7 @@ struct PaymentAccount final {
     ///
     /// @param name The label.
     /// @param details The IBAN or the username.
-    PaymentAccount(std::string name, PaymentAccountDetails details) noexcept : name(std::move(name)), details(std::move(details)) {}
+    inline constexpr PaymentAccount(std::string name, PaymentAccountDetails details) noexcept : name(std::move(name)), details(std::move(details)) {}
 
     /// The label.
     std::string name;
@@ -70,7 +71,7 @@ struct PaymentAccount final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(PaymentAccount const &left, PaymentAccount const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(PaymentAccount const &left, PaymentAccount const &right) noexcept = default;
 };
 
 /// A member of the group.
@@ -80,13 +81,13 @@ struct Member final {
     ///
     /// @param id The identifier, which the app gives: its own, or one MemberId::generate() makes.
     /// @param firstName The first name.
-    Member(MemberId id, std::string firstName) noexcept : id(std::move(id)), firstName(std::move(firstName)) {}
+    inline constexpr Member(MemberId id, std::string firstName) noexcept : id(std::move(id)), firstName(std::move(firstName)) {}
 
     /// The record of its required fields under an identifier generated when it is called, which Member(MemberId, std::string) takes instead; the
     /// others start absent, empty, or at their default.
     ///
     /// @param firstName The first name.
-    explicit Member(std::string firstName) : Member(MemberId::generate(), std::move(firstName)) {}
+    inline explicit Member(std::string firstName) noexcept : Member(MemberId::generate(), std::move(firstName)) {}
 
     /// The identifier, which the app gives: its own, or one MemberId::generate() makes.
     MemberId id;
@@ -111,21 +112,21 @@ struct Member final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Member const &left, Member const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(Member const &left, Member const &right) noexcept = default;
 };
 
 namespace detail {
 
-[[nodiscard]] inline PaymentAccountDetails fromDetail(EranosPaymentAccountDetails const &value);
-[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(IbanPaymentAccountDetails const &value);
-[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(UsernamePaymentAccountDetails const &value);
-[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(PaymentAccountDetails const &value);
-[[nodiscard]] inline PaymentAccount fromDetail(EranosPaymentAccount const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosPaymentAccount>, Error> toDetail(PaymentAccount const &value);
-[[nodiscard]] inline Member fromDetail(EranosMember const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value);
-[[nodiscard]] inline std::vector<PaymentAccount> fromDetail(EranosPaymentAccountList const &list);
-[[nodiscard]] inline std::vector<Member> fromDetail(EranosMemberList const &list);
+[[nodiscard]] inline PaymentAccountDetails fromDetail(EranosPaymentAccountDetails const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(IbanPaymentAccountDetails const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(UsernamePaymentAccountDetails const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(PaymentAccountDetails const &value) noexcept;
+[[nodiscard]] inline PaymentAccount fromDetail(EranosPaymentAccount const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosPaymentAccount>, Error> toDetail(PaymentAccount const &value) noexcept;
+[[nodiscard]] inline Member fromDetail(EranosMember const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value) noexcept;
+[[nodiscard]] inline std::vector<PaymentAccount> fromDetail(EranosPaymentAccountList const &list) noexcept;
+[[nodiscard]] inline std::vector<Member> fromDetail(EranosMemberList const &list) noexcept;
 
 } // namespace detail
 

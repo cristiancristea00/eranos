@@ -37,7 +37,7 @@ struct Counts final {
 /// A row of the table of expenses: what was bought, who paid it, who shares it, and its amount.
 struct ExpenseRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Expense", "Paid by", "Shared by", "Amount"};
+    static inline constexpr Cells<4> HEADERS{"Expense", "Paid by", "Shared by", "Amount"};
 
     /// What was bought.
     std::string name;
@@ -51,13 +51,13 @@ struct ExpenseRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, payer, participants, amount}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, payer, participants, amount}; }
 };
 
 /// A row of the table of balances: what a member paid and consumed, and their balance.
 struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -71,13 +71,13 @@ struct BalanceRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
 };
 
 /// A row of the table of payments: who pays whom, and how much.
 struct PaymentRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"From", "To", "Amount"};
+    static inline constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
     /// Who pays.
     std::string from;
@@ -89,13 +89,13 @@ struct PaymentRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {from, to, amount}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {from, to, amount}; }
 };
 
 /// A row of the table of strategies: what a strategy guarantees, what it costs, and how many payments it plans here.
 struct StrategyRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Strategy", "Guarantee", "Cost", "Payments here"};
+    static inline constexpr Cells<4> HEADERS{"Strategy", "Guarantee", "Cost", "Payments here"};
 
     /// Its name.
     std::string_view strategy;
@@ -109,11 +109,11 @@ struct StrategyRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {strategy, guarantee, cost, payments}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {strategy, guarantee, cost, payments}; }
 };
 
 /// The name of @p strategy as the apps show it.
-[[nodiscard]] std::string_view strategyName(SettlementStrategy const strategy) {
+[[nodiscard]] inline constexpr std::string_view strategyName(SettlementStrategy const strategy) noexcept {
     switch (strategy) {
     case SettlementStrategy::ADAPTIVE:
         return "Adaptive";
@@ -129,13 +129,14 @@ struct StrategyRow final {
 
 /// Records an expense of @p amount euros, named @p name, that @p payer paid and @p members share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the amount, in the order the Rust example gives them.
-void spend(ExpenseGroup &group, std::string const &name, std::string_view const amount, MemberId const &payer, std::vector<MemberId> members) {
+void spend(ExpenseGroup &group, std::string const &name, std::string_view const amount, MemberId const &payer,
+           std::vector<MemberId> members) noexcept {
     static_cast<void>(must(group.addExpense(Expense(name, LocalCost{must(Money::parse(amount, must(CurrencyCode::of("EUR"))))}, EqualSplit{{payer}},
                                                     WholeExpenseSplit{EqualSplit{std::move(members)}}, must(CalendarDate::of(2026, 9, 20))))));
 }
 
 /// Prints what each member of @p group paid and consumed, and their balance.
-void printBalances(ExpenseGroup const &group) {
+void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
@@ -151,7 +152,7 @@ void printBalances(ExpenseGroup const &group) {
 }
 
 /// Prints the payments of @p settlement: who pays whom, and how much.
-void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) {
+void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) noexcept {
     std::vector<PaymentRow> rows;
     rows.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {
@@ -161,7 +162,7 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
 }
 
 /// Prints each strategy's plan with what it promises; returns the number of payments of each.
-[[nodiscard]] Counts strategies(ExpenseGroup const &group) {
+[[nodiscard]] Counts strategies(ExpenseGroup const &group) noexcept {
     section("3. Minimum transfers");
     auto const minimum = must(group.settlement(SettlementStrategy::MINIMUM_TRANSFERS));
     std::println("The fewest payments possible. Finding them is NP-hard; the solver does it exactly by\n"
@@ -235,7 +236,7 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
 
 /// Settles a group of 21 friends, more open balances than the adaptive strategy settles exactly, and prints which
 /// strategy's plan it took; returns the number of payments.
-[[nodiscard]] std::size_t festival() {
+[[nodiscard]] std::size_t festival() noexcept {
     section("8. A larger group");
     auto const euro = must(CurrencyCode::of("EUR"));
     auto group = must(ExpenseGroup::create("Festival", euro));
@@ -255,8 +256,8 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
         static_cast<void>(must(group.addExpense(expense)));
     }
     auto const summary = group.summary();
-    auto const open =
-        static_cast<std::size_t>(std::ranges::count_if(summary.members, [](MemberSummary const &totals) { return 0 != totals.net.minorUnits; }));
+    auto const open = static_cast<std::size_t>(
+        std::ranges::count_if(summary.members, [](MemberSummary const &totals) noexcept { return 0 != totals.net.minorUnits; }));
     auto const adaptive = must(group.settlement(SettlementStrategy::ADAPTIVE));
     auto const greedy = must(group.settlement(SettlementStrategy::GREEDY));
     std::println("Twenty-one friends at a festival each bought one round for everyone, each round\n"
@@ -271,7 +272,7 @@ void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) 
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto group = must(ExpenseGroup::create("Ski week", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
@@ -333,7 +334,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

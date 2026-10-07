@@ -23,7 +23,7 @@ namespace eranos {
 
 namespace detail {
 
-[[nodiscard]] inline ExchangeRate exchangeRateOf(std::string text) noexcept;
+[[nodiscard]] inline constexpr ExchangeRate exchangeRateOf(std::string text) noexcept;
 
 } // namespace detail
 
@@ -35,31 +35,31 @@ class ExchangeRate final {
     /// @param text The rate's text
     /// @return The rate, or an error of the kind ErrorKind::MONEY for text that is not a positive decimal, and ErrorKind::INVALID_TEXT for text that
     ///   is not UTF-8
-    [[nodiscard]] static std::expected<ExchangeRate, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<ExchangeRate, Error> parse(std::string_view const text) noexcept;
 
     /// @p amount converted at this rate into @p currency.
     ///
     /// @param amount The amount to convert
     /// @param currency The currency to convert it into
     /// @return The converted amount, rounded half away from zero, or an error of the kind ErrorKind::MONEY for an amount out of range
-    [[nodiscard]] std::expected<Money, Error> convert(Money const &amount, CurrencyCode const &currency) const;
+    [[nodiscard]] std::expected<Money, Error> convert(Money const &amount, CurrencyCode const &currency) const noexcept;
 
     /// The rate as the library writes it: "4.97".
     ///
     /// @return The text
-    [[nodiscard]] std::string const &toString() const noexcept { return text; }
+    [[nodiscard]] inline constexpr std::string const &toString() const noexcept { return text; }
 
     /// Whether two rates are written alike.
     ///
     /// @param left A rate
     /// @param right Another rate
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExchangeRate const &left, ExchangeRate const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ExchangeRate const &left, ExchangeRate const &right) noexcept = default;
 
   private:
-    friend ExchangeRate detail::exchangeRateOf(std::string text) noexcept;
+    friend constexpr ExchangeRate detail::exchangeRateOf(std::string text) noexcept;
 
-    explicit ExchangeRate(std::string text) noexcept : text(std::move(text)) {}
+    inline constexpr explicit ExchangeRate(std::string text) noexcept : text(std::move(text)) {}
 
     std::string text;
 };
@@ -71,7 +71,7 @@ struct Percentage final {
     /// @param text The percentage's text
     /// @return The percentage, or an error of the kind ErrorKind::MONEY for text that is not a percentage, and ErrorKind::INVALID_TEXT for text that
     ///   is not UTF-8
-    [[nodiscard]] static std::expected<Percentage, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<Percentage, Error> parse(std::string_view const text) noexcept;
 
     /// The basis points: 10000 for 100 %.
     std::int32_t basisPoints{};
@@ -79,7 +79,7 @@ struct Percentage final {
     /// The percentage as the library writes it: "12.5%".
     ///
     /// @return The text, or an error of the kind ErrorKind::MONEY for a percentage out of range
-    [[nodiscard]] std::expected<std::string, Error> toString() const;
+    [[nodiscard]] std::expected<std::string, Error> toString() const noexcept;
 
     /// Whether two percentages have one number of basis points.
     ///
@@ -96,7 +96,7 @@ struct Parts final {
     /// @param text The parts' text
     /// @return The parts, or an error of the kind ErrorKind::MONEY for text that is not a number of parts, and ErrorKind::INVALID_TEXT for text that
     ///   is not UTF-8
-    [[nodiscard]] static std::expected<Parts, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<Parts, Error> parse(std::string_view const text) noexcept;
 
     /// The hundredths: 100 for one part.
     std::int32_t hundredths{};
@@ -104,7 +104,7 @@ struct Parts final {
     /// The parts as the library writes them: "0.5".
     ///
     /// @return The text, or an error of the kind ErrorKind::MONEY for parts out of range
-    [[nodiscard]] std::expected<std::string, Error> toString() const;
+    [[nodiscard]] std::expected<std::string, Error> toString() const noexcept;
 
     /// Whether two numbers of parts are equal.
     ///
@@ -114,28 +114,30 @@ struct Parts final {
     [[nodiscard]] friend constexpr bool operator==(Parts const &left, Parts const &right) noexcept = default;
 };
 
-inline std::expected<ExchangeRate, Error> ExchangeRate::parse(std::string_view const text) {
+inline std::expected<ExchangeRate, Error> ExchangeRate::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosExchangeRate::parse(text)).transform(detail::exchangeRateOf);
 }
 
-inline std::expected<Money, Error> ExchangeRate::convert(Money const &amount, CurrencyCode const &currency) const {
+inline std::expected<Money, Error> ExchangeRate::convert(Money const &amount, CurrencyCode const &currency) const noexcept {
     return detail::expectedOf(detail::EranosExchangeRate::convert(text, *detail::toDetail(amount), currency.code()))
-        .transform([](auto const &converted) { return detail::fromDetail(*converted); });
+        .transform([](auto const &converted) noexcept { return detail::fromDetail(*converted); });
 }
 
-inline std::expected<Percentage, Error> Percentage::parse(std::string_view const text) {
+inline std::expected<Percentage, Error> Percentage::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosPercentage::parse(text)).transform([](std::int32_t const basisPoints) noexcept {
         return Percentage{basisPoints};
     });
 }
 
-inline std::expected<std::string, Error> Percentage::toString() const { return detail::expectedOf(detail::EranosPercentage::format(basisPoints)); }
+inline std::expected<std::string, Error> Percentage::toString() const noexcept {
+    return detail::expectedOf(detail::EranosPercentage::format(basisPoints));
+}
 
-inline std::expected<Parts, Error> Parts::parse(std::string_view const text) {
+inline std::expected<Parts, Error> Parts::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosParts::parse(text)).transform([](std::int32_t const hundredths) noexcept { return Parts{hundredths}; });
 }
 
-inline std::expected<std::string, Error> Parts::toString() const { return detail::expectedOf(detail::EranosParts::format(hundredths)); }
+inline std::expected<std::string, Error> Parts::toString() const noexcept { return detail::expectedOf(detail::EranosParts::format(hundredths)); }
 
 } // namespace eranos
 

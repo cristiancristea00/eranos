@@ -37,7 +37,7 @@ typedef struct LineRow {
 } LineRow;
 
 /// A table of the receipt's lines, its columns from @p numbersFrom on aligned to the right.
-static Table *lineTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *lineTable(size_t const numbersFrom) {
     return tableCreate(5, (char const *const[]){"Item", "Shared by", "Quantity", "Unit price", "Line total"}, numbersFrom);
 }
 
@@ -63,7 +63,7 @@ typedef struct TipRow {
 } TipRow;
 
 /// A table of tips, its columns from @p numbersFrom on aligned to the right.
-static Table *tipTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *tipTable(size_t const numbersFrom) {
     return tableCreate(6, (char const *const[]){"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"}, numbersFrom);
 }
 
@@ -73,7 +73,7 @@ static void addTipRow(Table *const table, TipRow const *const row) {
 }
 
 /// The amount @p text of euros.
-static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
+[[nodiscard]] static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
 
 /// Adds the line @p name of the receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
 /// @p split.
@@ -91,7 +91,7 @@ static void addItem(EranosExpenseItemList *const items, char const *const name, 
 }
 
 /// The receipt: every line with the members who had it.
-static EranosExpenseItemList *receipt(Friends const *const friends) {
+[[nodiscard]] static EranosExpenseItemList *receipt(Friends const *const friends) {
     EranosExpenseItemList *const items = eranosExpenseItemListCreate();
     addItem(items, "Ciorbă", "8.00", soleSplit(friends->ana), 1);
     Members const sarmale = {.count = 2, .ids = {friends->bob, friends->carol}};
@@ -107,7 +107,7 @@ static EranosExpenseItemList *receipt(Friends const *const friends) {
 }
 
 /// The dinner of @p amount euros that Ana paid, over the receipt's lines.
-static EranosExpense *billOf(Friends const *const friends, char const *const amount) {
+[[nodiscard]] static EranosExpense *billOf(Friends const *const friends, char const *const amount) {
     EranosCost *const cost = localCost(euros(amount));
     EranosSplit *const payers = soleSplit(friends->ana);
     EranosExpenseItemList *const items = receipt(friends);
@@ -122,7 +122,7 @@ static EranosExpense *billOf(Friends const *const friends, char const *const amo
 }
 
 /// The dinner with a tip of 10 %, shared by @p distribution.
-static EranosExpense *tippedBillOf(Friends const *const friends, EranosTipDistribution const distribution) {
+[[nodiscard]] static EranosExpense *tippedBillOf(Friends const *const friends, EranosTipDistribution const distribution) {
     EranosExpense *const expense = billOf(friends, "54.00");
     int32_t basisPoints = 0;
     must(eranosPercentageParse("10", &basisPoints));
@@ -136,7 +136,7 @@ static EranosExpense *tippedBillOf(Friends const *const friends, EranosTipDistri
 
 /// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so
 /// the group itself is unchanged; destroys @p expense.
-static EranosExpenseShares *preview(EranosExpenseGroup const *const group, EranosExpense *const expense) {
+[[nodiscard]] static EranosExpenseShares *preview(EranosExpenseGroup const *const group, EranosExpense *const expense) {
     EranosText *const text = eranosTextCreate();
     must(eranosExpenseGroupSave(group, text));
     EranosExpenseGroup *copy = nullptr;
@@ -152,7 +152,7 @@ static EranosExpenseShares *preview(EranosExpenseGroup const *const group, Erano
 }
 
 /// What @p member consumed of the expense that @p shares divides, which the caller destroys.
-static EranosMoney *consumed(EranosExpenseShares const *const shares, Id const member) {
+[[nodiscard]] static EranosMoney *consumed(EranosExpenseShares const *const shares, Id const member) {
     EranosMemberShareList *const members = eranosExpenseSharesMembers(shares);
     EranosText *const text = eranosTextCreate();
     EranosMoney *found = nullptr;
@@ -171,14 +171,14 @@ static EranosMoney *consumed(EranosExpenseShares const *const shares, Id const m
 }
 
 /// What @p total adds to @p subtotal.
-static Line addedTo(EranosMoney const *const total, EranosMoney const *const subtotal) {
+[[nodiscard]] static Line addedTo(EranosMoney const *const total, EranosMoney const *const subtotal) {
     EranosMoney *difference = nullptr;
     must(eranosMoneySubtract(total, subtotal, &difference));
     return moneyLine(difference);
 }
 
 /// Whether @p member consumed @p minorUnits of the expense that @p shares divides.
-static bool consumedIs(EranosExpenseShares const *const shares, Id const member, int64_t const minorUnits) {
+[[nodiscard]] static bool consumedIs(EranosExpenseShares const *const shares, Id const member, int64_t const minorUnits) {
     EranosMoney *const amount = consumed(shares, member);
     bool const same = minorUnits == eranosMoneyMinorUnits(amount);
     eranosMoneyDestroy(amount);

@@ -44,7 +44,7 @@ struct OwesBalance final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(OwesBalance const &left, OwesBalance const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(OwesBalance const &left, OwesBalance const &right) noexcept = default;
 };
 
 /// The member owes nothing and is owed nothing.
@@ -52,7 +52,7 @@ struct SettledBalance final {
     /// Whether every field of two alternatives is equal.
     ///
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(SettledBalance const & /* left */, SettledBalance const & /* right */) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(SettledBalance const & /* left */, SettledBalance const & /* right */) noexcept = default;
 };
 
 /// The others owe the member `amount`.
@@ -65,7 +65,7 @@ struct GetsBackBalance final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(GetsBackBalance const &left, GetsBackBalance const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(GetsBackBalance const &left, GetsBackBalance const &right) noexcept = default;
 };
 
 /// Where a member stands. One of its alternatives: OwesBalance, SettledBalance, GetsBackBalance.
@@ -82,7 +82,7 @@ struct MemberSummary final {
     /// @param received What the member received in transfers.
     /// @param net What the member is owed, less what they owe: positive when they get money back.
     /// @param balance Where the member stands.
-    MemberSummary(MemberId member, Money paid, Money share, Money sent, Money received, Money net, Balance balance) noexcept
+    inline constexpr MemberSummary(MemberId member, Money paid, Money share, Money sent, Money received, Money net, Balance balance) noexcept
         : member(std::move(member)), paid(std::move(paid)), share(std::move(share)), sent(std::move(sent)), received(std::move(received)),
           net(std::move(net)), balance(std::move(balance)) {}
 
@@ -112,7 +112,7 @@ struct MemberSummary final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberSummary const &left, MemberSummary const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(MemberSummary const &left, MemberSummary const &right) noexcept = default;
 };
 
 /// What the expenses of one category add up to.
@@ -121,7 +121,7 @@ struct CategoryTotal final {
     ///
     /// @param category The category's identifier.
     /// @param total The total.
-    CategoryTotal(CategoryId category, Money total) noexcept : category(std::move(category)), total(std::move(total)) {}
+    inline constexpr CategoryTotal(CategoryId category, Money total) noexcept : category(std::move(category)), total(std::move(total)) {}
 
     /// The category's identifier.
     CategoryId category;
@@ -134,7 +134,7 @@ struct CategoryTotal final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(CategoryTotal const &left, CategoryTotal const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(CategoryTotal const &left, CategoryTotal const &right) noexcept = default;
 };
 
 /// A member's share of each category.
@@ -143,7 +143,8 @@ struct MemberCategoryTotals final {
     ///
     /// @param member The member's identifier.
     /// @param totals The member's total in every category they have a share in.
-    MemberCategoryTotals(MemberId member, std::vector<CategoryTotal> totals) noexcept : member(std::move(member)), totals(std::move(totals)) {}
+    inline constexpr MemberCategoryTotals(MemberId member, std::vector<CategoryTotal> totals) noexcept
+        : member(std::move(member)), totals(std::move(totals)) {}
 
     /// The member's identifier.
     MemberId member;
@@ -156,7 +157,7 @@ struct MemberCategoryTotals final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberCategoryTotals const &left, MemberCategoryTotals const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(MemberCategoryTotals const &left, MemberCategoryTotals const &right) noexcept = default;
 };
 
 /// The group's totals.
@@ -167,8 +168,8 @@ struct Summary final {
     /// @param members Where every member stands.
     /// @param categoryTotals The total of every category.
     /// @param memberCategoryTotals The totals per category of every member.
-    Summary(Money totalSpent, std::vector<MemberSummary> members, std::vector<CategoryTotal> categoryTotals,
-            std::vector<MemberCategoryTotals> memberCategoryTotals) noexcept
+    inline constexpr Summary(Money totalSpent, std::vector<MemberSummary> members, std::vector<CategoryTotal> categoryTotals,
+                             std::vector<MemberCategoryTotals> memberCategoryTotals) noexcept
         : totalSpent(std::move(totalSpent)), members(std::move(members)), categoryTotals(std::move(categoryTotals)),
           memberCategoryTotals(std::move(memberCategoryTotals)) {}
 
@@ -189,7 +190,7 @@ struct Summary final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Summary const &left, Summary const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(Summary const &left, Summary const &right) noexcept = default;
 };
 
 /// A member's part of an expense.
@@ -199,7 +200,8 @@ struct MemberShare final {
     /// @param member The member's identifier.
     /// @param paid What the member paid of it.
     /// @param share The member's share of it.
-    MemberShare(MemberId member, Money paid, Money share) noexcept : member(std::move(member)), paid(std::move(paid)), share(std::move(share)) {}
+    inline constexpr MemberShare(MemberId member, Money paid, Money share) noexcept
+        : member(std::move(member)), paid(std::move(paid)), share(std::move(share)) {}
 
     /// The member's identifier.
     MemberId member;
@@ -215,7 +217,7 @@ struct MemberShare final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(MemberShare const &left, MemberShare const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(MemberShare const &left, MemberShare const &right) noexcept = default;
 };
 
 /// An expense's shares, in the group currency.
@@ -225,7 +227,7 @@ struct ExpenseShares final {
     /// @param members Every member's part.
     /// @param total The amount with the tip.
     /// @param tip The tip.
-    ExpenseShares(std::vector<MemberShare> members, Money total, Money tip) noexcept
+    inline constexpr ExpenseShares(std::vector<MemberShare> members, Money total, Money tip) noexcept
         : members(std::move(members)), total(std::move(total)), tip(std::move(tip)) {}
 
     /// Every member's part.
@@ -242,7 +244,7 @@ struct ExpenseShares final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExpenseShares const &left, ExpenseShares const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ExpenseShares const &left, ExpenseShares const &right) noexcept = default;
 };
 
 /// A payment of a settlement.
@@ -252,7 +254,8 @@ struct Payment final {
     /// @param from The identifier of the member who pays.
     /// @param to The identifier of the member who is paid.
     /// @param amount What is paid.
-    Payment(MemberId from, MemberId to, Money amount) noexcept : from(std::move(from)), to(std::move(to)), amount(std::move(amount)) {}
+    inline constexpr Payment(MemberId from, MemberId to, Money amount) noexcept
+        : from(std::move(from)), to(std::move(to)), amount(std::move(amount)) {}
 
     /// The identifier of the member who pays.
     MemberId from;
@@ -268,7 +271,7 @@ struct Payment final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Payment const &left, Payment const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(Payment const &left, Payment const &right) noexcept = default;
 };
 
 /// A plan of payments that settles every balance.
@@ -277,7 +280,8 @@ struct SettlementPlan final {
     ///
     /// @param payments The payments.
     /// @param strategy The strategy that made the plan: the one asked for, or, for the adaptive strategy, the one whose plan it chose.
-    SettlementPlan(std::vector<Payment> payments, SettlementStrategy const strategy) noexcept : payments(std::move(payments)), strategy(strategy) {}
+    inline constexpr SettlementPlan(std::vector<Payment> payments, SettlementStrategy const strategy) noexcept
+        : payments(std::move(payments)), strategy(strategy) {}
 
     /// The payments.
     std::vector<Payment> payments;
@@ -290,42 +294,42 @@ struct SettlementPlan final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(SettlementPlan const &left, SettlementPlan const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(SettlementPlan const &left, SettlementPlan const &right) noexcept = default;
 };
 
 /// The balance as the library writes it: "owes 12.00 EUR", "settled", or "gets back 12.00 EUR".
 ///
 /// @param balance The balance
 /// @return The text
-[[nodiscard]] std::string toString(Balance const &balance);
+[[nodiscard]] std::string toString(Balance const &balance) noexcept;
 
 namespace detail {
 
-[[nodiscard]] inline Balance fromDetail(EranosBalance const &value);
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(OwesBalance const &value);
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(SettledBalance const & /* value */);
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value);
-[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(Balance const &value);
-[[nodiscard]] inline MemberSummary fromDetail(EranosMemberSummary const &value);
-[[nodiscard]] inline CategoryTotal fromDetail(EranosCategoryTotal const &value);
-[[nodiscard]] inline MemberCategoryTotals fromDetail(EranosMemberCategoryTotals const &value);
-[[nodiscard]] inline Summary fromDetail(EranosSummary const &value);
-[[nodiscard]] inline MemberShare fromDetail(EranosMemberShare const &value);
-[[nodiscard]] inline ExpenseShares fromDetail(EranosExpenseShares const &value);
-[[nodiscard]] inline Payment fromDetail(EranosPayment const &value);
-[[nodiscard]] inline SettlementPlan fromDetail(EranosSettlementPlan const &value);
-[[nodiscard]] inline std::vector<CategoryTotal> fromDetail(EranosCategoryTotalList const &list);
-[[nodiscard]] inline std::vector<MemberCategoryTotals> fromDetail(EranosMemberCategoryTotalsList const &list);
-[[nodiscard]] inline std::vector<MemberShare> fromDetail(EranosMemberShareList const &list);
-[[nodiscard]] inline std::vector<MemberSummary> fromDetail(EranosMemberSummaryList const &list);
-[[nodiscard]] inline std::vector<Payment> fromDetail(EranosPaymentList const &list);
-[[nodiscard]] constexpr SettlementStrategy fromDetail(EranosSettlementStrategy const value) noexcept;
-[[nodiscard]] constexpr EranosSettlementStrategy toDetail(SettlementStrategy const value) noexcept;
+[[nodiscard]] inline Balance fromDetail(EranosBalance const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(OwesBalance const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(SettledBalance const & /* value */) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(GetsBackBalance const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosBalance> toDetail(Balance const &value) noexcept;
+[[nodiscard]] inline MemberSummary fromDetail(EranosMemberSummary const &value) noexcept;
+[[nodiscard]] inline CategoryTotal fromDetail(EranosCategoryTotal const &value) noexcept;
+[[nodiscard]] inline MemberCategoryTotals fromDetail(EranosMemberCategoryTotals const &value) noexcept;
+[[nodiscard]] inline Summary fromDetail(EranosSummary const &value) noexcept;
+[[nodiscard]] inline MemberShare fromDetail(EranosMemberShare const &value) noexcept;
+[[nodiscard]] inline ExpenseShares fromDetail(EranosExpenseShares const &value) noexcept;
+[[nodiscard]] inline Payment fromDetail(EranosPayment const &value) noexcept;
+[[nodiscard]] inline SettlementPlan fromDetail(EranosSettlementPlan const &value) noexcept;
+[[nodiscard]] inline std::vector<CategoryTotal> fromDetail(EranosCategoryTotalList const &list) noexcept;
+[[nodiscard]] inline std::vector<MemberCategoryTotals> fromDetail(EranosMemberCategoryTotalsList const &list) noexcept;
+[[nodiscard]] inline std::vector<MemberShare> fromDetail(EranosMemberShareList const &list) noexcept;
+[[nodiscard]] inline std::vector<MemberSummary> fromDetail(EranosMemberSummaryList const &list) noexcept;
+[[nodiscard]] inline std::vector<Payment> fromDetail(EranosPaymentList const &list) noexcept;
+[[nodiscard]] inline constexpr SettlementStrategy fromDetail(EranosSettlementStrategy const value) noexcept;
+[[nodiscard]] inline constexpr EranosSettlementStrategy toDetail(SettlementStrategy const value) noexcept;
 
 } // namespace detail
 
 // A balance's amount is in a currency the library lists.
-inline std::string toString(Balance const &balance) { return detail::known(detail::toDetail(balance)->format()); }
+inline std::string toString(Balance const &balance) noexcept { return detail::known(detail::toDetail(balance)->format()); }
 
 } // namespace eranos
 

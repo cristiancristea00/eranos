@@ -41,7 +41,7 @@ typedef struct ShareRow {
 } ShareRow;
 
 /// A table of an expense's shares, its columns from @p numbersFrom on aligned to the right.
-static Table *shareTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *shareTable(size_t const numbersFrom) {
     return tableCreate(4, (char const *const[]){"Member", "Rule", "Paid", "Consumed"}, numbersFrom);
 }
 
@@ -63,7 +63,7 @@ typedef struct TotalRow {
 } TotalRow;
 
 /// A table of totals, its columns from @p numbersFrom on aligned to the right.
-static Table *totalTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *totalTable(size_t const numbersFrom) {
     return tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, numbersFrom);
 }
 
@@ -73,13 +73,13 @@ static void addTotalRow(Table *const table, TotalRow const *const row) {
 }
 
 /// The amount @p text of euros.
-static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
+[[nodiscard]] static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
 
 /// The three members of @p family.
-static Members everyone(Family const *const family) { return (Members){.count = 3, .ids = {family->ana, family->bob, family->mia}}; }
+[[nodiscard]] static Members everyone(Family const *const family) { return (Members){.count = 3, .ids = {family->ana, family->bob, family->mia}}; }
 
 /// The rule of @p member among the @p count rules of @p rules, or (payer only) for a member they do not name.
-static char const *ruleOf(Rule const *const rules, size_t const count, char const *const member) {
+[[nodiscard]] static char const *ruleOf(Rule const *const rules, size_t const count, char const *const member) {
     for (size_t index = 0; count > index; ++index) {
         if (0 == strcmp(rules[index].member.text, member)) {
             return rules[index].text;
@@ -161,7 +161,7 @@ static void byPercentage(EranosExpenseGroup *const group, Family const *const fa
 }
 
 /// Adds the food, which the three share by parts, Mia counting as half an adult.
-static Id byParts(EranosExpenseGroup *const group, Family const *const family) {
+[[nodiscard]] static Id byParts(EranosExpenseGroup *const group, Family const *const family) {
     section("3. By parts");
     printLine("Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n"
               "2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.");
@@ -268,7 +268,7 @@ static void totals(EranosExpenseGroup const *const group) {
 }
 
 /// Whether Mia consumed 25.00 EUR of the food: 125.00 over 2.5 parts is 50.00 per part.
-static bool miaConsumedHalfAPart(EranosExpenseGroup const *const group, Family const *const family, Id const food) {
+[[nodiscard]] static bool miaConsumedHalfAPart(EranosExpenseGroup const *const group, Family const *const family, Id const food) {
     EranosExpenseShares *shares = nullptr;
     must(eranosExpenseGroupExpenseShares(group, food.text, &shares));
     check(nullptr != shares, "food was added");

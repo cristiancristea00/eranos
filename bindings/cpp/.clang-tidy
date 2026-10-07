@@ -15,7 +15,18 @@
 # left, which the analyser's moved-from check reports through every call of
 # the layer; bugprone-use-after-move checks the layer's own moves. A
 # parameter taken by value is const in its declaration too, so that the
-# declaration reads as the definition does.
+# declaration reads as the definition does. Every function a header defines
+# writes inline, even where the language implies it, so readability's check of
+# a redundant inline is off. The groups enable the checks that keep the
+# qualifiers: misc-const-correctness, which also asks for a pointer that is
+# never reseated to be const itself (T *const),
+# readability-make-member-function-const, modernize-use-nodiscard,
+# misc-explicit-constructor, the performance-noexcept checks, and
+# bugprone-exception-escape, which reads throw expressions and so finds none
+# in a lint built without exceptions, as the tests and the ports are. No check
+# finds a function that could be noexcept, a parameter taken by value that
+# could be const, or a local of a template that could be const; those are kept
+# by reading.
 Checks: >
   -*,
   bugprone-*,
@@ -31,10 +42,13 @@ Checks: >
   -bugprone-switch-missing-default-case,
   -clang-analyzer-cplusplus.Move,
   -modernize-use-trailing-return-type,
-  -readability-avoid-const-params-in-decls
+  -readability-avoid-const-params-in-decls,
+  -readability-redundant-inline-specifier
 WarningsAsErrors: '*'
 HeaderFilterRegex: '(.*/)?include/eranos(/.*)?\.hpp$'
 CheckOptions:
+  misc-const-correctness.TransformPointersAsValues: true
+  misc-const-correctness.WarnPointersAsValues: true
   misc-header-include-cycle.IgnoredFilesList: 'Eranos[A-Za-z]*\.(d\.)?h(pp)?'
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
   readability-identifier-length.IgnoredParameterNames: '^(id|to)$'

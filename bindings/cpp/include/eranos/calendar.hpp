@@ -21,8 +21,8 @@ namespace eranos {
 
 namespace detail {
 
-[[nodiscard]] constexpr CalendarDate calendarDateOf(EranosCalendarDate const date) noexcept;
-[[nodiscard]] constexpr TimeOfDay timeOfDayOf(EranosTimeOfDay const time) noexcept;
+[[nodiscard]] inline constexpr CalendarDate calendarDateOf(EranosCalendarDate const date) noexcept;
+[[nodiscard]] inline constexpr TimeOfDay timeOfDayOf(EranosTimeOfDay const time) noexcept;
 
 } // namespace detail
 
@@ -36,34 +36,34 @@ class CalendarDate final {
     /// @param day The day of the month, from 1
     /// @return The date, or an error of the kind ErrorKind::CALENDAR for a day the calendar does not have
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the order is the library's, year, month, and day.
-    [[nodiscard]] static std::expected<CalendarDate, Error> of(std::int32_t const year, std::int32_t const month, std::int32_t const day);
+    [[nodiscard]] static std::expected<CalendarDate, Error> of(std::int32_t const year, std::int32_t const month, std::int32_t const day) noexcept;
 
     /// The date written @p text: "2026-09-23".
     ///
     /// @param text The date's text
     /// @return The date, or an error of the kind ErrorKind::CALENDAR for text that is not a date, and ErrorKind::INVALID_TEXT for text that is not
     ///   UTF-8
-    [[nodiscard]] static std::expected<CalendarDate, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<CalendarDate, Error> parse(std::string_view const text) noexcept;
 
     /// The year.
     ///
     /// @return The year
-    [[nodiscard]] constexpr std::int32_t year() const noexcept { return fields.year; }
+    [[nodiscard]] inline constexpr std::int32_t year() const noexcept { return fields.year; }
 
     /// The month, from 1 for January.
     ///
     /// @return The month
-    [[nodiscard]] constexpr std::int32_t month() const noexcept { return fields.month; }
+    [[nodiscard]] inline constexpr std::int32_t month() const noexcept { return fields.month; }
 
     /// The day of the month, from 1.
     ///
     /// @return The day
-    [[nodiscard]] constexpr std::int32_t day() const noexcept { return fields.day; }
+    [[nodiscard]] inline constexpr std::int32_t day() const noexcept { return fields.day; }
 
     /// The date as the library writes it: "2026-09-23".
     ///
     /// @return The text
-    [[nodiscard]] std::string toString() const;
+    [[nodiscard]] std::string toString() const noexcept;
 
     /// Whether two dates are the same day.
     ///
@@ -84,7 +84,7 @@ class CalendarDate final {
         [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
     };
 
-    constexpr explicit CalendarDate(Fields const fields) noexcept : fields(fields) {}
+    inline constexpr explicit CalendarDate(Fields const fields) noexcept : fields(fields) {}
 
     Fields fields;
 };
@@ -98,29 +98,29 @@ class TimeOfDay final {
     /// @param minute The minute, from 0 to 59
     /// @return The time, or an error of the kind ErrorKind::CALENDAR for a time the day does not have
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the order is the library's, hour and minute.
-    [[nodiscard]] static std::expected<TimeOfDay, Error> of(std::int32_t const hour, std::int32_t const minute);
+    [[nodiscard]] static std::expected<TimeOfDay, Error> of(std::int32_t const hour, std::int32_t const minute) noexcept;
 
     /// The time written @p text: "18:30".
     ///
     /// @param text The time's text
     /// @return The time, or an error of the kind ErrorKind::CALENDAR for text that is not a time, and ErrorKind::INVALID_TEXT for text that is not
     ///   UTF-8
-    [[nodiscard]] static std::expected<TimeOfDay, Error> parse(std::string_view const text);
+    [[nodiscard]] static std::expected<TimeOfDay, Error> parse(std::string_view const text) noexcept;
 
     /// The hour, from 0 to 23.
     ///
     /// @return The hour
-    [[nodiscard]] constexpr std::int32_t hour() const noexcept { return fields.hour; }
+    [[nodiscard]] inline constexpr std::int32_t hour() const noexcept { return fields.hour; }
 
     /// The minute, from 0 to 59.
     ///
     /// @return The minute
-    [[nodiscard]] constexpr std::int32_t minute() const noexcept { return fields.minute; }
+    [[nodiscard]] inline constexpr std::int32_t minute() const noexcept { return fields.minute; }
 
     /// The time as the library writes it: "18:30".
     ///
     /// @return The text
-    [[nodiscard]] std::string toString() const;
+    [[nodiscard]] std::string toString() const noexcept;
 
     /// Whether two times are the same minute.
     ///
@@ -140,42 +140,42 @@ class TimeOfDay final {
         [[nodiscard]] friend constexpr bool operator==(Fields const &left, Fields const &right) noexcept = default;
     };
 
-    constexpr explicit TimeOfDay(Fields const fields) noexcept : fields(fields) {}
+    inline constexpr explicit TimeOfDay(Fields const fields) noexcept : fields(fields) {}
 
     Fields fields;
 };
 
 namespace detail {
 
-[[nodiscard]] constexpr EranosCalendarDate toDetail(CalendarDate const date) noexcept;
-[[nodiscard]] constexpr EranosTimeOfDay toDetail(TimeOfDay const time) noexcept;
-[[nodiscard]] constexpr std::optional<TimeOfDay> optionalTime(std::optional<EranosTimeOfDay> const time) noexcept;
+[[nodiscard]] inline constexpr EranosCalendarDate toDetail(CalendarDate const date) noexcept;
+[[nodiscard]] inline constexpr EranosTimeOfDay toDetail(TimeOfDay const time) noexcept;
+[[nodiscard]] inline constexpr std::optional<TimeOfDay> optionalTime(std::optional<EranosTimeOfDay> const time) noexcept;
 
 } // namespace detail
 
-inline std::expected<CalendarDate, Error> CalendarDate::of(std::int32_t const year, std::int32_t const month, std::int32_t const day) {
+inline std::expected<CalendarDate, Error> CalendarDate::of(std::int32_t const year, std::int32_t const month, std::int32_t const day) noexcept {
     detail::EranosCalendarDate const date{.year = year, .month = month, .day = day};
     return detail::expectedOf(date.format()).transform([date](std::string const & /* text */) noexcept { return detail::calendarDateOf(date); });
 }
 
-inline std::expected<CalendarDate, Error> CalendarDate::parse(std::string_view const text) {
+inline std::expected<CalendarDate, Error> CalendarDate::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosCalendarDate::parse(text)).transform(detail::calendarDateOf);
 }
 
 // A date is checked when it is made.
-inline std::string CalendarDate::toString() const { return detail::known(detail::toDetail(*this).format()); }
+inline std::string CalendarDate::toString() const noexcept { return detail::known(detail::toDetail(*this).format()); }
 
-inline std::expected<TimeOfDay, Error> TimeOfDay::of(std::int32_t const hour, std::int32_t const minute) {
+inline std::expected<TimeOfDay, Error> TimeOfDay::of(std::int32_t const hour, std::int32_t const minute) noexcept {
     detail::EranosTimeOfDay const time{.hour = hour, .minute = minute};
     return detail::expectedOf(time.format()).transform([time](std::string const & /* text */) noexcept { return detail::timeOfDayOf(time); });
 }
 
-inline std::expected<TimeOfDay, Error> TimeOfDay::parse(std::string_view const text) {
+inline std::expected<TimeOfDay, Error> TimeOfDay::parse(std::string_view const text) noexcept {
     return detail::expectedOf(detail::EranosTimeOfDay::parse(text)).transform(detail::timeOfDayOf);
 }
 
 // A time is checked when it is made.
-inline std::string TimeOfDay::toString() const { return detail::known(detail::toDetail(*this).format()); }
+inline std::string TimeOfDay::toString() const noexcept { return detail::known(detail::toDetail(*this).format()); }
 
 } // namespace eranos
 

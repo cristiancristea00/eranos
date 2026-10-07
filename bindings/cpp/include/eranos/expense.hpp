@@ -42,7 +42,7 @@ struct ExpenseItem final {
     /// @param name What was bought.
     /// @param unitPrice The price of one unit, in the expense's currency.
     /// @param split How the line's total divides.
-    ExpenseItem(std::string name, Money unitPrice, Split split) noexcept
+    inline constexpr ExpenseItem(std::string name, Money unitPrice, Split split) noexcept
         : name(std::move(name)), unitPrice(std::move(unitPrice)), split(std::move(split)) {}
 
     /// What was bought.
@@ -62,7 +62,7 @@ struct ExpenseItem final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ExpenseItem const &left, ExpenseItem const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ExpenseItem const &left, ExpenseItem const &right) noexcept = default;
 };
 
 /// A percentage of the expense's amount.
@@ -75,7 +75,7 @@ struct PercentageTipValue final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(PercentageTipValue const &left, PercentageTipValue const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(PercentageTipValue const &left, PercentageTipValue const &right) noexcept = default;
 };
 
 /// A fixed amount in the expense's currency.
@@ -88,7 +88,7 @@ struct FixedTipValue final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(FixedTipValue const &left, FixedTipValue const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(FixedTipValue const &left, FixedTipValue const &right) noexcept = default;
 };
 
 /// How a tip is expressed. One of its alternatives: PercentageTipValue, FixedTipValue.
@@ -100,7 +100,7 @@ struct TipRule final {
     ///
     /// @param value How the tip is expressed.
     /// @param distribution How the tip is shared among the participants.
-    TipRule(TipValue value, TipDistribution const distribution) noexcept : value(std::move(value)), distribution(distribution) {}
+    inline constexpr TipRule(TipValue value, TipDistribution const distribution) noexcept : value(std::move(value)), distribution(distribution) {}
 
     /// How the tip is expressed.
     TipValue value;
@@ -113,7 +113,7 @@ struct TipRule final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(TipRule const &left, TipRule const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(TipRule const &left, TipRule const &right) noexcept = default;
 };
 
 /// An amount in the group currency.
@@ -126,7 +126,7 @@ struct LocalCost final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(LocalCost const &left, LocalCost const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(LocalCost const &left, LocalCost const &right) noexcept = default;
 };
 
 /// An amount in another currency than the group's, converted at `rate`.
@@ -141,7 +141,7 @@ struct ConvertedCost final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ConvertedCost const &left, ConvertedCost const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ConvertedCost const &left, ConvertedCost const &right) noexcept = default;
 };
 
 /// What an entry cost: an amount in the group currency, or one in another, converted at a rate. One of its alternatives: LocalCost, ConvertedCost.
@@ -157,7 +157,7 @@ struct WholeExpenseSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(WholeExpenseSplit const &left, WholeExpenseSplit const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(WholeExpenseSplit const &left, WholeExpenseSplit const &right) noexcept = default;
 };
 
 /// Every line is divided by its own split; the lines add up to the amount.
@@ -170,7 +170,7 @@ struct ItemisedExpenseSplit final {
     /// @param left An alternative
     /// @param right Another alternative
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(ItemisedExpenseSplit const &left, ItemisedExpenseSplit const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(ItemisedExpenseSplit const &left, ItemisedExpenseSplit const &right) noexcept = default;
 };
 
 /// How an expense's amount is shared. One of its alternatives: WholeExpenseSplit, ItemisedExpenseSplit.
@@ -187,7 +187,7 @@ struct Expense final {
     /// @param payers Who paid the total, amount and tip, and how much each.
     /// @param split How the amount is shared.
     /// @param date The day it was bought.
-    Expense(ExpenseId id, std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
+    inline constexpr Expense(ExpenseId id, std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
         : id(std::move(id)), name(std::move(name)), cost(std::move(cost)), payers(std::move(payers)), split(std::move(split)), date(date) {}
 
     /// The record of its required fields under an identifier generated when it is called, which
@@ -198,7 +198,7 @@ struct Expense final {
     /// @param payers Who paid the total, amount and tip, and how much each.
     /// @param split How the amount is shared.
     /// @param date The day it was bought.
-    Expense(std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date)
+    inline Expense(std::string name, Cost cost, Split payers, ExpenseSplit split, CalendarDate const date) noexcept
         : Expense(ExpenseId::generate(), std::move(name), std::move(cost), std::move(payers), std::move(split), date) {}
 
     /// The identifier, which the app gives: its own, or one ExpenseId::generate() makes.
@@ -236,70 +236,70 @@ struct Expense final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Expense const &left, Expense const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(Expense const &left, Expense const &right) noexcept = default;
 };
 
 /// The tip of an expense in its currency, zero without one.
 ///
 /// @param expense The expense
 /// @return The tip, or an error of the kind ErrorKind::EXPENSE for a tip the expense cannot have
-[[nodiscard]] std::expected<Money, Error> tipAmount(Expense const &expense);
+[[nodiscard]] std::expected<Money, Error> tipAmount(Expense const &expense) noexcept;
 
 /// The amount of an expense with its tip, what its payers paid.
 ///
 /// @param expense The expense
 /// @return The total, or an error of the kind ErrorKind::EXPENSE for a tip the expense cannot have
-[[nodiscard]] std::expected<Money, Error> total(Expense const &expense);
+[[nodiscard]] std::expected<Money, Error> total(Expense const &expense) noexcept;
 
 /// Every member an expense names, payers and participants, each once and in the order of their identifiers.
 ///
 /// @param expense The expense
 /// @return The members, or an error of the kind ErrorKind::ID for an identifier that is not one
-[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Expense const &expense);
+[[nodiscard]] std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) noexcept;
 
 namespace detail {
 
-[[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value);
-[[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value);
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value);
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value);
-[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(TipValue const &value);
-[[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value);
-[[nodiscard]] inline std::unique_ptr<EranosTipRule> toDetail(TipRule const &value);
-[[nodiscard]] inline Cost fromDetail(EranosCost const &value);
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value);
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value);
-[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(Cost const &value);
-[[nodiscard]] inline ExpenseSplit fromDetail(EranosExpenseSplit const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(WholeExpenseSplit const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value);
-[[nodiscard]] inline Expense fromDetail(EranosExpense const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value);
-[[nodiscard]] inline std::vector<Expense> fromDetail(EranosExpenseList const &list);
-[[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list);
-[[nodiscard]] constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept;
-[[nodiscard]] constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept;
+[[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value) noexcept;
+[[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(TipValue const &value) noexcept;
+[[nodiscard]] inline TipRule fromDetail(EranosTipRule const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosTipRule> toDetail(TipRule const &value) noexcept;
+[[nodiscard]] inline Cost fromDetail(EranosCost const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(LocalCost const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(ConvertedCost const &value) noexcept;
+[[nodiscard]] inline std::unique_ptr<EranosCost> toDetail(Cost const &value) noexcept;
+[[nodiscard]] inline ExpenseSplit fromDetail(EranosExpenseSplit const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(WholeExpenseSplit const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ExpenseSplit const &value) noexcept;
+[[nodiscard]] inline Expense fromDetail(EranosExpense const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value) noexcept;
+[[nodiscard]] inline std::vector<Expense> fromDetail(EranosExpenseList const &list) noexcept;
+[[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list) noexcept;
+[[nodiscard]] inline constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept;
+[[nodiscard]] inline constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept;
 
 } // namespace detail
 
-inline std::expected<Money, Error> tipAmount(Expense const &expense) {
+inline std::expected<Money, Error> tipAmount(Expense const &expense) noexcept {
     return detail::toDetail(expense)
-        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) { return detail::expectedOf(converted->tip_amount()); })
-        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) { return detail::fromDetail(*amount); });
+        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) noexcept { return detail::expectedOf(converted->tip_amount()); })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) noexcept { return detail::fromDetail(*amount); });
 }
 
-inline std::expected<Money, Error> total(Expense const &expense) {
+inline std::expected<Money, Error> total(Expense const &expense) noexcept {
     return detail::toDetail(expense)
-        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) { return detail::expectedOf(converted->total()); })
-        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) { return detail::fromDetail(*amount); });
+        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) noexcept { return detail::expectedOf(converted->total()); })
+        .transform([](std::unique_ptr<detail::EranosMoney> const &amount) noexcept { return detail::fromDetail(*amount); });
 }
 
-inline std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) {
+inline std::expected<std::vector<MemberId>, Error> participants(Expense const &expense) noexcept {
     return detail::toDetail(expense)
-        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) { return detail::expectedOf(converted->participants()); })
-        .transform([](std::unique_ptr<detail::EranosTextList> const &members) { return detail::identifiers<MemberId>(*members); });
+        .and_then([](std::unique_ptr<detail::EranosExpense> const &converted) noexcept { return detail::expectedOf(converted->participants()); })
+        .transform([](std::unique_ptr<detail::EranosTextList> const &members) noexcept { return detail::identifiers<MemberId>(*members); });
 }
 
 } // namespace eranos

@@ -23,7 +23,7 @@ namespace eranos {
 
 namespace detail {
 
-[[nodiscard]] inline Error errorOf(EranosError const &detail);
+[[nodiscard]] inline Error errorOf(EranosError const &detail) noexcept;
 
 } // namespace detail
 
@@ -163,12 +163,12 @@ class Error final {
     [[nodiscard]] std::optional<std::vector<TransferId>> const &transfers() const noexcept;
 
   private:
-    friend Error detail::errorOf(detail::EranosError const &detail);
+    friend Error detail::errorOf(detail::EranosError const &detail) noexcept;
 
     /// What an error holds.
     struct Fields;
 
-    explicit Error(std::shared_ptr<Fields const> fields) noexcept : fields(std::move(fields)) {}
+    inline explicit Error(std::shared_ptr<Fields const> fields) noexcept : fields(std::move(fields)) {}
 
     std::shared_ptr<Fields const> fields;
 };

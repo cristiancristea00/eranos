@@ -21,7 +21,7 @@ namespace {
 /// currency.
 struct EntryRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
+    static inline constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
 
     /// What it was.
     std::string name;
@@ -37,13 +37,13 @@ struct EntryRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<5> cells() const noexcept { return {name, payer, original, rate, converted}; }
+    [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {name, payer, original, rate, converted}; }
 };
 
 /// A row of the table of balances: what a member paid, consumed, sent, and received, and their balance.
 struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
+    static inline constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -61,27 +61,27 @@ struct BalanceRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<6> cells() const noexcept { return {name, paid, consumed, sent, received, balance}; }
+    [[nodiscard]] inline constexpr Cells<6> cells() const noexcept { return {name, paid, consumed, sent, received, balance}; }
 };
 
 /// The amount @p text of @p code.
-[[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) {
+[[nodiscard]] Money amountOf(std::string_view const text, std::string_view const code) noexcept {
     return must(Money::parse(text, must(CurrencyCode::of(code))));
 }
 
 /// The amount of @p cost, as entered.
-[[nodiscard]] Money amountOf(Cost const &cost) {
-    return std::visit([](auto const &alternative) { return alternative.amount; }, cost);
+[[nodiscard]] inline constexpr Money amountOf(Cost const &cost) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return alternative.amount; }, cost);
 }
 
 /// The rate @p cost was entered at: 1 for a cost in the group currency.
-[[nodiscard]] ExchangeRate rateOf(Cost const &cost) {
+[[nodiscard]] ExchangeRate rateOf(Cost const &cost) noexcept {
     auto const *const converted = std::get_if<ConvertedCost>(&cost);
     return nullptr == converted ? must(ExchangeRate::parse("1")) : converted->rate;
 }
 
 /// Prints every expense and transfer, as entered and in the group currency.
-void printEntries(ExpenseGroup const &group) {
+void printEntries(ExpenseGroup const &group) noexcept {
     Money const zero(0, group.currency());
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
@@ -108,7 +108,7 @@ void printEntries(ExpenseGroup const &group) {
 }
 
 /// Prints what each member paid, consumed, sent, and received, and their balance.
-void printBalances(ExpenseGroup const &group) {
+void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
@@ -126,7 +126,7 @@ void printBalances(ExpenseGroup const &group) {
 }
 
 /// Adds the fuel in RON, the dinner in HUF, and the ferry in EUR, which Ana and Bob share.
-void expenses(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) {
+void expenses(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) noexcept {
     section("1. Expenses in three currencies");
     WholeExpenseSplit const both{EqualSplit{{ana, bob}}};
     static_cast<void>(
@@ -144,7 +144,7 @@ void expenses(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) {
 }
 
 /// Adds Ana's repayment to Bob, in cash and in RON.
-void repayment(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) {
+void repayment(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) noexcept {
     section("3. A repayment in cash, in another currency");
     Transfer transfer(ana, bob, ConvertedCost{.amount = amountOf("100.00", "RON"), .rate = must(ExchangeRate::parse("0.2"))},
                       must(CalendarDate::of(2026, 8, 4)));
@@ -157,7 +157,7 @@ void repayment(ExpenseGroup &group, MemberId const &ana, MemberId const &bob) {
 }
 
 /// Moves the books of @p group to RON.
-void newCurrency(ExpenseGroup &group) {
+void newCurrency(ExpenseGroup &group) noexcept {
     section("4. Moving the books to another currency");
     printLine("Changing the group currency needs a rate into the new currency for every other\n"
               "currency in use: 1 EUR = 5 RON and 1 HUF = 0.0125 RON. Entries in those currencies\n"
@@ -172,7 +172,7 @@ void newCurrency(ExpenseGroup &group) {
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto group = must(ExpenseGroup::create("Danube road trip", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
@@ -206,7 +206,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

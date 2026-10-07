@@ -18,7 +18,7 @@ namespace {
 /// A row of the table of expenses: what was bought, who paid it, who shares it, and its amount.
 struct ExpenseRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Expense", "Paid by", "Shared by", "Amount"};
+    static inline constexpr Cells<4> HEADERS{"Expense", "Paid by", "Shared by", "Amount"};
 
     /// What was bought.
     std::string name;
@@ -32,13 +32,13 @@ struct ExpenseRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, payers, participants, amount}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, payers, participants, amount}; }
 };
 
 /// A row of the table of members: what a member paid and consumed, and their balance.
 struct MemberRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -52,13 +52,13 @@ struct MemberRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
 };
 
 /// A row of the table of payments: who pays whom, and how much.
 struct PaymentRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"From", "To", "Amount"};
+    static inline constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
     /// Who pays.
     std::string from;
@@ -70,14 +70,14 @@ struct PaymentRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {from, to, amount}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {from, to, amount}; }
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto group = must(ExpenseGroup::create("Weekend in Sinaia", must(CurrencyCode::of("EUR"))));
     title(group.name());
     std::println("Three friends rent a cabin and buy groceries. The group keeps its books in {}, so\n"
@@ -150,7 +150,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

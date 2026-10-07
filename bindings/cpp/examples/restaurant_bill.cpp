@@ -22,7 +22,7 @@ namespace {
 /// A row of the receipt: a line, who shared it, its quantity, its unit price, and its total.
 struct LineRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
+    static inline constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
 
     /// What was ordered.
     std::string name;
@@ -38,13 +38,13 @@ struct LineRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<5> cells() const noexcept { return {name, participants, quantity, unitPrice, lineTotal}; }
+    [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {name, participants, quantity, unitPrice, lineTotal}; }
 };
 
 /// A row of the table of tips: what a friend ordered, and what they pay with the tip shared by consumption and equally.
 struct TipRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<6> HEADERS{"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"};
+    static inline constexpr Cells<6> HEADERS{"Member", "Ordered", "Tip by consumption", "Pays", "Tip shared equally", "Pays"};
 
     /// Their first name.
     std::string name;
@@ -62,21 +62,23 @@ struct TipRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<6> cells() const noexcept { return {name, subtotal, proportionalTip, proportionalTotal, equalTip, equalTotal}; }
+    [[nodiscard]] inline constexpr Cells<6> cells() const noexcept {
+        return {name, subtotal, proportionalTip, proportionalTotal, equalTip, equalTotal};
+    }
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
+[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) noexcept {
     ExpenseItem item(std::move(name), euros(unitPrice), std::move(split));
     item.quantity = quantity;
     return item;
 }
 
 /// The receipt: every line with the members who had it.
-[[nodiscard]] std::vector<ExpenseItem> receipt(MemberId const &ana, MemberId const &bob, MemberId const &carol) {
+[[nodiscard]] std::vector<ExpenseItem> receipt(MemberId const &ana, MemberId const &bob, MemberId const &carol) noexcept {
     return {
         line("Ciorbă", "8.00", EqualSplit{{ana}}, 1),
         line("Sarmale", "14.00", EqualSplit{{bob, carol}}, 2),
@@ -87,21 +89,21 @@ struct TipRow final {
 
 /// How @p expense would divide if it were added to @p group, computed on a copy loaded from the group's saved form, so the
 /// group itself is unchanged.
-[[nodiscard]] ExpenseShares preview(ExpenseGroup const &group, Expense const &expense) {
+[[nodiscard]] ExpenseShares preview(ExpenseGroup const &group, Expense const &expense) noexcept {
     auto copy = must(ExpenseGroup::load(group.save()));
     auto const id = must(copy.addExpense(expense));
     return must(copy.expenseShares(id)).value();
 }
 
 /// What @p member consumed of the expense that @p shares divides.
-[[nodiscard]] Money consumed(ExpenseShares const &shares, MemberId const &member) {
-    auto const found = std::ranges::find_if(shares.members, [&member](MemberShare const &share) { return member == share.member; });
+[[nodiscard]] Money consumed(ExpenseShares const &shares, MemberId const &member) noexcept {
+    auto const found = std::ranges::find_if(shares.members, [&member](MemberShare const &share) noexcept { return member == share.member; });
     check(shares.members.end() != found, "every member ordered");
     return found->share;
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto group = must(ExpenseGroup::create("Dinner at Caru' cu Bere", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
@@ -130,7 +132,7 @@ void run() {
 
     section("2. Who ordered what, and the tip");
     // The dinner, with its tip of 10 % shared by `distribution` when there is one.
-    auto const bill = [&](std::optional<TipDistribution> const distribution) {
+    auto const bill = [&](std::optional<TipDistribution> const distribution) noexcept {
         Expense expense("Dinner", LocalCost{euros("54.00")}, EqualSplit{{ana}}, ItemisedExpenseSplit{receipt(ana, bob, carol)}, day);
         if (distribution.has_value()) {
             expense.tip = TipRule(PercentageTipValue{must(Percentage::parse("10"))}, *distribution);
@@ -182,7 +184,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

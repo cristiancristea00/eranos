@@ -6,6 +6,7 @@
 
 #include "eranos.hpp"
 
+#include <algorithm>
 #include <array>
 #include <concepts>
 #include <cstddef>
@@ -23,13 +24,13 @@ namespace eranos::examples {
 /// Stops the port, printing @p error, which the library refused a call the example makes with.
 ///
 /// @param error The refusal
-[[noreturn]] void stopWith(Error const &error);
+[[noreturn]] void stopWith(Error const &error) noexcept;
 
 /// The value of @p result, of a call the example makes, which stops the port when the library refused the call.
 ///
 /// @param result The call's result
 /// @return Its value
-template <typename Value> [[nodiscard]] Value must(std::expected<Value, Error> result) {
+template <typename Value> [[nodiscard]] inline Value must(std::expected<Value, Error> result) noexcept {
     if (!result) {
         stopWith(result.error());
     }
@@ -39,28 +40,28 @@ template <typename Value> [[nodiscard]] Value must(std::expected<Value, Error> r
 /// Stops the port when the library refused @p result, of a call the example makes that returns nothing.
 ///
 /// @param result The call's result
-void must(std::expected<void, Error> const &result);
+void must(std::expected<void, Error> const &result) noexcept;
 
 /// Stops the port, naming @p claim, unless @p holds: a number of the report is not the example's.
 ///
 /// @param holds Whether the number is the example's
 /// @param claim What the number is
-void check(bool const holds, std::string_view const claim);
+void check(bool const holds, std::string_view const claim) noexcept;
 
 /// Prints @p text, then a line break.
 ///
 /// @param text The text, which may hold line breaks of its own
-void printLine(std::string_view const text);
+void printLine(std::string_view const text) noexcept;
 
 /// Prints @p text with a double line under it, as an example opens.
 ///
 /// @param text The title
-void title(std::string_view const text);
+void title(std::string_view const text) noexcept;
 
 /// Prints a section heading with a line under it, after a blank line.
 ///
 /// @param text The heading
-void section(std::string_view const text);
+void section(std::string_view const text) noexcept;
 
 /// The text of a table's columns, one per column: the headers of its columns, or the cells of one of its rows.
 template <std::size_t Columns> using Cells = std::array<std::string_view, Columns>;
@@ -79,14 +80,14 @@ concept TableRow = requires(Row const &row) {
 /// @param rows The rows, a cell per column
 /// @param numbersFrom The first column aligned to the right
 void printCells(std::span<std::string_view const> const headers, std::vector<std::vector<std::string_view>> const &rows,
-                std::size_t const numbersFrom);
+                std::size_t const numbersFrom) noexcept;
 
 /// Prints @p rows under the headers of their type with rounded borders, as the Rust examples' tables are printed,
 /// right-aligning the columns from @p numbersFrom on.
 ///
 /// @param rows The rows
 /// @param numbersFrom The first column aligned to the right
-template <TableRow Row> void printTable(std::vector<Row> const &rows, std::size_t const numbersFrom) {
+template <TableRow Row> inline void printTable(std::vector<Row> const &rows, std::size_t const numbersFrom) noexcept {
     std::vector<std::vector<std::string_view>> cells;
     cells.reserve(rows.size());
     for (auto const &row : rows) {
@@ -100,40 +101,49 @@ template <TableRow Row> void printTable(std::vector<Row> const &rows, std::size_
 ///
 /// @param lines The lines
 /// @return The cell
-[[nodiscard]] std::string cell(std::vector<std::string> const &lines);
+[[nodiscard]] inline constexpr std::string cell(std::vector<std::string> const &lines) noexcept {
+    std::string text;
+    for (std::size_t index = 0; lines.size() > index; ++index) {
+        text += (0 == index ? "" : "\n") + lines.at(index);
+    }
+    return text;
+}
 
 /// The first name of @p member in @p group, or ? for one the group does not hold.
 ///
 /// @param group The group
 /// @param member The member
 /// @return The first name
-[[nodiscard]] std::string firstName(ExpenseGroup const &group, MemberId const &member);
+[[nodiscard]] std::string firstName(ExpenseGroup const &group, MemberId const &member) noexcept;
 
 /// The first names of @p members in @p group, joined by commas.
 ///
 /// @param group The group
 /// @param members The members
 /// @return The names
-[[nodiscard]] std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members);
+[[nodiscard]] std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members) noexcept;
 
 /// Every member who shares the cost of @p split, once each, in the order of their identifiers.
 ///
 /// @param split The expense's split
 /// @return The members
-[[nodiscard]] std::vector<MemberId> sharedBy(ExpenseSplit const &split);
+[[nodiscard]] std::vector<MemberId> sharedBy(ExpenseSplit const &split) noexcept;
 
 /// The totals of @p member in @p summary, absent when the summary lists none of theirs.
 ///
 /// @param summary The summary
 /// @param member The member
 /// @return The totals
-[[nodiscard]] std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &member);
+[[nodiscard]] inline constexpr std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &member) noexcept {
+    auto const found = std::ranges::find_if(summary.members, [&member](MemberSummary const &totals) noexcept { return member == totals.member; });
+    return summary.members.end() == found ? std::nullopt : std::optional<MemberSummary>(*found);
+}
 
 /// What the library refused the call of @p result with, or none when it accepted it.
 ///
 /// @param result The call's result
 /// @return The refusal
-template <typename Value> [[nodiscard]] std::optional<Error> refusal(std::expected<Value, Error> const &result) {
+template <typename Value> [[nodiscard]] inline std::optional<Error> refusal(std::expected<Value, Error> const &result) noexcept {
     if (result) {
         return std::nullopt;
     }
@@ -144,7 +154,7 @@ template <typename Value> [[nodiscard]] std::optional<Error> refusal(std::expect
 ///
 /// @param refused The refusal
 /// @return The message
-[[nodiscard]] std::string message(std::optional<Error> const &refused);
+[[nodiscard]] std::string message(std::optional<Error> const &refused) noexcept;
 
 } // namespace eranos::examples
 

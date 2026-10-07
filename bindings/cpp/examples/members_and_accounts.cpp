@@ -16,7 +16,7 @@ namespace eranos::examples {
 namespace {
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The two flatmates.
 struct Flatmates final {
@@ -29,7 +29,7 @@ struct Flatmates final {
 /// A row of the table of members: a member's name, contact details, and accounts.
 struct MemberRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
 
     /// Their first and last name.
     std::string name;
@@ -43,13 +43,13 @@ struct MemberRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, email, phone, accounts}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, email, phone, accounts}; }
 };
 
 /// A row of the table of checks: a text, what it was checked as, and what validation made of it.
 struct CheckRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"Input", "Checked as", "Result"};
+    static inline constexpr Cells<3> HEADERS{"Input", "Checked as", "Result"};
 
     /// The text checked.
     std::string_view input;
@@ -61,13 +61,13 @@ struct CheckRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {input, kind, result}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {input, kind, result}; }
 };
 
 /// A row of the table of balances: whether a member is active, what they consumed, and their balance.
 struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Status", "Consumed", "Balance"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Status", "Consumed", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -81,11 +81,11 @@ struct BalanceRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, status, consumed, balance}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, status, consumed, balance}; }
 };
 
 /// An account with its label and its details.
-[[nodiscard]] std::string describe(PaymentAccount const &account) {
+[[nodiscard]] std::string describe(PaymentAccount const &account) noexcept {
     auto const *const iban = std::get_if<IbanPaymentAccountDetails>(&account.details);
     return std::format("{}: {}", account.name,
                        (nullptr == iban ? std::get<UsernamePaymentAccountDetails>(account.details).username.toString() : iban->iban.toString()));
@@ -94,7 +94,7 @@ struct BalanceRow final {
 /// The row of @p input, checked as @p kind: "valid: " and what @p shown writes of the value @p parse makes of it, or
 /// "refused: " and the library's message.
 template <typename Parse, typename Shown>
-[[nodiscard]] CheckRow validated(std::string_view const input, std::string_view const kind, Parse const &parse, Shown const &shown) {
+[[nodiscard]] CheckRow validated(std::string_view const input, std::string_view const kind, Parse const &parse, Shown const &shown) noexcept {
     auto const parsed = parse(input);
     return {
         .input = input,
@@ -104,7 +104,7 @@ template <typename Parse, typename Shown>
 }
 
 /// Prints every member of @p group with their contact and account details.
-void printMembers(ExpenseGroup const &group) {
+void printMembers(ExpenseGroup const &group) noexcept {
     std::vector<MemberRow> rows;
     for (auto const &member : group.members()) {
         std::vector<std::string> accounts;
@@ -123,7 +123,7 @@ void printMembers(ExpenseGroup const &group) {
 }
 
 /// Prints whether each member of @p group is active or archived, what they consumed, and their balance.
-void printBalances(ExpenseGroup const &group) {
+void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     std::vector<BalanceRow> rows;
     for (auto const &member : group.members()) {
@@ -139,7 +139,7 @@ void printBalances(ExpenseGroup const &group) {
 }
 
 /// Adds Ana, with every detail, and Bob, with a first name only, to @p group, and prints them.
-[[nodiscard]] Flatmates members(ExpenseGroup &group) {
+[[nodiscard]] Flatmates members(ExpenseGroup &group) noexcept {
     section("1. Members");
     Member first("Ana");
     first.accounts = {
@@ -159,25 +159,27 @@ void printBalances(ExpenseGroup const &group) {
 }
 
 /// Prints what validation makes of valid and mistyped IBANs, emails, and phone numbers.
-void validation() {
+void validation() noexcept {
     section("2. What validation accepts");
     printLine("IBANs are checked against the SWIFT registry: the country, its length, which\n"
               "positions hold digits and which letters, and the mod-97 check digits, which catch\n"
               "any single mistyped character. Emails are checked against the rules of RFC 5321\n"
               "and 5322, which refuse the doubled dots and stray commas of hurried typing, and\n"
               "phone numbers against their country's numbering plan, stored in E.164 form.");
-    auto const iban = [](std::string_view const input) {
+    auto const iban = [](std::string_view const input) noexcept {
         return validated(
-            input, "IBAN", [](std::string_view const text) { return Iban::parse(text); }, [](Iban const &parsed) { return parsed.toString(); });
+            input, "IBAN", [](std::string_view const text) noexcept { return Iban::parse(text); },
+            [](Iban const &parsed) noexcept { return parsed.toString(); });
     };
-    auto const email = [](std::string_view const input) {
+    auto const email = [](std::string_view const input) noexcept {
         return validated(
-            input, "email", [](std::string_view const text) { return Email::parse(text); }, [](Email const &parsed) { return parsed.toString(); });
+            input, "email", [](std::string_view const text) noexcept { return Email::parse(text); },
+            [](Email const &parsed) noexcept { return parsed.toString(); });
     };
-    auto const phone = [](std::string_view const input) {
+    auto const phone = [](std::string_view const input) noexcept {
         return validated(
-            input, "phone", [](std::string_view const text) { return PhoneNumber::parse(text); },
-            [](PhoneNumber const &parsed) { return parsed.toString(); });
+            input, "phone", [](std::string_view const text) noexcept { return PhoneNumber::parse(text); },
+            [](PhoneNumber const &parsed) noexcept { return parsed.toString(); });
     };
     printTable<CheckRow>(
         {
@@ -197,7 +199,7 @@ void validation() {
 }
 
 /// Adds the rent that Ana and Bob share, archives Bob, and shows what that allows and refuses.
-void movingOut(ExpenseGroup &group, Flatmates const &flatmates) {
+void movingOut(ExpenseGroup &group, Flatmates const &flatmates) noexcept {
     section("3. A flatmate moves out");
     WholeExpenseSplit const both{EqualSplit{{flatmates.ana, flatmates.bob}}};
     auto const rent =
@@ -222,7 +224,7 @@ void movingOut(ExpenseGroup &group, Flatmates const &flatmates) {
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto group = must(ExpenseGroup::create("Flat 4B", must(CurrencyCode::of("EUR"))));
     printLine("Flat 4B: members and their accounts\n"
               "═══════════════════════════════════");
@@ -236,7 +238,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

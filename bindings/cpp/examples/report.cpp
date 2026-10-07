@@ -31,14 +31,14 @@ constexpr unsigned CONTINUATION_MASK = 0xC0U;
 constexpr unsigned CONTINUATION = 0x80U;
 
 /// How many characters @p text holds: the reports' characters are each one column wide.
-[[nodiscard]] std::size_t widthOf(std::string_view const text) noexcept {
+[[nodiscard]] inline constexpr std::size_t widthOf(std::string_view const text) noexcept {
     return static_cast<std::size_t>(std::count_if(text.begin(), text.end(), [](char const byte) noexcept {
         return CONTINUATION != (static_cast<unsigned>(static_cast<unsigned char>(byte)) & CONTINUATION_MASK);
     }));
 }
 
 /// @p piece, @p count times over.
-[[nodiscard]] std::string repeated(std::string_view const piece, std::size_t const count) {
+[[nodiscard]] inline constexpr std::string repeated(std::string_view const piece, std::size_t const count) noexcept {
     std::string text;
     for (std::size_t index = 0; count > index; ++index) {
         text += piece;
@@ -47,7 +47,7 @@ constexpr unsigned CONTINUATION = 0x80U;
 }
 
 /// The lines of @p text, an empty text holding one empty line.
-[[nodiscard]] std::vector<std::string> linesOf(std::string_view const text) {
+[[nodiscard]] inline constexpr std::vector<std::string> linesOf(std::string_view const text) noexcept {
     std::vector<std::string> lines;
     std::size_t start = 0;
     for (std::size_t end = text.find('\n'); std::string_view::npos != end; end = text.find('\n', start)) {
@@ -59,7 +59,7 @@ constexpr unsigned CONTINUATION = 0x80U;
 }
 
 /// Ends the port with a failure, printing @p reason after the report it printed so far.
-[[noreturn]] void stop(std::string_view const reason) {
+[[noreturn]] void stop(std::string_view const reason) noexcept {
     static_cast<void>(std::fflush(stdout));
     std::println(stderr, "the port stopped: {}", reason);
     // NOLINTNEXTLINE(concurrency-mt-unsafe): a port stops on its main thread, and no thread of its own calls exit().
@@ -77,7 +77,7 @@ struct Border final {
 };
 
 /// The border @p border over columns of @p widths.
-[[nodiscard]] std::string borderOf(std::vector<std::size_t> const &widths, Border const border) {
+[[nodiscard]] inline constexpr std::string borderOf(std::vector<std::size_t> const &widths, Border const border) noexcept {
     std::string line(border.left);
     for (std::size_t column = 0; widths.size() > column; ++column) {
         line += repeated("─", widths.at(column) + 2);
@@ -88,7 +88,7 @@ struct Border final {
 
 /// The lines of @p row, each of its cells' lines on a line of its own, over columns of @p widths.
 [[nodiscard]] std::vector<std::string> rowLines(std::vector<std::vector<std::string>> const &row, std::vector<std::size_t> const &widths,
-                                                std::size_t const numbersFrom) {
+                                                std::size_t const numbersFrom) noexcept {
     std::size_t height = 1;
     for (auto const &lines : row) {
         height = std::max(height, lines.size());
@@ -108,29 +108,29 @@ struct Border final {
 
 } // namespace
 
-void stopWith(Error const &error) { stop(std::format("the library refused a call the example makes: {}", error.message())); }
+void stopWith(Error const &error) noexcept { stop(std::format("the library refused a call the example makes: {}", error.message())); }
 
-void must(std::expected<void, Error> const &result) {
+void must(std::expected<void, Error> const &result) noexcept {
     if (!result) {
         stopWith(result.error());
     }
 }
 
-void check(bool const holds, std::string_view const claim) {
+void check(bool const holds, std::string_view const claim) noexcept {
     if (!holds) {
         stop(std::format("the report is not the example's: {}", claim));
     }
 }
 
-void printLine(std::string_view const text) { std::println("{}", text); }
+void printLine(std::string_view const text) noexcept { std::println("{}", text); }
 
-void title(std::string_view const text) { std::println("{}\n{}", text, repeated("═", widthOf(text))); }
+void title(std::string_view const text) noexcept { std::println("{}\n{}", text, repeated("═", widthOf(text))); }
 
-void section(std::string_view const text) { std::println("\n{}\n{}", text, repeated("─", widthOf(text))); }
+void section(std::string_view const text) noexcept { std::println("\n{}\n{}", text, repeated("─", widthOf(text))); }
 
 void printCells(std::span<std::string_view const> const headers, std::vector<std::vector<std::string_view>> const &rows,
-                std::size_t const numbersFrom) {
-    auto const cellsOf = [](std::span<std::string_view const> const row) {
+                std::size_t const numbersFrom) noexcept {
+    auto const cellsOf = [](std::span<std::string_view const> const row) noexcept {
         std::vector<std::vector<std::string>> cells;
         cells.reserve(row.size());
         for (auto const text : row) {
@@ -164,20 +164,12 @@ void printCells(std::span<std::string_view const> const headers, std::vector<std
     printLine(cell(output));
 }
 
-std::string cell(std::vector<std::string> const &lines) {
-    std::string text;
-    for (std::size_t index = 0; lines.size() > index; ++index) {
-        text += (0 == index ? "" : "\n") + lines.at(index);
-    }
-    return text;
-}
-
-std::string firstName(ExpenseGroup const &group, MemberId const &member) {
+std::string firstName(ExpenseGroup const &group, MemberId const &member) noexcept {
     auto const found = must(group.member(member));
     return found.has_value() ? found->firstName : "?";
 }
 
-std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members) {
+std::string names(ExpenseGroup const &group, std::vector<MemberId> const &members) noexcept {
     std::string text;
     for (std::size_t index = 0; members.size() > index; ++index) {
         text += (0 == index ? "" : ", ") + firstName(group, members.at(index));
@@ -185,9 +177,9 @@ std::string names(ExpenseGroup const &group, std::vector<MemberId> const &member
     return text;
 }
 
-std::vector<MemberId> sharedBy(ExpenseSplit const &split) {
+std::vector<MemberId> sharedBy(ExpenseSplit const &split) noexcept {
     std::vector<MemberId> members = std::visit(
-        [](auto const &alternative) {
+        [](auto const &alternative) noexcept {
             using Alternative = std::decay_t<decltype(alternative)>;
             if constexpr (std::is_same_v<Alternative, ItemisedExpenseSplit>) {
                 std::vector<MemberId> all;
@@ -206,11 +198,6 @@ std::vector<MemberId> sharedBy(ExpenseSplit const &split) {
     return members;
 }
 
-std::optional<MemberSummary> totalsOf(Summary const &summary, MemberId const &member) {
-    auto const found = std::ranges::find_if(summary.members, [&member](MemberSummary const &totals) { return member == totals.member; });
-    return summary.members.end() == found ? std::nullopt : std::optional<MemberSummary>(*found);
-}
-
-std::string message(std::optional<Error> const &refused) { return refused.has_value() ? refused->message() : "accepted"; }
+std::string message(std::optional<Error> const &refused) noexcept { return refused.has_value() ? refused->message() : "accepted"; }
 
 } // namespace eranos::examples

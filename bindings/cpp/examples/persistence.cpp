@@ -16,7 +16,7 @@ namespace {
 /// A row of the table of balances: a member's balance before saving and after loading.
 struct ComparisonRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"Member", "Balance before saving", "Balance after loading"};
+    static inline constexpr Cells<3> HEADERS{"Member", "Balance before saving", "Balance after loading"};
 
     /// The member's first name.
     std::string name;
@@ -28,28 +28,28 @@ struct ComparisonRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {name, before, after}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {name, before, after}; }
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The balance of @p member in @p summary, as the library writes it, or ? for a member without totals.
-[[nodiscard]] std::string balanceOf(Summary const &summary, MemberId const &member) {
+[[nodiscard]] std::string balanceOf(Summary const &summary, MemberId const &member) noexcept {
     auto const found = totalsOf(summary, member);
     return found.has_value() ? toString(found->balance) : "?";
 }
 
 /// @p text with the first @p pattern in it replaced by @p replacement.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the text, then what to find in it and what replaces it, as a search reads.
-[[nodiscard]] std::string replaceFirst(std::string text, std::string_view const pattern, std::string_view const replacement) {
+[[nodiscard]] std::string replaceFirst(std::string text, std::string_view const pattern, std::string_view const replacement) noexcept {
     auto const found = text.find(pattern);
     check(std::string::npos != found, "the text holds what the example replaces");
     return text.replace(found, pattern.size(), replacement);
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto const day = must(CalendarDate::of(2026, 9, 23));
     auto group = must(ExpenseGroup::create("Road trip", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
@@ -109,7 +109,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

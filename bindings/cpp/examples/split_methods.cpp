@@ -19,7 +19,7 @@ namespace {
 /// A row of the table of an expense's shares: a member's rule, what they paid, and what they consumed.
 struct ShareRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Rule", "Paid", "Consumed"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Rule", "Paid", "Consumed"};
 
     /// Their first name.
     std::string name;
@@ -33,13 +33,13 @@ struct ShareRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, rule, paid, consumed}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, rule, paid, consumed}; }
 };
 
 /// A row of the table of totals: what a member paid and consumed over the holiday, and their balance.
 struct TotalRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Paid", "Consumed", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -53,11 +53,11 @@ struct TotalRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, paid, consumed, balance}; }
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
+[[nodiscard]] Money euros(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The family and the day every expense happened.
 struct Family final {
@@ -67,7 +67,7 @@ struct Family final {
     /// @param bob The second parent
     /// @param mia Their daughter
     /// @param day The day of every expense
-    Family(MemberId ana, MemberId bob, MemberId mia, CalendarDate const day) noexcept
+    inline constexpr Family(MemberId ana, MemberId bob, MemberId mia, CalendarDate const day) noexcept
         : ana(std::move(ana)), bob(std::move(bob)), mia(std::move(mia)), day(day) {}
 
     /// The first parent.
@@ -84,15 +84,15 @@ struct Family final {
 using Rules = std::map<MemberId, std::string>;
 
 /// The rule of an expense shared equally by the three.
-[[nodiscard]] Rules thirds(Family const &family) {
+[[nodiscard]] Rules thirds(Family const &family) noexcept {
     return {{family.ana, "an equal third"}, {family.bob, "an equal third"}, {family.mia, "an equal third"}};
 }
 
 /// The three members of @p family, sharing equally.
-[[nodiscard]] EqualSplit everyone(Family const &family) { return EqualSplit{{family.ana, family.bob, family.mia}}; }
+[[nodiscard]] inline constexpr EqualSplit everyone(Family const &family) noexcept { return EqualSplit{{family.ana, family.bob, family.mia}}; }
 
 /// Prints how the expense @p id divides: every involved member's rule, what they paid, and what they consumed.
-void report(ExpenseGroup const &group, ExpenseId const &id, Rules const &rules) {
+void report(ExpenseGroup const &group, ExpenseId const &id, Rules const &rules) noexcept {
     auto const expense = must(group.expense(id));
     auto const shares = must(group.expenseShares(id));
     if (!expense.has_value() || !shares.has_value()) {
@@ -114,7 +114,7 @@ void report(ExpenseGroup const &group, ExpenseId const &id, Rules const &rules) 
 }
 
 /// Adds the taxi, which the three share equally, the leftover cent going to one of them.
-void equally(ExpenseGroup &group, Family const &family) {
+void equally(ExpenseGroup &group, Family const &family) noexcept {
     section("1. Equally");
     printLine("Everyone pays the same. 10.00 does not divide by three, so one member pays the\n"
               "leftover cent; which member it is rotates from expense to expense, so over a trip\n"
@@ -125,7 +125,7 @@ void equally(ExpenseGroup &group, Family const &family) {
 }
 
 /// Adds the flat, which the three share by percentage.
-void byPercentage(ExpenseGroup &group, Family const &family) {
+void byPercentage(ExpenseGroup &group, Family const &family) noexcept {
     section("2. By percentage");
     printLine("Everyone pays a percentage of the amount; the percentages must add up to exactly\n"
               "100 %. Mia's room is smaller, so she takes 20 %.");
@@ -140,7 +140,7 @@ void byPercentage(ExpenseGroup &group, Family const &family) {
 }
 
 /// Adds the food, which the three share by parts, Mia counting as half an adult.
-[[nodiscard]] ExpenseId byParts(ExpenseGroup &group, Family const &family) {
+[[nodiscard]] ExpenseId byParts(ExpenseGroup &group, Family const &family) noexcept {
     section("3. By parts");
     printLine("Everyone pays in proportion to their parts. Mia, a child, counts as half an adult:\n"
               "2.5 parts in total, so one part is 125.00 / 2.5 = 50.00.");
@@ -156,7 +156,7 @@ void byPercentage(ExpenseGroup &group, Family const &family) {
 }
 
 /// Adds the museum tickets, which the three share by exact amounts.
-void byAmounts(ExpenseGroup &group, Family const &family) {
+void byAmounts(ExpenseGroup &group, Family const &family) noexcept {
     section("4. By exact amounts");
     printLine("Everyone pays a fixed amount, such as a ticket price; the amounts must add up to\n"
               "exactly the expense amount.");
@@ -171,7 +171,7 @@ void byAmounts(ExpenseGroup &group, Family const &family) {
 }
 
 /// Adds the dinner, which two of them paid and the three share equally.
-void severalPayers(ExpenseGroup &group, Family const &family) {
+void severalPayers(ExpenseGroup &group, Family const &family) noexcept {
     section("5. Several payers");
     printLine("The dinner bill went on two cards: Ana paid 50.00 and Bob 40.00. The payers are\n"
               "divided with the same methods as the participants.");
@@ -181,7 +181,7 @@ void severalPayers(ExpenseGroup &group, Family const &family) {
 }
 
 /// Shows that a split whose percentages do not add up to 100 % is refused.
-void mistakes(ExpenseGroup &group, Family const &family) {
+void mistakes(ExpenseGroup &group, Family const &family) noexcept {
     section("6. Mistakes are refused");
     printLine("A percentage split that adds up to 90 % is refused when the expense is built:");
     std::vector<MemberPercentage> const ninety{
@@ -195,7 +195,7 @@ void mistakes(ExpenseGroup &group, Family const &family) {
 }
 
 /// Prints what each member paid and consumed over the holiday, and their balance.
-void totals(ExpenseGroup const &group) {
+void totals(ExpenseGroup const &group) noexcept {
     section("7. The holiday in total");
     auto const summary = group.summary();
     std::println("{} spent over five expenses:", summary.totalSpent.toString());
@@ -213,7 +213,7 @@ void totals(ExpenseGroup const &group) {
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     auto group = must(ExpenseGroup::create("Family holiday", must(CurrencyCode::of("EUR"))));
     auto const ana = must(group.addMember(Member("Ana")));
     auto const bob = must(group.addMember(Member("Bob")));
@@ -235,14 +235,14 @@ void run() {
 
     // Parts: 125.00 over 2.5 parts is 50.00 per part.
     auto const shares = must(group.expenseShares(food)).value();
-    auto const mias = std::ranges::find_if(shares.members, [&](MemberShare const &share) { return family.mia == share.member; });
+    auto const mias = std::ranges::find_if(shares.members, [&](MemberShare const &share) noexcept { return family.mia == share.member; });
     check(shares.members.end() != mias && euros("25.00") == mias->share, "Mia consumed 25.00 EUR of the food");
 }
 
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

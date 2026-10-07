@@ -73,7 +73,7 @@ struct Expenses final {
 /// A row of the table of the group's details: a detail and its value.
 struct DetailRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<2> HEADERS{"Detail", "Value"};
+    static inline constexpr Cells<2> HEADERS{"Detail", "Value"};
 
     /// What the detail is.
     std::string_view detail;
@@ -83,13 +83,13 @@ struct DetailRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<2> cells() const noexcept { return {detail, value}; }
+    [[nodiscard]] inline constexpr Cells<2> cells() const noexcept { return {detail, value}; }
 };
 
 /// A row of the table of members: a member's name, contact details, and accounts.
 struct MemberRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
+    static inline constexpr Cells<4> HEADERS{"Member", "Email", "Phone", "Accounts"};
 
     /// Their first and last name.
     std::string name;
@@ -103,13 +103,13 @@ struct MemberRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {name, email, phone, accounts}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {name, email, phone, accounts}; }
 };
 
 /// A row of the table of checks: a text, what it was checked as, and what validation made of it.
 struct CheckRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"Input", "Checked as", "Result"};
+    static inline constexpr Cells<3> HEADERS{"Input", "Checked as", "Result"};
 
     /// The text checked, quoted.
     std::string input;
@@ -121,13 +121,13 @@ struct CheckRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {input, kind, result}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {input, kind, result}; }
 };
 
 /// A row of the table of refusals: a change and the message the library refused it with.
 struct RefusalRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<2> HEADERS{"Change", "Refused with"};
+    static inline constexpr Cells<2> HEADERS{"Change", "Refused with"};
 
     /// The change.
     std::string_view change;
@@ -137,13 +137,13 @@ struct RefusalRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<2> cells() const noexcept { return {change, error}; }
+    [[nodiscard]] inline constexpr Cells<2> cells() const noexcept { return {change, error}; }
 };
 
 /// A row of the table of shares: an expense, how it divides, and every involved member's payment and consumption.
 struct ShareRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<5> HEADERS{"Expense", "Split", "Member", "Paid", "Consumed"};
+    static inline constexpr Cells<5> HEADERS{"Expense", "Split", "Member", "Paid", "Consumed"};
 
     /// The expense's name.
     std::string expense;
@@ -159,13 +159,13 @@ struct ShareRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<5> cells() const noexcept { return {expense, how, members, paid, consumed}; }
+    [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {expense, how, members, paid, consumed}; }
 };
 
 /// A row of a receipt: a line, who shared it, its quantity, its unit price, and its total.
 struct ItemRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
+    static inline constexpr Cells<5> HEADERS{"Item", "Shared by", "Quantity", "Unit price", "Line total"};
 
     /// What was ordered.
     std::string name;
@@ -181,14 +181,14 @@ struct ItemRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<5> cells() const noexcept { return {name, sharedBy, quantity, unitPrice, lineTotal}; }
+    [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {name, sharedBy, quantity, unitPrice, lineTotal}; }
 };
 
 /// A row of the table of entries: an expense or a transfer, who paid it, and its amount as entered and in the group
 /// currency.
 struct EntryRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
+    static inline constexpr Cells<5> HEADERS{"Entry", "Paid by", "Entered as", "Rate", "In the group currency"};
 
     /// What it was.
     std::string name;
@@ -204,13 +204,13 @@ struct EntryRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<5> cells() const noexcept { return {name, payer, original, rate, converted}; }
+    [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {name, payer, original, rate, converted}; }
 };
 
 /// A row of the table of edits: an entry and what happened to it.
 struct EditRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<2> HEADERS{"Entry", "Edit"};
+    static inline constexpr Cells<2> HEADERS{"Entry", "Edit"};
 
     /// The entry.
     std::string entry;
@@ -220,13 +220,13 @@ struct EditRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<2> cells() const noexcept { return {entry, edit}; }
+    [[nodiscard]] inline constexpr Cells<2> cells() const noexcept { return {entry, edit}; }
 };
 
 /// A row of the table of balances: what a member paid, consumed, sent, and received, and their balance.
 struct BalanceRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
+    static inline constexpr Cells<6> HEADERS{"Member", "Paid", "Consumed", "Sent", "Received", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -244,13 +244,13 @@ struct BalanceRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<6> cells() const noexcept { return {name, paid, consumed, sent, received, balance}; }
+    [[nodiscard]] inline constexpr Cells<6> cells() const noexcept { return {name, paid, consumed, sent, received, balance}; }
 };
 
 /// A row of the table of statuses: whether a member is active or archived, and their balance.
 struct StatusRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"Member", "Status", "Balance"};
+    static inline constexpr Cells<3> HEADERS{"Member", "Status", "Balance"};
 
     /// Their first name.
     std::string name;
@@ -262,13 +262,13 @@ struct StatusRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {name, status, balance}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {name, status, balance}; }
 };
 
 /// A row of the table of categories: a category, how many expenses it holds, and their total.
 struct CategoryRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"Category", "Expenses", "Total"};
+    static inline constexpr Cells<3> HEADERS{"Category", "Expenses", "Total"};
 
     /// Its name.
     std::string name;
@@ -280,13 +280,13 @@ struct CategoryRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {name, expenses, total}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {name, expenses, total}; }
 };
 
 /// A row of the table of each member's consumption per category.
 struct MemberCategoryRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<5> HEADERS{"Member", "Food", "Lodging", "Getting around", "Uncategorised"};
+    static inline constexpr Cells<5> HEADERS{"Member", "Food", "Lodging", "Getting around", "Uncategorised"};
 
     /// Their first name.
     std::string name;
@@ -302,13 +302,13 @@ struct MemberCategoryRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<5> cells() const noexcept { return {name, food, lodging, transport, uncategorised}; }
+    [[nodiscard]] inline constexpr Cells<5> cells() const noexcept { return {name, food, lodging, transport, uncategorised}; }
 };
 
 /// A row of the table of strategies: a strategy, the strategy whose plan it chose, and how many payments that plan makes.
 struct StrategyRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"Strategy", "Computed by", "Payments"};
+    static inline constexpr Cells<3> HEADERS{"Strategy", "Computed by", "Payments"};
 
     /// Its name.
     std::string_view strategy;
@@ -320,13 +320,13 @@ struct StrategyRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {strategy, computedBy, payments}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {strategy, computedBy, payments}; }
 };
 
 /// A row of the table of payments: who pays whom, and how much.
 struct PaymentRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<3> HEADERS{"From", "To", "Amount"};
+    static inline constexpr Cells<3> HEADERS{"From", "To", "Amount"};
 
     /// Who pays.
     std::string from;
@@ -338,13 +338,13 @@ struct PaymentRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<3> cells() const noexcept { return {from, to, amount}; }
+    [[nodiscard]] inline constexpr Cells<3> cells() const noexcept { return {from, to, amount}; }
 };
 
 /// A row of the table of loads: a change to a saved group, and the message its load is refused with.
 struct LoadRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<2> HEADERS{"Change to the file", "Message"};
+    static inline constexpr Cells<2> HEADERS{"Change to the file", "Message"};
 
     /// The change to the file.
     std::string_view change;
@@ -354,13 +354,13 @@ struct LoadRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<2> cells() const noexcept { return {change, message}; }
+    [[nodiscard]] inline constexpr Cells<2> cells() const noexcept { return {change, message}; }
 };
 
 /// A row of the table of currencies: a currency's code, name, numeric code, and decimal places.
 struct CurrencyRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<4> HEADERS{"Code", "Name", "Numeric code", "Decimal places"};
+    static inline constexpr Cells<4> HEADERS{"Code", "Name", "Numeric code", "Decimal places"};
 
     /// Its ISO 4217 code.
     std::string code;
@@ -374,13 +374,13 @@ struct CurrencyRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<4> cells() const noexcept { return {code, name, numericCode, decimalPlaces}; }
+    [[nodiscard]] inline constexpr Cells<4> cells() const noexcept { return {code, name, numericCode, decimalPlaces}; }
 };
 
 /// A row of the table of values: an input and what the library makes of it.
 struct ValueRow final {
     /// The headers of the table's columns, in the order it prints them.
-    static constexpr Cells<2> HEADERS{"Input", "Result"};
+    static inline constexpr Cells<2> HEADERS{"Input", "Result"};
 
     /// The input.
     std::string_view input;
@@ -390,37 +390,37 @@ struct ValueRow final {
     /// The row's cells, in the order of the table's headers.
     ///
     /// @return The cells
-    [[nodiscard]] Cells<2> cells() const noexcept { return {input, result}; }
+    [[nodiscard]] inline constexpr Cells<2> cells() const noexcept { return {input, result}; }
 };
 
 /// The amount @p text of euros.
-[[nodiscard]] Money eur(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
+[[nodiscard]] Money eur(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("EUR")))); }
 
 /// The amount @p text of lei.
-[[nodiscard]] Money ron(std::string_view const text) { return must(Money::parse(text, must(CurrencyCode::of("RON")))); }
+[[nodiscard]] Money ron(std::string_view const text) noexcept { return must(Money::parse(text, must(CurrencyCode::of("RON")))); }
 
 /// A date of the trip, in October 2026.
-[[nodiscard]] CalendarDate october(std::int32_t const day) { return must(CalendarDate::of(2026, 10, day)); }
+[[nodiscard]] CalendarDate october(std::int32_t const day) noexcept { return must(CalendarDate::of(2026, 10, day)); }
 
 /// "valid: " and what @p shown writes of the value @p make returns, or "refused: " and the library's message.
-template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make const &make, Shown const &shown) {
+template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make const &make, Shown const &shown) noexcept {
     auto const made = make();
     return made.has_value() ? std::format("valid: {}", shown(*made)) : std::format("refused: {}", made.error().message());
 }
 
 /// The amount of @p cost, as entered.
-[[nodiscard]] Money amountOf(Cost const &cost) {
-    return std::visit([](auto const &alternative) { return alternative.amount; }, cost);
+[[nodiscard]] inline constexpr Money amountOf(Cost const &cost) noexcept {
+    return std::visit([](auto const &alternative) noexcept { return alternative.amount; }, cost);
 }
 
 /// The rate @p cost was entered at: 1 for a cost in the group currency.
-[[nodiscard]] ExchangeRate rateOf(Cost const &cost) {
+[[nodiscard]] ExchangeRate rateOf(Cost const &cost) noexcept {
     auto const *const converted = std::get_if<ConvertedCost>(&cost);
     return nullptr == converted ? must(ExchangeRate::parse("1")) : converted->rate;
 }
 
 /// The sum of @p amounts, all in @p currency.
-[[nodiscard]] Money sum(CurrencyCode const &currency, std::vector<Money> const &amounts) {
+[[nodiscard]] Money sum(CurrencyCode const &currency, std::vector<Money> const &amounts) noexcept {
     Money total(0, currency);
     for (auto const &amount : amounts) {
         total = must(total.plus(amount));
@@ -429,10 +429,10 @@ template <typename Make, typename Shown> [[nodiscard]] std::string outcome(Make 
 }
 
 /// The identifier of the built-in category, which the group lists first.
-[[nodiscard]] CategoryId builtInCategory(ExpenseGroup const &group) { return group.categories().at(0).id; }
+[[nodiscard]] CategoryId builtInCategory(ExpenseGroup const &group) noexcept { return group.categories().at(0).id; }
 
 /// Prints what each member of @p group paid, consumed, sent, and received, and their balance.
-void printBalances(ExpenseGroup const &group) {
+void printBalances(ExpenseGroup const &group) noexcept {
     auto const summary = group.summary();
     auto const zero = Money(0, group.currency()).toString();
     std::vector<BalanceRow> rows;
@@ -463,14 +463,14 @@ void printBalances(ExpenseGroup const &group) {
 }
 
 /// Prints what @p group spent per category, and on how many expenses.
-void printCategories(ExpenseGroup const &group) {
+void printCategories(ExpenseGroup const &group) noexcept {
     auto const expenses = group.expenses();
     auto const builtIn = builtInCategory(group);
     std::vector<CategoryRow> rows;
     for (auto const &total : group.summary().categoryTotals) {
         auto const category = must(group.category(total.category));
         auto const count = std::count_if(expenses.begin(), expenses.end(),
-                                         [&](Expense const &expense) { return total.category == expense.category.value_or(builtIn); });
+                                         [&](Expense const &expense) noexcept { return total.category == expense.category.value_or(builtIn); });
         rows.push_back({
             .name = category.has_value() ? category->name : "?",
             .expenses = std::to_string(count),
@@ -481,7 +481,7 @@ void printCategories(ExpenseGroup const &group) {
 }
 
 /// Prints every expense and transfer of @p group in a currency @p shown accepts, as entered and in the group currency.
-void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode const &)> const &shown) {
+void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode const &)> const &shown) noexcept {
     auto const zero = Money(0, group.currency()).toString();
     std::vector<EntryRow> rows;
     for (auto const &expense : group.expenses()) {
@@ -514,7 +514,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
 // 1. The group.
 
 /// Creates the group, renames it, and prints its details.
-[[nodiscard]] ExpenseGroup theGroup() {
+[[nodiscard]] ExpenseGroup theGroup() noexcept {
     section("1. The group");
     auto group = must(ExpenseGroup::create("Lisbon", must(CurrencyCode::of("EUR")),
                                            ExpenseGroupOptions{.description = "A week by the Atlantic", .language = must(Language::parse("pt-pt"))}));
@@ -546,7 +546,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
 // 2. Members.
 
 /// An account with its label, its kind, and its details.
-[[nodiscard]] std::string describe(PaymentAccount const &account) {
+[[nodiscard]] std::string describe(PaymentAccount const &account) noexcept {
     auto const *const iban = std::get_if<IbanPaymentAccountDetails>(&account.details);
     return nullptr == iban
                ? std::format("{}, username {}", account.name, std::get<UsernamePaymentAccountDetails>(account.details).username.toString())
@@ -554,7 +554,7 @@ void printEntries(ExpenseGroup const &group, std::function<bool(CurrencyCode con
 }
 
 /// Prints every member of @p group with their contact and account details.
-void printMembers(ExpenseGroup const &group) {
+void printMembers(ExpenseGroup const &group) noexcept {
     std::vector<MemberRow> rows;
     for (auto const &member : group.members()) {
         std::vector<std::string> accounts;
@@ -573,27 +573,28 @@ void printMembers(ExpenseGroup const &group) {
 }
 
 /// Prints what validation makes of IBANs, an email, phone numbers, and blank required text.
-void validation(ExpenseGroup &group) {
+void validation(ExpenseGroup &group) noexcept {
     printLine("IBANs are checked against the SWIFT registry and their mod-97 check digits,\n"
               "emails against RFC 5321 and 5322, and phone numbers against their country's\n"
               "numbering plan. Required text must not be blank:");
-    auto const iban = [](std::string_view const input) {
+    auto const iban = [](std::string_view const input) noexcept {
         return CheckRow{
             .input = std::format("\"{}\"", input),
             .kind = "IBAN",
-            .result = outcome([&] { return Iban::parse(input); },
-                              [](Iban const &parsed) { return std::format("{}, country {}", parsed.toString(), parsed.countryCode()); }),
+            .result = outcome([&] noexcept { return Iban::parse(input); },
+                              [](Iban const &parsed) noexcept { return std::format("{}, country {}", parsed.toString(), parsed.countryCode()); }),
         };
     };
-    auto const phone = [](std::string_view const input) {
+    auto const phone = [](std::string_view const input) noexcept {
         return CheckRow{
             .input = std::format("\"{}\"", input),
             .kind = "phone",
-            .result = outcome([&] { return PhoneNumber::parse(input); },
-                              [](PhoneNumber const &parsed) { return std::format("{}, stored as {}", parsed.international(), parsed.toString()); }),
+            .result = outcome(
+                [&] noexcept { return PhoneNumber::parse(input); },
+                [](PhoneNumber const &parsed) noexcept { return std::format("{}, stored as {}", parsed.international(), parsed.toString()); }),
         };
     };
-    auto const text = [](auto const &parsed) { return parsed.toString(); };
+    auto const text = [](auto const &parsed) noexcept { return parsed.toString(); };
     printTable<CheckRow>(
         {
             iban("ro49 aaaa 1b31 0075 9384 0000"),
@@ -601,22 +602,22 @@ void validation(ExpenseGroup &group) {
             {
                 .input = "\"ana..popescu@example.com\"",
                 .kind = "email",
-                .result = outcome([] { return Email::parse("ana..popescu@example.com"); }, text),
+                .result = outcome([] noexcept { return Email::parse("ana..popescu@example.com"); }, text),
             },
             phone("+351 912 345 678"),
             phone("+40 612 345 678"),
-            {.input = "\"   \"", .kind = "username", .result = outcome([] { return Username::parse("   "); }, text)},
+            {.input = "\"   \"", .kind = "username", .result = outcome([] noexcept { return Username::parse("   "); }, text)},
             {
                 .input = "\"  \"",
                 .kind = "first name",
-                .result = outcome([&] { return group.addMember(Member("  ")); }, [](MemberId const &id) { return id.value(); }),
+                .result = outcome([&] noexcept { return group.addMember(Member("  ")); }, [](MemberId const &id) noexcept { return id.value(); }),
             },
         },
         3);
 }
 
 /// Adds the members of the trip to @p group, edits Bob, and prints them and what validation accepts.
-[[nodiscard]] People members(ExpenseGroup &group) {
+[[nodiscard]] People members(ExpenseGroup &group) noexcept {
     section("2. Members");
     Member first("Ana");
     first.accounts = {
@@ -654,7 +655,7 @@ void validation(ExpenseGroup &group) {
 // 3. Categories.
 
 /// Adds Food, Lodging, and Transport to @p group, renames Transport, and shows what renaming refuses.
-[[nodiscard]] Categories addCategories(ExpenseGroup &group) {
+[[nodiscard]] Categories addCategories(ExpenseGroup &group) noexcept {
     section("3. Categories");
     auto const food = must(group.addCategory(Category("Food")));
     // An app that keeps its categories elsewhere gives them its own keys.
@@ -704,9 +705,9 @@ void validation(ExpenseGroup &group) {
 // 4. Expenses, one for every way of dividing.
 
 /// How a whole expense's amount divides, in a word or two.
-[[nodiscard]] std::string divided(Split const &split) {
+[[nodiscard]] inline constexpr std::string divided(Split const &split) noexcept {
     return std::visit(
-        [](auto const &alternative) -> std::string {
+        [](auto const &alternative) noexcept -> std::string {
             using Alternative = std::decay_t<decltype(alternative)>;
             if constexpr (std::is_same_v<Alternative, AmountsSplit>) {
                 return "by amounts";
@@ -722,7 +723,7 @@ void validation(ExpenseGroup &group) {
 }
 
 /// How @p expense divides, in a few words.
-[[nodiscard]] std::string how(Expense const &expense) {
+[[nodiscard]] std::string how(Expense const &expense) noexcept {
     auto const *const itemised = std::get_if<ItemisedExpenseSplit>(&expense.split);
     auto const split =
         nullptr == itemised ? divided(std::get<WholeExpenseSplit>(expense.split).split) : std::format("{} items", itemised->items.size());
@@ -738,7 +739,7 @@ void validation(ExpenseGroup &group) {
 }
 
 /// Prints each expense of @p ids, with every involved member's payment and consumption.
-void printShares(ExpenseGroup const &group, std::vector<ExpenseId> const &ids) {
+void printShares(ExpenseGroup const &group, std::vector<ExpenseId> const &ids) noexcept {
     std::vector<ShareRow> rows;
     rows.reserve(ids.size());
     for (auto const &id : ids) {
@@ -758,7 +759,7 @@ void printShares(ExpenseGroup const &group, std::vector<ExpenseId> const &ids) {
 }
 
 /// Prints the receipt of the expense @p id of @p group: who shared each line, its quantity, its unit price, and its total.
-void printItems(ExpenseGroup const &group, ExpenseId const &id) {
+void printItems(ExpenseGroup const &group, ExpenseId const &id) noexcept {
     auto const expense = must(group.expense(id)).value();
     auto const *const itemised = std::get_if<ItemisedExpenseSplit>(&expense.split);
     if (nullptr == itemised) {
@@ -780,14 +781,14 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
 }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
+[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) noexcept {
     ExpenseItem item(std::move(name), eur(unitPrice), std::move(split));
     item.quantity = quantity;
     return item;
 }
 
 /// The receipt of the fado night: every line with its own split.
-[[nodiscard]] std::vector<ExpenseItem> fadoItems(People const &people) {
+[[nodiscard]] std::vector<ExpenseItem> fadoItems(People const &people) noexcept {
     return {
         line("Vinho verde", "12.00", EqualSplit{{people.ana, people.bob, people.dan}}, 2),
         line("Bacalhau", "18.00", EqualSplit{{people.carol}}, 1),
@@ -807,13 +808,13 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
 }
 
 /// @p expense in @p category.
-[[nodiscard]] Expense inCategory(Expense expense, CategoryId const &category) {
+[[nodiscard]] inline constexpr Expense inCategory(Expense expense, CategoryId const &category) noexcept {
     expense.category = category;
     return expense;
 }
 
 /// Adds one expense for every way of dividing one to @p group, in order.
-[[nodiscard]] Expenses addEveryWay(ExpenseGroup &group, People const &people, Categories const &categories) {
+[[nodiscard]] Expenses addEveryWay(ExpenseGroup &group, People const &people, Categories const &categories) noexcept {
     std::vector<MemberPercentage> const rooms{
         MemberPercentage(people.ana, must(Percentage::parse("25"))),
         MemberPercentage(people.bob, must(Percentage::parse("25"))),
@@ -874,15 +875,15 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
 }
 
 /// The share of @p member in the expense @p id of @p group.
-[[nodiscard]] MemberShare shareOf(ExpenseGroup const &group, ExpenseId const &id, MemberId const &member) {
+[[nodiscard]] MemberShare shareOf(ExpenseGroup const &group, ExpenseId const &id, MemberId const &member) noexcept {
     auto const shares = must(group.expenseShares(id)).value();
-    auto const found = std::ranges::find_if(shares.members, [&](MemberShare const &share) { return member == share.member; });
+    auto const found = std::ranges::find_if(shares.members, [&](MemberShare const &share) noexcept { return member == share.member; });
     check(shares.members.end() != found, "the member shares the expense");
     return *found;
 }
 
 /// Prints how the fado night's tip was shared, and its receipt.
-void printFado(ExpenseGroup const &group, Expense const &fado) {
+void printFado(ExpenseGroup const &group, Expense const &fado) noexcept {
     auto const &tip = fado.tip.value();
     auto const *const fixed = std::get_if<FixedTipValue>(&tip.value);
     auto const rule = nullptr == fixed ? must(std::get<PercentageTipValue>(tip.value).percentage.toString()) : fixed->amount.toString();
@@ -897,7 +898,7 @@ void printFado(ExpenseGroup const &group, Expense const &fado) {
 }
 
 /// Adds the seven expenses to @p group and prints how each divides; returns the seafood dinner's identifier.
-[[nodiscard]] ExpenseId expenses(ExpenseGroup &group, People const &people, Categories const &categories) {
+[[nodiscard]] ExpenseId expenses(ExpenseGroup &group, People const &people, Categories const &categories) noexcept {
     section("4. Expenses, one for every way of dividing");
     auto const added = addEveryWay(group, people, categories);
     printLine("Seven expenses cover every way of dividing one: equally, by percentage, by parts\n"
@@ -931,7 +932,7 @@ void printFado(ExpenseGroup const &group, Expense const &fado) {
 // 5. Another currency.
 
 /// Adds the airport parking in RON and Bob's repayment in cash, and shows how they convert.
-void anotherCurrency(ExpenseGroup &group, People const &people, Categories const &categories) {
+void anotherCurrency(ExpenseGroup &group, People const &people, Categories const &categories) noexcept {
     section("5. Another currency");
     auto const euro = must(CurrencyCode::of("EUR"));
     auto const rate = must(ExchangeRate::parse("0.2"));
@@ -946,7 +947,7 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
     printLine("Back at the Bucharest airport, Ana paid the parking in RON and Bob paid her back in\n"
               "cash. An entry in another currency carries the rate into the group currency, how\n"
               "many EUR one RON is worth, and is converted once, when it is entered:");
-    printEntries(group, [&](CurrencyCode const &currency) { return euro.code() != currency.code(); });
+    printEntries(group, [&](CurrencyCode const &currency) noexcept { return euro.code() != currency.code(); });
     auto const transfer = must(group.transfer(cash)).value();
     auto const converted = must(must(ExchangeRate::parse("0.2011")).convert(ron("250.00"), euro));
     std::println("Bob's transfer, at {} (\"{}\"), counts as {}.\n"
@@ -965,14 +966,14 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
 
 /// Replaces an expense and a transfer, and removes one of each; returns what changed.
 [[nodiscard]] std::vector<EditRow> replaceAndRemove(ExpenseGroup &group, People const &people, Categories const &categories,
-                                                    ExpenseId const &seafood) {
+                                                    ExpenseId const &seafood) noexcept {
     // The dinner's receipt said 99.00.
     auto dinner = must(group.expense(seafood)).value();
     dinner.cost = LocalCost{eur("99.00")};
     dinner.description = "Cervejaria Ramiro";
     auto const previous = must(group.replaceExpense(dinner));
     // Bob entered the coffee twice, so each entry has an identifier of its own.
-    auto const coffee = [&] {
+    auto const coffee = [&] noexcept {
         return inCategory(Expense("Coffee", LocalCost{eur("6.00")}, EqualSplit{{people.bob}},
                                   WholeExpenseSplit{EqualSplit{{people.ana, people.bob, people.carol}}}, october(5)),
                           categories.food);
@@ -1016,7 +1017,7 @@ void anotherCurrency(ExpenseGroup &group, People const &people, Categories const
 }
 
 /// Replaces and removes entries, then shows that a change that does not fit is refused.
-void edits(ExpenseGroup &group, People const &people, Categories const &categories, ExpenseId const &seafood) {
+void edits(ExpenseGroup &group, People const &people, Categories const &categories, ExpenseId const &seafood) noexcept {
     section("6. Edits");
     auto const changes = replaceAndRemove(group, people, categories, seafood);
     printLine("Entries are values: an edit starts from a copy made with to_builder, keeps the\n"
@@ -1059,7 +1060,7 @@ void edits(ExpenseGroup &group, People const &people, Categories const &categori
 // 7. Members come and go.
 
 /// Removes Filip, archives Dan, shows what that refuses, and unarchives him.
-void comingsAndGoings(ExpenseGroup &group, People const &people) {
+void comingsAndGoings(ExpenseGroup &group, People const &people) noexcept {
     section("7. Members come and go");
     auto const removed = must(group.removeMember(people.filip));
     must(group.archiveMember(people.dan));
@@ -1104,19 +1105,20 @@ void comingsAndGoings(ExpenseGroup &group, People const &people) {
 // 8. The summary.
 
 /// The totals per category of @p member in @p summary.
-[[nodiscard]] std::vector<CategoryTotal> byCategory(Summary const &summary, MemberId const &member) {
-    auto const found = std::ranges::find_if(summary.memberCategoryTotals, [&](MemberCategoryTotals const &entry) { return member == entry.member; });
+[[nodiscard]] inline constexpr std::vector<CategoryTotal> byCategory(Summary const &summary, MemberId const &member) noexcept {
+    auto const found =
+        std::ranges::find_if(summary.memberCategoryTotals, [&](MemberCategoryTotals const &entry) noexcept { return member == entry.member; });
     return summary.memberCategoryTotals.end() == found ? std::vector<CategoryTotal>() : found->totals;
 }
 
 /// The total of @p category among @p totals, absent when they list none.
-[[nodiscard]] std::optional<Money> totalOf(std::vector<CategoryTotal> const &totals, CategoryId const &category) {
-    auto const found = std::ranges::find_if(totals, [&](CategoryTotal const &entry) { return category == entry.category; });
+[[nodiscard]] inline constexpr std::optional<Money> totalOf(std::vector<CategoryTotal> const &totals, CategoryId const &category) noexcept {
+    auto const found = std::ranges::find_if(totals, [&](CategoryTotal const &entry) noexcept { return category == entry.category; });
     return totals.end() == found ? std::nullopt : std::optional<Money>(found->total);
 }
 
 /// Prints the summary: every member's totals, the spending per category, and each member's consumption per category.
-void summary(ExpenseGroup const &group, People const &people, Categories const &categories) {
+void summary(ExpenseGroup const &group, People const &people, Categories const &categories) noexcept {
     section("8. The summary");
     auto const totals = group.summary();
     std::println("The group spent {} in all. For each member, what they paid, what they\n"
@@ -1166,7 +1168,7 @@ void summary(ExpenseGroup const &group, People const &people, Categories const &
 // 9. Removing a category.
 
 /// Removes Getting around, whose expenses move to Uncategorised, and shows that the built-in category stays.
-void removingACategory(ExpenseGroup &group, Categories const &categories) {
+void removingACategory(ExpenseGroup &group, Categories const &categories) noexcept {
     section("9. Removing a category");
     auto const removed = must(group.removeCategory(categories.transport));
     auto const uncategorised = builtInCategory(group);
@@ -1181,14 +1183,14 @@ void removingACategory(ExpenseGroup &group, Categories const &categories) {
     check(!must(group.category(categories.transport)).has_value(), "Getting around is gone");
     check(std::optional<Money>(eur("248.50")) == totalOf(group.summary().categoryTotals, uncategorised), "Uncategorised comes to 248.50 EUR");
     auto const expenses = group.expenses();
-    check(std::ranges::none_of(expenses, [&](Expense const &expense) { return categories.transport == expense.category; }),
+    check(std::ranges::none_of(expenses, [&](Expense const &expense) noexcept { return categories.transport == expense.category; }),
           "no expense is in Getting around");
 }
 
 // 10. A new currency.
 
 /// Moves the books of @p group to RON, which a missing rate first refuses.
-void newCurrency(ExpenseGroup &group, People const &people) {
+void newCurrency(ExpenseGroup &group, People const &people) noexcept {
     section("10. A new currency");
     auto const euro = must(CurrencyCode::of("EUR"));
     auto const leu = must(CurrencyCode::of("RON"));
@@ -1199,7 +1201,7 @@ void newCurrency(ExpenseGroup &group, People const &people) {
                  "  error: {}\n"
                  "Entries in EUR take the new rate, and the RON parking and cash become local:",
                  message(missing));
-    printEntries(group, [](CurrencyCode const &) { return true; });
+    printEntries(group, [](CurrencyCode const &) noexcept { return true; });
     std::println("Each entry keeps its currency and converts at the new rate. At 5 every share\n"
                  "converts exactly, so each balance is five times what it was. The trip cost\n"
                  "{}:",
@@ -1219,7 +1221,7 @@ void newCurrency(ExpenseGroup &group, People const &people) {
 // 11. Settling up.
 
 /// The name of @p strategy as the apps show it.
-[[nodiscard]] std::string_view strategyName(SettlementStrategy const strategy) {
+[[nodiscard]] inline constexpr std::string_view strategyName(SettlementStrategy const strategy) noexcept {
     switch (strategy) {
     case SettlementStrategy::ADAPTIVE:
         return "Adaptive";
@@ -1234,7 +1236,7 @@ void newCurrency(ExpenseGroup &group, People const &people) {
 }
 
 /// Prints how many payments each strategy plans, then records the minimum plan as transfers.
-void settlingUp(ExpenseGroup &group) {
+void settlingUp(ExpenseGroup &group) noexcept {
     section("11. Settling up");
     std::vector<StrategyRow> counts;
     for (auto const strategy :
@@ -1271,7 +1273,8 @@ void settlingUp(ExpenseGroup &group) {
     check(must(group.settlement(SettlementStrategy::GREEDY)).payments.empty(), "nothing is left to pay");
     check(4 == plan.payments.size(), "the minimum plan takes four payments");
     auto const summary = group.summary();
-    check(std::ranges::all_of(summary.members, [](MemberSummary const &found) { return std::holds_alternative<SettledBalance>(found.balance); }),
+    check(std::ranges::all_of(summary.members,
+                              [](MemberSummary const &found) noexcept { return std::holds_alternative<SettledBalance>(found.balance); }),
           "every balance is settled");
 }
 
@@ -1279,14 +1282,14 @@ void settlingUp(ExpenseGroup &group) {
 
 /// @p text with the first @p pattern in it replaced by @p replacement.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the text, then what to find in it and what replaces it, as a search reads.
-[[nodiscard]] std::string replaceFirst(std::string text, std::string_view const pattern, std::string_view const replacement) {
+[[nodiscard]] std::string replaceFirst(std::string text, std::string_view const pattern, std::string_view const replacement) noexcept {
     auto const found = text.find(pattern);
     check(std::string::npos != found, "the text holds what the example replaces");
     return text.replace(found, pattern.size(), replacement);
 }
 
 /// Saves @p group, loads it again, and shows that a changed file is refused with a typed error.
-void savingAndLoading(ExpenseGroup const &group, People const &people, Categories const &categories) {
+void savingAndLoading(ExpenseGroup const &group, People const &people, Categories const &categories) noexcept {
     section("12. Saving and loading");
     auto const saved = group.save();
     std::println("The group saves to {} bytes of JSON: its details and entries, never the totals.\n"
@@ -1303,7 +1306,7 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
     printLine("Loading replays every entry through the same checks as adding it and rebuilds the\n"
               "totals: the loaded group equals the saved one. Reading a SavedExpenseGroup and\n"
               "loading it with into_expense_group reports a refusal as a typed error, not as text:");
-    auto const refused = [&](std::string_view const pattern, std::string_view const replacement) {
+    auto const refused = [&](std::string_view const pattern, std::string_view const replacement) noexcept {
         auto const changed = replaceFirst(saved, pattern, replacement);
         check(changed != saved, "the change changes the file");
         auto const refusedLoad = refusal(ExpenseGroup::load(changed));
@@ -1333,7 +1336,7 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
 // 13. Values on their own.
 
 /// Prints four currencies, and that an unknown code is refused.
-void currencies() {
+void currencies() noexcept {
     std::vector<CurrencyRow> rows;
     for (auto const *const code : {"EUR", "RON", "JPY", "BHD"}) {
         auto const currency = must(CurrencyCode::of(code));
@@ -1353,7 +1356,7 @@ void currencies() {
 }
 
 /// Prints what amounts do: sums, differences, refusals, minor units, and a cost's rate kept for another amount.
-void amounts() {
+void amounts() noexcept {
     auto const sumOf = must(eur("12.34").plus(eur("0.66")));
     auto const change = must(eur("5.00").minus(eur("7.50")));
     auto const mixed = refusal(eur("1.00").plus(ron("1.00")));
@@ -1388,7 +1391,7 @@ void amounts() {
 }
 
 /// Prints what percentages, parts, and rates read and print.
-void ratios() {
+void ratios() noexcept {
     auto const percentage = must(Percentage::parse("12.5"));
     auto const parts = must(Parts::parse("1.5"));
     auto const exchange = must(ExchangeRate::parse("4.97650"));
@@ -1411,14 +1414,14 @@ void ratios() {
 }
 
 /// The message the library refuses @p text with as a member's identifier, which it checks is @p failure.
-[[nodiscard]] std::string identifierRefusal(ExpenseGroup const &group, std::string text, Failure const failure) {
+[[nodiscard]] std::string identifierRefusal(ExpenseGroup const &group, std::string text, Failure const failure) noexcept {
     auto const refused = refusal(group.member(MemberId(std::move(text))));
     check(refused.has_value() && ErrorKind::ID == refused->kind() && failure == refused->failure(), "the text is refused as an identifier");
     return message(refused);
 }
 
 /// Prints what dates, times, identifiers, and language tags read and print.
-void datesAndIdentifiers(ExpenseGroup const &group, People const &people) {
+void datesAndIdentifiers(ExpenseGroup const &group, People const &people) noexcept {
     auto const date = must(CalendarDate::parse("2026-10-01"));
     auto const time = must(TimeOfDay::parse("22:15"));
     auto const found = must(group.member(people.ana)).value().id;
@@ -1448,7 +1451,7 @@ void datesAndIdentifiers(ExpenseGroup const &group, People const &people) {
 }
 
 /// Prints the values on their own: currencies, amounts, ratios, dates, times, identifiers, and language tags.
-void values(ExpenseGroup const &group, People const &people) {
+void values(ExpenseGroup const &group, People const &people) noexcept {
     section("13. Values on their own");
     currencies();
     amounts();
@@ -1460,7 +1463,7 @@ void values(ExpenseGroup const &group, People const &people) {
 
 /// Shares @p group between tasks: an expense added through another handle, a settlement computed asynchronously, and a
 /// change that waits for a report's read and is cancelled.
-void sharing(ExpenseGroup &group, People const &people) {
+void sharing(ExpenseGroup &group, People const &people) noexcept {
     section("14. Sharing the group");
     // Another handle on the same group, as another task holds: a group is shared as it is.
     auto &other = group;
@@ -1509,7 +1512,8 @@ void sharing(ExpenseGroup &group, People const &people) {
     std::println("With the other handle gone, the app takes the group back: {} expenses.", must(group.expensesAsync().get()).size());
 
     check(4 == plan.payments.size(), "four payments settle the coffee");
-    check(std::ranges::all_of(plan.payments, [&](Payment const &payment) { return people.bob == payment.to && ron("15.00") == payment.amount; }),
+    check(std::ranges::all_of(plan.payments,
+                              [&](Payment const &payment) noexcept { return people.bob == payment.to && ron("15.00") == payment.amount; }),
           "everyone pays Bob 15.00 RON");
     check(cancelled.has_value() && ErrorKind::CANCELLED == cancelled->kind(), "the change is cancelled");
     check(before == after, "the cancelled change leaves the group as it was");
@@ -1518,7 +1522,7 @@ void sharing(ExpenseGroup &group, People const &people) {
 }
 
 /// Runs the example.
-void run() {
+void run() noexcept {
     printLine("Lisbon and Porto: a grand tour of eranos\n"
               "════════════════════════════════════════");
     printLine("Ana, Bob, Carol, Dan, and Carol's daughter Eva spend a week in Portugal. Each\n"
@@ -1543,7 +1547,7 @@ void run() {
 } // namespace
 } // namespace eranos::examples
 
-int main() {
+int main() noexcept {
     eranos::examples::run();
     return EXIT_SUCCESS;
 }

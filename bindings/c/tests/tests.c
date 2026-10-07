@@ -41,10 +41,10 @@ static void checkSucceeded(Check *const check, EranosError *const error, char co
 }
 
 /// Whether @p text holds @p expected.
-static bool isText(EranosText const *const text, char const *const expected) { return 0 == strcmp(eranosTextData(text), expected); }
+[[nodiscard]] static bool isText(EranosText const *const text, char const *const expected) { return 0 == strcmp(eranosTextData(text), expected); }
 
 /// Whether @p error is of @p kind, and holds no failure within a module; destroys it.
-static bool isKind(EranosError *const error, EranosErrorKind const kind) {
+[[nodiscard]] static bool isKind(EranosError *const error, EranosErrorKind const kind) {
     if (nullptr == error) {
         return false;
     }
@@ -55,7 +55,7 @@ static bool isKind(EranosError *const error, EranosErrorKind const kind) {
 }
 
 /// Whether @p error is of @p kind with @p expected; destroys it.
-static bool isFailure(EranosError *const error, EranosErrorKind const kind, EranosFailure const expected) {
+[[nodiscard]] static bool isFailure(EranosError *const error, EranosErrorKind const kind, EranosFailure const expected) {
     if (nullptr == error) {
         return false;
     }
@@ -66,13 +66,13 @@ static bool isFailure(EranosError *const error, EranosErrorKind const kind, Eran
 }
 
 /// Whether @p error is of @p kind with @p failure, without destroying it, so that a test reads what it holds.
-static bool holdsFailure(EranosError const *const error, EranosErrorKind const kind, EranosFailure const expected) {
+[[nodiscard]] static bool holdsFailure(EranosError const *const error, EranosErrorKind const kind, EranosFailure const expected) {
     EranosFailure failure = ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME;
     return nullptr != error && eranosErrorKind(error) == kind && eranosErrorFailure(error, &failure) && failure == expected;
 }
 
 /// The amount of @p minorUnits minor units of @p currency.
-static EranosMoney *amountOf(int64_t const minorUnits, char const *const currency) {
+[[nodiscard]] static EranosMoney *amountOf(int64_t const minorUnits, char const *const currency) {
     EranosMoney *money = nullptr;
     EranosError *const error = eranosMoneyCreate(minorUnits, currency, &money);
     eranosErrorDestroy(error);
@@ -80,10 +80,10 @@ static EranosMoney *amountOf(int64_t const minorUnits, char const *const currenc
 }
 
 /// @p cents euro cents.
-static EranosMoney *euros(int64_t const cents) { return amountOf(cents, "EUR"); }
+[[nodiscard]] static EranosMoney *euros(int64_t const cents) { return amountOf(cents, "EUR"); }
 
 /// Whether @p money is @p minorUnits minor units of @p currency; destroys it.
-static bool isAmount(EranosMoney *const money, int64_t const minorUnits, char const *const currency) {
+[[nodiscard]] static bool isAmount(EranosMoney *const money, int64_t const minorUnits, char const *const currency) {
     if (nullptr == money) {
         return false;
     }
@@ -96,7 +96,7 @@ static bool isAmount(EranosMoney *const money, int64_t const minorUnits, char co
 }
 
 /// The list of @p first and, unless nullptr, @p second.
-static EranosTextList *membersOf(char const *const first, char const *const second) {
+[[nodiscard]] static EranosTextList *membersOf(char const *const first, char const *const second) {
     EranosTextList *const members = eranosTextListCreate();
     eranosErrorDestroy(eranosTextListPush(members, first));
     if (nullptr != second) {
@@ -106,7 +106,7 @@ static EranosTextList *membersOf(char const *const first, char const *const seco
 }
 
 /// The split that divides equally among @p first and, unless nullptr, @p second.
-static EranosSplit *equally(char const *const first, char const *const second) {
+[[nodiscard]] static EranosSplit *equally(char const *const first, char const *const second) {
     EranosTextList *const members = membersOf(first, second);
     EranosSplit *const split = eranosSplitCreateEqual(members);
     eranosTextListDestroy(members);
@@ -114,7 +114,7 @@ static EranosSplit *equally(char const *const first, char const *const second) {
 }
 
 /// Whether @p list holds @p first and then, unless nullptr, @p second; destroys it.
-static bool listsMembers(EranosTextList *const list, char const *const first, char const *const second) {
+[[nodiscard]] static bool listsMembers(EranosTextList *const list, char const *const first, char const *const second) {
     if (nullptr == list) {
         return false;
     }
@@ -134,7 +134,7 @@ static constexpr EranosCalendarDate DAY = {.year = 2026, .month = 9, .day = 23};
 
 /// An expense of 30.00 EUR, called @p name, that @p payer paid and @p first and @p second share equally.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, the payer, and the members, in the order the expense reads them.
-static EranosExpense *expenseOf(char const *const name, char const *const payer, char const *const first, char const *const second) {
+[[nodiscard]] static EranosExpense *expenseOf(char const *const name, char const *const payer, char const *const first, char const *const second) {
     EranosMoney *const thirty = euros(3'000);
     EranosCost *const cost = eranosCostCreateLocal(thirty);
     EranosSplit *const payers = equally(payer, nullptr);
@@ -151,7 +151,7 @@ static EranosExpense *expenseOf(char const *const name, char const *const payer,
 }
 
 /// A transfer from @p from to @p to of @p cents euro cents.
-static EranosTransfer *transferOf(char const *const from, char const *const to, int64_t const cents) {
+[[nodiscard]] static EranosTransfer *transferOf(char const *const from, char const *const to, int64_t const cents) {
     EranosMoney *const amount = euros(cents);
     EranosCost *const cost = eranosCostCreateLocal(amount);
     EranosTransfer *transfer = nullptr;
@@ -178,7 +178,7 @@ typedef struct Flat {
 } Flat;
 
 /// Adds a member called @p firstName to @p group, and returns their identifier.
-static EranosText *memberIn(EranosExpenseGroup *const group, char const *const firstName) {
+[[nodiscard]] static EranosText *memberIn(EranosExpenseGroup *const group, char const *const firstName) {
     EranosMember *member = nullptr;
     eranosErrorDestroy(eranosMemberCreate(firstName, &member));
     EranosText *const id = eranosTextCreate();
@@ -188,7 +188,7 @@ static EranosText *memberIn(EranosExpenseGroup *const group, char const *const f
 }
 
 /// The flat.
-static Flat flatOf(void) {
+[[nodiscard]] static Flat flatOf(void) {
     EranosNewExpenseGroup *details = nullptr;
     eranosErrorDestroy(eranosNewExpenseGroupCreate("Flat", "EUR", &details));
     eranosErrorDestroy(eranosNewExpenseGroupSetDescription(details, "Rent"));
@@ -244,7 +244,7 @@ typedef struct Waiter {
 } Waiter;
 
 /// @p waiter, ready for a call.
-static Waiter *waiting(Waiter *const waiter) {
+[[nodiscard]] static Waiter *waiting(Waiter *const waiter) {
     (void)pthread_cond_init(&waiter->condition, nullptr);
     waiter->done = false;
     (void)pthread_mutex_init(&waiter->mutex, nullptr);
@@ -542,8 +542,8 @@ static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     checkThat(check, 2026 == date.year && 9 == date.month && 23 == date.day, "into its year, month, and day");
     checkSucceeded(check, eranosCalendarDateFormat(date, text), "and formats");
     checkThat(check, isText(text, "2026-09-23"), "as the library writes it");
-    EranosCalendarDate const leap = {.year = 2026, .month = 2, .day = 30};
-    checkThat(check, isFailure(eranosCalendarDateFormat(leap, text), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
+    constexpr EranosCalendarDate LEAP = {.year = 2026, .month = 2, .day = 30};
+    checkThat(check, isFailure(eranosCalendarDateFormat(LEAP, text), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE),
               "30 February");
     checkThat(check,
               isFailure(eranosCalendarDateParse("2026-02-30", &date), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_DATE) &&
@@ -553,8 +553,8 @@ static void datesAndTimesAreCheckedAndWritten(Check *const check) {
     checkSucceeded(check, eranosTimeOfDayParse("18:30", &time), "a time parses");
     checkSucceeded(check, eranosTimeOfDayFormat(time, text), "and formats");
     checkThat(check, 18 == time.hour && 30 == time.minute && isText(text, "18:30"), "into its hour and minute");
-    EranosTimeOfDay const late = {.hour = 25, .minute = 0};
-    checkThat(check, isFailure(eranosTimeOfDayFormat(late, text), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "hour 25");
+    constexpr EranosTimeOfDay LATE = {.hour = 25, .minute = 0};
+    checkThat(check, isFailure(eranosTimeOfDayFormat(LATE, text), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "hour 25");
     checkThat(check, isFailure(eranosTimeOfDayParse("25:00", &time), ERANOS_ERROR_KIND_CALENDAR, ERANOS_FAILURE_CALENDAR_INVALID_TIME), "parsed");
     eranosTextDestroy(text);
 }
@@ -879,10 +879,10 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
     checkSucceeded(check, eranosExpenseSetName(expense, "Lunch"), "a name");
     checkSucceeded(check, eranosExpenseSetCategory(expense, "0199a000-0000-7000-8000-000000000002"), "a category");
     checkSucceeded(check, eranosExpenseSetDescription(expense, "By the sea"), "a description");
-    EranosTimeOfDay const noon = {.hour = 12, .minute = 15};
-    eranosExpenseSetTime(expense, noon);
-    EranosCalendarDate const next = {.year = 2026, .month = 9, .day = 24};
-    eranosExpenseSetDate(expense, next);
+    constexpr EranosTimeOfDay NOON = {.hour = 12, .minute = 15};
+    eranosExpenseSetTime(expense, NOON);
+    constexpr EranosCalendarDate NEXT = {.year = 2026, .month = 9, .day = 24};
+    eranosExpenseSetDate(expense, NEXT);
     EranosMoney *const forty = euros(4'000);
     EranosCost *const cost = eranosCostCreateLocal(forty);
     eranosExpenseSetCost(expense, cost);
@@ -941,15 +941,15 @@ static void anExpenseReadsBackEveryFieldItWasGiven(Check *const check) {
                   nullptr == eranosExpenseTip(expense),
               "every optional field clears");
     EranosExpense *receipt = nullptr;
-    checkSucceeded(check, eranosExpenseCreateWithId("receipt-17", "Receipt", cost, bob, split, next, &receipt),
+    checkSucceeded(check, eranosExpenseCreateWithId("receipt-17", "Receipt", cost, bob, split, NEXT, &receipt),
                    "an expense under the app's identifier");
     eranosExpenseId(receipt, text);
     checkThat(check, isText(text, "receipt-17"), "keeps it");
     EranosExpense *noExpense = nullptr;
-    EranosCalendarDate const never = {.year = 2026, .month = 2, .day = 30};
-    checkThat(check, isKind(eranosExpenseCreate("\xff", cost, bob, split, never, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
+    constexpr EranosCalendarDate NEVER = {.year = 2026, .month = 2, .day = 30};
+    checkThat(check, isKind(eranosExpenseCreate("\xff", cost, bob, split, NEVER, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
     checkThat(check,
-              isKind(eranosExpenseCreateWithId("\xff", "Receipt", cost, bob, split, next, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+              isKind(eranosExpenseCreateWithId("\xff", "Receipt", cost, bob, split, NEXT, &noExpense), ERANOS_ERROR_KIND_INVALID_TEXT) &&
                   nullptr == noExpense,
               "an identifier is text");
     eranosCostDestroy(strange);
@@ -981,10 +981,10 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
     checkSucceeded(check, eranosTransferSetFrom(transfer, "ana"), "who paid");
     checkSucceeded(check, eranosTransferSetTo(transfer, "bob"), "who was paid");
     checkSucceeded(check, eranosTransferSetNote(transfer, "Cash"), "a note");
-    EranosTimeOfDay const morning = {.hour = 9, .minute = 5};
-    eranosTransferSetTime(transfer, morning);
-    EranosCalendarDate const next = {.year = 2026, .month = 9, .day = 24};
-    eranosTransferSetDate(transfer, next);
+    constexpr EranosTimeOfDay MORNING = {.hour = 9, .minute = 5};
+    eranosTransferSetTime(transfer, MORNING);
+    constexpr EranosCalendarDate NEXT = {.year = 2026, .month = 9, .day = 24};
+    eranosTransferSetDate(transfer, NEXT);
     EranosMoney *const five = euros(500);
     EranosCost *const cost = eranosCostCreateLocal(five);
     eranosTransferSetCost(transfer, cost);
@@ -1717,18 +1717,18 @@ static void theSummaryAndTheSharesAddUp(Check *const check) {
 static void eachStrategySettlesEveryBalance(Check *const check) {
     Flat const flat = flatOf();
     EranosText *const text = eranosTextCreate();
-    EranosSettlementStrategy const strategies[] = {
+    constexpr EranosSettlementStrategy STRATEGIES[] = {
         ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE,
         ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS,
         ERANOS_SETTLEMENT_STRATEGY_GREEDY,
         ERANOS_SETTLEMENT_STRATEGY_DIRECT,
     };
-    for (size_t index = 0; index < sizeof strategies / sizeof strategies[0]; ++index) {
+    for (size_t index = 0; sizeof STRATEGIES / sizeof STRATEGIES[0] > index; ++index) {
         // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
         EranosSettlementStrategy const computedBy =
-            ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == strategies[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : strategies[index];
+            ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == STRATEGIES[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : STRATEGIES[index];
         EranosSettlementPlan *settlement = nullptr;
-        checkSucceeded(check, eranosExpenseGroupSettlement(flat.group, strategies[index], &settlement), "a settlement");
+        checkSucceeded(check, eranosExpenseGroupSettlement(flat.group, STRATEGIES[index], &settlement), "a settlement");
         EranosPaymentList *const payments = eranosSettlementPlanPayments(settlement);
         EranosPayment *const payment = eranosPaymentListGet(payments, 0);
         checkThat(check,
@@ -2471,13 +2471,13 @@ int main(void) {
             .name = "aChangeWaitingBehindAReaderIsCancelledAndLeavesTheGroupAsItWas",
         },
     };
-    size_t const count = sizeof tests / sizeof tests[0];
+    constexpr size_t COUNT = sizeof tests / sizeof tests[0];
     size_t failed = 0;
-    for (size_t index = 0; index < count; ++index) {
+    for (size_t index = 0; COUNT > index; ++index) {
         Check check = {.test = tests[index].name, .failures = 0};
         tests[index].body(&check);
         failed += 0 == check.failures ? 0U : 1U;
     }
-    (void)printf("%zu of %zu tests passed\n", count - failed, count);
+    (void)printf("%zu of %zu tests passed\n", COUNT - failed, COUNT);
     return 0 == failed ? EXIT_SUCCESS : EXIT_FAILURE;
 }

@@ -25,13 +25,13 @@ struct Category final {
     ///
     /// @param id The identifier, which the app gives: its own, or one CategoryId::generate() makes.
     /// @param name The name, which no other category of the group shares.
-    Category(CategoryId id, std::string name) noexcept : id(std::move(id)), name(std::move(name)) {}
+    inline constexpr Category(CategoryId id, std::string name) noexcept : id(std::move(id)), name(std::move(name)) {}
 
     /// The record of its required fields under an identifier generated when it is called, which Category(CategoryId, std::string) takes instead;
     /// the others start absent, empty, or at their default.
     ///
     /// @param name The name, which no other category of the group shares.
-    explicit Category(std::string name) : Category(CategoryId::generate(), std::move(name)) {}
+    inline explicit Category(std::string name) noexcept : Category(CategoryId::generate(), std::move(name)) {}
 
     /// The identifier, which the app gives: its own, or one CategoryId::generate() makes.
     CategoryId id;
@@ -44,14 +44,14 @@ struct Category final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Category const &left, Category const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool operator==(Category const &left, Category const &right) noexcept = default;
 };
 
 namespace detail {
 
-[[nodiscard]] inline Category fromDetail(EranosCategory const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value);
-[[nodiscard]] inline std::vector<Category> fromDetail(EranosCategoryList const &list);
+[[nodiscard]] inline Category fromDetail(EranosCategory const &value) noexcept;
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosCategory>, Error> toDetail(Category const &value) noexcept;
+[[nodiscard]] inline std::vector<Category> fromDetail(EranosCategoryList const &list) noexcept;
 
 } // namespace detail
 

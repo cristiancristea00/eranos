@@ -20,7 +20,7 @@ typedef struct ExpenseRow {
 } ExpenseRow;
 
 /// A table of expenses, its columns from @p numbersFrom on aligned to the right.
-static Table *expenseTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *expenseTable(size_t const numbersFrom) {
     return tableCreate(4, (char const *const[]){"Expense", "Paid by", "Shared by", "Amount"}, numbersFrom);
 }
 
@@ -42,7 +42,7 @@ typedef struct MemberRow {
 } MemberRow;
 
 /// A table of members, its columns from @p numbersFrom on aligned to the right.
-static Table *memberTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *memberTable(size_t const numbersFrom) {
     return tableCreate(4, (char const *const[]){"Member", "Paid", "Consumed", "Balance"}, numbersFrom);
 }
 
@@ -62,13 +62,15 @@ typedef struct PaymentRow {
 } PaymentRow;
 
 /// A table of payments, its columns from @p numbersFrom on aligned to the right.
-static Table *paymentTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"From", "To", "Amount"}, numbersFrom); }
+[[nodiscard]] static Table *paymentTable(size_t const numbersFrom) {
+    return tableCreate(3, (char const *const[]){"From", "To", "Amount"}, numbersFrom);
+}
 
 /// Adds @p row to @p table, a table of payments, its cells in the order of the table's headers.
 static void addPaymentRow(Table *const table, PaymentRow const *const row) { tableAdd(table, (Line const[]){row->from, row->to, row->amount}); }
 
 /// The amount @p text of euros.
-static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
+[[nodiscard]] static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR"); }
 
 /// Prints the expenses of @p group: who paid each, who shares it, and its amount.
 static void printExpenses(EranosExpenseGroup const *const group) {
@@ -173,9 +175,9 @@ int main(void) {
     section("2. Expenses");
     printLine("Each expense records who paid and who shares it. Here everyone shares everything\n"
               "equally.");
-    EranosCalendarDate const friday = {.year = 2026, .month = 9, .day = 25};
-    addExpense(group, expenseOf("Cabin", localCost(euros("240.00")), soleSplit(ana), equalSplit(&everyone), friday));
-    addExpense(group, expenseOf("Groceries", localCost(euros("60.00")), soleSplit(bob), equalSplit(&everyone), friday));
+    constexpr EranosCalendarDate FRIDAY = {.year = 2026, .month = 9, .day = 25};
+    (void)addExpense(group, expenseOf("Cabin", localCost(euros("240.00")), soleSplit(ana), equalSplit(&everyone), FRIDAY));
+    (void)addExpense(group, expenseOf("Groceries", localCost(euros("60.00")), soleSplit(bob), equalSplit(&everyone), FRIDAY));
     printExpenses(group);
 
     section("3. Who paid and who consumed");

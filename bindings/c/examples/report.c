@@ -53,7 +53,7 @@ bool isFailure(EranosError const *const error, EranosErrorKind const kind, Erano
 }
 
 /// The copy of @p text in a line, which stops the port when it does not fit.
-static Line lineFrom(char const *const text) {
+[[nodiscard]] static Line lineFrom(char const *const text) {
     Line line = {};
     size_t const length = strlen(text);
     check(LINE_SIZE > length, "a line of the report fits its buffer");
@@ -309,7 +309,9 @@ Members splitMembers(EranosSplit const *const split) {
 }
 
 /// Orders two identifiers by their text, which orders them as the library does.
-static int compareIds(void const *const left, void const *const right) { return strcmp(((Id const *)left)->text, ((Id const *)right)->text); }
+[[nodiscard]] static int compareIds(void const *const left, void const *const right) {
+    return strcmp(((Id const *)left)->text, ((Id const *)right)->text);
+}
 
 Members participants(EranosExpense const *const expense) {
     Members members = {.count = 0};
@@ -384,7 +386,7 @@ void printFormatted(char const *const format, ...) {
 }
 
 /// How many characters @p text holds, up to @p length bytes: the reports' characters are each one column wide.
-static size_t widthOf(char const *const text, size_t const length) {
+[[nodiscard]] static size_t widthOf(char const *const text, size_t const length) {
     size_t width = 0;
     for (size_t index = 0; length > index; ++index) {
         if (CONTINUATION != ((unsigned)(unsigned char)text[index] & CONTINUATION_MASK)) {
@@ -429,7 +431,9 @@ struct Table {
 };
 
 /// The table's cell in @p row and @p column.
-static Line *cellOf(Table const *const table, size_t const row, size_t const column) { return &table->cells[(row * table->columns) + column]; }
+[[nodiscard]] static Line *cellOf(Table const *const table, size_t const row, size_t const column) {
+    return &table->cells[(row * table->columns) + column];
+}
 
 /// Adds a row of @p cells to @p table, making room for it when the table is full.
 static void addRow(Table *const table, Line const *const cells) {
@@ -466,7 +470,7 @@ Table *tableCreate(size_t const columns, char const *const *const headers, size_
 void tableAdd(Table *const table, Line const *const cells) { addRow(table, cells); }
 
 /// How many lines @p text holds.
-static size_t linesOf(char const *const text) {
+[[nodiscard]] static size_t linesOf(char const *const text) {
     size_t lines = 1;
     for (char const *next = strchr(text, '\n'); nullptr != next; next = strchr(next + 1, '\n')) {
         ++lines;
@@ -475,7 +479,7 @@ static size_t linesOf(char const *const text) {
 }
 
 /// The line @p index of @p text, as where it starts and how many bytes it holds; past its last line, an empty one.
-static char const *lineAt(char const *const text, size_t const index, size_t *const length) {
+[[nodiscard]] static char const *lineAt(char const *const text, size_t const index, size_t *const length) {
     char const *start = text;
     for (size_t skipped = 0; index > skipped; ++skipped) {
         char const *const next = strchr(start, '\n');

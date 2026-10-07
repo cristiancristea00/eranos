@@ -29,7 +29,7 @@ typedef struct MemberRow {
 } MemberRow;
 
 /// A table of members, its columns from @p numbersFrom on aligned to the right.
-static Table *memberTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *memberTable(size_t const numbersFrom) {
     return tableCreate(4, (char const *const[]){"Member", "Email", "Phone", "Accounts"}, numbersFrom);
 }
 
@@ -49,7 +49,9 @@ typedef struct CheckRow {
 } CheckRow;
 
 /// A table of checks, its columns from @p numbersFrom on aligned to the right.
-static Table *checkTable(size_t const numbersFrom) { return tableCreate(3, (char const *const[]){"Input", "Checked as", "Result"}, numbersFrom); }
+[[nodiscard]] static Table *checkTable(size_t const numbersFrom) {
+    return tableCreate(3, (char const *const[]){"Input", "Checked as", "Result"}, numbersFrom);
+}
 
 /// Adds @p row to @p table, a table of checks, its cells in the order of the table's headers.
 static void addCheckRow(Table *const table, CheckRow const *const row) { tableAdd(table, (Line const[]){row->input, row->kind, row->result}); }
@@ -67,7 +69,7 @@ typedef struct BalanceRow {
 } BalanceRow;
 
 /// A table of balances, its columns from @p numbersFrom on aligned to the right.
-static Table *balanceTable(size_t const numbersFrom) {
+[[nodiscard]] static Table *balanceTable(size_t const numbersFrom) {
     return tableCreate(4, (char const *const[]){"Member", "Status", "Consumed", "Balance"}, numbersFrom);
 }
 
@@ -80,7 +82,7 @@ static void addBalanceRow(Table *const table, BalanceRow const *const row) {
 typedef EranosError *(*Validation)(char const *text, EranosText *value);
 
 /// The account @p name, paid to @p details; destroys @p details.
-static EranosPaymentAccount *accountOf(char const *const name, EranosPaymentAccountDetails *const details) {
+[[nodiscard]] static EranosPaymentAccount *accountOf(char const *const name, EranosPaymentAccountDetails *const details) {
     EranosPaymentAccount *account = nullptr;
     must(eranosPaymentAccountCreate(name, details, &account));
     eranosPaymentAccountDetailsDestroy(details);
@@ -88,7 +90,7 @@ static EranosPaymentAccount *accountOf(char const *const name, EranosPaymentAcco
 }
 
 /// The label and the details of every account of @p member, one per line.
-static Line accountsOf(EranosMember const *const member) {
+[[nodiscard]] static Line accountsOf(EranosMember const *const member) {
     EranosPaymentAccountList *const accounts = eranosMemberAccounts(member);
     EranosText *const name = eranosTextCreate();
     EranosText *const text = eranosTextCreate();
@@ -112,7 +114,7 @@ static Line accountsOf(EranosMember const *const member) {
 }
 
 /// The first and the last name of @p member, the last when there is one.
-static Line fullName(EranosMember const *const member) {
+[[nodiscard]] static Line fullName(EranosMember const *const member) {
     EranosText *const first = eranosTextCreate();
     EranosText *const last = eranosTextCreate();
     eranosMemberFirstName(member, first);
@@ -123,7 +125,7 @@ static Line fullName(EranosMember const *const member) {
 }
 
 /// The phone number of @p member, grouped for reading, or nothing when there is none.
-static Line phoneOf(EranosMember const *const member) {
+[[nodiscard]] static Line phoneOf(EranosMember const *const member) {
     EranosText *const text = eranosTextCreate();
     Line line = {};
     if (eranosMemberPhone(member, text)) {
@@ -137,7 +139,7 @@ static Line phoneOf(EranosMember const *const member) {
 }
 
 /// The email of @p member, or nothing when there is none.
-static Line emailOf(EranosMember const *const member) {
+[[nodiscard]] static Line emailOf(EranosMember const *const member) {
     EranosText *const text = eranosTextCreate();
     Line const line = eranosMemberEmail(member, text) ? textLine(text) : lineOf("%s", "");
     eranosTextDestroy(text);
@@ -195,7 +197,7 @@ static void printBalances(EranosExpenseGroup const *const group) {
 }
 
 /// Adds Ana, with every detail, and Bob, with a first name only, to @p group, and prints them.
-static Flatmates members(EranosExpenseGroup *const group) {
+[[nodiscard]] static Flatmates members(EranosExpenseGroup *const group) {
     section("1. Members");
     EranosMember *member = nullptr;
     must(eranosMemberCreate("Ana", &member));
@@ -263,7 +265,7 @@ static void validation(void) {
 }
 
 /// Whether @p error names @p member.
-static bool errorNames(EranosError const *const error, Id const member) {
+[[nodiscard]] static bool errorNames(EranosError const *const error, Id const member) {
     EranosText *const text = eranosTextCreate();
     bool const same = eranosErrorMember(error, text) && 0 == strcmp(eranosTextData(text), member.text);
     eranosTextDestroy(text);
