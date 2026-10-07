@@ -11,7 +11,7 @@ from eranos import (
     ExpenseId,
     FixedTip,
     ExpenseGroup,
-    Item,
+    ExpenseItem,
     ItemisedExpenseSplit,
     LocalCost,
     MemberAmount,
@@ -248,7 +248,7 @@ def _print_shares(group: ExpenseGroup, expenses: Sequence[ExpenseId]) -> None:
     )
 
 
-def _line_total(item: Item) -> Money:
+def _line_total(item: ExpenseItem) -> Money:
     """
     Work out an item's line total, its unit price times its quantity, which the layer does not offer.
 
@@ -290,7 +290,7 @@ def _print_items(group: ExpenseGroup, expense: Expense) -> None:
     )
 
 
-def _fado_items(people: People) -> tuple[Item, ...]:
+def _fado_items(people: People) -> tuple[ExpenseItem, ...]:
     """
     Write the receipt of the fado night: every line with its own split.
 
@@ -303,9 +303,9 @@ def _fado_items(people: People) -> tuple[Item, ...]:
     """
     one = Parts.parse('1')
     return (
-        Item(name='Vinho verde', unit_price=eur('12.00'), split=EqualSplit((people.ana, people.bob, people.dan)), quantity=2),
-        Item(name='Bacalhau', unit_price=eur('18.00'), split=EqualSplit((people.carol,))),
-        Item(
+        ExpenseItem(name='Vinho verde', unit_price=eur('12.00'), split=EqualSplit((people.ana, people.bob, people.dan)), quantity=2),
+        ExpenseItem(name='Bacalhau', unit_price=eur('18.00'), split=EqualSplit((people.carol,))),
+        ExpenseItem(
             name='Custard tarts',
             unit_price=eur('1.50'),
             split=PartsSplit(
@@ -319,7 +319,7 @@ def _fado_items(people: People) -> tuple[Item, ...]:
             ),
             quantity=6,
         ),
-        Item(name='Juice', unit_price=eur('3.00'), split=EqualSplit((people.eva,))),
+        ExpenseItem(name='Juice', unit_price=eur('3.00'), split=EqualSplit((people.eva,))),
     )
 
 

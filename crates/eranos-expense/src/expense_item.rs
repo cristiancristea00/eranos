@@ -16,10 +16,10 @@ use crate::error::ExpenseError;
 ///
 /// ```
 /// use eranos::id::MemberId;
-/// use eranos::{Currency, Item, MemberParts, Money, Parts, Split};
+/// use eranos::{Currency, ExpenseItem, MemberParts, Money, Parts, Split};
 ///
 /// let (ana, bob) = (MemberId::generate(), MemberId::generate());
-/// let beers = Item::builder("Beer", Money::parse("4.50", Currency::EUR)?, [ana, bob])
+/// let beers = ExpenseItem::builder("Beer", Money::parse("4.50", Currency::EUR)?, [ana, bob])
 ///     .quantity(3)
 ///     .build()?;
 /// assert_eq!(beers.line_total(), Money::parse("13.50", Currency::EUR)?);
@@ -28,28 +28,28 @@ use crate::error::ExpenseError;
 ///     MemberParts::new(ana, Parts::from_whole(2)?),
 ///     MemberParts::new(bob, Parts::from_whole(1)?),
 /// ]);
-/// let pizza = Item::builder_with_split("Pizza", Money::parse("12.00", Currency::EUR)?, split)
+/// let pizza = ExpenseItem::builder_with_split("Pizza", Money::parse("12.00", Currency::EUR)?, split)
 ///     .build()?;
 /// assert_eq!(pizza.quantity(), 1);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Item {
+pub struct ExpenseItem {
     name: String,
     unit_price: Money,
     split: Split,
     quantity: u32,
 }
 
-impl Item {
+impl ExpenseItem {
     /// Starts an item whose line total `members` share equally; the
     /// quantity defaults to 1.
     pub fn builder(
         name: impl Into<String>,
         unit_price: Money,
         members: impl IntoIterator<Item = MemberId>,
-    ) -> ItemBuilder {
+    ) -> ExpenseItemBuilder {
         Self::builder_with_split(name, unit_price, Split::equal(members))
     }
 
@@ -59,8 +59,8 @@ impl Item {
         name: impl Into<String>,
         unit_price: Money,
         split: Split,
-    ) -> ItemBuilder {
-        ItemBuilder {
+    ) -> ExpenseItemBuilder {
+        ExpenseItemBuilder {
             name: name.into(),
             unit_price,
             split,
@@ -69,8 +69,8 @@ impl Item {
     }
 
     /// Starts a builder holding a copy of this item, to edit it.
-    pub fn to_builder(&self) -> ItemBuilder {
-        ItemBuilder {
+    pub fn to_builder(&self) -> ExpenseItemBuilder {
+        ExpenseItemBuilder {
             name: self.name.clone(),
             unit_price: self.unit_price,
             split: self.split.clone(),
@@ -114,18 +114,18 @@ impl Item {
     }
 }
 
-/// Builds an [`Item`]; created by [`Item::builder`],
-/// [`Item::builder_with_split`], or [`Item::to_builder`].
+/// Builds an [`ExpenseItem`]; created by [`ExpenseItem::builder`],
+/// [`ExpenseItem::builder_with_split`], or [`ExpenseItem::to_builder`].
 #[derive(Debug, Clone)]
 #[must_use = "a builder does nothing until `build` is called"]
-pub struct ItemBuilder {
+pub struct ExpenseItemBuilder {
     name: String,
     unit_price: Money,
     split: Split,
     quantity: u32,
 }
 
-impl ItemBuilder {
+impl ExpenseItemBuilder {
     /// Replaces the name.
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
@@ -166,7 +166,7 @@ impl ItemBuilder {
     ///   positive, and [`ExpenseError::ZeroQuantity`] for a quantity of 0.
     /// - [`ExpenseError::Overflow`] when the line total does not fit.
     /// - Any error of an invalid [`Split`] for the line total.
-    pub fn build(self) -> Result<Item, ExpenseError> {
+    pub fn build(self) -> Result<ExpenseItem, ExpenseError> {
         let name = text::required(self.name, ExpenseError::EmptyItemName)?;
         if !self.unit_price.is_positive() {
             return Err(ExpenseError::NonPositiveAmount);
@@ -183,7 +183,7 @@ impl ItemBuilder {
             line_total,
             self.unit_price.currency(),
         ))?;
-        Ok(Item {
+        Ok(ExpenseItem {
             name,
             unit_price: self.unit_price,
             split: self.split,
@@ -192,10 +192,10 @@ impl ItemBuilder {
     }
 }
 
-/// The serialised form of an [`Item`], validated on the way in.
+/// The serialised form of an [`ExpenseItem`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
-struct ItemRecord {
+struct ExpenseItemRecord {
     name: String,
     unit_price: Money,
     split: Split,
@@ -204,18 +204,18 @@ struct ItemRecord {
 
 /// Builds the item `record` describes, through the checks of the builder.
 #[cfg(feature = "serde")]
-fn from_record(record: ItemRecord) -> Result<Item, ExpenseError> {
-    Item::builder_with_split(record.name, record.unit_price, record.split)
+fn from_record(record: ExpenseItemRecord) -> Result<ExpenseItem, ExpenseError> {
+    ExpenseItem::builder_with_split(record.name, record.unit_price, record.split)
         .quantity(record.quantity)
         .build()
 }
 
 // Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `Item`.
+// from the private record would appear on the facade's page for `ExpenseItem`.
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Item {
+impl<'de> serde::Deserialize<'de> for ExpenseItem {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        from_record(ItemRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
+        from_record(ExpenseItemRecord::deserialize(deserialiser)?).map_err(serde::de::Error::custom)
     }
 }
 

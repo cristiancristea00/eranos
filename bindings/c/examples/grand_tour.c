@@ -1144,16 +1144,16 @@ static Line tipOf(EranosExpense const *const expense) {
 /// How @p expense divides, in a few words.
 static Line how(EranosExpense const *const expense) {
     EranosExpenseSplit *const split = eranosExpenseSplit(expense);
-    EranosItemList *const items = eranosExpenseSplitItems(split);
+    EranosExpenseItemList *const items = eranosExpenseSplitItems(split);
     EranosSplit *const whole = eranosExpenseSplitSplit(split);
-    Line const kind = nullptr == items ? lineOf("%s", divided(whole)) : lineOf("%zu items", eranosItemListLength(items));
+    Line const kind = nullptr == items ? lineOf("%s", divided(whole)) : lineOf("%zu items", eranosExpenseItemListLength(items));
     EranosSplit *const payers = eranosExpensePayers(expense);
     size_t const count = splitMembers(payers).count;
     Line const paid = 1 == count ? lineOf("%s", "") : lineOf(", %zu payers", count);
     Line const tip = tipOf(expense);
     eranosSplitDestroy(payers);
     eranosSplitDestroy(whole);
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
     eranosExpenseSplitDestroy(split);
     return lineOf("%s%s%s", kind.text, paid.text, tip.text);
 }
@@ -1203,20 +1203,20 @@ static void printItems(EranosExpenseGroup const *const group, Id const id) {
     must(eranosExpenseGroupExpense(group, id.text, &expense));
     check(nullptr != expense, "the group holds the expense");
     EranosExpenseSplit *const split = eranosExpenseSplit(expense);
-    EranosItemList *const items = eranosExpenseSplitItems(split);
+    EranosExpenseItemList *const items = eranosExpenseSplitItems(split);
     check(nullptr != items, "the expense is itemised");
     Table *const table = itemTable(2);
     EranosText *const text = eranosTextCreate();
-    for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
-        EranosItem *const item = eranosItemListGet(items, index);
-        EranosSplit *const itemSplit = eranosItemSplit(item);
+    for (size_t index = 0; eranosExpenseItemListLength(items) > index; ++index) {
+        EranosExpenseItem *const item = eranosExpenseItemListGet(items, index);
+        EranosSplit *const itemSplit = eranosExpenseItemSplit(item);
         Members const sharedBy = splitMembers(itemSplit);
-        EranosMoney *const unitPrice = eranosItemUnitPrice(item);
-        int32_t const quantity = eranosItemQuantity(item);
+        EranosMoney *const unitPrice = eranosExpenseItemUnitPrice(item);
+        int32_t const quantity = eranosExpenseItemQuantity(item);
         eranosMoneyCurrency(unitPrice, text);
         EranosMoney *total = nullptr;
         must(eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, eranosTextData(text), &total));
-        eranosItemName(item, text);
+        eranosExpenseItemName(item, text);
         addItemRow(table, &(ItemRow){
                               .name = textLine(text),
                               .sharedBy = names(group, &sharedBy),
@@ -1225,11 +1225,11 @@ static void printItems(EranosExpenseGroup const *const group, Id const id) {
                               .lineTotal = moneyLine(total),
                           });
         eranosSplitDestroy(itemSplit);
-        eranosItemDestroy(item);
+        eranosExpenseItemDestroy(item);
     }
     tablePrint(table);
     eranosTextDestroy(text);
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
     eranosExpenseSplitDestroy(split);
     eranosExpenseDestroy(expense);
 }
@@ -1237,21 +1237,21 @@ static void printItems(EranosExpenseGroup const *const group, Id const id) {
 /// Adds the line @p name of a receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
 /// @p split.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the unit price, in the order the library's constructor reads them.
-static void addItem(EranosItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
+static void addItem(EranosExpenseItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
                     int32_t const quantity) {
     EranosMoney *const price = eur(unitPrice);
-    EranosItem *item = nullptr;
-    must(eranosItemCreate(name, price, split, &item));
-    eranosItemSetQuantity(item, quantity);
-    eranosItemListPush(items, item);
-    eranosItemDestroy(item);
+    EranosExpenseItem *item = nullptr;
+    must(eranosExpenseItemCreate(name, price, split, &item));
+    eranosExpenseItemSetQuantity(item, quantity);
+    eranosExpenseItemListPush(items, item);
+    eranosExpenseItemDestroy(item);
     eranosMoneyDestroy(price);
     eranosSplitDestroy(split);
 }
 
 /// The receipt of the fado night: every line with its own split.
-static EranosItemList *fadoItems(People const *const people) {
-    EranosItemList *const items = eranosItemListCreate();
+static EranosExpenseItemList *fadoItems(People const *const people) {
+    EranosExpenseItemList *const items = eranosExpenseItemListCreate();
     Members const wine = {.count = 3, .ids = {people->ana, people->bob, people->dan}};
     addItem(items, "Vinho verde", "12.00", equalSplit(&wine), 2);
     addItem(items, "Bacalhau", "18.00", soleSplit(people->carol), 1);
@@ -1287,12 +1287,12 @@ static EranosExpense *fadoNight(People const *const people, Categories const *co
     };
     EranosCost *const cost = localCost(eur("54.00"));
     EranosSplit *const payers = amountsSplit("EUR", cards, 2);
-    EranosItemList *const items = fadoItems(people);
+    EranosExpenseItemList *const items = fadoItems(people);
     EranosExpenseSplit *const split = eranosExpenseSplitCreateItemised(items);
     EranosExpense *expense = nullptr;
     must(eranosExpenseCreate("Fado night", cost, payers, split, october(4), &expense));
     eranosExpenseSplitDestroy(split);
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
     eranosSplitDestroy(payers);
     eranosCostDestroy(cost);
     must(eranosExpenseSetCategory(expense, categories->food.text));

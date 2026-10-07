@@ -672,6 +672,18 @@ public final class eranos/ExpenseId {
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
 }
 
+public final class eranos/ExpenseItem {
+	public fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;I)V
+	public synthetic fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getQuantity ()I
+	public final fun getSplit ()Leranos/Split;
+	public final fun getUnitPrice ()Leranos/Money;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class eranos/ExpenseShares {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMembers ()Ljava/util/List;
@@ -765,18 +777,6 @@ public abstract interface class eranos/IdFailure {
 public final class eranos/IdFailure$InvalidId : eranos/IdFailure {
 	public static final field INSTANCE Leranos/IdFailure$InvalidId;
 	public fun equals (Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class eranos/Item {
-	public fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;I)V
-	public synthetic fun <init> (Ljava/lang/String;Leranos/Money;Leranos/Split;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getName ()Ljava/lang/String;
-	public final fun getQuantity ()I
-	public final fun getSplit ()Leranos/Split;
-	public final fun getUnitPrice ()Leranos/Money;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

@@ -81,11 +81,11 @@ func printItems(_ group: ExpenseGroup, _ id: Expense.ID) throws(EranosError) {
 }
 
 /// The receipt of the fado night: every line with its own split.
-func fadoItems(_ people: People) throws(EranosError) -> [Item] {
+func fadoItems(_ people: People) throws(EranosError) -> [ExpenseItem] {
     [
-        Item(name: "Vinho verde", unitPrice: try eur("12.00"), split: .equal([people.ana, people.bob, people.dan]), quantity: 2),
-        Item(name: "Bacalhau", unitPrice: try eur("18.00"), split: .equal([people.carol])),
-        Item(
+        ExpenseItem(name: "Vinho verde", unitPrice: try eur("12.00"), split: .equal([people.ana, people.bob, people.dan]), quantity: 2),
+        ExpenseItem(name: "Bacalhau", unitPrice: try eur("18.00"), split: .equal([people.carol])),
+        ExpenseItem(
             name: "Custard tarts",
             unitPrice: try eur("1.50"),
             split: .parts([
@@ -97,7 +97,7 @@ func fadoItems(_ people: People) throws(EranosError) -> [Item] {
             ]),
             quantity: 6
         ),
-        Item(name: "Juice", unitPrice: try eur("3.00"), split: .equal([people.eva]))
+        ExpenseItem(name: "Juice", unitPrice: try eur("3.00"), split: .equal([people.eva]))
     ]
 }
 

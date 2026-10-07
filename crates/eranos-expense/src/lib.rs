@@ -13,7 +13,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 mod error;
-mod item;
+mod expense_item;
 mod resolution;
 mod split;
 mod tip;
@@ -21,7 +21,7 @@ mod tip;
 use std::collections::BTreeSet;
 
 pub use error::{ExpenseError, FromExpenseError};
-pub use item::{Item, ItemBuilder};
+pub use expense_item::{ExpenseItem, ExpenseItemBuilder};
 pub use resolution::{resolve_expense, resolve_expense_at};
 pub use split::{FromSplit, MemberAmount, MemberParts, MemberPercentage, Split};
 pub use tip::{FromTipDistribution, FromTipValue, Tip, TipDistribution, TipValue};
@@ -129,7 +129,7 @@ impl Expense {
         name: impl Into<String>,
         cost: impl Into<Cost>,
         payer: MemberId,
-        items: impl IntoIterator<Item = Item>,
+        items: impl IntoIterator<Item = ExpenseItem>,
         date: CalendarDate,
     ) -> ExpenseBuilder {
         starting(
@@ -147,7 +147,7 @@ impl Expense {
         name: impl Into<String>,
         cost: impl Into<Cost>,
         payers: Split,
-        items: impl IntoIterator<Item = Item>,
+        items: impl IntoIterator<Item = ExpenseItem>,
         date: CalendarDate,
     ) -> ExpenseBuilder {
         starting(
@@ -341,8 +341,8 @@ impl Expense {
 pub enum ExpenseSplit {
     /// The whole amount is divided by one [`Split`].
     Whole(Split),
-    /// Every [`Item`] is divided by its own split.
-    Itemised(Vec<Item>),
+    /// Every [`ExpenseItem`] is divided by its own split.
+    Itemised(Vec<ExpenseItem>),
 }
 
 impl ExpenseSplit {
@@ -366,7 +366,7 @@ pub trait FromExpenseSplit: Sized {
     fn whole(split: &Split) -> Self;
 
     /// The value for a cost shared item by item.
-    fn itemised(items: &[Item]) -> Self;
+    fn itemised(items: &[ExpenseItem]) -> Self;
 
     /// The value for `expense_split`, from the method of its variant.
     #[must_use]
@@ -438,7 +438,7 @@ impl ExpenseBuilder {
 
     /// Replaces the split with one item by item; the line totals must add up
     /// to the amount.
-    pub fn items(mut self, items: impl IntoIterator<Item = Item>) -> Self {
+    pub fn items(mut self, items: impl IntoIterator<Item = ExpenseItem>) -> Self {
         self.split = ExpenseSplit::Itemised(items.into_iter().collect());
         self
     }
@@ -531,7 +531,7 @@ impl ExpenseBuilder {
 
 /// Checks that there is at least one item, every item is in the expense's
 /// currency, and the line totals add up to the amount.
-fn validate_items(items: &[Item], amount: Money) -> Result<(), ExpenseError> {
+fn validate_items(items: &[ExpenseItem], amount: Money) -> Result<(), ExpenseError> {
     if items.is_empty() {
         return Err(ExpenseError::NoItems);
     }

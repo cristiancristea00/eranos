@@ -18,8 +18,8 @@
 use eranos::cooperative::block_on;
 use eranos::{
     CalendarDate, CategoryTotal, Cost, Currency, CurrencyRate, ExchangeRate, Expense, ExpenseGroup,
-    ExpenseId, Item, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
-    Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
+    ExpenseId, ExpenseItem, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money,
+    Parts, Percentage, SettlementStrategy, Split, Tip, TipDistribution, Transfer,
     error::ExpenseGroupError,
 };
 use proptest::prelude::*;
@@ -140,7 +140,7 @@ impl ForeignRecipe {
 /// A line of an itemised bill: its unit price in minor units, its
 /// quantity, and how it is divided.
 #[derive(Debug, Clone)]
-struct ItemRecipe {
+struct ExpenseItemRecipe {
     price: i64,
     split: SplitRecipe,
     quantity: u32,
@@ -160,7 +160,7 @@ struct ExpenseRecipe {
     amount: i64,
     payers: SplitRecipe,
     split: SplitRecipe,
-    items: Option<Vec<ItemRecipe>>,
+    items: Option<Vec<ExpenseItemRecipe>>,
     tip: Option<TipRecipe>,
     foreign: Option<ForeignRecipe>,
 }
@@ -172,7 +172,7 @@ fn expense_recipe() -> impl Strategy<Value = ExpenseRecipe> {
             0.3,
             proptest::collection::vec(
                 (1_i64..20_000, 1_u32..4, split_recipe()).prop_map(|(price, quantity, split)| {
-                    ItemRecipe {
+                    ExpenseItemRecipe {
                         price,
                         split,
                         quantity,
@@ -226,12 +226,12 @@ impl ExpenseRecipe {
             let split = self.split.build(members, amount);
             Expense::builder("Whole", cost(amount), members[0], split, day())
         };
-        let itemised = |items: &Vec<ItemRecipe>| {
-            let items: Vec<Item> = items
+        let itemised = |items: &Vec<ExpenseItemRecipe>| {
+            let items: Vec<ExpenseItem> = items
                 .iter()
                 .map(|item| {
                     let line = money(item.price * i64::from(item.quantity));
-                    Item::builder_with_split(
+                    ExpenseItem::builder_with_split(
                         "Item",
                         money(item.price),
                         item.split.build(members, line),

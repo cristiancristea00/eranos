@@ -494,19 +494,19 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Item fromDetail(EranosItem const &value) {
-    Item result(value.name(), detail::fromDetail(*value.unit_price()), detail::fromDetail(*value.split()));
+[[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value) {
+    ExpenseItem result(value.name(), detail::fromDetail(*value.unit_price()), detail::fromDetail(*value.split()));
     result.quantity = value.quantity();
     return result;
 }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosItem>, Error> toDetail(Item const &value) {
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value) {
     return detail::toDetail(value.split)
         .and_then([&value](std::unique_ptr<EranosSplit> const &split) {
-            return expectedOf(EranosItem::create(value.name, *detail::toDetail(value.unitPrice), *split));
+            return expectedOf(EranosExpenseItem::create(value.name, *detail::toDetail(value.unitPrice), *split));
         })
-        .transform([&value](std::unique_ptr<EranosItem> result) {
+        .transform([&value](std::unique_ptr<EranosExpenseItem> result) {
             result->set_quantity(value.quantity);
             return result;
         });
@@ -595,7 +595,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The generated expense split of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseSplit>, Error> toDetail(ItemisedExpenseSplit const &value) {
-    return listOf<EranosItemList>(value.items).transform([](std::unique_ptr<EranosItemList> const &items) {
+    return listOf<EranosExpenseItemList>(value.items).transform([](std::unique_ptr<EranosExpenseItemList> const &items) {
         return EranosExpenseSplit::create_itemised(*items);
     });
 }
@@ -655,8 +655,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Item> fromDetail(EranosItemList const &list) {
-    std::vector<Item> result;
+[[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list) {
+    std::vector<ExpenseItem> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
         result.push_back(fromDetail(*list.get(index)));

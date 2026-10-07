@@ -48,7 +48,7 @@
 //! # Money is exact
 //!
 //! Amounts are whole numbers of minor units ([`Money`]), never floats. Every
-//! division, whether a [`Split`] among members, a [`Tip`], an [`Item`] of an
+//! division, whether a [`Split`] among members, a [`Tip`], an [`ExpenseItem`] of an
 //! itemised bill, or a conversion at an [`ExchangeRate`], hands out its
 //! leftover minor units by the largest-remainder method, so the parts always
 //! add up to the whole. Ties rotate with the expense's identifier: over many
@@ -190,8 +190,8 @@ pub mod expense {
 
     #[doc(inline)]
     pub use eranos_expense::{
-        Expense, ExpenseBuilder, ExpenseSplit, Item, ItemBuilder, MemberAmount, MemberParts,
-        MemberPercentage, Split, Tip, TipDistribution, TipValue,
+        Expense, ExpenseBuilder, ExpenseItem, ExpenseItemBuilder, ExpenseSplit, MemberAmount,
+        MemberParts, MemberPercentage, Split, Tip, TipDistribution, TipValue,
     };
 }
 pub mod expense_group {
@@ -272,7 +272,7 @@ pub use calendar::{CalendarDate, TimeOfDay};
 pub use category::Category;
 #[doc(no_inline)]
 pub use expense::{
-    Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
+    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,
 };
 #[cfg(feature = "serde")]

@@ -772,14 +772,14 @@ void printItems(ExpenseGroup const &group, ExpenseId const &id) {
 }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] Item line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
-    Item item(std::move(name), eur(unitPrice), std::move(split));
+[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
+    ExpenseItem item(std::move(name), eur(unitPrice), std::move(split));
     item.quantity = quantity;
     return item;
 }
 
 /// The receipt of the fado night: every line with its own split.
-[[nodiscard]] std::vector<Item> fadoItems(People const &people) {
+[[nodiscard]] std::vector<ExpenseItem> fadoItems(People const &people) {
     return {
         line("Vinho verde", "12.00", EqualSplit{{people.ana, people.bob, people.dan}}, 2),
         line("Bacalhau", "18.00", EqualSplit{{people.carol}}, 1),

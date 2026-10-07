@@ -33,7 +33,7 @@ macro_rules! mirrors {
         $crate::mirror_expense_group_failure!($($callback)+);
         $crate::mirror_iban_reason!($($callback)+);
         $crate::mirror_id_failure!($($callback)+);
-        $crate::mirror_item!($($callback)+);
+        $crate::mirror_expense_item!($($callback)+);
         $crate::mirror_language_failure!($($callback)+);
         $crate::mirror_member!($($callback)+);
         $crate::mirror_member_amount!($($callback)+);

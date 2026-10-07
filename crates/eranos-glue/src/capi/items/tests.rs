@@ -23,7 +23,7 @@ fn the_core_is_its_marked_items_and_its_one_trait_of_calls() {
             "CalendarDate",
             "TimeOfDay",
             "TipDistribution",
-            "Item",
+            "ExpenseItem",
             "Tip",
             "Split",
             "Cost",

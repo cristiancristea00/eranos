@@ -50,7 +50,7 @@ pub use error::{
     PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 pub use expense::{
-    Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
+    Expense, ExpenseItem, ExpenseSplit, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
     TipDistribution, TipValue,
 };
 pub use expense_group::{ExpenseGroupHandle, NewExpenseGroup};

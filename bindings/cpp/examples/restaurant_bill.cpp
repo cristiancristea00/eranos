@@ -69,14 +69,14 @@ struct TipRow final {
 [[nodiscard]] Money euros(std::string_view const text) { return must(Money::parse(text, must(Currency::of("EUR")))); }
 
 /// The line @p name of @p quantity at @p unitPrice euros, which @p split shares.
-[[nodiscard]] Item line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
-    Item item(std::move(name), euros(unitPrice), std::move(split));
+[[nodiscard]] ExpenseItem line(std::string name, std::string_view const unitPrice, Split split, std::int32_t const quantity) {
+    ExpenseItem item(std::move(name), euros(unitPrice), std::move(split));
     item.quantity = quantity;
     return item;
 }
 
 /// The receipt: every line with the members who had it.
-[[nodiscard]] std::vector<Item> receipt(MemberId const &ana, MemberId const &bob, MemberId const &carol) {
+[[nodiscard]] std::vector<ExpenseItem> receipt(MemberId const &ana, MemberId const &bob, MemberId const &carol) {
     return {
         line("Ciorbă", "8.00", EqualSplit{{ana}}, 1),
         line("Sarmale", "14.00", EqualSplit{{bob, carol}}, 2),

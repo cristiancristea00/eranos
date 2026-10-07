@@ -25,7 +25,7 @@ export {
     type Cost,
     type Expense,
     type ExpenseSplit,
-    type Item,
+    type ExpenseItem,
     type Member,
     type MemberAmount,
     type MemberParts,

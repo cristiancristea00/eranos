@@ -13,7 +13,7 @@ use eranos_money::{Cost, Parts, Percentage};
 use proptest::prelude::*;
 
 use super::*;
-use crate::{Item, MemberAmount, MemberParts, Split, Tip, TipDistribution};
+use crate::{ExpenseItem, MemberAmount, MemberParts, Split, Tip, TipDistribution};
 
 /// `expense` under the identifier `id`, which seeds its tie rotation.
 fn identified(expense: &Expense, id: ExpenseId) -> Expense {
@@ -178,8 +178,10 @@ fn an_equal_tip_ignores_the_shares() {
 #[test]
 fn items_divide_by_their_own_splits() {
     let (ana, bob) = (member(1), member(2));
-    let pizza = Item::builder("Pizza", eur(1200), [ana]).build().unwrap();
-    let beer = Item::builder("Beer", eur(450), [ana, bob])
+    let pizza = ExpenseItem::builder("Pizza", eur(1200), [ana])
+        .build()
+        .unwrap();
+    let beer = ExpenseItem::builder("Beer", eur(450), [ana, bob])
         .quantity(2)
         .build()
         .unwrap();
@@ -509,7 +511,7 @@ fn the_rotation_of_every_pass_is_pinned() {
     // Three items with a leftover cent or two each, an equal tip of 2 cents
     // among three, and 3.03 paid by two: every pass has ties to break.
     let items = [100, 100, 101].map(|price| {
-        Item::builder("Item", eur(price), [ana, bob, carol])
+        ExpenseItem::builder("Item", eur(price), [ana, bob, carol])
             .build()
             .unwrap()
     });

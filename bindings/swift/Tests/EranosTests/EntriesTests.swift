@@ -19,7 +19,7 @@ private struct Expenses {
             cost: .converted(Money(minorUnits: 5_000, currency: lei), rate: ExchangeRate(parsing: "0.2")),
             payers: .percentages([MemberPercentage(member: flat.ana, percentage: Percentage(basisPoints: 10_000))]),
             split: .itemised([
-                Item(
+                ExpenseItem(
                     name: "Fare",
                     unitPrice: Money(minorUnits: 2_500, currency: lei),
                     split: .parts([

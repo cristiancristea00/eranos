@@ -314,24 +314,24 @@ static int compareIds(void const *const left, void const *const right) { return 
 Members participants(EranosExpense const *const expense) {
     Members members = {.count = 0};
     EranosExpenseSplit *const split = eranosExpenseSplit(expense);
-    EranosItemList *const items = eranosExpenseSplitItems(split);
+    EranosExpenseItemList *const items = eranosExpenseSplitItems(split);
     if (nullptr == items) {
         EranosSplit *const whole = eranosExpenseSplitSplit(split);
         members = splitMembers(whole);
         eranosSplitDestroy(whole);
     } else {
-        for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
-            EranosItem *const item = eranosItemListGet(items, index);
-            EranosSplit *const itemSplit = eranosItemSplit(item);
+        for (size_t index = 0; eranosExpenseItemListLength(items) > index; ++index) {
+            EranosExpenseItem *const item = eranosExpenseItemListGet(items, index);
+            EranosSplit *const itemSplit = eranosExpenseItemSplit(item);
             EranosTextList *list = nullptr;
             must(eranosSplitParticipants(itemSplit, &list));
             addAll(&members, list);
             eranosTextListDestroy(list);
             eranosSplitDestroy(itemSplit);
-            eranosItemDestroy(item);
+            eranosExpenseItemDestroy(item);
         }
     }
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
     eranosExpenseSplitDestroy(split);
     qsort(members.ids, members.count, sizeof members.ids[0], compareIds);
     return members;

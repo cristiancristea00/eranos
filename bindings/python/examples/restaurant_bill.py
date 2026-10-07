@@ -18,7 +18,7 @@ from eranos import (
     Expense,
     ExpenseShares,
     ExpenseGroup,
-    Item,
+    ExpenseItem,
     ItemisedExpenseSplit,
     LocalCost,
     Member,
@@ -113,7 +113,7 @@ def euros(text: str) -> Money:
     return Money.parse(text, Currency('EUR'))
 
 
-def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[Item, ...]:
+def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[ExpenseItem, ...]:
     """
     List the lines of the receipt, each with the members who had it.
 
@@ -127,14 +127,16 @@ def receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> tuple[Item, ...]:
 
     """
     return (
-        Item(name='Ciorbă', unit_price=euros('8.00'), split=EqualSplit((ana,))),
-        Item(name='Sarmale', unit_price=euros('14.00'), split=EqualSplit((bob, carol)), quantity=2),
-        Item(name='Papanași', unit_price=euros('9.00'), split=PartsSplit((MemberParts(ana, Parts.parse('1')), MemberParts(carol, Parts.parse('2'))))),
-        Item(name='Lemonade', unit_price=euros('3.00'), split=EqualSplit((ana, bob, carol)), quantity=3),
+        ExpenseItem(name='Ciorbă', unit_price=euros('8.00'), split=EqualSplit((ana,))),
+        ExpenseItem(name='Sarmale', unit_price=euros('14.00'), split=EqualSplit((bob, carol)), quantity=2),
+        ExpenseItem(
+            name='Papanași', unit_price=euros('9.00'), split=PartsSplit((MemberParts(ana, Parts.parse('1')), MemberParts(carol, Parts.parse('2'))))
+        ),
+        ExpenseItem(name='Lemonade', unit_price=euros('3.00'), split=EqualSplit((ana, bob, carol)), quantity=3),
     )
 
 
-def line_total(item: Item) -> Money:
+def line_total(item: ExpenseItem) -> Money:
     """
     Work out what a line of the receipt costs: its unit price times its quantity.
 

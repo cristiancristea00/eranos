@@ -17,10 +17,10 @@ use std::task::{Context, Poll, Waker};
 use eranos::cooperative::block_on;
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, ExpenseGroup, Iban,
-    Item, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
-    PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy, Split,
-    TimeOfDay, Tip, TipDistribution, Transfer, Username,
+    CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, ExpenseGroup,
+    ExpenseItem, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
+    Money, Parts, PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy,
+    Split, TimeOfDay, Tip, TipDistribution, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -76,10 +76,10 @@ fn trip() -> Trip {
         eur("21.00"),
         bob,
         [
-            Item::builder("Bacalhau", eur("12.00"), [ana])
+            ExpenseItem::builder("Bacalhau", eur("12.00"), [ana])
                 .build()
                 .unwrap(),
-            Item::builder_with_split(
+            ExpenseItem::builder_with_split(
                 "Wine",
                 eur("4.50"),
                 Split::parts([

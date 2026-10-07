@@ -13,9 +13,9 @@ import eranos.EranosException;
 import eranos.Expense;
 import eranos.ExpenseGroup;
 import eranos.ExpenseId;
+import eranos.ExpenseItem;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Item;
 import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberParts;
@@ -95,19 +95,20 @@ public final class Main {
     }
 
     /** The receipt: every line with the members who had it. */
-    private static List<Item> receipt(MemberId ana, MemberId bob, MemberId carol)
+    private static List<ExpenseItem> receipt(MemberId ana, MemberId bob, MemberId carol)
             throws EranosException {
         return List.of(
-                new Item("Ciorbă", eur("8.00"), new Split.Equal(List.of(ana))),
-                new Item("Sarmale", eur("14.00"), new Split.Equal(List.of(bob, carol)), 2),
-                new Item(
+                new ExpenseItem("Ciorbă", eur("8.00"), new Split.Equal(List.of(ana))),
+                new ExpenseItem("Sarmale", eur("14.00"), new Split.Equal(List.of(bob, carol)), 2),
+                new ExpenseItem(
                         "Papanași",
                         eur("9.00"),
                         new Split.Parts(
                                 List.of(
                                         new MemberParts(ana, Parts.ofHundredths(100)),
                                         new MemberParts(carol, Parts.ofHundredths(200))))),
-                new Item("Lemonade", eur("3.00"), new Split.Equal(List.of(ana, bob, carol)), 3));
+                new ExpenseItem(
+                        "Lemonade", eur("3.00"), new Split.Equal(List.of(ana, bob, carol)), 3));
     }
 
     /** The dinner, its tip of 10 % shared by {@code distribution}. */
@@ -172,7 +173,7 @@ public final class Main {
 
             section("1. The receipt");
             List<LineRow> lines = new ArrayList<>();
-            for (Item item : receipt(ana, bob, carol)) {
+            for (ExpenseItem item : receipt(ana, bob, carol)) {
                 Money total =
                         new Money(
                                 item.unitPrice().minorUnits() * item.quantity(),

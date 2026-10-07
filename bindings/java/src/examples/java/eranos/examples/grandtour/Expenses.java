@@ -14,9 +14,9 @@ import eranos.EranosException;
 import eranos.Expense;
 import eranos.ExpenseGroup;
 import eranos.ExpenseId;
+import eranos.ExpenseItem;
 import eranos.ExpenseShares;
 import eranos.ExpenseSplit;
-import eranos.Item;
 import eranos.MemberAmount;
 import eranos.MemberId;
 import eranos.MemberParts;
@@ -101,7 +101,7 @@ final class Expenses {
         Optional<ExpenseSplit> split = group.expense(id).map(Expense::split);
         if (split.isPresent() && split.orElseThrow() instanceof ExpenseSplit.Itemised itemised) {
             List<ItemRow> rows = new ArrayList<>();
-            for (Item item : itemised.items()) {
+            for (ExpenseItem item : itemised.items()) {
                 Money total =
                         new Money(
                                 item.unitPrice().minorUnits() * item.quantity(),
@@ -119,15 +119,15 @@ final class Expenses {
     }
 
     /** The receipt of the fado night: every line with its own split. */
-    static List<Item> fadoItems(People people) throws EranosException {
+    static List<ExpenseItem> fadoItems(People people) throws EranosException {
         return List.of(
-                new Item(
+                new ExpenseItem(
                         "Vinho verde",
                         eur("12.00"),
                         new Split.Equal(List.of(people.ana(), people.bob(), people.dan())),
                         2),
-                new Item("Bacalhau", eur("18.00"), new Split.Equal(List.of(people.carol()))),
-                new Item(
+                new ExpenseItem("Bacalhau", eur("18.00"), new Split.Equal(List.of(people.carol()))),
+                new ExpenseItem(
                         "Custard tarts",
                         eur("1.50"),
                         new Split.Parts(
@@ -138,7 +138,7 @@ final class Expenses {
                                         new MemberParts(people.dan(), Parts.parse("1")),
                                         new MemberParts(people.eva(), Parts.parse("2")))),
                         6),
-                new Item("Juice", eur("3.00"), new Split.Equal(List.of(people.eva()))));
+                new ExpenseItem("Juice", eur("3.00"), new Split.Equal(List.of(people.eva()))));
     }
 
     /** The fado night, item by item, paid by Carol and Dan, with a 10 % tip. */

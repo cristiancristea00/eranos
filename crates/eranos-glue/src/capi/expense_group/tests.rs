@@ -636,7 +636,7 @@ fn calls_the_bridge_cannot_carry_are_refused() {
         ""
     );
     assert_ne!(
-        refusal(&CALLS.replace("items: &[Item]", "items: &[f64]")),
+        refusal(&CALLS.replace("items: &[ExpenseItem]", "items: &[f64]")),
         ""
     );
 }

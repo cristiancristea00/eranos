@@ -20,11 +20,11 @@ use eranos::error::{ExpenseError, ExpenseGroupError, TransferError};
 use eranos::expense::ExpenseBuilder;
 use eranos::{
     Balance, CalendarDate, Category, CategoryId, CategoryTotal, Cost, Currency, CurrencyRate,
-    Email, ExchangeRate, Expense, ExpenseGroup, ExpenseId, ExpenseShares, ExpenseSplit, Iban, Item,
-    Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, MemberShare, Money,
-    Parts, PaymentAccount, PaymentAccountDetails, PaymentAccountKind, Percentage, PhoneNumber,
-    SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup, Split, TimeOfDay, Tip,
-    TipDistribution, TipValue, Transfer, Username,
+    Email, ExchangeRate, Expense, ExpenseGroup, ExpenseId, ExpenseItem, ExpenseShares,
+    ExpenseSplit, Iban, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage,
+    MemberShare, Money, Parts, PaymentAccount, PaymentAccountDetails, PaymentAccountKind,
+    Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup, Split,
+    TimeOfDay, Tip, TipDistribution, TipValue, Transfer, Username,
 };
 use tabled::settings::formatting::AlignmentStrategy;
 use tabled::settings::object::Columns;
@@ -728,7 +728,7 @@ fn print_items(group: &ExpenseGroup, id: ExpenseId) {
 }
 
 /// The receipt of the fado night: every line with its own split.
-fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
+fn fado_items(people: People) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
     let People {
         ana,
         bob,
@@ -738,11 +738,11 @@ fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
         ..
     } = people;
     Ok(vec![
-        Item::builder("Vinho verde", eur("12.00")?, [ana, bob, dan])
+        ExpenseItem::builder("Vinho verde", eur("12.00")?, [ana, bob, dan])
             .quantity(2)
             .build()?,
-        Item::builder("Bacalhau", eur("18.00")?, [carol]).build()?,
-        Item::builder_with_split(
+        ExpenseItem::builder("Bacalhau", eur("18.00")?, [carol]).build()?,
+        ExpenseItem::builder_with_split(
             "Custard tarts",
             eur("1.50")?,
             Split::parts([
@@ -755,7 +755,7 @@ fn fado_items(people: People) -> Result<Vec<Item>, Box<dyn Error>> {
         )
         .quantity(6)
         .build()?,
-        Item::builder("Juice", eur("3.00")?, [eva]).build()?,
+        ExpenseItem::builder("Juice", eur("3.00")?, [eva]).build()?,
     ])
 }
 

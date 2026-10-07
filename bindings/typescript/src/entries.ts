@@ -190,7 +190,7 @@ export function generatedCost(cost: Cost): internal.Cost {
 }
 
 /** A line of an itemised bill: `quantity` units of `name` at `unitPrice`, which `split` divides. */
-export interface Item {
+export interface ExpenseItem {
     /** What was bought. */
     readonly name: string;
     /** The price of one unit, in the expense's currency. */
@@ -213,7 +213,7 @@ export type ExpenseSplit =
           /** Every line is divided by its own split; the lines add up to the amount. */
           readonly kind: 'itemised';
           /** The lines of the bill. */
-          readonly items: readonly Item[];
+          readonly items: readonly ExpenseItem[];
       };
 
 /**
@@ -250,7 +250,7 @@ export function generatedExpenseSplit(split: ExpenseSplit): internal.ExpenseSpli
         case 'itemised':
             return new internal.ExpenseSplit.Itemised({
                 items: split.items.map((item) =>
-                    internal.Item.create({
+                    internal.ExpenseItem.create({
                         name: item.name,
                         unitPrice: item.unitPrice.generated(),
                         split: generatedSplit(item.split),

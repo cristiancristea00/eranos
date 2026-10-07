@@ -683,6 +683,118 @@ pub mod ffi {
         }
     }
 
+    /// A line of an itemised bill.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosExpenseItem(pub(crate) eranos_bindings::ExpenseItem);
+
+    impl EranosExpenseItem {
+        /// An expense item of its required fields; every other field starts absent, empty, or at
+        /// its default.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn create(
+            name: &DiplomatStr,
+            unit_price: &EranosMoney,
+            split: &EranosSplit,
+        ) -> Result<Box<Self>, Box<EranosError>> {
+            Ok(Box::new(Self(eranos_bindings::ExpenseItem {
+                name: crate::text(name)?,
+                unit_price: unit_price.0.clone(),
+                split: split.0.clone(),
+                quantity: 1,
+            })))
+        }
+
+        /// What was bought.
+        pub fn name(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.name);
+        }
+
+        /// Sets what was bought.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.name = crate::text(name)?;
+            Ok(())
+        }
+
+        /// The price of one unit, in the expense's currency.
+        #[must_use]
+        pub fn unit_price(&self) -> Box<EranosMoney> {
+            Box::new(EranosMoney(self.0.unit_price.clone()))
+        }
+
+        /// Sets the price of one unit, in the expense's currency.
+        pub fn set_unit_price(&mut self, unit_price: &EranosMoney) {
+            self.0.unit_price.clone_from(&unit_price.0);
+        }
+
+        /// How the line total divides.
+        #[must_use]
+        pub fn split(&self) -> Box<EranosSplit> {
+            Box::new(EranosSplit(self.0.split.clone()))
+        }
+
+        /// Sets how the line total divides.
+        pub fn set_split(&mut self, split: &EranosSplit) {
+            self.0.split.clone_from(&split.0);
+        }
+
+        /// How many units, from 1.
+        #[must_use]
+        pub const fn quantity(&self) -> i32 {
+            self.0.quantity
+        }
+
+        /// Sets how many units, from 1.
+        pub const fn set_quantity(&mut self, quantity: i32) {
+            self.0.quantity = quantity;
+        }
+    }
+
+    /// A list of expense item records.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosExpenseItemList(pub(crate) Vec<eranos_bindings::ExpenseItem>);
+
+    impl EranosExpenseItemList {
+        /// An empty list.
+        #[must_use]
+        pub fn create() -> Box<Self> {
+            Box::new(Self(Vec::new()))
+        }
+
+        /// Adds a copy of `element` at the end.
+        pub fn push(&mut self, element: &EranosExpenseItem) {
+            self.0.push(element.0.clone());
+        }
+
+        /// How many records the list holds.
+        #[must_use]
+        pub const fn len(&self) -> usize {
+            self.0.len()
+        }
+
+        /// Whether the list holds no record.
+        #[must_use]
+        pub const fn is_empty(&self) -> bool {
+            self.0.is_empty()
+        }
+
+        /// A copy of the record at `index`, absent past the end.
+        #[must_use]
+        pub fn get(&self, index: usize) -> Option<Box<EranosExpenseItem>> {
+            self.0
+                .get(index)
+                .map(|element| Box::new(EranosExpenseItem(element.clone())))
+        }
+    }
+
     /// A list of expense records.
     #[diplomat::opaque]
     #[derive(Debug)]
@@ -751,7 +863,7 @@ pub mod ffi {
 
         /// Every item is divided by its own split.
         #[must_use]
-        pub fn create_itemised(items: &EranosItemList) -> Box<Self> {
+        pub fn create_itemised(items: &EranosExpenseItemList) -> Box<Self> {
             Box::new(Self(eranos_bindings::ExpenseSplit::Itemised {
                 items: items.0.clone(),
             }))
@@ -768,10 +880,10 @@ pub mod ffi {
 
         /// The lines of the bill. Present in the kind `Itemised` alone.
         #[must_use]
-        pub fn items(&self) -> Option<Box<EranosItemList>> {
+        pub fn items(&self) -> Option<Box<EranosExpenseItemList>> {
             match &self.0 {
                 eranos_bindings::ExpenseSplit::Itemised { items, .. } => {
-                    Some(Box::new(EranosItemList(items.clone())))
+                    Some(Box::new(EranosExpenseItemList(items.clone())))
                 }
                 eranos_bindings::ExpenseSplit::Whole { .. } => None,
             }
@@ -796,118 +908,6 @@ pub mod ffi {
         Whole,
         /// Every item is divided by its own split.
         Itemised,
-    }
-
-    /// A line of an itemised bill.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosItem(pub(crate) eranos_bindings::Item);
-
-    impl EranosItem {
-        /// An item of its required fields; every other field starts absent, empty, or at its
-        /// default.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(
-            name: &DiplomatStr,
-            unit_price: &EranosMoney,
-            split: &EranosSplit,
-        ) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::Item {
-                name: crate::text(name)?,
-                unit_price: unit_price.0.clone(),
-                split: split.0.clone(),
-                quantity: 1,
-            })))
-        }
-
-        /// What was bought.
-        pub fn name(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.name);
-        }
-
-        /// Sets what was bought.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.name = crate::text(name)?;
-            Ok(())
-        }
-
-        /// The price of one unit, in the expense's currency.
-        #[must_use]
-        pub fn unit_price(&self) -> Box<EranosMoney> {
-            Box::new(EranosMoney(self.0.unit_price.clone()))
-        }
-
-        /// Sets the price of one unit, in the expense's currency.
-        pub fn set_unit_price(&mut self, unit_price: &EranosMoney) {
-            self.0.unit_price.clone_from(&unit_price.0);
-        }
-
-        /// How the line total divides.
-        #[must_use]
-        pub fn split(&self) -> Box<EranosSplit> {
-            Box::new(EranosSplit(self.0.split.clone()))
-        }
-
-        /// Sets how the line total divides.
-        pub fn set_split(&mut self, split: &EranosSplit) {
-            self.0.split.clone_from(&split.0);
-        }
-
-        /// How many units, from 1.
-        #[must_use]
-        pub const fn quantity(&self) -> i32 {
-            self.0.quantity
-        }
-
-        /// Sets how many units, from 1.
-        pub const fn set_quantity(&mut self, quantity: i32) {
-            self.0.quantity = quantity;
-        }
-    }
-
-    /// A list of item records.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosItemList(pub(crate) Vec<eranos_bindings::Item>);
-
-    impl EranosItemList {
-        /// An empty list.
-        #[must_use]
-        pub fn create() -> Box<Self> {
-            Box::new(Self(Vec::new()))
-        }
-
-        /// Adds a copy of `element` at the end.
-        pub fn push(&mut self, element: &EranosItem) {
-            self.0.push(element.0.clone());
-        }
-
-        /// How many records the list holds.
-        #[must_use]
-        pub const fn len(&self) -> usize {
-            self.0.len()
-        }
-
-        /// Whether the list holds no record.
-        #[must_use]
-        pub const fn is_empty(&self) -> bool {
-            self.0.is_empty()
-        }
-
-        /// A copy of the record at `index`, absent past the end.
-        #[must_use]
-        pub fn get(&self, index: usize) -> Option<Box<EranosItem>> {
-            self.0
-                .get(index)
-                .map(|element| Box::new(EranosItem(element.clone())))
-        }
     }
 
     /// A person in the group.

@@ -178,7 +178,7 @@ impl FromSplit for Split {
 /// A line of an itemised bill.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Item {
+pub struct ExpenseItem {
     /// What was bought.
     pub name: String,
     /// The price of one unit, in the expense's currency.
@@ -189,9 +189,9 @@ pub struct Item {
     pub quantity: i32,
 }
 
-impl Item {
+impl ExpenseItem {
     /// The record of `item`.
-    pub(crate) fn from_library(item: &library::Item) -> Self {
+    pub(crate) fn from_library(item: &library::ExpenseItem) -> Self {
         Self {
             name: item.name().to_owned(),
             unit_price: Money::from_library(item.unit_price()),
@@ -209,9 +209,9 @@ impl Item {
     /// for a blank name, and
     /// [`ExpenseFailure::ZeroQuantity`](crate::ExpenseFailure::ZeroQuantity)
     /// for a quantity below 1.
-    pub(crate) fn to_library(&self) -> Result<library::Item, EranosError> {
+    pub(crate) fn to_library(&self) -> Result<library::ExpenseItem, EranosError> {
         let quantity = u32::try_from(self.quantity).map_err(|_| ExpenseError::ZeroQuantity)?;
-        Ok(library::Item::builder_with_split(
+        Ok(library::ExpenseItem::builder_with_split(
             self.name.clone(),
             self.unit_price.to_library()?,
             self.split.to_library()?,
@@ -233,7 +233,7 @@ pub enum ExpenseSplit {
     /// Every item is divided by its own split.
     Itemised {
         /// The lines of the bill.
-        items: Vec<Item>,
+        items: Vec<ExpenseItem>,
     },
 }
 
@@ -244,9 +244,9 @@ impl FromExpenseSplit for ExpenseSplit {
         }
     }
 
-    fn itemised(items: &[library::Item]) -> Self {
+    fn itemised(items: &[library::ExpenseItem]) -> Self {
         Self::Itemised {
-            items: items.iter().map(Item::from_library).collect(),
+            items: items.iter().map(ExpenseItem::from_library).collect(),
         }
     }
 }
@@ -476,8 +476,8 @@ impl Expense {
 }
 
 /// The library's items of `items`.
-fn items_of(items: &[Item]) -> Result<Vec<library::Item>, EranosError> {
-    items.iter().map(Item::to_library).collect()
+fn items_of(items: &[ExpenseItem]) -> Result<Vec<library::ExpenseItem>, EranosError> {
+    items.iter().map(ExpenseItem::to_library).collect()
 }
 
 /// A count the library holds as an unsigned integer, as the bindings carry

@@ -132,7 +132,7 @@ final class Conversions {
                     new ExpenseSplit.Whole(converted(whole.split()));
             case eranos.internal.ExpenseSplit.Itemised itemised ->
                     new ExpenseSplit.Itemised(
-                            itemised.items().stream().map(Item::converted).toList());
+                            itemised.items().stream().map(ExpenseItem::converted).toList());
         };
     }
 
@@ -148,7 +148,7 @@ final class Conversions {
                     new eranos.internal.ExpenseSplit.Whole(generated(whole.split()));
             case ExpenseSplit.Itemised itemised ->
                     new eranos.internal.ExpenseSplit.Itemised(
-                            itemised.items().stream().map(Item::generated).toList());
+                            itemised.items().stream().map(ExpenseItem::generated).toList());
         };
     }
 

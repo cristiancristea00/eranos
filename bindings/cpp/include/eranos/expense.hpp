@@ -36,13 +36,14 @@ enum class TipDistribution : std::uint8_t {
 };
 
 /// A line of an itemised bill: `quantity` units of `name` at `unit_price`, which `split` divides.
-struct Item final {
+struct ExpenseItem final {
     /// The record of its required fields; the others start absent, empty, or at their default.
     ///
     /// @param name What was bought.
     /// @param unitPrice The price of one unit, in the expense's currency.
     /// @param split How the line's total divides.
-    Item(std::string name, Money unitPrice, Split split) noexcept : name(std::move(name)), unitPrice(std::move(unitPrice)), split(std::move(split)) {}
+    ExpenseItem(std::string name, Money unitPrice, Split split) noexcept
+        : name(std::move(name)), unitPrice(std::move(unitPrice)), split(std::move(split)) {}
 
     /// What was bought.
     std::string name;
@@ -61,7 +62,7 @@ struct Item final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Item const &left, Item const &right) noexcept = default;
+    [[nodiscard]] friend bool operator==(ExpenseItem const &left, ExpenseItem const &right) noexcept = default;
 };
 
 /// A percentage of the expense's amount.
@@ -162,7 +163,7 @@ struct WholeExpenseSplit final {
 /// Every line is divided by its own split; the lines add up to the amount.
 struct ItemisedExpenseSplit final {
     /// The lines of the bill.
-    std::vector<Item> items;
+    std::vector<ExpenseItem> items;
 
     /// Whether every field of two alternatives is equal.
     ///
@@ -245,8 +246,8 @@ struct Expense final {
 
 namespace detail {
 
-[[nodiscard]] inline Item fromDetail(EranosItem const &value);
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosItem>, Error> toDetail(Item const &value);
+[[nodiscard]] inline ExpenseItem fromDetail(EranosExpenseItem const &value);
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosExpenseItem>, Error> toDetail(ExpenseItem const &value);
 [[nodiscard]] inline TipValue fromDetail(EranosTipValue const &value);
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(PercentageTipValue const &value);
 [[nodiscard]] inline std::unique_ptr<EranosTipValue> toDetail(FixedTipValue const &value);
@@ -264,7 +265,7 @@ namespace detail {
 [[nodiscard]] inline Expense fromDetail(EranosExpense const &value);
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosExpense>, Error> toDetail(Expense const &value);
 [[nodiscard]] inline std::vector<Expense> fromDetail(EranosExpenseList const &list);
-[[nodiscard]] inline std::vector<Item> fromDetail(EranosItemList const &list);
+[[nodiscard]] inline std::vector<ExpenseItem> fromDetail(EranosExpenseItemList const &list);
 [[nodiscard]] constexpr TipDistribution fromDetail(EranosTipDistribution const value) noexcept;
 [[nodiscard]] constexpr EranosTipDistribution toDetail(TipDistribution const value) noexcept;
 

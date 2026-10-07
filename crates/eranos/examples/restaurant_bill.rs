@@ -8,7 +8,7 @@
 use std::error::Error;
 
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseGroup, ExpenseShares, Item, Member, MemberId,
+    CalendarDate, Currency, Expense, ExpenseGroup, ExpenseItem, ExpenseShares, Member, MemberId,
     MemberParts, MemberShare, Money, Parts, Percentage, Split, Tip, TipDistribution,
 };
 use tabled::settings::object::Columns;
@@ -73,13 +73,17 @@ fn names(group: &ExpenseGroup, members: impl IntoIterator<Item = MemberId>) -> S
         .join(", ")
 }
 
-fn receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> Result<Vec<Item>, Box<dyn Error>> {
+fn receipt(
+    ana: MemberId,
+    bob: MemberId,
+    carol: MemberId,
+) -> Result<Vec<ExpenseItem>, Box<dyn Error>> {
     Ok(vec![
-        Item::builder("Ciorbă", eur("8.00")?, [ana]).build()?,
-        Item::builder("Sarmale", eur("14.00")?, [bob, carol])
+        ExpenseItem::builder("Ciorbă", eur("8.00")?, [ana]).build()?,
+        ExpenseItem::builder("Sarmale", eur("14.00")?, [bob, carol])
             .quantity(2)
             .build()?,
-        Item::builder_with_split(
+        ExpenseItem::builder_with_split(
             "Papanași",
             eur("9.00")?,
             Split::parts([
@@ -88,7 +92,7 @@ fn receipt(ana: MemberId, bob: MemberId, carol: MemberId) -> Result<Vec<Item>, B
             ]),
         )
         .build()?,
-        Item::builder("Lemonade", eur("3.00")?, [ana, bob, carol])
+        ExpenseItem::builder("Lemonade", eur("3.00")?, [ana, bob, carol])
             .quantity(3)
             .build()?,
     ])

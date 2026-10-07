@@ -46,7 +46,7 @@ pub enum TipDistribution {
 
 /// A line of a bill.
 #[mirrored]
-pub struct Item {
+pub struct ExpenseItem {
     /// What was bought.
     pub name: String,
     /// How many units.
@@ -78,7 +78,7 @@ pub enum Split {
     /// Items.
     Itemised {
         /// The items.
-        shares: Vec<Item>,
+        shares: Vec<ExpenseItem>,
     },
 }
 
@@ -92,7 +92,7 @@ pub enum Cost {
         /// The day.
         date: CalendarDate,
         /// The items.
-        items: Vec<Item>,
+        items: Vec<ExpenseItem>,
         /// The decimal places.
         places: i32,
         /// The rate.
@@ -105,7 +105,7 @@ pub enum Cost {
         /// The day.
         date: CalendarDate,
         /// The items.
-        items: Vec<Item>,
+        items: Vec<ExpenseItem>,
         /// The decimal places.
         places: i32,
         /// The rate.
@@ -165,7 +165,7 @@ pub struct Expense {
     /// The fallback.
     pub fallback: Option<TipDistribution>,
     /// The items.
-    pub items: Vec<Item>,
+    pub items: Vec<ExpenseItem>,
     /// The limit.
     pub limit: Option<i64>,
     /// The members.
@@ -244,7 +244,7 @@ trait ExpenseGroupCalls {
 
     /// Sets the members.
     #[write]
-    fn set_members(&self, members: &[String], items: &[Item]) -> Result<(), EranosError>;
+    fn set_members(&self, members: &[String], items: &[ExpenseItem]) -> Result<(), EranosError>;
 
     /// Sets the language, or clears it when there is none.
     #[write]

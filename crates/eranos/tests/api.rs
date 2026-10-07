@@ -38,8 +38,8 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::expense::Expense>();
         assert_send_and_sync::<eranos::expense::ExpenseBuilder>();
         assert_send_and_sync::<eranos::expense::ExpenseSplit>();
-        assert_send_and_sync::<eranos::expense::Item>();
-        assert_send_and_sync::<eranos::expense::ItemBuilder>();
+        assert_send_and_sync::<eranos::expense::ExpenseItem>();
+        assert_send_and_sync::<eranos::expense::ExpenseItemBuilder>();
         assert_send_and_sync::<eranos::expense::MemberAmount>();
         assert_send_and_sync::<eranos::expense::MemberParts>();
         assert_send_and_sync::<eranos::expense::MemberPercentage>();

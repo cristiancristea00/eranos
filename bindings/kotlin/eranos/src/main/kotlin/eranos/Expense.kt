@@ -215,10 +215,10 @@ public sealed interface ExpenseSplit {
 
     /** Every line is divided by its own split; the lines add up to the amount. */
     public class Itemised(
-        items: List<Item>,
+        items: List<ExpenseItem>,
     ) : ExpenseSplit {
         /** The lines of the bill. */
-        public val items: List<Item> = items.toList()
+        public val items: List<ExpenseItem> = items.toList()
 
         /** Whether [other] is of the same class, with the same [items]. */
         override fun equals(other: Any?): Boolean = other is Itemised && items == other.items
@@ -247,7 +247,7 @@ internal fun eranos.internal.ExpenseSplit.converted(): ExpenseSplit =
     }
 
 /** A line of an itemised bill: [quantity] units of [name] at [unitPrice], which [split] divides. */
-public class Item(
+public class ExpenseItem(
     /** What was bought. */
     public val name: String,
     /** The price of one unit, in the expense's currency. */
@@ -258,22 +258,22 @@ public class Item(
     public val quantity: Int = 1,
 ) {
     /** The line as the generated code holds it. */
-    internal val generated: eranos.internal.Item
-        get() = eranos.internal.Item(name, unitPrice.generated, split.generated, quantity)
+    internal val generated: eranos.internal.ExpenseItem
+        get() = eranos.internal.ExpenseItem(name, unitPrice.generated, split.generated, quantity)
 
     /** Whether [other] is of the same class, with the same [name], [unitPrice], [split], and [quantity]. */
     override fun equals(other: Any?): Boolean =
-        other is Item && name == other.name && unitPrice == other.unitPrice && split == other.split && quantity == other.quantity
+        other is ExpenseItem && name == other.name && unitPrice == other.unitPrice && split == other.split && quantity == other.quantity
 
     /** A hash of what [equals] compares. */
     override fun hashCode(): Int = hashOf(name, unitPrice, split, quantity)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Item(name=$name, unitPrice=$unitPrice, split=$split, quantity=$quantity)"
+    override fun toString(): String = "ExpenseItem(name=$name, unitPrice=$unitPrice, split=$split, quantity=$quantity)"
 }
 
 /** The line the generated code holds as [this]. */
-internal fun eranos.internal.Item.converted(): Item = Item(name, unitPrice.converted(), split.converted(), quantity)
+internal fun eranos.internal.ExpenseItem.converted(): ExpenseItem = ExpenseItem(name, unitPrice.converted(), split.converted(), quantity)
 
 /** A tip on top of an expense's amount, which its payers cover: [value], shared by [distribution]. */
 public class Tip(

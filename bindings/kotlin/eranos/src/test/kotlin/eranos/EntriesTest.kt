@@ -23,7 +23,7 @@ class EntriesTest {
                 split =
                     ExpenseSplit.Itemised(
                         listOf(
-                            Item(
+                            ExpenseItem(
                                 name = "Fare",
                                 unitPrice = Money(2_500, lei),
                                 split =
@@ -137,8 +137,8 @@ class EntriesTest {
         val itemised = expenses.taxi.split as ExpenseSplit.Itemised
         assertValue(itemised, ExpenseSplit.Itemised(itemised.items), ExpenseSplit.Itemised(emptyList()))
         val item = itemised.items[0]
-        assertValue(item, Item(item.name, item.unitPrice, item.split, 2), Item(item.name, item.unitPrice, item.split))
-        assertEquals(1, Item("Bread", flat.euros(1), equal).quantity)
+        assertValue(item, ExpenseItem(item.name, item.unitPrice, item.split, 2), ExpenseItem(item.name, item.unitPrice, item.split))
+        assertEquals(1, ExpenseItem("Bread", flat.euros(1), equal).quantity)
         assertValue(
             present(expenses.taxi.tip),
             Tip(TipValue.Fixed(Money(500, Currency.of("RON"))), TipDistribution.EQUAL),

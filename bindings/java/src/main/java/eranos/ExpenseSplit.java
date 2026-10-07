@@ -26,7 +26,7 @@ public sealed interface ExpenseSplit {
      *
      * @param items the lines of the bill
      */
-    record Itemised(List<Item> items) implements ExpenseSplit {
+    record Itemised(List<ExpenseItem> items) implements ExpenseSplit {
         /**
          * The bill of {@code items}, which it copies.
          *

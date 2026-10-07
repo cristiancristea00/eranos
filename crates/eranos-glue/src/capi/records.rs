@@ -37,7 +37,7 @@ struct FieldDefault {
 /// record is created without them: a line of a bill is of one unit.
 const DEFAULTS: [FieldDefault; 1] = [FieldDefault {
     field: "quantity",
-    record: "Item",
+    record: "ExpenseItem",
     value: 1,
 }];
 

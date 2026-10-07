@@ -75,8 +75,8 @@ fn every_type_crosses_by_its_kind() {
     );
     assert_eq!(crossing("Vec<String>").unwrap(), Crossing::TextList);
     assert_eq!(
-        crossing("Vec<Item>").unwrap(),
-        Crossing::List(format_ident!("Item"))
+        crossing("Vec<ExpenseItem>").unwrap(),
+        Crossing::List(format_ident!("ExpenseItem"))
     );
     for refused in [
         "f64",
@@ -113,7 +113,11 @@ fn an_option_is_optional_but_a_list_never_is() {
             optional: false
         }
     );
-    for refused in ["Option<Vec<String>>", "Option<Vec<Item>>", "Option<f64>"] {
+    for refused in [
+        "Option<Vec<String>>",
+        "Option<Vec<ExpenseItem>>",
+        "Option<f64>",
+    ] {
         assert!(Value::of(&written(refused), &core).is_err(), "{refused}");
     }
 }
@@ -136,7 +140,7 @@ fn every_crossing_has_its_parameter_and_its_owned_value() {
             parameter: quote!(value: i32),
         },
         Case {
-            crossing: Crossing::List(format_ident!("Item")),
+            crossing: Crossing::List(format_ident!("ExpenseItem")),
             owned: quote!(value.0.clone()),
             parameter: quote!(value: &EranosItemList),
         },
@@ -238,8 +242,8 @@ fn a_call_takes_records_by_reference_and_values_by_value() {
         Crossing::TextList
     );
     assert_eq!(
-        crossing(Kind::List(written("Item"))).unwrap(),
-        Crossing::List(format_ident!("Item"))
+        crossing(Kind::List(written("ExpenseItem"))).unwrap(),
+        Crossing::List(format_ident!("ExpenseItem"))
     );
     assert_eq!(
         crossing(Kind::Value(written("TipDistribution"))).unwrap(),
@@ -257,7 +261,7 @@ fn a_call_takes_records_by_reference_and_values_by_value() {
         Kind::List(written("f64")),
         Kind::Value(written("Expense")),
         Kind::Value(written("Vec<String>")),
-        Kind::Value(written("Vec<Item>")),
+        Kind::Value(written("Vec<ExpenseItem>")),
         Kind::Value(written("f64")),
     ] {
         assert!(crossing(refused).is_err());
@@ -295,7 +299,7 @@ fn the_plan_holds_what_the_calls_reach() {
                     taken: false,
                 },
                 Reached {
-                    name: "Item",
+                    name: "ExpenseItem",
                     taken: true,
                 },
                 Reached {
@@ -321,7 +325,7 @@ fn the_plan_holds_what_the_calls_reach() {
                     taken: true,
                 },
                 Reached {
-                    name: "Item",
+                    name: "ExpenseItem",
                     taken: true,
                 },
                 Reached {
@@ -357,7 +361,7 @@ fn a_core_without_the_templates_records_gives_no_plan() {
         let core = Core::parse(&[records, CALLS.to_owned()]).unwrap();
         assert!(Plan::of(&core).is_err());
     }
-    let refused = CALLS.replace("items: &[Item]", "items: &[f64]");
+    let refused = CALLS.replace("items: &[ExpenseItem]", "items: &[f64]");
     let core = Core::parse(&[RECORDS.to_owned(), refused]).unwrap();
     assert!(Plan::of(&core).is_err());
 }

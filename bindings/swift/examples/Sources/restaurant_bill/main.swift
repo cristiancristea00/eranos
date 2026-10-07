@@ -48,16 +48,16 @@ func expect(_ expected: String, _ found: Money?) throws(EranosError) {
 }
 
 /// The receipt: every line with the members who had it.
-func receipt(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(EranosError) -> [Item] {
+func receipt(_ ana: Member.ID, _ bob: Member.ID, _ carol: Member.ID) throws(EranosError) -> [ExpenseItem] {
     [
-        Item(name: "Ciorbă", unitPrice: try eur("8.00"), split: .equal([ana])),
-        Item(name: "Sarmale", unitPrice: try eur("14.00"), split: .equal([bob, carol]), quantity: 2),
-        Item(
+        ExpenseItem(name: "Ciorbă", unitPrice: try eur("8.00"), split: .equal([ana])),
+        ExpenseItem(name: "Sarmale", unitPrice: try eur("14.00"), split: .equal([bob, carol]), quantity: 2),
+        ExpenseItem(
             name: "Papanași",
             unitPrice: try eur("9.00"),
             split: .parts([MemberParts(member: ana, parts: try Parts(hundredths: 100)), MemberParts(member: carol, parts: try Parts(hundredths: 200))])
         ),
-        Item(name: "Lemonade", unitPrice: try eur("3.00"), split: .equal([ana, bob, carol]), quantity: 3)
+        ExpenseItem(name: "Lemonade", unitPrice: try eur("3.00"), split: .equal([ana, bob, carol]), quantity: 3)
     ]
 }
 

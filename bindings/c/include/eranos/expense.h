@@ -7,11 +7,11 @@
 #include "EranosCost.h"
 #include "EranosCostKind.h"
 #include "EranosExpense.h"
+#include "EranosExpenseItem.h"
+#include "EranosExpenseItemList.h"
 #include "EranosExpenseList.h"
 #include "EranosExpenseSplit.h"
 #include "EranosExpenseSplitKind.h"
-#include "EranosItem.h"
-#include "EranosItemList.h"
 #include "EranosTip.h"
 #include "EranosTipDistribution.h"
 #include "EranosTipValue.h"
@@ -423,7 +423,7 @@ typedef struct EranosExpenseSplit EranosExpenseSplit;
 ///
 /// @param items The lines of the bill
 /// @return The expense split, which the caller destroys
-[[nodiscard]] static inline EranosExpenseSplit *eranosExpenseSplitCreateItemised(EranosItemList const *const items) {
+[[nodiscard]] static inline EranosExpenseSplit *eranosExpenseSplitCreateItemised(EranosExpenseItemList const *const items) {
     return EranosExpenseSplit_create_itemised(items);
 }
 
@@ -439,7 +439,7 @@ typedef struct EranosExpenseSplit EranosExpenseSplit;
 ///
 /// @param expenseSplit The expense split
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosItemList *eranosExpenseSplitItems(EranosExpenseSplit const *const expenseSplit) {
+[[nodiscard]] static inline EranosExpenseItemList *eranosExpenseSplitItems(EranosExpenseSplit const *const expenseSplit) {
     return EranosExpenseSplit_items(expenseSplit);
 }
 
@@ -461,7 +461,7 @@ static inline void eranosExpenseSplitDestroy(EranosExpenseSplit *const expenseSp
 }
 
 /// A line of an itemised bill: `quantity` units of `name` at `unit_price`, which `split` divides.
-typedef struct EranosItem EranosItem;
+typedef struct EranosExpenseItem EranosExpenseItem;
 
 /// A new item of its required fields; every other field starts absent, empty, or at its default.
 ///
@@ -471,9 +471,9 @@ typedef struct EranosItem EranosItem;
 /// @param item Receives the item on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosItemCreate(char const *const name, EranosMoney const *const unitPrice, EranosSplit const *const split,
-                                                          EranosItem **const item) {
-    EranosItem_create_result const result = EranosItem_create(eranosDetailView(name), unitPrice, split);
+[[nodiscard]] static inline EranosError *eranosExpenseItemCreate(char const *const name, EranosMoney const *const unitPrice,
+                                                                 EranosSplit const *const split, EranosExpenseItem **const item) {
+    EranosExpenseItem_create_result const result = EranosExpenseItem_create(eranosDetailView(name), unitPrice, split);
     *item = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -482,9 +482,9 @@ typedef struct EranosItem EranosItem;
 ///
 /// @param item The item
 /// @param name Receives what was bought, replacing what it held
-static inline void eranosItemName(EranosItem const *const item, EranosText *const name) {
+static inline void eranosExpenseItemName(EranosExpenseItem const *const item, EranosText *const name) {
     eranosDetailClear(name);
-    EranosItem_name(item, name);
+    EranosExpenseItem_name(item, name);
     eranosDetailFinish(name);
 }
 
@@ -494,8 +494,8 @@ static inline void eranosItemName(EranosItem const *const item, EranosText *cons
 /// @param name What was bought, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosItemSetName(EranosItem *const item, char const *const name) {
-    EranosItem_set_name_result const result = EranosItem_set_name(item, eranosDetailView(name));
+[[nodiscard]] static inline EranosError *eranosExpenseItemSetName(EranosExpenseItem *const item, char const *const name) {
+    EranosExpenseItem_set_name_result const result = EranosExpenseItem_set_name(item, eranosDetailView(name));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -503,88 +503,100 @@ static inline void eranosItemName(EranosItem const *const item, EranosText *cons
 ///
 /// @param item The item
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosMoney *eranosItemUnitPrice(EranosItem const *const item) { return EranosItem_unit_price(item); }
+[[nodiscard]] static inline EranosMoney *eranosExpenseItemUnitPrice(EranosExpenseItem const *const item) {
+    return EranosExpenseItem_unit_price(item);
+}
 
 /// Sets the price of one unit, in the expense's currency.
 ///
 /// @param item The item
 /// @param unitPrice The price of one unit, in the expense's currency
-static inline void eranosItemSetUnitPrice(EranosItem *const item, EranosMoney const *const unitPrice) { EranosItem_set_unit_price(item, unitPrice); }
+static inline void eranosExpenseItemSetUnitPrice(EranosExpenseItem *const item, EranosMoney const *const unitPrice) {
+    EranosExpenseItem_set_unit_price(item, unitPrice);
+}
 
 /// How the line's total divides.
 ///
 /// @param item The item
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosSplit *eranosItemSplit(EranosItem const *const item) { return EranosItem_split(item); }
+[[nodiscard]] static inline EranosSplit *eranosExpenseItemSplit(EranosExpenseItem const *const item) { return EranosExpenseItem_split(item); }
 
 /// Sets how the line's total divides.
 ///
 /// @param item The item
 /// @param split How the line's total divides
-static inline void eranosItemSetSplit(EranosItem *const item, EranosSplit const *const split) { EranosItem_set_split(item, split); }
+static inline void eranosExpenseItemSetSplit(EranosExpenseItem *const item, EranosSplit const *const split) {
+    EranosExpenseItem_set_split(item, split);
+}
 
 /// How many units, from 1.
 ///
 /// @param item The item
 /// @return How many units, from 1
-[[nodiscard]] static inline int32_t eranosItemQuantity(EranosItem const *const item) { return EranosItem_quantity(item); }
+[[nodiscard]] static inline int32_t eranosExpenseItemQuantity(EranosExpenseItem const *const item) { return EranosExpenseItem_quantity(item); }
 
 /// Sets how many units, from 1.
 ///
 /// @param item The item
 /// @param quantity How many units, from 1
-static inline void eranosItemSetQuantity(EranosItem *const item, int32_t const quantity) { EranosItem_set_quantity(item, quantity); }
+static inline void eranosExpenseItemSetQuantity(EranosExpenseItem *const item, int32_t const quantity) {
+    EranosExpenseItem_set_quantity(item, quantity);
+}
 
 /// Destroys @p item; destroying nullptr does nothing, as free() does.
 ///
 /// @param item The item, which no call uses after this one, or nullptr
-static inline void eranosItemDestroy(EranosItem *const item) {
+static inline void eranosExpenseItemDestroy(EranosExpenseItem *const item) {
     if (nullptr != item) {
-        EranosItem_destroy(item);
+        EranosExpenseItem_destroy(item);
     }
 }
 
 /// A list of item records.
-typedef struct EranosItemList EranosItemList;
+typedef struct EranosExpenseItemList EranosExpenseItemList;
 
 /// An empty list.
 ///
 /// @return The item list, which the caller destroys
-[[nodiscard]] static inline EranosItemList *eranosItemListCreate(void) { return EranosItemList_create(); }
+[[nodiscard]] static inline EranosExpenseItemList *eranosExpenseItemListCreate(void) { return EranosExpenseItemList_create(); }
 
 /// Adds a copy of `element` at the end.
 ///
 /// @param list The item list
 /// @param element The element
-static inline void eranosItemListPush(EranosItemList *const list, EranosItem const *const element) { EranosItemList_push(list, element); }
+static inline void eranosExpenseItemListPush(EranosExpenseItemList *const list, EranosExpenseItem const *const element) {
+    EranosExpenseItemList_push(list, element);
+}
 
 /// How many records the list holds.
 ///
 /// @param list The item list
 /// @return The result
-[[nodiscard]] static inline size_t eranosItemListLength(EranosItemList const *const list) { return EranosItemList_len(list); }
+[[nodiscard]] static inline size_t eranosExpenseItemListLength(EranosExpenseItemList const *const list) { return EranosExpenseItemList_len(list); }
 
 /// Whether the list holds no record.
 ///
 /// @param list The item list
 /// @return Whether it holds none
-[[nodiscard]] static inline bool eranosItemListIsEmpty(EranosItemList const *const list) { return EranosItemList_is_empty(list); }
+[[nodiscard]] static inline bool eranosExpenseItemListIsEmpty(EranosExpenseItemList const *const list) {
+    return EranosExpenseItemList_is_empty(list);
+}
 
 /// A copy of the record at `index`, absent past the end.
 ///
 /// @param list The item list
 /// @param index The index
 /// @return A copy of the element at @p index, which the caller destroys, or nullptr past the end
-[[nodiscard]] static inline EranosItem *eranosItemListGet(EranosItemList const *const list, size_t const index) {
-    return EranosItemList_get(list, index);
+[[nodiscard]] static inline EranosExpenseItem *eranosExpenseItemListGet(EranosExpenseItemList const *const list, size_t const index) {
+    return EranosExpenseItemList_get(list, index);
 }
 
 /// Destroys @p list; destroying nullptr does nothing, as free() does.
 ///
 /// @param list The item list, which no call uses after this one, or nullptr
-static inline void eranosItemListDestroy(EranosItemList *const list) {
+static inline void eranosExpenseItemListDestroy(EranosExpenseItemList *const list) {
     if (nullptr != list) {
-        EranosItemList_destroy(list);
+        EranosExpenseItemList_destroy(list);
     }
 }
 

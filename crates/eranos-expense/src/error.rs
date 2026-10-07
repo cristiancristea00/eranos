@@ -3,7 +3,7 @@
 use eranos_core::MemberId;
 use eranos_money::{Currency, Money};
 
-/// An [`Expense`](crate::Expense) or [`Item`](crate::Item) whose parts do not
+/// An [`Expense`](crate::Expense) or [`ExpenseItem`](crate::ExpenseItem) whose parts do not
 /// fit together.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]

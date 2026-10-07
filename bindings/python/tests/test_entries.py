@@ -22,7 +22,7 @@ from eranos import (
     Iban,
     IbanPaymentAccountDetails,
     IdError,
-    Item,
+    ExpenseItem,
     ItemisedExpenseSplit,
     LocalCost,
     Member,
@@ -65,8 +65,8 @@ def test_an_expense_reads_back_as_it_was_added(flat: Flat) -> None:
     )
     lunch_id = flat.group.add_expense(lunch)
     assert flat.group.expense(lunch_id) == copy.replace(lunch, id=lunch_id)
-    pizza = Item(name='Pizza', unit_price=flat.euros(1200), split=EqualSplit((flat.ana, flat.bob)), quantity=2)
-    wine = Item(name='Wine', unit_price=flat.euros(600), split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)))
+    pizza = ExpenseItem(name='Pizza', unit_price=flat.euros(1200), split=EqualSplit((flat.ana, flat.bob)), quantity=2)
+    wine = ExpenseItem(name='Wine', unit_price=flat.euros(600), split=PercentagesSplit((MemberPercentage(flat.ana, Percentage(10000)),)))
     receipt = Expense(
         name='Receipt',
         cost=LocalCost(flat.euros(3000)),

@@ -319,7 +319,7 @@ pub fn expense_members(expense: &Expense) -> Result<Vec<String>, EranosError> {
         ExpenseSplit::Itemised { items } => expenses::ExpenseSplit::Itemised(
             items
                 .iter()
-                .map(crate::expense::Item::to_library)
+                .map(crate::expense::ExpenseItem::to_library)
                 .collect::<Result<Vec<_>, EranosError>>()?,
         ),
         ExpenseSplit::Whole { split } => expenses::ExpenseSplit::Whole(split.to_library()?),

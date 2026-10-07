@@ -165,7 +165,7 @@ public enum ExpenseSplit: Hashable, Sendable {
     case whole(Split)
 
     /// Every line is divided by its own split; the lines add up to the amount.
-    case itemised([Item])
+    case itemised([ExpenseItem])
 
     var generated: EranosGenerated.ExpenseSplit {
         switch self {
@@ -181,13 +181,13 @@ public enum ExpenseSplit: Hashable, Sendable {
         case let .whole(split):
             self = .whole(Split(split))
         case let .itemised(items):
-            self = .itemised(items.map(Item.init))
+            self = .itemised(items.map(ExpenseItem.init))
         }
     }
 }
 
 /// A line of an itemised bill.
-public struct Item: Hashable, Sendable {
+public struct ExpenseItem: Hashable, Sendable {
     /// What was bought.
     public var name: String
 
@@ -200,7 +200,7 @@ public struct Item: Hashable, Sendable {
     /// How many units, from 1.
     public var quantity: Int32
 
-    var generated: EranosGenerated.Item {
+    var generated: EranosGenerated.ExpenseItem {
         .init(name: name, unitPrice: unitPrice.generated, split: split.generated, quantity: quantity)
     }
 
@@ -212,7 +212,7 @@ public struct Item: Hashable, Sendable {
         self.quantity = quantity
     }
 
-    init(_ item: EranosGenerated.Item) {
+    init(_ item: EranosGenerated.ExpenseItem) {
         self.init(name: item.name, unitPrice: Money(item.unitPrice), split: Split(item.split), quantity: item.quantity)
     }
 }

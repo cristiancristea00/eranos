@@ -42,8 +42,8 @@ fn dinner() -> ExpenseBuilder {
 }
 
 /// A line of `minor_units` shared by Ana.
-fn item(name: &str, minor_units: i64) -> Item {
-    Item::builder(name, euros(minor_units), [ANA])
+fn item(name: &str, minor_units: i64) -> ExpenseItem {
+    ExpenseItem::builder(name, euros(minor_units), [ANA])
         .build()
         .unwrap()
 }
@@ -74,7 +74,7 @@ fn full_expense() -> Expense {
 /// The dinner as a receipt paid by Bob: a pizza for Ana and two glasses of
 /// wine for Ana and Carol.
 fn itemised_expense() -> Expense {
-    let wine = Item::builder("Wine", euros(2_000), [ANA, CAROL])
+    let wine = ExpenseItem::builder("Wine", euros(2_000), [ANA, CAROL])
         .quantity(2)
         .build()
         .unwrap();
@@ -334,7 +334,7 @@ fn items_must_add_up_to_the_amount() {
 #[test]
 fn an_item_in_another_currency_is_rejected() {
     // A dollar line on a euro receipt.
-    let dollars = Item::builder(
+    let dollars = ExpenseItem::builder(
         "Pizza",
         Money::from_minor_units(9_000, Currency::USD),
         [ANA],
@@ -790,7 +790,7 @@ fn expenses_round_trip_through_serde() {
 #[derive(Debug, PartialEq, Eq)]
 enum ConvertedExpenseSplit {
     Whole(Split),
-    Itemised(Vec<Item>),
+    Itemised(Vec<ExpenseItem>),
 }
 
 impl FromExpenseSplit for ConvertedExpenseSplit {
@@ -798,7 +798,7 @@ impl FromExpenseSplit for ConvertedExpenseSplit {
         Self::Whole(split.clone())
     }
 
-    fn itemised(items: &[Item]) -> Self {
+    fn itemised(items: &[ExpenseItem]) -> Self {
         Self::Itemised(items.to_vec())
     }
 }
@@ -812,7 +812,7 @@ fn an_expense_split_converts_through_the_method_of_its_variant() {
         ConvertedExpenseSplit::from_expense_split(&ExpenseSplit::Whole(split.clone())),
         ConvertedExpenseSplit::Whole(split)
     );
-    let wine = Item::builder("Wine", euros(2_400), [ANA, BOB])
+    let wine = ExpenseItem::builder("Wine", euros(2_400), [ANA, BOB])
         .build()
         .unwrap();
     assert_eq!(

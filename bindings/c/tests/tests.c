@@ -722,34 +722,34 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
     EranosText *const text = eranosTextCreate();
     EranosMoney *const twelve = euros(1'200);
     EranosSplit *const both = equally("ana", "bob");
-    EranosItem *item = nullptr;
-    checkSucceeded(check, eranosItemCreate("Pizza", twelve, both, &item), "an item");
-    checkThat(check, 1 == eranosItemQuantity(item), "one unit, by default");
-    eranosItemSetQuantity(item, 2);
-    checkSucceeded(check, eranosItemSetName(item, "Pizzas"), "a name is set");
+    EranosExpenseItem *item = nullptr;
+    checkSucceeded(check, eranosExpenseItemCreate("Pizza", twelve, both, &item), "an item");
+    checkThat(check, 1 == eranosExpenseItemQuantity(item), "one unit, by default");
+    eranosExpenseItemSetQuantity(item, 2);
+    checkSucceeded(check, eranosExpenseItemSetName(item, "Pizzas"), "a name is set");
     EranosSplit *const ana = equally("ana", nullptr);
-    eranosItemSetSplit(item, ana);
+    eranosExpenseItemSetSplit(item, ana);
     EranosMoney *const eleven = euros(1'100);
-    eranosItemSetUnitPrice(item, eleven);
-    eranosItemName(item, text);
-    EranosSplit *const itemSplit = eranosItemSplit(item);
+    eranosExpenseItemSetUnitPrice(item, eleven);
+    eranosExpenseItemName(item, text);
+    EranosSplit *const itemSplit = eranosExpenseItemSplit(item);
     checkThat(check,
-              isText(text, "Pizzas") && 2 == eranosItemQuantity(item) && isAmount(eranosItemUnitPrice(item), 1'100, "EUR") &&
+              isText(text, "Pizzas") && 2 == eranosExpenseItemQuantity(item) && isAmount(eranosExpenseItemUnitPrice(item), 1'100, "EUR") &&
                   listsMembers(eranosSplitMembers(itemSplit), "ana", nullptr),
               "the item as set");
-    checkThat(check, isKind(eranosItemSetName(item, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
-    EranosItem *noItem = nullptr;
-    checkThat(check, isKind(eranosItemCreate("\xff", twelve, both, &noItem), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == noItem,
+    checkThat(check, isKind(eranosExpenseItemSetName(item, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
+    EranosExpenseItem *noItem = nullptr;
+    checkThat(check, isKind(eranosExpenseItemCreate("\xff", twelve, both, &noItem), ERANOS_ERROR_KIND_INVALID_TEXT) && nullptr == noItem,
               "an item's name is text");
-    EranosItemList *const items = eranosItemListCreate();
-    checkThat(check, eranosItemListIsEmpty(items), "an empty list of items");
-    eranosItemListPush(items, item);
-    EranosItem *const firstItem = eranosItemListGet(items, 0);
-    checkThat(check, 1 == eranosItemListLength(items) && nullptr != firstItem && nullptr == eranosItemListGet(items, 1), "one item");
-    eranosItemDestroy(firstItem);
+    EranosExpenseItemList *const items = eranosExpenseItemListCreate();
+    checkThat(check, eranosExpenseItemListIsEmpty(items), "an empty list of items");
+    eranosExpenseItemListPush(items, item);
+    EranosExpenseItem *const firstItem = eranosExpenseItemListGet(items, 0);
+    checkThat(check, 1 == eranosExpenseItemListLength(items) && nullptr != firstItem && nullptr == eranosExpenseItemListGet(items, 1), "one item");
+    eranosExpenseItemDestroy(firstItem);
     EranosExpenseSplit *const itemised = eranosExpenseSplitCreateItemised(items);
     EranosExpenseSplit *const whole = eranosExpenseSplitCreateWhole(both);
-    EranosItemList *const readItems = eranosExpenseSplitItems(itemised);
+    EranosExpenseItemList *const readItems = eranosExpenseSplitItems(itemised);
     EranosSplit *const readSplit = eranosExpenseSplitSplit(whole);
     checkThat(check,
               ERANOS_EXPENSE_SPLIT_KIND_ITEMISED == eranosExpenseSplitKind(itemised) && nullptr != readItems &&
@@ -799,14 +799,14 @@ static void itemsTipsAndCostsReadBackAsTheyWereMade(Check *const check) {
     eranosTipValueDestroy(fixed);
     eranosMoneyDestroy(three);
     eranosSplitDestroy(readSplit);
-    eranosItemListDestroy(readItems);
+    eranosExpenseItemListDestroy(readItems);
     eranosExpenseSplitDestroy(whole);
     eranosExpenseSplitDestroy(itemised);
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
     eranosSplitDestroy(itemSplit);
     eranosMoneyDestroy(eleven);
     eranosSplitDestroy(ana);
-    eranosItemDestroy(item);
+    eranosExpenseItemDestroy(item);
     eranosSplitDestroy(both);
     eranosMoneyDestroy(twelve);
     eranosTextDestroy(text);
@@ -1105,8 +1105,8 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosExpenseDestroy(nullptr);
     eranosExpenseListDestroy(nullptr);
     eranosExpenseSplitDestroy(nullptr);
-    eranosItemDestroy(nullptr);
-    eranosItemListDestroy(nullptr);
+    eranosExpenseItemDestroy(nullptr);
+    eranosExpenseItemListDestroy(nullptr);
     eranosTipDestroy(nullptr);
     eranosTipValueDestroy(nullptr);
     eranosCancellationDestroy(nullptr);

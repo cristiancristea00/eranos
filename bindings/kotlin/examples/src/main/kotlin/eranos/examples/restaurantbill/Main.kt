@@ -9,9 +9,9 @@ import eranos.Currency
 import eranos.EranosException
 import eranos.Expense
 import eranos.ExpenseGroup
+import eranos.ExpenseItem
 import eranos.ExpenseShares
 import eranos.ExpenseSplit
-import eranos.Item
 import eranos.Member
 import eranos.MemberId
 import eranos.MemberParts
@@ -67,16 +67,16 @@ private fun receipt(
     ana: MemberId,
     bob: MemberId,
     carol: MemberId,
-): List<Item> =
+): List<ExpenseItem> =
     listOf(
-        Item("Ciorbă", eur("8.00"), Split.Equal(listOf(ana))),
-        Item("Sarmale", eur("14.00"), Split.Equal(listOf(bob, carol)), quantity = 2),
-        Item(
+        ExpenseItem("Ciorbă", eur("8.00"), Split.Equal(listOf(ana))),
+        ExpenseItem("Sarmale", eur("14.00"), Split.Equal(listOf(bob, carol)), quantity = 2),
+        ExpenseItem(
             "Papanași",
             eur("9.00"),
             Split.Parts(listOf(MemberParts(ana, Parts.ofHundredths(hundredths = 100)), MemberParts(carol, Parts.ofHundredths(hundredths = 200)))),
         ),
-        Item("Lemonade", eur("3.00"), Split.Equal(listOf(ana, bob, carol)), quantity = 3),
+        ExpenseItem("Lemonade", eur("3.00"), Split.Equal(listOf(ana, bob, carol)), quantity = 3),
     )
 
 /**

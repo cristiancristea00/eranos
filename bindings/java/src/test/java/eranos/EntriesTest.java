@@ -33,7 +33,7 @@ class EntriesTest {
                                                 flat.ana, Percentage.ofBasisPoints(10_000)))),
                         new ExpenseSplit.Itemised(
                                 List.of(
-                                        new Item(
+                                        new ExpenseItem(
                                                 "Fare",
                                                 new Money(2_500, lei),
                                                 new Split.Parts(
@@ -184,7 +184,9 @@ class EntriesTest {
             assertEquals(value, Conversions.converted(Conversions.generated(value)));
         }
         assertEquals(
-                1, new Item("Bread", flat.euros(1), new Split.Equal(List.of(flat.bob))).quantity());
+                1,
+                new ExpenseItem("Bread", flat.euros(1), new Split.Equal(List.of(flat.bob)))
+                        .quantity());
         assertEquals(
                 TipDistribution.PROPORTIONAL,
                 new Tip(new TipValue.Fixed(flat.euros(1))).distribution());

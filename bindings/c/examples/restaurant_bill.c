@@ -78,21 +78,21 @@ static EranosMoney *euros(char const *const text) { return amountOf(text, "EUR")
 /// Adds the line @p name of the receipt to @p items: @p quantity of @p unitPrice euros, which @p split shares; destroys
 /// @p split.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the name, then the unit price, in the order the library's constructor reads them.
-static void addItem(EranosItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
+static void addItem(EranosExpenseItemList *const items, char const *const name, char const *const unitPrice, EranosSplit *const split,
                     int32_t const quantity) {
     EranosMoney *const price = euros(unitPrice);
-    EranosItem *item = nullptr;
-    must(eranosItemCreate(name, price, split, &item));
-    eranosItemSetQuantity(item, quantity);
-    eranosItemListPush(items, item);
-    eranosItemDestroy(item);
+    EranosExpenseItem *item = nullptr;
+    must(eranosExpenseItemCreate(name, price, split, &item));
+    eranosExpenseItemSetQuantity(item, quantity);
+    eranosExpenseItemListPush(items, item);
+    eranosExpenseItemDestroy(item);
     eranosMoneyDestroy(price);
     eranosSplitDestroy(split);
 }
 
 /// The receipt: every line with the members who had it.
-static EranosItemList *receipt(Friends const *const friends) {
-    EranosItemList *const items = eranosItemListCreate();
+static EranosExpenseItemList *receipt(Friends const *const friends) {
+    EranosExpenseItemList *const items = eranosExpenseItemListCreate();
     addItem(items, "Ciorbă", "8.00", soleSplit(friends->ana), 1);
     Members const sarmale = {.count = 2, .ids = {friends->bob, friends->carol}};
     addItem(items, "Sarmale", "14.00", equalSplit(&sarmale), 2);
@@ -110,12 +110,12 @@ static EranosItemList *receipt(Friends const *const friends) {
 static EranosExpense *billOf(Friends const *const friends, char const *const amount) {
     EranosCost *const cost = localCost(euros(amount));
     EranosSplit *const payers = soleSplit(friends->ana);
-    EranosItemList *const items = receipt(friends);
+    EranosExpenseItemList *const items = receipt(friends);
     EranosExpenseSplit *const split = eranosExpenseSplitCreateItemised(items);
     EranosExpense *expense = nullptr;
     must(eranosExpenseCreate("Dinner", cost, payers, split, friends->day, &expense));
     eranosExpenseSplitDestroy(split);
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
     eranosSplitDestroy(payers);
     eranosCostDestroy(cost);
     return expense;
@@ -187,19 +187,19 @@ static bool consumedIs(EranosExpenseShares const *const shares, Id const member,
 
 /// Prints the receipt's lines: who shared each, its quantity, its unit price, and its total.
 static void printReceipt(EranosExpenseGroup const *const group, Friends const *const friends) {
-    EranosItemList *const items = receipt(friends);
+    EranosExpenseItemList *const items = receipt(friends);
     Table *const table = lineTable(2);
     EranosText *const text = eranosTextCreate();
-    for (size_t index = 0; eranosItemListLength(items) > index; ++index) {
-        EranosItem *const item = eranosItemListGet(items, index);
-        EranosSplit *const split = eranosItemSplit(item);
+    for (size_t index = 0; eranosExpenseItemListLength(items) > index; ++index) {
+        EranosExpenseItem *const item = eranosExpenseItemListGet(items, index);
+        EranosSplit *const split = eranosExpenseItemSplit(item);
         Members const sharedBy = splitMembers(split);
-        EranosMoney *const unitPrice = eranosItemUnitPrice(item);
-        int32_t const quantity = eranosItemQuantity(item);
+        EranosMoney *const unitPrice = eranosExpenseItemUnitPrice(item);
+        int32_t const quantity = eranosExpenseItemQuantity(item);
         eranosMoneyCurrency(unitPrice, text);
         EranosMoney *total = nullptr;
         must(eranosMoneyCreate(eranosMoneyMinorUnits(unitPrice) * quantity, eranosTextData(text), &total));
-        eranosItemName(item, text);
+        eranosExpenseItemName(item, text);
         addLineRow(table, &(LineRow){
                               .name = textLine(text),
                               .participants = names(group, &sharedBy),
@@ -208,11 +208,11 @@ static void printReceipt(EranosExpenseGroup const *const group, Friends const *c
                               .lineTotal = moneyLine(total),
                           });
         eranosSplitDestroy(split);
-        eranosItemDestroy(item);
+        eranosExpenseItemDestroy(item);
     }
     tablePrint(table);
     eranosTextDestroy(text);
-    eranosItemListDestroy(items);
+    eranosExpenseItemListDestroy(items);
 }
 
 /// Prints what each friend ordered, and what they pay with the tip shared by consumption, in @p byConsumption, and

@@ -191,8 +191,8 @@ fn splits() -> [Split; 4] {
 }
 
 /// The one line of the taxi's bill.
-fn fare() -> Item {
-    Item {
+fn fare() -> ExpenseItem {
+    ExpenseItem {
         name: "Fare".to_owned(),
         unit_price: lei(2_500),
         split: equal(&[ana(), bob()]),
@@ -305,7 +305,7 @@ fn refused_expenses() -> Vec<Refusal<Expense>> {
         Refusal {
             record: Expense {
                 split: ExpenseSplit::Itemised {
-                    items: vec![Item {
+                    items: vec![ExpenseItem {
                         quantity: -1,
                         ..fare()
                     }],
@@ -456,40 +456,40 @@ fn an_item_converts_both_ways_and_refuses_bad_lines() {
     let item = fare();
     assert_eq!(
         item.to_library()
-            .map(|converted| Item::from_library(&converted)),
+            .map(|converted| ExpenseItem::from_library(&converted)),
         Ok(fare())
     );
     let refusals = [
         Refusal {
-            record: Item {
+            record: ExpenseItem {
                 quantity: -1,
                 ..fare()
             },
             is_expected: zero_quantity,
         },
         Refusal {
-            record: Item {
+            record: ExpenseItem {
                 quantity: 0,
                 ..fare()
             },
             is_expected: zero_quantity,
         },
         Refusal {
-            record: Item {
+            record: ExpenseItem {
                 name: " ".to_owned(),
                 ..fare()
             },
             is_expected: empty_item_name,
         },
         Refusal {
-            record: Item {
+            record: ExpenseItem {
                 split: unreadable_split(),
                 ..fare()
             },
             is_expected: invalid_id,
         },
         Refusal {
-            record: Item {
+            record: ExpenseItem {
                 unit_price: unknown_money(),
                 ..fare()
             },

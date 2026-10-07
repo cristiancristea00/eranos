@@ -144,7 +144,7 @@ type Cost = LocalCost | ConvertedCost
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
-class Item:
+class ExpenseItem:
     """A line of an itemised bill: quantity units of name at unit_price, which split divides."""
 
     name: str
@@ -219,7 +219,7 @@ class WholeExpenseSplit:
 class ItemisedExpenseSplit:
     """An expense divided line by line, each item by its own split."""
 
-    items: tuple[Item, ...]
+    items: tuple[ExpenseItem, ...]
     """The lines of the bill."""
 
 
@@ -502,7 +502,7 @@ def cost_of(value: generated.Cost) -> Cost:
     return _COSTS[type(value)](value)
 
 
-def generated_item(item: Item) -> generated.Item:
+def generated_item(item: ExpenseItem) -> generated.ExpenseItem:
     """
     Convert item into the item the generated module holds.
 
@@ -513,10 +513,12 @@ def generated_item(item: Item) -> generated.Item:
         The generated item.
 
     """
-    return generated.Item(name=item.name, unit_price=generated_money(item.unit_price), split=generated_split(item.split), quantity=item.quantity)
+    return generated.ExpenseItem(
+        name=item.name, unit_price=generated_money(item.unit_price), split=generated_split(item.split), quantity=item.quantity
+    )
 
 
-def item_of(value: generated.Item) -> Item:
+def item_of(value: generated.ExpenseItem) -> ExpenseItem:
     """
     Convert the item the generated module holds as value.
 
@@ -527,7 +529,7 @@ def item_of(value: generated.Item) -> Item:
         The item.
 
     """
-    return Item(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=value.quantity)
+    return ExpenseItem(name=value.name, unit_price=money_of(value.unit_price), split=split_of(value.split), quantity=value.quantity)
 
 
 def generated_tip(tip: Tip) -> generated.Tip:

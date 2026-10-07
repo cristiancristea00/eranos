@@ -92,7 +92,7 @@ flowchart TD
     BINDINGS["eranos-bindings<br/>records, EranosError, ExpenseGroupHandle,<br/>ExpenseGroupReader, value helpers"]
     FACADE["eranos<br/>re-exports; tests, examples, benchmarks"]
     EXPENSE_GROUP["eranos-expense-group<br/>ExpenseGroup, ExpenseGroupBuilder, Language, SavedExpenseGroup,<br/>SharedExpenseGroup"]
-    EXPENSE["eranos-expense<br/>Expense, Split, Item, Tip<br/>(+ resolve_expense)"]
+    EXPENSE["eranos-expense<br/>Expense, Split, ExpenseItem, Tip<br/>(+ resolve_expense)"]
     TRANSFER["eranos-transfer<br/>Transfer (+ resolve_transfer)"]
     MEMBER["eranos-member<br/>Member"]
     CATEGORY["eranos-category<br/>Category"]
@@ -166,12 +166,12 @@ flowchart TD
  │ eranos-expense-group   ExpenseGroup, ExpenseGroupBuilder, Language,         │
  │                        SavedExpenseGroup, SharedExpenseGroup                │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ eranos-expense         Expense, Split, Item, Tip (+ resolve_expense)        │
+ │ eranos-expense         Expense, Split, ExpenseItem, Tip (+ resolve_expense) │
  │ eranos-transfer        Transfer (+ resolve_transfer)                        │
  │ eranos-member          Member                                               │
  │ eranos-category        Category                                             │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ eranos-settlement      SettlementStrategy, SettlementPlan, Payment              │
+ │ eranos-settlement      SettlementStrategy, Settlement, Payment              │
  │                        (+ Settlements)                                      │
  │ eranos-payment-account PaymentAccount, Iban, Username                       │
  │ eranos-contact         Email, PhoneNumber                                   │
@@ -205,7 +205,7 @@ flowchart TD
 | `eranos-bindings`        | the records and enums every binding exposes, `EranosError` and its `FlatError`, `IbanReason`, `NewExpenseGroup`, `ExpenseGroupHandle`, `ExpenseGroupReader`, `Cancellation`, the value helpers; the trait that lists the group calls     | `eranos` with `serde`, the twelve internal crates for their conversion traits, and eranos-glue-macros; serde_json      |
 | `eranos`                 | the re-exports callers use; the integration tests, examples, and benchmarks                                                                                                                                                              | the twelve crates below                                                                                                |
 | `eranos-expense-group`   | `ExpenseGroup`, `ExpenseGroupBuilder`, `Language`, `SavedExpenseGroup`, `SharedExpenseGroup`, `ExpenseGroupReadGuard`, `ExpenseGroupWriteGuard`, `ExpenseGroupError`, `LanguageError`                                                    | category, core, expense, ledger, member, money, settlement, transfer; async-lock, icu_locale_core                      |
-| `eranos-expense`         | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `Item`, `ItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                                      | calendar, core, ledger, money                                                                                          |
+| `eranos-expense`         | `Expense`, `ExpenseBuilder`, `ExpenseSplit`, `Split` and its shares, `ExpenseItem`, `ExpenseItemBuilder`, `Tip`, `TipValue`, `TipDistribution`, `ExpenseError`; `resolve_expense`                                                        | calendar, core, ledger, money                                                                                          |
 | `eranos-transfer`        | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                                       | calendar, core, money, settlement                                                                                      |
 | `eranos-member`          | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                                                 | account, contact, core                                                                                                 |
 | `eranos-category`        | `Category`, `CategoryError`                                                                                                                                                                                                              | core; icu_casemap, icu_normalizer                                                                                      |
@@ -262,13 +262,14 @@ converted into the group currency at a fixed rate), a date and an optional
 time, an optional description, a category (Uncategorised unless another is
 set), a tip (none unless set), the payers (a `Split` of the total), and how
 the cost is shared: an `ExpenseSplit::Whole(Split)` or
-`ExpenseSplit::Itemised(Vec<Item>)`. A split is `Equal`, `Percentages`
-(basis points summing to exactly 10 000), `Parts` (hundredths, so 0.5 for a
-child), or `Amounts` (summing exactly to what is divided). An **item** has a
-unit price, a quantity, and its own split; the line totals must add up to
-the amount. A **tip** is fixed or a percentage of the amount, added on top,
-and shared `Proportional`ly (by consumption) or `Equal`ly. A **transfer** is
-money one member paid another, with a cost like an expense's.
+`ExpenseSplit::Itemised(Vec<ExpenseItem>)`. A split is `Equal`, `Parts`
+(hundredths, so 0.5 for a child), `Percentages` (basis points summing to
+exactly 10 000), or `Amounts` (summing exactly to what is divided). An
+**item** has a unit price, a quantity, and its own split; the line totals
+must add up to the amount. A **tip** is fixed or a percentage of the amount,
+added on top, and shared `Proportional`ly (by consumption) or `Equal`ly. A
+**transfer** is money one member paid another, with a cost like an
+expense's.
 
 **Archived members** keep their history and balance and may send and
 receive transfers, but cannot join a new expense; a replacement may keep an
@@ -500,7 +501,7 @@ ledger's range.
 | `MemberError`         | `MemberBuilder::build`                                                                                                                                                                                                         |
 | `CategoryError`       | `Category::new`, `Category::renamed`                                                                                                                                                                                           |
 | `LanguageError`       | `Language::parse`                                                                                                                                                                                                              |
-| `ExpenseError`        | `ExpenseBuilder::build`, `ItemBuilder::build`                                                                                                                                                                                  |
+| `ExpenseError`        | `ExpenseBuilder::build`, `ExpenseItemBuilder::build`                                                                                                                                                                           |
 | `TransferError`       | `TransferBuilder::build`                                                                                                                                                                                                       |
 | `ExpenseGroupError`   | `ExpenseGroupBuilder::build`, `SavedExpenseGroup::into_expense_group`, every group mutation, and `SharedExpenseGroup::try_read` and `try_write` while another call holds the lock; the group is unchanged when one is returned |
 | `SettlementError`     | `ExpenseGroup::settlement` (only `MinimumTransfers` can fail)                                                                                                                                                                  |

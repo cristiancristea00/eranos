@@ -280,10 +280,10 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
                PercentagesSplit{{}}, "percentage splits");
     checkValue(check, AmountsSplit{{MemberAmount(ana, one)}}, AmountsSplit{{MemberAmount(ana, one)}}, AmountsSplit{{MemberAmount(ana, two)}},
                "amounts");
-    Item const pizza("Pizza", one, EqualSplit{{ana, bob}});
+    ExpenseItem const pizza("Pizza", one, EqualSplit{{ana, bob}});
     auto twoPizzas = pizza;
     twoPizzas.quantity = 2;
-    checkValue(check, pizza, Item("Pizza", one, EqualSplit{{ana, bob}}), twoPizzas, "items compare by quantity too");
+    checkValue(check, pizza, ExpenseItem("Pizza", one, EqualSplit{{ana, bob}}), twoPizzas, "items compare by quantity too");
     checkValue(check, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{1'000}}, PercentageTipValue{Percentage{500}},
                "percentage tips");
     checkValue(check, FixedTipValue{one}, FixedTipValue{one}, FixedTipValue{two}, "fixed tips");
@@ -355,11 +355,12 @@ void anExpenseReadsBackAsItWasAdded(Check &check) {
     auto const lunchId = flat.group.addExpense(lunch).value();
     lunch.id = lunchId;
     check.that(flat.group.expense(lunchId) == lunch, "a converted expense with every detail reads back unchanged");
-    Item pizza("Pizza", flat.euros(1'200), EqualSplit{{flat.ana, flat.bob}});
+    ExpenseItem pizza("Pizza", flat.euros(1'200), EqualSplit{{flat.ana, flat.bob}});
     pizza.quantity = 2;
-    Expense receipt("Receipt", LocalCost{flat.euros(3'000)}, AmountsSplit{{MemberAmount(flat.bob, flat.euros(3'300))}},
-                    ItemisedExpenseSplit{{pizza, Item("Wine", flat.euros(600), PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}})}},
-                    flat.day);
+    Expense receipt(
+        "Receipt", LocalCost{flat.euros(3'000)}, AmountsSplit{{MemberAmount(flat.bob, flat.euros(3'300))}},
+        ItemisedExpenseSplit{{pizza, ExpenseItem("Wine", flat.euros(600), PercentagesSplit{{MemberPercentage(flat.ana, Percentage{10'000})}})}},
+        flat.day);
     receipt.tip = Tip(FixedTipValue{flat.euros(300)}, TipDistribution::EQUAL);
     receipt.id = flat.group.addExpense(receipt).value();
     check.that(flat.group.expense(receipt.id.value()) == receipt, "an itemised receipt with a fixed tip reads back unchanged");

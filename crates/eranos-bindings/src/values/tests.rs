@@ -7,7 +7,7 @@
 use eranos::MemberId;
 
 use super::*;
-use crate::expense::{Item, MemberAmount, Tip, TipDistribution, TipValue};
+use crate::expense::{ExpenseItem, MemberAmount, Tip, TipDistribution, TipValue};
 use crate::money::Cost;
 use crate::{
     CalendarFailure, ContactFailure, ExpenseFailure, IdFailure, LanguageFailure, MoneyFailure,
@@ -504,7 +504,7 @@ fn an_expense_and_a_split_list_their_members() {
     assert_eq!(expense_members(&dinner()), Ok(everyone.to_vec()));
     let itemised = Expense {
         split: ExpenseSplit::Itemised {
-            items: vec![Item {
+            items: vec![ExpenseItem {
                 name: "Soup".to_owned(),
                 unit_price: euros(3_000),
                 split: equal(&[member(3), member(2)]),
@@ -545,7 +545,7 @@ fn an_expense_and_a_split_list_their_members() {
     }
     let bad_item = Expense {
         split: ExpenseSplit::Itemised {
-            items: vec![Item {
+            items: vec![ExpenseItem {
                 name: "Soup".to_owned(),
                 unit_price: euros(3_000),
                 split: equal(&[member(2)]),

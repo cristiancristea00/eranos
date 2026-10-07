@@ -26,7 +26,7 @@ library itself is plain Rust with no I/O and no async runtime.
 | Expense         | `Expense`            | What was bought: name, cost, payers, split, date, optional tip and category       |
 | Cost            | `Cost`               | An amount in the group currency, or in another one at a fixed exchange rate       |
 | Split           | `Split`              | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
-| Item            | `Item`               | A receipt line of an itemised expense, with its own quantity and split            |
+| Item            | `ExpenseItem`        | A receipt line of an itemised expense, with its own quantity and split            |
 | Tip             | `Tip`                | A percentage or a fixed amount on top, shared proportionally or equally           |
 | Transfer        | `Transfer`           | Money one member paid another, such as a repayment                                |
 | Summary         | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |

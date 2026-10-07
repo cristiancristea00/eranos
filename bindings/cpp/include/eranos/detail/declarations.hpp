@@ -34,6 +34,8 @@
 #include "eranos/detail/EranosExpenseGroupOutcome.hpp"
 #include "eranos/detail/EranosExpenseGroupReader.hpp"
 #include "eranos/detail/EranosExpenseGroupReaderOutcome.hpp"
+#include "eranos/detail/EranosExpenseItem.hpp"
+#include "eranos/detail/EranosExpenseItemList.hpp"
 #include "eranos/detail/EranosExpenseList.hpp"
 #include "eranos/detail/EranosExpenseListOutcome.hpp"
 #include "eranos/detail/EranosExpenseOutcome.hpp"
@@ -45,8 +47,6 @@
 #include "eranos/detail/EranosFlagOutcome.hpp"
 #include "eranos/detail/EranosIban.hpp"
 #include "eranos/detail/EranosIbanReason.hpp"
-#include "eranos/detail/EranosItem.hpp"
-#include "eranos/detail/EranosItemList.hpp"
 #include "eranos/detail/EranosLanguage.hpp"
 #include "eranos/detail/EranosMember.hpp"
 #include "eranos/detail/EranosMemberAmount.hpp"
@@ -140,7 +140,7 @@ struct FixedTipValue;
 struct GetsBackBalance;
 struct ExpenseGroupOptions;
 struct IbanPaymentAccountDetails;
-struct Item;
+struct ExpenseItem;
 struct ItemisedExpenseSplit;
 struct LocalCost;
 struct Member;

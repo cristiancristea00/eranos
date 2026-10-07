@@ -11,7 +11,7 @@ import java.util.Objects;
  * @param split how the line's total divides
  * @param quantity how many units, from 1
  */
-public record Item(String name, Money unitPrice, Split split, int quantity) {
+public record ExpenseItem(String name, Money unitPrice, Split split, int quantity) {
     /**
      * The line of {@code quantity} units.
      *
@@ -20,7 +20,7 @@ public record Item(String name, Money unitPrice, Split split, int quantity) {
      * @param split how the line's total divides
      * @param quantity how many units, from 1
      */
-    public Item {
+    public ExpenseItem {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(unitPrice, "unitPrice");
         Objects.requireNonNull(split, "split");
@@ -33,7 +33,7 @@ public record Item(String name, Money unitPrice, Split split, int quantity) {
      * @param unitPrice the price of the unit, in the expense's currency
      * @param split how the line's total divides
      */
-    public Item(String name, Money unitPrice, Split split) {
+    public ExpenseItem(String name, Money unitPrice, Split split) {
         this(name, unitPrice, split, 1);
     }
 
@@ -43,8 +43,8 @@ public record Item(String name, Money unitPrice, Split split, int quantity) {
      * @param item the generated line
      * @return the line
      */
-    static Item converted(eranos.internal.Item item) {
-        return new Item(
+    static ExpenseItem converted(eranos.internal.ExpenseItem item) {
+        return new ExpenseItem(
                 item.name(),
                 Money.converted(item.unitPrice()),
                 Conversions.converted(item.split()),
@@ -56,8 +56,8 @@ public record Item(String name, Money unitPrice, Split split, int quantity) {
      *
      * @return the generated line
      */
-    eranos.internal.Item generated() {
-        return new eranos.internal.Item(
+    eranos.internal.ExpenseItem generated() {
+        return new eranos.internal.ExpenseItem(
                 name, unitPrice.generated(), Conversions.generated(split), quantity);
     }
 }

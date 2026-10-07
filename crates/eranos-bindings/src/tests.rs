@@ -70,7 +70,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<Category>();
         assert_send_and_sync::<Expense>();
         assert_send_and_sync::<ExpenseSplit>();
-        assert_send_and_sync::<Item>();
+        assert_send_and_sync::<ExpenseItem>();
         assert_send_and_sync::<Member>();
         assert_send_and_sync::<MemberAmount>();
         assert_send_and_sync::<MemberParts>();

@@ -6,7 +6,7 @@ import {
     type Expense,
     type ExpenseId,
     type ExpenseGroup,
-    type Item,
+    type ExpenseItem,
     type MemberId,
     type Split,
     Money,
@@ -141,7 +141,7 @@ function printItems(group: ExpenseGroup, id: ExpenseId): void {
 }
 
 /** The receipt of the fado night: every line with its own split. */
-function fadoItems(people: People): Item[] {
+function fadoItems(people: People): ExpenseItem[] {
     return [
         { name: 'Vinho verde', unitPrice: eur('12.00'), split: { kind: 'equal', members: [people.ana, people.bob, people.dan] }, quantity: 2 },
         { name: 'Bacalhau', unitPrice: eur('18.00'), split: { kind: 'equal', members: [people.carol] } },
