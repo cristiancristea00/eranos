@@ -17,7 +17,7 @@ use crate::member::{Category, Member};
 use crate::money::{CurrencyRate, Money};
 use crate::operations;
 use crate::reader::ExpenseGroupReader;
-use crate::settlement::{Settlement, SettlementStrategy};
+use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 
 #[eranos_glue_macros::calls]
@@ -158,7 +158,7 @@ trait ExpenseGroupCalls {
     /// The payments that settle every balance by `strategy`.
     #[read]
     #[async_body = expense_group::settlement]
-    fn settlement(&self, strategy: SettlementStrategy) -> Result<Settlement, EranosError>;
+    fn settlement(&self, strategy: SettlementStrategy) -> Result<SettlementPlan, EranosError>;
 
     // --- Transfers -----------------------------------------------------------
 

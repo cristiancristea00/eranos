@@ -12,7 +12,7 @@ import eranos.ExpenseSplit
 import eranos.Member
 import eranos.MemberId
 import eranos.Money
-import eranos.Settlement
+import eranos.SettlementPlan
 import eranos.SettlementStrategy
 import eranos.Split
 import eranos.Transfer
@@ -129,7 +129,7 @@ private fun printBalances(group: ExpenseGroup) {
 
 private fun printPayments(
     group: ExpenseGroup,
-    settlement: Settlement,
+    settlement: SettlementPlan,
 ) {
     printTable(
         PaymentRow.HEADERS,

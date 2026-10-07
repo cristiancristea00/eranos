@@ -17,7 +17,7 @@
 #include "EranosMemberSummaryList.h"
 #include "EranosPayment.h"
 #include "EranosPaymentList.h"
-#include "EranosSettlement.h"
+#include "EranosSettlementPlan.h"
 #include "EranosSettlementStrategy.h"
 #include "EranosSummary.h"
 #include "eranos/detail.h"
@@ -529,30 +529,30 @@ static inline void eranosPaymentListDestroy(EranosPaymentList *const list) {
 }
 
 /// A plan of payments that settles every balance.
-typedef struct EranosSettlement EranosSettlement;
+typedef struct EranosSettlementPlan EranosSettlementPlan;
 
 /// The payments.
 ///
 /// @param settlement The settlement
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosPaymentList *eranosSettlementPayments(EranosSettlement const *const settlement) {
-    return EranosSettlement_payments(settlement);
+[[nodiscard]] static inline EranosPaymentList *eranosSettlementPlanPayments(EranosSettlementPlan const *const settlement) {
+    return EranosSettlementPlan_payments(settlement);
 }
 
 /// The strategy that made the plan: the one asked for, or, for the adaptive strategy, the one whose plan it chose.
 ///
 /// @param settlement The settlement
 /// @return The strategy that made the plan
-[[nodiscard]] static inline EranosSettlementStrategy eranosSettlementStrategy(EranosSettlement const *const settlement) {
-    return EranosSettlement_strategy(settlement);
+[[nodiscard]] static inline EranosSettlementStrategy eranosSettlementPlanStrategy(EranosSettlementPlan const *const settlement) {
+    return EranosSettlementPlan_strategy(settlement);
 }
 
 /// Destroys @p settlement; destroying nullptr does nothing, as free() does.
 ///
 /// @param settlement The settlement, which no call uses after this one, or nullptr
-static inline void eranosSettlementDestroy(EranosSettlement *const settlement) {
+static inline void eranosSettlementPlanDestroy(EranosSettlementPlan *const settlement) {
     if (nullptr != settlement) {
-        EranosSettlement_destroy(settlement);
+        EranosSettlementPlan_destroy(settlement);
     }
 }
 

@@ -240,7 +240,7 @@ class SettlementStrategy(enum.Enum):
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
-class Settlement:
+class SettlementPlan:
     """The payments that settle a group, and the strategy that planned them."""
 
     payments: tuple[Payment, ...]
@@ -315,7 +315,7 @@ def expense_shares_of(value: generated.ExpenseShares) -> ExpenseShares:
     )
 
 
-def settlement_of(value: generated.Settlement) -> Settlement:
+def settlement_of(value: generated.SettlementPlan) -> SettlementPlan:
     """
     Convert the settlement the generated module holds as value.
 
@@ -326,7 +326,7 @@ def settlement_of(value: generated.Settlement) -> Settlement:
         The settlement.
 
     """
-    return Settlement(
+    return SettlementPlan(
         tuple(
             Payment(
                 # The generator names the field after the keyword it would otherwise be.

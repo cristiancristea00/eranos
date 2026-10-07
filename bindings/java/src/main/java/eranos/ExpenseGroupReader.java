@@ -247,7 +247,8 @@ public final class ExpenseGroupReader implements AutoCloseable {
      *     plan of more open balances than its table fits
      * @throws IllegalStateException after {@link #close}
      */
-    public Settlement settlement(SettlementStrategy strategy) throws EranosException {
-        return Converting.call(() -> Settlement.converted(handle.settlement(strategy.generated())));
+    public SettlementPlan settlement(SettlementStrategy strategy) throws EranosException {
+        return Converting.call(
+                () -> SettlementPlan.converted(handle.settlement(strategy.generated())));
     }
 }

@@ -47,7 +47,7 @@ macro_rules! mirrors {
         $crate::mirror_money_failure!($($callback)+);
         $crate::mirror_new_expense_group!($($callback)+);
         $crate::mirror_payment!($($callback)+);
-        $crate::mirror_settlement!($($callback)+);
+        $crate::mirror_settlement_plan!($($callback)+);
         $crate::mirror_settlement_failure!($($callback)+);
         $crate::mirror_settlement_strategy!($($callback)+);
         $crate::mirror_split!($($callback)+);

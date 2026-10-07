@@ -2061,11 +2061,11 @@ static char const *strategyName(EranosSettlementStrategy const strategy) {
 
 /// The payments of the plan that @p strategy makes for @p group, which the caller destroys.
 static EranosPaymentList *planOf(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy) {
-    EranosSettlement *settlement = nullptr;
+    EranosSettlementPlan *settlement = nullptr;
     must(eranosExpenseGroupSettlement(group, strategy, &settlement));
-    check(strategy == eranosSettlementStrategy(settlement), "the plan is the strategy's");
-    EranosPaymentList *const payments = eranosSettlementPayments(settlement);
-    eranosSettlementDestroy(settlement);
+    check(strategy == eranosSettlementPlanStrategy(settlement), "the plan is the strategy's");
+    EranosPaymentList *const payments = eranosSettlementPlanPayments(settlement);
+    eranosSettlementPlanDestroy(settlement);
     return payments;
 }
 
@@ -2099,20 +2099,20 @@ static void settlingUp(EranosExpenseGroup *const group) {
               "and greedy's beyond, naming the strategy whose plan it chose.");
     Table *const counts = strategyTable(2);
     for (size_t index = 0; 4 > index; ++index) {
-        EranosSettlement *settlement = nullptr;
+        EranosSettlementPlan *settlement = nullptr;
         must(eranosExpenseGroupSettlement(group, strategies[index], &settlement));
         // The group's open balances are well within the adaptive strategy's limit, so it settles them exactly.
         EranosSettlementStrategy const computedBy =
             ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == strategies[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : strategies[index];
-        check(computedBy == eranosSettlementStrategy(settlement), "the settlement names the strategy whose plan it is");
-        EranosPaymentList *const payments = eranosSettlementPayments(settlement);
+        check(computedBy == eranosSettlementPlanStrategy(settlement), "the settlement names the strategy whose plan it is");
+        EranosPaymentList *const payments = eranosSettlementPlanPayments(settlement);
         addStrategyRow(counts, &(StrategyRow){
                                    .strategy = lineOf("%s", strategyName(strategies[index])),
-                                   .computedBy = lineOf("%s", strategyName(eranosSettlementStrategy(settlement))),
+                                   .computedBy = lineOf("%s", strategyName(eranosSettlementPlanStrategy(settlement))),
                                    .payments = lineOf("%zu", eranosPaymentListLength(payments)),
                                });
         eranosPaymentListDestroy(payments);
-        eranosSettlementDestroy(settlement);
+        eranosSettlementPlanDestroy(settlement);
     }
     tablePrint(counts);
     EranosPaymentList *const plan = planOf(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS);
@@ -2528,7 +2528,7 @@ static void receiveExpenses(void *const context, EranosError *const error, Erano
 static void receiveReader(void *const context, EranosError *const error, EranosExpenseGroupReader *const reader) { finish(context, error, reader); }
 
 /// Receives a settlement.
-static void receiveSettlement(void *const context, EranosError *const error, EranosSettlement *const settlement) {
+static void receiveSettlement(void *const context, EranosError *const error, EranosSettlementPlan *const settlement) {
     finish(context, error, settlement);
 }
 
@@ -2576,10 +2576,10 @@ static void settleCoffee(EranosExpenseGroup *const other, EranosExpenseGroup con
     eranosTextDestroy(awaited(&added));
     eranosExpenseDestroy(coffee);
     Waiter planned;
-    EranosSettlementCallback const plannedCallback = {.context = waiting(&planned), .run = receiveSettlement};
+    EranosSettlementPlanCallback const plannedCallback = {.context = waiting(&planned), .run = receiveSettlement};
     eranosExpenseGroupSettlementAsync(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, nullptr, &plannedCallback);
-    EranosSettlement *const plan = awaited(&planned);
-    EranosPaymentList *const payments = eranosSettlementPayments(plan);
+    EranosSettlementPlan *const plan = awaited(&planned);
+    EranosPaymentList *const payments = eranosSettlementPlanPayments(plan);
     printLine("An app shares the group between its tasks and threads through a\n"
               "SharedExpenseGroup, whose calls are futures any executor runs; here the library's\n"
               "block_on runs each one on this thread. Bob adds the airport coffee through another\n"
@@ -2609,7 +2609,7 @@ static void settleCoffee(EranosExpenseGroup *const other, EranosExpenseGroup con
     eranosTextDestroy(from);
     eranosExpenseGroupReaderDestroy(reader);
     eranosPaymentListDestroy(payments);
-    eranosSettlementDestroy(plan);
+    eranosSettlementPlanDestroy(plan);
 }
 
 /// Shares @p group between tasks: an expense added through another handle, a settlement computed asynchronously, and a

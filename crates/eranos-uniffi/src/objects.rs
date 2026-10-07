@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use eranos_bindings::{
     Category, CurrencyRate, EranosError, Expense, ExpenseGroupHandle, ExpenseShares, Member, Money,
-    NewExpenseGroup, Settlement, SettlementStrategy, Summary, Transfer,
+    NewExpenseGroup, SettlementPlan, SettlementStrategy, Summary, Transfer,
 };
 
 /// A group, shared between the tasks and threads of a binding.

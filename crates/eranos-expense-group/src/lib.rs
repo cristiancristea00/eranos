@@ -34,7 +34,7 @@ use eranos_expense::{Expense, resolve_expense, resolve_expense_at};
 use eranos_ledger::{Delta, ExpenseShares, Ledger, MemberPair, ResolvedExpense, Summary};
 use eranos_member::Member;
 use eranos_money::{Cost, Currency, CurrencyRate, ExchangeRate, Money};
-use eranos_settlement::{Settlement, SettlementError, SettlementStrategy, Settlements};
+use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy, Settlements};
 use eranos_transfer::{Transfer, resolve_transfer, resolve_transfer_at};
 
 /// The version of the saved form. Every other version is refused: a newer
@@ -838,7 +838,10 @@ impl ExpenseGroup {
     /// [`SettlementStrategy::MinimumTransfers`] cannot allocate its table;
     /// the other strategies never fail, [`SettlementStrategy::Adaptive`]
     /// settling greedily instead.
-    pub fn settlement(&self, strategy: SettlementStrategy) -> Result<&Settlement, SettlementError> {
+    pub fn settlement(
+        &self,
+        strategy: SettlementStrategy,
+    ) -> Result<&SettlementPlan, SettlementError> {
         self.settlements.get(strategy, &self.ledger)
     }
 
@@ -878,7 +881,7 @@ impl ExpenseGroup {
     pub fn settlement_async(
         &self,
         strategy: SettlementStrategy,
-    ) -> Cooperative<impl Future<Output = Result<&Settlement, SettlementError>> + Send> {
+    ) -> Cooperative<impl Future<Output = Result<&SettlementPlan, SettlementError>> + Send> {
         self.settlements.get_async(strategy, &self.ledger)
     }
 

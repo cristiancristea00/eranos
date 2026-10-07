@@ -96,9 +96,9 @@ int main(void) {
         addComparisonRow(table, &(ComparisonRow){.name = firstName(group, members[index].text), .before = before, .after = after});
     }
     tablePrint(table);
-    EranosSettlement *plan = nullptr;
+    EranosSettlementPlan *plan = nullptr;
     must(eranosExpenseGroupSettlement(loaded, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &plan));
-    EranosPaymentList *const payments = eranosSettlementPayments(plan);
+    EranosPaymentList *const payments = eranosSettlementPlanPayments(plan);
     printFormatted("Payments needed to settle the loaded group: %zu.", eranosPaymentListLength(payments));
 
     section("3. A corrupted file is refused");
@@ -122,7 +122,7 @@ int main(void) {
     eranosTextDestroy(resaved);
     free(corrupted);
     eranosPaymentListDestroy(payments);
-    eranosSettlementDestroy(plan);
+    eranosSettlementPlanDestroy(plan);
     eranosExpenseGroupDestroy(loaded);
     eranosTextDestroy(saved);
     eranosExpenseGroupDestroy(group);

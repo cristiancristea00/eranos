@@ -139,7 +139,7 @@ fn a_dropped_request_keeps_no_plan() {
             assert!(request.as_mut().poll(&mut context).is_pending());
         }
         assert!(kept.slot(strategy).get().is_none());
-        assert_eq!(kept.get(strategy, &ledger).map(Settlement::len), Ok(16));
+        assert_eq!(kept.get(strategy, &ledger).map(SettlementPlan::len), Ok(16));
     }
 }
 

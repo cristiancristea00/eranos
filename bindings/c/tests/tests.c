@@ -378,7 +378,7 @@ static void receiveMoney(void *const context, EranosError *const error, EranosMo
 }
 
 /// Receives a settlement.
-static void receiveSettlement(void *const context, EranosError *const error, EranosSettlement *const settlement) {
+static void receiveSettlement(void *const context, EranosError *const error, EranosSettlementPlan *const settlement) {
     Waiter *const waiter = context;
     waiter->error = error;
     waiter->object = settlement;
@@ -1142,7 +1142,7 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosMemberSummaryListDestroy(nullptr);
     eranosPaymentDestroy(nullptr);
     eranosPaymentListDestroy(nullptr);
-    eranosSettlementDestroy(nullptr);
+    eranosSettlementPlanDestroy(nullptr);
     eranosSummaryDestroy(nullptr);
     eranosTransferDestroy(nullptr);
     eranosTransferListDestroy(nullptr);
@@ -1535,12 +1535,12 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
         // The fixture's two balances are well within the adaptive strategy's limit, so it settles them exactly.
         EranosSettlementStrategy const computedBy =
             ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE == strategies[index] ? ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS : strategies[index];
-        EranosSettlement *settlement = nullptr;
+        EranosSettlementPlan *settlement = nullptr;
         checkSucceeded(check, eranosExpenseGroupSettlement(flat.group, strategies[index], &settlement), "a settlement");
-        EranosPaymentList *const payments = eranosSettlementPayments(settlement);
+        EranosPaymentList *const payments = eranosSettlementPlanPayments(settlement);
         EranosPayment *const payment = eranosPaymentListGet(payments, 0);
         checkThat(check,
-                  eranosSettlementStrategy(settlement) == computedBy && 1 == eranosPaymentListLength(payments) &&
+                  eranosSettlementPlanStrategy(settlement) == computedBy && 1 == eranosPaymentListLength(payments) &&
                       !eranosPaymentListIsEmpty(payments) && nullptr == eranosPaymentListGet(payments, 1),
                   "one payment, by the strategy whose plan it is");
         eranosPaymentFrom(payment, text);
@@ -1549,7 +1549,7 @@ static void eachStrategySettlesEveryBalance(Check *const check) {
         checkThat(check, isText(text, eranosTextData(flat.ana)) && isAmount(eranosPaymentAmount(payment), 500, "EUR"), "to Ana, of 5.00 EUR");
         eranosPaymentDestroy(payment);
         eranosPaymentListDestroy(payments);
-        eranosSettlementDestroy(settlement);
+        eranosSettlementPlanDestroy(settlement);
     }
     eranosTextDestroy(text);
     flatDestroy(flat);
@@ -1583,7 +1583,7 @@ static void anExactPlanTooLargeToComputeIsRefused(Check *const check) {
     checkSucceeded(check, eranosExpenseCreate("Food", cost, payers, split, DAY, &expense), "the food, which the first neighbour paid");
     EranosText *const id = eranosTextCreate();
     checkSucceeded(check, eranosExpenseGroupAddExpense(group, expense, id), "shared by every neighbour");
-    EranosSettlement *settlement = nullptr;
+    EranosSettlementPlan *settlement = nullptr;
     EranosError *const refused = eranosExpenseGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, &settlement);
     int64_t balances = 0;
     checkThat(check,
@@ -1592,10 +1592,10 @@ static void anExactPlanTooLargeToComputeIsRefused(Check *const check) {
               "the exact plan is refused, naming its balances");
     eranosErrorDestroy(refused);
     checkSucceeded(check, eranosExpenseGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, &settlement), "a greedy plan");
-    EranosPaymentList *const payments = nullptr == settlement ? nullptr : eranosSettlementPayments(settlement);
+    EranosPaymentList *const payments = nullptr == settlement ? nullptr : eranosSettlementPlanPayments(settlement);
     checkThat(check, nullptr != payments && NEIGHBOURS - 1 == eranosPaymentListLength(payments), "one payment from each neighbour who owes");
     eranosPaymentListDestroy(payments);
-    eranosSettlementDestroy(settlement);
+    eranosSettlementPlanDestroy(settlement);
     eranosTextDestroy(id);
     eranosExpenseDestroy(expense);
     eranosExpenseSplitDestroy(split);
@@ -1934,11 +1934,11 @@ static void everyAsynchronousCallReportsWhatItsSynchronousFormReturns(Check *con
     await(&waiter);
     checkThat(check, isAmount(eranosSummaryTotalSpent(waiter.object), 3'000, "EUR"), "the summary");
     eranosSummaryDestroy(waiter.object);
-    EranosSettlementCallback const settlementCallback = {waiting(&waiter), receiveSettlement};
+    EranosSettlementPlanCallback const settlementCallback = {waiting(&waiter), receiveSettlement};
     eranosExpenseGroupSettlementAsync(flat.group, ERANOS_SETTLEMENT_STRATEGY_GREEDY, nullptr, &settlementCallback);
     await(&waiter);
-    checkThat(check, ERANOS_SETTLEMENT_STRATEGY_GREEDY == eranosSettlementStrategy(waiter.object), "a settlement");
-    eranosSettlementDestroy(waiter.object);
+    checkThat(check, ERANOS_SETTLEMENT_STRATEGY_GREEDY == eranosSettlementPlanStrategy(waiter.object), "a settlement");
+    eranosSettlementPlanDestroy(waiter.object);
     EranosMemberListCallback const membersCallback = {waiting(&waiter), receiveMembers};
     eranosExpenseGroupMembersAsync(flat.group, nullptr, &membersCallback);
     await(&waiter);
@@ -2107,7 +2107,7 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     checkSucceeded(check, eranosExpenseGroupReaderMember(reader, eranosTextData(flat.ana), &member), "a member");
     bool archived = true;
     checkSucceeded(check, eranosExpenseGroupReaderIsArchived(reader, eranosTextData(flat.ana), &archived), "whether a member is archived");
-    EranosSettlement *settlement = nullptr;
+    EranosSettlementPlan *settlement = nullptr;
     checkSucceeded(check, eranosExpenseGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), "a settlement");
     EranosTransferList *transfers = nullptr;
     checkSucceeded(check, eranosExpenseGroupReaderTransfers(reader, &transfers), "the transfers");
@@ -2128,7 +2128,7 @@ static void aReaderReadsTheGroupUntilItIsReleased(Check *const check) {
     eranosExpenseGroupReaderDestroy(synchronous);
     eranosTransferDestroy(transfer);
     eranosTransferListDestroy(transfers);
-    eranosSettlementDestroy(settlement);
+    eranosSettlementPlanDestroy(settlement);
     eranosMemberDestroy(member);
     eranosMemberListDestroy(members);
     eranosSummaryDestroy(summary);
@@ -2174,7 +2174,7 @@ static void everyReadOfAReleasedReaderFails(Check *const check) {
     checkThat(check,
               isKind(eranosExpenseGroupReaderMember(reader, eranosTextData(flat.ana), &member), ERANOS_ERROR_KIND_RELEASED) && nullptr == member,
               "a member");
-    EranosSettlement *settlement = nullptr;
+    EranosSettlementPlan *settlement = nullptr;
     checkThat(check,
               isKind(eranosExpenseGroupReaderSettlement(reader, ERANOS_SETTLEMENT_STRATEGY_DIRECT, &settlement), ERANOS_ERROR_KIND_RELEASED) &&
                   nullptr == settlement,

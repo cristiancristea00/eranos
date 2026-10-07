@@ -67,7 +67,7 @@ pub struct Payment {
 /// The payments that settle every balance.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Settlement {
+pub struct SettlementPlan {
     /// The payments, ordered by payer and then by recipient.
     pub payments: Vec<Payment>,
     /// The strategy that produced them: the one asked for, or, for the
@@ -75,9 +75,9 @@ pub struct Settlement {
     pub strategy: SettlementStrategy,
 }
 
-impl Settlement {
+impl SettlementPlan {
     /// The record of `settlement`.
-    pub(crate) fn from_library(settlement: &library::Settlement) -> Self {
+    pub(crate) fn from_library(settlement: &library::SettlementPlan) -> Self {
         Self {
             payments: settlement
                 .payments()

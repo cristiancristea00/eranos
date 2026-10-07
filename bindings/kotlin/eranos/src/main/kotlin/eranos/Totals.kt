@@ -247,24 +247,24 @@ public class MemberShare internal constructor(
 internal fun eranos.internal.MemberShare.converted(): MemberShare = MemberShare(MemberId(member), paid.converted(), share.converted())
 
 /** The payments that settle every balance. */
-public class Settlement internal constructor(
+public class SettlementPlan internal constructor(
     /** The payments, ordered by payer and then by recipient. */
     public val payments: List<Payment>,
     /** The strategy that produced them: the one asked for, or, for [SettlementStrategy.ADAPTIVE], the one whose plan it chose. */
     public val strategy: SettlementStrategy,
 ) {
     /** Whether [other] is of the same class, with the same [payments] and [strategy]. */
-    override fun equals(other: Any?): Boolean = other is Settlement && payments == other.payments && strategy == other.strategy
+    override fun equals(other: Any?): Boolean = other is SettlementPlan && payments == other.payments && strategy == other.strategy
 
     /** A hash of what [equals] compares. */
     override fun hashCode(): Int = hashOf(payments, strategy)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Settlement(payments=$payments, strategy=$strategy)"
+    override fun toString(): String = "SettlementPlan(payments=$payments, strategy=$strategy)"
 }
 
 /** The settlement the generated code holds as [this]. */
-internal fun eranos.internal.Settlement.converted(): Settlement = Settlement(payments.map { it.converted() }, strategy.converted())
+internal fun eranos.internal.SettlementPlan.converted(): SettlementPlan = SettlementPlan(payments.map { it.converted() }, strategy.converted())
 
 /** One payment of a settlement: one member pays another an amount. */
 public class Payment internal constructor(

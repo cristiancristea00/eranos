@@ -33,7 +33,7 @@ import eranos.MemberId;
 import eranos.MemberSummary;
 import eranos.Money;
 import eranos.Payment;
-import eranos.Settlement;
+import eranos.SettlementPlan;
 import eranos.SettlementStrategy;
 import eranos.Summary;
 import eranos.Transfer;
@@ -225,7 +225,7 @@ final class Totals {
         section("11. Settling up");
         List<StrategyRow> counts = new ArrayList<>();
         for (SettlementStrategy strategy : SettlementStrategy.values()) {
-            Settlement settlement = group.settlement(strategy);
+            SettlementPlan settlement = group.settlement(strategy);
             // The group's open balances are well within the adaptive strategy's limit, so it
             // settles them exactly.
             SettlementStrategy computedBy =
@@ -247,7 +247,7 @@ final class Totals {
                 and greedy's beyond, naming the strategy whose plan it chose.
                 """);
         printTable(StrategyRow.HEADERS, counts, 2);
-        Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
+        SettlementPlan plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
         System.out.println("The group follows the minimum plan:");
         List<PaymentRow> rows = new ArrayList<>();
         for (Payment payment : plan.payments()) {

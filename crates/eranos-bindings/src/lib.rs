@@ -62,7 +62,7 @@ pub use ledger::{
 pub use member::{Category, Member, PaymentAccount, PaymentAccountDetails};
 pub use money::{Cost, CurrencyDetails, CurrencyRate, Money};
 pub use reader::ExpenseGroupReader;
-pub use settlement::{Payment, Settlement, SettlementStrategy};
+pub use settlement::{Payment, SettlementPlan, SettlementStrategy};
 pub use transfer::Transfer;
 pub use values::{
     balance_format, calendar_date_format, calendar_date_parse, currencies, currency_details,

@@ -1824,9 +1824,9 @@ pub mod ffi {
     /// The payments that settle every balance.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosSettlement(pub(crate) eranos_bindings::Settlement);
+    pub struct EranosSettlementPlan(pub(crate) eranos_bindings::SettlementPlan);
 
-    impl EranosSettlement {
+    impl EranosSettlementPlan {
         /// The payments, ordered by payer and then by recipient.
         #[must_use]
         pub fn payments(&self) -> Box<EranosPaymentList> {

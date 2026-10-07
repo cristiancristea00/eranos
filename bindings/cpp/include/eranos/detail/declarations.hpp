@@ -77,8 +77,8 @@
 #include "eranos/detail/EranosPaymentList.hpp"
 #include "eranos/detail/EranosPercentage.hpp"
 #include "eranos/detail/EranosPhoneNumber.hpp"
-#include "eranos/detail/EranosSettlement.hpp"
-#include "eranos/detail/EranosSettlementOutcome.hpp"
+#include "eranos/detail/EranosSettlementPlan.hpp"
+#include "eranos/detail/EranosSettlementPlanOutcome.hpp"
 #include "eranos/detail/EranosSettlementStrategy.hpp"
 #include "eranos/detail/EranosSplit.hpp"
 #include "eranos/detail/EranosSplitKind.hpp"
@@ -159,7 +159,7 @@ struct Percentage;
 struct PercentageTipValue;
 struct PercentagesSplit;
 struct SettledBalance;
-struct Settlement;
+struct SettlementPlan;
 struct Summary;
 struct Tip;
 struct Transfer;

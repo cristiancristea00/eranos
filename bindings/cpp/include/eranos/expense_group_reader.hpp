@@ -108,7 +108,7 @@ class ExpenseGroupReader final {
     /// @param strategy The strategy
     /// @return The result, or the error the library refuses the call with, of the kind ErrorKind::RELEASED after release() and otherwise of the
     ///   module that refused it
-    [[nodiscard]] std::expected<Settlement, Error> settlement(SettlementStrategy const strategy) const;
+    [[nodiscard]] std::expected<SettlementPlan, Error> settlement(SettlementStrategy const strategy) const;
 
     /// Every transfer, in the order they were created.
     ///
@@ -203,7 +203,7 @@ inline std::expected<bool, Error> ExpenseGroupReader::isArchived(MemberId const 
 
 inline std::expected<std::string, Error> ExpenseGroupReader::name() const { return detail::expectedOf(handle->name()); }
 
-inline std::expected<Settlement, Error> ExpenseGroupReader::settlement(SettlementStrategy const strategy) const {
+inline std::expected<SettlementPlan, Error> ExpenseGroupReader::settlement(SettlementStrategy const strategy) const {
     return detail::expectedOf(handle->settlement(detail::toDetail(strategy))).transform([](auto const &value) { return detail::fromDetail(*value); });
 }
 

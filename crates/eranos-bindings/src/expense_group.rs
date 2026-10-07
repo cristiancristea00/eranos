@@ -12,7 +12,7 @@ use crate::cancellation::{Cancellation, cancellable};
 use crate::money::{CurrencyRate, currency};
 use crate::operations::CurrencyChange;
 use crate::reader::ExpenseGroupReader;
-use crate::settlement::{Settlement, SettlementStrategy};
+use crate::settlement::{SettlementPlan, SettlementStrategy};
 
 /// What a new group starts with.
 #[eranos_glue_macros::mirrored]
@@ -242,10 +242,10 @@ pub(crate) async fn settlement(
     shared: SharedExpenseGroup,
     strategy: SettlementStrategy,
     cancellation: Option<Arc<Cancellation>>,
-) -> Result<Settlement, EranosError> {
+) -> Result<SettlementPlan, EranosError> {
     let group = cancellable(shared.read(), cancellation.clone()).await?;
     let kept = cancellable(group.settlement_async(strategy.to_library()), cancellation).await??;
-    let settlement = Settlement::from_library(kept);
+    let settlement = SettlementPlan::from_library(kept);
     drop(group);
     Ok(settlement)
 }

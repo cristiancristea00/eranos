@@ -193,9 +193,9 @@ int main(void) {
     printFormatted("Ana paid %s but consumed only %s, so the others owe her the difference.", paid.text, consumed.text);
 
     section("4. Settling up");
-    EranosSettlement *settlement = nullptr;
+    EranosSettlementPlan *settlement = nullptr;
     must(eranosExpenseGroupSettlement(group, ERANOS_SETTLEMENT_STRATEGY_MINIMUM_TRANSFERS, &settlement));
-    EranosPaymentList *const payments = eranosSettlementPayments(settlement);
+    EranosPaymentList *const payments = eranosSettlementPlanPayments(settlement);
     printFormatted("The fewest payments that bring every balance to zero (%zu in total):", eranosPaymentListLength(payments));
     printPayments(group, payments);
     printLine("Once these payments are made, nobody owes anything.");
@@ -211,7 +211,7 @@ int main(void) {
     eranosBalanceDestroy(balance);
     eranosMoneyDestroy(total);
     eranosPaymentListDestroy(payments);
-    eranosSettlementDestroy(settlement);
+    eranosSettlementPlanDestroy(settlement);
     eranosMemberSummaryDestroy(anaTotals);
     eranosSummaryDestroy(summary);
     eranosTextDestroy(text);

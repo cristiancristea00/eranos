@@ -102,7 +102,7 @@ class TotalsTest {
                             ? SettlementStrategy.MINIMUM_TRANSFERS
                             : strategy;
             assertEquals(
-                    new Settlement(
+                    new SettlementPlan(
                             List.of(new Payment(flat.bob, flat.ana, flat.euros(500))), computedBy),
                     flat.group.settlement(strategy));
             assertEquals(strategy, SettlementStrategy.converted(strategy.generated()));

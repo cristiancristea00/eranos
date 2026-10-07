@@ -161,7 +161,7 @@ public struct MemberShare: Hashable, Sendable {
 }
 
 /// The payments that settle every balance.
-public struct Settlement: Hashable, Sendable {
+public struct SettlementPlan: Hashable, Sendable {
     /// The payments, ordered by payer and then by recipient.
     public let payments: [Payment]
 
@@ -169,7 +169,7 @@ public struct Settlement: Hashable, Sendable {
     /// whose plan it chose.
     public let strategy: SettlementStrategy
 
-    init(_ settlement: EranosGenerated.Settlement) {
+    init(_ settlement: EranosGenerated.SettlementPlan) {
         payments = settlement.payments.map(Payment.init)
         strategy = SettlementStrategy(settlement.strategy)
     }
@@ -196,7 +196,7 @@ public struct Payment: Hashable, Sendable {
 /// How balances turn into payments.
 public enum SettlementStrategy: Hashable, Sendable, CaseIterable {
     /// The fewest payments while at most 20 balances are left after exact opposites pay each other,
-    /// the greedy plan beyond; the settlement's ``Settlement/strategy`` names the strategy whose plan
+    /// the greedy plan beyond; the settlement's ``SettlementPlan/strategy`` names the strategy whose plan
     /// it is.
     case adaptive
 

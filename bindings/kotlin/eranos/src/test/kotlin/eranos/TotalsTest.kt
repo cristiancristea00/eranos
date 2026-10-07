@@ -93,7 +93,7 @@ class TotalsTest {
             assertEquals(flat.bob, payment.from)
             assertEquals(flat.ana, payment.to)
             assertEquals(flat.euros(500), payment.amount)
-            assertValue(settlement, flat.group.settlementBlocking(strategy), Settlement(emptyList(), settlement.strategy))
+            assertValue(settlement, flat.group.settlementBlocking(strategy), SettlementPlan(emptyList(), settlement.strategy))
             assertValue(payment, Payment(flat.bob, flat.ana, flat.euros(500)), Payment(flat.ana, flat.bob, flat.euros(500)))
         }
     }

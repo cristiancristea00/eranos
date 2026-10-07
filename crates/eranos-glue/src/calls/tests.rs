@@ -40,7 +40,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
                 category: &Category,
                 rates: &[CurrencyRate],
                 strategy: SettlementStrategy,
-            ) -> Result<Settlement, EranosError>;
+            ) -> Result<SettlementPlan, EranosError>;
         }
     })
     .unwrap();
@@ -50,7 +50,7 @@ fn every_kind_of_parameter_is_owned_lent_and_crossed_by_its_rule() {
     };
     assert_eq!(Access::Write, call.access);
     assert_eq!(text(&call.name), "change");
-    assert_eq!(text(&call.answer), text(quote!(Settlement)));
+    assert_eq!(text(&call.answer), text(quote!(SettlementPlan)));
     assert_eq!(text(&call.error), text(quote!(EranosError)));
     assert!(!call.infallible);
     assert!(call.asynchronous.is_none());
@@ -117,7 +117,7 @@ fn a_call_s_attributes_set_its_lock_its_fallibility_and_its_asynchronous_body() 
             /// The settlement.
             #[read]
             #[async_body = bodies::settlement]
-            fn settlement(&self) -> Result<Settlement, EranosError>;
+            fn settlement(&self) -> Result<SettlementPlan, EranosError>;
             /// Renames the group.
             #[write]
             #[infallible]

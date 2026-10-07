@@ -7,8 +7,8 @@
 use std::error::Error;
 
 use eranos::{
-    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money, Settlement,
-    SettlementStrategy, Split, Transfer,
+    Balance, CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money,
+    SettlementPlan, SettlementStrategy, Split, Transfer,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -140,7 +140,7 @@ fn print_balances(group: &ExpenseGroup) {
     );
 }
 
-fn print_payments(group: &ExpenseGroup, settlement: &Settlement) {
+fn print_payments(group: &ExpenseGroup, settlement: &SettlementPlan) {
     print_table(
         settlement.payments().iter().map(|payment| PaymentRow {
             from: names(group, [payment.from()]),

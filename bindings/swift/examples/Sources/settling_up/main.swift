@@ -104,7 +104,7 @@ func printBalances(_ group: ExpenseGroup) throws(EranosError) {
     )
 }
 
-func printPayments(_ group: ExpenseGroup, _ settlement: Settlement) throws(EranosError) {
+func printPayments(_ group: ExpenseGroup, _ settlement: SettlementPlan) throws(EranosError) {
     printTable(
         try settlement.payments.map { payment throws(EranosError) in
             PaymentRow(from: try names(group, [payment.from]), to: try names(group, [payment.to]), amount: payment.amount)

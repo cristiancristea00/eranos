@@ -21,7 +21,7 @@ import eranos.MemberId;
 import eranos.MemberSummary;
 import eranos.Money;
 import eranos.Payment;
-import eranos.Settlement;
+import eranos.SettlementPlan;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
@@ -158,7 +158,7 @@ public final class Main {
                     anaTotals.map(MemberSummary::share).map(Money::toString).orElse("?"));
 
             section("4. Settling up");
-            Settlement settlement = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
+            SettlementPlan settlement = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
             System.out.printf(
                     "The fewest payments that bring every balance to zero (%d in total):%n",
                     settlement.payments().size());

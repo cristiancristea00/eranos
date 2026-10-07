@@ -89,7 +89,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::money::Percentage>();
         // Settlements and transfers.
         assert_send_and_sync::<eranos::settlement::Payment>();
-        assert_send_and_sync::<eranos::settlement::Settlement>();
+        assert_send_and_sync::<eranos::settlement::SettlementPlan>();
         assert_send_and_sync::<eranos::settlement::SettlementStrategy>();
         assert_send_and_sync::<eranos::transfer::Transfer>();
         assert_send_and_sync::<eranos::transfer::TransferBuilder>();

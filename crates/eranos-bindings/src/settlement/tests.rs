@@ -45,8 +45,8 @@ fn a_settlement_keeps_every_payment() {
         .settlement(library::SettlementStrategy::Greedy)
         .unwrap();
     assert_eq!(
-        Settlement::from_library(settlement),
-        Settlement {
+        SettlementPlan::from_library(settlement),
+        SettlementPlan {
             payments: vec![Payment {
                 from: ana.to_string(),
                 to: bob.to_string(),

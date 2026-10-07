@@ -1318,8 +1318,9 @@ public final class ExpenseGroup implements AutoCloseable {
      * @throws EranosException.Settlement with {@link SettlementFailure.OutOfMemory} for an exact
      *     plan of more open balances than its table fits
      */
-    public Settlement settlement(SettlementStrategy strategy) throws EranosException {
-        return Converting.call(() -> Settlement.converted(handle.settlement(strategy.generated())));
+    public SettlementPlan settlement(SettlementStrategy strategy) throws EranosException {
+        return Converting.call(
+                () -> SettlementPlan.converted(handle.settlement(strategy.generated())));
     }
 
     /**
@@ -1334,10 +1335,10 @@ public final class ExpenseGroup implements AutoCloseable {
      * @param strategy the strategy
      * @return a future of the payments
      */
-    public CompletableFuture<Settlement> settlementAsync(SettlementStrategy strategy) {
+    public CompletableFuture<SettlementPlan> settlementAsync(SettlementStrategy strategy) {
         return Converting.future(
                 handle.settlementAsync(strategy.generated(), null),
-                value -> Settlement.converted(value));
+                value -> SettlementPlan.converted(value));
     }
 
     /**

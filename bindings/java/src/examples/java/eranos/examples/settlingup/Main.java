@@ -20,7 +20,7 @@ import eranos.MemberId;
 import eranos.MemberSummary;
 import eranos.Money;
 import eranos.Payment;
-import eranos.Settlement;
+import eranos.SettlementPlan;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
@@ -131,7 +131,7 @@ public final class Main {
         printTable(BalanceRow.HEADERS, rows, 1);
     }
 
-    private static void printPayments(ExpenseGroup group, Settlement settlement)
+    private static void printPayments(ExpenseGroup group, SettlementPlan settlement)
             throws EranosException {
         List<PaymentRow> rows = new ArrayList<>();
         for (Payment payment : settlement.payments()) {
@@ -149,7 +149,7 @@ public final class Main {
      */
     private static Counts strategies(ExpenseGroup group) throws EranosException {
         section("3. Minimum transfers");
-        Settlement minimum = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
+        SettlementPlan minimum = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
         System.out.print(
                 """
                 The fewest payments possible. Finding them is NP-hard; the solver does it exactly by
@@ -161,7 +161,7 @@ public final class Main {
         printPayments(group, minimum);
 
         section("4. Greedy");
-        Settlement greedy = group.settlement(SettlementStrategy.GREEDY);
+        SettlementPlan greedy = group.settlement(SettlementStrategy.GREEDY);
         System.out.print(
                 """
                 The largest debtor pays the largest creditor, again and again: fast, at most one
@@ -172,7 +172,7 @@ public final class Main {
         printPayments(group, greedy);
 
         section("5. Direct");
-        Settlement direct = group.settlement(SettlementStrategy.DIRECT);
+        SettlementPlan direct = group.settlement(SettlementStrategy.DIRECT);
         System.out.print(
                 """
                 No simplification: everyone pays back the people who paid for them, with the debts
@@ -183,7 +183,7 @@ public final class Main {
         printPayments(group, direct);
 
         section("6. Adaptive");
-        Settlement adaptive = group.settlement(SettlementStrategy.ADAPTIVE);
+        SettlementPlan adaptive = group.settlement(SettlementStrategy.ADAPTIVE);
         System.out.print(
                 """
                 The fewest payments while they are quick to find, greedy's beyond: up to 20 open
@@ -255,8 +255,8 @@ public final class Main {
                     group.summary().members().stream()
                             .filter(member -> 0 != member.net().minorUnits())
                             .count();
-            Settlement adaptive = group.settlement(SettlementStrategy.ADAPTIVE);
-            Settlement greedy = group.settlement(SettlementStrategy.GREEDY);
+            SettlementPlan adaptive = group.settlement(SettlementStrategy.ADAPTIVE);
+            SettlementPlan greedy = group.settlement(SettlementStrategy.GREEDY);
             System.out.print(
                     """
                     Twenty-one friends at a festival each bought one round for everyone, each round
@@ -323,7 +323,7 @@ public final class Main {
             int festivalPayments = festival();
 
             section("9. Settling up for real");
-            Settlement plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
+            SettlementPlan plan = group.settlement(SettlementStrategy.MINIMUM_TRANSFERS);
             for (Payment payment : plan.payments()) {
                 group.addTransfer(
                         Transfer.builder(

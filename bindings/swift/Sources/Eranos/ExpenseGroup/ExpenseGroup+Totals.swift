@@ -28,8 +28,8 @@ public extension ExpenseGroup {
     ///   ``SettlementFailure/outOfMemory(balances:)`` for an exact plan of more open balances than
     ///   the table fits; on wasm, ``EranosError/expenseGroup(_:detail:)`` with ``ExpenseGroupFailure/busy`` while
     ///   another call holds the lock.
-    func settlement(by strategy: SettlementStrategy) throws(EranosError) -> Settlement {
-        try converting { Settlement(try handle.settlement(strategy: strategy.generated)) }
+    func settlement(by strategy: SettlementStrategy) throws(EranosError) -> SettlementPlan {
+        try converting { SettlementPlan(try handle.settlement(strategy: strategy.generated)) }
     }
 
     /// The payments that settle every balance by `strategy`.
@@ -40,9 +40,9 @@ public extension ExpenseGroup {
     /// - Throws: ``EranosError/settlement(_:detail:)`` with
     ///   ``SettlementFailure/outOfMemory(balances:)`` for an exact plan of more open balances than
     ///   the table fits; ``EranosError/cancelled(detail:)`` when the task is cancelled first.
-    func settlement(by strategy: SettlementStrategy) async throws(EranosError) -> Settlement {
+    func settlement(by strategy: SettlementStrategy) async throws(EranosError) -> SettlementPlan {
         try await converting { [handle] cancellation in
-            Settlement(try await handle.settlementAsync(strategy: strategy.generated, cancellation: cancellation))
+            SettlementPlan(try await handle.settlementAsync(strategy: strategy.generated, cancellation: cancellation))
         }
     }
 }

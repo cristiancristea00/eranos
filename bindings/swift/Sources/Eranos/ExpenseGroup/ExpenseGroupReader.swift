@@ -153,8 +153,8 @@ public final class ExpenseGroupReader: Sendable {
     /// - Throws: ``EranosError/settlement(_:detail:)`` with
     ///   ``SettlementFailure/outOfMemory(balances:)`` for an exact plan of more open balances than
     ///   the table fits; ``EranosError/released(detail:)`` after ``release()``.
-    public func settlement(by strategy: SettlementStrategy) throws(EranosError) -> Settlement {
-        try converting { Settlement(try handle.settlement(strategy: strategy.generated)) }
+    public func settlement(by strategy: SettlementStrategy) throws(EranosError) -> SettlementPlan {
+        try converting { SettlementPlan(try handle.settlement(strategy: strategy.generated)) }
     }
 
     /// The group in its saved form, as JSON, which `ExpenseGroup.load(_:)` reads back.

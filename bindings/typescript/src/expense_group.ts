@@ -39,11 +39,11 @@ import { Money } from './money.js';
 import type { ExchangeRate } from './ratios.js';
 import {
     type ExpenseShares,
-    type Settlement,
+    type SettlementPlan,
     type SettlementStrategy,
     type Summary,
     convertedExpenseShares,
-    convertedSettlement,
+    convertedSettlementPlan,
     convertedSummary,
     generatedStrategy,
 } from './totals.js';
@@ -1355,8 +1355,10 @@ export class ExpenseGroup implements Disposable {
      * @param options - The call's signal
      * @returns A promise of the payments
      */
-    async settlement(strategy: SettlementStrategy, options?: CallOptions): Promise<Settlement> {
-        return convertedSettlement(await awaiting((signal) => this.handle.settlementAsync(generatedStrategy(strategy), undefined, signal), options));
+    async settlement(strategy: SettlementStrategy, options?: CallOptions): Promise<SettlementPlan> {
+        return convertedSettlementPlan(
+            await awaiting((signal) => this.handle.settlementAsync(generatedStrategy(strategy), undefined, signal), options),
+        );
     }
 
     /**
@@ -1370,8 +1372,8 @@ export class ExpenseGroup implements Disposable {
      * @throws {@link SettlementError} with the failure `outOfMemory` for an exact plan of more open balances than its table
      *   fits
      */
-    settlementSync(strategy: SettlementStrategy): Settlement {
-        return convertedSettlement(calling(() => this.handle.settlement(generatedStrategy(strategy))));
+    settlementSync(strategy: SettlementStrategy): SettlementPlan {
+        return convertedSettlementPlan(calling(() => this.handle.settlement(generatedStrategy(strategy))));
     }
 }
 

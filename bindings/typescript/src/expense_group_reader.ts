@@ -22,11 +22,11 @@ import type * as internal from './internal/eranos.js';
 import { Money } from './money.js';
 import {
     type ExpenseShares,
-    type Settlement,
+    type SettlementPlan,
     type SettlementStrategy,
     type Summary,
     convertedExpenseShares,
-    convertedSettlement,
+    convertedSettlementPlan,
     convertedSummary,
     generatedStrategy,
 } from './totals.js';
@@ -287,8 +287,8 @@ export class ExpenseGroupReader implements Disposable {
      *   fits
      * @throws `TypeError` after {@link ExpenseGroupReader.release}
      */
-    settlement(strategy: SettlementStrategy): Settlement {
-        return convertedSettlement(calling(() => this.handle.settlement(generatedStrategy(strategy))));
+    settlement(strategy: SettlementStrategy): SettlementPlan {
+        return convertedSettlementPlan(calling(() => this.handle.settlement(generatedStrategy(strategy))));
     }
 }
 

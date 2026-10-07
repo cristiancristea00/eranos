@@ -22,7 +22,7 @@
 #include "EranosMoneyOutcome.h"
 #include "EranosNewExpenseGroup.h"
 #include "EranosOptionalTextOutcome.h"
-#include "EranosSettlementOutcome.h"
+#include "EranosSettlementPlanOutcome.h"
 #include "EranosSummaryOutcome.h"
 #include "EranosTextOutcome.h"
 #include "EranosTransferListOutcome.h"
@@ -267,19 +267,19 @@ static inline void eranosDetailRunOptionalTextCallback(void const *const data, E
 
 /// What an asynchronous call reports to when it ends: the error, or nullptr when the call succeeded, and the settlement, or nullptr when the call
 /// failed. The callback destroys each object it receives.
-typedef struct EranosSettlementCallback {
+typedef struct EranosSettlementPlanCallback {
     /// What the caller passes back to itself.
     void *context;
     /// Called once with @p context and the outcome.
-    void (*run)(void *context, EranosError *error, EranosSettlement *settlement);
-} EranosSettlementCallback;
+    void (*run)(void *context, EranosError *error, EranosSettlementPlan *settlement);
+} EranosSettlementPlanCallback;
 
 /// Reports @p outcome to the callback @p data points to, and destroys it.
-static inline void eranosDetailRunSettlementCallback(void const *const data, EranosSettlementOutcome *const outcome) {
-    EranosSettlementCallback const *const callback = data;
-    EranosError *const error = EranosSettlementOutcome_error(outcome);
-    EranosSettlement *const settlement = EranosSettlementOutcome_value(outcome);
-    EranosSettlementOutcome_destroy(outcome);
+static inline void eranosDetailRunSettlementPlanCallback(void const *const data, EranosSettlementPlanOutcome *const outcome) {
+    EranosSettlementPlanCallback const *const callback = data;
+    EranosError *const error = EranosSettlementPlanOutcome_error(outcome);
+    EranosSettlementPlan *const settlement = EranosSettlementPlanOutcome_value(outcome);
+    EranosSettlementPlanOutcome_destroy(outcome);
     callback->run(callback->context, error, settlement);
 }
 
@@ -1406,7 +1406,7 @@ static inline void eranosExpenseGroupSetNameAsync(EranosExpenseGroup *const grou
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: The library's refusal, and the error of the kind
 ///   ERANOS_ERROR_KIND_EXPENSE_GROUP with the failure `ExpenseGroupBusy` on wasm while another call holds the lock
 [[nodiscard]] static inline EranosError *eranosExpenseGroupSettlement(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy,
-                                                                      EranosSettlement **const settlement) {
+                                                                      EranosSettlementPlan **const settlement) {
     EranosExpenseGroup_settlement_result const result = EranosExpenseGroup_settlement(group, strategy);
     *settlement = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
@@ -1422,10 +1422,11 @@ static inline void eranosExpenseGroupSetNameAsync(EranosExpenseGroup *const grou
 /// @param callback What to call with the outcome, on the group's worker thread or, for a load, a thread of its own; it and its context stay valid
 ///   until it is called, which happens once
 static inline void eranosExpenseGroupSettlementAsync(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy,
-                                                     EranosCancellation const *const cancellation, EranosSettlementCallback const *const callback) {
+                                                     EranosCancellation const *const cancellation,
+                                                     EranosSettlementPlanCallback const *const callback) {
     DiplomatCallback_EranosExpenseGroup_settlement_async_callback const wrapped = {
         .data = callback,
-        .run_callback = eranosDetailRunSettlementCallback,
+        .run_callback = eranosDetailRunSettlementPlanCallback,
         .destructor = nullptr,
     };
     EranosExpenseGroup_settlement_async(group, strategy, cancellation, wrapped);

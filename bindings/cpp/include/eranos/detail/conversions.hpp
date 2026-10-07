@@ -912,7 +912,7 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Settlement fromDetail(EranosSettlement const &value) {
+[[nodiscard]] inline SettlementPlan fromDetail(EranosSettlementPlan const &value) {
     return {detail::fromDetail(*value.payments()), detail::fromDetail(value.strategy())};
 }
 

@@ -148,7 +148,7 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
 def test_every_strategy_converts_into_the_generated_module_and_back() -> None:
     """A strategy that converted to another case would plan by, or name, one the app did not ask for; no group names the adaptive one."""
     for strategy in _totals.SettlementStrategy:
-        assert _totals.settlement_of(generated.Settlement(payments=[], strategy=_totals.generated_strategy(strategy))).strategy is strategy
+        assert _totals.settlement_of(generated.SettlementPlan(payments=[], strategy=_totals.generated_strategy(strategy))).strategy is strategy
 
 
 def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_name() -> None:

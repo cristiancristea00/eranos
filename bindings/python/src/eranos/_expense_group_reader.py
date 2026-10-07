@@ -11,7 +11,16 @@ from eranos._errors import library_errors
 from eranos._identifiers import CategoryId, ExpenseId, ExpenseGroupId, MemberId, TransferId
 from eranos._internal import eranos as generated
 from eranos._money import Money, money_of
-from eranos._totals import ExpenseShares, Settlement, SettlementStrategy, Summary, expense_shares_of, generated_strategy, settlement_of, summary_of
+from eranos._totals import (
+    ExpenseShares,
+    SettlementPlan,
+    SettlementStrategy,
+    Summary,
+    expense_shares_of,
+    generated_strategy,
+    settlement_of,
+    summary_of,
+)
 
 
 # One method per read of the library: the class is its surface.
@@ -236,7 +245,7 @@ class ExpenseGroupReader:
         with library_errors():
             return self._handle.name()
 
-    def settlement(self, strategy: SettlementStrategy) -> Settlement:
+    def settlement(self, strategy: SettlementStrategy) -> SettlementPlan:
         """
         Plan the payments that settle every balance by strategy.
 

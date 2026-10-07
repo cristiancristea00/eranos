@@ -68,7 +68,7 @@ pub enum SettlementStrategy {
     /// left, the exact solver settles them and the plan is the one
     /// [`MinimumTransfers`](Self::MinimumTransfers) gives; when more are left,
     /// or when the solver's table of 2ⁿ bytes cannot be allocated, the plan is
-    /// the one [`Greedy`](Self::Greedy) gives. [`Settlement::strategy`] names
+    /// the one [`Greedy`](Self::Greedy) gives. [`SettlementPlan::strategy`] names
     /// the strategy whose plan it is. It never fails, and it yields only while
     /// the exact solver fills its table.
     ///
@@ -158,12 +158,12 @@ pub trait FromSettlementStrategy: Sized {
 /// Recording every payment as a transfer, with `Transfer::from_payment`,
 /// brings every balance to zero.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Settlement {
+pub struct SettlementPlan {
     payments: Vec<Payment>,
     strategy: SettlementStrategy,
 }
 
-impl Settlement {
+impl SettlementPlan {
     /// The payments, ordered by payer and then by recipient.
     #[must_use]
     pub fn payments(&self) -> &[Payment] {
@@ -192,7 +192,7 @@ impl Settlement {
     }
 }
 
-/// One payment of a [`Settlement`]: `from` pays `amount` to `to`.
+/// One payment of a [`SettlementPlan`]: `from` pays `amount` to `to`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Payment {
     members: MemberPair,
@@ -263,10 +263,10 @@ struct OpenBalance {
 /// nothing.
 #[derive(Debug, Clone, Default)]
 pub struct Settlements {
-    adaptive: OnceLock<Result<Settlement, SettlementError>>,
-    minimum_transfers: OnceLock<Result<Settlement, SettlementError>>,
-    greedy: OnceLock<Result<Settlement, SettlementError>>,
-    direct: OnceLock<Result<Settlement, SettlementError>>,
+    adaptive: OnceLock<Result<SettlementPlan, SettlementError>>,
+    minimum_transfers: OnceLock<Result<SettlementPlan, SettlementError>>,
+    greedy: OnceLock<Result<SettlementPlan, SettlementError>>,
+    direct: OnceLock<Result<SettlementPlan, SettlementError>>,
 }
 
 impl Settlements {
@@ -280,7 +280,7 @@ impl Settlements {
         &self,
         strategy: SettlementStrategy,
         ledger: &Ledger,
-    ) -> Result<&Settlement, SettlementError> {
+    ) -> Result<&SettlementPlan, SettlementError> {
         self.get_async(strategy, ledger).complete()
     }
 
@@ -294,7 +294,7 @@ impl Settlements {
         &self,
         strategy: SettlementStrategy,
         ledger: &Ledger,
-    ) -> Cooperative<impl Future<Output = Result<&Settlement, SettlementError>> + Send> {
+    ) -> Cooperative<impl Future<Output = Result<&SettlementPlan, SettlementError>> + Send> {
         let slot = self.slot(strategy);
         Cooperative::new(async move {
             let kept = if let Some(kept) = slot.get() {
@@ -320,7 +320,7 @@ impl Settlements {
     const fn slot(
         &self,
         strategy: SettlementStrategy,
-    ) -> &OnceLock<Result<Settlement, SettlementError>> {
+    ) -> &OnceLock<Result<SettlementPlan, SettlementError>> {
         match strategy {
             SettlementStrategy::Adaptive => &self.adaptive,
             SettlementStrategy::MinimumTransfers => &self.minimum_transfers,
@@ -340,7 +340,7 @@ impl Settlements {
 pub fn settle(
     strategy: SettlementStrategy,
     ledger: &Ledger,
-) -> Result<Settlement, SettlementError> {
+) -> Result<SettlementPlan, SettlementError> {
     settle_async(strategy, ledger).complete()
 }
 
@@ -356,7 +356,7 @@ pub fn settle(
 pub fn settle_async(
     strategy: SettlementStrategy,
     ledger: &Ledger,
-) -> Cooperative<impl Future<Output = Result<Settlement, SettlementError>> + Send + '_> {
+) -> Cooperative<impl Future<Output = Result<SettlementPlan, SettlementError>> + Send + '_> {
     Cooperative::new(settle_paced(strategy, ledger))
 }
 
@@ -364,7 +364,7 @@ pub fn settle_async(
 async fn settle_paced(
     strategy: SettlementStrategy,
     ledger: &Ledger,
-) -> Result<Settlement, SettlementError> {
+) -> Result<SettlementPlan, SettlementError> {
     let Plan {
         mut flows,
         strategy: computed_by,
@@ -383,7 +383,7 @@ async fn settle_paced(
             strategy,
         },
     };
-    // By payer, then recipient, as `Settlement::payments` promises. Every
+    // By payer, then recipient, as `SettlementPlan::payments` promises. Every
     // strategy pays each pair of members at most once (the direct one pays
     // each ledger pair once, and the others clear a debtor or a creditor
     // with every payment), so the pair alone orders the flows.
@@ -393,7 +393,7 @@ async fn settle_paced(
         .into_iter()
         .map(|flow| flow.into_payment(currency))
         .collect();
-    Ok(Settlement {
+    Ok(SettlementPlan {
         payments,
         strategy: computed_by,
     })

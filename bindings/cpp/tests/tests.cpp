@@ -334,8 +334,8 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     checkValue(check, ExpenseShares({share}, two, one), ExpenseShares({share}, two, one), ExpenseShares({share}, two, two), "expense shares");
     Payment const payment(bob, ana, one);
     checkValue(check, payment, Payment(bob, ana, one), Payment(ana, bob, one), "payments compare by direction");
-    checkValue(check, Settlement({payment}, SettlementStrategy::GREEDY), Settlement({payment}, SettlementStrategy::GREEDY),
-               Settlement({payment}, SettlementStrategy::DIRECT), "settlements compare by strategy too");
+    checkValue(check, SettlementPlan({payment}, SettlementStrategy::GREEDY), SettlementPlan({payment}, SettlementStrategy::GREEDY),
+               SettlementPlan({payment}, SettlementStrategy::DIRECT), "settlements compare by strategy too");
     checkValue(check, CurrencyRate(euro, rate), CurrencyRate(euro, rate), CurrencyRate(Currency::of("RON").value(), rate), "currency rates");
 }
 

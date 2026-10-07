@@ -28,7 +28,16 @@ from eranos._identifiers import CategoryId, ExpenseId, ExpenseGroupId, MemberId,
 from eranos._internal import eranos as generated
 from eranos._money import Money, money_of
 from eranos._ratios import ExchangeRate
-from eranos._totals import ExpenseShares, Settlement, SettlementStrategy, Summary, expense_shares_of, generated_strategy, settlement_of, summary_of
+from eranos._totals import (
+    ExpenseShares,
+    SettlementPlan,
+    SettlementStrategy,
+    Summary,
+    expense_shares_of,
+    generated_strategy,
+    settlement_of,
+    summary_of,
+)
 
 
 @final
@@ -981,7 +990,7 @@ class ExpenseGroup:
         with library_errors():
             await self._generated().set_name_async(name, None)
 
-    def settlement(self, strategy: SettlementStrategy) -> Settlement:
+    def settlement(self, strategy: SettlementStrategy) -> SettlementPlan:
         """
         Plan the payments that settle every balance by strategy.
 
@@ -998,7 +1007,7 @@ class ExpenseGroup:
         with library_errors():
             return settlement_of(self._generated().settlement(generated_strategy(strategy)))
 
-    async def settlement_async(self, strategy: SettlementStrategy) -> Settlement:
+    async def settlement_async(self, strategy: SettlementStrategy) -> SettlementPlan:
         """
         Plan the payments that settle every balance by strategy.
 

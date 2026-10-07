@@ -96,7 +96,7 @@ flowchart TD
     TRANSFER["eranos-transfer<br/>Transfer (+ resolve_transfer)"]
     MEMBER["eranos-member<br/>Member"]
     CATEGORY["eranos-category<br/>Category"]
-    SETTLEMENT["eranos-settlement<br/>SettlementStrategy, Settlement, Payment<br/>(+ Settlements)"]
+    SETTLEMENT["eranos-settlement<br/>SettlementStrategy, SettlementPlan, Payment<br/>(+ Settlements)"]
     PAYMENT_ACCOUNT["eranos-payment-account<br/>PaymentAccount, Iban, Username"]
     CONTACT["eranos-contact<br/>Email, PhoneNumber"]
     LEDGER["eranos-ledger<br/>Summary, Balance, ExpenseShares<br/>(+ Ledger, Delta)"]
@@ -171,7 +171,7 @@ flowchart TD
  │ eranos-member          Member                                               │
  │ eranos-category        Category                                             │
  ├─────────────────────────────────────────────────────────────────────────────┤
- │ eranos-settlement      SettlementStrategy, Settlement, Payment              │
+ │ eranos-settlement      SettlementStrategy, SettlementPlan, Payment              │
  │                        (+ Settlements)                                      │
  │ eranos-payment-account PaymentAccount, Iban, Username                       │
  │ eranos-contact         Email, PhoneNumber                                   │
@@ -209,7 +209,7 @@ flowchart TD
 | `eranos-transfer`        | `Transfer`, `TransferBuilder`, `TransferError`; `resolve_transfer`                                                                                                                                                                       | calendar, core, money, settlement                                                                                      |
 | `eranos-member`          | `Member`, `MemberBuilder`, `MemberError`                                                                                                                                                                                                 | account, contact, core                                                                                                 |
 | `eranos-category`        | `Category`, `CategoryError`                                                                                                                                                                                                              | core; icu_casemap, icu_normalizer                                                                                      |
-| `eranos-settlement`      | `SettlementStrategy`, `Settlement`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                                                                                                | core, ledger, money                                                                                                    |
+| `eranos-settlement`      | `SettlementStrategy`, `SettlementPlan`, `Payment`, `SettlementError`; `Settlements`, `settle`                                                                                                                                            | core, ledger, money                                                                                                    |
 | `eranos-payment-account` | `PaymentAccount`, `PaymentAccountDetails`, `PaymentAccountKind`, `Iban`, `Username`, `PaymentAccountError`, `IbanError`                                                                                                                  | core                                                                                                                   |
 | `eranos-contact`         | `Email`, `PhoneNumber`, `ContactError`                                                                                                                                                                                                   | core; icu_properties, rlibphonenumber                                                                                  |
 | `eranos-ledger`          | `Summary`, `MemberSummary`, `Balance`, `CategoryTotal`, `ExpenseShares`, `MemberShare`; `Ledger`, `Delta`, `MemberPair`, `Debt`, `ResolvedExpense`                                                                                       | core, money                                                                                                            |
@@ -453,7 +453,7 @@ process before an allocation fails, which is why the documentation of
 `Adaptive` bounds that cost. It pairs exact opposites once and, when at
 most 20 balances are left, settles them with the exact solver, so its plan
 is the one `MinimumTransfers` gives; when more are left, it computes the
-plan `Greedy` gives from the same pairing. `Settlement::strategy` names the
+plan `Greedy` gives from the same pairing. `SettlementPlan::strategy` names the
 strategy whose plan it is, never `Adaptive`, and the plan is cached under
 `Adaptive`. Twenty balances take a 1 MiB table and about 7 ms on the
 reference machine; phones run from about its speed (flagships) to about a
@@ -518,7 +518,7 @@ With the `serde` feature, `ExpenseGroup` and every type it stores serialise
 and deserialise: its entries, members, and categories, the identifiers, and
 the values inside them, such as `Money`, `Currency`, `ExchangeRate`,
 `CalendarDate`, and `Language`. `SavedExpenseGroup` only deserialises. What
-a group derives (`Summary`, `Settlement`, `ExpenseShares`, and the types
+a group derives (`Summary`, `SettlementPlan`, `ExpenseShares`, and the types
 they hold), the builders, the errors, `CurrencyRate`, and
 `SettlementStrategy` do not serialise. A group serialises only its inputs,
 never the derived totals:

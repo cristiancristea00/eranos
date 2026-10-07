@@ -11,7 +11,7 @@ use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
 use crate::money::{Cost, CurrencyRate, Money};
 use crate::operations;
-use crate::settlement::{Settlement, SettlementStrategy};
+use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{
     CategoryFailure, EranosError, ExpenseFailure, ExpenseGroupFailure, IdFailure, LanguageFailure,
@@ -185,7 +185,7 @@ fn every_read_converts_what_the_group_holds() {
         let settled = group.settlement(strategy.to_library()).unwrap();
         assert_eq!(
             operations::settlement(group, strategy),
-            Ok(Settlement::from_library(settled))
+            Ok(SettlementPlan::from_library(settled))
         );
     }
     let transfers = operations::transfers(group);

@@ -138,9 +138,9 @@ flowchart TD
   modules at once, since its records are converted before the library runs
   it, and a generated function throws one error type, so every call
   reports `EranosError`. It has a case per module of the library, as the
-  library has an error per module: `PaymentAccount`, `Calendar`, `Category`,
-  `Contact`, `Expense`, `ExpenseGroup`, `Id`, `Language`, `Member`, `Money`,
-  `Settlement`, and `Transfer`. Each holds the module's failure, an enum
+  library has an error per module: `Id`, `PaymentAccount`, `Calendar`,
+  `Category`, `Contact`, `Money`, `Member`, `Expense`, `Settlement`,
+  `Transfer`, `ExpenseGroup`, and `Language`. Each holds the module's failure, an enum
   with a case per variant of the module's error and what the variant holds
   (`ExpenseGroupFailure::MemberInUse { expenses, member, transfers }`), and, as
   `detail`, the library's message; a field named `message` would clash

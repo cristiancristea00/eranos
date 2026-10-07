@@ -9,7 +9,7 @@ use eranos_bindings::{
     ExpenseGroupFailure, ExpenseShares, ExpenseSplit, IbanReason, IdFailure, Item, LanguageFailure,
     Member, MemberAmount, MemberCategoryTotals, MemberFailure, MemberParts, MemberPercentage,
     MemberShare, MemberSummary, Money, MoneyFailure, NewExpenseGroup, Payment, PaymentAccount,
-    PaymentAccountDetails, PaymentAccountFailure, Settlement, SettlementFailure,
+    PaymentAccountDetails, PaymentAccountFailure, SettlementFailure, SettlementPlan,
     SettlementStrategy, Split, Summary, TimeOfDay, Tip, TipDistribution, TipValue, Transfer,
     TransferFailure,
 };

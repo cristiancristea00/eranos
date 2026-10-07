@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
     type Balance,
     type MemberId,
-    type Settlement,
+    type SettlementPlan,
     CalendarDate,
     Currency,
     ExpenseGroup,
@@ -121,7 +121,7 @@ function printBalances(group: ExpenseGroup): void {
     );
 }
 
-function printPayments(group: ExpenseGroup, settlement: Settlement): void {
+function printPayments(group: ExpenseGroup, settlement: SettlementPlan): void {
     printTable(
         paymentColumns,
         settlement.payments.map((payment) => ({ from: names(group, [payment.from]), to: names(group, [payment.to]), amount: payment.amount })),

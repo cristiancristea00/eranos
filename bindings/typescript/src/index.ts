@@ -94,7 +94,7 @@ export {
     type MemberShare,
     type MemberSummary,
     type Payment,
-    type Settlement,
+    type SettlementPlan,
     type Summary,
     SettlementStrategy,
     formatBalance,

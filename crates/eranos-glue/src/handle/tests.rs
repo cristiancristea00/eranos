@@ -32,7 +32,7 @@ fn trait_item() -> ItemTrait {
             /// The payments that settle every balance.
             #[read]
             #[async_body = bodies::settlement]
-            fn settlement(&self, strategy: SettlementStrategy) -> Result<Settlement, EranosError>;
+            fn settlement(&self, strategy: SettlementStrategy) -> Result<SettlementPlan, EranosError>;
         }
     })
     .unwrap()
@@ -144,7 +144,7 @@ fn every_call_writes_both_forms_on_the_group_handle() {
                 })
             }
             #[doc = #settlement_doc]
-            pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<Settlement, EranosError> {
+            pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<SettlementPlan, EranosError> {
                 self.reading(|group| operations::settlement(group, strategy))
             }
             #[doc = #settlement_future]
@@ -152,7 +152,7 @@ fn every_call_writes_both_forms_on_the_group_handle() {
                 &self,
                 strategy: SettlementStrategy,
                 cancellation: ::std::option::Option<::std::sync::Arc<Cancellation>>,
-            ) -> impl ::std::future::Future<Output = ::std::result::Result<Settlement, EranosError>>
+            ) -> impl ::std::future::Future<Output = ::std::result::Result<SettlementPlan, EranosError>>
                    + ::std::marker::Send
                    + 'static {
                 bodies::settlement(self.shared.clone(), strategy, cancellation)
@@ -184,7 +184,7 @@ fn every_read_writes_its_form_on_the_read_handle_and_the_table_hands_the_trait()
                 self.reading(|group| ::std::result::Result::Ok(operations::name(group)))
             }
             #[doc = #settlement]
-            pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<Settlement, EranosError> {
+            pub fn settlement(&self, strategy: SettlementStrategy) -> ::std::result::Result<SettlementPlan, EranosError> {
                 self.reading(|group| operations::settlement(group, strategy))
             }
         }

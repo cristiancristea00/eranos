@@ -89,7 +89,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<MemberShare>();
         assert_send_and_sync::<MemberSummary>();
         assert_send_and_sync::<Payment>();
-        assert_send_and_sync::<Settlement>();
+        assert_send_and_sync::<SettlementPlan>();
         assert_send_and_sync::<SettlementStrategy>();
         assert_send_and_sync::<Summary>();
     }

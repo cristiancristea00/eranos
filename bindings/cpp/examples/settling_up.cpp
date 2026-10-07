@@ -151,7 +151,7 @@ void printBalances(ExpenseGroup const &group) {
 }
 
 /// Prints the payments of @p settlement: who pays whom, and how much.
-void printPayments(ExpenseGroup const &group, Settlement const &settlement) {
+void printPayments(ExpenseGroup const &group, SettlementPlan const &settlement) {
     std::vector<PaymentRow> rows;
     rows.reserve(settlement.payments.size());
     for (auto const &payment : settlement.payments) {

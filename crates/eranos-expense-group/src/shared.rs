@@ -14,7 +14,7 @@ use eranos_expense::Expense;
 use eranos_ledger::{ExpenseShares, Summary};
 use eranos_member::Member;
 use eranos_money::{Currency, CurrencyRate, Money};
-use eranos_settlement::{Settlement, SettlementError, SettlementStrategy};
+use eranos_settlement::{SettlementError, SettlementPlan, SettlementStrategy};
 use eranos_transfer::Transfer;
 
 use crate::{ExpenseGroup, ExpenseGroupError, Language};
@@ -430,7 +430,7 @@ impl SharedExpenseGroup {
     pub fn settlement(
         &self,
         strategy: SettlementStrategy,
-    ) -> impl Future<Output = Result<Settlement, SettlementError>> + Send + 'static {
+    ) -> impl Future<Output = Result<SettlementPlan, SettlementError>> + Send + 'static {
         let group = Arc::clone(&self.group);
         async move {
             let group = group.read().await;

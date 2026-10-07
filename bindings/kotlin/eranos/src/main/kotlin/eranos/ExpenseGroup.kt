@@ -851,7 +851,7 @@ public class ExpenseGroup private constructor(
      *   its table fits.
      */
     @Throws(EranosException::class, CancellationException::class)
-    public suspend fun settlement(strategy: SettlementStrategy): Settlement =
+    public suspend fun settlement(strategy: SettlementStrategy): SettlementPlan =
         converting { handle.settlementAsync(strategy.generated, null).converted() }
 
     /**
@@ -863,7 +863,7 @@ public class ExpenseGroup private constructor(
      *   its table fits.
      */
     @Throws(EranosException::class)
-    public fun settlementBlocking(strategy: SettlementStrategy): Settlement = converting { handle.settlement(strategy.generated).converted() }
+    public fun settlementBlocking(strategy: SettlementStrategy): SettlementPlan = converting { handle.settlement(strategy.generated).converted() }
 
     /** The loading of a saved group. */
     public companion object {

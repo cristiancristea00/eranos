@@ -272,12 +272,12 @@ struct Payment final {
 };
 
 /// A plan of payments that settles every balance.
-struct Settlement final {
+struct SettlementPlan final {
     /// The record of its fields.
     ///
     /// @param payments The payments.
     /// @param strategy The strategy that made the plan: the one asked for, or, for the adaptive strategy, the one whose plan it chose.
-    Settlement(std::vector<Payment> payments, SettlementStrategy const strategy) noexcept : payments(std::move(payments)), strategy(strategy) {}
+    SettlementPlan(std::vector<Payment> payments, SettlementStrategy const strategy) noexcept : payments(std::move(payments)), strategy(strategy) {}
 
     /// The payments.
     std::vector<Payment> payments;
@@ -290,7 +290,7 @@ struct Settlement final {
     /// @param left A record
     /// @param right Another record
     /// @return Whether they are equal
-    [[nodiscard]] friend bool operator==(Settlement const &left, Settlement const &right) noexcept = default;
+    [[nodiscard]] friend bool operator==(SettlementPlan const &left, SettlementPlan const &right) noexcept = default;
 };
 
 /// The balance as the library writes it: "owes 12.00 EUR", "settled", or "gets back 12.00 EUR".
@@ -313,7 +313,7 @@ namespace detail {
 [[nodiscard]] inline MemberShare fromDetail(EranosMemberShare const &value);
 [[nodiscard]] inline ExpenseShares fromDetail(EranosExpenseShares const &value);
 [[nodiscard]] inline Payment fromDetail(EranosPayment const &value);
-[[nodiscard]] inline Settlement fromDetail(EranosSettlement const &value);
+[[nodiscard]] inline SettlementPlan fromDetail(EranosSettlementPlan const &value);
 [[nodiscard]] inline std::vector<CategoryTotal> fromDetail(EranosCategoryTotalList const &list);
 [[nodiscard]] inline std::vector<MemberCategoryTotals> fromDetail(EranosMemberCategoryTotalsList const &list);
 [[nodiscard]] inline std::vector<MemberShare> fromDetail(EranosMemberShareList const &list);

@@ -5,7 +5,7 @@
 //! [`Expense`]s they share, and the [`Transfer`]s they make to pay each other
 //! back. Every change updates the group's [`Summary`] in place: total
 //! spending, what each member paid and consumed, their [`Balance`], and
-//! totals per category and per member per category. A [`Settlement`] turns
+//! totals per category and per member per category. A [`SettlementPlan`] turns
 //! the balances into payments with the [`SettlementStrategy`] the caller
 //! chooses.
 //!
@@ -257,7 +257,7 @@ pub mod settlement {
     //! Settling up: turning balances into payments between members.
 
     #[doc(inline)]
-    pub use eranos_settlement::{Payment, Settlement, SettlementStrategy};
+    pub use eranos_settlement::{Payment, SettlementPlan, SettlementStrategy};
 }
 pub mod transfer {
     //! Transfers: money one member paid another, such as a repayment.
@@ -292,7 +292,7 @@ pub use member::{
 #[doc(no_inline)]
 pub use money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};
 #[doc(no_inline)]
-pub use settlement::{Payment, Settlement, SettlementStrategy};
+pub use settlement::{Payment, SettlementPlan, SettlementStrategy};
 #[doc(no_inline)]
 pub use transfer::Transfer;
 

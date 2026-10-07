@@ -10,7 +10,7 @@ import java.util.Objects;
  * @param strategy the strategy that produced them: the one asked for, or, for the adaptive
  *     strategy, the one whose plan it chose
  */
-public record Settlement(List<Payment> payments, SettlementStrategy strategy) {
+public record SettlementPlan(List<Payment> payments, SettlementStrategy strategy) {
     /**
      * The settlement of these components; the lists are copied.
      *
@@ -18,7 +18,7 @@ public record Settlement(List<Payment> payments, SettlementStrategy strategy) {
      * @param strategy the strategy that produced them: the one asked for, or, for the adaptive
      *     strategy, the one whose plan it chose
      */
-    public Settlement {
+    public SettlementPlan {
         payments = List.copyOf(payments);
         Objects.requireNonNull(strategy, "strategy");
     }
@@ -29,8 +29,8 @@ public record Settlement(List<Payment> payments, SettlementStrategy strategy) {
      * @param settlement the generated value
      * @return the value
      */
-    static Settlement converted(eranos.internal.Settlement settlement) {
-        return new Settlement(
+    static SettlementPlan converted(eranos.internal.SettlementPlan settlement) {
+        return new SettlementPlan(
                 settlement.payments().stream().map(Payment::converted).toList(),
                 SettlementStrategy.converted(settlement.strategy()));
     }

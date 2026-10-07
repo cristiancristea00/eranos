@@ -119,7 +119,7 @@ export interface Payment {
 }
 
 /** The payments that settle every balance. */
-export interface Settlement {
+export interface SettlementPlan {
     /** The payments, ordered by payer and then by recipient. */
     readonly payments: readonly Payment[];
     /** The strategy that produced them: the one asked for, or, for the adaptive strategy, the one whose plan it chose. */
@@ -257,7 +257,7 @@ export function convertedStrategy(strategy: internal.SettlementStrategy): Settle
  *
  * @internal
  */
-export function convertedSettlement(settlement: internal.Settlement): Settlement {
+export function convertedSettlementPlan(settlement: internal.SettlementPlan): SettlementPlan {
     return {
         payments: settlement.payments.map((payment) => ({
             from: memberId(payment.from),

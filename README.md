@@ -30,7 +30,7 @@ library itself is plain Rust with no I/O and no async runtime.
 | Tip             | `Tip`                | A percentage or a fixed amount on top, shared proportionally or equally           |
 | Transfer        | `Transfer`           | Money one member paid another, such as a repayment                                |
 | Summary         | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |
-| Settlement      | `Settlement`         | The payments that bring every balance to zero                                     |
+| Settlement plan | `SettlementPlan`     | The payments that bring every balance to zero                                     |
 
 ## Quick start
 

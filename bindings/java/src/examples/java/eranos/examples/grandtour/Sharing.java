@@ -18,7 +18,7 @@ import eranos.Member;
 import eranos.MemberId;
 import eranos.Money;
 import eranos.Payment;
-import eranos.Settlement;
+import eranos.SettlementPlan;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
@@ -52,7 +52,7 @@ final class Sharing {
                                 october(8))
                         .build();
         other.addExpenseAsync(coffee).join();
-        Settlement plan = group.settlementAsync(SettlementStrategy.MINIMUM_TRANSFERS).join();
+        SettlementPlan plan = group.settlementAsync(SettlementStrategy.MINIMUM_TRANSFERS).join();
         System.out.print(
                 """
                 An app shares the group between its tasks and threads through a

@@ -9,7 +9,7 @@ use crate::expense::Expense;
 use crate::ledger::{ExpenseShares, Summary};
 use crate::member::{Category, Member};
 use crate::money::{self, CurrencyRate, Money};
-use crate::settlement::{Settlement, SettlementStrategy};
+use crate::settlement::{SettlementPlan, SettlementStrategy};
 use crate::transfer::Transfer;
 use crate::{EranosError, identifier, identifier_to_replace};
 
@@ -240,8 +240,8 @@ pub(crate) fn set_name(group: &mut ExpenseGroup, name: &str) -> Result<(), Erano
 pub(crate) fn settlement(
     group: &ExpenseGroup,
     strategy: SettlementStrategy,
-) -> Result<Settlement, EranosError> {
-    Ok(Settlement::from_library(
+) -> Result<SettlementPlan, EranosError> {
+    Ok(SettlementPlan::from_library(
         group.settlement(strategy.to_library())?,
     ))
 }

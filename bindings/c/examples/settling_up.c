@@ -217,17 +217,17 @@ static void printPayments(EranosExpenseGroup const *const group, EranosPaymentLi
 }
 
 /// The plan that @p strategy makes for @p group, which the caller destroys.
-static EranosSettlement *settlementOf(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy) {
-    EranosSettlement *settlement = nullptr;
+static EranosSettlementPlan *settlementOf(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy) {
+    EranosSettlementPlan *settlement = nullptr;
     must(eranosExpenseGroupSettlement(group, strategy, &settlement));
     return settlement;
 }
 
 /// The payments of the plan that @p strategy makes for @p group, which the caller destroys.
 static EranosPaymentList *planOf(EranosExpenseGroup const *const group, EranosSettlementStrategy const strategy) {
-    EranosSettlement *const settlement = settlementOf(group, strategy);
-    EranosPaymentList *const payments = eranosSettlementPayments(settlement);
-    eranosSettlementDestroy(settlement);
+    EranosSettlementPlan *const settlement = settlementOf(group, strategy);
+    EranosPaymentList *const payments = eranosSettlementPlanPayments(settlement);
+    eranosSettlementPlanDestroy(settlement);
     return payments;
 }
 
@@ -286,13 +286,13 @@ static Counts strategies(EranosExpenseGroup const *const group) {
     printPayments(group, direct);
 
     section("6. Adaptive");
-    EranosSettlement *const settlement = settlementOf(group, ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE);
-    EranosPaymentList *const adaptive = eranosSettlementPayments(settlement);
+    EranosSettlementPlan *const settlement = settlementOf(group, ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE);
+    EranosPaymentList *const adaptive = eranosSettlementPlanPayments(settlement);
     printFormatted("The fewest payments while they are quick to find, greedy's beyond: up to 20 open\n"
                    "balances the minimum solver settles them, past that greedy does, and the plan\n"
                    "names the strategy whose plan it is. Six balances are well within the limit, so\n"
                    "the plan is the one %s gives, the same %zu payments.",
-                   strategyName(eranosSettlementStrategy(settlement)), eranosPaymentListLength(adaptive));
+                   strategyName(eranosSettlementPlanStrategy(settlement)), eranosPaymentListLength(adaptive));
 
     section("7. The strategies side by side");
     Counts const counts = {
@@ -328,7 +328,7 @@ static Counts strategies(EranosExpenseGroup const *const group) {
                           });
     tablePrint(table);
     eranosPaymentListDestroy(adaptive);
-    eranosSettlementDestroy(settlement);
+    eranosSettlementPlanDestroy(settlement);
     eranosPaymentListDestroy(direct);
     eranosPaymentListDestroy(greedy);
     eranosPaymentListDestroy(minimum);
@@ -381,21 +381,21 @@ static size_t festival(void) {
         addExpense(group, expenseOf("Round", localCost(amount), soleSplit(friends[index]), eranosSplitCreateEqual(everyone), date));
     }
     size_t const open = openBalances(group);
-    EranosSettlement *const settlement = settlementOf(group, ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE);
-    EranosPaymentList *const adaptive = eranosSettlementPayments(settlement);
+    EranosSettlementPlan *const settlement = settlementOf(group, ERANOS_SETTLEMENT_STRATEGY_ADAPTIVE);
+    EranosPaymentList *const adaptive = eranosSettlementPlanPayments(settlement);
     EranosPaymentList *const greedy = planOf(group, ERANOS_SETTLEMENT_STRATEGY_GREEDY);
     printFormatted("Twenty-one friends at a festival each bought one round for everyone, each round\n"
                    "at another price, so all %zu end with a balance and no two of them cancel out.\n"
                    "That is more than the 20 the adaptive strategy settles exactly, so it takes the\n"
                    "plan %s gives and says so: the same %zu payments.",
-                   open, strategyName(eranosSettlementStrategy(settlement)), eranosPaymentListLength(adaptive));
+                   open, strategyName(eranosSettlementPlanStrategy(settlement)), eranosPaymentListLength(adaptive));
     check(FRIENDS == open, "every friend has a balance");
-    check(ERANOS_SETTLEMENT_STRATEGY_GREEDY == eranosSettlementStrategy(settlement), "the adaptive plan is greedy's");
+    check(ERANOS_SETTLEMENT_STRATEGY_GREEDY == eranosSettlementPlanStrategy(settlement), "the adaptive plan is greedy's");
     check(samePayments(adaptive, greedy), "the adaptive plan makes greedy's payments");
     size_t const payments = eranosPaymentListLength(adaptive);
     eranosPaymentListDestroy(greedy);
     eranosPaymentListDestroy(adaptive);
-    eranosSettlementDestroy(settlement);
+    eranosSettlementPlanDestroy(settlement);
     eranosTextListDestroy(everyone);
     eranosExpenseGroupDestroy(group);
     return payments;

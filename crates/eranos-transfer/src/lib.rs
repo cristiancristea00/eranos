@@ -83,7 +83,7 @@ impl Transfer {
     /// The transfer recording `payment`, made on `date`, under a newly
     /// generated identifier.
     ///
-    /// Recording every payment of a [`Settlement`](eranos_settlement::Settlement) brings
+    /// Recording every payment of a [`SettlementPlan`](eranos_settlement::SettlementPlan) brings
     /// every balance to zero.
     #[must_use]
     pub fn from_payment(payment: &Payment, date: CalendarDate) -> Self {

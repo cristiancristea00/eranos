@@ -14,7 +14,7 @@ pub mod ffi {
     use crate::generated::records::ffi::{
         EranosCategory, EranosCategoryList, EranosCurrencyRateList, EranosExpense,
         EranosExpenseList, EranosExpenseShares, EranosMember, EranosMemberList,
-        EranosNewExpenseGroup, EranosSettlement, EranosSettlementStrategy, EranosSummary,
+        EranosNewExpenseGroup, EranosSettlementPlan, EranosSettlementStrategy, EranosSummary,
         EranosTransfer, EranosTransferList,
     };
     use crate::values::ffi::EranosMoney;
@@ -1214,10 +1214,10 @@ pub mod ffi {
         pub fn settlement(
             &self,
             strategy: EranosSettlementStrategy,
-        ) -> Result<Box<EranosSettlement>, Box<EranosError>> {
+        ) -> Result<Box<EranosSettlementPlan>, Box<EranosError>> {
             self.handle
                 .settlement(strategy.into())
-                .map(|value| Box::new(EranosSettlement(value)))
+                .map(|value| Box::new(EranosSettlementPlan(value)))
                 .map_err(crate::failed)
         }
 
@@ -1229,7 +1229,7 @@ pub mod ffi {
             &self,
             strategy: EranosSettlementStrategy,
             cancellation: Option<&EranosCancellation>,
-            callback: impl Fn(Box<EranosSettlementOutcome>) + 'static,
+            callback: impl Fn(Box<EranosSettlementPlanOutcome>) + 'static,
         ) {
             let handle = self.handle.clone();
             let cancellation = cancellation.map(EranosCancellation::shared);
@@ -1244,7 +1244,7 @@ pub mod ffi {
                         .map(Some)
                 },
                 callback,
-                EranosSettlementOutcome,
+                EranosSettlementPlanOutcome,
             );
         }
 
@@ -1970,10 +1970,10 @@ pub mod ffi {
         pub fn settlement(
             &self,
             strategy: EranosSettlementStrategy,
-        ) -> Result<Box<EranosSettlement>, Box<EranosError>> {
+        ) -> Result<Box<EranosSettlementPlan>, Box<EranosError>> {
             self.0
                 .settlement(strategy.into())
-                .map(|value| Box::new(EranosSettlement(value)))
+                .map(|value| Box::new(EranosSettlementPlan(value)))
                 .map_err(crate::failed)
         }
 
@@ -2356,15 +2356,15 @@ pub mod ffi {
         }
     }
 
-    /// The outcome of an asynchronous call that returns a settlement, which its callback receives
-    /// and destroys.
+    /// The outcome of an asynchronous call that returns a settlement plan, which its callback
+    /// receives and destroys.
     #[diplomat::opaque]
     #[derive(Debug)]
-    pub struct EranosSettlementOutcome(
-        pub(crate) Result<Option<eranos_bindings::Settlement>, crate::Failure>,
+    pub struct EranosSettlementPlanOutcome(
+        pub(crate) Result<Option<eranos_bindings::SettlementPlan>, crate::Failure>,
     );
 
-    impl EranosSettlementOutcome {
+    impl EranosSettlementPlanOutcome {
         /// Whether the call succeeded.
         #[must_use]
         pub const fn is_ok(&self) -> bool {
@@ -2380,14 +2380,14 @@ pub mod ffi {
                 .map(|failure| Box::new(EranosError::from(failure.clone())))
         }
 
-        /// A copy of the settlement the call returned, if it succeeded and found one.
+        /// A copy of the settlement plan the call returned, if it succeeded and found one.
         #[must_use]
-        pub fn value(&self) -> Option<Box<EranosSettlement>> {
+        pub fn value(&self) -> Option<Box<EranosSettlementPlan>> {
             self.0
                 .as_ref()
                 .ok()
                 .and_then(Option::as_ref)
-                .map(|value| Box::new(EranosSettlement(value.clone())))
+                .map(|value| Box::new(EranosSettlementPlan(value.clone())))
         }
     }
 

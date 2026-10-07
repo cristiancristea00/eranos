@@ -12,7 +12,7 @@ use std::iter;
 
 use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
 use eranos::{
-    CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money, Settlement,
+    CalendarDate, Currency, Expense, ExpenseGroup, Member, MemberId, Money, SettlementPlan,
     SettlementStrategy, Split,
 };
 
@@ -106,7 +106,7 @@ fn strategies(criterion: &mut Criterion) {
                 let computed_by = template
                     .clone()
                     .settlement(strategy)
-                    .map_or_else(|error| panic!("{error}"), Settlement::strategy);
+                    .map_or_else(|error| panic!("{error}"), SettlementPlan::strategy);
                 let expected = if 20 >= size {
                     SettlementStrategy::MinimumTransfers
                 } else {
@@ -122,7 +122,7 @@ fn strategies(criterion: &mut Criterion) {
                     // the clones are dropped outside the timed section.
                     bencher.iter_batched_ref(
                         || template.clone(),
-                        |group| black_box(group.settlement(strategy).map(Settlement::len).ok()),
+                        |group| black_box(group.settlement(strategy).map(SettlementPlan::len).ok()),
                         BatchSize::LargeInput,
                     );
                 },

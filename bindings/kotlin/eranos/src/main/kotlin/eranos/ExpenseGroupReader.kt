@@ -165,5 +165,5 @@ public class ExpenseGroupReader internal constructor(
      * @throws IllegalStateException after [close].
      */
     @Throws(EranosException::class)
-    public fun settlement(strategy: SettlementStrategy): Settlement = converting { handle.settlement(strategy.generated).converted() }
+    public fun settlement(strategy: SettlementStrategy): SettlementPlan = converting { handle.settlement(strategy.generated).converted() }
 }

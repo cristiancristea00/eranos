@@ -196,7 +196,7 @@ static inline void eranosExpenseGroupReaderRelease(EranosExpenseGroupReader *con
 ///   ERANOS_ERROR_KIND_RELEASED after `release`
 [[nodiscard]] static inline EranosError *eranosExpenseGroupReaderSettlement(EranosExpenseGroupReader const *const reader,
                                                                             EranosSettlementStrategy const strategy,
-                                                                            EranosSettlement **const settlement) {
+                                                                            EranosSettlementPlan **const settlement) {
     EranosExpenseGroupReader_settlement_result const result = EranosExpenseGroupReader_settlement(reader, strategy);
     *settlement = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);

@@ -449,7 +449,7 @@ public final class eranos/ExpenseGroup : java/lang/AutoCloseable {
 	public final fun setLanguage (Leranos/Language;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun setLanguageBlocking (Leranos/Language;)V
 	public final fun settlement (Leranos/SettlementStrategy;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun settlementBlocking (Leranos/SettlementStrategy;)Leranos/Settlement;
+	public final fun settlementBlocking (Leranos/SettlementStrategy;)Leranos/SettlementPlan;
 	public final fun summary (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun summaryBlocking ()Leranos/Summary;
 	public final fun transfer-2F7qjSk (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -651,7 +651,7 @@ public final class eranos/ExpenseGroupReader : java/lang/AutoCloseable {
 	public final fun members ()Ljava/util/List;
 	public final fun name ()Ljava/lang/String;
 	public final fun save ()Ljava/lang/String;
-	public final fun settlement (Leranos/SettlementStrategy;)Leranos/Settlement;
+	public final fun settlement (Leranos/SettlementStrategy;)Leranos/SettlementPlan;
 	public final fun summary ()Leranos/Summary;
 	public final fun transfer-FnJQt9E (Ljava/lang/String;)Leranos/Transfer;
 	public final fun transferAmount-FnJQt9E (Ljava/lang/String;)Leranos/Money;
@@ -1078,14 +1078,6 @@ public final class eranos/PhoneNumber$Companion {
 	public final fun parse (Ljava/lang/String;)Leranos/PhoneNumber;
 }
 
-public final class eranos/Settlement {
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getPayments ()Ljava/util/List;
-	public final fun getStrategy ()Leranos/SettlementStrategy;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
 public abstract interface class eranos/SettlementFailure {
 }
 
@@ -1093,6 +1085,14 @@ public final class eranos/SettlementFailure$OutOfMemory : eranos/SettlementFailu
 	public fun <init> (J)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBalances ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/SettlementPlan {
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPayments ()Ljava/util/List;
+	public final fun getStrategy ()Leranos/SettlementStrategy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

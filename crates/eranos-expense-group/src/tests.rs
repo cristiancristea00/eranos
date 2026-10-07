@@ -465,7 +465,7 @@ fn removing_a_category_moves_its_expenses_to_uncategorised() {
         .add_expense(shared("10.00", bob, &[ana, bob]))
         .unwrap();
     let balances: Vec<_> = group.summary().members().collect();
-    let cached: *const Settlement = group.settlement(SettlementStrategy::Greedy).unwrap();
+    let cached: *const SettlementPlan = group.settlement(SettlementStrategy::Greedy).unwrap();
     assert_eq!(group.summary().category_total(food), eur("20.00"));
 
     group.remove_category(food).unwrap();
@@ -711,7 +711,7 @@ fn settlements_are_cached_until_a_balance_changes() {
     group
         .add_expense(shared("30.00", ana, &[ana, bob, carol]))
         .unwrap();
-    let first: *const Settlement = group.settlement(SettlementStrategy::Greedy).unwrap();
+    let first: *const SettlementPlan = group.settlement(SettlementStrategy::Greedy).unwrap();
     assert!(std::ptr::eq(
         first,
         group.settlement(SettlementStrategy::Greedy).unwrap()
@@ -778,7 +778,7 @@ fn an_asynchronous_settlement_fills_the_cache_the_synchronous_call_reads() {
         group
             .settlement_async(strategy)
             .complete()
-            .map(Settlement::len),
+            .map(SettlementPlan::len),
         Ok(15)
     );
 }

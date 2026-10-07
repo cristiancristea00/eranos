@@ -20,7 +20,7 @@ from eranos import (
     MemberId,
     Money,
     SettledBalance,
-    Settlement,
+    SettlementPlan,
     SettlementStrategy,
     Transfer,
     WholeExpenseSplit,
@@ -206,7 +206,7 @@ def print_balances(group: ExpenseGroup) -> None:
     )
 
 
-def print_payments(group: ExpenseGroup, settlement: Settlement) -> None:
+def print_payments(group: ExpenseGroup, settlement: SettlementPlan) -> None:
     """
     Print who pays whom in settlement, and how much, by the first names of the members of group.
 

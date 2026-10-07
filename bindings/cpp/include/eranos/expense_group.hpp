@@ -506,7 +506,7 @@ class ExpenseGroup final {
     ///
     /// @param strategy The strategy
     /// @return The result, or the error the library refuses the call with; its kind names the module that refused it
-    [[nodiscard]] std::expected<Settlement, Error> settlement(SettlementStrategy const strategy) const;
+    [[nodiscard]] std::expected<SettlementPlan, Error> settlement(SettlementStrategy const strategy) const;
 
     /// The asynchronous form of settlement(): it runs on the group's worker thread, in the order of the calls, without blocking the calling thread;
     /// cancelling @p cancellation stops the call at its next yield, or at once while it waits for the lock, and its future then holds an error of the
@@ -515,8 +515,8 @@ class ExpenseGroup final {
     /// @param strategy The strategy
     /// @param cancellation A cancellation for the call, or none
     /// @return A future of the result, or of the error the call ends with
-    [[nodiscard]] std::future<std::expected<Settlement, Error>> settlementAsync(SettlementStrategy const strategy,
-                                                                                Cancellation const *const cancellation = nullptr) const;
+    [[nodiscard]] std::future<std::expected<SettlementPlan, Error>> settlementAsync(SettlementStrategy const strategy,
+                                                                                    Cancellation const *const cancellation = nullptr) const;
 
     /// Every transfer, in the order they were created. Blocks the calling thread while another call holds the group's lock.
     ///
@@ -1026,15 +1026,15 @@ inline std::future<std::expected<void, Error>> ExpenseGroup::setNameAsync(std::s
                                 detail::finished);
 }
 
-inline std::expected<Settlement, Error> ExpenseGroup::settlement(SettlementStrategy const strategy) const {
+inline std::expected<SettlementPlan, Error> ExpenseGroup::settlement(SettlementStrategy const strategy) const {
     return detail::expectedOf(handle->settlement(detail::toDetail(strategy))).transform([](auto const &value) { return detail::fromDetail(*value); });
 }
 
-inline std::future<std::expected<Settlement, Error>> ExpenseGroup::settlementAsync(SettlementStrategy const strategy,
-                                                                                   Cancellation const *const cancellation) const {
-    return detail::launch<Settlement>(
+inline std::future<std::expected<SettlementPlan, Error>> ExpenseGroup::settlementAsync(SettlementStrategy const strategy,
+                                                                                       Cancellation const *const cancellation) const {
+    return detail::launch<SettlementPlan>(
         [&](auto callback) { handle->settlement_async(detail::toDetail(strategy), detail::handleOf(cancellation), std::move(callback)); },
-        [](detail::EranosSettlementOutcome const &done) { return detail::fromDetail(*done.value()); });
+        [](detail::EranosSettlementPlanOutcome const &done) { return detail::fromDetail(*done.value()); });
 }
 
 inline std::vector<Transfer> ExpenseGroup::transfers() const { return detail::fromDetail(*detail::waited(handle->transfers())); }

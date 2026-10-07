@@ -86,7 +86,7 @@ private struct Snapshot {
     let expenses: [Expense]
     let json: String
     let members: [Member]
-    let settlement: Settlement
+    let settlement: SettlementPlan
     let summary: Summary
     let transfers: [Transfer]
     let shares: ExpenseShares?

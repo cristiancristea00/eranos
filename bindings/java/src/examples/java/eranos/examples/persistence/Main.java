@@ -18,7 +18,7 @@ import eranos.MemberId;
 import eranos.MemberSummary;
 import eranos.Money;
 import eranos.Percentage;
-import eranos.Settlement;
+import eranos.SettlementPlan;
 import eranos.SettlementStrategy;
 import eranos.Split;
 import eranos.Summary;
@@ -127,7 +127,7 @@ public final class Main {
                                     balance(member, after)));
                 }
                 printTable(ComparisonRow.HEADERS, rows, 1);
-                Settlement plan = loaded.settlement(SettlementStrategy.GREEDY);
+                SettlementPlan plan = loaded.settlement(SettlementStrategy.GREEDY);
                 System.out.printf(
                         "Payments needed to settle the loaded group: %d.%n",
                         plan.payments().size());
