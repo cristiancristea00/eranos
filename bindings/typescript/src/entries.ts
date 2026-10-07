@@ -458,7 +458,7 @@ export function expenseMembers(expense: Expense): readonly MemberId[] {
 }
 
 /** Where a member can be paid: a bank account or a payment-app username. */
-export type AccountDetails =
+export type PaymentAccountDetails =
     | {
           /** A bank account. */
           readonly kind: 'iban';
@@ -473,30 +473,30 @@ export type AccountDetails =
       };
 
 /** A place to send a member money, with a label: "Main account". */
-export interface Account {
+export interface PaymentAccount {
     /** The label. */
     readonly name: string;
     /** The IBAN or the username. */
-    readonly details: AccountDetails;
+    readonly details: PaymentAccountDetails;
 }
 
 /** The account details the generated code holds as `details`. */
-function convertedAccountDetails(details: internal.AccountDetails): AccountDetails {
+function convertedPaymentAccountDetails(details: internal.PaymentAccountDetails): PaymentAccountDetails {
     switch (details.tag) {
-        case internal.AccountDetails_Tags.Iban:
+        case internal.PaymentAccountDetails_Tags.Iban:
             return { kind: 'iban', iban: Iban.known(details.inner.iban) };
-        case internal.AccountDetails_Tags.Username:
+        case internal.PaymentAccountDetails_Tags.Username:
             return { kind: 'username', username: Username.known(details.inner.username) };
     }
 }
 
 /** The account details as the generated code holds them. */
-function generatedAccountDetails(details: AccountDetails): internal.AccountDetails {
+function generatedPaymentAccountDetails(details: PaymentAccountDetails): internal.PaymentAccountDetails {
     switch (details.kind) {
         case 'iban':
-            return new internal.AccountDetails.Iban({ iban: details.iban.toString() });
+            return new internal.PaymentAccountDetails.Iban({ iban: details.iban.toString() });
         case 'username':
-            return new internal.AccountDetails.Username({ username: details.username.toString() });
+            return new internal.PaymentAccountDetails.Username({ username: details.username.toString() });
     }
 }
 
@@ -517,7 +517,7 @@ export interface Member {
     /** The phone number. */
     readonly phone?: PhoneNumber;
     /** Where the member can be paid, in the order they were given; none unless given. */
-    readonly accounts?: readonly Account[];
+    readonly accounts?: readonly PaymentAccount[];
 }
 
 /**
@@ -532,7 +532,7 @@ export function convertedMember(member: internal.Member): Member {
         ...(undefined === member.lastName ? {} : { lastName: member.lastName }),
         ...(undefined === member.email ? {} : { email: Email.known(member.email) }),
         ...(undefined === member.phone ? {} : { phone: PhoneNumber.known(member.phone) }),
-        accounts: member.accounts.map((account) => ({ name: account.name, details: convertedAccountDetails(account.details) })),
+        accounts: member.accounts.map((account) => ({ name: account.name, details: convertedPaymentAccountDetails(account.details) })),
     };
 }
 
@@ -549,7 +549,7 @@ export function generatedMember(member: Member): internal.Member {
         ...(undefined === member.email ? {} : { email: member.email.toString() }),
         ...(undefined === member.phone ? {} : { phone: member.phone.e164 }),
         accounts: (member.accounts ?? []).map((account) =>
-            internal.Account.create({ name: account.name, details: generatedAccountDetails(account.details) }),
+            internal.PaymentAccount.create({ name: account.name, details: generatedPaymentAccountDetails(account.details) }),
         ),
     });
 }

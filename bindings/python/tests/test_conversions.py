@@ -44,7 +44,7 @@ class Conversion[Error: EranosError]:
 
 FAILURES = {
     'Id': Conversion(kind=generated.IdFailure, table=_errors._ID_FAILURES, error=_errors.IdError),
-    'Account': Conversion(kind=generated.AccountFailure, table=_errors._ACCOUNT_FAILURES, error=_errors.AccountError),
+    'PaymentAccount': Conversion(kind=generated.PaymentAccountFailure, table=_errors._PAYMENT_ACCOUNT_FAILURES, error=_errors.PaymentAccountError),
     'Calendar': Conversion(kind=generated.CalendarFailure, table=_errors._CALENDAR_FAILURES, error=_errors.CalendarError),
     'Category': Conversion(kind=generated.CategoryFailure, table=_errors._CATEGORY_FAILURES, error=_errors.CategoryError),
     'Contact': Conversion(kind=generated.ContactFailure, table=_errors._CONTACT_FAILURES, error=_errors.ContactError),
@@ -132,7 +132,7 @@ def test_every_table_converts_every_case_the_generator_wrote() -> None:
         CaseTable(kind=generated.Cost, table=_entries._COSTS),
         CaseTable(kind=generated.TipValue, table=_entries._TIP_VALUES),
         CaseTable(kind=generated.ExpenseSplit, table=_entries._EXPENSE_SPLITS),
-        CaseTable(kind=generated.AccountDetails, table=_entries._ACCOUNT_DETAILS),
+        CaseTable(kind=generated.PaymentAccountDetails, table=_entries._PAYMENT_ACCOUNT_DETAILS),
         CaseTable(kind=generated.Balance, table=_totals._BALANCES),
         CaseTable(kind=generated.IbanReason, table=_errors._IBAN_REASONS),
     ]:
@@ -165,9 +165,9 @@ def test_every_failure_the_library_reports_converts_to_the_layers_case_of_its_na
     for case in cases(generated.IbanReason):
         reason = instance(case)
         assert isinstance(reason, generated.IbanReason)
-        raised = converted(generated.EranosError.Account(generated.AccountFailure.INVALID_IBAN(reason), 'the message'))
-        assert isinstance(raised, _errors.AccountError)
-        assert isinstance(raised.failure, _errors.AccountError.InvalidIban)
+        raised = converted(generated.EranosError.PaymentAccount(generated.PaymentAccountFailure.INVALID_IBAN(reason), 'the message'))
+        assert isinstance(raised, _errors.PaymentAccountError)
+        assert isinstance(raised.failure, _errors.PaymentAccountError.InvalidIban)
         assert type(raised.failure.reason).__name__ == title(re.sub(r'.*\.', '', case.__name__))
 
 

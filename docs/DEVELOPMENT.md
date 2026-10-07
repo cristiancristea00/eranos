@@ -369,8 +369,8 @@ removed currency stop loading.
 ### 3.3 An IBAN registry update
 
 The countries, their IBAN lengths and BBAN structures, and the registry's
-example IBANs are in `crates/eranos-account/src/iban/registry.rs`, generated
-from the SWIFT IBAN Registry text file (linked from
+example IBANs are in `crates/eranos-payment-account/src/iban/registry.rs`,
+generated from the SWIFT IBAN Registry text file (linked from
 <https://www.swift.com/standards/data-standards/iban-international-bank-account-number>;
 swift.com answers 403 unless the request carries browser-like headers).
 
@@ -387,7 +387,7 @@ the carriage return the last country's cells keep it.
    text file has had errors: release 98 left out PK, release 99 gave IQ's
    positions as spreadsheet dates, and release 103 gives CZ one BBAN
    structure (`4!n16!n`, used here) and a differently split IBAN structure.
-3. `cargo test -p eranos-account --lib iban` validates every example
+3. `cargo test -p eranos-payment-account --lib iban` validates every example
    against its length, its structure, and the check digits, and checks that
    every structure adds up to its country's length.
 

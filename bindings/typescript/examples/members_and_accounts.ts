@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 
 import {
-    type Account,
+    type PaymentAccount,
     type Balance,
     type MemberId,
     type Split,
@@ -71,7 +71,7 @@ interface Flatmates {
 }
 
 /** An account with its label and its details. */
-function describe(account: Account): string {
+function describe(account: PaymentAccount): string {
     const details = 'iban' === account.details.kind ? account.details.iban.toString() : account.details.username.toString();
     return `${account.name}: ${details}`;
 }

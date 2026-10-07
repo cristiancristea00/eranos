@@ -2,8 +2,6 @@
 // out. The port of the Rust example `members_and_accounts`, which prints the same report.
 package eranos.examples.membersandaccounts
 
-import eranos.Account
-import eranos.AccountDetails
 import eranos.Balance
 import eranos.CalendarDate
 import eranos.Cost
@@ -18,6 +16,8 @@ import eranos.Iban
 import eranos.Member
 import eranos.MemberId
 import eranos.Money
+import eranos.PaymentAccount
+import eranos.PaymentAccountDetails
 import eranos.PhoneNumber
 import eranos.Split
 import eranos.Username
@@ -74,11 +74,11 @@ private data class Flatmates(
 )
 
 /** An account with its label and its details. */
-private fun describe(account: Account): String {
+private fun describe(account: PaymentAccount): String {
     val details =
         when (val details = account.details) {
-            is AccountDetails.Iban -> details.iban.toString()
-            is AccountDetails.Username -> details.username.toString()
+            is PaymentAccountDetails.Iban -> details.iban.toString()
+            is PaymentAccountDetails.Username -> details.username.toString()
         }
     return "${account.name}: $details"
 }
@@ -138,8 +138,8 @@ private fun members(group: ExpenseGroup): Flatmates {
                 phone = PhoneNumber.parse("+40 712 345 678"),
                 accounts =
                     listOf(
-                        Account("ING", AccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000"))),
-                        Account("Revolut", AccountDetails.Username(Username.parse("@ana"))),
+                        PaymentAccount("ING", PaymentAccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000"))),
+                        PaymentAccount("Revolut", PaymentAccountDetails.Username(Username.parse("@ana"))),
                     ),
             ),
         )

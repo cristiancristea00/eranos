@@ -40,16 +40,16 @@ private let conversions: [Conversion] = [
         generated: .Id(failure: .invalidId, detail: "detail")
     ),
     Conversion(
-        expected: .account(.emptyName, detail: "detail"),
-        generated: .Account(failure: .emptyName, detail: "detail")
+        expected: .paymentAccount(.emptyName, detail: "detail"),
+        generated: .PaymentAccount(failure: .emptyName, detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.invalidChecksum), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .invalidChecksum), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.invalidChecksum), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .invalidChecksum), detail: "detail")
     ),
     Conversion(
-        expected: .account(.emptyUsername, detail: "detail"),
-        generated: .Account(failure: .emptyUsername, detail: "detail")
+        expected: .paymentAccount(.emptyUsername, detail: "detail"),
+        generated: .PaymentAccount(failure: .emptyUsername, detail: "detail")
     ),
     Conversion(
         expected: .calendar(.invalidDate, detail: "detail"),
@@ -256,28 +256,28 @@ private let conversions: [Conversion] = [
         generated: .Language(failure: .invalidLanguage, detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.invalidCharacter), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .invalidCharacter), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.invalidCharacter), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .invalidCharacter), detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.invalidFormat), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .invalidFormat), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.invalidFormat), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .invalidFormat), detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.unknownCountry), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .unknownCountry), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.unknownCountry), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .unknownCountry), detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.wrongLength(expected: 24, found: 22)), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .wrongLength(expected: 24, found: 22)), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.wrongLength(expected: 24, found: 22)), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .wrongLength(expected: 24, found: 22)), detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.invalidStructure), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .invalidStructure), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.invalidStructure), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .invalidStructure), detail: "detail")
     ),
     Conversion(
-        expected: .account(.invalidIBAN(.invalidChecksum), detail: "detail"),
-        generated: .Account(failure: .invalidIban(reason: .invalidChecksum), detail: "detail")
+        expected: .paymentAccount(.invalidIBAN(.invalidChecksum), detail: "detail"),
+        generated: .PaymentAccount(failure: .invalidIban(reason: .invalidChecksum), detail: "detail")
     ),
     Conversion(
         expected: .identifierGiven(detail: "detail"),

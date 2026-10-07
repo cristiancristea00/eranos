@@ -523,8 +523,8 @@ public final class ExpenseGroup implements AutoCloseable {
      * @throws IllegalArgumentException for a member with an identifier
      * @throws EranosException.Member with {@link MemberFailure.EmptyFirstName} for a blank first
      *     name
-     * @throws EranosException.Account with {@link AccountFailure.EmptyName} for an account with a
-     *     blank name
+     * @throws EranosException.PaymentAccount with {@link PaymentAccountFailure.EmptyName} for an
+     *     account with a blank name
      */
     public MemberId addMember(Member member) throws EranosException {
         return Converting.call(() -> new MemberId(handle.addMember(member.generated())));
@@ -538,8 +538,8 @@ public final class ExpenseGroup implements AutoCloseable {
      *
      * <p>The future fails with {@link IllegalArgumentException} for a member with an identifier;
      * {@link EranosException.Member} with {@link MemberFailure.EmptyFirstName} for a blank first
-     * name; {@link EranosException.Account} with {@link AccountFailure.EmptyName} for an account
-     * with a blank name.
+     * name; {@link EranosException.PaymentAccount} with {@link PaymentAccountFailure.EmptyName} for
+     * an account with a blank name.
      *
      * @param member the member
      * @return a future of the member's identifier
@@ -560,7 +560,7 @@ public final class ExpenseGroup implements AutoCloseable {
      * @return the member as they were
      * @throws IllegalArgumentException for a member without an identifier
      * @throws EranosException.Member as adding one does
-     * @throws EranosException.Account as adding one does
+     * @throws EranosException.PaymentAccount as adding one does
      * @throws EranosException.ExpenseGroup with {@link ExpenseGroupFailure.UnknownMember}
      * @throws EranosException.Id for an identifier that is not one
      */
@@ -576,8 +576,8 @@ public final class ExpenseGroup implements AutoCloseable {
      * call, which leaves the group as it was.
      *
      * <p>The future fails with {@link IllegalArgumentException} for a member without an identifier;
-     * {@link EranosException.Member} as adding one does; {@link EranosException.Account} as adding
-     * one does; {@link EranosException.ExpenseGroup} with {@link
+     * {@link EranosException.Member} as adding one does; {@link EranosException.PaymentAccount} as
+     * adding one does; {@link EranosException.ExpenseGroup} with {@link
      * ExpenseGroupFailure.UnknownMember}; {@link EranosException.Id} for an identifier that is not
      * one.
      *

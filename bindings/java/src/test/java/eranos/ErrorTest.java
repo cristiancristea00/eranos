@@ -93,7 +93,7 @@ class ErrorTest {
     private static Object failure(EranosException exception) {
         return switch (exception) {
             case EranosException.Id id -> id.failure();
-            case EranosException.Account account -> account.failure();
+            case EranosException.PaymentAccount account -> account.failure();
             case EranosException.Calendar calendar -> calendar.failure();
             case EranosException.Category category -> category.failure();
             case EranosException.Contact contact -> contact.failure();
@@ -121,19 +121,21 @@ class ErrorTest {
                             new eranos.internal.EranosException.Id(
                                     eranos.internal.IdFailure.INVALID_ID, "detail")),
                     new Conversion(
-                            new AccountFailure.EmptyName(),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.EmptyName(), "detail")),
+                            new PaymentAccountFailure.EmptyName(),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.EmptyName(),
+                                    "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.InvalidChecksum()),
                                     "detail")),
                     new Conversion(
-                            new AccountFailure.EmptyUsername(),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.EmptyUsername(), "detail")),
+                            new PaymentAccountFailure.EmptyUsername(),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.EmptyUsername(),
+                                    "detail")),
                     new Conversion(
                             new CalendarFailure.InvalidDate(),
                             new eranos.internal.EranosException.Calendar(
@@ -396,39 +398,42 @@ class ErrorTest {
                             new eranos.internal.EranosException.Language(
                                     eranos.internal.LanguageFailure.INVALID_LANGUAGE, "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidCharacter()),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(
+                                    new IbanReason.InvalidCharacter()),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.InvalidCharacter()),
                                     "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidFormat()),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(new IbanReason.InvalidFormat()),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.InvalidFormat()),
                                     "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.UnknownCountry()),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(new IbanReason.UnknownCountry()),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.UnknownCountry()),
                                     "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.WrongLength(24L, 22L)),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(
+                                    new IbanReason.WrongLength(24L, 22L)),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.WrongLength(24L, 22L)),
                                     "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidStructure()),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(
+                                    new IbanReason.InvalidStructure()),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.InvalidStructure()),
                                     "detail")),
                     new Conversion(
-                            new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
-                            new eranos.internal.EranosException.Account(
-                                    new eranos.internal.AccountFailure.InvalidIban(
+                            new PaymentAccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
+                            new eranos.internal.EranosException.PaymentAccount(
+                                    new eranos.internal.PaymentAccountFailure.InvalidIban(
                                             new eranos.internal.IbanReason.InvalidChecksum()),
                                     "detail")));
 }

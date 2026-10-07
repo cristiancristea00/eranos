@@ -314,7 +314,7 @@ public class ExpenseGroup private constructor(
      *
      * @throws IllegalArgumentException for a member with an identifier.
      * @throws EranosException.Member with [MemberFailure.EmptyFirstName] for a blank first name.
-     * @throws EranosException.Account with [AccountFailure.EmptyName] for an account with a blank name.
+     * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyName] for an account with a blank name.
      */
     @Throws(EranosException::class, CancellationException::class)
     public suspend fun add(member: Member): MemberId = converting { MemberId(handle.addMemberAsync(member.generated, null)) }
@@ -326,7 +326,7 @@ public class ExpenseGroup private constructor(
      *
      * @throws IllegalArgumentException for a member with an identifier.
      * @throws EranosException.Member with [MemberFailure.EmptyFirstName] for a blank first name.
-     * @throws EranosException.Account with [AccountFailure.EmptyName] for an account with a blank name.
+     * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyName] for an account with a blank name.
      */
     @Throws(EranosException::class)
     public fun addBlocking(member: Member): MemberId = converting { MemberId(handle.addMember(member.generated)) }
@@ -340,7 +340,7 @@ public class ExpenseGroup private constructor(
      *
      * @throws IllegalArgumentException for a member without an identifier.
      * @throws EranosException.Member as adding one does.
-     * @throws EranosException.Account as adding one does.
+     * @throws EranosException.PaymentAccount as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
      * @throws EranosException.Id for an identifier that is not one.
      */
@@ -355,7 +355,7 @@ public class ExpenseGroup private constructor(
      *
      * @throws IllegalArgumentException for a member without an identifier.
      * @throws EranosException.Member as adding one does.
-     * @throws EranosException.Account as adding one does.
+     * @throws EranosException.PaymentAccount as adding one does.
      * @throws EranosException.ExpenseGroup with [ExpenseGroupFailure.UnknownMember].
      * @throws EranosException.Id for an identifier that is not one.
      */

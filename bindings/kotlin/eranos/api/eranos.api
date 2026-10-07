@@ -1,56 +1,3 @@
-public final class eranos/Account {
-	public fun <init> (Ljava/lang/String;Leranos/AccountDetails;)V
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getDetails ()Leranos/AccountDetails;
-	public final fun getName ()Ljava/lang/String;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public abstract interface class eranos/AccountDetails {
-}
-
-public final class eranos/AccountDetails$Iban : eranos/AccountDetails {
-	public fun <init> (Leranos/Iban;)V
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getIban ()Leranos/Iban;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class eranos/AccountDetails$Username : eranos/AccountDetails {
-	public fun <init> (Leranos/Username;)V
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getUsername ()Leranos/Username;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public abstract interface class eranos/AccountFailure {
-}
-
-public final class eranos/AccountFailure$EmptyName : eranos/AccountFailure {
-	public static final field INSTANCE Leranos/AccountFailure$EmptyName;
-	public fun equals (Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class eranos/AccountFailure$EmptyUsername : eranos/AccountFailure {
-	public static final field INSTANCE Leranos/AccountFailure$EmptyUsername;
-	public fun equals (Ljava/lang/Object;)Z
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
-public final class eranos/AccountFailure$InvalidIban : eranos/AccountFailure {
-	public fun <init> (Leranos/IbanReason;)V
-	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReason ()Leranos/IbanReason;
-	public fun hashCode ()I
-	public fun toString ()Ljava/lang/String;
-}
-
 public abstract interface class eranos/Balance {
 }
 
@@ -220,11 +167,6 @@ public abstract class eranos/EranosException : java/lang/Exception {
 	public fun getMessage ()Ljava/lang/String;
 }
 
-public final class eranos/EranosException$Account : eranos/EranosException {
-	public fun <init> (Leranos/AccountFailure;Ljava/lang/String;)V
-	public final fun getFailure ()Leranos/AccountFailure;
-}
-
 public final class eranos/EranosException$Calendar : eranos/EranosException {
 	public fun <init> (Leranos/CalendarFailure;Ljava/lang/String;)V
 	public final fun getFailure ()Leranos/CalendarFailure;
@@ -274,6 +216,11 @@ public final class eranos/EranosException$Member : eranos/EranosException {
 public final class eranos/EranosException$Money : eranos/EranosException {
 	public fun <init> (Leranos/MoneyFailure;Ljava/lang/String;)V
 	public final fun getFailure ()Leranos/MoneyFailure;
+}
+
+public final class eranos/EranosException$PaymentAccount : eranos/EranosException {
+	public fun <init> (Leranos/PaymentAccountFailure;Ljava/lang/String;)V
+	public final fun getFailure ()Leranos/PaymentAccountFailure;
 }
 
 public final class eranos/EranosException$Settlement : eranos/EranosException {
@@ -1049,6 +996,59 @@ public final class eranos/Payment {
 	public final fun getAmount ()Leranos/Money;
 	public final fun getFrom-FHfRuUo ()Ljava/lang/String;
 	public final fun getTo-FHfRuUo ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/PaymentAccount {
+	public fun <init> (Ljava/lang/String;Leranos/PaymentAccountDetails;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDetails ()Leranos/PaymentAccountDetails;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/PaymentAccountDetails {
+}
+
+public final class eranos/PaymentAccountDetails$Iban : eranos/PaymentAccountDetails {
+	public fun <init> (Leranos/Iban;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIban ()Leranos/Iban;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/PaymentAccountDetails$Username : eranos/PaymentAccountDetails {
+	public fun <init> (Leranos/Username;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getUsername ()Leranos/Username;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class eranos/PaymentAccountFailure {
+}
+
+public final class eranos/PaymentAccountFailure$EmptyName : eranos/PaymentAccountFailure {
+	public static final field INSTANCE Leranos/PaymentAccountFailure$EmptyName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/PaymentAccountFailure$EmptyUsername : eranos/PaymentAccountFailure {
+	public static final field INSTANCE Leranos/PaymentAccountFailure$EmptyUsername;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class eranos/PaymentAccountFailure$InvalidIban : eranos/PaymentAccountFailure {
+	public fun <init> (Leranos/IbanReason;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Leranos/IbanReason;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

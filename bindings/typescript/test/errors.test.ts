@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
 
 import { convertedError } from '../src/errors.js';
 import {
-    AccountError,
+    PaymentAccountError,
     CalendarError,
     CategoryError,
     ContactError,
@@ -56,21 +56,21 @@ const conversions: readonly Conversion[] = [
         failure: { kind: 'invalidId' },
     },
     {
-        generated: new internal.EranosError.Account({ failure: new internal.AccountFailure.EmptyName(), detail: 'detail' }),
-        type: AccountError,
+        generated: new internal.EranosError.PaymentAccount({ failure: new internal.PaymentAccountFailure.EmptyName(), detail: 'detail' }),
+        type: PaymentAccountError,
         failure: { kind: 'emptyName' },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidChecksum() }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidChecksum() }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
     },
     {
-        generated: new internal.EranosError.Account({ failure: new internal.AccountFailure.EmptyUsername(), detail: 'detail' }),
-        type: AccountError,
+        generated: new internal.EranosError.PaymentAccount({ failure: new internal.PaymentAccountFailure.EmptyUsername(), detail: 'detail' }),
+        type: PaymentAccountError,
         failure: { kind: 'emptyUsername' },
     },
     {
@@ -406,51 +406,51 @@ const conversions: readonly Conversion[] = [
         failure: { kind: 'invalidLanguage' },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidCharacter() }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidCharacter() }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'invalidCharacter' } },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidFormat() }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidFormat() }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'invalidFormat' } },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.UnknownCountry() }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.UnknownCountry() }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'unknownCountry' } },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.WrongLength({ expected: 24n, found: 22n }) }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.WrongLength({ expected: 24n, found: 22n }) }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'wrongLength', expected: 24, found: 22 } },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidStructure() }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidStructure() }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'invalidStructure' } },
     },
     {
-        generated: new internal.EranosError.Account({
-            failure: new internal.AccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidChecksum() }),
+        generated: new internal.EranosError.PaymentAccount({
+            failure: new internal.PaymentAccountFailure.InvalidIban({ reason: new internal.IbanReason.InvalidChecksum() }),
             detail: 'detail',
         }),
-        type: AccountError,
+        type: PaymentAccountError,
         failure: { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
     },
 ];

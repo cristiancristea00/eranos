@@ -12,9 +12,9 @@
 #[macro_export]
 macro_rules! mirrors {
     ($($callback:tt)+) => {
-        $crate::mirror_account!($($callback)+);
-        $crate::mirror_account_details!($($callback)+);
-        $crate::mirror_account_failure!($($callback)+);
+        $crate::mirror_payment_account!($($callback)+);
+        $crate::mirror_payment_account_details!($($callback)+);
+        $crate::mirror_payment_account_failure!($($callback)+);
         $crate::mirror_balance!($($callback)+);
         $crate::mirror_calendar_date!($($callback)+);
         $crate::mirror_calendar_failure!($($callback)+);

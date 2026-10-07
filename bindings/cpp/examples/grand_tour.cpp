@@ -546,10 +546,11 @@ void printEntries(ExpenseGroup const &group, std::function<bool(Currency const &
 // 2. Members.
 
 /// An account with its label, its kind, and its details.
-[[nodiscard]] std::string describe(Account const &account) {
-    auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
-    return nullptr == iban ? std::format("{}, username {}", account.name, std::get<UsernameAccountDetails>(account.details).username.toString())
-                           : std::format("{}, IBAN {}", account.name, iban->iban.toString());
+[[nodiscard]] std::string describe(PaymentAccount const &account) {
+    auto const *const iban = std::get_if<IbanPaymentAccountDetails>(&account.details);
+    return nullptr == iban
+               ? std::format("{}, username {}", account.name, std::get<UsernamePaymentAccountDetails>(account.details).username.toString())
+               : std::format("{}, IBAN {}", account.name, iban->iban.toString());
 }
 
 /// Prints every member of @p group with their contact and account details.
@@ -619,8 +620,8 @@ void validation(ExpenseGroup &group) {
     section("2. Members");
     Member first("Ana");
     first.accounts = {
-        Account("ING", IbanAccountDetails{must(Iban::parse("RO49 AAAA 1B31 0075 9384 0000"))}),
-        Account("Revolut", UsernameAccountDetails{must(Username::parse("@ana"))}),
+        PaymentAccount("ING", IbanPaymentAccountDetails{must(Iban::parse("RO49 AAAA 1B31 0075 9384 0000"))}),
+        PaymentAccount("Revolut", UsernamePaymentAccountDetails{must(Username::parse("@ana"))}),
     };
     first.email = must(Email::parse("ana@example.com"));
     first.lastName = "Popescu";
@@ -1283,8 +1284,8 @@ void savingAndLoading(ExpenseGroup const &group, People const &people, Categorie
                  saved.size());
     auto const ana = must(group.member(people.ana)).value();
     for (auto const &account : ana.accounts) {
-        auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
-        auto const details = nullptr == iban ? std::get<UsernameAccountDetails>(account.details).username.toString() : iban->iban.toString();
+        auto const *const iban = std::get_if<IbanPaymentAccountDetails>(&account.details);
+        auto const details = nullptr == iban ? std::get<UsernamePaymentAccountDetails>(account.details).username.toString() : iban->iban.toString();
         check(saved.contains(details), "the details are saved as they are");
         std::println("  {}: {}", account.name, details);
     }

@@ -118,7 +118,7 @@ export class Iban {
      *
      * @param text - The IBAN's text
      * @returns The IBAN
-     * @throws {@link AccountError} with the failure `invalidIban` and the check it failed
+     * @throws {@link PaymentAccountError} with the failure `invalidIban` and the check it failed
      */
     static parse(text: string): Iban {
         return new Iban(calling(() => internal.ibanParse(text)));
@@ -174,7 +174,7 @@ export class Username {
      *
      * @param text - The username's text
      * @returns The username
-     * @throws {@link AccountError} with the failure `emptyUsername` for blank text
+     * @throws {@link PaymentAccountError} with the failure `emptyUsername` for blank text
      */
     static parse(text: string): Username {
         return new Username(calling(() => internal.usernameParse(text)));

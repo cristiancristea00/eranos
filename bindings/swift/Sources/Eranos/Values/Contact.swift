@@ -54,7 +54,7 @@ public struct IBAN: Hashable, Sendable, CustomStringConvertible {
 
     /// The IBAN written `text`, with or without spaces, in any letter case.
     ///
-    /// - Throws: ``EranosError/account(_:detail:)`` with ``AccountFailure/invalidIBAN(_:)`` and
+    /// - Throws: ``EranosError/paymentAccount(_:detail:)`` with ``PaymentAccountFailure/invalidIBAN(_:)`` and
     ///   the check it failed.
     public init(_ text: String) throws(EranosError) {
         description = try converting { try EranosGenerated.ibanParse(text: text) }
@@ -73,7 +73,7 @@ public struct Username: Hashable, Sendable, CustomStringConvertible {
 
     /// The username written `text`.
     ///
-    /// - Throws: ``EranosError/account(_:detail:)`` with ``AccountFailure/emptyUsername`` for
+    /// - Throws: ``EranosError/paymentAccount(_:detail:)`` with ``PaymentAccountFailure/emptyUsername`` for
     ///   blank text.
     public init(_ text: String) throws(EranosError) {
         description = try converting { try EranosGenerated.usernameParse(text: text) }

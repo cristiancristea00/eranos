@@ -5,7 +5,6 @@
 
 package eranos
 
-import eranos.internal.AccountFailure as GeneratedAccountFailure
 import eranos.internal.CalendarFailure as GeneratedCalendarFailure
 import eranos.internal.CategoryFailure as GeneratedCategoryFailure
 import eranos.internal.ContactFailure as GeneratedContactFailure
@@ -16,19 +15,20 @@ import eranos.internal.IdFailure as GeneratedIdFailure
 import eranos.internal.LanguageFailure as GeneratedLanguageFailure
 import eranos.internal.MemberFailure as GeneratedMemberFailure
 import eranos.internal.MoneyFailure as GeneratedMoneyFailure
+import eranos.internal.PaymentAccountFailure as GeneratedPaymentAccountFailure
 import eranos.internal.SettlementFailure as GeneratedSettlementFailure
 import eranos.internal.TransferFailure as GeneratedTransferFailure
 
-/** What the library's `AccountError` reports: a type per failure, with what it holds. */
-public sealed interface AccountFailure {
+/** What the library's `PaymentAccountError` reports: a type per failure, with what it holds. */
+public sealed interface PaymentAccountFailure {
     /** An account whose name is blank. */
-    public data object EmptyName : AccountFailure
+    public data object EmptyName : PaymentAccountFailure
 
     /** An IBAN that failed validation, and why. */
     public class InvalidIban(
         /** The check the IBAN failed. */
         public val reason: IbanReason,
-    ) : AccountFailure {
+    ) : PaymentAccountFailure {
         /** Whether [other] is of the same class, with the same [reason]. */
         override fun equals(other: Any?): Boolean = other is InvalidIban && reason == other.reason
 
@@ -40,15 +40,15 @@ public sealed interface AccountFailure {
     }
 
     /** A username that is blank. */
-    public data object EmptyUsername : AccountFailure
+    public data object EmptyUsername : PaymentAccountFailure
 }
 
 /** The failure the generated code reports as [this]. */
-internal fun GeneratedAccountFailure.converted(): AccountFailure =
+internal fun GeneratedPaymentAccountFailure.converted(): PaymentAccountFailure =
     when (this) {
-        GeneratedAccountFailure.EmptyName -> AccountFailure.EmptyName
-        is GeneratedAccountFailure.InvalidIban -> AccountFailure.InvalidIban(reason.converted())
-        GeneratedAccountFailure.EmptyUsername -> AccountFailure.EmptyUsername
+        GeneratedPaymentAccountFailure.EmptyName -> PaymentAccountFailure.EmptyName
+        is GeneratedPaymentAccountFailure.InvalidIban -> PaymentAccountFailure.InvalidIban(reason.converted())
+        GeneratedPaymentAccountFailure.EmptyUsername -> PaymentAccountFailure.EmptyUsername
     }
 
 /** What the library's `CalendarError` reports: a type per failure, with what it holds. */

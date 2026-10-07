@@ -3,8 +3,8 @@
 
 internal import EranosGenerated
 
-/// What the library's `AccountError` reports: a case per failure, with what it holds.
-public enum AccountFailure: Sendable, Hashable {
+/// What the library's `PaymentAccountError` reports: a case per failure, with what it holds.
+public enum PaymentAccountFailure: Sendable, Hashable {
     /// An account whose name is blank.
     case emptyName
 
@@ -15,8 +15,8 @@ public enum AccountFailure: Sendable, Hashable {
     case emptyUsername
 }
 
-extension AccountFailure {
-    init(_ failure: EranosGenerated.AccountFailure) {
+extension PaymentAccountFailure {
+    init(_ failure: EranosGenerated.PaymentAccountFailure) {
         switch failure {
         case .emptyName:
             self = .emptyName

@@ -38,39 +38,39 @@ struct Flattening {
 fn flattenings() -> Vec<Flattening> {
     vec![
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::EmptyName,
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::EmptyName,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountEmptyName),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountEmptyName),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::EmptyUsername,
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::EmptyUsername,
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountEmptyUsername),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountEmptyUsername),
                 message: DETAIL.to_owned(),
                 payload: Payload::default(),
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::InvalidIban {
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::InvalidIban {
                     reason: IbanReason::InvalidCharacter,
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountInvalidIban),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountInvalidIban),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     reason: Some(IbanReasonKind::InvalidCharacter),
@@ -79,15 +79,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::InvalidIban {
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::InvalidIban {
                     reason: IbanReason::InvalidChecksum,
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountInvalidIban),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountInvalidIban),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     reason: Some(IbanReasonKind::InvalidChecksum),
@@ -96,15 +96,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::InvalidIban {
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::InvalidIban {
                     reason: IbanReason::InvalidFormat,
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountInvalidIban),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountInvalidIban),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     reason: Some(IbanReasonKind::InvalidFormat),
@@ -113,15 +113,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::InvalidIban {
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::InvalidIban {
                     reason: IbanReason::InvalidStructure,
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountInvalidIban),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountInvalidIban),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     reason: Some(IbanReasonKind::InvalidStructure),
@@ -130,15 +130,15 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::InvalidIban {
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::InvalidIban {
                     reason: IbanReason::UnknownCountry,
                 },
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountInvalidIban),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountInvalidIban),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     reason: Some(IbanReasonKind::UnknownCountry),
@@ -147,8 +147,8 @@ fn flattenings() -> Vec<Flattening> {
             },
         },
         Flattening {
-            error: EranosError::Account {
-                failure: AccountFailure::InvalidIban {
+            error: EranosError::PaymentAccount {
+                failure: PaymentAccountFailure::InvalidIban {
                     reason: IbanReason::WrongLength {
                         expected: 24,
                         found: 22,
@@ -157,8 +157,8 @@ fn flattenings() -> Vec<Flattening> {
                 detail: DETAIL.to_owned(),
             },
             flat: FlatError {
-                kind: ErrorKind::Account,
-                failure: Some(FailureKind::AccountInvalidIban),
+                kind: ErrorKind::PaymentAccount,
+                failure: Some(FailureKind::PaymentAccountInvalidIban),
                 message: DETAIL.to_owned(),
                 payload: Payload {
                     expected_length: Some(24),

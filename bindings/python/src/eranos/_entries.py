@@ -331,7 +331,7 @@ class Transfer:
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
-class IbanAccountDetails:
+class IbanPaymentAccountDetails:
     """A bank account, by its IBAN."""
 
     iban: Iban
@@ -340,26 +340,26 @@ class IbanAccountDetails:
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
-class UsernameAccountDetails:
+class UsernamePaymentAccountDetails:
     """An account in a payment app, by its username."""
 
     username: Username
     """The username."""
 
 
-type AccountDetails = IbanAccountDetails | UsernameAccountDetails
+type PaymentAccountDetails = IbanPaymentAccountDetails | UsernamePaymentAccountDetails
 """How a member is paid: a bank account by its IBAN, or a payment app by its username."""
 
 
 @final
 @dataclasses.dataclass(frozen=True, slots=True)
-class Account:
+class PaymentAccount:
     """An account a member is paid into, with its label."""
 
     name: str
     """The account's label, such as ``"Bank"``."""
 
-    details: AccountDetails
+    details: PaymentAccountDetails
     """How the member is paid."""
 
 
@@ -383,7 +383,7 @@ class Member:
     phone: PhoneNumber | None = None
     """Their phone number, or none."""
 
-    accounts: tuple[Account, ...] = ()
+    accounts: tuple[PaymentAccount, ...] = ()
     """The accounts they are paid into."""
 
 
@@ -694,7 +694,7 @@ def transfer_of(value: generated.Transfer) -> Transfer:
     )
 
 
-def generated_account(account: Account) -> generated.Account:
+def generated_account(account: PaymentAccount) -> generated.PaymentAccount:
     """
     Convert account into the account the generated module holds.
 
@@ -706,18 +706,18 @@ def generated_account(account: Account) -> generated.Account:
 
     """
     match account.details:
-        case IbanAccountDetails(iban=iban):
-            details = variant(generated.AccountDetails, generated.AccountDetails.IBAN(str(iban)))
-        case UsernameAccountDetails(username=username):
-            details = variant(generated.AccountDetails, generated.AccountDetails.USERNAME(str(username)))
+        case IbanPaymentAccountDetails(iban=iban):
+            details = variant(generated.PaymentAccountDetails, generated.PaymentAccountDetails.IBAN(str(iban)))
+        case UsernamePaymentAccountDetails(username=username):
+            details = variant(generated.PaymentAccountDetails, generated.PaymentAccountDetails.USERNAME(str(username)))
         case _:
             assert_never(account.details)
-    return generated.Account(name=account.name, details=details)
+    return generated.PaymentAccount(name=account.name, details=details)
 
 
-_ACCOUNT_DETAILS: dict[type[object], Callable[[Any], AccountDetails]] = {
-    generated.AccountDetails.IBAN: lambda value: IbanAccountDetails(Iban(value.iban)),
-    generated.AccountDetails.USERNAME: lambda value: UsernameAccountDetails(Username(value.username)),
+_PAYMENT_ACCOUNT_DETAILS: dict[type[object], Callable[[Any], PaymentAccountDetails]] = {
+    generated.PaymentAccountDetails.IBAN: lambda value: IbanPaymentAccountDetails(Iban(value.iban)),
+    generated.PaymentAccountDetails.USERNAME: lambda value: UsernamePaymentAccountDetails(Username(value.username)),
 }
 """The account details of each case of the generated account details, by its class."""
 
@@ -760,7 +760,7 @@ def member_of(value: generated.Member) -> Member:
         last_name=value.last_name,
         email=None if value.email is None else Email(value.email),
         phone=None if value.phone is None else PhoneNumber(value.phone),
-        accounts=tuple(Account(account.name, _ACCOUNT_DETAILS[type(account.details)](account.details)) for account in value.accounts),
+        accounts=tuple(PaymentAccount(account.name, _PAYMENT_ACCOUNT_DETAILS[type(account.details)](account.details)) for account in value.accounts),
     )
 
 

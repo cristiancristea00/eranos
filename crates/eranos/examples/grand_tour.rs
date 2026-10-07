@@ -19,10 +19,10 @@ use eranos::cooperative::block_on;
 use eranos::error::{ExpenseError, ExpenseGroupError, TransferError};
 use eranos::expense::ExpenseBuilder;
 use eranos::{
-    Account, AccountDetails, AccountKind, Balance, CalendarDate, Category, CategoryId,
-    CategoryTotal, Cost, Currency, CurrencyRate, Email, ExchangeRate, Expense, ExpenseGroup,
-    ExpenseId, ExpenseShares, ExpenseSplit, Iban, Item, Language, Member, MemberAmount, MemberId,
-    MemberParts, MemberPercentage, MemberShare, Money, Parts, Percentage, PhoneNumber,
+    Balance, CalendarDate, Category, CategoryId, CategoryTotal, Cost, Currency, CurrencyRate,
+    Email, ExchangeRate, Expense, ExpenseGroup, ExpenseId, ExpenseShares, ExpenseSplit, Iban, Item,
+    Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, MemberShare, Money,
+    Parts, PaymentAccount, PaymentAccountDetails, PaymentAccountKind, Percentage, PhoneNumber,
     SavedExpenseGroup, SettlementStrategy, SharedExpenseGroup, Split, TimeOfDay, Tip,
     TipDistribution, TipValue, Transfer, Username,
 };
@@ -452,15 +452,15 @@ fn the_group() -> Result<ExpenseGroup, Box<dyn Error>> {
 }
 
 /// An account with its label, its kind, and its details.
-fn describe(account: &Account) -> String {
+fn describe(account: &PaymentAccount) -> String {
     let kind = match account.kind() {
-        AccountKind::Iban => "IBAN",
-        AccountKind::Username => "username",
+        PaymentAccountKind::Iban => "IBAN",
+        PaymentAccountKind::Username => "username",
         _ => "account",
     };
     let details = match account.details() {
-        AccountDetails::Iban(iban) => iban.as_str(),
-        AccountDetails::Username(username) => username.as_str(),
+        PaymentAccountDetails::Iban(iban) => iban.as_str(),
+        PaymentAccountDetails::Username(username) => username.as_str(),
         _ => "",
     };
     format!("{}, {kind} {details}", account.name())
@@ -542,11 +542,11 @@ fn members(group: &mut ExpenseGroup) -> Result<People, Box<dyn Error>> {
             .last_name("Popescu")
             .email(Email::parse("ana@example.com")?)
             .phone(PhoneNumber::parse("+40 712 345 678")?)
-            .account(Account::new(
+            .account(PaymentAccount::new(
                 "ING",
                 Iban::parse("RO49 AAAA 1B31 0075 9384 0000")?,
             )?)
-            .account(Account::new("Revolut", Username::new("@ana")?)?)
+            .account(PaymentAccount::new("Revolut", Username::new("@ana")?)?)
             .build()?,
     )?;
     let mut add = |first_name| -> Result<MemberId, Box<dyn Error>> {
@@ -1493,8 +1493,8 @@ fn saving_and_loading(
     let ana = group.member(people.ana).ok_or("Ana is a member")?;
     for account in ana.accounts() {
         let details = match account.details() {
-            AccountDetails::Iban(iban) => iban.as_str(),
-            AccountDetails::Username(username) => username.as_str(),
+            PaymentAccountDetails::Iban(iban) => iban.as_str(),
+            PaymentAccountDetails::Username(username) => username.as_str(),
             _ => "",
         };
         assert!(saved.contains(details), "{details} is saved as it is");

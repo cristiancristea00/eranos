@@ -10,9 +10,9 @@
 
 mod error;
 
-use eranos_account::Account;
 use eranos_contact::{Email, PhoneNumber};
 use eranos_core::{MemberId, text};
+use eranos_payment_account::PaymentAccount;
 
 pub use error::{FromMemberError, MemberError};
 
@@ -26,12 +26,12 @@ pub use error::{FromMemberError, MemberError};
 /// # Examples
 ///
 /// ```
-/// use eranos::{Account, Email, Iban, Member};
+/// use eranos::{PaymentAccount, Email, Iban, Member};
 ///
 /// let ana = Member::builder("Ana")
 ///     .last_name("Popescu")
 ///     .email(Email::parse("ana@example.com")?)
-///     .account(Account::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?)
+///     .account(PaymentAccount::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?)
 ///     .build()?;
 /// assert_eq!(ana.first_name(), "Ana");
 /// assert_eq!(ana.accounts().len(), 1);
@@ -52,7 +52,7 @@ pub struct Member {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     phone: Option<PhoneNumber>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
-    accounts: Vec<Account>,
+    accounts: Vec<PaymentAccount>,
 }
 
 impl Member {
@@ -113,7 +113,7 @@ impl Member {
 
     /// The accounts the member can be paid to, in the order they were added.
     #[must_use]
-    pub fn accounts(&self) -> &[Account] {
+    pub fn accounts(&self) -> &[PaymentAccount] {
         &self.accounts
     }
 }
@@ -128,7 +128,7 @@ pub struct MemberBuilder {
     last_name: Option<String>,
     email: Option<Email>,
     phone: Option<PhoneNumber>,
-    accounts: Vec<Account>,
+    accounts: Vec<PaymentAccount>,
 }
 
 impl MemberBuilder {
@@ -157,13 +157,13 @@ impl MemberBuilder {
     }
 
     /// Replaces every account.
-    pub fn accounts(mut self, accounts: impl IntoIterator<Item = Account>) -> Self {
+    pub fn accounts(mut self, accounts: impl IntoIterator<Item = PaymentAccount>) -> Self {
         self.accounts = accounts.into_iter().collect();
         self
     }
 
     /// Appends an account.
-    pub fn account(mut self, account: Account) -> Self {
+    pub fn account(mut self, account: PaymentAccount) -> Self {
         self.accounts.push(account);
         self
     }
@@ -201,7 +201,7 @@ struct MemberRecord {
     #[serde(default)]
     phone: Option<PhoneNumber>,
     #[serde(default)]
-    accounts: Vec<Account>,
+    accounts: Vec<PaymentAccount>,
 }
 
 /// Builds the member `record` describes, through the checks of the builder.

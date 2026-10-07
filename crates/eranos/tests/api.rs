@@ -21,7 +21,7 @@ fn every_public_type_is_send_and_sync() {
         // Cooperative futures, around a future that is itself both.
         assert_send_and_sync::<eranos::cooperative::Cooperative<std::future::Ready<()>>>();
         // Errors.
-        assert_send_and_sync::<eranos::error::AccountError>();
+        assert_send_and_sync::<eranos::error::PaymentAccountError>();
         assert_send_and_sync::<eranos::error::CalendarError>();
         assert_send_and_sync::<eranos::error::CategoryError>();
         assert_send_and_sync::<eranos::error::ContactError>();
@@ -70,9 +70,9 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<eranos::ledger::MemberSummary>();
         assert_send_and_sync::<eranos::ledger::Summary>();
         // Members, their contact details, and their accounts.
-        assert_send_and_sync::<eranos::member::Account>();
-        assert_send_and_sync::<eranos::member::AccountDetails>();
-        assert_send_and_sync::<eranos::member::AccountKind>();
+        assert_send_and_sync::<eranos::member::PaymentAccount>();
+        assert_send_and_sync::<eranos::member::PaymentAccountDetails>();
+        assert_send_and_sync::<eranos::member::PaymentAccountKind>();
         assert_send_and_sync::<eranos::member::Email>();
         assert_send_and_sync::<eranos::member::Iban>();
         assert_send_and_sync::<eranos::member::Member>();

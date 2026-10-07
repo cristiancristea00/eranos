@@ -7,11 +7,11 @@ import static eranos.examples.grandtour.Tour.groupFailure;
 import static eranos.examples.grandtour.Tour.message;
 import static eranos.examples.grandtour.Tour.refusal;
 
-import eranos.Account;
-import eranos.AccountDetails;
 import eranos.EranosException;
 import eranos.ExpenseGroup;
 import eranos.ExpenseGroupFailure;
+import eranos.PaymentAccount;
+import eranos.PaymentAccountDetails;
 import eranos.examples.grandtour.Tables.LoadRow;
 import eranos.examples.grandtour.Tour.Categories;
 import eranos.examples.grandtour.Tour.People;
@@ -45,11 +45,12 @@ final class Saving {
                 Ana's accounts are saved in clear text, as the library holds them:
                 """
                         .formatted(saved.getBytes(StandardCharsets.UTF_8).length));
-        for (Account account : group.member(people.ana()).orElseThrow().accounts()) {
+        for (PaymentAccount account : group.member(people.ana()).orElseThrow().accounts()) {
             String details =
                     switch (account.details()) {
-                        case AccountDetails.Iban iban -> iban.iban().toString();
-                        case AccountDetails.Username username -> username.username().toString();
+                        case PaymentAccountDetails.Iban iban -> iban.iban().toString();
+                        case PaymentAccountDetails.Username username ->
+                                username.username().toString();
                     };
             check(saved.contains(details));
             System.out.println("  " + account.name() + ": " + details);

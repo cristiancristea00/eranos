@@ -63,8 +63,8 @@ type IdFailure = IdError.InvalidId
 
 
 @final
-class AccountError(EranosError):
-    """The library's ``AccountError``, with the message it words: what the module reports, a class per failure."""
+class PaymentAccountError(EranosError):
+    """The library's ``PaymentAccountError``, with the message it words: what the module reports, a class per failure."""
 
     @final
     @dataclasses.dataclass(frozen=True, slots=True)
@@ -124,7 +124,7 @@ class AccountError(EranosError):
     class EmptyUsername:
         """A username that is blank."""
 
-    def __init__(self, failure: AccountFailure, message: str) -> None:
+    def __init__(self, failure: PaymentAccountFailure, message: str) -> None:
         """
         Make the error of failure, which the library words as message.
 
@@ -134,21 +134,21 @@ class AccountError(EranosError):
 
         """
         super().__init__(message)
-        self.failure: AccountFailure = failure
+        self.failure: PaymentAccountFailure = failure
         """What the module reports."""
 
 
-type AccountFailure = AccountError.EmptyName | AccountError.InvalidIban | AccountError.EmptyUsername
-"""What ``AccountError`` can report: a class per failure, with what it holds."""
+type PaymentAccountFailure = PaymentAccountError.EmptyName | PaymentAccountError.InvalidIban | PaymentAccountError.EmptyUsername
+"""What ``PaymentAccountError`` can report: a class per failure, with what it holds."""
 
 
 type IbanReason = (
-    AccountError.InvalidIban.InvalidCharacter
-    | AccountError.InvalidIban.InvalidFormat
-    | AccountError.InvalidIban.UnknownCountry
-    | AccountError.InvalidIban.WrongLength
-    | AccountError.InvalidIban.InvalidStructure
-    | AccountError.InvalidIban.InvalidChecksum
+    PaymentAccountError.InvalidIban.InvalidCharacter
+    | PaymentAccountError.InvalidIban.InvalidFormat
+    | PaymentAccountError.InvalidIban.UnknownCountry
+    | PaymentAccountError.InvalidIban.WrongLength
+    | PaymentAccountError.InvalidIban.InvalidStructure
+    | PaymentAccountError.InvalidIban.InvalidChecksum
 )
 """Why the library refused an IBAN: a class per check it failed, with what it holds."""
 
@@ -803,18 +803,20 @@ _ID_FAILURES: dict[generated.IdFailure, IdFailure] = {
 }
 
 _IBAN_REASONS: dict[type[object], Callable[[Any], IbanReason]] = {
-    generated.IbanReason.INVALID_CHARACTER: lambda _: AccountError.InvalidIban.InvalidCharacter(),
-    generated.IbanReason.INVALID_FORMAT: lambda _: AccountError.InvalidIban.InvalidFormat(),
-    generated.IbanReason.UNKNOWN_COUNTRY: lambda _: AccountError.InvalidIban.UnknownCountry(),
-    generated.IbanReason.WRONG_LENGTH: lambda failure: AccountError.InvalidIban.WrongLength(expected=failure.expected, found=failure.found),
-    generated.IbanReason.INVALID_STRUCTURE: lambda _: AccountError.InvalidIban.InvalidStructure(),
-    generated.IbanReason.INVALID_CHECKSUM: lambda _: AccountError.InvalidIban.InvalidChecksum(),
+    generated.IbanReason.INVALID_CHARACTER: lambda _: PaymentAccountError.InvalidIban.InvalidCharacter(),
+    generated.IbanReason.INVALID_FORMAT: lambda _: PaymentAccountError.InvalidIban.InvalidFormat(),
+    generated.IbanReason.UNKNOWN_COUNTRY: lambda _: PaymentAccountError.InvalidIban.UnknownCountry(),
+    generated.IbanReason.WRONG_LENGTH: lambda failure: PaymentAccountError.InvalidIban.WrongLength(expected=failure.expected, found=failure.found),
+    generated.IbanReason.INVALID_STRUCTURE: lambda _: PaymentAccountError.InvalidIban.InvalidStructure(),
+    generated.IbanReason.INVALID_CHECKSUM: lambda _: PaymentAccountError.InvalidIban.InvalidChecksum(),
 }
 
-_ACCOUNT_FAILURES: dict[type[object], Callable[[Any], AccountFailure]] = {
-    generated.AccountFailure.EMPTY_NAME: lambda _: AccountError.EmptyName(),
-    generated.AccountFailure.INVALID_IBAN: lambda failure: AccountError.InvalidIban(reason=_IBAN_REASONS[type(failure.reason)](failure.reason)),
-    generated.AccountFailure.EMPTY_USERNAME: lambda _: AccountError.EmptyUsername(),
+_PAYMENT_ACCOUNT_FAILURES: dict[type[object], Callable[[Any], PaymentAccountFailure]] = {
+    generated.PaymentAccountFailure.EMPTY_NAME: lambda _: PaymentAccountError.EmptyName(),
+    generated.PaymentAccountFailure.INVALID_IBAN: lambda failure: PaymentAccountError.InvalidIban(
+        reason=_IBAN_REASONS[type(failure.reason)](failure.reason)
+    ),
+    generated.PaymentAccountFailure.EMPTY_USERNAME: lambda _: PaymentAccountError.EmptyUsername(),
 }
 
 _CALENDAR_FAILURES: dict[generated.CalendarFailure, CalendarFailure] = {
@@ -922,7 +924,9 @@ _LANGUAGE_FAILURES: dict[generated.LanguageFailure, LanguageFailure] = {
 
 _ERRORS: dict[type[object], Callable[[Any], BaseException]] = {
     generated.EranosError.Id: lambda error: IdError(_ID_FAILURES[error.failure], error.detail),
-    generated.EranosError.Account: lambda error: AccountError(_ACCOUNT_FAILURES[type(error.failure)](error.failure), error.detail),
+    generated.EranosError.PaymentAccount: lambda error: PaymentAccountError(
+        _PAYMENT_ACCOUNT_FAILURES[type(error.failure)](error.failure), error.detail
+    ),
     generated.EranosError.Calendar: lambda error: CalendarError(_CALENDAR_FAILURES[error.failure], error.detail),
     generated.EranosError.Category: lambda error: CategoryError(_CATEGORY_FAILURES[error.failure], error.detail),
     generated.EranosError.Contact: lambda error: ContactError(_CONTACT_FAILURES[error.failure], error.detail),

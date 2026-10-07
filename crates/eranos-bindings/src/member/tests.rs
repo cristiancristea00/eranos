@@ -6,7 +6,7 @@
 use eranos::MemberId;
 
 use super::*;
-use crate::{AccountFailure, CategoryFailure, ContactFailure, MemberFailure};
+use crate::{CategoryFailure, ContactFailure, MemberFailure, PaymentAccountFailure};
 
 /// A record the library refuses, beside a check of how it refuses it.
 struct Refusal {
@@ -14,10 +14,10 @@ struct Refusal {
     is_expected: fn(&EranosError) -> bool,
 }
 
-fn iban_account() -> Account {
-    Account {
+fn iban_account() -> PaymentAccount {
+    PaymentAccount {
         name: "Main account".to_owned(),
-        details: AccountDetails::Iban {
+        details: PaymentAccountDetails::Iban {
             iban: "RO49AAAA1B31007593840000".to_owned(),
         },
     }
@@ -33,9 +33,9 @@ fn ana() -> Member {
         phone: Some("+40712345678".to_owned()),
         accounts: vec![
             iban_account(),
-            Account {
+            PaymentAccount {
                 name: "Payment app".to_owned(),
-                details: AccountDetails::Username {
+                details: PaymentAccountDetails::Username {
                     username: "ana.pays".to_owned(),
                 },
             },
@@ -55,9 +55,9 @@ fn bob() -> Member {
     }
 }
 
-fn with_account(details: AccountDetails, name: &str) -> Member {
+fn with_account(details: PaymentAccountDetails, name: &str) -> Member {
     Member {
-        accounts: vec![Account {
+        accounts: vec![PaymentAccount {
             name: name.to_owned(),
             details,
         }],
@@ -70,7 +70,7 @@ fn refused_members() -> [Refusal; 6] {
     [
         Refusal {
             record: with_account(
-                AccountDetails::Iban {
+                PaymentAccountDetails::Iban {
                     iban: "RO49AAAA1B31007593840001".to_owned(),
                 },
                 "Main account",
@@ -78,8 +78,8 @@ fn refused_members() -> [Refusal; 6] {
             is_expected: |error| {
                 matches!(
                     error,
-                    EranosError::Account {
-                        failure: AccountFailure::InvalidIban { .. },
+                    EranosError::PaymentAccount {
+                        failure: PaymentAccountFailure::InvalidIban { .. },
                         ..
                     }
                 )
@@ -87,7 +87,7 @@ fn refused_members() -> [Refusal; 6] {
         },
         Refusal {
             record: with_account(
-                AccountDetails::Username {
+                PaymentAccountDetails::Username {
                     username: " ".to_owned(),
                 },
                 "Payment app",
@@ -95,8 +95,8 @@ fn refused_members() -> [Refusal; 6] {
             is_expected: |error| {
                 matches!(
                     error,
-                    EranosError::Account {
-                        failure: AccountFailure::EmptyUsername,
+                    EranosError::PaymentAccount {
+                        failure: PaymentAccountFailure::EmptyUsername,
                         ..
                     }
                 )
@@ -107,8 +107,8 @@ fn refused_members() -> [Refusal; 6] {
             is_expected: |error| {
                 matches!(
                     error,
-                    EranosError::Account {
-                        failure: AccountFailure::EmptyName,
+                    EranosError::PaymentAccount {
+                        failure: PaymentAccountFailure::EmptyName,
                         ..
                     }
                 )
@@ -180,9 +180,9 @@ fn a_member_to_add_converts_both_ways() {
     let entered = Member {
         email: Some(" ana@example.com ".to_owned()),
         phone: Some("+40 712 345 678".to_owned()),
-        accounts: vec![Account {
+        accounts: vec![PaymentAccount {
             name: " Main account ".to_owned(),
-            details: AccountDetails::Iban {
+            details: PaymentAccountDetails::Iban {
                 iban: "ro49 aaaa 1b31 0075 9384 0000".to_owned(),
             },
         }],

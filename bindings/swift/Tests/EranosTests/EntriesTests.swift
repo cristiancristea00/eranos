@@ -102,8 +102,8 @@ func membersAndTransfersConvertAndStoreWhole() throws {
         email: Email("carol@example.com"),
         phone: PhoneNumber("+40712345678"),
         accounts: [
-            Account(name: "Main account", details: .iban(IBAN("RO49AAAA1B31007593840000"))),
-            Account(name: "Payment app", details: .username(Username("carol.pays")))
+            PaymentAccount(name: "Main account", details: .iban(IBAN("RO49AAAA1B31007593840000"))),
+            PaymentAccount(name: "Payment app", details: .username(Username("carol.pays")))
         ]
     )
     #expect(Member(carol.generated) == carol)

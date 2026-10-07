@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-    AccountError,
+    PaymentAccountError,
     CalendarDate,
     CalendarError,
     ContactError,
@@ -155,7 +155,7 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.ok(!iban.equals(Iban.parse('GB82WEST12345698765432')));
         assertRefused(
             () => Iban.parse('RO49AAAA1B31007593840001'),
-            AccountError,
+            PaymentAccountError,
             { kind: 'invalidIban', reason: { kind: 'invalidChecksum' } },
             'invalid IBAN: the check digits do not match',
         );
@@ -164,7 +164,7 @@ void describe('the currencies, amounts, ratios, dates, times, contact details, a
         assert.equal(username.toString(), 'ana.pays');
         assert.ok(username.equals(Username.parse('ana.pays')));
         assert.ok(!username.equals(Username.parse('bob.pays')));
-        assertRefused(() => Username.parse(' '), AccountError);
+        assertRefused(() => Username.parse(' '), PaymentAccountError);
 
         const language = Language.parse('pt-pt');
         assert.equal(language.toString(), 'pt-PT');

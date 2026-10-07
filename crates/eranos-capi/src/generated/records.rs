@@ -14,164 +14,6 @@ pub mod ffi {
     use crate::values::ffi::{EranosCalendarDate, EranosMoney, EranosTextList, EranosTimeOfDay};
     use diplomat_runtime::{DiplomatStr, DiplomatWrite};
 
-    /// A place to send a member money: a bank account or a payment-app username, with a label.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosAccount(pub(crate) eranos_bindings::Account);
-
-    impl EranosAccount {
-        /// An account of its required fields; every other field starts absent, empty, or at its
-        /// default.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create(
-            name: &DiplomatStr,
-            details: &EranosAccountDetails,
-        ) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::Account {
-                name: crate::text(name)?,
-                details: details.0.clone(),
-            })))
-        }
-
-        /// The label: "Main account".
-        pub fn name(&self, write: &mut DiplomatWrite) {
-            crate::write_text(write, &self.0.name);
-        }
-
-        /// Sets the label: "Main account".
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
-            self.0.name = crate::text(name)?;
-            Ok(())
-        }
-
-        /// The IBAN or the username.
-        #[must_use]
-        pub fn details(&self) -> Box<EranosAccountDetails> {
-            Box::new(EranosAccountDetails(self.0.details.clone()))
-        }
-
-        /// Sets the IBAN or the username.
-        pub fn set_details(&mut self, details: &EranosAccountDetails) {
-            self.0.details.clone_from(&details.0);
-        }
-    }
-
-    /// Where a member can be paid, without its label.
-    #[diplomat::opaque]
-    #[derive(Debug)]
-    pub struct EranosAccountDetails(pub(crate) eranos_bindings::AccountDetails);
-
-    impl EranosAccountDetails {
-        /// A bank account.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create_iban(iban: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::AccountDetails::Iban {
-                iban: crate::text(iban)?,
-            })))
-        }
-
-        /// A username in a payment app.
-        ///
-        /// # Errors
-        ///
-        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
-        pub fn create_username(username: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
-            Ok(Box::new(Self(eranos_bindings::AccountDetails::Username {
-                username: crate::text(username)?,
-            })))
-        }
-
-        /// Which kind of account details it is.
-        #[must_use]
-        pub const fn kind(&self) -> EranosAccountDetailsKind {
-            match &self.0 {
-                eranos_bindings::AccountDetails::Iban { .. } => EranosAccountDetailsKind::Iban,
-                eranos_bindings::AccountDetails::Username { .. } => {
-                    EranosAccountDetailsKind::Username
-                }
-            }
-        }
-
-        /// The IBAN, without spaces, in capitals. Present in the kind `Iban` alone. Writes it, if
-        /// present; absent otherwise.
-        pub fn iban(&self, write: &mut DiplomatWrite) -> Option<()> {
-            match &self.0 {
-                eranos_bindings::AccountDetails::Iban { iban, .. } => {
-                    crate::write_optional(write, Some(iban))
-                }
-                eranos_bindings::AccountDetails::Username { .. } => None,
-            }
-        }
-
-        /// The username, without surrounding whitespace. Present in the kind `Username` alone.
-        /// Writes it, if present; absent otherwise.
-        pub fn username(&self, write: &mut DiplomatWrite) -> Option<()> {
-            match &self.0 {
-                eranos_bindings::AccountDetails::Username { username, .. } => {
-                    crate::write_optional(write, Some(username))
-                }
-                eranos_bindings::AccountDetails::Iban { .. } => None,
-            }
-        }
-    }
-
-    /// The kinds of account details.
-    #[derive(Debug)]
-    pub enum EranosAccountDetailsKind {
-        /// A bank account.
-        Iban,
-        /// A username in a payment app.
-        Username,
-    }
-
-    /// A list of account records.
-    #[diplomat::opaque_mut]
-    #[derive(Debug)]
-    pub struct EranosAccountList(pub(crate) Vec<eranos_bindings::Account>);
-
-    impl EranosAccountList {
-        /// An empty list.
-        #[must_use]
-        pub fn create() -> Box<Self> {
-            Box::new(Self(Vec::new()))
-        }
-
-        /// Adds a copy of `element` at the end.
-        pub fn push(&mut self, element: &EranosAccount) {
-            self.0.push(element.0.clone());
-        }
-
-        /// How many records the list holds.
-        #[must_use]
-        pub const fn len(&self) -> usize {
-            self.0.len()
-        }
-
-        /// Whether the list holds no record.
-        #[must_use]
-        pub const fn is_empty(&self) -> bool {
-            self.0.is_empty()
-        }
-
-        /// A copy of the record at `index`, absent past the end.
-        #[must_use]
-        pub fn get(&self, index: usize) -> Option<Box<EranosAccount>> {
-            self.0
-                .get(index)
-                .map(|element| Box::new(EranosAccount(element.clone())))
-        }
-    }
-
     /// Where a member stands with the group.
     #[diplomat::opaque]
     #[derive(Debug)]
@@ -1195,12 +1037,12 @@ pub mod ffi {
 
         /// Where the member can be paid, in the order they were given.
         #[must_use]
-        pub fn accounts(&self) -> Box<EranosAccountList> {
-            Box::new(EranosAccountList(self.0.accounts.clone()))
+        pub fn accounts(&self) -> Box<EranosPaymentAccountList> {
+            Box::new(EranosPaymentAccountList(self.0.accounts.clone()))
         }
 
         /// Sets where the member can be paid, in the order they were given.
-        pub fn set_accounts(&mut self, accounts: &EranosAccountList) {
+        pub fn set_accounts(&mut self, accounts: &EranosPaymentAccountList) {
             self.0.accounts.clone_from(&accounts.0);
         }
     }
@@ -1785,6 +1627,170 @@ pub mod ffi {
         #[must_use]
         pub fn amount(&self) -> Box<EranosMoney> {
             Box::new(EranosMoney(self.0.amount.clone()))
+        }
+    }
+
+    /// A place to send a member money: a bank account or a payment-app username, with a label.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosPaymentAccount(pub(crate) eranos_bindings::PaymentAccount);
+
+    impl EranosPaymentAccount {
+        /// A payment account of its required fields; every other field starts absent, empty, or at
+        /// its default.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn create(
+            name: &DiplomatStr,
+            details: &EranosPaymentAccountDetails,
+        ) -> Result<Box<Self>, Box<EranosError>> {
+            Ok(Box::new(Self(eranos_bindings::PaymentAccount {
+                name: crate::text(name)?,
+                details: details.0.clone(),
+            })))
+        }
+
+        /// The label: "Main account".
+        pub fn name(&self, write: &mut DiplomatWrite) {
+            crate::write_text(write, &self.0.name);
+        }
+
+        /// Sets the label: "Main account".
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn set_name(&mut self, name: &DiplomatStr) -> Result<(), Box<EranosError>> {
+            self.0.name = crate::text(name)?;
+            Ok(())
+        }
+
+        /// The IBAN or the username.
+        #[must_use]
+        pub fn details(&self) -> Box<EranosPaymentAccountDetails> {
+            Box::new(EranosPaymentAccountDetails(self.0.details.clone()))
+        }
+
+        /// Sets the IBAN or the username.
+        pub fn set_details(&mut self, details: &EranosPaymentAccountDetails) {
+            self.0.details.clone_from(&details.0);
+        }
+    }
+
+    /// Where a member can be paid, without its label.
+    #[diplomat::opaque]
+    #[derive(Debug)]
+    pub struct EranosPaymentAccountDetails(pub(crate) eranos_bindings::PaymentAccountDetails);
+
+    impl EranosPaymentAccountDetails {
+        /// A bank account.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn create_iban(iban: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            Ok(Box::new(Self(
+                eranos_bindings::PaymentAccountDetails::Iban {
+                    iban: crate::text(iban)?,
+                },
+            )))
+        }
+
+        /// A username in a payment app.
+        ///
+        /// # Errors
+        ///
+        /// [`EranosError`] of the kind `InvalidText` for text that is not UTF-8.
+        pub fn create_username(username: &DiplomatStr) -> Result<Box<Self>, Box<EranosError>> {
+            Ok(Box::new(Self(
+                eranos_bindings::PaymentAccountDetails::Username {
+                    username: crate::text(username)?,
+                },
+            )))
+        }
+
+        /// Which kind of payment account details it is.
+        #[must_use]
+        pub const fn kind(&self) -> EranosPaymentAccountDetailsKind {
+            match &self.0 {
+                eranos_bindings::PaymentAccountDetails::Iban { .. } => {
+                    EranosPaymentAccountDetailsKind::Iban
+                }
+                eranos_bindings::PaymentAccountDetails::Username { .. } => {
+                    EranosPaymentAccountDetailsKind::Username
+                }
+            }
+        }
+
+        /// The IBAN, without spaces, in capitals. Present in the kind `Iban` alone. Writes it, if
+        /// present; absent otherwise.
+        pub fn iban(&self, write: &mut DiplomatWrite) -> Option<()> {
+            match &self.0 {
+                eranos_bindings::PaymentAccountDetails::Iban { iban, .. } => {
+                    crate::write_optional(write, Some(iban))
+                }
+                eranos_bindings::PaymentAccountDetails::Username { .. } => None,
+            }
+        }
+
+        /// The username, without surrounding whitespace. Present in the kind `Username` alone.
+        /// Writes it, if present; absent otherwise.
+        pub fn username(&self, write: &mut DiplomatWrite) -> Option<()> {
+            match &self.0 {
+                eranos_bindings::PaymentAccountDetails::Username { username, .. } => {
+                    crate::write_optional(write, Some(username))
+                }
+                eranos_bindings::PaymentAccountDetails::Iban { .. } => None,
+            }
+        }
+    }
+
+    /// The kinds of payment account details.
+    #[derive(Debug)]
+    pub enum EranosPaymentAccountDetailsKind {
+        /// A bank account.
+        Iban,
+        /// A username in a payment app.
+        Username,
+    }
+
+    /// A list of payment account records.
+    #[diplomat::opaque_mut]
+    #[derive(Debug)]
+    pub struct EranosPaymentAccountList(pub(crate) Vec<eranos_bindings::PaymentAccount>);
+
+    impl EranosPaymentAccountList {
+        /// An empty list.
+        #[must_use]
+        pub fn create() -> Box<Self> {
+            Box::new(Self(Vec::new()))
+        }
+
+        /// Adds a copy of `element` at the end.
+        pub fn push(&mut self, element: &EranosPaymentAccount) {
+            self.0.push(element.0.clone());
+        }
+
+        /// How many records the list holds.
+        #[must_use]
+        pub const fn len(&self) -> usize {
+            self.0.len()
+        }
+
+        /// Whether the list holds no record.
+        #[must_use]
+        pub const fn is_empty(&self) -> bool {
+            self.0.is_empty()
+        }
+
+        /// A copy of the record at `index`, absent past the end.
+        #[must_use]
+        pub fn get(&self, index: usize) -> Option<Box<EranosPaymentAccount>> {
+            self.0
+                .get(index)
+                .map(|element| Box::new(EranosPaymentAccount(element.clone())))
         }
     }
 

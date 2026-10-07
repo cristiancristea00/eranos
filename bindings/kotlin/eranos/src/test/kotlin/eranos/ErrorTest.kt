@@ -78,7 +78,7 @@ private fun assertStandard(
 private fun EranosException.failure(): Any =
     when (this) {
         is EranosException.Id -> failure
-        is EranosException.Account -> failure
+        is EranosException.PaymentAccount -> failure
         is EranosException.Calendar -> failure
         is EranosException.Category -> failure
         is EranosException.Contact -> failure
@@ -100,20 +100,20 @@ private val conversions: List<Conversion> =
     listOf(
         Conversion(failure = IdFailure.InvalidId, generated = eranos.internal.EranosException.Id(eranos.internal.IdFailure.INVALID_ID, "detail")),
         Conversion(
-            failure = AccountFailure.EmptyName,
-            generated = eranos.internal.EranosException.Account(eranos.internal.AccountFailure.EmptyName, "detail"),
+            failure = PaymentAccountFailure.EmptyName,
+            generated = eranos.internal.EranosException.PaymentAccount(eranos.internal.PaymentAccountFailure.EmptyName, "detail"),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.InvalidChecksum),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.InvalidChecksum),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidChecksum),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidChecksum),
                     "detail",
                 ),
         ),
         Conversion(
-            failure = AccountFailure.EmptyUsername,
-            generated = eranos.internal.EranosException.Account(eranos.internal.AccountFailure.EmptyUsername, "detail"),
+            failure = PaymentAccountFailure.EmptyUsername,
+            generated = eranos.internal.EranosException.PaymentAccount(eranos.internal.PaymentAccountFailure.EmptyUsername, "detail"),
         ),
         Conversion(
             failure = CalendarFailure.InvalidDate,
@@ -336,50 +336,50 @@ private val conversions: List<Conversion> =
             generated = eranos.internal.EranosException.Language(eranos.internal.LanguageFailure.INVALID_LANGUAGE, "detail"),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.InvalidCharacter),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.InvalidCharacter),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidCharacter),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidCharacter),
                     "detail",
                 ),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.InvalidFormat),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.InvalidFormat),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidFormat),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidFormat),
                     "detail",
                 ),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.UnknownCountry),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.UnknownCountry),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.UnknownCountry),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.UnknownCountry),
                     "detail",
                 ),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.WrongLength(24, 22)),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.WrongLength(24, 22)),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.WrongLength(24, 22)),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.WrongLength(24, 22)),
                     "detail",
                 ),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.InvalidStructure),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.InvalidStructure),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidStructure),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidStructure),
                     "detail",
                 ),
         ),
         Conversion(
-            failure = AccountFailure.InvalidIban(IbanReason.InvalidChecksum),
+            failure = PaymentAccountFailure.InvalidIban(IbanReason.InvalidChecksum),
             generated =
-                eranos.internal.EranosException.Account(
-                    eranos.internal.AccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidChecksum),
+                eranos.internal.EranosException.PaymentAccount(
+                    eranos.internal.PaymentAccountFailure.InvalidIban(eranos.internal.IbanReason.InvalidChecksum),
                     "detail",
                 ),
         ),

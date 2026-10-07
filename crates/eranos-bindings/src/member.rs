@@ -3,14 +3,14 @@
 
 use eranos::category as categories;
 use eranos::member as library;
-use eranos_account::FromAccountDetails;
+use eranos_payment_account::FromPaymentAccountDetails;
 
 use crate::{EranosError, check_new};
 
 /// Where a member can be paid, without its label.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum AccountDetails {
+pub enum PaymentAccountDetails {
     /// A bank account.
     Iban {
         /// The IBAN, without spaces, in capitals.
@@ -23,16 +23,16 @@ pub enum AccountDetails {
     },
 }
 
-impl AccountDetails {
+impl PaymentAccountDetails {
     /// The library's details.
     ///
     /// # Errors
     ///
-    /// [`AccountFailure::InvalidIban`](crate::AccountFailure::InvalidIban) for
+    /// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban) for
     /// an IBAN the library refuses, and
-    /// [`AccountFailure::EmptyUsername`](crate::AccountFailure::EmptyUsername)
+    /// [`PaymentAccountFailure::EmptyUsername`](crate::PaymentAccountFailure::EmptyUsername)
     /// for a blank username.
-    pub(crate) fn to_library(&self) -> Result<library::AccountDetails, EranosError> {
+    pub(crate) fn to_library(&self) -> Result<library::PaymentAccountDetails, EranosError> {
         Ok(match self {
             Self::Iban { iban } => library::Iban::parse(iban)?.into(),
             Self::Username { username } => library::Username::new(username)?.into(),
@@ -40,7 +40,7 @@ impl AccountDetails {
     }
 }
 
-impl FromAccountDetails for AccountDetails {
+impl FromPaymentAccountDetails for PaymentAccountDetails {
     fn iban(iban: &library::Iban) -> Self {
         Self::Iban {
             iban: iban.as_str().to_owned(),
@@ -58,19 +58,19 @@ impl FromAccountDetails for AccountDetails {
 /// username, with a label.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Account {
+pub struct PaymentAccount {
     /// The label: "Main account".
     pub name: String,
     /// The IBAN or the username.
-    pub details: AccountDetails,
+    pub details: PaymentAccountDetails,
 }
 
-impl Account {
+impl PaymentAccount {
     /// The record of `account`.
-    fn from_library(account: &library::Account) -> Self {
+    fn from_library(account: &library::PaymentAccount) -> Self {
         Self {
             name: account.name().to_owned(),
-            details: AccountDetails::from_account_details(account.details()),
+            details: PaymentAccountDetails::from_payment_account_details(account.details()),
         }
     }
 
@@ -78,11 +78,11 @@ impl Account {
     ///
     /// # Errors
     ///
-    /// The errors of [`AccountDetails::to_library`], and
-    /// [`AccountFailure::EmptyName`](crate::AccountFailure::EmptyName) for a
+    /// The errors of [`PaymentAccountDetails::to_library`], and
+    /// [`PaymentAccountFailure::EmptyName`](crate::PaymentAccountFailure::EmptyName) for a
     /// blank label.
-    fn to_library(&self) -> Result<library::Account, EranosError> {
-        Ok(library::Account::new(
+    fn to_library(&self) -> Result<library::PaymentAccount, EranosError> {
+        Ok(library::PaymentAccount::new(
             self.name.clone(),
             self.details.to_library()?,
         )?)
@@ -106,7 +106,7 @@ pub struct Member {
     /// the group holds has it in E.164 form: "+40712345678".
     pub phone: Option<String>,
     /// Where the member can be paid, in the order they were given.
-    pub accounts: Vec<Account>,
+    pub accounts: Vec<PaymentAccount>,
 }
 
 impl Member {
@@ -121,7 +121,7 @@ impl Member {
             accounts: member
                 .accounts()
                 .iter()
-                .map(Account::from_library)
+                .map(PaymentAccount::from_library)
                 .collect(),
         }
     }
@@ -169,7 +169,7 @@ impl Member {
         let accounts = self
             .accounts
             .iter()
-            .map(Account::to_library)
+            .map(PaymentAccount::to_library)
             .collect::<Result<Vec<_>, EranosError>>()?;
         Ok(builder
             .last_name(self.last_name.clone().unwrap_or_default())

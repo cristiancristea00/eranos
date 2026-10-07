@@ -3,13 +3,13 @@ package eranos;
 import java.util.Objects;
 
 /** Where a member can be paid: a bank account or a payment-app username. */
-public sealed interface AccountDetails {
+public sealed interface PaymentAccountDetails {
     /**
      * A bank account.
      *
      * @param iban the account's IBAN
      */
-    record Iban(eranos.Iban iban) implements AccountDetails {
+    record Iban(eranos.Iban iban) implements PaymentAccountDetails {
         /**
          * The bank account of {@code iban}.
          *
@@ -25,7 +25,7 @@ public sealed interface AccountDetails {
      *
      * @param username the username
      */
-    record Username(eranos.Username username) implements AccountDetails {
+    record Username(eranos.Username username) implements PaymentAccountDetails {
         /**
          * The payment-app account of {@code username}.
          *

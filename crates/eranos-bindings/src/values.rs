@@ -255,7 +255,7 @@ pub fn phone_number_international(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`AccountFailure::InvalidIban`](crate::AccountFailure::InvalidIban), with
+/// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban), with
 /// the reason.
 pub fn iban_parse(text: &str) -> Result<String, EranosError> {
     Ok(Iban::parse(text)?.as_str().to_owned())
@@ -265,7 +265,7 @@ pub fn iban_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`AccountFailure::InvalidIban`](crate::AccountFailure::InvalidIban), with
+/// [`PaymentAccountFailure::InvalidIban`](crate::PaymentAccountFailure::InvalidIban), with
 /// the reason.
 pub fn iban_country_code(text: &str) -> Result<String, EranosError> {
     Ok(Iban::parse(text)?.country_code().to_owned())
@@ -276,7 +276,7 @@ pub fn iban_country_code(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// [`AccountFailure::EmptyUsername`](crate::AccountFailure::EmptyUsername).
+/// [`PaymentAccountFailure::EmptyUsername`](crate::PaymentAccountFailure::EmptyUsername).
 pub fn username_parse(text: &str) -> Result<String, EranosError> {
     Ok(Username::new(text)?.as_str().to_owned())
 }

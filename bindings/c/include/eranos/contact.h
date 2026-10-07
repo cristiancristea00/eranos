@@ -29,7 +29,8 @@
 ///
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param iban Receives the iban, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ACCOUNT for text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
+/// text
 ///   that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosIbanParse(char const *const text, EranosText *const iban) {
     eranosDetailClear(iban);
@@ -42,7 +43,8 @@
 ///
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param countryCode Receives the country code, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ACCOUNT for text
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
+/// text
 ///   that is not an IBAN, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosIbanCountryCode(char const *const text, EranosText *const countryCode) {
     eranosDetailClear(countryCode);
@@ -94,7 +96,8 @@
 ///
 /// @param text The text, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @param username Receives the username, replacing what it held
-/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_ACCOUNT for a blank
+/// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT for
+/// a blank
 ///   username, and of the kind ERANOS_ERROR_KIND_INVALID_TEXT for text that is not UTF-8
 [[nodiscard]] static inline EranosError *eranosUsernameParse(char const *const text, EranosText *const username) {
     eranosDetailClear(username);

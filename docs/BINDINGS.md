@@ -138,7 +138,7 @@ flowchart TD
   modules at once, since its records are converted before the library runs
   it, and a generated function throws one error type, so every call
   reports `EranosError`. It has a case per module of the library, as the
-  library has an error per module: `Account`, `Calendar`, `Category`,
+  library has an error per module: `PaymentAccount`, `Calendar`, `Category`,
   `Contact`, `Expense`, `ExpenseGroup`, `Id`, `Language`, `Member`, `Money`,
   `Settlement`, and `Transfer`. Each holds the module's failure, an enum
   with a case per variant of the module's error and what the variant holds

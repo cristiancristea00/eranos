@@ -51,7 +51,7 @@ struct Flatmates {
 let euro = try Currency(code: "EUR")
 
 /// An account with its label and its details.
-func describe(_ account: Account) -> String {
+func describe(_ account: PaymentAccount) -> String {
     let details = switch account.details {
     case let .iban(iban):
         iban.description
@@ -105,8 +105,8 @@ func members(_ group: ExpenseGroup) throws(EranosError) -> Flatmates {
             email: try Email("ana@example.com"),
             phone: try PhoneNumber("+40 712 345 678"),
             accounts: [
-                Account(name: "ING", details: .iban(try IBAN("ro49 aaaa 1b31 0075 9384 0000"))),
-                Account(name: "Revolut", details: .username(try Username("@ana")))
+                PaymentAccount(name: "ING", details: .iban(try IBAN("ro49 aaaa 1b31 0075 9384 0000"))),
+                PaymentAccount(name: "Revolut", details: .username(try Username("@ana")))
             ]
         )
     )

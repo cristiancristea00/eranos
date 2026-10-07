@@ -24,7 +24,7 @@ public struct Member: Hashable, Sendable {
     public var phone: PhoneNumber?
 
     /// Where the member can be paid, in the order they were given.
-    public var accounts: [Account]
+    public var accounts: [PaymentAccount]
 
     var generated: EranosGenerated.Member {
         .init(
@@ -43,7 +43,7 @@ public struct Member: Hashable, Sendable {
         lastName: String? = nil,
         email: Email? = nil,
         phone: PhoneNumber? = nil,
-        accounts: [Account] = []
+        accounts: [PaymentAccount] = []
     ) {
         self.firstName = firstName
         self.lastName = lastName
@@ -58,44 +58,44 @@ public struct Member: Hashable, Sendable {
             lastName: member.lastName,
             email: member.email.map { Email(known: $0) },
             phone: member.phone.map { PhoneNumber(known: $0) },
-            accounts: member.accounts.map(Account.init)
+            accounts: member.accounts.map(PaymentAccount.init)
         )
         id = member.id.map { ID(rawValue: $0) }
     }
 }
 
 /// A place to send a member money, with a label: "Main account".
-public struct Account: Hashable, Sendable {
+public struct PaymentAccount: Hashable, Sendable {
     /// The label.
     public var name: String
 
     /// The IBAN or the username.
-    public var details: AccountDetails
+    public var details: PaymentAccountDetails
 
-    var generated: EranosGenerated.Account {
+    var generated: EranosGenerated.PaymentAccount {
         .init(name: name, details: details.generated)
     }
 
     /// The account labelled `name`, at `details`.
-    public init(name: String, details: AccountDetails) {
+    public init(name: String, details: PaymentAccountDetails) {
         self.name = name
         self.details = details
     }
 
-    init(_ account: EranosGenerated.Account) {
-        self.init(name: account.name, details: AccountDetails(account.details))
+    init(_ account: EranosGenerated.PaymentAccount) {
+        self.init(name: account.name, details: PaymentAccountDetails(account.details))
     }
 }
 
 /// Where a member can be paid: a bank account or a payment-app username.
-public enum AccountDetails: Hashable, Sendable {
+public enum PaymentAccountDetails: Hashable, Sendable {
     /// A bank account.
     case iban(IBAN)
 
     /// A username in a payment app.
     case username(Username)
 
-    var generated: EranosGenerated.AccountDetails {
+    var generated: EranosGenerated.PaymentAccountDetails {
         switch self {
         case let .iban(iban):
             .iban(iban: iban.description)
@@ -104,7 +104,7 @@ public enum AccountDetails: Hashable, Sendable {
         }
     }
 
-    init(_ details: EranosGenerated.AccountDetails) {
+    init(_ details: EranosGenerated.PaymentAccountDetails) {
         switch details {
         case let .iban(iban):
             self = .iban(IBAN(known: iban))

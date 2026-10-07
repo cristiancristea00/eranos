@@ -405,7 +405,7 @@ pub mod ffi {
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Account` for text that is not an IBAN, and of the kind
+        /// [`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the kind
         /// `InvalidText` for text that is not UTF-8.
         pub fn parse(
             text: &DiplomatStr,
@@ -420,7 +420,7 @@ pub mod ffi {
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Account` for text that is not an IBAN, and of the kind
+        /// [`EranosError`] of the kind `PaymentAccount` for text that is not an IBAN, and of the kind
         /// `InvalidText` for text that is not UTF-8.
         pub fn country_code(
             text: &DiplomatStr,
@@ -443,7 +443,7 @@ pub mod ffi {
         ///
         /// # Errors
         ///
-        /// [`EranosError`] of the kind `Account` for a blank username, and of the kind
+        /// [`EranosError`] of the kind `PaymentAccount` for a blank username, and of the kind
         /// `InvalidText` for text that is not UTF-8.
         pub fn parse(
             text: &DiplomatStr,

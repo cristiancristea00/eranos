@@ -3,7 +3,7 @@
 import pytest
 
 from eranos import (
-    AccountError,
+    PaymentAccountError,
     CalendarDate,
     CalendarError,
     Currency,
@@ -179,17 +179,17 @@ def test_contacts_and_accounts_are_checked_and_made_canonical() -> None:
     iban = Iban('ro49 aaaa 1b31 0075 9384 0000')
     assert str(iban) == 'RO49AAAA1B31007593840000'
     assert iban.country_code() == 'RO'
-    with pytest.raises(AccountError) as checksum:
+    with pytest.raises(PaymentAccountError) as checksum:
         Iban('RO49AAAA1B31007593840001')
-    assert checksum.value.failure == AccountError.InvalidIban(AccountError.InvalidIban.InvalidChecksum())
+    assert checksum.value.failure == PaymentAccountError.InvalidIban(PaymentAccountError.InvalidIban.InvalidChecksum())
     assert str(checksum.value) == 'invalid IBAN: the check digits do not match'
-    with pytest.raises(AccountError) as length:
+    with pytest.raises(PaymentAccountError) as length:
         Iban('RO49AAAA1B3100759384000')
-    assert length.value.failure == AccountError.InvalidIban(AccountError.InvalidIban.WrongLength(expected=24, found=23))
+    assert length.value.failure == PaymentAccountError.InvalidIban(PaymentAccountError.InvalidIban.WrongLength(expected=24, found=23))
     assert str(Username(' ana.pays ')) == 'ana.pays'
-    with pytest.raises(AccountError) as blank:
+    with pytest.raises(PaymentAccountError) as blank:
         Username(' ')
-    assert blank.value.failure == AccountError.EmptyUsername()
+    assert blank.value.failure == PaymentAccountError.EmptyUsername()
     assert Language('pt-pt') == Language('pt-PT')
     assert str(Language('pt-pt')) == 'pt-PT'
     with pytest.raises(LanguageError) as tag:

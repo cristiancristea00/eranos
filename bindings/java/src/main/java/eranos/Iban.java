@@ -15,8 +15,8 @@ public final class Iban {
      *
      * @param text the IBAN's text
      * @return the IBAN
-     * @throws EranosException.Account with {@link AccountFailure.InvalidIban} and the check it
-     *     failed
+     * @throws EranosException.PaymentAccount with {@link PaymentAccountFailure.InvalidIban} and the
+     *     check it failed
      */
     public static Iban parse(String text) throws EranosException {
         return Converting.call(() -> new Iban(Eranos.ibanParse(text)));

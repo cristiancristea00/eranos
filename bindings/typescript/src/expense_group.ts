@@ -596,7 +596,7 @@ export class ExpenseGroup implements Disposable {
      * was, and rejects with the signal's reason. {@link ExpenseGroup.addMemberSync} does not wait.
      *
      * Rejects with `TypeError` for a member with an identifier; {@link MemberError} with the failure `emptyFirstName` for a
-     * blank first name; {@link AccountError} with the failure `emptyName` for an account with a blank name.
+     * blank first name; {@link PaymentAccountError} with the failure `emptyName` for an account with a blank name.
      *
      * @param member - The member
      * @param options - The call's signal
@@ -616,7 +616,7 @@ export class ExpenseGroup implements Disposable {
      * @returns The member's identifier
      * @throws `TypeError` for a member with an identifier
      * @throws {@link MemberError} with the failure `emptyFirstName` for a blank first name
-     * @throws {@link AccountError} with the failure `emptyName` for an account with a blank name
+     * @throws {@link PaymentAccountError} with the failure `emptyName` for an account with a blank name
      */
     addMemberSync(member: Member): MemberId {
         return memberId(calling(() => this.handle.addMember(generatedMember(member))));
@@ -630,7 +630,7 @@ export class ExpenseGroup implements Disposable {
      * was, and rejects with the signal's reason. {@link ExpenseGroup.replaceMemberSync} does not wait.
      *
      * Rejects with `TypeError` for a member without an identifier; {@link MemberError} as adding one does; {@link
-     * AccountError} as adding one does; {@link ExpenseGroupError} with the failure `unknownMember`; {@link IdError} for an
+     * PaymentAccountError} as adding one does; {@link ExpenseGroupError} with the failure `unknownMember`; {@link IdError} for an
      * identifier that is not one.
      *
      * @param member - The member
@@ -652,7 +652,7 @@ export class ExpenseGroup implements Disposable {
      * @returns The member as they were
      * @throws `TypeError` for a member without an identifier
      * @throws {@link MemberError} as adding one does
-     * @throws {@link AccountError} as adding one does
+     * @throws {@link PaymentAccountError} as adding one does
      * @throws {@link ExpenseGroupError} with the failure `unknownMember`
      * @throws {@link IdError} for an identifier that is not one
      */

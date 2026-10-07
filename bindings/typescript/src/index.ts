@@ -19,8 +19,8 @@ export { Email, Iban, Language, PhoneNumber, Username } from './contact.js';
 export type { CallOptions } from './converting.js';
 export { Currency } from './currency.js';
 export {
-    type Account,
-    type AccountDetails,
+    type PaymentAccount,
+    type PaymentAccountDetails,
     type Category,
     type Cost,
     type Expense,
@@ -41,7 +41,7 @@ export {
     splitMembers,
 } from './entries.js';
 export {
-    type AccountFailure,
+    type PaymentAccountFailure,
     type CalendarFailure,
     type CategoryFailure,
     type ContactFailure,
@@ -54,7 +54,7 @@ export {
     type MoneyFailure,
     type SettlementFailure,
     type TransferFailure,
-    AccountError,
+    PaymentAccountError,
     CalendarError,
     CategoryError,
     ContactError,

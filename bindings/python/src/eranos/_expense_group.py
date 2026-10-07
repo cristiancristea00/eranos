@@ -772,7 +772,7 @@ class ExpenseGroup:
         Add member, who has no identifier yet, and return the one the group gives them.
 
         It blocks the calling thread while another call holds the group's lock. The library refuses a blank first name with
-        ``MemberError.EmptyFirstName``, and an account with a blank name with ``AccountError.EmptyName``; a member with an identifier raises
+        ``MemberError.EmptyFirstName``, and an account with a blank name with ``PaymentAccountError.EmptyName``; a member with an identifier raises
         ``ValueError``.
 
         Args:

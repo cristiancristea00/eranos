@@ -3,9 +3,9 @@
 //! and what the failure holds, each in a field of its own.
 
 use crate::{
-    AccountFailure, CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
+    CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
     ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, Money,
-    MoneyFailure, SettlementFailure, TransferFailure,
+    MoneyFailure, PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 
 /// An [`EranosError`] as fields: its kind, the library's message, the
@@ -52,10 +52,10 @@ impl From<&EranosError> for FlatError {
                 message,
                 payload: Payload::default(),
             },
-            EranosError::Account { failure, .. } => {
-                let FlatFailure { failure, payload } = account(*failure);
+            EranosError::PaymentAccount { failure, .. } => {
+                let FlatFailure { failure, payload } = payment_account(*failure);
                 Self {
-                    kind: ErrorKind::Account,
+                    kind: ErrorKind::PaymentAccount,
                     failure: Some(failure),
                     message,
                     payload,
@@ -177,8 +177,8 @@ impl From<&EranosError> for FlatError {
 pub enum ErrorKind {
     /// [`EranosError::Id`].
     Id,
-    /// [`EranosError::Account`].
-    Account,
+    /// [`EranosError::PaymentAccount`].
+    PaymentAccount,
     /// [`EranosError::Calendar`].
     Calendar,
     /// [`EranosError::Category`].
@@ -220,12 +220,12 @@ pub enum ErrorKind {
 pub enum FailureKind {
     /// [`IdFailure::InvalidId`].
     IdInvalidId,
-    /// [`AccountFailure::EmptyName`].
-    AccountEmptyName,
-    /// [`AccountFailure::InvalidIban`].
-    AccountInvalidIban,
-    /// [`AccountFailure::EmptyUsername`].
-    AccountEmptyUsername,
+    /// [`PaymentAccountFailure::EmptyName`].
+    PaymentAccountEmptyName,
+    /// [`PaymentAccountFailure::InvalidIban`].
+    PaymentAccountInvalidIban,
+    /// [`PaymentAccountFailure::EmptyUsername`].
+    PaymentAccountEmptyUsername,
     /// [`CalendarFailure::InvalidDate`].
     CalendarInvalidDate,
     /// [`CalendarFailure::InvalidTime`].
@@ -406,7 +406,7 @@ pub struct Payload {
     /// [`ExpenseGroupFailure::ArchivedMember`], [`ExpenseGroupFailure::DuplicateMember`],
     /// [`ExpenseGroupFailure::MemberInUse`], [`ExpenseGroupFailure::UnknownMember`].
     pub member: Option<String>,
-    /// The check the IBAN failed: [`AccountFailure::InvalidIban`].
+    /// The check the IBAN failed: [`PaymentAccountFailure::InvalidIban`].
     pub reason: Option<IbanReasonKind>,
     /// The currency of the second amount:
     /// [`MoneyFailure::CurrencyMismatch`].
@@ -439,14 +439,16 @@ impl FlatFailure {
 }
 
 /// The account module's `failure`, with what it holds.
-fn account(failure: AccountFailure) -> FlatFailure {
+fn payment_account(failure: PaymentAccountFailure) -> FlatFailure {
     match failure {
-        AccountFailure::EmptyName => FlatFailure::new(FailureKind::AccountEmptyName),
-        AccountFailure::InvalidIban { reason } => FlatFailure {
-            failure: FailureKind::AccountInvalidIban,
+        PaymentAccountFailure::EmptyName => FlatFailure::new(FailureKind::PaymentAccountEmptyName),
+        PaymentAccountFailure::InvalidIban { reason } => FlatFailure {
+            failure: FailureKind::PaymentAccountInvalidIban,
             payload: iban(reason),
         },
-        AccountFailure::EmptyUsername => FlatFailure::new(FailureKind::AccountEmptyUsername),
+        PaymentAccountFailure::EmptyUsername => {
+            FlatFailure::new(FailureKind::PaymentAccountEmptyUsername)
+        }
     }
 }
 

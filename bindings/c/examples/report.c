@@ -48,7 +48,7 @@ void check(bool const holds, char const *const claim) {
 }
 
 bool isFailure(EranosError const *const error, EranosErrorKind const kind, EranosFailure const failure) {
-    EranosFailure found = ERANOS_FAILURE_ACCOUNT_EMPTY_NAME;
+    EranosFailure found = ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME;
     return nullptr != error && kind == eranosErrorKind(error) && eranosErrorFailure(error, &found) && failure == found;
 }
 

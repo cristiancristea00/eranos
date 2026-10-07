@@ -1,4 +1,4 @@
-//! Every failure of this crate converts through `FromAccountError`, and the
+//! Every failure of this crate converts through `FromPaymentAccountError`, and the
 //! reason of a refused IBAN through `FromIbanError`: the traits through which
 //! a crate outside this one, such as the binding core, reports them. These
 //! tests keep each variant reaching its own method with what it holds, and
@@ -15,16 +15,16 @@ struct Case<Failure> {
     held: String,
 }
 
-/// An [`AccountError`] as a crate outside this one converts it: the method
+/// An [`PaymentAccountError`] as a crate outside this one converts it: the method
 /// that built the value, what the variant held, and the message.
 #[derive(Debug, PartialEq, Eq)]
-struct ConvertedAccountError {
+struct ConvertedPaymentAccountError {
     method: &'static str,
     held: String,
     message: String,
 }
 
-impl FromAccountError for ConvertedAccountError {
+impl FromPaymentAccountError for ConvertedPaymentAccountError {
     fn empty_name(message: String) -> Self {
         Self {
             method: "empty_name",
@@ -58,25 +58,25 @@ fn every_failure_of_account_error_converts_through_the_method_of_its_variant() {
     let reason = IbanError::InvalidChecksum;
     let cases = [
         Case {
-            error: AccountError::EmptyName,
+            error: PaymentAccountError::EmptyName,
             method: "empty_name",
             held: String::new(),
         },
         Case {
-            error: AccountError::InvalidIban(reason),
+            error: PaymentAccountError::InvalidIban(reason),
             method: "invalid_iban",
             held: format!("{reason:?}"),
         },
         Case {
-            error: AccountError::EmptyUsername,
+            error: PaymentAccountError::EmptyUsername,
             method: "empty_username",
             held: String::new(),
         },
     ];
     for case in cases {
         assert_eq!(
-            ConvertedAccountError::from_account_error(&case.error),
-            ConvertedAccountError {
+            ConvertedPaymentAccountError::from_payment_account_error(&case.error),
+            ConvertedPaymentAccountError {
                 method: case.method,
                 held: case.held,
                 message: case.error.to_string(),

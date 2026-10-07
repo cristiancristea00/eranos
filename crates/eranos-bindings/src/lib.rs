@@ -45,9 +45,9 @@ use eranos::error::IdError;
 pub use calendar::{CalendarDate, TimeOfDay};
 pub use cancellation::Cancellation;
 pub use error::{
-    AccountFailure, CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
+    CalendarFailure, CategoryFailure, ContactFailure, EranosError, ExpenseFailure,
     ExpenseGroupFailure, IbanReason, IdFailure, LanguageFailure, MemberFailure, MoneyFailure,
-    SettlementFailure, TransferFailure,
+    PaymentAccountFailure, SettlementFailure, TransferFailure,
 };
 pub use expense::{
     Expense, ExpenseSplit, Item, MemberAmount, MemberParts, MemberPercentage, Split, Tip,
@@ -59,7 +59,7 @@ pub use ledger::{
     Balance, CategoryTotal, ExpenseShares, MemberCategoryTotals, MemberShare, MemberSummary,
     Summary,
 };
-pub use member::{Account, AccountDetails, Category, Member};
+pub use member::{Category, Member, PaymentAccount, PaymentAccountDetails};
 pub use money::{Cost, CurrencyDetails, CurrencyRate, Money};
 pub use reader::ExpenseGroupReader;
 pub use settlement::{Payment, Settlement, SettlementStrategy};

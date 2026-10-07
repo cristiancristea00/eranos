@@ -3,7 +3,7 @@
 
 import assert from 'node:assert/strict';
 
-import { type Account, Currency, Email, ExpenseGroup, ExpenseGroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
+import { type PaymentAccount, Currency, Email, ExpenseGroup, ExpenseGroupError, Iban, Language, PhoneNumber, Username } from '../../src/index.js';
 import { type Columns, message, printLines, printTable, refusal, section } from '../report.js';
 import { type Categories, type People, cell, outcome, refusalColumns } from './tour.js';
 
@@ -80,7 +80,7 @@ export function theGroup(): ExpenseGroup {
 }
 
 /** An account with its label, its kind, and its details. */
-function describe(account: Account): string {
+function describe(account: PaymentAccount): string {
     return 'iban' === account.details.kind
         ? `${account.name}, IBAN ${account.details.iban.toString()}`
         : `${account.name}, username ${account.details.username.toString()}`;

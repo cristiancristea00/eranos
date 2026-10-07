@@ -36,7 +36,7 @@ func theGroup() throws(EranosError) -> ExpenseGroup {
 }
 
 /// An account with its label, its kind, and its details.
-func describe(_ account: Account) -> String {
+func describe(_ account: PaymentAccount) -> String {
     switch account.details {
     case let .iban(iban):
         "\(account.name), IBAN \(iban)"
@@ -97,8 +97,8 @@ func members(_ group: ExpenseGroup) throws(EranosError) -> People {
             email: try Email("ana@example.com"),
             phone: try PhoneNumber("+40 712 345 678"),
             accounts: [
-                Account(name: "ING", details: .iban(try IBAN("RO49 AAAA 1B31 0075 9384 0000"))),
-                Account(name: "Revolut", details: .username(try Username("@ana")))
+                PaymentAccount(name: "ING", details: .iban(try IBAN("RO49 AAAA 1B31 0075 9384 0000"))),
+                PaymentAccount(name: "Revolut", details: .username(try Username("@ana")))
             ]
         )
     )

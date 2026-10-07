@@ -119,14 +119,14 @@ class ValuesTest {
         assertEquals("RO49AAAA1B31007593840000", iban.toString())
         assertEquals("RO", iban.countryCode)
         assertValue(iban, Iban.parse("RO49AAAA1B31007593840000"), Iban.parse("GB82WEST12345698765432"))
-        val refused = assertThrows<EranosException.Account> { Iban.parse("RO49AAAA1B31007593840001") }
-        assertEquals(AccountFailure.InvalidIban(IbanReason.InvalidChecksum), refused.failure)
+        val refused = assertThrows<EranosException.PaymentAccount> { Iban.parse("RO49AAAA1B31007593840001") }
+        assertEquals(PaymentAccountFailure.InvalidIban(IbanReason.InvalidChecksum), refused.failure)
         assertEquals("invalid IBAN: the check digits do not match", refused.message)
 
         val username = Username.parse(" ana.pays ")
         assertEquals("ana.pays", username.toString())
         assertValue(username, Username.parse("ana.pays"), Username.parse("bob.pays"))
-        assertThrows<EranosException.Account> { Username.parse(" ") }
+        assertThrows<EranosException.PaymentAccount> { Username.parse(" ") }
 
         val language = Language.parse("pt-pt")
         assertEquals("pt-PT", language.toString())

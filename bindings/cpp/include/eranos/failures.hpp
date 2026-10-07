@@ -19,7 +19,7 @@ enum class ErrorKind : std::uint8_t {
     /// A failure of the id module.
     ID,
     /// A failure of the account module.
-    ACCOUNT,
+    PAYMENT_ACCOUNT,
     /// A failure of the calendar module.
     CALENDAR,
     /// A failure of the category module.
@@ -59,11 +59,11 @@ enum class Failure : std::uint8_t {
     /// Text that is not a UUID.
     ID_INVALID_ID,
     /// An account whose name is blank.
-    ACCOUNT_EMPTY_NAME,
+    PAYMENT_ACCOUNT_EMPTY_NAME,
     /// An IBAN that failed validation, and why.
-    ACCOUNT_INVALID_IBAN,
+    PAYMENT_ACCOUNT_INVALID_IBAN,
     /// A username that is blank.
-    ACCOUNT_EMPTY_USERNAME,
+    PAYMENT_ACCOUNT_EMPTY_USERNAME,
     /// A calendar date that does not exist, is outside years 1 to 9999, or is not ISO 8601 text.
     CALENDAR_INVALID_DATE,
     /// A time of day that does not exist, has seconds, or is not ISO 8601 text.

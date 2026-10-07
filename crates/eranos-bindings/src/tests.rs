@@ -43,7 +43,7 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<ExpenseGroupHandle>();
         assert_send_and_sync::<ExpenseGroupReader>();
         // The error, and the failure of every module.
-        assert_send_and_sync::<AccountFailure>();
+        assert_send_and_sync::<PaymentAccountFailure>();
         assert_send_and_sync::<CalendarFailure>();
         assert_send_and_sync::<CategoryFailure>();
         assert_send_and_sync::<ContactFailure>();
@@ -65,8 +65,8 @@ fn every_public_type_is_send_and_sync() {
         assert_send_and_sync::<Money>();
         assert_send_and_sync::<TimeOfDay>();
         // Entries and how they divide.
-        assert_send_and_sync::<Account>();
-        assert_send_and_sync::<AccountDetails>();
+        assert_send_and_sync::<PaymentAccount>();
+        assert_send_and_sync::<PaymentAccountDetails>();
         assert_send_and_sync::<Category>();
         assert_send_and_sync::<Expense>();
         assert_send_and_sync::<ExpenseSplit>();

@@ -69,8 +69,8 @@ class Iban(CheckedText):
         """
         Check the IBAN written text, with or without its spaces.
 
-        The library refuses an IBAN that fails a check with ``AccountError.InvalidIban``, whose reason names the check, in an
-        ``AccountError``.
+        The library refuses an IBAN that fails a check with ``PaymentAccountError.InvalidIban``, whose reason names the check, in an
+        ``PaymentAccountError``.
 
         Args:
             text: The IBAN's text: ``"RO49 AAAA 1B31 0075 9384 0000"``.
@@ -100,7 +100,7 @@ class Username(CheckedText):
         """
         Check the username written text.
 
-        The library refuses blank text with ``AccountError.EmptyUsername``, in an ``AccountError``.
+        The library refuses blank text with ``PaymentAccountError.EmptyUsername``, in a ``PaymentAccountError``.
 
         Args:
             text: The username's text: ``"ana.pays"``.

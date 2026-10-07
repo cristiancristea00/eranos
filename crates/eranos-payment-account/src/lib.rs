@@ -2,7 +2,7 @@
 //!
 //! An internal crate of eranos: depend on `eranos`, which re-exports the
 //! types callers use. The facade does not re-export the conversion traits
-//! [`FromAccountDetails`], [`FromAccountError`], and [`FromIbanError`],
+//! [`FromPaymentAccountDetails`], [`FromPaymentAccountError`], and [`FromIbanError`],
 //! through which a crate that tells every variant apart converts account
 //! details or a failure without the wildcard arm a `match` outside this crate
 //! would need.
@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use eranos_core::text;
 
-pub use error::{AccountError, FromAccountError, FromIbanError, IbanError};
+pub use error::{FromIbanError, FromPaymentAccountError, IbanError, PaymentAccountError};
 pub use iban::Iban;
 
 /// A named place where a member can receive money, such as `ING` with an
@@ -28,33 +28,33 @@ pub use iban::Iban;
 /// # Examples
 ///
 /// ```
-/// use eranos::{Account, AccountKind, Iban, Username};
+/// use eranos::{PaymentAccount, PaymentAccountKind, Iban, Username};
 ///
-/// let bank = Account::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?;
-/// assert_eq!(bank.kind(), AccountKind::Iban);
+/// let bank = PaymentAccount::new("ING", Iban::parse("RO49AAAA1B31007593840000")?)?;
+/// assert_eq!(bank.kind(), PaymentAccountKind::Iban);
 ///
-/// let app = Account::new("Revolut", Username::new("@ana")?)?;
+/// let app = PaymentAccount::new("Revolut", Username::new("@ana")?)?;
 /// assert_eq!(app.name(), "Revolut");
-/// # Ok::<(), eranos::error::AccountError>(())
+/// # Ok::<(), eranos::error::PaymentAccountError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-pub struct Account {
+pub struct PaymentAccount {
     name: String,
-    details: AccountDetails,
+    details: PaymentAccountDetails,
 }
 
-impl Account {
+impl PaymentAccount {
     /// Returns an account named `name`, trimmed.
     ///
     /// # Errors
     ///
-    /// [`AccountError::EmptyName`] when the name is blank.
+    /// [`PaymentAccountError::EmptyName`] when the name is blank.
     pub fn new(
         name: impl Into<String>,
-        details: impl Into<AccountDetails>,
-    ) -> Result<Self, AccountError> {
-        let name = text::required(name, AccountError::EmptyName)?;
+        details: impl Into<PaymentAccountDetails>,
+    ) -> Result<Self, PaymentAccountError> {
+        let name = text::required(name, PaymentAccountError::EmptyName)?;
         Ok(Self {
             name,
             details: details.into(),
@@ -69,18 +69,18 @@ impl Account {
 
     /// The account details.
     #[must_use]
-    pub const fn details(&self) -> &AccountDetails {
+    pub const fn details(&self) -> &PaymentAccountDetails {
         &self.details
     }
 
     /// Whether the details are an IBAN or a username.
     #[must_use]
-    pub const fn kind(&self) -> AccountKind {
+    pub const fn kind(&self) -> PaymentAccountKind {
         self.details.kind()
     }
 }
 
-/// The details of an [`Account`]: where the money goes.
+/// The details of an [`PaymentAccount`]: where the money goes.
 ///
 /// Serialised as `{"iban": "…"}` or `{"username": "…"}`, in clear text.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,38 +90,38 @@ impl Account {
     serde(rename_all = "snake_case")
 )]
 #[non_exhaustive]
-pub enum AccountDetails {
+pub enum PaymentAccountDetails {
     /// A bank account.
     Iban(Iban),
     /// A username in a payment app.
     Username(Username),
 }
 
-impl AccountDetails {
+impl PaymentAccountDetails {
     /// Which kind of details these are.
     #[must_use]
-    pub const fn kind(&self) -> AccountKind {
+    pub const fn kind(&self) -> PaymentAccountKind {
         match self {
-            Self::Iban(_) => AccountKind::Iban,
-            Self::Username(_) => AccountKind::Username,
+            Self::Iban(_) => PaymentAccountKind::Iban,
+            Self::Username(_) => PaymentAccountKind::Username,
         }
     }
 }
 
-impl From<Iban> for AccountDetails {
+impl From<Iban> for PaymentAccountDetails {
     fn from(iban: Iban) -> Self {
         Self::Iban(iban)
     }
 }
 
-impl From<Username> for AccountDetails {
+impl From<Username> for PaymentAccountDetails {
     fn from(username: Username) -> Self {
         Self::Username(username)
     }
 }
 
-/// Builds a value from [`AccountDetails`], one method per kind of account.
-pub trait FromAccountDetails: Sized {
+/// Builds a value from [`PaymentAccountDetails`], one method per kind of account.
+pub trait FromPaymentAccountDetails: Sized {
     /// The value for a bank account's `iban`.
     fn iban(iban: &Iban) -> Self;
 
@@ -130,15 +130,15 @@ pub trait FromAccountDetails: Sized {
 
     /// The value for `details`, from the method of its variant.
     #[must_use]
-    fn from_account_details(details: &AccountDetails) -> Self {
+    fn from_payment_account_details(details: &PaymentAccountDetails) -> Self {
         match details {
-            AccountDetails::Iban(iban) => Self::iban(iban),
-            AccountDetails::Username(username) => Self::username(username),
+            PaymentAccountDetails::Iban(iban) => Self::iban(iban),
+            PaymentAccountDetails::Username(username) => Self::username(username),
         }
     }
 }
 
-/// The kind of an [`Account`], without its details.
+/// The kind of an [`PaymentAccount`], without its details.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
@@ -146,7 +146,7 @@ pub trait FromAccountDetails: Sized {
     serde(rename_all = "snake_case")
 )]
 #[non_exhaustive]
-pub enum AccountKind {
+pub enum PaymentAccountKind {
     /// A bank account identified by an IBAN.
     Iban,
     /// A payment-app account identified by a username.
@@ -164,11 +164,11 @@ impl Username {
     ///
     /// # Errors
     ///
-    /// [`AccountError::EmptyUsername`] when the text is blank.
-    pub fn new(text: &str) -> Result<Self, AccountError> {
+    /// [`PaymentAccountError::EmptyUsername`] when the text is blank.
+    pub fn new(text: &str) -> Result<Self, PaymentAccountError> {
         let trimmed = text.trim();
         if trimmed.is_empty() {
-            return Err(AccountError::EmptyUsername);
+            return Err(PaymentAccountError::EmptyUsername);
         }
         Ok(Self(trimmed.to_owned()))
     }
@@ -187,27 +187,27 @@ impl fmt::Display for Username {
 }
 
 impl FromStr for Username {
-    type Err = AccountError;
+    type Err = PaymentAccountError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::new(text)
     }
 }
 
-/// The serialised form of an [`Account`], validated on the way in.
+/// The serialised form of an [`PaymentAccount`], validated on the way in.
 #[cfg(feature = "serde")]
 #[derive(serde::Deserialize)]
-struct AccountRecord {
+struct PaymentAccountRecord {
     name: String,
-    details: AccountDetails,
+    details: PaymentAccountDetails,
 }
 
 // Written out rather than derived with `serde(try_from)`: its `TryFrom` impl
-// from the private record would appear on the facade's page for `Account`.
+// from the private record would appear on the facade's page for `PaymentAccount`.
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Account {
+impl<'de> serde::Deserialize<'de> for PaymentAccount {
     fn deserialize<D: serde::Deserializer<'de>>(deserialiser: D) -> Result<Self, D::Error> {
-        let record = AccountRecord::deserialize(deserialiser)?;
+        let record = PaymentAccountRecord::deserialize(deserialiser)?;
         Self::new(record.name, record.details).map_err(serde::de::Error::custom)
     }
 }

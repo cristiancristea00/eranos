@@ -197,14 +197,15 @@ class EntriesTest {
     @Test
     void membersAndTransfersConvertAndStoreWhole() throws EranosException {
         Flat flat = new Flat();
-        List<Account> accounts =
+        List<PaymentAccount> accounts =
                 List.of(
-                        new Account(
+                        new PaymentAccount(
                                 "Main account",
-                                new AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000"))),
-                        new Account(
+                                new PaymentAccountDetails.Iban(
+                                        Iban.parse("RO49AAAA1B31007593840000"))),
+                        new PaymentAccount(
                                 "Payment app",
-                                new AccountDetails.Username(Username.parse("carol.pays"))));
+                                new PaymentAccountDetails.Username(Username.parse("carol.pays"))));
         Member carol =
                 Member.builder("Carol")
                         .lastName("Popa")
@@ -280,7 +281,7 @@ class EntriesTest {
         IllegalArgumentException missing =
                 assertThrows(IllegalArgumentException.class, () -> flat.group.replaceMember(carol));
         assertEquals("an entry to replace must carry its identifier", missing.getMessage());
-        for (Account account : accounts) {
+        for (PaymentAccount account : accounts) {
             assertEquals(
                     account.details(),
                     Conversions.converted(Conversions.generated(account.details())));
@@ -295,12 +296,13 @@ class EntriesTest {
         Flat flat = new Flat();
         List<MemberId> members = new ArrayList<>(List.of(flat.ana));
         Split split = new Split.Equal(members);
-        List<Account> accounts =
+        List<PaymentAccount> accounts =
                 new ArrayList<>(
                         List.of(
-                                new Account(
+                                new PaymentAccount(
                                         "Payment app",
-                                        new AccountDetails.Username(Username.parse("ana.pays")))));
+                                        new PaymentAccountDetails.Username(
+                                                Username.parse("ana.pays")))));
         Member member = Member.builder("Ana").accounts(accounts).build();
         members.add(flat.bob);
         accounts.clear();

@@ -160,8 +160,8 @@ class EntriesTest {
     @Test
     fun membersAndTransfersConvertAndStoreWhole() {
         val flat = Flat()
-        val mainAccount = Account("Main account", AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")))
-        val paymentApp = Account("Payment app", AccountDetails.Username(Username.parse("carol.pays")))
+        val mainAccount = PaymentAccount("Main account", PaymentAccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")))
+        val paymentApp = PaymentAccount("Payment app", PaymentAccountDetails.Username(Username.parse("carol.pays")))
         val carol =
             Member(
                 firstName = "Carol",
@@ -176,14 +176,18 @@ class EntriesTest {
         assertEquals(id, stored.id)
         assertEquals(carol, Member(stored.firstName, stored.lastName, stored.email, stored.phone, stored.accounts))
         assertValue(stored, stored.copy(), stored.copy(firstName = "Caroline"))
-        assertEquals(emptyList<Account>(), Member("Dan").accounts)
-        assertValue(mainAccount, Account("Main account", mainAccount.details), Account("Savings", mainAccount.details))
+        assertEquals(emptyList<PaymentAccount>(), Member("Dan").accounts)
+        assertValue(mainAccount, PaymentAccount("Main account", mainAccount.details), PaymentAccount("Savings", mainAccount.details))
         assertValue(
             mainAccount.details,
-            AccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")),
-            AccountDetails.Iban(Iban.parse("GB82WEST12345698765432")),
+            PaymentAccountDetails.Iban(Iban.parse("RO49AAAA1B31007593840000")),
+            PaymentAccountDetails.Iban(Iban.parse("GB82WEST12345698765432")),
         )
-        assertValue(paymentApp.details, AccountDetails.Username(Username.parse("carol.pays")), AccountDetails.Username(Username.parse("dan.pays")))
+        assertValue(
+            paymentApp.details,
+            PaymentAccountDetails.Username(Username.parse("carol.pays")),
+            PaymentAccountDetails.Username(Username.parse("dan.pays")),
+        )
 
         val lei = Currency.of("RON")
         val cash =
@@ -222,7 +226,7 @@ class EntriesTest {
         val flat = Flat()
         val members = mutableListOf(flat.ana)
         val split = Split.Equal(members)
-        val accounts = mutableListOf(Account("Payment app", AccountDetails.Username(Username.parse("ana.pays"))))
+        val accounts = mutableListOf(PaymentAccount("Payment app", PaymentAccountDetails.Username(Username.parse("ana.pays"))))
         val member = Member("Ana", accounts = accounts)
         members.add(flat.bob)
         accounts.clear()

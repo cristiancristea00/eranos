@@ -231,7 +231,7 @@ pub(crate) fn phone_number_international(text: &str) -> Result<String, EranosErr
 ///
 /// # Errors
 ///
-/// `AccountFailure::InvalidIban`, with
+/// `PaymentAccountFailure::InvalidIban`, with
 /// the reason.
 #[uniffi::export]
 pub(crate) fn iban_parse(text: &str) -> Result<String, EranosError> {
@@ -242,7 +242,7 @@ pub(crate) fn iban_parse(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// `AccountFailure::InvalidIban`, with
+/// `PaymentAccountFailure::InvalidIban`, with
 /// the reason.
 #[uniffi::export]
 pub(crate) fn iban_country_code(text: &str) -> Result<String, EranosError> {
@@ -254,7 +254,7 @@ pub(crate) fn iban_country_code(text: &str) -> Result<String, EranosError> {
 ///
 /// # Errors
 ///
-/// `AccountFailure::EmptyUsername`.
+/// `PaymentAccountFailure::EmptyUsername`.
 #[uniffi::export]
 pub(crate) fn username_parse(text: &str) -> Result<String, EranosError> {
     eranos_bindings::username_parse(text)

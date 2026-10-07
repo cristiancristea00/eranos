@@ -1,10 +1,10 @@
 // Section 12 of the tour: the group saved as JSON, loaded again, and refused when its file was changed.
 package eranos.examples.grandtour
 
-import eranos.AccountDetails
 import eranos.EranosException
 import eranos.ExpenseGroup
 import eranos.ExpenseGroupFailure
+import eranos.PaymentAccountDetails
 import eranos.examples.Row
 import eranos.examples.printTable
 import eranos.examples.section
@@ -48,8 +48,8 @@ internal fun savingAndLoading(
     for (account in ana.accounts) {
         val details =
             when (val held = account.details) {
-                is AccountDetails.Iban -> held.iban.toString()
-                is AccountDetails.Username -> held.username.toString()
+                is PaymentAccountDetails.Iban -> held.iban.toString()
+                is PaymentAccountDetails.Username -> held.username.toString()
             }
         check(details in saved) { "$details is saved as it is" }
         println("  ${account.name}: $details")

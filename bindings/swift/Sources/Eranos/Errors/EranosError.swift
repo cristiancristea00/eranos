@@ -20,8 +20,8 @@ public enum EranosError: Error, Sendable, Hashable {
     /// The library's `IdError`, with the message it words.
     case id(IDFailure, detail: String)
 
-    /// The library's `AccountError`, with the message it words.
-    case account(AccountFailure, detail: String)
+    /// The library's `PaymentAccountError`, with the message it words.
+    case paymentAccount(PaymentAccountFailure, detail: String)
 
     /// The library's `CalendarError`, with the message it words.
     case calendar(CalendarFailure, detail: String)
@@ -76,7 +76,7 @@ public enum EranosError: Error, Sendable, Hashable {
     public var detail: String {
         switch self {
         case .id(_, let detail),
-             .account(_, let detail),
+             .paymentAccount(_, let detail),
              .calendar(_, let detail),
              .category(_, let detail),
              .contact(_, let detail),
@@ -110,8 +110,8 @@ extension EranosError {
         switch error {
         case let .Id(failure, detail):
             self = .id(IDFailure(failure), detail: detail)
-        case let .Account(failure, detail):
-            self = .account(AccountFailure(failure), detail: detail)
+        case let .PaymentAccount(failure, detail):
+            self = .paymentAccount(PaymentAccountFailure(failure), detail: detail)
         case let .Calendar(failure, detail):
             self = .calendar(CalendarFailure(failure), detail: detail)
         case let .Category(failure, detail):

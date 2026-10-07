@@ -11,10 +11,10 @@ publish.workspace = true
 
 [features]
 # `Serialize` and `Deserialize` for members, with their details and accounts.
-serde = ["dep:serde", "eranos-account/serde", "eranos-contact/serde", "eranos-core/serde"]
+serde = ["dep:serde", "eranos-payment-account/serde", "eranos-contact/serde", "eranos-core/serde"]
 
 [dependencies]
-eranos-account = { workspace = true }
+eranos-payment-account = { workspace = true }
 eranos-contact = { workspace = true }
 eranos-core = { workspace = true }
 thiserror = { workspace = true }

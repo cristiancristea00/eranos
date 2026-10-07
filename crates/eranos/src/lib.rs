@@ -163,8 +163,6 @@ pub mod error {
     //! and contact details, and error messages end up in logs.
 
     #[doc(inline)]
-    pub use eranos_account::{AccountError, IbanError};
-    #[doc(inline)]
     pub use eranos_calendar::CalendarError;
     #[doc(inline)]
     pub use eranos_category::CategoryError;
@@ -180,6 +178,8 @@ pub mod error {
     pub use eranos_member::MemberError;
     #[doc(inline)]
     pub use eranos_money::MoneyError;
+    #[doc(inline)]
+    pub use eranos_payment_account::{IbanError, PaymentAccountError};
     #[doc(inline)]
     pub use eranos_settlement::SettlementError;
     #[doc(inline)]
@@ -234,11 +234,13 @@ pub mod member {
     //! paid.
 
     #[doc(inline)]
-    pub use eranos_account::{Account, AccountDetails, AccountKind, Iban, Username};
-    #[doc(inline)]
     pub use eranos_contact::{Email, PhoneNumber};
     #[doc(inline)]
     pub use eranos_member::{Member, MemberBuilder};
+    #[doc(inline)]
+    pub use eranos_payment_account::{
+        Iban, PaymentAccount, PaymentAccountDetails, PaymentAccountKind, Username,
+    };
 }
 pub mod money {
     //! Money, currencies, exchange rates, costs, and the ratios splits are
@@ -284,7 +286,8 @@ pub use id::{CategoryId, ExpenseGroupId, ExpenseId, MemberId, TransferId};
 pub use ledger::{Balance, CategoryTotal, ExpenseShares, MemberShare, MemberSummary, Summary};
 #[doc(no_inline)]
 pub use member::{
-    Account, AccountDetails, AccountKind, Email, Iban, Member, PhoneNumber, Username,
+    Email, Iban, Member, PaymentAccount, PaymentAccountDetails, PaymentAccountKind, PhoneNumber,
+    Username,
 };
 #[doc(no_inline)]
 pub use money::{Cost, Currency, CurrencyRate, ExchangeRate, Money, Parts, Percentage};

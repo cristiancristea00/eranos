@@ -32,10 +32,10 @@ public sealed class EranosException(
         message: String,
     ) : EranosException(message)
 
-    /** The library's `AccountError`, with the message it words. */
-    public class Account(
+    /** The library's `PaymentAccountError`, with the message it words. */
+    public class PaymentAccount(
         /** What the module reports. */
-        public val failure: AccountFailure,
+        public val failure: PaymentAccountFailure,
         message: String,
     ) : EranosException(message)
 
@@ -129,7 +129,7 @@ public sealed class EranosException(
 internal fun eranos.internal.EranosException.converted(): Exception =
     when (this) {
         is eranos.internal.EranosException.Id -> EranosException.Id(failure.converted(), detail)
-        is eranos.internal.EranosException.Account -> EranosException.Account(failure.converted(), detail)
+        is eranos.internal.EranosException.PaymentAccount -> EranosException.PaymentAccount(failure.converted(), detail)
         is eranos.internal.EranosException.Calendar -> EranosException.Calendar(failure.converted(), detail)
         is eranos.internal.EranosException.Category -> EranosException.Category(failure.converted(), detail)
         is eranos.internal.EranosException.Contact -> EranosException.Contact(failure.converted(), detail)

@@ -10,8 +10,8 @@ use super::*;
 use crate::expense::{Item, MemberAmount, Tip, TipDistribution, TipValue};
 use crate::money::Cost;
 use crate::{
-    AccountFailure, CalendarFailure, ContactFailure, ExpenseFailure, IdFailure, LanguageFailure,
-    MoneyFailure,
+    CalendarFailure, ContactFailure, ExpenseFailure, IdFailure, LanguageFailure, MoneyFailure,
+    PaymentAccountFailure,
 };
 
 fn euros(minor_units: i64) -> Money {
@@ -405,8 +405,8 @@ fn contact_and_account_details_parse_as_the_library_does() {
         assert!(
             matches!(
                 refused,
-                Err(EranosError::Account {
-                    failure: AccountFailure::InvalidIban { .. },
+                Err(EranosError::PaymentAccount {
+                    failure: PaymentAccountFailure::InvalidIban { .. },
                     ..
                 })
             ),
@@ -416,8 +416,8 @@ fn contact_and_account_details_parse_as_the_library_does() {
     assert_eq!(username_parse(" ana.pays ").as_deref(), Ok("ana.pays"));
     assert!(matches!(
         username_parse(" "),
-        Err(EranosError::Account {
-            failure: AccountFailure::EmptyUsername,
+        Err(EranosError::PaymentAccount {
+            failure: PaymentAccountFailure::EmptyUsername,
             ..
         })
     ));

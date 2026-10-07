@@ -51,8 +51,8 @@ export class IdError extends EranosError {
     }
 }
 
-/** The library's `AccountError`, with the message it words. */
-export class AccountError extends EranosError {
+/** The library's `PaymentAccountError`, with the message it words. */
+export class PaymentAccountError extends EranosError {
     /**
      * The error of `failure`, which the library words as `message`.
      *
@@ -61,11 +61,11 @@ export class AccountError extends EranosError {
      */
     constructor(
         /** What the module reports. */
-        readonly failure: AccountFailure,
+        readonly failure: PaymentAccountFailure,
         message: string,
     ) {
         super(message);
-        this.name = 'AccountError';
+        this.name = 'PaymentAccountError';
     }
 }
 
@@ -279,8 +279,8 @@ export interface IdFailure {
     readonly kind: 'invalidId';
 }
 
-/** What the library's `AccountError` reports: a type per failure, with what it holds. */
-export type AccountFailure =
+/** What the library's `PaymentAccountError` reports: a type per failure, with what it holds. */
+export type PaymentAccountFailure =
     | {
           /** An account whose name is blank. */
           readonly kind: 'emptyName';
@@ -652,8 +652,8 @@ export function convertedError(error: unknown): unknown {
     switch (error.tag) {
         case internal.EranosError_Tags.Id:
             return new IdError(convertedIdFailure(error.inner.failure), error.inner.detail);
-        case internal.EranosError_Tags.Account:
-            return new AccountError(convertedAccountFailure(error.inner.failure), error.inner.detail);
+        case internal.EranosError_Tags.PaymentAccount:
+            return new PaymentAccountError(convertedPaymentAccountFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.Calendar:
             return new CalendarError(convertedCalendarFailure(error.inner.failure), error.inner.detail);
         case internal.EranosError_Tags.Category:
@@ -697,13 +697,13 @@ function convertedIdFailure(failure: internal.IdFailure): IdFailure {
 }
 
 /** The failure the generated code reports as `failure`. */
-function convertedAccountFailure(failure: internal.AccountFailure): AccountFailure {
+function convertedPaymentAccountFailure(failure: internal.PaymentAccountFailure): PaymentAccountFailure {
     switch (failure.tag) {
-        case internal.AccountFailure_Tags.EmptyName:
+        case internal.PaymentAccountFailure_Tags.EmptyName:
             return { kind: 'emptyName' };
-        case internal.AccountFailure_Tags.InvalidIban:
+        case internal.PaymentAccountFailure_Tags.InvalidIban:
             return { kind: 'invalidIban', reason: convertedIbanReason(failure.inner.reason) };
-        case internal.AccountFailure_Tags.EmptyUsername:
+        case internal.PaymentAccountFailure_Tags.EmptyUsername:
             return { kind: 'emptyUsername' };
     }
 }

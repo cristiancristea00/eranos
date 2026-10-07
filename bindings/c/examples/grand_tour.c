@@ -778,19 +778,19 @@ static EranosExpenseGroup *theGroup(void) {
 // 2. Members.
 
 /// An account with its label, its kind, and its details.
-static Line describe(EranosAccount const *const account) {
+static Line describe(EranosPaymentAccount const *const account) {
     EranosText *const name = eranosTextCreate();
     EranosText *const text = eranosTextCreate();
-    eranosAccountName(account, name);
-    EranosAccountDetails *const details = eranosAccountDetails(account);
+    eranosPaymentAccountName(account, name);
+    EranosPaymentAccountDetails *const details = eranosPaymentAccountDetails(account);
     Line line = {};
-    if (eranosAccountDetailsIban(details, text)) {
+    if (eranosPaymentAccountDetailsIban(details, text)) {
         line = lineOf("%s, IBAN %s", eranosTextData(name), eranosTextData(text));
     } else {
-        (void)eranosAccountDetailsUsername(details, text);
+        (void)eranosPaymentAccountDetailsUsername(details, text);
         line = lineOf("%s, username %s", eranosTextData(name), eranosTextData(text));
     }
-    eranosAccountDetailsDestroy(details);
+    eranosPaymentAccountDetailsDestroy(details);
     eranosTextDestroy(text);
     eranosTextDestroy(name);
     return line;
@@ -798,15 +798,15 @@ static Line describe(EranosAccount const *const account) {
 
 /// The label and the details of every account of @p member, one per line.
 static Line accountsOf(EranosMember const *const member) {
-    EranosAccountList *const accounts = eranosMemberAccounts(member);
+    EranosPaymentAccountList *const accounts = eranosMemberAccounts(member);
     Cell cell = {.lines = 0, .text = {}};
-    for (size_t index = 0; eranosAccountListLength(accounts) > index; ++index) {
-        EranosAccount *const account = eranosAccountListGet(accounts, index);
+    for (size_t index = 0; eranosPaymentAccountListLength(accounts) > index; ++index) {
+        EranosPaymentAccount *const account = eranosPaymentAccountListGet(accounts, index);
         Line const line = describe(account);
         cellAdd(&cell, line.text);
-        eranosAccountDestroy(account);
+        eranosPaymentAccountDestroy(account);
     }
-    eranosAccountListDestroy(accounts);
+    eranosPaymentAccountListDestroy(accounts);
     return cell.text;
 }
 
@@ -931,17 +931,17 @@ static void validation(EranosExpenseGroup *const group) {
 static Id addAna(EranosExpenseGroup *const group) {
     EranosMember *member = nullptr;
     must(eranosMemberCreate("Ana", &member));
-    EranosAccountDetails *iban = nullptr;
-    must(eranosAccountDetailsCreateIban("RO49 AAAA 1B31 0075 9384 0000", &iban));
-    EranosAccountDetails *username = nullptr;
-    must(eranosAccountDetailsCreateUsername("@ana", &username));
-    EranosAccount *bank = nullptr;
-    must(eranosAccountCreate("ING", iban, &bank));
-    EranosAccount *card = nullptr;
-    must(eranosAccountCreate("Revolut", username, &card));
-    EranosAccountList *const accounts = eranosAccountListCreate();
-    eranosAccountListPush(accounts, bank);
-    eranosAccountListPush(accounts, card);
+    EranosPaymentAccountDetails *iban = nullptr;
+    must(eranosPaymentAccountDetailsCreateIban("RO49 AAAA 1B31 0075 9384 0000", &iban));
+    EranosPaymentAccountDetails *username = nullptr;
+    must(eranosPaymentAccountDetailsCreateUsername("@ana", &username));
+    EranosPaymentAccount *bank = nullptr;
+    must(eranosPaymentAccountCreate("ING", iban, &bank));
+    EranosPaymentAccount *card = nullptr;
+    must(eranosPaymentAccountCreate("Revolut", username, &card));
+    EranosPaymentAccountList *const accounts = eranosPaymentAccountListCreate();
+    eranosPaymentAccountListPush(accounts, bank);
+    eranosPaymentAccountListPush(accounts, card);
     eranosMemberSetAccounts(member, accounts);
     must(eranosMemberSetEmail(member, "ana@example.com"));
     must(eranosMemberSetLastName(member, "Popescu"));
@@ -950,11 +950,11 @@ static Id addAna(EranosExpenseGroup *const group) {
     must(eranosExpenseGroupAddMember(group, member, text));
     Id const ana = idOf(text);
     eranosTextDestroy(text);
-    eranosAccountListDestroy(accounts);
-    eranosAccountDestroy(card);
-    eranosAccountDestroy(bank);
-    eranosAccountDetailsDestroy(username);
-    eranosAccountDetailsDestroy(iban);
+    eranosPaymentAccountListDestroy(accounts);
+    eranosPaymentAccountDestroy(card);
+    eranosPaymentAccountDestroy(bank);
+    eranosPaymentAccountDetailsDestroy(username);
+    eranosPaymentAccountDetailsDestroy(iban);
     eranosMemberDestroy(member);
     return ana;
 }
@@ -991,9 +991,9 @@ static People members(EranosExpenseGroup *const group) {
     check(eranosMemberLastName(edited, text) && 0 == strcmp(eranosTextData(text), "Ionescu"), "Bob has his last name");
     EranosMember *first = nullptr;
     must(eranosExpenseGroupMember(group, ana.text, &first));
-    EranosAccountList *const accounts = eranosMemberAccounts(first);
-    check(2 == eranosAccountListLength(accounts), "Ana has two accounts");
-    eranosAccountListDestroy(accounts);
+    EranosPaymentAccountList *const accounts = eranosMemberAccounts(first);
+    check(2 == eranosPaymentAccountListLength(accounts), "Ana has two accounts");
+    eranosPaymentAccountListDestroy(accounts);
     eranosMemberDestroy(first);
     eranosMemberDestroy(edited);
     eranosTextDestroy(text);
@@ -2165,24 +2165,24 @@ static void printAccounts(EranosExpenseGroup const *const group, Id const ana, c
     EranosMember *member = nullptr;
     must(eranosExpenseGroupMember(group, ana.text, &member));
     check(nullptr != member, "Ana is a member");
-    EranosAccountList *const accounts = eranosMemberAccounts(member);
+    EranosPaymentAccountList *const accounts = eranosMemberAccounts(member);
     EranosText *const name = eranosTextCreate();
     EranosText *const text = eranosTextCreate();
-    for (size_t index = 0; eranosAccountListLength(accounts) > index; ++index) {
-        EranosAccount *const account = eranosAccountListGet(accounts, index);
-        eranosAccountName(account, name);
-        EranosAccountDetails *const details = eranosAccountDetails(account);
-        if (!eranosAccountDetailsIban(details, text)) {
-            (void)eranosAccountDetailsUsername(details, text);
+    for (size_t index = 0; eranosPaymentAccountListLength(accounts) > index; ++index) {
+        EranosPaymentAccount *const account = eranosPaymentAccountListGet(accounts, index);
+        eranosPaymentAccountName(account, name);
+        EranosPaymentAccountDetails *const details = eranosPaymentAccountDetails(account);
+        if (!eranosPaymentAccountDetailsIban(details, text)) {
+            (void)eranosPaymentAccountDetailsUsername(details, text);
         }
         check(nullptr != strstr(saved, eranosTextData(text)), "the details are saved as they are");
         printFormatted("  %s: %s", eranosTextData(name), eranosTextData(text));
-        eranosAccountDetailsDestroy(details);
-        eranosAccountDestroy(account);
+        eranosPaymentAccountDetailsDestroy(details);
+        eranosPaymentAccountDestroy(account);
     }
     eranosTextDestroy(text);
     eranosTextDestroy(name);
-    eranosAccountListDestroy(accounts);
+    eranosPaymentAccountListDestroy(accounts);
     eranosMemberDestroy(member);
 }
 

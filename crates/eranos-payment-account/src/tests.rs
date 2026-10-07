@@ -2,7 +2,7 @@
 //! the account label present and trimmed, keep IBANs and usernames
 //! convertible into account details of the right kind, keep usernames
 //! printed as they were entered, and keep the kind of details through
-//! `FromAccountDetails`.
+//! `FromPaymentAccountDetails`.
 
 use super::*;
 
@@ -22,10 +22,10 @@ fn username() -> Username {
 #[test]
 fn the_account_name_is_trimmed() {
     // Surrounding whitespace.
-    let account = Account::new("  ING \n", iban()).unwrap();
+    let account = PaymentAccount::new("  ING \n", iban()).unwrap();
     assert_eq!(account.name(), "ING");
     // The details are kept as given.
-    assert_eq!(account.details(), &AccountDetails::Iban(iban()));
+    assert_eq!(account.details(), &PaymentAccountDetails::Iban(iban()));
 }
 
 /// An account without a label would appear as a blank line in the payment
@@ -35,8 +35,8 @@ fn a_blank_account_name_is_rejected() {
     // Empty and whitespace-only labels.
     for name in ["", "   ", "\t"] {
         assert_eq!(
-            Account::new(name, username()),
-            Err(AccountError::EmptyName),
+            PaymentAccount::new(name, username()),
+            Err(PaymentAccountError::EmptyName),
             "{name:?}"
         );
     }
@@ -46,11 +46,14 @@ fn a_blank_account_name_is_rejected() {
 #[test]
 fn ibans_and_usernames_convert_into_account_details() {
     // IBANs.
-    assert_eq!(AccountDetails::from(iban()), AccountDetails::Iban(iban()));
+    assert_eq!(
+        PaymentAccountDetails::from(iban()),
+        PaymentAccountDetails::Iban(iban())
+    );
     // Usernames.
     assert_eq!(
-        AccountDetails::from(username()),
-        AccountDetails::Username(username())
+        PaymentAccountDetails::from(username()),
+        PaymentAccountDetails::Username(username())
     );
 }
 
@@ -59,13 +62,13 @@ fn ibans_and_usernames_convert_into_account_details() {
 #[test]
 fn kind_reports_the_kind_of_details() {
     // IBAN accounts.
-    let bank = Account::new("ING", iban()).unwrap();
-    assert_eq!(bank.kind(), AccountKind::Iban);
-    assert_eq!(bank.details().kind(), AccountKind::Iban);
+    let bank = PaymentAccount::new("ING", iban()).unwrap();
+    assert_eq!(bank.kind(), PaymentAccountKind::Iban);
+    assert_eq!(bank.details().kind(), PaymentAccountKind::Iban);
     // Username accounts.
-    let app = Account::new("Revolut", username()).unwrap();
-    assert_eq!(app.kind(), AccountKind::Username);
-    assert_eq!(app.details().kind(), AccountKind::Username);
+    let app = PaymentAccount::new("Revolut", username()).unwrap();
+    assert_eq!(app.kind(), PaymentAccountKind::Username);
+    assert_eq!(app.details().kind(), PaymentAccountKind::Username);
 }
 
 /// Usernames typed with a stray space would not be found in the payment app.
@@ -85,7 +88,7 @@ fn a_blank_username_is_rejected() {
     for text in ["", "   ", "\n"] {
         assert_eq!(
             Username::new(text),
-            Err(AccountError::EmptyUsername),
+            Err(PaymentAccountError::EmptyUsername),
             "{text:?}"
         );
     }
@@ -99,7 +102,7 @@ fn usernames_print_as_entered() {
     assert_eq!(username().to_string(), USERNAME);
     assert_eq!(format!("{:?}", username()), "Username(\"@ana.popescu\")");
     // Nested in account details.
-    let details = AccountDetails::from(username());
+    let details = PaymentAccountDetails::from(username());
     assert_eq!(
         format!("{details:?}"),
         "Username(Username(\"@ana.popescu\"))"
@@ -122,29 +125,30 @@ fn as_str_returns_the_username() {
 #[test]
 fn accounts_round_trip_through_serde() {
     // IBAN accounts.
-    let bank = Account::new("ING", iban()).unwrap();
+    let bank = PaymentAccount::new("ING", iban()).unwrap();
     let json = serde_json::to_string(&bank).unwrap();
     assert_eq!(
         json,
         r#"{"name":"ING","details":{"iban":"RO49AAAA1B31007593840000"}}"#
     );
-    assert_eq!(serde_json::from_str::<Account>(&json).unwrap(), bank);
+    assert_eq!(serde_json::from_str::<PaymentAccount>(&json).unwrap(), bank);
     // Username accounts, trimmed on the way in.
-    let app = Account::new("Revolut", Username::new("@ana").unwrap()).unwrap();
-    let loaded: Account =
+    let app = PaymentAccount::new("Revolut", Username::new("@ana").unwrap()).unwrap();
+    let loaded: PaymentAccount =
         serde_json::from_str(r#"{"name":" Revolut ","details":{"username":" @ana "}}"#).unwrap();
     assert_eq!(loaded, app);
     // Blank labels and usernames are rejected.
     assert!(
-        serde_json::from_str::<Account>(r#"{"name":" ","details":{"username":"@ana"}}"#).is_err()
+        serde_json::from_str::<PaymentAccount>(r#"{"name":" ","details":{"username":"@ana"}}"#)
+            .is_err()
     );
     assert!(
-        serde_json::from_str::<Account>(r#"{"name":"Revolut","details":{"username":" "}}"#)
+        serde_json::from_str::<PaymentAccount>(r#"{"name":"Revolut","details":{"username":" "}}"#)
             .is_err()
     );
     // The kind alone.
     assert_eq!(
-        serde_json::to_string(&AccountKind::Username).unwrap(),
+        serde_json::to_string(&PaymentAccountKind::Username).unwrap(),
         "\"username\""
     );
 }
@@ -156,7 +160,7 @@ enum ConvertedDetails {
     Username(String),
 }
 
-impl FromAccountDetails for ConvertedDetails {
+impl FromPaymentAccountDetails for ConvertedDetails {
     fn iban(iban: &Iban) -> Self {
         Self::Iban(iban.as_str().to_owned())
     }
@@ -171,11 +175,11 @@ impl FromAccountDetails for ConvertedDetails {
 #[test]
 fn account_details_convert_through_the_method_of_their_variant() {
     assert_eq!(
-        ConvertedDetails::from_account_details(&AccountDetails::from(iban())),
+        ConvertedDetails::from_payment_account_details(&PaymentAccountDetails::from(iban())),
         ConvertedDetails::Iban(iban().as_str().to_owned())
     );
     assert_eq!(
-        ConvertedDetails::from_account_details(&AccountDetails::from(username())),
+        ConvertedDetails::from_payment_account_details(&PaymentAccountDetails::from(username())),
         ConvertedDetails::Username(USERNAME.to_owned())
     );
 }

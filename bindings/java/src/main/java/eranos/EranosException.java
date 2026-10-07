@@ -34,7 +34,7 @@ import java.util.function.Function;
 @SuppressWarnings("serial")
 public abstract sealed class EranosException extends Exception
         permits EranosException.Id,
-                EranosException.Account,
+                EranosException.PaymentAccount,
                 EranosException.Calendar,
                 EranosException.Category,
                 EranosException.Contact,
@@ -76,10 +76,10 @@ public abstract sealed class EranosException extends Exception
         }
     }
 
-    /** The library's {@code AccountError}, with the message it words. */
-    public static final class Account extends EranosException {
+    /** The library's {@code PaymentAccountError}, with the message it words. */
+    public static final class PaymentAccount extends EranosException {
         /** What the module reports. */
-        private final AccountFailure failure;
+        private final PaymentAccountFailure failure;
 
         /**
          * The exception of {@code failure}, which the library words as {@code message}.
@@ -87,7 +87,7 @@ public abstract sealed class EranosException extends Exception
          * @param failure what the module reports
          * @param message the library's message
          */
-        public Account(AccountFailure failure, String message) {
+        public PaymentAccount(PaymentAccountFailure failure, String message) {
             super(message);
             this.failure = Objects.requireNonNull(failure, "failure");
         }
@@ -97,7 +97,7 @@ public abstract sealed class EranosException extends Exception
          *
          * @return the failure
          */
-        public AccountFailure failure() {
+        public PaymentAccountFailure failure() {
             return failure;
         }
     }
@@ -429,8 +429,9 @@ public abstract sealed class EranosException extends Exception
                 exception -> new Id(converted(exception.failure()), exception.detail()));
         register(
                 conversions,
-                eranos.internal.EranosException.Account.class,
-                exception -> new Account(converted(exception.failure()), exception.detail()));
+                eranos.internal.EranosException.PaymentAccount.class,
+                exception ->
+                        new PaymentAccount(converted(exception.failure()), exception.detail()));
         register(
                 conversions,
                 eranos.internal.EranosException.Calendar.class,
@@ -540,13 +541,14 @@ public abstract sealed class EranosException extends Exception
      * @param failure the generated failure
      * @return the failure
      */
-    static AccountFailure converted(eranos.internal.AccountFailure failure) {
+    static PaymentAccountFailure converted(eranos.internal.PaymentAccountFailure failure) {
         return switch (failure) {
-            case eranos.internal.AccountFailure.EmptyName _ -> new AccountFailure.EmptyName();
-            case eranos.internal.AccountFailure.InvalidIban invalidIban ->
-                    new AccountFailure.InvalidIban(converted(invalidIban.reason()));
-            case eranos.internal.AccountFailure.EmptyUsername _ ->
-                    new AccountFailure.EmptyUsername();
+            case eranos.internal.PaymentAccountFailure.EmptyName _ ->
+                    new PaymentAccountFailure.EmptyName();
+            case eranos.internal.PaymentAccountFailure.InvalidIban invalidIban ->
+                    new PaymentAccountFailure.InvalidIban(converted(invalidIban.reason()));
+            case eranos.internal.PaymentAccountFailure.EmptyUsername _ ->
+                    new PaymentAccountFailure.EmptyUsername();
         };
     }
 

@@ -94,7 +94,7 @@ public class Iban internal constructor(
         /**
          * The IBAN written [text], with or without spaces, in any letter case.
          *
-         * @throws EranosException.Account with [AccountFailure.InvalidIban] and the check it failed.
+         * @throws EranosException.PaymentAccount with [PaymentAccountFailure.InvalidIban] and the check it failed.
          */
         @Throws(EranosException::class)
         public fun parse(text: String): Iban = converting { Iban(ibanParse(text)) }
@@ -120,7 +120,7 @@ public class Username internal constructor(
         /**
          * The username written [text].
          *
-         * @throws EranosException.Account with [AccountFailure.EmptyUsername] for blank text.
+         * @throws EranosException.PaymentAccount with [PaymentAccountFailure.EmptyUsername] for blank text.
          */
         @Throws(EranosException::class)
         public fun parse(text: String): Username = converting { Username(usernameParse(text)) }

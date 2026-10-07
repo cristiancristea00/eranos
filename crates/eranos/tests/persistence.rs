@@ -17,10 +17,10 @@ use std::task::{Context, Poll, Waker};
 use eranos::cooperative::block_on;
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    Account, CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense,
-    ExpenseGroup, Iban, Item, Language, Member, MemberAmount, MemberId, MemberParts,
-    MemberPercentage, Money, Parts, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy,
-    Split, TimeOfDay, Tip, TipDistribution, Transfer, Username,
+    CalendarDate, Category, CategoryId, Currency, Email, ExchangeRate, Expense, ExpenseGroup, Iban,
+    Item, Language, Member, MemberAmount, MemberId, MemberParts, MemberPercentage, Money, Parts,
+    PaymentAccount, Percentage, PhoneNumber, SavedExpenseGroup, SettlementStrategy, Split,
+    TimeOfDay, Tip, TipDistribution, Transfer, Username,
 };
 use serde_json::{Value, json};
 
@@ -55,9 +55,10 @@ fn trip() -> Trip {
                 .email(Email::parse("ana@example.com").unwrap())
                 .phone(PhoneNumber::parse("+40712345678").unwrap())
                 .account(
-                    Account::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap(),
+                    PaymentAccount::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap())
+                        .unwrap(),
                 )
-                .account(Account::new("Revolut", Username::new("@ana").unwrap()).unwrap())
+                .account(PaymentAccount::new("Revolut", Username::new("@ana").unwrap()).unwrap())
                 .build()
                 .unwrap(),
         )

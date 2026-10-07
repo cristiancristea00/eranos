@@ -9,8 +9,6 @@ import static eranos.examples.grandtour.Tour.message;
 import static eranos.examples.grandtour.Tour.outcome;
 import static eranos.examples.grandtour.Tour.refusal;
 
-import eranos.Account;
-import eranos.AccountDetails;
 import eranos.Category;
 import eranos.CategoryId;
 import eranos.Currency;
@@ -22,6 +20,8 @@ import eranos.Iban;
 import eranos.Language;
 import eranos.Member;
 import eranos.MemberId;
+import eranos.PaymentAccount;
+import eranos.PaymentAccountDetails;
 import eranos.PhoneNumber;
 import eranos.Username;
 import eranos.examples.grandtour.Tables.CheckRow;
@@ -80,10 +80,10 @@ final class Members {
     }
 
     /** An account with its label, its kind, and its details. */
-    static String describe(Account account) {
+    static String describe(PaymentAccount account) {
         return switch (account.details()) {
-            case AccountDetails.Iban iban -> account.name() + ", IBAN " + iban.iban();
-            case AccountDetails.Username username ->
+            case PaymentAccountDetails.Iban iban -> account.name() + ", IBAN " + iban.iban();
+            case PaymentAccountDetails.Username username ->
                     account.name() + ", username " + username.username();
         };
     }
@@ -151,11 +151,14 @@ final class Members {
 
     static People members(ExpenseGroup group) throws EranosException {
         section("2. Members");
-        Account bank =
-                new Account(
+        PaymentAccount bank =
+                new PaymentAccount(
                         "ING",
-                        new AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000")));
-        Account app = new Account("Revolut", new AccountDetails.Username(Username.parse("@ana")));
+                        new PaymentAccountDetails.Iban(
+                                Iban.parse("RO49 AAAA 1B31 0075 9384 0000")));
+        PaymentAccount app =
+                new PaymentAccount(
+                        "Revolut", new PaymentAccountDetails.Username(Username.parse("@ana")));
         MemberId ana =
                 group.addMember(
                         Member.builder("Ana")

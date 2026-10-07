@@ -5,8 +5,6 @@ import static eranos.examples.Report.printTable;
 import static eranos.examples.Report.section;
 import static eranos.examples.Report.totals;
 
-import eranos.Account;
-import eranos.AccountDetails;
 import eranos.Balance;
 import eranos.CalendarDate;
 import eranos.Cost;
@@ -23,6 +21,8 @@ import eranos.Member;
 import eranos.MemberId;
 import eranos.MemberSummary;
 import eranos.Money;
+import eranos.PaymentAccount;
+import eranos.PaymentAccountDetails;
 import eranos.PhoneNumber;
 import eranos.Split;
 import eranos.Summary;
@@ -92,11 +92,11 @@ public final class Main {
     }
 
     /** An account with its label and its details. */
-    private static String describe(Account account) {
+    private static String describe(PaymentAccount account) {
         String details =
                 switch (account.details()) {
-                    case AccountDetails.Iban iban -> iban.iban().toString();
-                    case AccountDetails.Username username -> username.username().toString();
+                    case PaymentAccountDetails.Iban iban -> iban.iban().toString();
+                    case PaymentAccountDetails.Username username -> username.username().toString();
                 };
         return account.name() + ": " + details;
     }
@@ -162,11 +162,14 @@ public final class Main {
 
     private static Flatmates members(ExpenseGroup group) throws EranosException {
         section("1. Members");
-        Account bank =
-                new Account(
+        PaymentAccount bank =
+                new PaymentAccount(
                         "ING",
-                        new AccountDetails.Iban(Iban.parse("ro49 aaaa 1b31 0075 9384 0000")));
-        Account app = new Account("Revolut", new AccountDetails.Username(Username.parse("@ana")));
+                        new PaymentAccountDetails.Iban(
+                                Iban.parse("ro49 aaaa 1b31 0075 9384 0000")));
+        PaymentAccount app =
+                new PaymentAccount(
+                        "Revolut", new PaymentAccountDetails.Username(Username.parse("@ana")));
         MemberId ana =
                 group.addMember(
                         Member.builder("Ana")

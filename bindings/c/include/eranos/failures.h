@@ -30,11 +30,11 @@ typedef enum EranosFailure EranosFailure;
 /// Text that is not a UUID.
 static constexpr EranosFailure ERANOS_FAILURE_ID_INVALID_ID = EranosFailure_IdInvalidId;
 /// An account whose name is blank.
-static constexpr EranosFailure ERANOS_FAILURE_ACCOUNT_EMPTY_NAME = EranosFailure_AccountEmptyName;
+static constexpr EranosFailure ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME = EranosFailure_PaymentAccountEmptyName;
 /// An IBAN that failed validation, and why.
-static constexpr EranosFailure ERANOS_FAILURE_ACCOUNT_INVALID_IBAN = EranosFailure_AccountInvalidIban;
+static constexpr EranosFailure ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN = EranosFailure_PaymentAccountInvalidIban;
 /// A username that is blank.
-static constexpr EranosFailure ERANOS_FAILURE_ACCOUNT_EMPTY_USERNAME = EranosFailure_AccountEmptyUsername;
+static constexpr EranosFailure ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_USERNAME = EranosFailure_PaymentAccountEmptyUsername;
 /// A calendar date that does not exist, is outside years 1 to 9999, or is not ISO 8601 text.
 static constexpr EranosFailure ERANOS_FAILURE_CALENDAR_INVALID_DATE = EranosFailure_CalendarInvalidDate;
 /// A time of day that does not exist, has seconds, or is not ISO 8601 text.
@@ -145,8 +145,8 @@ typedef enum EranosErrorKind EranosErrorKind;
 
 /// An `IdError`, about an identifier.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_ID = EranosErrorKind_Id;
-/// An `AccountError`, about a payment account: its IBAN, username, or label.
-static constexpr EranosErrorKind ERANOS_ERROR_KIND_ACCOUNT = EranosErrorKind_Account;
+/// A `PaymentAccountError`, about a payment account: its IBAN, username, or label.
+static constexpr EranosErrorKind ERANOS_ERROR_KIND_PAYMENT_ACCOUNT = EranosErrorKind_PaymentAccount;
 /// A `CalendarError`, about a date or a time of day.
 static constexpr EranosErrorKind ERANOS_ERROR_KIND_CALENDAR = EranosErrorKind_Calendar;
 /// A `CategoryError`, about a category.

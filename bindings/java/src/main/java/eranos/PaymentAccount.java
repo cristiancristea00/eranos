@@ -8,14 +8,14 @@ import java.util.Objects;
  * @param name the label
  * @param details the IBAN or the username
  */
-public record Account(String name, AccountDetails details) {
+public record PaymentAccount(String name, PaymentAccountDetails details) {
     /**
      * The account at {@code details}, labelled {@code name}.
      *
      * @param name the label
      * @param details the IBAN or the username
      */
-    public Account {
+    public PaymentAccount {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(details, "details");
     }
@@ -26,8 +26,8 @@ public record Account(String name, AccountDetails details) {
      * @param account the generated account
      * @return the account
      */
-    static Account converted(eranos.internal.Account account) {
-        return new Account(account.name(), Conversions.converted(account.details()));
+    static PaymentAccount converted(eranos.internal.PaymentAccount account) {
+        return new PaymentAccount(account.name(), Conversions.converted(account.details()));
     }
 
     /**
@@ -35,7 +35,7 @@ public record Account(String name, AccountDetails details) {
      *
      * @return the generated account
      */
-    eranos.internal.Account generated() {
-        return new eranos.internal.Account(name, Conversions.generated(details));
+    eranos.internal.PaymentAccount generated() {
+        return new eranos.internal.PaymentAccount(name, Conversions.generated(details));
     }
 }

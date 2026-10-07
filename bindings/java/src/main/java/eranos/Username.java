@@ -15,7 +15,8 @@ public final class Username {
      *
      * @param text the username's text
      * @return the username
-     * @throws EranosException.Account with {@link AccountFailure.EmptyUsername} for blank text
+     * @throws EranosException.PaymentAccount with {@link PaymentAccountFailure.EmptyUsername} for
+     *     blank text
      */
     public static Username parse(String text) throws EranosException {
         return Converting.call(() -> new Username(Eranos.usernameParse(text)));

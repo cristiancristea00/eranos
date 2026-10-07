@@ -16,12 +16,12 @@ final class Conversions {
      * @param details the generated details
      * @return the details
      */
-    static AccountDetails converted(eranos.internal.AccountDetails details) {
+    static PaymentAccountDetails converted(eranos.internal.PaymentAccountDetails details) {
         return switch (details) {
-            case eranos.internal.AccountDetails.Iban iban ->
-                    new AccountDetails.Iban(Iban.known(iban.iban()));
-            case eranos.internal.AccountDetails.Username username ->
-                    new AccountDetails.Username(Username.known(username.username()));
+            case eranos.internal.PaymentAccountDetails.Iban iban ->
+                    new PaymentAccountDetails.Iban(Iban.known(iban.iban()));
+            case eranos.internal.PaymentAccountDetails.Username username ->
+                    new PaymentAccountDetails.Username(Username.known(username.username()));
         };
     }
 
@@ -31,12 +31,13 @@ final class Conversions {
      * @param details the details
      * @return the generated details
      */
-    static eranos.internal.AccountDetails generated(AccountDetails details) {
+    static eranos.internal.PaymentAccountDetails generated(PaymentAccountDetails details) {
         return switch (details) {
-            case AccountDetails.Iban iban ->
-                    new eranos.internal.AccountDetails.Iban(iban.iban().toString());
-            case AccountDetails.Username username ->
-                    new eranos.internal.AccountDetails.Username(username.username().toString());
+            case PaymentAccountDetails.Iban iban ->
+                    new eranos.internal.PaymentAccountDetails.Iban(iban.iban().toString());
+            case PaymentAccountDetails.Username username ->
+                    new eranos.internal.PaymentAccountDetails.Username(
+                            username.username().toString());
         };
     }
 

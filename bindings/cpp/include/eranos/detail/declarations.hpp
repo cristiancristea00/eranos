@@ -9,10 +9,6 @@
 
 // IWYU pragma: private, include "eranos.hpp"
 
-#include "eranos/detail/EranosAccount.hpp"
-#include "eranos/detail/EranosAccountDetails.hpp"
-#include "eranos/detail/EranosAccountDetailsKind.hpp"
-#include "eranos/detail/EranosAccountList.hpp"
 #include "eranos/detail/EranosBalance.hpp"
 #include "eranos/detail/EranosBalanceKind.hpp"
 #include "eranos/detail/EranosCalendarDate.hpp"
@@ -74,6 +70,10 @@
 #include "eranos/detail/EranosOptionalTextOutcome.hpp"
 #include "eranos/detail/EranosParts.hpp"
 #include "eranos/detail/EranosPayment.hpp"
+#include "eranos/detail/EranosPaymentAccount.hpp"
+#include "eranos/detail/EranosPaymentAccountDetails.hpp"
+#include "eranos/detail/EranosPaymentAccountDetailsKind.hpp"
+#include "eranos/detail/EranosPaymentAccountList.hpp"
 #include "eranos/detail/EranosPaymentList.hpp"
 #include "eranos/detail/EranosPercentage.hpp"
 #include "eranos/detail/EranosPhoneNumber.hpp"
@@ -127,7 +127,7 @@ class PhoneNumber;
 class TimeOfDay;
 class TransferId;
 class Username;
-struct Account;
+struct PaymentAccount;
 struct AmountsSplit;
 struct Category;
 struct CategoryTotal;
@@ -139,7 +139,7 @@ struct ExpenseShares;
 struct FixedTipValue;
 struct GetsBackBalance;
 struct ExpenseGroupOptions;
-struct IbanAccountDetails;
+struct IbanPaymentAccountDetails;
 struct Item;
 struct ItemisedExpenseSplit;
 struct LocalCost;
@@ -163,7 +163,7 @@ struct Settlement;
 struct Summary;
 struct Tip;
 struct Transfer;
-struct UsernameAccountDetails;
+struct UsernamePaymentAccountDetails;
 struct WholeExpenseSplit;
 enum class ErrorKind : std::uint8_t;
 enum class Failure : std::uint8_t;

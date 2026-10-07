@@ -23,7 +23,7 @@ Signed-off-by: <committer name> <<committer email>>
 
 - Types in use: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`.
 - Scopes in use: one per internal crate, `core`, `calendar`, `money`,
-  `account`, `contact`, `member`, `category`, `ledger`, `expense`,
+  `payment-account`, `contact`, `member`, `category`, `ledger`, `expense`,
   `settlement`, `transfer`, and `expense-group`; `bindings` for the binding
   core, `glue` for the model of its calls and records, the code written from
   it, and the proc macros over it, `uniffi` for the UniFFI glue and its
@@ -260,8 +260,8 @@ test in `crates/xtask` checks every root.
 - **The public API grows additively.** Fields are private; entities are
   built with builders and edited with `to_builder`; public enums are
   `#[non_exhaustive]`; getters have no `get_` prefix; errors are
-  `#[non_exhaustive]` thiserror enums, one per crate (two in account and
-  group) in its `src/error.rs`, whose messages are lowercase, carry no
+  `#[non_exhaustive]` thiserror enums, one per crate (two in payment-account and
+  expense-group) in its `src/error.rs`, whose messages are lowercase, carry no
   trailing full stop, and never echo the text they rejected (inputs include
   account numbers). No error wraps another and none converts into another:
   a function reports its own crate's failure, and a caller that mixes
@@ -288,7 +288,7 @@ test in `crates/xtask` checks every root.
 - **A builder starts complete.** A type with a builder names its
   constructors `builder` or a variant of it (`itemised_builder`,
   `builder_with_payers`, `builder_with_split`), and `to_builder` starts an
-  edit; a type without one, such as `Category` or `Account`, has `new`.
+  edit; a type without one, such as `Category` or `PaymentAccount`, has `new`.
   Every required value is a constructor argument, so `build` never reports
   a missing one, and every setter replaces what was set before: the last
   call wins.

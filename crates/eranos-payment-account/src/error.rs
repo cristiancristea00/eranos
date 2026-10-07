@@ -3,7 +3,7 @@
 /// A payment account, or its details, that could not be built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
-pub enum AccountError {
+pub enum PaymentAccountError {
     /// An account whose name is blank.
     #[error("the account name must not be empty")]
     EmptyName,
@@ -15,27 +15,27 @@ pub enum AccountError {
     EmptyUsername,
 }
 
-/// Builds a value from an [`AccountError`], one method per failure, each
+/// Builds a value from an [`PaymentAccountError`], one method per failure, each
 /// given what its variant holds and the error's message.
-pub trait FromAccountError: Sized {
-    /// The value for [`AccountError::EmptyName`].
+pub trait FromPaymentAccountError: Sized {
+    /// The value for [`PaymentAccountError::EmptyName`].
     fn empty_name(message: String) -> Self;
 
-    /// The value for [`AccountError::InvalidIban`].
+    /// The value for [`PaymentAccountError::InvalidIban`].
     fn invalid_iban(reason: IbanError, message: String) -> Self;
 
-    /// The value for [`AccountError::EmptyUsername`].
+    /// The value for [`PaymentAccountError::EmptyUsername`].
     fn empty_username(message: String) -> Self;
 
     /// The value for `error`, from the method of its variant, given the error's
     /// message.
     #[must_use]
-    fn from_account_error(error: &AccountError) -> Self {
+    fn from_payment_account_error(error: &PaymentAccountError) -> Self {
         let message = error.to_string();
         match error {
-            AccountError::EmptyName => Self::empty_name(message),
-            AccountError::InvalidIban(reason) => Self::invalid_iban(*reason, message),
-            AccountError::EmptyUsername => Self::empty_username(message),
+            PaymentAccountError::EmptyName => Self::empty_name(message),
+            PaymentAccountError::InvalidIban(reason) => Self::invalid_iban(*reason, message),
+            PaymentAccountError::EmptyUsername => Self::empty_username(message),
         }
     }
 }
@@ -74,7 +74,7 @@ pub enum IbanError {
 }
 
 /// Builds a value from an [`IbanError`], the reason inside
-/// [`AccountError::InvalidIban`], one method per reason.
+/// [`PaymentAccountError::InvalidIban`], one method per reason.
 pub trait FromIbanError: Sized {
     /// The value for [`IbanError::InvalidCharacter`].
     fn invalid_character() -> Self;

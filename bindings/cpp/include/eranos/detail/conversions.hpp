@@ -720,41 +720,41 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The alternative of @p value.
-[[nodiscard]] inline AccountDetails fromDetail(EranosAccountDetails const &value) {
+[[nodiscard]] inline PaymentAccountDetails fromDetail(EranosPaymentAccountDetails const &value) {
     switch (value.kind()) {
-    case EranosAccountDetailsKind::Iban:
+    case EranosPaymentAccountDetailsKind::Iban:
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
-        return IbanAccountDetails{detail::ibanOf(value.iban().value())};
-    case EranosAccountDetailsKind::Username:
+        return IbanPaymentAccountDetails{detail::ibanOf(value.iban().value())};
+    case EranosPaymentAccountDetailsKind::Username:
         break;
     }
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access): the kind says the value is present.
-    return UsernameAccountDetails{detail::usernameOf(value.username().value())};
+    return UsernamePaymentAccountDetails{detail::usernameOf(value.username().value())};
 }
 
 /// The generated account details of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(IbanAccountDetails const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(IbanPaymentAccountDetails const &value) {
     // An IBAN is text the library wrote.
-    return known(EranosAccountDetails::create_iban(value.iban.toString()));
+    return known(EranosPaymentAccountDetails::create_iban(value.iban.toString()));
 }
 
 /// The generated account details of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(UsernameAccountDetails const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(UsernamePaymentAccountDetails const &value) {
     // A username is text the library wrote.
-    return known(EranosAccountDetails::create_username(value.username.toString()));
+    return known(EranosPaymentAccountDetails::create_username(value.username.toString()));
 }
 
 /// The generated account details of @p value.
-[[nodiscard]] inline std::unique_ptr<EranosAccountDetails> toDetail(AccountDetails const &value) {
+[[nodiscard]] inline std::unique_ptr<EranosPaymentAccountDetails> toDetail(PaymentAccountDetails const &value) {
     return std::visit([](auto const &alternative) { return toDetail(alternative); }, value);
 }
 
 /// The record of @p value.
-[[nodiscard]] inline Account fromDetail(EranosAccount const &value) { return {value.name(), detail::fromDetail(*value.details())}; }
+[[nodiscard]] inline PaymentAccount fromDetail(EranosPaymentAccount const &value) { return {value.name(), detail::fromDetail(*value.details())}; }
 
 /// The generated record of @p value.
-[[nodiscard]] inline std::expected<std::unique_ptr<EranosAccount>, Error> toDetail(Account const &value) {
-    return expectedOf(EranosAccount::create(value.name, *detail::toDetail(value.details)));
+[[nodiscard]] inline std::expected<std::unique_ptr<EranosPaymentAccount>, Error> toDetail(PaymentAccount const &value) {
+    return expectedOf(EranosPaymentAccount::create(value.name, *detail::toDetail(value.details)));
 }
 
 /// The record of @p value.
@@ -770,8 +770,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 
 /// The generated record of @p value.
 [[nodiscard]] inline std::expected<std::unique_ptr<EranosMember>, Error> toDetail(Member const &value) {
-    return listOf<EranosAccountList>(value.accounts)
-        .and_then([&value](std::unique_ptr<EranosAccountList> const &accounts) {
+    return listOf<EranosPaymentAccountList>(value.accounts)
+        .and_then([&value](std::unique_ptr<EranosPaymentAccountList> const &accounts) {
             return expectedOf(EranosMember::create(value.firstName)).transform([&accounts](std::unique_ptr<EranosMember> result) {
                 result->set_accounts(*accounts);
                 return result;
@@ -795,8 +795,8 @@ template <typename Value, typename Argument, typename Start, typename Convert>
 }
 
 /// The records of @p list.
-[[nodiscard]] inline std::vector<Account> fromDetail(EranosAccountList const &list) {
-    std::vector<Account> result;
+[[nodiscard]] inline std::vector<PaymentAccount> fromDetail(EranosPaymentAccountList const &list) {
+    std::vector<PaymentAccount> result;
     result.reserve(list.len());
     for (std::size_t index = 0; index < list.len(); ++index) {
         result.push_back(fromDetail(*list.get(index)));

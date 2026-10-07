@@ -1,8 +1,8 @@
-# eranos-account: where a member can be paid, an IBAN or a payment-app
+# eranos-payment-account: where a member can be paid, an IBAN or a payment-app
 # username with the account's name. An internal crate: the `eranos` crate
 # re-exports the types callers use.
 [package]
-name = "eranos-account"
+name = "eranos-payment-account"
 description = "The payment accounts of eranos, re-exported by the eranos crate"
 version.workspace = true
 edition.workspace = true

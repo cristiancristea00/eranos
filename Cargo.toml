@@ -17,7 +17,7 @@
 resolver = "3"
 members = [
     "crates/eranos",
-    "crates/eranos-account",
+    "crates/eranos-payment-account",
     "crates/eranos-bindings",
     "crates/eranos-calendar",
     "crates/eranos-capi",
@@ -53,7 +53,7 @@ publish = false
 # The library: the internal crates' documentation examples use it through a
 # dev-dependency, so they read as callers write them.
 eranos = { path = "crates/eranos", default-features = false }
-eranos-account = { path = "crates/eranos-account" }
+eranos-payment-account = { path = "crates/eranos-payment-account" }
 eranos-bindings = { path = "crates/eranos-bindings" }
 eranos-calendar = { path = "crates/eranos-calendar" }
 eranos-category = { path = "crates/eranos-category" }

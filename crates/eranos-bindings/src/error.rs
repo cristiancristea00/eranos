@@ -5,11 +5,11 @@
 use std::fmt;
 
 use eranos::error::{
-    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError,
-    IbanError, IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
+    CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError, IbanError,
+    IdError, LanguageError, MemberError, MoneyError, PaymentAccountError, SettlementError,
+    TransferError,
 };
 use eranos::{CategoryId, Currency, ExpenseId, MemberId, TransferId};
-use eranos_account::{FromAccountError, FromIbanError};
 use eranos_calendar::FromCalendarError;
 use eranos_category::FromCategoryError;
 use eranos_contact::FromContactError;
@@ -18,6 +18,7 @@ use eranos_expense::FromExpenseError;
 use eranos_expense_group::{FromExpenseGroupError, FromLanguageError};
 use eranos_member::FromMemberError;
 use eranos_money::FromMoneyError;
+use eranos_payment_account::{FromIbanError, FromPaymentAccountError};
 use eranos_settlement::FromSettlementError;
 use eranos_transfer::FromTransferError;
 
@@ -40,11 +41,11 @@ pub enum EranosError {
         /// The library's message.
         detail: String,
     },
-    /// An [`AccountError`], about a payment account: its IBAN, username, or
+    /// An [`PaymentAccountError`], about a payment account: its IBAN, username, or
     /// label.
-    Account {
+    PaymentAccount {
         /// Which failure, with what it holds.
-        failure: AccountFailure,
+        failure: PaymentAccountFailure,
         /// The library's message.
         detail: String,
     },
@@ -206,7 +207,7 @@ impl EranosError {
     pub fn detail(&self) -> &str {
         match self {
             Self::Id { detail, .. }
-            | Self::Account { detail, .. }
+            | Self::PaymentAccount { detail, .. }
             | Self::Calendar { detail, .. }
             | Self::Category { detail, .. }
             | Self::Contact { detail, .. }
@@ -234,19 +235,19 @@ impl fmt::Display for EranosError {
 
 impl std::error::Error for EranosError {}
 
-/// What an [`AccountError`] reports: a case per variant, with
+/// What an [`PaymentAccountError`] reports: a case per variant, with
 /// what the variant holds.
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AccountFailure {
-    /// [`AccountError::EmptyName`].
+pub enum PaymentAccountFailure {
+    /// [`PaymentAccountError::EmptyName`].
     EmptyName,
-    /// [`AccountError::InvalidIban`].
+    /// [`PaymentAccountError::InvalidIban`].
     InvalidIban {
         /// Why the IBAN was refused.
         reason: IbanReason,
     },
-    /// [`AccountError::EmptyUsername`].
+    /// [`PaymentAccountError::EmptyUsername`].
     EmptyUsername,
 }
 
@@ -515,7 +516,7 @@ pub enum TransferFailure {
 }
 
 /// Why an IBAN was refused: the [`IbanError`] inside
-/// [`AccountFailure::InvalidIban`].
+/// [`PaymentAccountFailure::InvalidIban`].
 #[eranos_glue_macros::mirrored]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IbanReason {
@@ -674,17 +675,17 @@ impl From<MoneyError> for EranosError {
     }
 }
 
-impl FromAccountError for EranosError {
+impl FromPaymentAccountError for EranosError {
     fn empty_name(message: String) -> Self {
-        Self::Account {
-            failure: AccountFailure::EmptyName,
+        Self::PaymentAccount {
+            failure: PaymentAccountFailure::EmptyName,
             detail: message,
         }
     }
 
     fn invalid_iban(reason: IbanError, message: String) -> Self {
-        Self::Account {
-            failure: AccountFailure::InvalidIban {
+        Self::PaymentAccount {
+            failure: PaymentAccountFailure::InvalidIban {
                 reason: IbanReason::from_iban_error(&reason),
             },
             detail: message,
@@ -692,16 +693,16 @@ impl FromAccountError for EranosError {
     }
 
     fn empty_username(message: String) -> Self {
-        Self::Account {
-            failure: AccountFailure::EmptyUsername,
+        Self::PaymentAccount {
+            failure: PaymentAccountFailure::EmptyUsername,
             detail: message,
         }
     }
 }
 
-impl From<AccountError> for EranosError {
-    fn from(error: AccountError) -> Self {
-        Self::from_account_error(&error)
+impl From<PaymentAccountError> for EranosError {
+    fn from(error: PaymentAccountError) -> Self {
+        Self::from_payment_account_error(&error)
     }
 }
 

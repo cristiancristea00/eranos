@@ -15,8 +15,8 @@ pub mod ffi {
     pub enum EranosErrorKind {
         /// An `IdError`, about an identifier.
         Id,
-        /// An `AccountError`, about a payment account: its IBAN, username, or label.
-        Account,
+        /// A `PaymentAccountError`, about a payment account: its IBAN, username, or label.
+        PaymentAccount,
         /// A `CalendarError`, about a date or a time of day.
         Calendar,
         /// A `CategoryError`, about a category.
@@ -58,11 +58,11 @@ pub mod ffi {
         /// Text that is not a UUID.
         IdInvalidId,
         /// An account whose name is blank.
-        AccountEmptyName,
+        PaymentAccountEmptyName,
         /// An IBAN that failed validation, and why.
-        AccountInvalidIban,
+        PaymentAccountInvalidIban,
         /// A username that is blank.
-        AccountEmptyUsername,
+        PaymentAccountEmptyUsername,
         /// A calendar date that does not exist, is outside years 1 to 9999, or is not ISO 8601
         /// text.
         CalendarInvalidDate,

@@ -17,10 +17,10 @@ public class Member internal constructor(
     public val email: Email?,
     /** The phone number. */
     public val phone: PhoneNumber?,
-    accounts: List<Account>,
+    accounts: List<PaymentAccount>,
 ) {
     /** Where the member can be paid, in the order they were given. */
-    public val accounts: List<Account> = accounts.toList()
+    public val accounts: List<PaymentAccount> = accounts.toList()
 
     /** A member to add, called [firstName]. */
     public constructor(
@@ -28,7 +28,7 @@ public class Member internal constructor(
         lastName: String? = null,
         email: Email? = null,
         phone: PhoneNumber? = null,
-        accounts: List<Account> = emptyList(),
+        accounts: List<PaymentAccount> = emptyList(),
     ) : this(null, firstName, lastName, email, phone, accounts)
 
     /** The member as the generated code holds them. */
@@ -49,7 +49,7 @@ public class Member internal constructor(
         lastName: String? = this.lastName,
         email: Email? = this.email,
         phone: PhoneNumber? = this.phone,
-        accounts: List<Account> = this.accounts,
+        accounts: List<PaymentAccount> = this.accounts,
     ): Member = Member(id, firstName, lastName, email, phone, accounts)
 
     /**
@@ -83,36 +83,36 @@ internal fun eranos.internal.Member.converted(): Member =
     )
 
 /** A place to send a member money, with a label: "Main account". */
-public class Account(
+public class PaymentAccount(
     /** The label. */
     public val name: String,
     /** The IBAN or the username. */
-    public val details: AccountDetails,
+    public val details: PaymentAccountDetails,
 ) {
     /** The account as the generated code holds it. */
-    internal val generated: eranos.internal.Account
-        get() = eranos.internal.Account(name, details.generated)
+    internal val generated: eranos.internal.PaymentAccount
+        get() = eranos.internal.PaymentAccount(name, details.generated)
 
     /** Whether [other] is of the same class, with the same [name] and [details]. */
-    override fun equals(other: Any?): Boolean = other is Account && name == other.name && details == other.details
+    override fun equals(other: Any?): Boolean = other is PaymentAccount && name == other.name && details == other.details
 
     /** A hash of what [equals] compares. */
     override fun hashCode(): Int = hashOf(name, details)
 
     /** A description of every field, for logs. */
-    override fun toString(): String = "Account(name=$name, details=$details)"
+    override fun toString(): String = "PaymentAccount(name=$name, details=$details)"
 }
 
 /** The account the generated code holds as [this]. */
-internal fun eranos.internal.Account.converted(): Account = Account(name, details.converted())
+internal fun eranos.internal.PaymentAccount.converted(): PaymentAccount = PaymentAccount(name, details.converted())
 
 /** Where a member can be paid: a bank account or a payment-app username. */
-public sealed interface AccountDetails {
+public sealed interface PaymentAccountDetails {
     /** A bank account. */
     public class Iban(
         /** The account's IBAN. */
         public val iban: eranos.Iban,
-    ) : AccountDetails {
+    ) : PaymentAccountDetails {
         /** Whether [other] is of the same class, with the same [iban]. */
         override fun equals(other: Any?): Boolean = other is Iban && iban == other.iban
 
@@ -127,7 +127,7 @@ public sealed interface AccountDetails {
     public class Username(
         /** The username. */
         public val username: eranos.Username,
-    ) : AccountDetails {
+    ) : PaymentAccountDetails {
         /** Whether [other] is of the same class, with the same [username]. */
         override fun equals(other: Any?): Boolean = other is Username && username == other.username
 
@@ -140,16 +140,16 @@ public sealed interface AccountDetails {
 }
 
 /** The account details as the generated code holds them. */
-internal val AccountDetails.generated: eranos.internal.AccountDetails
+internal val PaymentAccountDetails.generated: eranos.internal.PaymentAccountDetails
     get() =
         when (this) {
-            is AccountDetails.Iban -> eranos.internal.AccountDetails.Iban(iban.toString())
-            is AccountDetails.Username -> eranos.internal.AccountDetails.Username(username.toString())
+            is PaymentAccountDetails.Iban -> eranos.internal.PaymentAccountDetails.Iban(iban.toString())
+            is PaymentAccountDetails.Username -> eranos.internal.PaymentAccountDetails.Username(username.toString())
         }
 
 /** The account details the generated code holds as [this]. */
-internal fun eranos.internal.AccountDetails.converted(): AccountDetails =
+internal fun eranos.internal.PaymentAccountDetails.converted(): PaymentAccountDetails =
     when (this) {
-        is eranos.internal.AccountDetails.Iban -> AccountDetails.Iban(Iban(iban))
-        is eranos.internal.AccountDetails.Username -> AccountDetails.Username(Username(username))
+        is eranos.internal.PaymentAccountDetails.Iban -> PaymentAccountDetails.Iban(Iban(iban))
+        is eranos.internal.PaymentAccountDetails.Username -> PaymentAccountDetails.Username(Username(username))
     }

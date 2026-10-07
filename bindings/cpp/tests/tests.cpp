@@ -231,7 +231,8 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) {
     check.that("RO49AAAA1B31007593840000" == iban.toString() && "RO" == iban.countryCode(), "an IBAN in its electronic form");
     checkValue(check, iban, Iban::parse("RO49AAAA1B31007593840000").value(), Iban::parse("GB82WEST12345698765432").value(), "IBANs compare by text");
     auto const checksum = refusal(Iban::parse("RO49AAAA1B31007593840001"));
-    check.that(isFailure(checksum, ErrorKind::ACCOUNT, Failure::ACCOUNT_INVALID_IBAN) && IbanReason::INVALID_CHECKSUM == checksum.value().reason(),
+    check.that(isFailure(checksum, ErrorKind::PAYMENT_ACCOUNT, Failure::PAYMENT_ACCOUNT_INVALID_IBAN) &&
+                   IbanReason::INVALID_CHECKSUM == checksum.value().reason(),
                "an IBAN whose check digits do not match");
     check.that(checksum.has_value() && "invalid IBAN: the check digits do not match" == checksum.value().message(), "the message");
     auto const length = refusal(Iban::parse("RO49AAAA1B3100759384000"));
@@ -241,7 +242,7 @@ void contactsAndAccountsAreCheckedAndMadeCanonical(Check &check) {
     auto const username = Username::parse(" ana.pays ").value();
     check.that("ana.pays" == username.toString(), "a username is trimmed");
     checkValue(check, username, Username::parse("ana.pays").value(), Username::parse("bob.pays").value(), "usernames compare by text");
-    check.that(isFailure(refusal(Username::parse(" ")), ErrorKind::ACCOUNT, Failure::ACCOUNT_EMPTY_USERNAME), "a blank username");
+    check.that(isFailure(refusal(Username::parse(" ")), ErrorKind::PAYMENT_ACCOUNT, Failure::PAYMENT_ACCOUNT_EMPTY_USERNAME), "a blank username");
     auto const language = Language::parse("pt-pt").value();
     check.that("pt-PT" == language.toString(), "a language tag is canonical");
     checkValue(check, language, Language::parse("pt-PT").value(), Language::parse("ro-RO").value(), "languages compare by tag");
@@ -305,13 +306,13 @@ void everyRecordAndAlternativeEqualsItsTwinAndDiffersFromAnother(Check &check) {
     noted.note = "Cash";
     checkValue(check, repayment, Transfer(bob, ana, LocalCost{one}, day), noted, "transfers compare by note too");
     auto const iban = Iban::parse("RO49AAAA1B31007593840000").value();
-    checkValue(check, IbanAccountDetails{iban}, IbanAccountDetails{iban}, IbanAccountDetails{Iban::parse("GB82WEST12345698765432").value()},
-               "IBAN details");
+    checkValue(check, IbanPaymentAccountDetails{iban}, IbanPaymentAccountDetails{iban},
+               IbanPaymentAccountDetails{Iban::parse("GB82WEST12345698765432").value()}, "IBAN details");
     auto const username = Username::parse("ana.pays").value();
-    checkValue(check, UsernameAccountDetails{username}, UsernameAccountDetails{username}, UsernameAccountDetails{Username::parse("bob.pays").value()},
-               "username details");
-    checkValue(check, Account("Bank", IbanAccountDetails{iban}), Account("Bank", IbanAccountDetails{iban}),
-               Account("App", UsernameAccountDetails{username}), "accounts");
+    checkValue(check, UsernamePaymentAccountDetails{username}, UsernamePaymentAccountDetails{username},
+               UsernamePaymentAccountDetails{Username::parse("bob.pays").value()}, "username details");
+    checkValue(check, PaymentAccount("Bank", IbanPaymentAccountDetails{iban}), PaymentAccount("Bank", IbanPaymentAccountDetails{iban}),
+               PaymentAccount("App", UsernamePaymentAccountDetails{username}), "accounts");
     Member const member("Ana");
     auto withLastName = member;
     withLastName.lastName = "Pop";
@@ -385,8 +386,8 @@ void aTransferAndAMemberReadBackAsTheyWereAdded(Check &check) {
     carla.email = Email::parse("carla@example.com").value();
     carla.phone = PhoneNumber::parse("+40712345678").value();
     carla.accounts = {
-        Account("Bank", IbanAccountDetails{Iban::parse("RO49AAAA1B31007593840000").value()}),
-        Account("App", UsernameAccountDetails{Username::parse("carla.pays").value()}),
+        PaymentAccount("Bank", IbanPaymentAccountDetails{Iban::parse("RO49AAAA1B31007593840000").value()}),
+        PaymentAccount("App", UsernamePaymentAccountDetails{Username::parse("carla.pays").value()}),
     };
     carla.id = flat.group.addMember(carla).value();
     check.that(flat.group.member(carla.id.value()) == carla, "a member with every detail reads back unchanged");

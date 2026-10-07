@@ -18,7 +18,7 @@ readme = "../../README.md"
 # deserialised `ExpenseGroup` is rebuilt through the same validation as its `add_*`
 # methods.
 serde = [
-    "eranos-account/serde",
+    "eranos-payment-account/serde",
     "eranos-calendar/serde",
     "eranos-category/serde",
     "eranos-contact/serde",
@@ -35,7 +35,7 @@ serde = [
 sequential-ids = ["eranos-core/sequential-ids"]
 
 [dependencies]
-eranos-account = { workspace = true }
+eranos-payment-account = { workspace = true }
 eranos-calendar = { workspace = true }
 eranos-category = { workspace = true }
 eranos-contact = { workspace = true }

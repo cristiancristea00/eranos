@@ -8,8 +8,9 @@
 use std::fmt::Display;
 
 use eranos::error::{
-    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError,
-    IbanError, IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
+    CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError, IbanError,
+    IdError, LanguageError, MemberError, MoneyError, PaymentAccountError, SettlementError,
+    TransferError,
 };
 use eranos::{
     CalendarDate, CategoryId, Currency, Email, ExchangeRate, ExpenseId, Iban, Language, MemberId,
@@ -101,19 +102,19 @@ fn money_errors() -> Vec<Expected<MoneyError>> {
     ]
 }
 
-/// One example of every `AccountError` variant, with its exact message.
-fn account_errors() -> Vec<Expected<AccountError>> {
+/// One example of every `PaymentAccountError` variant, with its exact message.
+fn account_errors() -> Vec<Expected<PaymentAccountError>> {
     vec![
         Expected {
-            error: AccountError::EmptyName,
+            error: PaymentAccountError::EmptyName,
             message: "the account name must not be empty",
         },
         Expected {
-            error: AccountError::EmptyUsername,
+            error: PaymentAccountError::EmptyUsername,
             message: "the username must not be empty",
         },
         Expected {
-            error: AccountError::InvalidIban(IbanError::InvalidChecksum),
+            error: PaymentAccountError::InvalidIban(IbanError::InvalidChecksum),
             message: "invalid IBAN: the check digits do not match",
         },
     ]
@@ -457,7 +458,7 @@ fn account_error_messages_are_pinned() {
     assert_messages(account_errors());
     // The IBAN reason is appended to the prefix.
     assert_eq!(
-        AccountError::InvalidIban(IbanError::WrongLength {
+        PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 24,
             found: 20
         })

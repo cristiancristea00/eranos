@@ -3,7 +3,7 @@
 import dataclasses
 from typing import ClassVar, assert_never, final, override
 
-from eranos import Account, ExpenseGroup, ExpenseGroupError, IbanAccountDetails, UsernameAccountDetails
+from eranos import PaymentAccount, ExpenseGroup, ExpenseGroupError, IbanPaymentAccountDetails, UsernamePaymentAccountDetails
 from examples.grand_tour.tour import Categories, People
 from examples.report import Row, print_lines, print_table, refusal, section
 
@@ -38,7 +38,7 @@ class LoadRow(Row):
         return self.change, str(self.message)
 
 
-def _details(account: Account) -> str:
+def _details(account: PaymentAccount) -> str:
     """
     Write the details of account: its IBAN or its username.
 
@@ -51,9 +51,9 @@ def _details(account: Account) -> str:
     """
     details = account.details
     match details:
-        case IbanAccountDetails(iban=iban):
+        case IbanPaymentAccountDetails(iban=iban):
             return str(iban)
-        case UsernameAccountDetails(username=username):
+        case UsernamePaymentAccountDetails(username=username):
             return str(username)
         case _:
             assert_never(details)

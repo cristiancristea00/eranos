@@ -29,8 +29,8 @@ from eranos._calendar import CalendarDate, TimeOfDay
 from eranos._contact import Email, Iban, Language, PhoneNumber, Username
 from eranos._currency import Currency
 from eranos._entries import (
-    Account,
-    AccountDetails,
+    PaymentAccount,
+    PaymentAccountDetails,
     AmountsSplit,
     Category,
     ConvertedCost,
@@ -39,7 +39,7 @@ from eranos._entries import (
     Expense,
     ExpenseSplit,
     FixedTip,
-    IbanAccountDetails,
+    IbanPaymentAccountDetails,
     Item,
     ItemisedExpenseSplit,
     LocalCost,
@@ -55,12 +55,12 @@ from eranos._entries import (
     TipDistribution,
     TipValue,
     Transfer,
-    UsernameAccountDetails,
+    UsernamePaymentAccountDetails,
     WholeExpenseSplit,
 )
 from eranos._errors import (
-    AccountError,
-    AccountFailure,
+    PaymentAccountError,
+    PaymentAccountFailure,
     CalendarError,
     CalendarFailure,
     CategoryError,
@@ -129,10 +129,6 @@ TransferId = _identifiers.TransferId
 
 
 __all__ = [
-    'Account',
-    'AccountDetails',
-    'AccountError',
-    'AccountFailure',
     'AmountsSplit',
     'Balance',
     'CalendarDate',
@@ -167,7 +163,7 @@ __all__ = [
     'FixedTip',
     'GetsBackBalance',
     'Iban',
-    'IbanAccountDetails',
+    'IbanPaymentAccountDetails',
     'IbanReason',
     'IdError',
     'IdFailure',
@@ -195,6 +191,10 @@ __all__ = [
     'Parts',
     'PartsSplit',
     'Payment',
+    'PaymentAccount',
+    'PaymentAccountDetails',
+    'PaymentAccountError',
+    'PaymentAccountFailure',
     'Percentage',
     'PercentageTip',
     'PercentagesSplit',
@@ -215,6 +215,6 @@ __all__ = [
     'TransferFailure',
     'TransferId',
     'Username',
-    'UsernameAccountDetails',
+    'UsernamePaymentAccountDetails',
     'WholeExpenseSplit',
 ]

@@ -2,8 +2,6 @@
 // the categories.
 package eranos.examples.grandtour
 
-import eranos.Account
-import eranos.AccountDetails
 import eranos.Category
 import eranos.Currency
 import eranos.Email
@@ -13,6 +11,8 @@ import eranos.ExpenseGroupFailure
 import eranos.Iban
 import eranos.Language
 import eranos.Member
+import eranos.PaymentAccount
+import eranos.PaymentAccountDetails
 import eranos.PhoneNumber
 import eranos.Username
 import eranos.examples.Row
@@ -91,10 +91,10 @@ internal fun theGroup(): ExpenseGroup {
 }
 
 /** An account with its label, its kind, and its details. */
-internal fun describe(account: Account): String =
+internal fun describe(account: PaymentAccount): String =
     when (val details = account.details) {
-        is AccountDetails.Iban -> "${account.name}, IBAN ${details.iban}"
-        is AccountDetails.Username -> "${account.name}, username ${details.username}"
+        is PaymentAccountDetails.Iban -> "${account.name}, IBAN ${details.iban}"
+        is PaymentAccountDetails.Username -> "${account.name}, username ${details.username}"
     }
 
 internal fun printMembers(group: ExpenseGroup) {
@@ -153,8 +153,8 @@ internal fun members(group: ExpenseGroup): People {
                 phone = PhoneNumber.parse("+40 712 345 678"),
                 accounts =
                     listOf(
-                        Account("ING", AccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000"))),
-                        Account("Revolut", AccountDetails.Username(Username.parse("@ana"))),
+                        PaymentAccount("ING", PaymentAccountDetails.Iban(Iban.parse("RO49 AAAA 1B31 0075 9384 0000"))),
+                        PaymentAccount("Revolut", PaymentAccountDetails.Username(Username.parse("@ana"))),
                     ),
             ),
         )

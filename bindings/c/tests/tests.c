@@ -48,7 +48,7 @@ static bool isKind(EranosError *const error, EranosErrorKind const kind) {
     if (nullptr == error) {
         return false;
     }
-    EranosFailure failure = ERANOS_FAILURE_ACCOUNT_EMPTY_NAME;
+    EranosFailure failure = ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME;
     bool const same = eranosErrorKind(error) == kind && !eranosErrorFailure(error, &failure);
     eranosErrorDestroy(error);
     return same;
@@ -59,7 +59,7 @@ static bool isFailure(EranosError *const error, EranosErrorKind const kind, Eran
     if (nullptr == error) {
         return false;
     }
-    EranosFailure failure = ERANOS_FAILURE_ACCOUNT_EMPTY_NAME;
+    EranosFailure failure = ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME;
     bool const same = eranosErrorKind(error) == kind && eranosErrorFailure(error, &failure) && failure == expected;
     eranosErrorDestroy(error);
     return same;
@@ -67,7 +67,7 @@ static bool isFailure(EranosError *const error, EranosErrorKind const kind, Eran
 
 /// Whether @p error is of @p kind with @p failure, without destroying it, so that a test reads what it holds.
 static bool holdsFailure(EranosError const *const error, EranosErrorKind const kind, EranosFailure const expected) {
-    EranosFailure failure = ERANOS_FAILURE_ACCOUNT_EMPTY_NAME;
+    EranosFailure failure = ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_NAME;
     return nullptr != error && eranosErrorKind(error) == kind && eranosErrorFailure(error, &failure) && failure == expected;
 }
 
@@ -581,8 +581,8 @@ static void contactsAndAccountsAreCheckedAndMadeCanonical(Check *const check) {
     EranosError *const checksum = eranosIbanParse("RO49AAAA1B31007593840001", text);
     EranosIbanReason reason = ERANOS_IBAN_REASON_INVALID_FORMAT;
     checkThat(check,
-              holdsFailure(checksum, ERANOS_ERROR_KIND_ACCOUNT, ERANOS_FAILURE_ACCOUNT_INVALID_IBAN) && eranosErrorReason(checksum, &reason) &&
-                  ERANOS_IBAN_REASON_INVALID_CHECKSUM == reason,
+              holdsFailure(checksum, ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN) &&
+                  eranosErrorReason(checksum, &reason) && ERANOS_IBAN_REASON_INVALID_CHECKSUM == reason,
               "an IBAN whose check digits do not match");
     eranosErrorMessage(checksum, text);
     checkThat(check, isText(text, "invalid IBAN: the check digits do not match"), "the message names the failure, not the text");
@@ -593,10 +593,12 @@ static void contactsAndAccountsAreCheckedAndMadeCanonical(Check *const check) {
     checkThat(check, eranosErrorExpectedLength(length, &expected) && 24 == expected && eranosErrorFoundLength(length, &found) && 23 == found,
               "an IBAN one character short holds both lengths");
     eranosErrorDestroy(length);
-    checkThat(check, isFailure(eranosIbanCountryCode("X", text), ERANOS_ERROR_KIND_ACCOUNT, ERANOS_FAILURE_ACCOUNT_INVALID_IBAN), "a country code");
+    checkThat(check, isFailure(eranosIbanCountryCode("X", text), ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_INVALID_IBAN),
+              "a country code");
     checkSucceeded(check, eranosUsernameParse(" ana.pays ", text), "a username parses");
     checkThat(check, isText(text, "ana.pays"), "trimmed");
-    checkThat(check, isFailure(eranosUsernameParse(" ", text), ERANOS_ERROR_KIND_ACCOUNT, ERANOS_FAILURE_ACCOUNT_EMPTY_USERNAME), "a blank username");
+    checkThat(check, isFailure(eranosUsernameParse(" ", text), ERANOS_ERROR_KIND_PAYMENT_ACCOUNT, ERANOS_FAILURE_PAYMENT_ACCOUNT_EMPTY_USERNAME),
+              "a blank username");
     checkSucceeded(check, eranosLanguageParse("pt-pt", text), "a language parses");
     checkThat(check, isText(text, "pt-PT"), "into its canonical tag");
     checkThat(check, isFailure(eranosLanguageParse("not a tag", text), ERANOS_ERROR_KIND_LANGUAGE, ERANOS_FAILURE_LANGUAGE_INVALID_LANGUAGE),
@@ -953,42 +955,43 @@ static void aTransferReadsBackEveryFieldItWasGiven(Check *const check) {
 /// A member or an account whose fields did not read back as set would send a member's money to another's account.
 static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     EranosText *const text = eranosTextCreate();
-    EranosAccountDetails *bank = nullptr;
-    checkSucceeded(check, eranosAccountDetailsCreateIban("RO49AAAA1B31007593840000", &bank), "an account's IBAN");
-    EranosAccountDetails *app = nullptr;
-    checkSucceeded(check, eranosAccountDetailsCreateUsername("ana.pays", &app), "an account's username");
+    EranosPaymentAccountDetails *bank = nullptr;
+    checkSucceeded(check, eranosPaymentAccountDetailsCreateIban("RO49AAAA1B31007593840000", &bank), "an account's IBAN");
+    EranosPaymentAccountDetails *app = nullptr;
+    checkSucceeded(check, eranosPaymentAccountDetailsCreateUsername("ana.pays", &app), "an account's username");
     checkThat(check,
-              ERANOS_ACCOUNT_DETAILS_KIND_IBAN == eranosAccountDetailsKind(bank) && eranosAccountDetailsIban(bank, text) &&
-                  isText(text, "RO49AAAA1B31007593840000") && !eranosAccountDetailsUsername(bank, text),
+              ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN == eranosPaymentAccountDetailsKind(bank) && eranosPaymentAccountDetailsIban(bank, text) &&
+                  isText(text, "RO49AAAA1B31007593840000") && !eranosPaymentAccountDetailsUsername(bank, text),
               "an IBAN account holds its IBAN");
     checkThat(check,
-              ERANOS_ACCOUNT_DETAILS_KIND_USERNAME == eranosAccountDetailsKind(app) && eranosAccountDetailsUsername(app, text) &&
-                  isText(text, "ana.pays") && !eranosAccountDetailsIban(app, text),
+              ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_USERNAME == eranosPaymentAccountDetailsKind(app) &&
+                  eranosPaymentAccountDetailsUsername(app, text) && isText(text, "ana.pays") && !eranosPaymentAccountDetailsIban(app, text),
               "a username account holds its username");
-    EranosAccountDetails *none = nullptr;
+    EranosPaymentAccountDetails *none = nullptr;
     checkThat(check,
-              isKind(eranosAccountDetailsCreateIban("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT) &&
-                  isKind(eranosAccountDetailsCreateUsername("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT),
+              isKind(eranosPaymentAccountDetailsCreateIban("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT) &&
+                  isKind(eranosPaymentAccountDetailsCreateUsername("\xff", &none), ERANOS_ERROR_KIND_INVALID_TEXT),
               "account details are text");
-    EranosAccount *account = nullptr;
-    checkSucceeded(check, eranosAccountCreate("Bank", bank, &account), "an account");
-    eranosAccountSetDetails(account, app);
-    checkSucceeded(check, eranosAccountSetName(account, "App"), "a name is set");
-    EranosAccountDetails *const details = eranosAccountDetails(account);
-    eranosAccountName(account, text);
-    checkThat(check, isText(text, "App") && ERANOS_ACCOUNT_DETAILS_KIND_USERNAME == eranosAccountDetailsKind(details), "the account as set");
-    checkThat(check, isKind(eranosAccountSetName(account, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
-    EranosAccount *noAccount = nullptr;
-    checkThat(check, isKind(eranosAccountCreate("\xff", bank, &noAccount), ERANOS_ERROR_KIND_INVALID_TEXT), "an account's name is text");
-    EranosAccountList *const accounts = eranosAccountListCreate();
-    checkThat(check, eranosAccountListIsEmpty(accounts), "an empty list of accounts");
-    eranosAccountListPush(accounts, account);
+    EranosPaymentAccount *account = nullptr;
+    checkSucceeded(check, eranosPaymentAccountCreate("Bank", bank, &account), "an account");
+    eranosPaymentAccountSetDetails(account, app);
+    checkSucceeded(check, eranosPaymentAccountSetName(account, "App"), "a name is set");
+    EranosPaymentAccountDetails *const details = eranosPaymentAccountDetails(account);
+    eranosPaymentAccountName(account, text);
+    checkThat(check, isText(text, "App") && ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_USERNAME == eranosPaymentAccountDetailsKind(details),
+              "the account as set");
+    checkThat(check, isKind(eranosPaymentAccountSetName(account, "\xff"), ERANOS_ERROR_KIND_INVALID_TEXT), "a name is text");
+    EranosPaymentAccount *noAccount = nullptr;
+    checkThat(check, isKind(eranosPaymentAccountCreate("\xff", bank, &noAccount), ERANOS_ERROR_KIND_INVALID_TEXT), "an account's name is text");
+    EranosPaymentAccountList *const accounts = eranosPaymentAccountListCreate();
+    checkThat(check, eranosPaymentAccountListIsEmpty(accounts), "an empty list of accounts");
+    eranosPaymentAccountListPush(accounts, account);
     EranosMember *member = nullptr;
     checkSucceeded(check, eranosMemberCreate("Carla", &member), "a member");
-    EranosAccountList *const noAccounts = eranosMemberAccounts(member);
+    EranosPaymentAccountList *const noAccounts = eranosMemberAccounts(member);
     checkThat(check,
               !eranosMemberId(member, text) && !eranosMemberEmail(member, text) && !eranosMemberLastName(member, text) &&
-                  !eranosMemberPhone(member, text) && eranosAccountListIsEmpty(noAccounts),
+                  !eranosMemberPhone(member, text) && eranosPaymentAccountListIsEmpty(noAccounts),
               "a new member has a first name only");
     checkSucceeded(check, eranosMemberSetId(member, "0199a000-0000-7000-8000-000000000004"), "an identifier is set");
     checkSucceeded(check, eranosMemberSetFirstName(member, "Carla Maria"), "a first name");
@@ -996,9 +999,10 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
     checkSucceeded(check, eranosMemberSetLastName(member, "Pop"), "a last name");
     checkSucceeded(check, eranosMemberSetPhone(member, "+40712345678"), "a phone number");
     eranosMemberSetAccounts(member, accounts);
-    EranosAccountList *const readAccounts = eranosMemberAccounts(member);
-    EranosAccount *const firstAccount = eranosAccountListGet(readAccounts, 0);
-    checkThat(check, 1 == eranosAccountListLength(readAccounts) && nullptr != firstAccount && nullptr == eranosAccountListGet(readAccounts, 1),
+    EranosPaymentAccountList *const readAccounts = eranosMemberAccounts(member);
+    EranosPaymentAccount *const firstAccount = eranosPaymentAccountListGet(readAccounts, 0);
+    checkThat(check,
+              1 == eranosPaymentAccountListLength(readAccounts) && nullptr != firstAccount && nullptr == eranosPaymentAccountListGet(readAccounts, 1),
               "one account");
     eranosMemberFirstName(member, text);
     checkThat(check, isText(text, "Carla Maria"), "the first name");
@@ -1024,15 +1028,15 @@ static void aMemberAndTheirAccountsReadBackAsTheyWereGiven(Check *const check) {
               "and clears");
     EranosMember *noMember = nullptr;
     checkThat(check, isKind(eranosMemberCreate("\xff", &noMember), ERANOS_ERROR_KIND_INVALID_TEXT), "a first name is text");
-    eranosAccountDestroy(firstAccount);
-    eranosAccountListDestroy(readAccounts);
-    eranosAccountListDestroy(noAccounts);
+    eranosPaymentAccountDestroy(firstAccount);
+    eranosPaymentAccountListDestroy(readAccounts);
+    eranosPaymentAccountListDestroy(noAccounts);
     eranosMemberDestroy(member);
-    eranosAccountListDestroy(accounts);
-    eranosAccountDetailsDestroy(details);
-    eranosAccountDestroy(account);
-    eranosAccountDetailsDestroy(app);
-    eranosAccountDetailsDestroy(bank);
+    eranosPaymentAccountListDestroy(accounts);
+    eranosPaymentAccountDetailsDestroy(details);
+    eranosPaymentAccountDestroy(account);
+    eranosPaymentAccountDetailsDestroy(app);
+    eranosPaymentAccountDetailsDestroy(bank);
     eranosTextDestroy(text);
 }
 
@@ -1112,9 +1116,9 @@ static void destroyingNullDoesNothing(Check *const check) {
     eranosNewExpenseGroupDestroy(nullptr);
     eranosExpenseGroupReaderDestroy(nullptr);
     eranosTextListDestroy(nullptr);
-    eranosAccountDestroy(nullptr);
-    eranosAccountDetailsDestroy(nullptr);
-    eranosAccountListDestroy(nullptr);
+    eranosPaymentAccountDestroy(nullptr);
+    eranosPaymentAccountDetailsDestroy(nullptr);
+    eranosPaymentAccountListDestroy(nullptr);
     eranosMemberDestroy(nullptr);
     eranosMemberListDestroy(nullptr);
     eranosMoneyDestroy(nullptr);

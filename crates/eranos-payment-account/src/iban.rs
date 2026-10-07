@@ -3,7 +3,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::error::{AccountError, IbanError};
+use crate::error::{IbanError, PaymentAccountError};
 
 mod registry;
 
@@ -31,7 +31,7 @@ mod registry;
 /// assert!(Iban::parse("DE89 3704 0044 0532 0130 01").is_err());
 /// // A letter O typed for a zero passes them, but not Germany's format.
 /// assert!(Iban::parse("DE46 37O4 0044 0532 0130 00").is_err());
-/// # Ok::<(), eranos::error::AccountError>(())
+/// # Ok::<(), eranos::error::PaymentAccountError>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Iban(String);
@@ -42,9 +42,9 @@ impl Iban {
     ///
     /// # Errors
     ///
-    /// [`AccountError::InvalidIban`] with the [`IbanError`] that failed.
-    pub fn parse(text: &str) -> Result<Self, AccountError> {
-        Self::validate(text).map_err(AccountError::InvalidIban)
+    /// [`PaymentAccountError::InvalidIban`] with the [`IbanError`] that failed.
+    pub fn parse(text: &str) -> Result<Self, PaymentAccountError> {
+        Self::validate(text).map_err(PaymentAccountError::InvalidIban)
     }
 
     fn validate(text: &str) -> Result<Self, IbanError> {
@@ -157,7 +157,7 @@ impl fmt::Display for Iban {
 }
 
 impl FromStr for Iban {
-    type Err = AccountError;
+    type Err = PaymentAccountError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         Self::parse(text)

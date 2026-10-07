@@ -136,19 +136,19 @@ class ValuesTest {
         assertEquals("RO", iban.countryCode());
         assertValue(
                 iban, Iban.parse("RO49AAAA1B31007593840000"), Iban.parse("GB82WEST12345698765432"));
-        EranosException.Account refused =
+        EranosException.PaymentAccount refused =
                 assertThrows(
-                        EranosException.Account.class,
+                        EranosException.PaymentAccount.class,
                         () -> Iban.parse("RO49AAAA1B31007593840001"));
         assertEquals(
-                new AccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
+                new PaymentAccountFailure.InvalidIban(new IbanReason.InvalidChecksum()),
                 refused.failure());
         assertEquals("invalid IBAN: the check digits do not match", refused.getMessage());
 
         Username username = Username.parse(" ana.pays ");
         assertEquals("ana.pays", username.toString());
         assertValue(username, Username.parse("ana.pays"), Username.parse("bob.pays"));
-        assertThrows(EranosException.Account.class, () -> Username.parse(" "));
+        assertThrows(EranosException.PaymentAccount.class, () -> Username.parse(" "));
 
         Language language = Language.parse("pt-pt");
         assertEquals("pt-PT", language.toString());

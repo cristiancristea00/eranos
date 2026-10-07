@@ -5,7 +5,7 @@
 //! keep edits made through `to_builder` from touching the member they were
 //! copied from.
 
-use eranos_account::{Iban, Username};
+use eranos_payment_account::{Iban, Username};
 
 use super::*;
 
@@ -17,12 +17,12 @@ fn phone() -> PhoneNumber {
     PhoneNumber::parse("+40712345678").unwrap()
 }
 
-fn bank_account() -> Account {
-    Account::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap()
+fn bank_account() -> PaymentAccount {
+    PaymentAccount::new("ING", Iban::parse("RO49AAAA1B31007593840000").unwrap()).unwrap()
 }
 
-fn app_account() -> Account {
-    Account::new("Revolut", Username::new("@ana").unwrap()).unwrap()
+fn app_account() -> PaymentAccount {
+    PaymentAccount::new("Revolut", Username::new("@ana").unwrap()).unwrap()
 }
 
 /// A member with every optional detail set.

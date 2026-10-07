@@ -9,8 +9,8 @@ use std::error::Error;
 
 use eranos::error::ExpenseGroupError;
 use eranos::{
-    Account, AccountDetails, Balance, CalendarDate, Currency, Email, Expense, ExpenseGroup, Iban,
-    Member, MemberId, Money, PhoneNumber, Split, Username,
+    Balance, CalendarDate, Currency, Email, Expense, ExpenseGroup, Iban, Member, MemberId, Money,
+    PaymentAccount, PaymentAccountDetails, PhoneNumber, Split, Username,
 };
 use tabled::settings::object::Columns;
 use tabled::settings::{Alignment, Style};
@@ -73,10 +73,10 @@ fn print_table<Row: Tabled>(rows: impl IntoIterator<Item = Row>, numbers_from: u
 }
 
 /// An account with its label and its details.
-fn describe(account: &Account) -> String {
+fn describe(account: &PaymentAccount) -> String {
     let details = match account.details() {
-        AccountDetails::Iban(iban) => iban.as_str().to_owned(),
-        AccountDetails::Username(username) => username.as_str().to_owned(),
+        PaymentAccountDetails::Iban(iban) => iban.as_str().to_owned(),
+        PaymentAccountDetails::Username(username) => username.as_str().to_owned(),
         _ => format!("{:?}", account.kind()),
     };
     format!("{}: {details}", account.name())
@@ -139,11 +139,11 @@ fn members(group: &mut ExpenseGroup) -> Result<Flatmates, Box<dyn Error>> {
             .last_name("Popescu")
             .email(Email::parse("ana@example.com")?)
             .phone(PhoneNumber::parse("+40 712 345 678")?)
-            .account(Account::new(
+            .account(PaymentAccount::new(
                 "ING",
                 Iban::parse("ro49 aaaa 1b31 0075 9384 0000")?,
             )?)
-            .account(Account::new("Revolut", Username::new("@ana")?)?)
+            .account(PaymentAccount::new("Revolut", Username::new("@ana")?)?)
             .build()?,
     )?;
     let bob = group.add_member(Member::builder("Bob").build()?)?;

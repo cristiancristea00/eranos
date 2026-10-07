@@ -16,21 +16,21 @@ library itself is plain Rust with no I/O and no async runtime.
 
 ## Concepts
 
-| Concept      | Type                 | What it is                                                                        |
-| ------------ | -------------------- | --------------------------------------------------------------------------------- |
-| Group        | `ExpenseGroup`       | A trip, a day out, or a household: name, currency, language, and everything below |
-| Shared group | `SharedExpenseGroup` | A group shared between tasks and threads, each call locking it while it runs      |
-| Member       | `Member`             | A person: first name (required), last name, email, phone, payment accounts        |
-| Account      | `Account`            | Where a member can be paid: an IBAN or a payment-app username                     |
-| Category     | `Category`           | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
-| Expense      | `Expense`            | What was bought: name, cost, payers, split, date, optional tip and category       |
-| Cost         | `Cost`               | An amount in the group currency, or in another one at a fixed exchange rate       |
-| Split        | `Split`              | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
-| Item         | `Item`               | A receipt line of an itemised expense, with its own quantity and split            |
-| Tip          | `Tip`                | A percentage or a fixed amount on top, shared proportionally or equally           |
-| Transfer     | `Transfer`           | Money one member paid another, such as a repayment                                |
-| Summary      | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |
-| Settlement   | `Settlement`         | The payments that bring every balance to zero                                     |
+| Concept         | Type                 | What it is                                                                        |
+| --------------- | -------------------- | --------------------------------------------------------------------------------- |
+| Group           | `ExpenseGroup`       | A trip, a day out, or a household: name, currency, language, and everything below |
+| Shared group    | `SharedExpenseGroup` | A group shared between tasks and threads, each call locking it while it runs      |
+| Member          | `Member`             | A person: first name (required), last name, email, phone, payment accounts        |
+| Payment account | `PaymentAccount`     | Where a member can be paid: an IBAN or a payment-app username                     |
+| Category        | `Category`           | A label the group defines, such as "Food", or the built-in "Uncategorised"        |
+| Expense         | `Expense`            | What was bought: name, cost, payers, split, date, optional tip and category       |
+| Cost            | `Cost`               | An amount in the group currency, or in another one at a fixed exchange rate       |
+| Split           | `Split`              | How an amount is divided: equally, by parts, by percentages, or by exact amounts  |
+| Item            | `Item`               | A receipt line of an itemised expense, with its own quantity and split            |
+| Tip             | `Tip`                | A percentage or a fixed amount on top, shared proportionally or equally           |
+| Transfer        | `Transfer`           | Money one member paid another, such as a repayment                                |
+| Summary         | `Summary`            | Spending, paid, consumed, balances, and totals per category, always current       |
+| Settlement      | `Settlement`         | The payments that bring every balance to zero                                     |
 
 ## Quick start
 
@@ -226,7 +226,7 @@ eranos/
 │   ├── eranos-core/            identifiers and text rules
 │   ├── eranos-calendar/        dates and times of day
 │   ├── eranos-money/           amounts, currencies, rates, ratios, and apportionment
-│   ├── eranos-account/         payment accounts: IBANs and usernames
+│   ├── eranos-payment-account/ payment accounts: IBANs and usernames
 │   ├── eranos-contact/         emails and phone numbers
 │   ├── eranos-member/          members
 │   ├── eranos-category/        categories

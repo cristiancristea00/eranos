@@ -20,7 +20,7 @@ sequential-ids = ["eranos/sequential-ids"]
 [dependencies]
 eranos = { workspace = true, features = ["serde"] }
 # The conversion traits, which the facade does not re-export.
-eranos-account = { workspace = true }
+eranos-payment-account = { workspace = true }
 eranos-calendar = { workspace = true }
 eranos-category = { workspace = true }
 eranos-contact = { workspace = true }

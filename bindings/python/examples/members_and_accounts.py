@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import ClassVar, assert_never, final, override
 
 from eranos import (
-    Account,
+    PaymentAccount,
     Balance,
     CalendarDate,
     Currency,
@@ -21,7 +21,7 @@ from eranos import (
     ExpenseGroup,
     ExpenseGroupError,
     Iban,
-    IbanAccountDetails,
+    IbanPaymentAccountDetails,
     LocalCost,
     Member,
     MemberId,
@@ -29,7 +29,7 @@ from eranos import (
     OwesBalance,
     PhoneNumber,
     Username,
-    UsernameAccountDetails,
+    UsernamePaymentAccountDetails,
     WholeExpenseSplit,
 )
 from examples.report import Row, print_lines, print_table, refusal, section, title, totals
@@ -116,7 +116,7 @@ class Flatmates:
     """Bob, who moves out."""
 
 
-def describe(account: Account) -> str:
+def describe(account: PaymentAccount) -> str:
     """
     Write an account with its label and its details.
 
@@ -128,9 +128,9 @@ def describe(account: Account) -> str:
 
     """
     match account.details:
-        case IbanAccountDetails(iban=iban):
+        case IbanPaymentAccountDetails(iban=iban):
             details = str(iban)
-        case UsernameAccountDetails(username=username):
+        case UsernamePaymentAccountDetails(username=username):
             details = str(username)
         case _:
             assert_never(account.details)
@@ -225,8 +225,8 @@ def members(group: ExpenseGroup) -> Flatmates:
             email=Email('ana@example.com'),
             phone=PhoneNumber('+40 712 345 678'),
             accounts=(
-                Account('ING', IbanAccountDetails(Iban('ro49 aaaa 1b31 0075 9384 0000'))),
-                Account('Revolut', UsernameAccountDetails(Username('@ana'))),
+                PaymentAccount('ING', IbanPaymentAccountDetails(Iban('ro49 aaaa 1b31 0075 9384 0000'))),
+                PaymentAccount('Revolut', UsernamePaymentAccountDetails(Username('@ana'))),
             ),
         )
     )

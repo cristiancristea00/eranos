@@ -5,8 +5,9 @@
 //! here, and every case's message is read.
 
 use eranos::error::{
-    AccountError, CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError,
-    IbanError, IdError, LanguageError, MemberError, MoneyError, SettlementError, TransferError,
+    CalendarError, CategoryError, ContactError, ExpenseError, ExpenseGroupError, IbanError,
+    IdError, LanguageError, MemberError, MoneyError, PaymentAccountError, SettlementError,
+    TransferError,
 };
 use eranos::{CategoryId, Currency, ExpenseId, MemberId, TransferId};
 
@@ -159,34 +160,34 @@ fn conversions() -> Vec<Conversion> {
             }
         },
         {
-            let error = AccountError::EmptyName;
+            let error = PaymentAccountError::EmptyName;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Account {
-                    failure: AccountFailure::EmptyName,
+                expected: EranosError::PaymentAccount {
+                    failure: PaymentAccountFailure::EmptyName,
                     detail: message,
                 },
             }
         },
         {
-            let error = AccountError::EmptyUsername;
+            let error = PaymentAccountError::EmptyUsername;
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Account {
-                    failure: AccountFailure::EmptyUsername,
+                expected: EranosError::PaymentAccount {
+                    failure: PaymentAccountFailure::EmptyUsername,
                     detail: message,
                 },
             }
         },
         {
-            let error = AccountError::InvalidIban(IbanError::InvalidChecksum);
+            let error = PaymentAccountError::InvalidIban(IbanError::InvalidChecksum);
             let message = error.to_string();
             Conversion {
                 converted: EranosError::from(error),
-                expected: EranosError::Account {
-                    failure: AccountFailure::InvalidIban {
+                expected: EranosError::PaymentAccount {
+                    failure: PaymentAccountFailure::InvalidIban {
                         reason: IbanReason::InvalidChecksum,
                     },
                     detail: message,

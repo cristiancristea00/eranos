@@ -463,7 +463,6 @@ name = "eranos"
 version = "0.7.0"
 dependencies = [
  "criterion",
- "eranos-account",
  "eranos-calendar",
  "eranos-category",
  "eranos-contact",
@@ -473,6 +472,7 @@ dependencies = [
  "eranos-ledger",
  "eranos-member",
  "eranos-money",
+ "eranos-payment-account",
  "eranos-settlement",
  "eranos-transfer",
  "proptest",
@@ -481,23 +481,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "eranos-account"
-version = "0.7.0"
-dependencies = [
- "eranos",
- "eranos-core",
- "proptest",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
-]
-
-[[package]]
 name = "eranos-bindings"
 version = "0.7.0"
 dependencies = [
  "eranos",
- "eranos-account",
  "eranos-calendar",
  "eranos-category",
  "eranos-contact",
@@ -508,6 +495,7 @@ dependencies = [
  "eranos-ledger",
  "eranos-member",
  "eranos-money",
+ "eranos-payment-account",
  "eranos-settlement",
  "eranos-transfer",
  "serde_json",
@@ -651,9 +639,9 @@ name = "eranos-member"
 version = "0.7.0"
 dependencies = [
  "eranos",
- "eranos-account",
  "eranos-contact",
  "eranos-core",
+ "eranos-payment-account",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
@@ -666,6 +654,18 @@ dependencies = [
  "eranos",
  "eranos-core",
  "iso4217-static",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "eranos-payment-account"
+version = "0.7.0"
+dependencies = [
+ "eranos",
+ "eranos-core",
  "proptest",
  "serde",
  "serde_json",

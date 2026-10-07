@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import ClassVar, assert_never, final, override
 
 from eranos import (
-    Account,
+    PaymentAccount,
     Category,
     Currency,
     Email,
@@ -14,12 +14,12 @@ from eranos import (
     ExpenseGroup,
     ExpenseGroupError,
     Iban,
-    IbanAccountDetails,
+    IbanPaymentAccountDetails,
     Language,
     Member,
     PhoneNumber,
     Username,
-    UsernameAccountDetails,
+    UsernamePaymentAccountDetails,
 )
 from examples.grand_tour.tour import Categories, People, RefusalRow, cell
 from examples.report import Row, message, print_lines, print_table, refusal, section
@@ -128,7 +128,7 @@ def the_group() -> ExpenseGroup:
     return group
 
 
-def _describe(account: Account) -> str:
+def _describe(account: PaymentAccount) -> str:
     """
     Describe account: its label, its kind, and its details.
 
@@ -141,9 +141,9 @@ def _describe(account: Account) -> str:
     """
     details = account.details
     match details:
-        case IbanAccountDetails(iban=iban):
+        case IbanPaymentAccountDetails(iban=iban):
             return f'{account.name}, IBAN {iban}'
-        case UsernameAccountDetails(username=username):
+        case UsernamePaymentAccountDetails(username=username):
             return f'{account.name}, username {username}'
         case _:
             assert_never(details)
@@ -268,8 +268,8 @@ def members(group: ExpenseGroup) -> People:
             email=Email('ana@example.com'),
             phone=PhoneNumber('+40 712 345 678'),
             accounts=(
-                Account('ING', IbanAccountDetails(Iban('RO49 AAAA 1B31 0075 9384 0000'))),
-                Account('Revolut', UsernameAccountDetails(Username('@ana'))),
+                PaymentAccount('ING', IbanPaymentAccountDetails(Iban('RO49 AAAA 1B31 0075 9384 0000'))),
+                PaymentAccount('Revolut', UsernamePaymentAccountDetails(Username('@ana'))),
             ),
         )
     )

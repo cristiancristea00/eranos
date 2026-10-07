@@ -131,7 +131,7 @@ func contactAndAccountDetailsReadAsTheLibraryDoes() throws {
     let iban = try IBAN("ro49 aaaa 1b31 0075 9384 0000")
     #expect("RO49AAAA1B31007593840000" == iban.description)
     #expect("RO" == iban.countryCode)
-    #expect(throws: EranosError.account(.invalidIBAN(.invalidChecksum), detail: "invalid IBAN: the check digits do not match")) {
+    #expect(throws: EranosError.paymentAccount(.invalidIBAN(.invalidChecksum), detail: "invalid IBAN: the check digits do not match")) {
         try IBAN("RO49AAAA1B31007593840001")
     }
     #expect(try "ana.pays" == Username(" ana.pays ").description)

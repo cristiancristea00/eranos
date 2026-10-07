@@ -4,27 +4,27 @@
 #ifndef ERANOS_MEMBERS_H
 #define ERANOS_MEMBERS_H
 
-#include "EranosAccount.h"
-#include "EranosAccountDetails.h"
-#include "EranosAccountDetailsKind.h"
-#include "EranosAccountList.h"
 #include "EranosMember.h"
 #include "EranosMemberList.h"
+#include "EranosPaymentAccount.h"
+#include "EranosPaymentAccountDetails.h"
+#include "EranosPaymentAccountDetailsKind.h"
+#include "EranosPaymentAccountList.h"
 #include "eranos/detail.h"
 #include "eranos/text.h"
 
 #include <stddef.h>
 
-/// The kind of a account details. The values of EranosAccountDetailsKind, by the names of the C layer.
-typedef enum EranosAccountDetailsKind EranosAccountDetailsKind;
+/// The kind of a account details. The values of EranosPaymentAccountDetailsKind, by the names of the C layer.
+typedef enum EranosPaymentAccountDetailsKind EranosPaymentAccountDetailsKind;
 
 /// A bank account.
-static constexpr EranosAccountDetailsKind ERANOS_ACCOUNT_DETAILS_KIND_IBAN = EranosAccountDetailsKind_Iban;
+static constexpr EranosPaymentAccountDetailsKind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_IBAN = EranosPaymentAccountDetailsKind_Iban;
 /// A username in a payment app.
-static constexpr EranosAccountDetailsKind ERANOS_ACCOUNT_DETAILS_KIND_USERNAME = EranosAccountDetailsKind_Username;
+static constexpr EranosPaymentAccountDetailsKind ERANOS_PAYMENT_ACCOUNT_DETAILS_KIND_USERNAME = EranosPaymentAccountDetailsKind_Username;
 
 /// An account a member can be paid into.
-typedef struct EranosAccount EranosAccount;
+typedef struct EranosPaymentAccount EranosPaymentAccount;
 
 /// A new account of its required fields; every other field starts absent, empty, or at its default.
 ///
@@ -33,9 +33,9 @@ typedef struct EranosAccount EranosAccount;
 /// @param account Receives the account on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosAccountCreate(char const *const name, EranosAccountDetails const *const details,
-                                                             EranosAccount **const account) {
-    EranosAccount_create_result const result = EranosAccount_create(eranosDetailView(name), details);
+[[nodiscard]] static inline EranosError *eranosPaymentAccountCreate(char const *const name, EranosPaymentAccountDetails const *const details,
+                                                                    EranosPaymentAccount **const account) {
+    EranosPaymentAccount_create_result const result = EranosPaymentAccount_create(eranosDetailView(name), details);
     *account = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -44,9 +44,9 @@ typedef struct EranosAccount EranosAccount;
 ///
 /// @param account The account
 /// @param name Receives the label, replacing what it held
-static inline void eranosAccountName(EranosAccount const *const account, EranosText *const name) {
+static inline void eranosPaymentAccountName(EranosPaymentAccount const *const account, EranosText *const name) {
     eranosDetailClear(name);
-    EranosAccount_name(account, name);
+    EranosPaymentAccount_name(account, name);
     eranosDetailFinish(name);
 }
 
@@ -56,8 +56,8 @@ static inline void eranosAccountName(EranosAccount const *const account, EranosT
 /// @param name The label, as UTF-8 ended by a NUL; nullptr reads as empty text
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosAccountSetName(EranosAccount *const account, char const *const name) {
-    EranosAccount_set_name_result const result = EranosAccount_set_name(account, eranosDetailView(name));
+[[nodiscard]] static inline EranosError *eranosPaymentAccountSetName(EranosPaymentAccount *const account, char const *const name) {
+    EranosPaymentAccount_set_name_result const result = EranosPaymentAccount_set_name(account, eranosDetailView(name));
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
 
@@ -65,27 +65,29 @@ static inline void eranosAccountName(EranosAccount const *const account, EranosT
 ///
 /// @param account The account
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosAccountDetails *eranosAccountDetails(EranosAccount const *const account) { return EranosAccount_details(account); }
+[[nodiscard]] static inline EranosPaymentAccountDetails *eranosPaymentAccountDetails(EranosPaymentAccount const *const account) {
+    return EranosPaymentAccount_details(account);
+}
 
 /// Sets the IBAN or the username.
 ///
 /// @param account The account
 /// @param details The IBAN or the username
-static inline void eranosAccountSetDetails(EranosAccount *const account, EranosAccountDetails const *const details) {
-    EranosAccount_set_details(account, details);
+static inline void eranosPaymentAccountSetDetails(EranosPaymentAccount *const account, EranosPaymentAccountDetails const *const details) {
+    EranosPaymentAccount_set_details(account, details);
 }
 
 /// Destroys @p account; destroying nullptr does nothing, as free() does.
 ///
 /// @param account The account, which no call uses after this one, or nullptr
-static inline void eranosAccountDestroy(EranosAccount *const account) {
+static inline void eranosPaymentAccountDestroy(EranosPaymentAccount *const account) {
     if (nullptr != account) {
-        EranosAccount_destroy(account);
+        EranosPaymentAccount_destroy(account);
     }
 }
 
 /// Where an account is: a bank account or a username in a payment app.
-typedef struct EranosAccountDetails EranosAccountDetails;
+typedef struct EranosPaymentAccountDetails EranosPaymentAccountDetails;
 
 /// A bank account.
 ///
@@ -93,8 +95,9 @@ typedef struct EranosAccountDetails EranosAccountDetails;
 /// @param accountDetails Receives the account details on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosAccountDetailsCreateIban(char const *const iban, EranosAccountDetails **const accountDetails) {
-    EranosAccountDetails_create_iban_result const result = EranosAccountDetails_create_iban(eranosDetailView(iban));
+[[nodiscard]] static inline EranosError *eranosPaymentAccountDetailsCreateIban(char const *const iban,
+                                                                               EranosPaymentAccountDetails **const accountDetails) {
+    EranosPaymentAccountDetails_create_iban_result const result = EranosPaymentAccountDetails_create_iban(eranosDetailView(iban));
     *accountDetails = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -105,8 +108,9 @@ typedef struct EranosAccountDetails EranosAccountDetails;
 /// @param accountDetails Receives the account details on success, which the caller destroys, and nullptr on failure
 /// @return nullptr on success, or the error, which the caller destroys with eranosErrorDestroy: one of the kind ERANOS_ERROR_KIND_INVALID_TEXT for
 ///   text that is not UTF-8
-[[nodiscard]] static inline EranosError *eranosAccountDetailsCreateUsername(char const *const username, EranosAccountDetails **const accountDetails) {
-    EranosAccountDetails_create_username_result const result = EranosAccountDetails_create_username(eranosDetailView(username));
+[[nodiscard]] static inline EranosError *eranosPaymentAccountDetailsCreateUsername(char const *const username,
+                                                                                   EranosPaymentAccountDetails **const accountDetails) {
+    EranosPaymentAccountDetails_create_username_result const result = EranosPaymentAccountDetails_create_username(eranosDetailView(username));
     *accountDetails = result.is_ok ? result.ok : nullptr;
     return eranosDetailErrorOf(result.is_ok, &result.err);
 }
@@ -115,8 +119,8 @@ typedef struct EranosAccountDetails EranosAccountDetails;
 ///
 /// @param accountDetails The account details
 /// @return The result
-[[nodiscard]] static inline EranosAccountDetailsKind eranosAccountDetailsKind(EranosAccountDetails const *const accountDetails) {
-    return EranosAccountDetails_kind(accountDetails);
+[[nodiscard]] static inline EranosPaymentAccountDetailsKind eranosPaymentAccountDetailsKind(EranosPaymentAccountDetails const *const accountDetails) {
+    return EranosPaymentAccountDetails_kind(accountDetails);
 }
 
 /// The account's IBAN. Present in the kind ERANOS_ERROR_KIND_IBAN alone. Writes it, if present; absent otherwise.
@@ -124,9 +128,9 @@ typedef struct EranosAccountDetails EranosAccountDetails;
 /// @param accountDetails The account details
 /// @param iban Receives the account's IBAN, replacing what it held
 /// @return Whether there is one
-[[nodiscard]] static inline bool eranosAccountDetailsIban(EranosAccountDetails const *const accountDetails, EranosText *const iban) {
+[[nodiscard]] static inline bool eranosPaymentAccountDetailsIban(EranosPaymentAccountDetails const *const accountDetails, EranosText *const iban) {
     eranosDetailClear(iban);
-    bool const present = EranosAccountDetails_iban(accountDetails, iban).is_ok;
+    bool const present = EranosPaymentAccountDetails_iban(accountDetails, iban).is_ok;
     eranosDetailFinish(iban);
     return present;
 }
@@ -136,9 +140,10 @@ typedef struct EranosAccountDetails EranosAccountDetails;
 /// @param accountDetails The account details
 /// @param username Receives the username, replacing what it held
 /// @return Whether there is one
-[[nodiscard]] static inline bool eranosAccountDetailsUsername(EranosAccountDetails const *const accountDetails, EranosText *const username) {
+[[nodiscard]] static inline bool eranosPaymentAccountDetailsUsername(EranosPaymentAccountDetails const *const accountDetails,
+                                                                     EranosText *const username) {
     eranosDetailClear(username);
-    bool const present = EranosAccountDetails_username(accountDetails, username).is_ok;
+    bool const present = EranosPaymentAccountDetails_username(accountDetails, username).is_ok;
     eranosDetailFinish(username);
     return present;
 }
@@ -146,53 +151,59 @@ typedef struct EranosAccountDetails EranosAccountDetails;
 /// Destroys @p accountDetails; destroying nullptr does nothing, as free() does.
 ///
 /// @param accountDetails The account details, which no call uses after this one, or nullptr
-static inline void eranosAccountDetailsDestroy(EranosAccountDetails *const accountDetails) {
+static inline void eranosPaymentAccountDetailsDestroy(EranosPaymentAccountDetails *const accountDetails) {
     if (nullptr != accountDetails) {
-        EranosAccountDetails_destroy(accountDetails);
+        EranosPaymentAccountDetails_destroy(accountDetails);
     }
 }
 
 /// A list of account records.
-typedef struct EranosAccountList EranosAccountList;
+typedef struct EranosPaymentAccountList EranosPaymentAccountList;
 
 /// An empty list.
 ///
 /// @return The account list, which the caller destroys
-[[nodiscard]] static inline EranosAccountList *eranosAccountListCreate(void) { return EranosAccountList_create(); }
+[[nodiscard]] static inline EranosPaymentAccountList *eranosPaymentAccountListCreate(void) { return EranosPaymentAccountList_create(); }
 
 /// Adds a copy of `element` at the end.
 ///
 /// @param list The account list
 /// @param element The element
-static inline void eranosAccountListPush(EranosAccountList *const list, EranosAccount const *const element) { EranosAccountList_push(list, element); }
+static inline void eranosPaymentAccountListPush(EranosPaymentAccountList *const list, EranosPaymentAccount const *const element) {
+    EranosPaymentAccountList_push(list, element);
+}
 
 /// How many records the list holds.
 ///
 /// @param list The account list
 /// @return The result
-[[nodiscard]] static inline size_t eranosAccountListLength(EranosAccountList const *const list) { return EranosAccountList_len(list); }
+[[nodiscard]] static inline size_t eranosPaymentAccountListLength(EranosPaymentAccountList const *const list) {
+    return EranosPaymentAccountList_len(list);
+}
 
 /// Whether the list holds no record.
 ///
 /// @param list The account list
 /// @return Whether it holds none
-[[nodiscard]] static inline bool eranosAccountListIsEmpty(EranosAccountList const *const list) { return EranosAccountList_is_empty(list); }
+[[nodiscard]] static inline bool eranosPaymentAccountListIsEmpty(EranosPaymentAccountList const *const list) {
+    return EranosPaymentAccountList_is_empty(list);
+}
 
 /// A copy of the record at `index`, absent past the end.
 ///
 /// @param list The account list
 /// @param index The index
 /// @return A copy of the element at @p index, which the caller destroys, or nullptr past the end
-[[nodiscard]] static inline EranosAccount *eranosAccountListGet(EranosAccountList const *const list, size_t const index) {
-    return EranosAccountList_get(list, index);
+[[nodiscard]] static inline EranosPaymentAccount *eranosPaymentAccountListGet(EranosPaymentAccountList const *const list, size_t const index) {
+    return EranosPaymentAccountList_get(list, index);
 }
 
 /// Destroys @p list; destroying nullptr does nothing, as free() does.
 ///
 /// @param list The account list, which no call uses after this one, or nullptr
-static inline void eranosAccountListDestroy(EranosAccountList *const list) {
+static inline void eranosPaymentAccountListDestroy(EranosPaymentAccountList *const list) {
     if (nullptr != list) {
-        EranosAccountList_destroy(list);
+        EranosPaymentAccountList_destroy(list);
     }
 }
 
@@ -348,13 +359,13 @@ static inline void eranosMemberClearPhone(EranosMember *const member) { EranosMe
 ///
 /// @param member The member
 /// @return A copy of the value, which the caller destroys, or nullptr when there is none
-[[nodiscard]] static inline EranosAccountList *eranosMemberAccounts(EranosMember const *const member) { return EranosMember_accounts(member); }
+[[nodiscard]] static inline EranosPaymentAccountList *eranosMemberAccounts(EranosMember const *const member) { return EranosMember_accounts(member); }
 
 /// Sets where the member can be paid, in the order they were given.
 ///
 /// @param member The member
 /// @param accounts Where the member can be paid, in the order they were given
-static inline void eranosMemberSetAccounts(EranosMember *const member, EranosAccountList const *const accounts) {
+static inline void eranosMemberSetAccounts(EranosMember *const member, EranosPaymentAccountList const *const accounts) {
     EranosMember_set_accounts(member, accounts);
 }
 

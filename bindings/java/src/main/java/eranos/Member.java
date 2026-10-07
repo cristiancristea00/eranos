@@ -17,7 +17,7 @@ public final class Member {
     private final String lastName;
     private final Email email;
     private final PhoneNumber phone;
-    private final List<Account> accounts;
+    private final List<PaymentAccount> accounts;
 
     private Member(Builder builder) {
         id = builder.id;
@@ -64,7 +64,7 @@ public final class Member {
                 .lastName(member.lastName())
                 .email(null == member.email() ? null : Email.known(member.email()))
                 .phone(null == member.phone() ? null : PhoneNumber.known(member.phone()))
-                .accounts(member.accounts().stream().map(Account::converted).toList())
+                .accounts(member.accounts().stream().map(PaymentAccount::converted).toList())
                 .build();
     }
 
@@ -80,7 +80,7 @@ public final class Member {
                 lastName,
                 null == email ? null : email.toString(),
                 null == phone ? null : phone.e164(),
-                accounts.stream().map(Account::generated).toList());
+                accounts.stream().map(PaymentAccount::generated).toList());
     }
 
     /**
@@ -133,7 +133,7 @@ public final class Member {
      *
      * @return the accounts
      */
-    public List<Account> accounts() {
+    public List<PaymentAccount> accounts() {
         return accounts;
     }
 
@@ -177,7 +177,7 @@ public final class Member {
         private String lastName;
         private Email email;
         private PhoneNumber phone;
-        private List<Account> accounts = List.of();
+        private List<PaymentAccount> accounts = List.of();
 
         private Builder(MemberId id, String firstName) {
             this.id = id;
@@ -234,7 +234,7 @@ public final class Member {
          * @param accounts the accounts, in order
          * @return this builder
          */
-        public Builder accounts(List<Account> accounts) {
+        public Builder accounts(List<PaymentAccount> accounts) {
             this.accounts = List.copyOf(accounts);
             return this;
         }

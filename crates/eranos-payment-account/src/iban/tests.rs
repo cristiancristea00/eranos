@@ -91,7 +91,9 @@ fn a_character_of_the_wrong_kind_for_its_position_is_rejected() {
     ] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::InvalidStructure)),
+            Err(PaymentAccountError::InvalidIban(
+                IbanError::InvalidStructure
+            )),
             "{text}"
         );
     }
@@ -103,7 +105,9 @@ fn a_character_of_the_wrong_kind_for_its_position_is_rejected() {
     ] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::InvalidStructure)),
+            Err(PaymentAccountError::InvalidIban(
+                IbanError::InvalidStructure
+            )),
             "{text}"
         );
     }
@@ -125,7 +129,7 @@ fn check_digits_outside_02_to_98_are_rejected() {
     ] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::InvalidChecksum)),
+            Err(PaymentAccountError::InvalidIban(IbanError::InvalidChecksum)),
             "{text}"
         );
     }
@@ -140,11 +144,11 @@ fn check_digits_outside_02_to_98_are_rejected() {
     // The country and the length are checked first.
     assert_eq!(
         Iban::parse("AA00"),
-        Err(AccountError::InvalidIban(IbanError::UnknownCountry))
+        Err(PaymentAccountError::InvalidIban(IbanError::UnknownCountry))
     );
     assert_eq!(
         Iban::parse("DE00"),
-        Err(AccountError::InvalidIban(IbanError::WrongLength {
+        Err(PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 22,
             found: 4
         }))
@@ -185,7 +189,7 @@ fn every_single_digit_typo_is_caught() {
             let typo = String::from_utf8(typo).unwrap();
             assert_eq!(
                 Iban::parse(&typo),
-                Err(AccountError::InvalidIban(IbanError::InvalidChecksum)),
+                Err(PaymentAccountError::InvalidIban(IbanError::InvalidChecksum)),
                 "{typo}"
             );
         }
@@ -193,7 +197,7 @@ fn every_single_digit_typo_is_caught() {
     // Two swapped digits.
     assert_eq!(
         Iban::parse(&GERMAN.replace("0532", "0523")),
-        Err(AccountError::InvalidIban(IbanError::InvalidChecksum))
+        Err(PaymentAccountError::InvalidIban(IbanError::InvalidChecksum))
     );
 }
 
@@ -209,7 +213,7 @@ fn an_unknown_country_is_rejected() {
     ] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::UnknownCountry)),
+            Err(PaymentAccountError::InvalidIban(IbanError::UnknownCountry)),
             "{text}"
         );
     }
@@ -222,14 +226,14 @@ fn the_wrong_length_for_the_country_is_rejected() {
     // One character missing or extra.
     assert_eq!(
         Iban::parse("DE8937040044053201300"),
-        Err(AccountError::InvalidIban(IbanError::WrongLength {
+        Err(PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 22,
             found: 21
         }))
     );
     assert_eq!(
         Iban::parse(&format!("{GERMAN}0")),
-        Err(AccountError::InvalidIban(IbanError::WrongLength {
+        Err(PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 22,
             found: 23
         }))
@@ -237,7 +241,7 @@ fn the_wrong_length_for_the_country_is_rejected() {
     // Only the prefix.
     assert_eq!(
         Iban::parse("DE89"),
-        Err(AccountError::InvalidIban(IbanError::WrongLength {
+        Err(PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 22,
             found: 4
         }))
@@ -245,7 +249,7 @@ fn the_wrong_length_for_the_country_is_rejected() {
     // Spaces do not count.
     assert_eq!(
         Iban::parse("DE89 3704 0044 0532 0130 0"),
-        Err(AccountError::InvalidIban(IbanError::WrongLength {
+        Err(PaymentAccountError::InvalidIban(IbanError::WrongLength {
             expected: 22,
             found: 21
         }))
@@ -266,7 +270,9 @@ fn characters_other_than_letters_digits_and_whitespace_are_rejected() {
     ] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::InvalidCharacter)),
+            Err(PaymentAccountError::InvalidIban(
+                IbanError::InvalidCharacter
+            )),
             "{text}"
         );
     }
@@ -284,7 +290,7 @@ fn a_malformed_prefix_is_rejected() {
     ] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::InvalidFormat)),
+            Err(PaymentAccountError::InvalidIban(IbanError::InvalidFormat)),
             "{text}"
         );
     }
@@ -292,7 +298,7 @@ fn a_malformed_prefix_is_rejected() {
     for text in ["", "   ", "DE", "DE8"] {
         assert_eq!(
             Iban::parse(text),
-            Err(AccountError::InvalidIban(IbanError::InvalidFormat)),
+            Err(PaymentAccountError::InvalidIban(IbanError::InvalidFormat)),
             "{text:?}"
         );
     }

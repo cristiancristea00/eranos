@@ -85,10 +85,10 @@ struct BalanceRow final {
 };
 
 /// An account with its label and its details.
-[[nodiscard]] std::string describe(Account const &account) {
-    auto const *const iban = std::get_if<IbanAccountDetails>(&account.details);
+[[nodiscard]] std::string describe(PaymentAccount const &account) {
+    auto const *const iban = std::get_if<IbanPaymentAccountDetails>(&account.details);
     return std::format("{}: {}", account.name,
-                       (nullptr == iban ? std::get<UsernameAccountDetails>(account.details).username.toString() : iban->iban.toString()));
+                       (nullptr == iban ? std::get<UsernamePaymentAccountDetails>(account.details).username.toString() : iban->iban.toString()));
 }
 
 /// The row of @p input, checked as @p kind: "valid: " and what @p shown writes of the value @p parse makes of it, or
@@ -143,8 +143,8 @@ void printBalances(ExpenseGroup const &group) {
     section("1. Members");
     Member first("Ana");
     first.accounts = {
-        Account("ING", IbanAccountDetails{must(Iban::parse("ro49 aaaa 1b31 0075 9384 0000"))}),
-        Account("Revolut", UsernameAccountDetails{must(Username::parse("@ana"))}),
+        PaymentAccount("ING", IbanPaymentAccountDetails{must(Iban::parse("ro49 aaaa 1b31 0075 9384 0000"))}),
+        PaymentAccount("Revolut", UsernamePaymentAccountDetails{must(Username::parse("@ana"))}),
     };
     first.email = must(Email::parse("ana@example.com"));
     first.lastName = "Popescu";

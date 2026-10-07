@@ -6,7 +6,7 @@ import pytest
 
 from conftest import Flat
 from eranos import (
-    Account,
+    PaymentAccount,
     AmountsSplit,
     Category,
     ConvertedCost,
@@ -20,7 +20,7 @@ from eranos import (
     GetsBackBalance,
     ExpenseGroupError,
     Iban,
-    IbanAccountDetails,
+    IbanPaymentAccountDetails,
     IdError,
     Item,
     ItemisedExpenseSplit,
@@ -45,7 +45,7 @@ from eranos import (
     Transfer,
     TransferId,
     Username,
-    UsernameAccountDetails,
+    UsernamePaymentAccountDetails,
     WholeExpenseSplit,
 )
 
@@ -103,8 +103,8 @@ def test_a_transfer_and_a_member_read_back_as_they_were_added(flat: Flat) -> Non
         email=Email('carla@example.com'),
         phone=PhoneNumber('+40712345678'),
         accounts=(
-            Account('Bank', IbanAccountDetails(Iban('RO49AAAA1B31007593840000'))),
-            Account('App', UsernameAccountDetails(Username('carla.pays'))),
+            PaymentAccount('Bank', IbanPaymentAccountDetails(Iban('RO49AAAA1B31007593840000'))),
+            PaymentAccount('App', UsernamePaymentAccountDetails(Username('carla.pays'))),
         ),
     )
     carla = copy.replace(carla, id=flat.group.add_member(carla))
